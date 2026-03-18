@@ -61,33 +61,30 @@ export function createFormDef(type: TAtscriptAnnotatedType): FormDef {
       if (arrayType.of.type.kind === "array" && !getFieldMeta(originalProp, UI_COMPONENT)) continue;
     }
 
-    // Mark structured prefixes
+    // Mark structured prefixes (pre-suffixed with "." for efficient child checks)
     if (kind === "array" || kind === "object" || kind === "union" || kind === "tuple") {
-      structuredPrefixes.add(path);
+      structuredPrefixes.add(path + ".");
     }
 
     fields.push(createFieldDef(path, originalProp));
   }
 
-  // Schwartzian transform: sort by ui.order
-  const decorated = fields.map((f) => ({
-    f,
-    order: (getFieldMeta(f.prop, UI_ORDER) as number | undefined) ?? Infinity,
-  }));
-  decorated.sort((a, b) => a.order - b.order);
-  fields.length = 0;
-  for (const { f } of decorated) fields.push(f);
+  // Sort by ui.order (cache order values to avoid repeated metadata lookups during sort)
+  const orderMap = new Map(
+    fields.map((f) => [f, (getFieldMeta(f.prop, UI_ORDER) as number | undefined) ?? Infinity]),
+  );
+  fields.sort((a, b) => orderMap.get(a)! - orderMap.get(b)!);
 
-  const def: FormDef = { type, rootField: undefined!, fields, flatMap };
-  def.rootField = {
+  const rootField = {
     path: "",
     prop: type,
     type: "object",
     phantom: false,
     name: "",
     allStatic: false,
-    objectDef: def,
   } as FormObjectFieldDef;
+  const def: FormDef = { type, rootField, fields, flatMap };
+  rootField.objectDef = def;
   return def;
 }
 
@@ -184,10 +181,10 @@ function resolveOriginalProp(
   return current.props.get(parts[parts.length - 1]!);
 }
 
-/** Check if a path is a child of any structured prefix. */
+/** Check if a path is a child of any structured prefix (prefixes are pre-suffixed with "."). */
 function isChildOfStructured(path: string, prefixes: Set<string>): boolean {
   for (const prefix of prefixes) {
-    if (path.startsWith(`${prefix}.`)) return true;
+    if (path.startsWith(prefix)) return true;
   }
   return false;
 }
@@ -203,10 +200,10 @@ export function buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVa
 
   for (const item of items) {
     const v = createVariant(item);
-    variants.push({
-      ...v,
-      label: items.length > 1 ? `${String(variants.length + 1)}. ${v.label}` : v.label,
-    });
+    if (items.length > 1) {
+      v.label = `${String(variants.length + 1)}. ${v.label}`;
+    }
+    variants.push(v);
   }
 
   return variants;

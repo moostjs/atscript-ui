@@ -1,5 +1,5 @@
 {
-  "name": "@atscript/ui-form",
+  "name": "@atscript/vue-form",
   "version": "0.0.1",
   "description": "Type-driven form rendering for Atscript with Vue 3",
   "type": "module",

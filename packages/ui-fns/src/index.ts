@@ -9,7 +9,7 @@ export { compileFieldFn, compileTopFn, compileValidatorFn } from "./runtime/fn-c
 
 // ── Dynamic resolver ─────────────────────────────────────────
 export { DynamicFieldResolver } from "./runtime/dynamic-resolver";
-export { buildFieldEntry, resolveDynamicAttrs } from "./runtime/dynamic-resolver";
+export { buildFieldEntry } from "./runtime/dynamic-resolver";
 export type { TBuildFieldEntryOpts } from "./runtime/dynamic-resolver";
 
 // ── Validator plugin ─────────────────────────────────────────

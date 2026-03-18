@@ -36,13 +36,19 @@ function makeFnAnnotation(description: string, mode: "field" | "top"): Annotatio
           ? "JS function string: (value, data, context, entry) => result"
           : "JS function string: (data, context) => result",
     },
-    validate(_token, args) {
-      if (args[0]) {
-        return validateFnString(args[0].text, args[0].range);
-      }
-      return undefined;
-    },
+    validate: validateFirstArg,
   });
+}
+
+/** Shared validate hook: validates the fn string at args[0]. */
+function validateFirstArg(
+  _token: unknown,
+  args: { text: string; range: Parameters<typeof validateFnString>[1] }[],
+): TMessages | undefined {
+  if (args[0]) {
+    return validateFnString(args[0].text, args[0].range);
+  }
+  return undefined;
 }
 
 const fnAnnotation = (description: string) => makeFnAnnotation(description, "field");
@@ -67,12 +73,7 @@ export const uiFnsAnnotations: TAnnotationsTree = {
         type: "string",
         description: "JS function string: (value, data, context, entry) => boolean | string",
       },
-      validate(_token, args) {
-        if (args[0]) {
-          return validateFnString(args[0].text, args[0].range);
-        }
-        return undefined;
-      },
+      validate: validateFirstArg,
     }),
 
     // ── Computed (fn) annotations ─────────────────────────────

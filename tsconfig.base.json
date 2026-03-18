@@ -22,8 +22,8 @@
       "@atscript/ui-core/*": ["./packages/ui-core/src/*"],
       "@atscript/ui-fns": ["./packages/ui-fns/src"],
       "@atscript/ui-fns/*": ["./packages/ui-fns/src/*"],
-      "@atscript/ui-form": ["./packages/ui-form/src"],
-      "@atscript/ui-form/*": ["./packages/ui-form/src/*"]
+      "@atscript/vue-form": ["./packages/vue-form/src"],
+      "@atscript/vue-form/*": ["./packages/vue-form/src/*"]
     }
   }
 }

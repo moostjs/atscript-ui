@@ -2,7 +2,6 @@ import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { FieldResolver, TResolveOptions } from "@atscript/ui-core";
 import {
   META_READONLY,
-  UI_ATTR,
   UI_COMPONENT,
   UI_DISABLED,
   UI_FN_ATTR,
@@ -14,7 +13,7 @@ import {
   UI_TYPE,
   asArray,
   getFieldMeta,
-  parseStaticAttrs,
+  resolveFieldProp,
   resolveOptions,
   resolveStatic,
 } from "@atscript/ui-core";
@@ -22,15 +21,12 @@ import { compileFieldFn, compileTopFn } from "./fn-compiler";
 import type { TFieldEvaluated, TFnScope } from "./types";
 
 /** Options for buildFieldEntry — allows pre-resolved overrides. */
-export interface TBuildFieldEntryOpts {
-  name?: string;
-  type?: string;
-  component?: string;
-  optional?: boolean;
-  disabled?: boolean;
-  hidden?: boolean;
-  readonly?: boolean;
-}
+export type TBuildFieldEntryOpts = Partial<
+  Pick<
+    TFieldEvaluated,
+    "name" | "type" | "component" | "optional" | "disabled" | "hidden" | "readonly"
+  >
+>;
 
 /**
  * Dynamic field resolver — extends static resolution with `new Function` compilation
@@ -46,6 +42,10 @@ export class DynamicFieldResolver implements FieldResolver {
     scope: Record<string, unknown>,
     opts?: TResolveOptions<T>,
   ): T | undefined {
+    // Special case: ui.fn.attr stores array of {name, fn} objects, not a single fn string
+    if (fnKey === UI_FN_ATTR) {
+      return this.resolveAttrFns(prop, scope as unknown as TFnScope) as T | undefined;
+    }
     return resolveAnnotatedProp(
       prop.metadata,
       fnKey,
@@ -79,11 +79,28 @@ export class DynamicFieldResolver implements FieldResolver {
     }
     return false;
   }
+
+  private resolveAttrFns(
+    prop: TAtscriptAnnotatedType,
+    scope: TFnScope,
+  ): Record<string, unknown> | undefined {
+    const fnAttrs = prop.metadata.get(UI_FN_ATTR as keyof AtscriptMetadata);
+    if (!fnAttrs) return undefined;
+
+    const result: Record<string, unknown> = {};
+    let hasAttrs = false;
+
+    for (const item of asArray(fnAttrs)) {
+      if (typeof item === "object" && item !== null && "name" in item && "fn" in item) {
+        const { name, fn } = item as { name: string; fn: string };
+        result[name] = compileFieldFn(fn)(scope);
+        hasAttrs = true;
+      }
+    }
+
+    return hasAttrs ? result : undefined;
+  }
 }
-
-// ── Module-level singleton ───────────────────────────────────
-
-const dynamicResolver = new DynamicFieldResolver();
 
 // ── Internal resolve logic ───────────────────────────────────
 
@@ -134,70 +151,16 @@ export function buildFieldEntry(
     optional: opts?.optional ?? prop.optional,
     disabled:
       opts?.disabled ??
-      dynamicResolver.resolveFieldProp<boolean>(
-        prop,
-        UI_FN_DISABLED,
-        UI_DISABLED,
-        scopeAsRecord,
-        boolOpts,
-      ),
+      resolveFieldProp<boolean>(prop, UI_FN_DISABLED, UI_DISABLED, scopeAsRecord, boolOpts),
     hidden:
       opts?.hidden ??
-      dynamicResolver.resolveFieldProp<boolean>(
-        prop,
-        UI_FN_HIDDEN,
-        UI_HIDDEN,
-        scopeAsRecord,
-        boolOpts,
-      ),
+      resolveFieldProp<boolean>(prop, UI_FN_HIDDEN, UI_HIDDEN, scopeAsRecord, boolOpts),
     readonly:
       opts?.readonly ??
-      dynamicResolver.resolveFieldProp<boolean>(
-        prop,
-        UI_FN_READONLY,
-        META_READONLY,
-        scopeAsRecord,
-        boolOpts,
-      ),
+      resolveFieldProp<boolean>(prop, UI_FN_READONLY, META_READONLY, scopeAsRecord, boolOpts),
   };
 
   const scope: TFnScope = { ...baseScope, entry };
   entry.options = resolveOptions(prop, scope as unknown as Record<string, unknown>);
   return scope;
-}
-
-/**
- * Resolves `ui.attr` + `ui.fn.attr` from metadata using dynamic compilation.
- * Reuses `parseStaticAttrs` from ui-core for the static portion.
- */
-export function resolveDynamicAttrs(
-  prop: TAtscriptAnnotatedType,
-  scope: TFnScope,
-): Record<string, unknown> | undefined {
-  const staticAttrs = prop.metadata.get(UI_ATTR as keyof AtscriptMetadata);
-  const fnAttrs = prop.metadata.get(UI_FN_ATTR as keyof AtscriptMetadata);
-
-  if (!staticAttrs && !fnAttrs) return undefined;
-
-  const result: Record<string, unknown> = {};
-  let hasAttrs = false;
-
-  // Reuse ui-core's static attr parser
-  const parsed = parseStaticAttrs(staticAttrs);
-  if (parsed) {
-    Object.assign(result, parsed);
-    hasAttrs = true;
-  }
-
-  if (fnAttrs) {
-    for (const item of asArray(fnAttrs)) {
-      if (typeof item === "object" && item !== null && "name" in item && "fn" in item) {
-        const { name, fn } = item as { name: string; fn: string };
-        result[name] = compileFieldFn(fn)(scope);
-        hasAttrs = true;
-      }
-    }
-  }
-
-  return hasAttrs ? result : undefined;
 }

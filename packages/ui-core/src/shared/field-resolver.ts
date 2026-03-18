@@ -1,6 +1,6 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { TFormEntryOptions } from "../form/types";
-import { UI_ATTR, UI_FN_ATTR, UI_FN_OPTIONS } from "./annotation-keys";
+import { UI_ATTR, UI_FN_ATTR, UI_FN_OPTIONS, UI_OPTIONS } from "./annotation-keys";
 
 // ── Resolve options ──────────────────────────────────────────
 
@@ -187,7 +187,7 @@ export function resolveOptions(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
 ): TFormEntryOptions[] | undefined {
-  return resolveFieldProp<TFormEntryOptions[]>(prop, UI_FN_OPTIONS, "ui.options", scope, {
+  return resolveFieldProp<TFormEntryOptions[]>(prop, UI_FN_OPTIONS, UI_OPTIONS, scope, {
     transform: parseStaticOptions,
   });
 }
@@ -218,8 +218,8 @@ export function resolveAttrs(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
 ): Record<string, unknown> | undefined {
-  const staticAttrs = prop.metadata.get(UI_ATTR as keyof AtscriptMetadata);
-  const fnAttrs = prop.metadata.get(UI_FN_ATTR as keyof AtscriptMetadata);
+  const staticAttrs = getFieldMeta(prop, UI_ATTR);
+  const fnAttrs = getFieldMeta(prop, UI_FN_ATTR);
 
   if (!staticAttrs && !fnAttrs) return undefined;
 

@@ -10,6 +10,7 @@ export {
   UI_HINT,
   UI_DISABLED,
   UI_TYPE,
+  UI_OPTIONS,
   UI_ATTR,
   UI_CLASS,
   UI_STYLE,
@@ -33,6 +34,7 @@ export {
   UI_FN_VALUE,
   UI_FN_CLASSES,
   UI_FN_STYLES,
+  UI_VALIDATE,
 } from "./shared/annotation-keys";
 
 // ── Form types ──────────────────────────────────────────────
