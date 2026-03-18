@@ -1,0 +1,31 @@
+{
+  "name": "@atscript/ui-form",
+  "version": "0.0.1",
+  "description": "Type-driven form rendering for Atscript with Vue 3",
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "devDependencies": {
+    "vue": "catalog:"
+  },
+  "peerDependencies": {
+    "vue": "^3"
+  }
+}
