@@ -1,0 +1,43 @@
+{
+  "name": "@atscript/ui-fns",
+  "version": "0.0.1",
+  "description": "Dynamic fn-compiled field properties for @atscript/ui-core (opt-in, uses new Function)",
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.mts",
+      "import": "./dist/plugin.mjs",
+      "require": "./dist/plugin.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "@atscript/ui-core": "workspace:^",
+    "@prostojs/deserialize-fn": "^0.0.5"
+  },
+  "devDependencies": {
+    "@atscript/core": "catalog:",
+    "@atscript/typescript": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@atscript/core": "^0.1.41",
+    "@atscript/typescript": "^0.1.41"
+  }
+}

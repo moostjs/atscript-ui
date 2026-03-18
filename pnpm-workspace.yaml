@@ -4,6 +4,9 @@ packages:
 catalogMode: prefer
 
 catalog:
+  "@atscript/core": ^0.1.41
+  "@atscript/typescript": ^0.1.41
+  "@prostojs/deserialize-fn": ^0.0.5
   "@types/node": ^24
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@latest

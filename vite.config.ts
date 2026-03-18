@@ -22,6 +22,7 @@ export default defineConfig({
       "no-unnecessary-type-assertion": "off",
       "no-misused-spread": "off",
       "no-shadow": "off",
+      "no-implied-eval": "off",
     },
   },
 });
