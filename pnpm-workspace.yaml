@@ -1,18 +1,21 @@
 packages:
   - packages/*
 
-catalogMode: prefer
-
 catalog:
   "@atscript/core": ^0.1.41
   "@atscript/typescript": ^0.1.41
   "@prostojs/deserialize-fn": ^0.0.5
+  '@tsdown/css': ^0.21.4
   "@types/node": ^24
+  "@vitejs/plugin-vue": ^6
   typescript: ^5
   vite: npm:@voidzero-dev/vite-plus-core@latest
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
   vite-plus: latest
+  vitest: npm:@voidzero-dev/vite-plus-test@latest
   vue: ^3
+  vue-tsc: ^3.2.6
+
+catalogMode: prefer
 
 overrides:
   vite: "catalog:"

@@ -1,0 +1,344 @@
+/* ── Shared default field styles ──────────────────────────── */
+
+.as-default-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.as-default-field label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.as-default-field.required label::after {
+  content: " *";
+  color: #ef4444;
+}
+
+.as-default-field span {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.as-default-field input,
+.as-default-field select {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #1d1d1f;
+  background: #fff;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+  outline: none;
+}
+
+.as-default-field input::placeholder {
+  color: #9ca3af;
+}
+
+.as-default-field input:focus,
+.as-default-field select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.as-default-field input:disabled,
+.as-default-field select:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.as-default-field.error input,
+.as-default-field.error select {
+  border-color: #ef4444;
+}
+
+.as-default-field.error input:focus,
+.as-default-field.error select:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.as-default-field .as-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+
+.as-field-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.as-field-input-row > input,
+.as-field-input-row > select {
+  flex: 1;
+}
+
+/* ── Field header row (label + action buttons) ───────── */
+
+.as-field-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.as-field-header-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  flex: 1;
+}
+
+.as-field-header-content > span {
+  width: 100%;
+}
+
+.as-field-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.as-field-remove-btn {
+  padding: 2px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.as-field-remove-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+.as-field-remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.as-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.as-radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1d1d1f;
+  cursor: pointer;
+}
+
+.as-radio-group input[type="radio"] {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.as-checkbox-field > label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 400;
+  color: #1d1d1f;
+  cursor: pointer;
+}
+
+.as-checkbox-field > label input[type="checkbox"] {
+  padding: 0;
+  border: none;
+  box-shadow: none;
+}
+
+.as-default-field .as-error-slot {
+  min-height: 16px;
+  line-height: 16px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.as-default-field.error .as-error-slot {
+  color: #ef4444;
+}
+
+.as-default-field.as-action-field button {
+  padding: 8px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.as-default-field.as-action-field button:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* ── Optional clear button ──────────────────────────────── */
+
+.as-optional-clear {
+  padding: 2px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.as-optional-clear:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #dc2626;
+}
+
+/* ── Dropdown ─────────────────────────────────────────── */
+
+.as-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.as-dropdown-anchor {
+  position: relative;
+}
+
+.as-dropdown-trigger {
+  padding: 2px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 12px;
+  color: #6b7280;
+  cursor: pointer;
+  line-height: 1.4;
+}
+
+.as-dropdown-trigger:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.as-dropdown-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.as-dropdown-menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 50;
+  min-width: 120px;
+  margin-top: 4px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.as-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #374151;
+  text-align: left;
+  cursor: pointer;
+}
+
+.as-dropdown-item:hover {
+  background: #f3f4f6;
+  color: #6366f1;
+}
+
+.as-dropdown-item--active {
+  background: #eef2ff;
+  color: #6366f1;
+  font-weight: 500;
+}
+
+/* ── Submit button ────────────────────────────────────── */
+
+button[type="submit"],
+button:not([type]) {
+  margin-top: 16px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+button[type="submit"]:hover,
+button:not([type]):hover {
+  background: #4f46e5;
+}
+
+button[type="submit"]:disabled,
+button:not([type]):disabled {
+  background: #c7d2fe;
+  cursor: not-allowed;
+}
+
+/* ── Variant trigger (compact icon button) ─────────────── */
+
+.as-variant-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  color: #9ca3af;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.as-variant-trigger:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.as-variant-trigger:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

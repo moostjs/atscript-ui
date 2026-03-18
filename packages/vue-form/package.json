@@ -11,6 +11,7 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./styles": "./dist/style.css",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -22,10 +23,20 @@
     "test": "vp test",
     "check": "vp check"
   },
+  "dependencies": {
+    "@atscript/ui-core": "workspace:^"
+  },
   "devDependencies": {
-    "vue": "catalog:"
+    "@atscript/typescript": "catalog:",
+    "@atscript/ui-fns": "workspace:^",
+    "@tsdown/css": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "vitest": "catalog:",
+    "vue": "catalog:",
+    "vue-tsc": "catalog:"
   },
   "peerDependencies": {
+    "@atscript/ui-fns": "^0.0.1",
     "vue": "^3"
   }
 }
