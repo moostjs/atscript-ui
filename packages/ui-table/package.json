@@ -1,0 +1,38 @@
+{
+  "name": "@atscript/ui-table",
+  "version": "0.0.1",
+  "description": "Framework-agnostic filter model, filter-to-Uniquery conversion, and preset serialization for atscript tables",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "@atscript/ui-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@uniqu/core": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@uniqu/core": "^0.1.2"
+  }
+}
