@@ -1,0 +1,99 @@
+import { describe, it, expect } from "vitest";
+import { nextTick } from "vue";
+import { mountForm, objectType, stringProp } from "./helpers";
+import { META_LABEL, META_REQUIRED } from "@atscript/ui-core";
+
+describe("AsForm", () => {
+  it("renders a <form> element", () => {
+    const type = objectType({
+      name: stringProp(),
+    });
+    const { wrapper } = mountForm(type);
+    expect(wrapper.find("form").exists()).toBe(true);
+  });
+
+  it('renders a submit button with default text "Submit"', () => {
+    const type = objectType({
+      name: stringProp(),
+    });
+    const { wrapper } = mountForm(type);
+    const button = wrapper.find("form > button");
+    expect(button.exists()).toBe(true);
+    expect(button.text()).toBe("Submit");
+  });
+
+  it("renders input fields for string props", () => {
+    const type = objectType({
+      firstName: stringProp({ [META_LABEL]: "First Name" }),
+      lastName: stringProp({ [META_LABEL]: "Last Name" }),
+    });
+    const { wrapper } = mountForm(type);
+    const inputs = wrapper.findAll("input");
+    expect(inputs.length).toBe(2);
+  });
+
+  it('emits "submit" with unwrapped domain data when validation passes', async () => {
+    const type = objectType({
+      name: stringProp(),
+    });
+    const { wrapper, formData } = mountForm(type);
+    formData.value.name = "Alice";
+    await nextTick();
+
+    await wrapper.find("form").trigger("submit");
+    await nextTick();
+
+    const submitEvents = wrapper.emitted("submit");
+    expect(submitEvents).toBeTruthy();
+    expect(submitEvents!.length).toBe(1);
+    expect(submitEvents![0]![0]).toEqual({ name: "Alice" });
+  });
+
+  it('emits "error" with error array when required field is empty', async () => {
+    const type = objectType({
+      name: stringProp({
+        [META_REQUIRED]: { message: "Name is required" },
+      }),
+    });
+    const { wrapper } = mountForm(type);
+
+    await wrapper.find("form").trigger("submit");
+    await nextTick();
+
+    const errorEvents = wrapper.emitted("error");
+    expect(errorEvents).toBeTruthy();
+    expect(errorEvents!.length).toBe(1);
+    const errors = errorEvents![0]![0] as { path: string; message: string }[];
+    expect(Array.isArray(errors)).toBe(true);
+    expect(errors.length).toBeGreaterThan(0);
+    expect(errors.some((e) => e.message === "Name is required")).toBe(true);
+  });
+
+  it("static @ui.submit.text changes button text", () => {
+    const type = objectType({ name: stringProp() }, { "ui.submit.text": "Save" });
+    const { wrapper } = mountForm(type);
+    const button = wrapper.find("form > button");
+    expect(button.text()).toBe("Save");
+  });
+
+  it('@change emitted with type "update" when field value changes and blurs', async () => {
+    const type = objectType({
+      name: stringProp(),
+    });
+    const { wrapper, formData } = mountForm(type);
+
+    formData.value.name = "Bob";
+    await nextTick();
+
+    const input = wrapper.find("input");
+    await input.trigger("blur");
+    await nextTick();
+
+    const changeEvents = wrapper.emitted("change");
+    expect(changeEvents).toBeTruthy();
+    expect(changeEvents!.length).toBeGreaterThanOrEqual(1);
+    const [changeType, path] = changeEvents![0]!;
+    expect(changeType).toBe("update");
+    expect(path).toBe("name");
+  });
+});

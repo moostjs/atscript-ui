@@ -1,0 +1,23 @@
+{
+  "name": "vue-playground",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@atscript/ui-core": "workspace:^",
+    "@atscript/ui-fns": "workspace:^",
+    "@atscript/vue-form": "workspace:^",
+    "vue": "catalog:",
+    "vue-router": "catalog:"
+  },
+  "devDependencies": {
+    "@atscript/typescript": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-atscript": "catalog:",
+    "vite": "catalog:"
+  }
+}

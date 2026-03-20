@@ -2,6 +2,10 @@
   "name": "@atscript/vue-form",
   "version": "0.0.1",
   "description": "Type-driven form rendering for Atscript with Vue 3",
+  "files": [
+    "dist",
+    "styles.d.ts"
+  ],
   "type": "module",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
@@ -11,7 +15,10 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
-    "./styles": "./dist/style.css",
+    "./styles": {
+      "types": "./styles.d.ts",
+      "default": "./dist/style.css"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -31,6 +38,8 @@
     "@atscript/ui-fns": "workspace:^",
     "@tsdown/css": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
+    "@vue/test-utils": "catalog:",
+    "happy-dom": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
     "vue-tsc": "catalog:"

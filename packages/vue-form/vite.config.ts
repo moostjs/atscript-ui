@@ -3,6 +3,9 @@ import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   plugins: [vue()],
+  test: {
+    environment: "happy-dom",
+  },
   pack: {
     dts: { vue: true },
     format: ["esm", "cjs"],

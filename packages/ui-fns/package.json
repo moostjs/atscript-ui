@@ -2,6 +2,9 @@
   "name": "@atscript/ui-fns",
   "version": "0.0.1",
   "description": "Dynamic fn-compiled field properties for @atscript/ui-core (opt-in, uses new Function)",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",

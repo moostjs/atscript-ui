@@ -2,6 +2,9 @@
   "name": "@atscript/ui-core",
   "version": "0.0.1",
   "description": "Framework-agnostic runtime for form and table definitions from atscript annotated types",
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",

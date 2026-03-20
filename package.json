@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "ready": "vp fmt && vp lint && vp run test -r && vp run build -r",
+    "dev": "pnpm --filter vue-playground run dev",
     "build": "vp run build -r",
     "test": "vp run test -r",
     "release": "node scripts/release.js patch",
