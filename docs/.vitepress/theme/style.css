@@ -1,0 +1,70 @@
+/**
+ * Customize default theme styling
+ */
+
+:root {
+  --vp-c-brand-1: #471aec;
+  --vp-c-brand-2: #6240dd;
+  --vp-c-brand-3: #8163ed;
+  --vp-c-brand-soft: rgba(71, 26, 236, 0.14);
+}
+
+.dark {
+  --vp-c-brand-1: #ae99fc;
+  --vp-c-brand-2: #8163ed;
+  --vp-c-brand-3: #6240dd;
+  --vp-c-brand-soft: rgba(98, 64, 221, 0.14);
+
+  --vp-c-bg: #15102b;
+  --vp-c-bg-alt: #1a1435;
+  --vp-c-bg-elv: #241d42;
+  --vp-c-bg-soft: #241d42;
+}
+
+/* Atscript code block styling */
+.language-atscript span[class*="keyword"],
+.language-atscript span[class*="decorator"],
+.language-atscript span[class*="at-rule"] {
+  color: #ffd700 !important;
+  font-weight: 600;
+}
+
+.shiki .variable.other.property.atscript {
+  color: #4fc1ff !important;
+}
+
+html:not(.dark) .shiki .variable.other.property.atscript {
+  color: #0969da !important;
+}
+
+.dark .shiki .variable.other.property.atscript {
+  color: #79c0ff !important;
+}
+
+.shiki .support.type.semantic.atscript,
+.shiki .support.type.primitive.extended.atscript {
+  color: #ff79c6 !important;
+  font-style: italic;
+}
+
+html:not(.dark) .shiki .support.type.semantic.atscript,
+html:not(.dark) .shiki .support.type.primitive.extended.atscript {
+  color: #d73a49 !important;
+  font-style: italic;
+}
+
+.dark .shiki .support.type.semantic.atscript,
+.dark .shiki .support.type.primitive.extended.atscript {
+  color: #ff79c6 !important;
+  font-style: italic;
+}
+
+/* Hide default VitePress hero when using custom layout */
+.VPHome .VPHero {
+  display: none;
+}
+
+/* Attach last section to footer */
+.VPHome {
+  margin-bottom: 0 !important;
+}
