@@ -31,6 +31,7 @@
   },
   "devDependencies": {
     "@atscript/typescript": "catalog:",
+    "@tanstack/vue-virtual": "catalog:",
     "@uniqu/core": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
@@ -40,6 +41,7 @@
     "vue-tsc": "catalog:"
   },
   "peerDependencies": {
+    "@tanstack/vue-virtual": "^3",
     "vue": "^3"
   }
 }

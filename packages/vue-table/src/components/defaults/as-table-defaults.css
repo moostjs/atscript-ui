@@ -1,0 +1,289 @@
+/* ── Table wrapper ────────────────────────────────────── */
+
+.as-table-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── Toolbar ─────────────────────────────────────────── */
+
+.as-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.as-table-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.as-table-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.as-table-search {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  min-width: 200px;
+}
+
+.as-table-search:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.as-table-count {
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.as-table-config-btn {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.as-table-config-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+/* ── Table ───────────────────────────────────────────── */
+
+.as-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  table-layout: fixed;
+}
+
+.as-table thead {
+  background: #f9fafb;
+}
+
+.as-table-sticky thead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.as-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
+  border-bottom: 2px solid #e5e7eb;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
+}
+
+.as-th-sortable {
+  cursor: pointer;
+}
+
+.as-th-sortable:hover {
+  background: #f3f4f6;
+}
+
+.as-th-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.as-table td {
+  padding: 6px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #1d1d1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.as-cell-number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Rows ────────────────────────────────────────────── */
+
+.as-virtual-row {
+  position: absolute;
+  width: 100%;
+}
+
+.as-table tbody tr {
+  transition: background 0.1s;
+}
+
+.as-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.as-row-selected {
+  background: #eef2ff !important;
+}
+
+/* ── Selection column ────────────────────────────────── */
+
+.as-th-select,
+.as-td-select {
+  width: 3em;
+  text-align: center;
+}
+
+/* ── Empty / Loading / Error states ──────────────────── */
+
+.as-table-empty,
+.as-table-loading,
+.as-table-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.as-table-error {
+  color: #ef4444;
+}
+
+/* ── Pagination ──────────────────────────────────────── */
+
+.as-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.as-table-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.as-table-pagination button {
+  padding: 4px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.as-table-pagination button:hover:not(:disabled) {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.as-table-pagination button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.as-table-pagination select {
+  padding: 4px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.as-table-load-more {
+  padding: 6px 20px;
+  border: 1px solid #6366f1;
+  border-radius: 6px;
+  background: #fff;
+  color: #6366f1;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.as-table-load-more:hover:not(:disabled) {
+  background: #eef2ff;
+}
+
+.as-table-load-more:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Column menu ─────────────────────────────────────── */
+
+.as-column-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.as-column-menu-trigger {
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  list-style: none;
+}
+
+.as-column-menu-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.as-column-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 50;
+  min-width: 160px;
+  margin-top: 4px;
+  padding: 4px 0;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.as-column-menu-item {
+  display: block;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  background: none;
+  font-size: 13px;
+  color: #374151;
+  text-align: left;
+  cursor: pointer;
+}
+
+.as-column-menu-item:hover {
+  background: #f3f4f6;
+  color: #6366f1;
+}
+
+/* ── Scroll container ────────────────────────────────── */
+
+.as-table-scroll-container {
+  overflow: auto;
+}

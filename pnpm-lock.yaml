@@ -12,6 +12,9 @@ catalogs:
     '@atscript/typescript':
       specifier: ^0.1.41
       version: 0.1.41
+    '@tanstack/vue-virtual':
+      specifier: ^3.13.23
+      version: 3.13.23
     '@tsdown/css':
       specifier: ^0.21.4
       version: 0.21.4
@@ -203,6 +206,9 @@ importers:
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+      '@tanstack/vue-virtual':
+        specifier: 'catalog:'
+        version: 3.13.23(vue@3.5.30(typescript@5.9.3))
       '@uniqu/core':
         specifier: 'catalog:'
         version: 0.1.2
@@ -1009,6 +1015,14 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@tanstack/virtual-core@3.13.23':
+    resolution: {integrity: sha512-zSz2Z2HNyLjCplANTDyl3BcdQJc2k1+yyFoKhNRmCr7V7dY8o8q5m8uFTI1/Pg1kL+Hgrz6u3Xo6eFUB7l66cg==}
+
+  '@tanstack/vue-virtual@3.13.23':
+    resolution: {integrity: sha512-b5jPluAR6U3eOq6GWAYSpj3ugnAIZgGR0e6aGAgyRse0Yu6MVQQ0ZWm9SArSXWtageogn6bkVD8D//c4IjW3xQ==}
+    peerDependencies:
+      vue: ^2.7.0 || ^3.0.0
 
   '@tsdown/css@0.21.4':
     resolution: {integrity: sha512-2aU44SVyShHmL6VSefFBB0H8OXPqGqd6KwZ4+SP88DyyM+kZ1nBqzs65xf+HCyL/1NnidQtpA1wWkZLKgLv2SA==}
@@ -2755,6 +2769,13 @@ snapshots:
   '@shikijs/vscode-textmate@10.0.2': {}
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@tanstack/virtual-core@3.13.23': {}
+
+  '@tanstack/vue-virtual@3.13.23(vue@3.5.30(typescript@5.9.3))':
+    dependencies:
+      '@tanstack/virtual-core': 3.13.23
+      vue: 3.5.30(typescript@5.9.3)
 
   '@tsdown/css@0.21.4(postcss@8.5.8)(tsdown@0.21.4)':
     dependencies:

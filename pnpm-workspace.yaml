@@ -6,6 +6,7 @@ catalog:
   "@atscript/core": ^0.1.41
   "@atscript/typescript": ^0.1.41
   "@prostojs/deserialize-fn": ^0.0.5
+  "@tanstack/vue-virtual": ^3.13.23
   "@tsdown/css": ^0.21.4
   "@types/node": ^24
   "@uniqu/core": ^0.1.2
