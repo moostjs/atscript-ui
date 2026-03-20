@@ -9,6 +9,7 @@ Spec for `@atscript/ui-table` (framework-agnostic) and `@atscript/vue-table` (Vu
 Performance is a first-class priority. Tables render large datasets and every unnecessary re-render or allocation matters.
 
 **Vue reactivity:**
+
 - Prefer `shallowRef` over `ref` for arrays/objects that are replaced wholesale (e.g. `results`, `columns`). Avoid deep reactivity on large data.
 - Use `computed` with stable dependencies — avoid computed that depend on entire reactive objects when only a single property is needed.
 - Use `triggerRef` / manual triggering over replacing large reactive structures when only a subset changed.
@@ -16,6 +17,7 @@ Performance is a first-class priority. Tables render large datasets and every un
 - Debounce query triggers (filter/sort/column changes) to batch rapid user interactions into a single fetch.
 
 **Rendering:**
+
 - Virtual scrolling by default for any non-trivial row count. The virtualizer must be the happy path, not an opt-in.
 - Avoid `v-for` over full row arrays without virtualization.
 - Use `v-memo` or keyed caching for cells that depend only on row data + column def (no reactive dependencies that change on every frame).
@@ -23,6 +25,7 @@ Performance is a first-class priority. Tables render large datasets and every un
 - Minimize slot prop objects — avoid creating new objects on every render. Reuse stable references where possible.
 
 **Data flow:**
+
 - Never copy the full results array for derived computations — use index-based access or computed slices.
 - Filter-to-Uniquery conversion must be allocation-light — avoid intermediate array/object copies per filter condition.
 - Column width calculations, sort comparisons, and cell formatting should be cached or memoized, not recomputed per render cycle.
@@ -34,12 +37,14 @@ Performance is a first-class priority. Tables render large datasets and every un
 Tables and forms are two views of the same underlying type metadata. They must share as much infrastructure as possible through `@atscript/ui-core`.
 
 **Already shared (must stay shared):**
+
 - **Annotation keys** (`ui.placeholder`, `ui.hidden`, `ui.component`, `meta.label`, etc.) — one definition for both form fields and table columns.
 - **FieldResolver** — the pluggable resolver (`resolveFieldProp`, `resolveFormProp`, `hasComputedAnnotations`) works identically for column and field metadata. ui-table must use the same resolver, not a parallel one.
 - **Path utilities** (`getByPath`, `setByPath`) — cell value access in tables and field value access in forms use the same helpers.
 - **Table types** — `ColumnDef`, `TableDef`, `MetaResponse`, etc. already live in `ui-core/src/table/` (see Existing Foundation below).
 
 **Form ↔ Table integration points:**
+
 - When a table row is opened for editing, the form's `FormDef` and the table's `ColumnDef` derive from the same atscript type. Column labels, visibility, ordering, and component overrides should be consistent without re-specifying them.
 - Inline cell editing should reuse form field components (from the types map) — not a parallel set of "table editor" components.
 - Validation (`getFormValidator`, `createFieldValidator`) is shared — inline edits and full-form edits use the same validation pipeline.
@@ -76,21 +81,21 @@ ODataEntitySet (renderless — provides metadata)
 
 ### Key Techniques
 
-| Technique | How not-sap does it |
-|-----------|---------------------|
-| **State management** | Provide/Inject composable (`useSmartTablePI`) — single source of truth for columns, filters, sorters, results, selection, pagination |
-| **Metadata → columns** | OData `EntitySet` fields with `$label`, `$sortable`, `$filterable`, `$MaxLength` |
-| **Query execution** | Watches `[columnsNames, sorters, fieldsFilters]` → debounced `query()` → `model.read()` with OData params |
-| **Filter system** | Per-field typed filters (`TODataTypedFilterValue`) with conditions: eq, ne, lt, le, gt, ge, starts, ends, contains, bw, empty, etc. |
-| **Filter conversion** | `fieldsFiltersToODataFilters()` → positive conditions OR'd, negative AND'd |
-| **Virtual scrolling** | `@tanstack/vue-virtual` via `SmartTableVirtualizer` wrapper |
-| **Selection** | Radix `ListboxRoot` for single/multi select with `selectAll` toggle |
-| **Pagination** | Strategies: hard-limit, pagination, load-more-btn, scroll-to-load |
-| **Column config** | Dialog with orderable list, dialog model is a copy (cancel-safe) |
-| **Presets/variants** | Save/load full table state (columns, filters, sorters) to backend |
-| **Cell rendering** | Named slots `#cell-{fieldName}` for custom cells, default uses SmartFieldValue |
-| **Column reorder** | Drag-and-drop in header |
-| **Column width** | Computed from `$MaxLength`: `min(max(len * 0.6, 12), 22) + 'em'` |
+| Technique              | How not-sap does it                                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| **State management**   | Provide/Inject composable (`useSmartTablePI`) — single source of truth for columns, filters, sorters, results, selection, pagination |
+| **Metadata → columns** | OData `EntitySet` fields with `$label`, `$sortable`, `$filterable`, `$MaxLength`                                                     |
+| **Query execution**    | Watches `[columnsNames, sorters, fieldsFilters]` → debounced `query()` → `model.read()` with OData params                            |
+| **Filter system**      | Per-field typed filters (`TODataTypedFilterValue`) with conditions: eq, ne, lt, le, gt, ge, starts, ends, contains, bw, empty, etc.  |
+| **Filter conversion**  | `fieldsFiltersToODataFilters()` → positive conditions OR'd, negative AND'd                                                           |
+| **Virtual scrolling**  | `@tanstack/vue-virtual` via `SmartTableVirtualizer` wrapper                                                                          |
+| **Selection**          | Radix `ListboxRoot` for single/multi select with `selectAll` toggle                                                                  |
+| **Pagination**         | Strategies: hard-limit, pagination, load-more-btn, scroll-to-load                                                                    |
+| **Column config**      | Dialog with orderable list, dialog model is a copy (cancel-safe)                                                                     |
+| **Presets/variants**   | Save/load full table state (columns, filters, sorters) to backend                                                                    |
+| **Cell rendering**     | Named slots `#cell-{fieldName}` for custom cells, default uses SmartFieldValue                                                       |
+| **Column reorder**     | Drag-and-drop in header                                                                                                              |
+| **Column width**       | Computed from `$MaxLength`: `min(max(len * 0.6, 12), 22) + 'em'`                                                                     |
 
 ---
 
@@ -117,6 +122,7 @@ HTTP client with built-in query builder. **No need to duplicate query building.*
 - `Client.count(query)` — count only
 
 Query is expressed via **Uniquery** objects from `@uniqu/core`:
+
 ```ts
 {
   filter: { status: "active", age: { $gt: 18 } },
@@ -206,21 +212,22 @@ packages/vue-table/
 
 ## Key Differences from not-sap
 
-| Aspect | not-sap | atscript |
-|--------|---------|----------|
-| **Metadata source** | OData `$metadata` XML → `EntitySet` fields | moost-db `/meta` JSON → `TableDef` via `createTableDef()` |
-| **Query execution** | `model.read(entitySet, params)` with OData URL | `Client.findManyWithCount(uniquery)` via db-client |
-| **Filter conversion** | `fieldsFiltersToODataFilters()` → OData $filter | `filtersToUniqueryFilter()` → Uniquery FilterExpr |
-| **Value help (F4)** | OData `ValueList` annotation → separate entity set query | Open question — requires "dictionary" concept design (see below) |
-| **UI components** | Hardcoded vunor (buttons, inputs, dialogs, tabs) | Unstyled HTML defaults + types map override (same as vue-form) |
-| **Presets storage** | SAP LRep Flex service | Pluggable — localStorage default, custom backend via adapter |
-| **Type info** | OData EDM types (Edm.String, Edm.DateTime, etc.) | atscript designType + tags (string, number, boolean, date, email, etc.) |
+| Aspect                | not-sap                                                  | atscript                                                                |
+| --------------------- | -------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **Metadata source**   | OData `$metadata` XML → `EntitySet` fields               | moost-db `/meta` JSON → `TableDef` via `createTableDef()`               |
+| **Query execution**   | `model.read(entitySet, params)` with OData URL           | `Client.findManyWithCount(uniquery)` via db-client                      |
+| **Filter conversion** | `fieldsFiltersToODataFilters()` → OData $filter          | `filtersToUniqueryFilter()` → Uniquery FilterExpr                       |
+| **Value help (F4)**   | OData `ValueList` annotation → separate entity set query | Open question — requires "dictionary" concept design (see below)        |
+| **UI components**     | Hardcoded vunor (buttons, inputs, dialogs, tabs)         | Unstyled HTML defaults + types map override (same as vue-form)          |
+| **Presets storage**   | SAP LRep Flex service                                    | Pluggable — localStorage default, custom backend via adapter            |
+| **Type info**         | OData EDM types (Edm.String, Edm.DateTime, etc.)         | atscript designType + tags (string, number, boolean, date, email, etc.) |
 
 ### Open Question: Value Help / Dictionaries
 
 In not-sap, the F4 (Value Help) dialog is a major feature: a full sub-table dialog for selecting filter values, powered by OData `Common.ValueList` annotation that points to another entity set with parameter mappings (In/Out/DisplayOnly).
 
 For atscript, this requires designing a **"dictionary" concept** end-to-end:
+
 - **Annotation layer** — how to annotate a field as having value help (e.g. `@ui.dictionary` pointing to a relation, or referencing another atscript type)
 - **moost-db layer** — a distinct values endpoint (or reuse `Client.aggregate` with `$groupBy`) + relation-based value help queries
 - **UI layer** — a value help dialog component (types map entry `valueHelpDialog`), integrated into the filter dialog
@@ -233,25 +240,26 @@ This is deferred to a future design pass. The filter system works without value 
 
 UI filter conditions mapped to Uniquery filter expressions:
 
-| Condition | Label | Uniquery expr | Example |
-|-----------|-------|---------------|---------|
-| `eq` | equals | `{ field: value }` | `{ status: "active" }` |
-| `ne` | not equals | `{ field: { $ne: value } }` | `{ status: { $ne: "active" } }` |
-| `gt` | greater than | `{ field: { $gt: value } }` | `{ age: { $gt: 18 } }` |
-| `gte` | greater or equal | `{ field: { $gte: value } }` | `{ age: { $gte: 18 } }` |
-| `lt` | less than | `{ field: { $lt: value } }` | `{ price: { $lt: 100 } }` |
-| `lte` | less or equal | `{ field: { $lte: value } }` | `{ price: { $lte: 100 } }` |
-| `contains` | contains | `{ field: { $regex: value } }` | `{ name: { $regex: "john" } }` |
-| `starts` | starts with | `{ field: { $regex: "^" + value } }` | `{ name: { $regex: "^Jo" } }` |
-| `ends` | ends with | `{ field: { $regex: value + "$" } }` | `{ email: { $regex: "gmail\\.com$" } }` |
-| `bw` | between | `{ field: { $gte: lo, $lte: hi } }` | `{ price: { $gte: 10, $lte: 100 } }` |
-| `in` | in set | `{ field: { $in: [...] } }` | `{ status: { $in: ["a", "b"] } }` |
-| `nin` | not in set | `{ field: { $nin: [...] } }` | `{ status: { $nin: ["a", "b"] } }` |
-| `null` | is empty | `{ field: { $exists: false } }` | `{ deletedAt: { $exists: false } }` |
-| `notNull` | is not empty | `{ field: { $exists: true } }` | `{ deletedAt: { $exists: true } }` |
-| `regex` | matches pattern | `{ field: { $regex: pattern } }` | `{ code: { $regex: "^[A-Z]{3}" } }` |
+| Condition  | Label            | Uniquery expr                        | Example                                 |
+| ---------- | ---------------- | ------------------------------------ | --------------------------------------- |
+| `eq`       | equals           | `{ field: value }`                   | `{ status: "active" }`                  |
+| `ne`       | not equals       | `{ field: { $ne: value } }`          | `{ status: { $ne: "active" } }`         |
+| `gt`       | greater than     | `{ field: { $gt: value } }`          | `{ age: { $gt: 18 } }`                  |
+| `gte`      | greater or equal | `{ field: { $gte: value } }`         | `{ age: { $gte: 18 } }`                 |
+| `lt`       | less than        | `{ field: { $lt: value } }`          | `{ price: { $lt: 100 } }`               |
+| `lte`      | less or equal    | `{ field: { $lte: value } }`         | `{ price: { $lte: 100 } }`              |
+| `contains` | contains         | `{ field: { $regex: value } }`       | `{ name: { $regex: "john" } }`          |
+| `starts`   | starts with      | `{ field: { $regex: "^" + value } }` | `{ name: { $regex: "^Jo" } }`           |
+| `ends`     | ends with        | `{ field: { $regex: value + "$" } }` | `{ email: { $regex: "gmail\\.com$" } }` |
+| `bw`       | between          | `{ field: { $gte: lo, $lte: hi } }`  | `{ price: { $gte: 10, $lte: 100 } }`    |
+| `in`       | in set           | `{ field: { $in: [...] } }`          | `{ status: { $in: ["a", "b"] } }`       |
+| `nin`      | not in set       | `{ field: { $nin: [...] } }`         | `{ status: { $nin: ["a", "b"] } }`      |
+| `null`     | is empty         | `{ field: { $exists: false } }`      | `{ deletedAt: { $exists: false } }`     |
+| `notNull`  | is not empty     | `{ field: { $exists: true } }`       | `{ deletedAt: { $exists: true } }`      |
+| `regex`    | matches pattern  | `{ field: { $regex: pattern } }`     | `{ code: { $regex: "^[A-Z]{3}" } }`     |
 
 **Regex conversion note:** Uniquery's `ComparisonOp` does not include `$contains`, `$starts`, or `$ends` natively. `filtersToUniqueryFilter()` converts these UI conditions to `$regex`:
+
 - `contains` → `$regex: escaped(value)`
 - `starts` → `$regex: "^" + escaped(value)`
 - `ends` → `$regex: escaped(value) + "$"`
@@ -270,6 +278,7 @@ Multiple conditions are combined following the same logic as not-sap:
 2. **Across fields:** all field groups are **AND'd** at the top level.
 
 Example with two fields:
+
 ```ts
 // UI state:
 //   status: [{ type: "eq", value: ["active"] }, { type: "eq", value: ["pending"] }]
@@ -278,10 +287,10 @@ Example with two fields:
 // Converts to:
 {
   $and: [
-    { $or: [{ status: "active" }, { status: "pending" }] },          // inclusion OR'd
-    { $or: [{ name: { $regex: "john" } }] },                         // inclusion OR'd (single)
-    { $and: [{ name: { $ne: "admin" } }] },                          // exclusion AND'd
-  ]
+    { $or: [{ status: "active" }, { status: "pending" }] }, // inclusion OR'd
+    { $or: [{ name: { $regex: "john" } }] }, // inclusion OR'd (single)
+    { $and: [{ name: { $ne: "admin" } }] }, // exclusion AND'd
+  ];
 }
 ```
 
@@ -289,26 +298,26 @@ Example with two fields:
 
 For date-type columns, the filter dialog offers quick-action shortcut buttons that insert a pre-filled `bw` (between) condition:
 
-| Shortcut | Range |
-|----------|-------|
-| Last 7 Days | 7 days ago → today |
-| Last 30 Days | 30 days ago → today |
-| Month to Date | 1st of current month → today |
-| Last 90 Days | 90 days ago → today |
-| Last 6 Months | 6 months ago → today |
-| Last 12 Months | 12 months ago → today |
-| Year to Date | Jan 1 of current year → today |
+| Shortcut       | Range                         |
+| -------------- | ----------------------------- |
+| Last 7 Days    | 7 days ago → today            |
+| Last 30 Days   | 30 days ago → today           |
+| Month to Date  | 1st of current month → today  |
+| Last 90 Days   | 90 days ago → today           |
+| Last 6 Months  | 6 months ago → today          |
+| Last 12 Months | 12 months ago → today         |
+| Year to Date   | Jan 1 of current year → today |
 
 Shortcuts calculate relative to the current date at click time. When applied, they replace existing conditions for that field with a single `bw` condition using ISO date strings (`YYYY-MM-DD`).
 
 ### Available Conditions per Column Type
 
-| Column type | Available conditions |
-|-------------|---------------------|
+| Column type     | Available conditions                                              |
+| --------------- | ----------------------------------------------------------------- |
 | `text` (string) | eq, ne, contains, starts, ends, bw, in, nin, null, notNull, regex |
-| `number` | eq, ne, gt, gte, lt, lte, bw, in, nin, null, notNull |
-| `boolean` | eq, ne, null, notNull |
-| `date` | eq, ne, gt, gte, lt, lte, bw, null, notNull + date shortcuts |
+| `number`        | eq, ne, gt, gte, lt, lte, bw, in, nin, null, notNull              |
+| `boolean`       | eq, ne, null, notNull                                             |
+| `date`          | eq, ne, gt, gte, lt, lte, bw, null, notNull + date shortcuts      |
 
 ---
 
@@ -321,57 +330,57 @@ Same philosophy as vue-form: ship unstyled HTML defaults that render a functiona
 ```ts
 interface TAsTableComponents {
   // Layout
-  table?: Component        // wraps <table> element
-  toolbar?: Component      // search + filter bar + config button
-  pagination?: Component   // page controls / load-more button
+  table?: Component; // wraps <table> element
+  toolbar?: Component; // search + filter bar + config button
+  pagination?: Component; // page controls / load-more button
 
   // Cells & headers
-  headerCell?: Component   // column header (label + sort indicator)
-  cellValue?: Component    // default cell renderer
-  columnMenu?: Component   // dropdown menu on header click
+  headerCell?: Component; // column header (label + sort indicator)
+  cellValue?: Component; // default cell renderer
+  columnMenu?: Component; // dropdown menu on header click
 
   // Filters
-  filterBar?: Component    // horizontal filter tokens bar
-  filterToken?: Component  // single filter chip
-  filterInput?: Component  // value input inside filter dialog (type-aware)
-  filterDialog?: Component // filter condition builder dialog
+  filterBar?: Component; // horizontal filter tokens bar
+  filterToken?: Component; // single filter chip
+  filterInput?: Component; // value input inside filter dialog (type-aware)
+  filterDialog?: Component; // filter condition builder dialog
 
   // Config
-  configDialog?: Component // columns/filters/sorters config dialog
-  fieldsSelector?: Component // orderable checkbox list
-  sortersConfig?: Component  // sorter list with direction toggle
+  configDialog?: Component; // columns/filters/sorters config dialog
+  fieldsSelector?: Component; // orderable checkbox list
+  sortersConfig?: Component; // sorter list with direction toggle
 
   // Presets
-  createPreset?: Component
-  managePresets?: Component
+  createPreset?: Component;
+  managePresets?: Component;
 
   // Primitives (shared with vue-form where possible)
-  input?: Component        // text input
-  select?: Component       // dropdown select
-  checkbox?: Component     // boolean checkbox
-  button?: Component       // action button
-  dialog?: Component       // modal dialog shell
-  icon?: Component         // icon renderer
+  input?: Component; // text input
+  select?: Component; // dropdown select
+  checkbox?: Component; // boolean checkbox
+  button?: Component; // action button
+  dialog?: Component; // modal dialog shell
+  icon?: Component; // icon renderer
 }
 ```
 
 ### Defaults provided
 
-| Component | Default implementation |
-|-----------|----------------------|
-| `table` | Plain `<table>` with sticky header CSS |
-| `toolbar` | `<div>` with search `<input>`, filter tokens, config `<button>` |
-| `pagination` | `<div>` with page info text, prev/next `<button>`, items-per-page `<select>` |
-| `headerCell` | `<th>` with label + sort arrow (▲/▼) + click-to-sort |
-| `cellValue` | `<td>` with type-aware formatting (numbers right-aligned, booleans as ✓/✗, dates formatted) |
-| `columnMenu` | Native `<details>/<summary>` dropdown with sort/filter/hide actions |
-| `filterBar` | `<div>` row of filter tokens |
-| `filterToken` | `<span>` chip with field:value text + × remove button |
-| `filterInput` | `<input>` with type=text/number/date based on column type |
-| `filterDialog` | `<dialog>` with condition rows |
-| `configDialog` | `<dialog>` with three fieldsets (columns, filters, sorters) |
-| `fieldsSelector` | `<ul>` with checkboxes, drag-to-reorder via native drag API |
-| `sortersConfig` | `<ul>` with asc/desc toggle buttons |
+| Component        | Default implementation                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------- |
+| `table`          | Plain `<table>` with sticky header CSS                                                      |
+| `toolbar`        | `<div>` with search `<input>`, filter tokens, config `<button>`                             |
+| `pagination`     | `<div>` with page info text, prev/next `<button>`, items-per-page `<select>`                |
+| `headerCell`     | `<th>` with label + sort arrow (▲/▼) + click-to-sort                                        |
+| `cellValue`      | `<td>` with type-aware formatting (numbers right-aligned, booleans as ✓/✗, dates formatted) |
+| `columnMenu`     | Native `<details>/<summary>` dropdown with sort/filter/hide actions                         |
+| `filterBar`      | `<div>` row of filter tokens                                                                |
+| `filterToken`    | `<span>` chip with field:value text + × remove button                                       |
+| `filterInput`    | `<input>` with type=text/number/date based on column type                                   |
+| `filterDialog`   | `<dialog>` with condition rows                                                              |
+| `configDialog`   | `<dialog>` with three fieldsets (columns, filters, sorters)                                 |
+| `fieldsSelector` | `<ul>` with checkboxes, drag-to-reorder via native drag API                                 |
+| `sortersConfig`  | `<ul>` with asc/desc toggle buttons                                                         |
 
 All defaults use semantic HTML, minimal inline styles for layout (sticky, flex), no external CSS framework.
 
@@ -384,6 +393,7 @@ All defaults use semantic HTML, minimal inline styles for layout (sticky, flex),
 Create `@atscript/ui-table` with framework-agnostic filter logic.
 
 **Scope:**
+
 - Filter model types (`FilterCondition`, `FilterValue`, `FieldFilters`)
 - Filter condition helpers (isFilled, has2ndValue, conditionLabel, available conditions per column type)
 - Available conditions map per column type (text/number/date/boolean — see Available Conditions per Column Type)
@@ -397,6 +407,7 @@ Create `@atscript/ui-table` with framework-agnostic filter logic.
 **No query builder** — db-client's `Client` handles query construction and HTTP.
 
 **Tests:**
+
 - Filter condition helpers
 - Filter-to-Uniquery conversion for all condition types (including regex conversion + escaping)
 - Filter combination logic (inclusion OR, exclusion AND, multi-field AND)
@@ -412,6 +423,7 @@ Create `@atscript/ui-table` with framework-agnostic filter logic.
 Create `@atscript/vue-table` with core composables and renderless provider.
 
 **Scope:**
+
 - `useTable(client)` — calls `client.meta()`, then `createTableDef()`, creates reactive state
 - `useTableState()` — provide/inject pattern (like not-sap's `useSmartTablePI`)
   - Provides: `tableDef`, `columns`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `selection`, `pagination`, `queryError`, `metadataError`, `mustRefresh`
@@ -430,6 +442,7 @@ Create `@atscript/vue-table` with core composables and renderless provider.
 - `as-table-root.vue` — renderless component that provides state via slot props (like SmartTableRoot)
 
 **Tests:**
+
 - `useTable` creates correct tableDef from mock meta
 - `useTableState` provide/inject works
 - `useTableQuery` triggers on state change, debounces
@@ -444,6 +457,7 @@ Create `@atscript/vue-table` with core composables and renderless provider.
 Add the table rendering components with unstyled defaults.
 
 **Scope:**
+
 - `as-table.vue` — entry point, accepts `components` types map (like as-form)
 - `as-table-base.vue` — `<table>` with sticky header, column highlight on hover, row click/double-click handlers, named slots (`#cell-{path}`, `#empty`, `#last-row`)
 - `as-table-header-cell.vue` — column name + sort indicator + click handler
@@ -468,6 +482,7 @@ Add the table rendering components with unstyled defaults.
 Add the filter system with default filter UI.
 
 **Scope:**
+
 - Filter components: `as-table-filters.vue`, `as-table-filter.vue`, `as-filter-conditions.vue` (see Package Structure for full layout)
 - Default components for this phase: filterBar, filterToken, filterInput, filterDialog (see Default Components section for specs)
 - `useTableFilter()` — per-field filter state composable
@@ -482,6 +497,7 @@ Add the filter system with default filter UI.
 Add table configuration UI with defaults.
 
 **Scope:**
+
 - Default components for this phase: configDialog, fieldsSelector, sortersConfig (see Default Components section for specs)
 - Dialog model copies (cancel-safe, apply on confirm) — same pattern as not-sap
 - Column reorder via drag-and-drop in table header
@@ -494,6 +510,7 @@ Add table configuration UI with defaults.
 Add full-text and vector search integration.
 
 **Scope:**
+
 - Full-text search integration via `client.search()`
 - Vector search support when `tableDef.vectorSearchable`
 - Search input in toolbar with debounced query trigger
@@ -506,6 +523,7 @@ Add full-text and vector search integration.
 Add table state persistence UI.
 
 **Scope:**
+
 - `useTablePresets()` — CRUD for saved table configurations
 - `PresetAdapter` interface — pluggable storage backend
   - `LocalStoragePresetAdapter` — default, stores per `tableKey` in localStorage
@@ -520,21 +538,25 @@ Add table state persistence UI.
 Create `@atscript/presets-server` — a Moost-based controller + atscript schema for storing table presets server-side.
 
 **Scope:**
+
 - `.as` schema defining the presets DB table (see Presets Schema below)
 - A Moost controller with REST endpoints for preset CRUD
 - The controller is extensible — users subclass or compose it to add auth guards, tenant scoping, etc.
 - Uses `@atscript/moost-db` internally for DB access (limited to simple CRUD — no complex queries)
 
 **User integration:**
+
 ```ts
 // User imports the .as schema and adds it to their DB
-import { PresetsController } from '@atscript/presets-server'
+import { PresetsController } from "@atscript/presets-server";
 
-@Controller('/presets')
+@Controller("/presets")
 class MyPresetsController extends PresetsController {
   // Override to add auth
   @Override()
-  getUserId() { return this.authService.currentUserId }
+  getUserId() {
+    return this.authService.currentUserId;
+  }
 }
 ```
 
@@ -555,6 +577,7 @@ class MyPresetsController extends PresetsController {
 Add a real backend to `vue-playground` so table components can be tested against live data.
 
 **Scope:**
+
 - Add a moost server to the playground package (separate entry point, e.g. `server/main.ts`)
 - SQLite as DB layer via `@atscript/moost-db` + `better-sqlite3`
 - Define several `.as` table schemas with varied field types:
@@ -582,20 +605,21 @@ The `@atscript/presets-server` package ships a `.as` atscript definition for the
 ```ts
 // Preset record structure
 interface TablePreset {
-  id: string                    // auto-generated UUID
-  tableKey: string              // identifies the table view (e.g. "products", "orders")
-  userId: string                // owner — provided by controller's getUserId()
-  label: string                 // user-visible preset name
-  shared: boolean               // visible to all users (default: false)
-  isDefault: boolean            // auto-apply on table mount for this user
-  content: {                    // serialized table state snapshot
-    columns?: string[]          // visible column paths in order
-    sorters?: SortControl[]     // active sorters
-    filters?: FieldFilters      // active filter state
-    itemsPerPage?: number       // page size
-  }
-  createdAt: Date
-  updatedAt: Date
+  id: string; // auto-generated UUID
+  tableKey: string; // identifies the table view (e.g. "products", "orders")
+  userId: string; // owner — provided by controller's getUserId()
+  label: string; // user-visible preset name
+  shared: boolean; // visible to all users (default: false)
+  isDefault: boolean; // auto-apply on table mount for this user
+  content: {
+    // serialized table state snapshot
+    columns?: string[]; // visible column paths in order
+    sorters?: SortControl[]; // active sorters
+    filters?: FieldFilters; // active filter state
+    itemsPerPage?: number; // page size
+  };
+  createdAt: Date;
+  updatedAt: Date;
 }
 ```
 
@@ -603,14 +627,18 @@ The `PresetAdapter` interface (used by `useTablePresets()` in vue-table) abstrac
 
 ```ts
 interface PresetAdapter {
-  list(tableKey: string): Promise<TablePreset[]>       // user's own + shared presets
-  create(tableKey: string, preset: Omit<TablePreset, 'id' | 'createdAt' | 'updatedAt'>): Promise<TablePreset>
-  update(tableKey: string, id: string, patch: Partial<TablePreset>): Promise<TablePreset>
-  delete(tableKey: string, id: string): Promise<void>
+  list(tableKey: string): Promise<TablePreset[]>; // user's own + shared presets
+  create(
+    tableKey: string,
+    preset: Omit<TablePreset, "id" | "createdAt" | "updatedAt">,
+  ): Promise<TablePreset>;
+  update(tableKey: string, id: string, patch: Partial<TablePreset>): Promise<TablePreset>;
+  delete(tableKey: string, id: string): Promise<void>;
 }
 ```
 
 Two adapters ship out of the box:
+
 - `LocalStoragePresetAdapter` — stores JSON in `localStorage` keyed by `as-presets:{tableKey}`, no auth, good for prototyping
 - `HttpPresetAdapter` — calls the `presets-server` REST endpoints, used in production
 
@@ -637,6 +665,7 @@ vue-playground               (Phase 9 — moost server + SQLite + demo views)
 ## Component Props Overview (vue-table)
 
 ### as-table-root
+
 ```ts
 {
   client: Client               // @atscript/db-client instance
@@ -656,6 +685,7 @@ v-model:searchTerm?: string    // two-way search input — toolbar writes, paren
 ```
 
 ### as-table
+
 ```ts
 {
   rows?: Record<string, unknown>[]  // override rows (if not using built-in query)
@@ -682,6 +712,7 @@ v-model:searchTerm?: string    // two-way search input — toolbar writes, paren
 ```
 
 ### as-table-filters
+
 ```ts
 // No props — reads from injected table state
 // Slots:

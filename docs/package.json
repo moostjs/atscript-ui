@@ -9,7 +9,9 @@
     "serve": "vitepress serve"
   },
   "devDependencies": {
-    "vitepress": "^1.6.4",
-    "vitepress-plugin-llmstxt": "^0.5.1"
+    "oxc-minify": "*",
+    "vitepress": "2.0.0-alpha.17",
+    "vitepress-plugin-llmstxt": "^0.5.1",
+    "vue": "catalog:"
   }
 }

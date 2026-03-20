@@ -4,19 +4,45 @@ import type { FilterConditionType } from "./filter-types";
 export type ColumnFilterType = "text" | "number" | "date" | "boolean";
 
 const TEXT_CONDITIONS: FilterConditionType[] = [
-  "eq", "ne", "contains", "starts", "ends", "bw", "in", "nin", "null", "notNull", "regex",
+  "eq",
+  "ne",
+  "contains",
+  "starts",
+  "ends",
+  "bw",
+  "in",
+  "nin",
+  "null",
+  "notNull",
+  "regex",
 ];
 
 const NUMBER_CONDITIONS: FilterConditionType[] = [
-  "eq", "ne", "gt", "gte", "lt", "lte", "bw", "in", "nin", "null", "notNull",
+  "eq",
+  "ne",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "bw",
+  "in",
+  "nin",
+  "null",
+  "notNull",
 ];
 
-const BOOLEAN_CONDITIONS: FilterConditionType[] = [
-  "eq", "ne", "null", "notNull",
-];
+const BOOLEAN_CONDITIONS: FilterConditionType[] = ["eq", "ne", "null", "notNull"];
 
 const DATE_CONDITIONS: FilterConditionType[] = [
-  "eq", "ne", "gt", "gte", "lt", "lte", "bw", "null", "notNull",
+  "eq",
+  "ne",
+  "gt",
+  "gte",
+  "lt",
+  "lte",
+  "bw",
+  "null",
+  "notNull",
 ];
 
 const CONDITIONS_MAP: Record<ColumnFilterType, FilterConditionType[]> = {

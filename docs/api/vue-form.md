@@ -14,10 +14,10 @@ pnpm add @atscript/vue-form
 
 ## Components
 
-| Component | Description |
-|-----------|-------------|
-| `AsForm` | Root form component — renders all fields from a definition |
-| `AsField` | Individual field renderer |
+| Component | Description                                                |
+| --------- | ---------------------------------------------------------- |
+| `AsForm`  | Root form component — renders all fields from a definition |
+| `AsField` | Individual field renderer                                  |
 
 ## Composables
 
@@ -26,10 +26,10 @@ pnpm add @atscript/vue-form
 Creates a reactive form definition and form data from an Atscript type reference.
 
 ```typescript
-import { useForm } from '@atscript/vue-form'
-import { MyForm } from './forms/my-form.as'
+import { useForm } from "@atscript/vue-form";
+import { MyForm } from "./forms/my-form.as";
 
-const { def, formData } = useForm(MyForm)
+const { def, formData } = useForm(MyForm);
 ```
 
 ### `createDefaultTypes()`
@@ -37,9 +37,9 @@ const { def, formData } = useForm(MyForm)
 Returns a type map with default HTML input components for each field type.
 
 ```typescript
-import { createDefaultTypes } from '@atscript/vue-form'
+import { createDefaultTypes } from "@atscript/vue-form";
 
-const types = createDefaultTypes()
+const types = createDefaultTypes();
 // Customize by replacing entries:
 // types.set('text', MyCustomTextInput)
 ```

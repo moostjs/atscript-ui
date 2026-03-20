@@ -78,7 +78,13 @@ watch(() => route.path, setupScrollAnimations);
             </div>
             <div class="arrow-separator">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
-                <path d="M5 12h14m-6-6 6 6-6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                <path
+                  d="M5 12h14m-6-6 6 6-6 6"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
               </svg>
             </div>
             <div class="form-side">
@@ -94,25 +100,37 @@ watch(() => route.path, setupScrollAnimations);
                 </div>
                 <div class="form-field">
                   <label class="form-label">Message</label>
-                  <textarea class="form-textarea" placeholder="Type your message..." disabled></textarea>
+                  <textarea
+                    class="form-textarea"
+                    placeholder="Type your message..."
+                    disabled
+                  ></textarea>
                 </div>
                 <button class="form-btn" disabled>Send</button>
               </div>
             </div>
           </div>
           <div class="schema-to-form-footer animate-in">
-            <p class="story-desc" style="margin-bottom: 0; text-align: center; max-width: 640px; margin-left: auto; margin-right: auto;">
+            <p
+              class="story-desc"
+              style="
+                margin-bottom: 0;
+                text-align: center;
+                max-width: 640px;
+                margin-left: auto;
+                margin-right: auto;
+              "
+            >
               Define labels, placeholders, field types, and validation in a single
               <code>.as</code> file — the form renders itself.
             </p>
-            <div class="story-links" style="justify-content: center;">
+            <div class="story-links" style="justify-content: center">
               <a href="/guide/quick-start" class="story-link">Quick Start</a>
               <a href="/forms/" class="story-link">Form Overview</a>
             </div>
           </div>
         </div>
       </section>
-
     </template>
   </Layout>
 </template>

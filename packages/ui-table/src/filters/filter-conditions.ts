@@ -9,12 +9,18 @@ export function isFilled(condition: FilterCondition): boolean {
 
   // bw needs both values
   if (type === "bw") {
-    return value.length >= 2 && value[0] != null && value[1] != null && value[0] !== "" && value[1] !== "";
+    return (
+      value.length >= 2 &&
+      value[0] != null &&
+      value[1] != null &&
+      value[0] !== "" &&
+      value[1] !== ""
+    );
   }
 
   // in/nin need at least one non-empty value
   if (type === "in" || type === "nin") {
-    return value.length > 0 && value.some((v) => v != null && v !== "");
+    return value.some((v) => v != null && v !== "");
   }
 
   // all others need value[0]

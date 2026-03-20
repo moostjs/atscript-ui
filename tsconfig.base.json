@@ -25,7 +25,9 @@
       "@atscript/vue-form": ["./packages/vue-form/src"],
       "@atscript/vue-form/*": ["./packages/vue-form/src/*"],
       "@atscript/ui-table": ["./packages/ui-table/src"],
-      "@atscript/ui-table/*": ["./packages/ui-table/src/*"]
+      "@atscript/ui-table/*": ["./packages/ui-table/src/*"],
+      "@atscript/vue-table": ["./packages/vue-table/src"],
+      "@atscript/vue-table/*": ["./packages/vue-table/src/*"]
     }
   }
 }

@@ -32,7 +32,7 @@ export default {
 // Apply colorization on client side
 if (typeof window !== "undefined") {
   const observer = new MutationObserver(() => {
-    nextTick(colorizeAtscriptAnnotations);
+    void nextTick(colorizeAtscriptAnnotations);
   });
   if (document.body) {
     observer.observe(document.body, { childList: true, subtree: true });

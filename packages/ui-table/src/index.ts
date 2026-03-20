@@ -23,3 +23,19 @@ export type { PresetSnapshot, Preset } from "./presets/preset-types";
 
 // ── Preset serializer ───────────────────────────────────────
 export { serializePreset, deserializePreset } from "./presets/preset-serializer";
+
+// ── Query builder ──────────────────────────────────────────
+export type { BuildTableQueryOptions } from "./query/build-table-query";
+export { buildTableQuery } from "./query/build-table-query";
+export { mergeSorters } from "./query/merge-sorters";
+export { mergeFilters } from "./query/merge-filters";
+
+// ── Selection ──────────────────────────────────────────────
+export type { SelectionMode, SelectionOptions } from "./selection/selection-state";
+export { SelectionState } from "./selection/selection-state";
+
+// ── State types ────────────────────────────────────────────
+export type { TableStateData, TableStateMethods } from "./state/table-state-types";
+
+// ── Utils ──────────────────────────────────────────────────
+export { debounce } from "./utils/debounce";

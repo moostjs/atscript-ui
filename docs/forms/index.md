@@ -11,19 +11,19 @@ Atscript UI forms are driven entirely by annotated type schemas. Define your for
 
 ## Annotations at a Glance
 
-| Annotation | Purpose |
-|------------|---------|
-| `@meta.label` | Field label text |
-| `@meta.required` | Mark field as required with error message |
-| `@meta.description` | Help text / description |
-| `@meta.default` | Default value |
-| `@ui.type` | Field input type (`text`, `number`, `select`, etc.) |
-| `@ui.placeholder` | Placeholder text |
-| `@ui.order` | Field display order |
-| `@ui.hidden` | Hide the field |
-| `@ui.disabled` | Disable the field |
-| `@ui.validate` | Custom validation function |
-| `@expect.min` | Minimum numeric value |
-| `@expect.max` | Maximum numeric value |
-| `@expect.minLength` | Minimum string length |
-| `@expect.maxLength` | Maximum string length |
+| Annotation          | Purpose                                             |
+| ------------------- | --------------------------------------------------- |
+| `@meta.label`       | Field label text                                    |
+| `@meta.required`    | Mark field as required with error message           |
+| `@meta.description` | Help text / description                             |
+| `@meta.default`     | Default value                                       |
+| `@ui.type`          | Field input type (`text`, `number`, `select`, etc.) |
+| `@ui.placeholder`   | Placeholder text                                    |
+| `@ui.order`         | Field display order                                 |
+| `@ui.hidden`        | Hide the field                                      |
+| `@ui.disabled`      | Disable the field                                   |
+| `@ui.validate`      | Custom validation function                          |
+| `@expect.min`       | Minimum numeric value                               |
+| `@expect.max`       | Maximum numeric value                               |
+| `@expect.minLength` | Minimum string length                               |
+| `@expect.maxLength` | Maximum string length                               |
