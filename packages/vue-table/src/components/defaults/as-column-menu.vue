@@ -19,6 +19,23 @@ const emit = defineEmits<{
 }>();
 
 const open = ref(false);
+const x = ref(0);
+const y = ref(0);
+
+function show(thElement: HTMLElement) {
+  const rect = thElement.getBoundingClientRect();
+  x.value = rect.left;
+  y.value = rect.bottom;
+  open.value = true;
+
+  const close = () => {
+    open.value = false;
+    document.removeEventListener("mousedown", close);
+  };
+  requestAnimationFrame(() => {
+    document.addEventListener("mousedown", close);
+  });
+}
 
 function sortAsc() {
   emit("sort", "asc");
@@ -34,16 +51,18 @@ function hide() {
   emit("hide");
   open.value = false;
 }
+
+defineExpose({ show });
 </script>
 
 <template>
-  <details
-    class="as-column-menu"
-    :open="open"
-    @toggle="open = ($event.target as HTMLDetailsElement).open"
-  >
-    <summary class="as-column-menu-trigger">&vellip;</summary>
-    <div class="as-column-menu-dropdown">
+  <Teleport to="body">
+    <div
+      v-if="open"
+      class="as-column-menu-dropdown"
+      :style="{ left: `${x}px`, top: `${y}px` }"
+      @mousedown.stop
+    >
       <template v-if="config.sort && props.column.sortable">
         <button type="button" class="as-column-menu-item" @click="sortAsc">
           &#x25B2; Sort Ascending
@@ -56,5 +75,5 @@ function hide() {
         &#x2716; Hide Column
       </button>
     </div>
-  </details>
+  </Teleport>
 </template>

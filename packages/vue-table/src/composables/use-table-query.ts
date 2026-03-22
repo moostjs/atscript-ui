@@ -1,13 +1,22 @@
-import { watch, onBeforeUnmount } from "vue";
+import { watch } from "vue";
 import type { Uniquery, FilterExpr } from "@uniqu/core";
 import type { SortControl } from "@atscript/ui-core";
-import { buildTableQuery, debounce } from "@atscript/ui-table";
+import { buildTableQuery } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 import type { TableStateInternals } from "./use-table-state";
 
+/** Page result shape — matches @atscript/db-client PageResult. */
+export interface PageResult {
+  data: Record<string, unknown>[];
+  count: number;
+  page: number;
+  itemsPerPage: number;
+  pages: number;
+}
+
 /** Client interface — structurally compatible with @atscript/db-client Client. */
 export interface TableClient {
-  findManyWithCount(query: Uniquery): Promise<{ data: Record<string, unknown>[]; count: number }>;
+  pages(query?: Uniquery, page?: number, size?: number): Promise<PageResult>;
 }
 
 export interface UseTableQueryOptions {
@@ -16,19 +25,17 @@ export interface UseTableQueryOptions {
   /** Always-applied sorters (prepended before user sorters). */
   forceSorters?: SortControl[];
   /** Override the default query function. */
-  queryFn?: (query: Uniquery) => Promise<{ data: Record<string, unknown>[]; count: number }>;
+  queryFn?: (query: Uniquery, page: number, size: number) => Promise<PageResult>;
   /** When true, queries are blocked. */
   blockQuery?: boolean;
-  /** Debounce delay in ms (default: 200). */
-  debounceMs?: number;
 }
 
 /**
- * Wire up reactive query execution on a table state.
+ * Wire up query execution on a table state.
  *
- * Watches columns/sorters/filters/pagination/searchTerm changes,
- * debounces, builds Uniquery via `buildTableQuery()` (ui-table),
- * and calls the client to fetch results.
+ * Queries are explicit via `state.query()` / `state.queryNext()`.
+ * After the first query, watchers on columns/sorters/filters/search
+ * automatically re-query on changes.
  */
 export function useTableQuery(
   client: TableClient,
@@ -37,7 +44,7 @@ export function useTableQuery(
   opts?: UseTableQueryOptions,
 ): void {
   let generation = 0;
-  const ms = opts?.debounceMs ?? 200;
+  let queryDetected = false;
 
   async function executeQuery(append: boolean) {
     if (opts?.blockQuery) return;
@@ -45,7 +52,6 @@ export function useTableQuery(
     const thisGen = ++generation;
     const queryingRef = append ? state.queryingNext : state.querying;
     queryingRef.value = true;
-    state.mustRefresh.value = false;
 
     try {
       const query = buildTableQuery({
@@ -58,10 +64,10 @@ export function useTableQuery(
         search: state.searchTerm.value || undefined,
       });
 
-      const fetcher = opts?.queryFn ?? ((q: Uniquery) => client.findManyWithCount(q));
-      const { data, count } = await fetcher(query);
+      const { page, itemsPerPage } = state.pagination.value;
+      const fetcher = opts?.queryFn ?? ((q: Uniquery, p: number, s: number) => client.pages(q, p, s));
+      const { data, count } = await fetcher(query, page, itemsPerPage);
 
-      // Discard stale results if a newer query was started
       if (thisGen !== generation) return;
 
       if (append) {
@@ -77,21 +83,13 @@ export function useTableQuery(
     } finally {
       if (thisGen === generation) {
         queryingRef.value = false;
-
-        // Re-trigger if state changed during the query
-        if (state.mustRefresh.value) {
-          state.mustRefresh.value = false;
-          debouncedQuery();
-        }
       }
     }
+
+    queryDetected = true;
   }
 
-  function queryReplace() {
-    // Reset to page 1 on filter/sort changes (no separate watcher needed)
-    if (state.pagination.value.page !== 1) {
-      state.pagination.value = { ...state.pagination.value, page: 1 };
-    }
+  function queryImmediate() {
     void executeQuery(false);
   }
 
@@ -101,29 +99,17 @@ export function useTableQuery(
     void executeQuery(true);
   }
 
-  const debouncedQuery = debounce(queryReplace, ms);
-
-  // Watch state changes and trigger debounced query
-  watch(
-    [
-      () => state.columns.value,
-      () => state.sorters.value,
-      () => state.filters.value,
-      () => state.searchTerm.value,
-    ],
-    () => {
-      if (generation > 0 && state.querying.value) {
-        state.mustRefresh.value = true;
-      } else {
-        debouncedQuery();
-      }
-    },
-  );
-
-  // Wire up state.query() and state.queryNext()
-  internals.setQueryFns(() => executeQuery(false), queryNext);
-
-  onBeforeUnmount(() => {
-    debouncedQuery.cancel();
+  // After first query, auto re-query on column/sorter changes
+  watch([() => state.columns.value, () => state.sorters.value], () => {
+    if (queryDetected) {
+      queryImmediate();
+    }
   });
+
+  // Filter/search changes just flag for refresh
+  watch([() => state.filters.value, () => state.searchTerm.value], () => {
+    state.mustRefresh.value = true;
+  });
+
+  internals.setQueryFns(queryImmediate, queryNext);
 }

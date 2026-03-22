@@ -235,29 +235,10 @@
 
 /* ── Column menu ─────────────────────────────────────── */
 
-.as-column-menu {
-  position: relative;
-  display: inline-block;
-}
-
-.as-column-menu-trigger {
-  cursor: pointer;
-  padding: 2px 4px;
-  font-size: 14px;
-  list-style: none;
-}
-
-.as-column-menu-trigger::-webkit-details-marker {
-  display: none;
-}
-
 .as-column-menu-dropdown {
-  position: absolute;
-  top: 100%;
-  right: 0;
+  position: fixed;
   z-index: 50;
-  min-width: 160px;
-  margin-top: 4px;
+  white-space: nowrap;
   padding: 4px 0;
   background: #fff;
   border: 1px solid #d1d5db;

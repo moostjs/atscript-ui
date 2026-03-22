@@ -45,10 +45,7 @@ export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
     $sort[s.field] = s.direction === "asc" ? 1 : -1;
   }
 
-  const controls: Uniquery["controls"] = {
-    $limit: opts.pagination.itemsPerPage,
-    $skip: (opts.pagination.page - 1) * opts.pagination.itemsPerPage,
-  };
+  const controls: Uniquery["controls"] = {};
 
   if (opts.visibleColumnPaths.length > 0) {
     controls.$select = opts.visibleColumnPaths;

@@ -3,18 +3,28 @@ packages:
   - docs
 
 catalog:
-  "@atscript/core": ^0.1.41
-  "@atscript/typescript": ^0.1.41
+  "@atscript/core": ^0.1.44
+  "@atscript/db": ^0.1.45
+  "@atscript/db-client": ^0.1.45
+  "@atscript/db-sqlite": ^0.1.45
+  "@atscript/moost-db": ^0.1.45
+  "@atscript/typescript": ^0.1.44
+  "@moostjs/event-http": ^0.6.4
+  '@moostjs/vite': ^0.6.4
   "@prostojs/deserialize-fn": ^0.0.5
+  '@swc/core': ^1.15.18
   "@tanstack/vue-virtual": ^3.13.23
   "@tsdown/css": ^0.21.4
   "@types/node": ^24
   "@uniqu/core": ^0.1.2
   "@vitejs/plugin-vue": ^6
   "@vue/test-utils": ^2
+  '@vueuse/core': ^14.2.1
   happy-dom: ^18
+  "moost": ^0.6.4
   typescript: ^5
-  unplugin-atscript: ^0.1.41
+  unplugin-atscript: ^0.1.44
+  unplugin-swc: ^1.5.9
   vite: npm:@voidzero-dev/vite-plus-core@0.1.12
   vite-plus: latest
   vitest: npm:@voidzero-dev/vite-plus-test@latest

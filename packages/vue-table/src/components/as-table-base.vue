@@ -30,6 +30,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   (e: "sort", column: ColumnDef, direction: "asc" | "desc" | null): void;
+  (e: "hide", column: ColumnDef): void;
   (e: "row-click", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "selection-toggle", row: Record<string, unknown>): void;
@@ -56,6 +57,10 @@ function hasHeaderSlot(path: string): boolean {
 
 function onSort(column: ColumnDef, direction: "asc" | "desc" | null) {
   emit("sort", column, direction);
+}
+
+function onHide(column: ColumnDef) {
+  emit("hide", column);
 }
 
 function onRowClick(row: Record<string, unknown>, event: MouseEvent) {
@@ -99,81 +104,86 @@ const useVirtual = computed(() => props.rows.length > 50);
   </div>
 
   <!-- Table with virtualizer -->
-  <AsTableVirtualizer
+  <div
     v-else-if="useVirtual"
-    :rows="rows"
-    :estimate-size="virtualRowHeight"
-    :overscan="virtualOverscan"
+    class="as-table-scroll-container"
+    data-virtual-scroll
+    style="overflow: auto"
   >
-    <template #default="{ virtualRows, totalSize }">
-      <table class="as-table" :class="{ 'as-table-sticky': stickyHeader }">
-        <thead>
-          <tr>
+    <table class="as-table" :class="{ 'as-table-sticky': stickyHeader }">
+      <thead>
+        <tr>
+          <th
+            v-if="selection && selection.mode !== 'none'"
+            class="as-th-select"
+            style="width: 3em"
+          >
+            <input
+              v-if="selection.mode === 'multi'"
+              type="checkbox"
+              :checked="selection.selectedCount === rows.length && rows.length > 0"
+              :indeterminate="
+                selection.selectedCount > 0 && selection.selectedCount < rows.length
+              "
+              @change="
+                selection!.selectedCount === rows.length
+                  ? selection!.deselectAll()
+                  : selection!.selectAll(rows)
+              "
+            />
+          </th>
+          <template v-for="col in columns" :key="col.path">
             <th
-              v-if="selection && selection.mode !== 'none'"
-              class="as-th-select"
-              style="width: 3em"
+              v-if="hasHeaderSlot(col.path)"
+              :style="{ width: getColumnWidth(col), minWidth: getColumnWidth(col) }"
             >
-              <input
-                v-if="selection.mode === 'multi'"
-                type="checkbox"
-                :checked="selection.selectedCount === rows.length && rows.length > 0"
-                :indeterminate="
-                  selection.selectedCount > 0 && selection.selectedCount < rows.length
-                "
-                @change="
-                  selection!.selectedCount === rows.length
-                    ? selection!.deselectAll()
-                    : selection!.selectAll(rows)
-                "
-              />
+              <slot :name="`header-${col.path}`" :column="col" />
             </th>
-            <template v-for="col in columns" :key="col.path">
-              <th
-                v-if="hasHeaderSlot(col.path)"
-                :style="{ width: getColumnWidth(col), minWidth: getColumnWidth(col) }"
-              >
-                <slot :name="`header-${col.path}`" :column="col" />
-              </th>
-              <AsTableHeaderCell
-                v-else
-                :column="col"
-                :sort-direction="sortMap[col.path] ?? null"
-                @sort="onSort"
-              />
-            </template>
-          </tr>
-        </thead>
-        <tbody :style="{ height: `${totalSize}px`, position: 'relative' }">
+            <AsTableHeaderCell
+              v-else
+              :column="col"
+              :sort-direction="sortMap[col.path] ?? null"
+              @sort="onSort"
+              @hide="onHide"
+            />
+          </template>
+        </tr>
+      </thead>
+      <AsTableVirtualizer
+        :count="rows.length"
+        :estimate-size="virtualRowHeight"
+        :overscan="virtualOverscan"
+      >
+        <template #default="{ index, spaceBefore }">
           <tr
-            v-for="vRow in virtualRows"
-            :key="vRow.index"
-            class="as-virtual-row"
-            :style="{ top: `${vRow.start}px`, height: `${virtualRowHeight}px` }"
-            :class="{ 'as-row-selected': isSelected(rows[vRow.index]!) }"
-            @click="onRowClick(rows[vRow.index]!, $event)"
-            @dblclick="onRowDblClick(rows[vRow.index]!, $event)"
+            :style="{
+              height: `${virtualRowHeight}px`,
+              transform: spaceBefore ? `translateY(${spaceBefore}px)` : undefined,
+            }"
+            :class="{ 'as-row-selected': isSelected(rows[index]!) }"
+            @click="onRowClick(rows[index]!, $event)"
+            @dblclick="onRowDblClick(rows[index]!, $event)"
           >
             <td v-if="selection && selection.mode !== 'none'" class="as-td-select">
-              <input type="checkbox" :checked="isSelected(rows[vRow.index]!)" tabindex="-1" />
+              <input type="checkbox" :checked="isSelected(rows[index]!)" tabindex="-1" />
             </td>
             <template v-for="col in columns" :key="col.path">
               <td v-if="hasCellSlot(col.path)">
                 <slot
                   :name="`cell-${col.path}`"
-                  :row="rows[vRow.index]!"
-                  :value="getCellValue(rows[vRow.index]!, col.path)"
+                  :row="rows[index]!"
+                  :value="getCellValue(rows[index]!, col.path)"
                   :column="col"
                 />
               </td>
-              <AsTableCellValue v-else :row="rows[vRow.index]!" :column="col" />
+              <AsTableCellValue v-else :row="rows[index]!" :column="col" />
             </template>
           </tr>
-        </tbody>
-      </table>
-      <slot name="last-row" />
-    </template>
-  </AsTableVirtualizer>
+        </template>
+      </AsTableVirtualizer>
+    </table>
+    <slot name="last-row" />
+  </div>
 
   <!-- Table without virtualizer (small datasets) -->
   <div v-else class="as-table-scroll-container" style="overflow: auto">
@@ -205,6 +215,7 @@ const useVirtual = computed(() => props.rows.length > 50);
               :column="col"
               :sort-direction="sortMap[col.path] ?? null"
               @sort="onSort"
+              @hide="onHide"
             />
           </template>
         </tr>

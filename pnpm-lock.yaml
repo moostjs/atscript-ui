@@ -7,11 +7,32 @@ settings:
 catalogs:
   default:
     '@atscript/core':
-      specifier: ^0.1.41
-      version: 0.1.41
+      specifier: ^0.1.44
+      version: 0.1.44
+    '@atscript/db':
+      specifier: ^0.1.45
+      version: 0.1.45
+    '@atscript/db-client':
+      specifier: ^0.1.45
+      version: 0.1.45
+    '@atscript/db-sqlite':
+      specifier: ^0.1.45
+      version: 0.1.45
+    '@atscript/moost-db':
+      specifier: ^0.1.45
+      version: 0.1.45
     '@atscript/typescript':
-      specifier: ^0.1.41
-      version: 0.1.41
+      specifier: ^0.1.44
+      version: 0.1.44
+    '@moostjs/event-http':
+      specifier: ^0.6.4
+      version: 0.6.4
+    '@moostjs/vite':
+      specifier: ^0.6.4
+      version: 0.6.4
+    '@swc/core':
+      specifier: ^1.15.18
+      version: 1.15.18
     '@tanstack/vue-virtual':
       specifier: ^3.13.23
       version: 3.13.23
@@ -30,15 +51,24 @@ catalogs:
     '@vue/test-utils':
       specifier: ^2
       version: 2.4.6
+    '@vueuse/core':
+      specifier: ^14.2.1
+      version: 14.2.1
     happy-dom:
       specifier: ^18
       version: 18.0.1
+    moost:
+      specifier: ^0.6.4
+      version: 0.6.4
     typescript:
       specifier: ^5
       version: 5.9.3
     unplugin-atscript:
-      specifier: ^0.1.41
-      version: 0.1.41
+      specifier: ^0.1.44
+      version: 0.1.44
+    unplugin-swc:
+      specifier: ^1.5.9
+      version: 1.5.9
     vite-plus:
       specifier: latest
       version: 0.1.12
@@ -89,7 +119,7 @@ importers:
     devDependencies:
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+        version: 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0))'
@@ -105,10 +135,10 @@ importers:
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.41
+        version: 0.1.44
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+        version: 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0))'
@@ -134,7 +164,7 @@ importers:
     devDependencies:
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+        version: 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
       '@atscript/ui-fns':
         specifier: workspace:^
         version: link:../ui-fns
@@ -162,6 +192,9 @@ importers:
 
   packages/vue-playground:
     dependencies:
+      '@atscript/db-client':
+        specifier: 'catalog:'
+        version: 0.1.45(@atscript/db@0.1.45)(@atscript/typescript@0.1.44)
       '@atscript/ui-core':
         specifier: workspace:^
         version: link:../ui-core
@@ -171,6 +204,9 @@ importers:
       '@atscript/vue-form':
         specifier: workspace:^
         version: link:../vue-form
+      '@atscript/vue-table':
+        specifier: workspace:^
+        version: link:../vue-table
       vue:
         specifier: 'catalog:'
         version: 3.5.30(typescript@5.9.3)
@@ -178,18 +214,45 @@ importers:
         specifier: 'catalog:'
         version: 4.6.4(vue@3.5.30(typescript@5.9.3))
     devDependencies:
+      '@atscript/db':
+        specifier: 'catalog:'
+        version: 0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)
+      '@atscript/db-sqlite':
+        specifier: 'catalog:'
+        version: 0.1.45(@atscript/core@0.1.44)(@atscript/db-sql-tools@0.1.43(@atscript/db@0.1.45)(@uniqu/core@0.1.2))(@atscript/db@0.1.45)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)(better-sqlite3@11.10.0)
+      '@atscript/moost-db':
+        specifier: 'catalog:'
+        version: 0.1.45(@atscript/db@0.1.45)(@atscript/typescript@0.1.44)(@moostjs/event-http@0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7))(@uniqu/core@0.1.2)(moost@0.6.4)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+        version: 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@moostjs/event-http':
+        specifier: 'catalog:'
+        version: 0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7)
+      '@moostjs/vite':
+        specifier: 'catalog:'
+        version: 0.6.4(@moostjs/event-http@0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7))(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(typescript@5.9.3))(moost@0.6.4)(sirv@3.0.2)
+      '@swc/core':
+        specifier: 'catalog:'
+        version: 1.15.18
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
         version: 6.0.5(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(typescript@5.9.3))(vue@3.5.30(typescript@5.9.3))
+      better-sqlite3:
+        specifier: ^11
+        version: 11.10.0
+      moost:
+        specifier: 'catalog:'
+        version: 0.6.4
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.41(@atscript/core@0.1.41)(@atscript/typescript@0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4))
+        version: 0.1.44(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)
+      unplugin-swc:
+        specifier: 'catalog:'
+        version: 1.5.9(@swc/core@1.15.18)
       vite:
         specifier: npm:@voidzero-dev/vite-plus-core@0.1.12
         version: '@voidzero-dev/vite-plus-core@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(typescript@5.9.3)'
@@ -205,7 +268,7 @@ importers:
     devDependencies:
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+        version: 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
       '@tanstack/vue-virtual':
         specifier: 'catalog:'
         version: 3.13.23(vue@3.5.30(typescript@5.9.3))
@@ -218,6 +281,9 @@ importers:
       '@vue/test-utils':
         specifier: 'catalog:'
         version: 2.4.6
+      '@vueuse/core':
+        specifier: 'catalog:'
+        version: 14.2.1(vue@3.5.30(typescript@5.9.3))
       happy-dom:
         specifier: 'catalog:'
         version: 18.0.1
@@ -233,15 +299,56 @@ importers:
 
 packages:
 
-  '@atscript/core@0.1.41':
-    resolution: {integrity: sha512-gA/PnHFASn17gSdFqbeRhuR1w12u3fSuLOMWhQaQRrbkGyoxmMuR4wMQQk2KVrYb/ZczxeLo9CNsVn+ftQW3Fg==}
+  '@atscript/core@0.1.44':
+    resolution: {integrity: sha512-pB9974K+o/cEPNgUxzI0IWJsfLy9Cp0tahPGktZ3IOuiFUPjMD19qpC/Z6KkOQrv6F9edE+C4zy+Wp35FaU9HQ==}
     hasBin: true
 
-  '@atscript/typescript@0.1.41':
-    resolution: {integrity: sha512-RO+oiM6MowjUOF0XcltBlT5lDUyfxHgHrYQLsryiJvEwDSPMukXF7f8LXZ8aBbHCx0uElDimGePBmZm/Cr+ZrA==}
+  '@atscript/db-client@0.1.45':
+    resolution: {integrity: sha512-B3wJ+10EdZcresdFpb+KGUFawokNU94urnGGkLY/64HaXJBLTDM7qdS4F8x+DLipe+4nJF5DbR1T2iCvU6QZvA==}
+    peerDependencies:
+      '@atscript/db': ^0.1.44
+      '@atscript/typescript': ^0.1.44
+
+  '@atscript/db-sql-tools@0.1.43':
+    resolution: {integrity: sha512-zN8irPzEnyXRLJOABQUxGjDm1ADCRbVatsh08HpWcvMJD4grRQ+lKogNDWpjNQP+AJPqkZ0Gqa36SvLWxpwkJw==}
+    peerDependencies:
+      '@atscript/db': ^0.1.43
+      '@uniqu/core': ^0.1.2
+
+  '@atscript/db-sqlite@0.1.45':
+    resolution: {integrity: sha512-ii4rLzBBwgDLLz6v+FmZIeAZC1SGipvolu2mdh+diJGM+hTYP75Nw31P2e0iidfIVXkme33lM0czQKXeV1lv0w==}
+    peerDependencies:
+      '@atscript/core': ^0.1.44
+      '@atscript/db': ^0.1.45
+      '@atscript/db-sql-tools': ^0.1.45
+      '@atscript/typescript': ^0.1.44
+      '@uniqu/core': ^0.1.2
+      better-sqlite3: '>=11.0.0'
+    peerDependenciesMeta:
+      better-sqlite3:
+        optional: true
+
+  '@atscript/db@0.1.45':
+    resolution: {integrity: sha512-SWKpZ3hnpqrI3mxWhZFnlHrarSkZKd4ZyP5pOsOpOYVsnbJzyK//McMFKkUcKzDI+f14vbs5ivB83TRQrlvoLw==}
+    peerDependencies:
+      '@atscript/core': ^0.1.44
+      '@atscript/typescript': ^0.1.44
+      '@uniqu/core': ^0.1.2
+
+  '@atscript/moost-db@0.1.45':
+    resolution: {integrity: sha512-Bd4ALeACkXylL9oaMj5qIiwDXnm9GhIG/g3k4xPxjRBudr4f0mM36UvDhHpRjOOdoZCqmFUUzdGlq+YZi/U6kw==}
+    peerDependencies:
+      '@atscript/db': ^0.1.45
+      '@atscript/typescript': ^0.1.44
+      '@moostjs/event-http': ^0.6.4
+      '@uniqu/core': ^0.1.2
+      moost: ^0.6.4
+
+  '@atscript/typescript@0.1.44':
+    resolution: {integrity: sha512-3kqDIT8cnLDjRajIRZPmjSue0t+o9XTWIEymfmEwnZWboVKgdiiJEqFqzAfIUjMqhKgtSDj99HJeHyHDa+cHCw==}
     hasBin: true
     peerDependencies:
-      '@atscript/core': ^0.1.41
+      '@atscript/core': ^0.1.44
       '@atscript/db': ^0.1.41
     peerDependenciesMeta:
       '@atscript/db':
@@ -329,13 +436,32 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@moostjs/event-cli@0.6.2':
-    resolution: {integrity: sha512-gsjkBvwLPheUZ+yYePYDyxfi6lEziCeyk7aiY53eqiQ2WvEGd5RWjv29mYrXUfApOzBfB0dB1oMBfXGN6uZY0Q==}
+  '@moostjs/event-cli@0.6.4':
+    resolution: {integrity: sha512-jKcPbHu/gxLpyN93jUS+oB/duw7/ftmKfSmMZ6KjfqHXglfN8QkzvFqGPYxB2LVBk3rb1hQ7okPBPrNDX8AsNQ==}
     hasBin: true
     peerDependencies:
-      '@wooksjs/event-core': ^0.7.4
-      moost: ^0.6.2
-      wooks: ^0.7.4
+      '@wooksjs/event-core': ^0.7.7
+      moost: ^0.6.4
+      wooks: ^0.7.7
+
+  '@moostjs/event-http@0.6.4':
+    resolution: {integrity: sha512-ytxe1nw10CHvCPzRlOD8dBbpgZ0HHCGdvDEOCURfbOpITgK6zj2BgXcRVZVqDcEtQXpT+l0XMsaZEU9ZChCPtg==}
+    hasBin: true
+    peerDependencies:
+      '@prostojs/infact': ^0.4.1
+      '@wooksjs/event-core': ^0.7.7
+      moost: ^0.6.4
+
+  '@moostjs/vite@0.6.4':
+    resolution: {integrity: sha512-0NjWW/zII0y1p32Mf7r5E7gzOBwv4kHTx/plBUbk1TVPWRlLs4ZIXWGWb2Mg3McTKsRbUrjo/2rpEiYPrmrVWg==}
+    peerDependencies:
+      '@moostjs/event-http': ^0.6.4
+      moost: ^0.6.4
+      sirv: ^3.0.0
+      vite: ^8.0.0
+    peerDependenciesMeta:
+      sirv:
+        optional: true
 
   '@napi-rs/wasm-runtime@1.1.1':
     resolution: {integrity: sha512-p64ah1M1ld8xjWv3qbvFwHiFVWrq1yFvV4f7w+mzaqiR4IlSgkqhcRdHwsGgomwzBH51sRY4NEowLxnaBjcW/A==}
@@ -989,6 +1115,15 @@ packages:
   '@rolldown/pluginutils@1.0.0-rc.9':
     resolution: {integrity: sha512-w6oiRWgEBl04QkFZgmW+jnU1EC9b57Oihi2ot3HNWIQRqgHp5PnYDia5iZ5FF7rpa4EQdiqMDXjlqKGXBhsoXw==}
 
+  '@rollup/pluginutils@5.3.0':
+    resolution: {integrity: sha512-5EdhGZtnu3V88ces7s53hhfK5KSASnJZv8Lulpc04cWO3REESroJXg73DFsOmgbU2BhwV0E20bu2IDZb3VKW4Q==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      rollup: ^1.20.0||^2.0.0||^3.0.0||^4.0.0
+    peerDependenciesMeta:
+      rollup:
+        optional: true
+
   '@shikijs/core@3.23.0':
     resolution: {integrity: sha512-NSWQz0riNb67xthdm5br6lAkvpDJRTgB36fxlo37ZzM2yq0PQFFzbd8psqC2XMPgCzo1fW6cVi18+ArJ44wqgA==}
 
@@ -1015,6 +1150,85 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
+
+  '@swc/core-darwin-arm64@1.15.18':
+    resolution: {integrity: sha512-+mIv7uBuSaywN3C9LNuWaX1jJJ3SKfiJuE6Lr3bd+/1Iv8oMU7oLBjYMluX1UrEPzwN2qCdY6Io0yVicABoCwQ==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@swc/core-darwin-x64@1.15.18':
+    resolution: {integrity: sha512-wZle0eaQhnzxWX5V/2kEOI6Z9vl/lTFEC6V4EWcn+5pDjhemCpQv9e/TDJ0GIoiClX8EDWRvuZwh+Z3dhL1NAg==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@swc/core-linux-arm-gnueabihf@1.15.18':
+    resolution: {integrity: sha512-ao61HGXVqrJFHAcPtF4/DegmwEkVCo4HApnotLU8ognfmU8x589z7+tcf3hU+qBiU1WOXV5fQX6W9Nzs6hjxDw==}
+    engines: {node: '>=10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@swc/core-linux-arm64-gnu@1.15.18':
+    resolution: {integrity: sha512-3xnctOBLIq3kj8PxOCgPrGjBLP/kNOddr6f5gukYt/1IZxsITQaU9TDyjeX6jG+FiCIHjCuWuffsyQDL5Ew1bg==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [glibc]
+
+  '@swc/core-linux-arm64-musl@1.15.18':
+    resolution: {integrity: sha512-0a+Lix+FSSHBSBOA0XznCcHo5/1nA6oLLjcnocvzXeqtdjnPb+SvchItHI+lfeiuj1sClYPDvPMLSLyXFaiIKw==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [linux]
+    libc: [musl]
+
+  '@swc/core-linux-x64-gnu@1.15.18':
+    resolution: {integrity: sha512-wG9J8vReUlpaHz4KOD/5UE1AUgirimU4UFT9oZmupUDEofxJKYb1mTA/DrMj0s78bkBiNI+7Fo2EgPuvOJfuAA==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [glibc]
+
+  '@swc/core-linux-x64-musl@1.15.18':
+    resolution: {integrity: sha512-4nwbVvCphKzicwNWRmvD5iBaZj8JYsRGa4xOxJmOyHlMDpsvvJ2OR2cODlvWyGFH6BYL1MfIAK3qph3hp0Az6g==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [linux]
+    libc: [musl]
+
+  '@swc/core-win32-arm64-msvc@1.15.18':
+    resolution: {integrity: sha512-zk0RYO+LjiBCat2RTMHzAWaMky0cra9loH4oRrLKLLNuL+jarxKLFDA8xTZWEkCPLjUTwlRN7d28eDLLMgtUcQ==}
+    engines: {node: '>=10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@swc/core-win32-ia32-msvc@1.15.18':
+    resolution: {integrity: sha512-yVuTrZ0RccD5+PEkpcLOBAuPbYBXS6rslENvIXfvJGXSdX5QGi1ehC4BjAMl5FkKLiam4kJECUI0l7Hq7T1vwg==}
+    engines: {node: '>=10'}
+    cpu: [ia32]
+    os: [win32]
+
+  '@swc/core-win32-x64-msvc@1.15.18':
+    resolution: {integrity: sha512-7NRmE4hmUQNCbYU3Hn9Tz57mK9Qq4c97ZS+YlamlK6qG9Fb5g/BB3gPDe0iLlJkns/sYv2VWSkm8c3NmbEGjbg==}
+    engines: {node: '>=10'}
+    cpu: [x64]
+    os: [win32]
+
+  '@swc/core@1.15.18':
+    resolution: {integrity: sha512-z87aF9GphWp//fnkRsqvtY+inMVPgYW3zSlXH1kJFvRT5H/wiAn+G32qW5l3oEk63KSF1x3Ov0BfHCObAmT8RA==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      '@swc/helpers': '>=0.5.17'
+    peerDependenciesMeta:
+      '@swc/helpers':
+        optional: true
+
+  '@swc/counter@0.1.3':
+    resolution: {integrity: sha512-e2BR4lsJkkRlKZ/qCHPw9ZaSxc0MVUd7gtbtaB7aMvHeJVYe8sOB8DBZkP2DtISHGSku9sCK6T6cnY0CtXrOCQ==}
+
+  '@swc/types@0.1.25':
+    resolution: {integrity: sha512-iAoY/qRhNH8a/hBvm3zKj9qQ4oc2+3w1unPJa2XvTK3XjeLXtzcCingVPw/9e5mn1+0yPqxcBGp9Jf0pkfMb1g==}
 
   '@tanstack/virtual-core@3.13.23':
     resolution: {integrity: sha512-zSz2Z2HNyLjCplANTDyl3BcdQJc2k1+yyFoKhNRmCr7V7dY8o8q5m8uFTI1/Pg1kL+Hgrz6u3Xo6eFUB7l66cg==}
@@ -1096,6 +1310,9 @@ packages:
 
   '@uniqu/core@0.1.2':
     resolution: {integrity: sha512-TTJdXBczPW0rLYH6jFYOv1ZxAREFaNV2BIN6hjMc4Fyaq3vJKieSyKoErfWqCtTiMnQeu1h/syjhDTs+lO2qKQ==}
+
+  '@uniqu/url@0.1.2':
+    resolution: {integrity: sha512-zyDsBrulqwc0kyNU4NBEz7FmORN160oOkLUrHt75vop6vxq0i22yMiXSJcDKqU1qu/XMZBGPALeioThawyh/Mw==}
 
   '@vitejs/plugin-vue@6.0.5':
     resolution: {integrity: sha512-bL3AxKuQySfk1iGcBsQnoRVexTPJq0Z/ixFVM8OhVJAP6ZXXXLtM7NFKWhLl30Kg7uTBqIaPXbh+nuQCuBDedg==}
@@ -1423,18 +1640,33 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
-  '@wooksjs/event-cli@0.7.4':
-    resolution: {integrity: sha512-/nBW3p2Zq/jEY0JhptmfcOfaMgt2P/rhn8d4jcdqj2PGLXmvdy+of4Pqa/WQUbX4Gzi6Tc27l4yZSkRMueTvSQ==}
+  '@wooksjs/event-cli@0.7.7':
+    resolution: {integrity: sha512-ogQQ4IqvrTjU5gzJ4NOcrdZ72HdVKDp6WTyEmsad1chYBJDSv34Hd7TH88FJSk3FXAGKQrw/NOPC3vgsE4iarA==}
     hasBin: true
     peerDependencies:
       '@prostojs/logger': ^0.4.3
       '@prostojs/router': ^0.3.3
-      '@wooksjs/event-core': ^0.7.4
-      wooks: ^0.7.4
+      '@wooksjs/event-core': ^0.7.7
+      wooks: ^0.7.7
 
-  '@wooksjs/event-core@0.7.4':
-    resolution: {integrity: sha512-Iqd8/h1d3zSFmAK8b+xpt9rIbYck3PD6wCZfdo5cNGS7Dfyugvb0s2TJH6P4IdvntxKFvzJgVkfhppXBDBdJpg==}
+  '@wooksjs/event-core@0.7.7':
+    resolution: {integrity: sha512-OQMmA3uyN8eAyNiitqR50Qyk1tBcV9yNr1xQTI75UJg3VZ5FIt+I6UzgDH4VzUOBgaKtnl9P6nmkuufTZ+IYsg==}
     hasBin: true
+
+  '@wooksjs/event-http@0.7.7':
+    resolution: {integrity: sha512-yDUO7igOquv7XOD2jwMOfjScd/2NFOXstqa+bDEV4HMR4sxNekGQcHcvAVwRSIheYkGUfLVYfFdLmVGq8nYHqw==}
+    hasBin: true
+    peerDependencies:
+      '@prostojs/logger': ^0.4.3
+      '@prostojs/router': ^0.3.3
+      '@wooksjs/event-core': ^0.7.7
+      wooks: ^0.7.7
+
+  '@wooksjs/http-body@0.7.7':
+    resolution: {integrity: sha512-iFxO95xW318G4kM3Loo2euMibO8Yw/QqKX8Xidcqpk0iQMdV23DxSOPOm8e7jP/7iYC0wKxUx31rf1YjCAxuCw==}
+    peerDependencies:
+      '@wooksjs/event-core': ^0.7.7
+      '@wooksjs/event-http': ^0.7.7
 
   abbrev@2.0.0:
     resolution: {integrity: sha512-6/mh1E2u2YgEsCHdY0Yx5oW+61gZU+1vXaoiHHrpKeuRNNgFvS+/jrwHiQhB5apAf5oB7UB7E19ol2R2LKH8hQ==}
@@ -1483,11 +1715,23 @@ packages:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
 
+  base64-js@1.5.1:
+    resolution: {integrity: sha512-AKpaYlHn8t4SVbOHCy+b5+KKgvR4vrsD8vbvrbiQJps7fKDTkjkDry6ji0rUJjC0kzbNePLwzxq8iypo41qeWA==}
+
+  better-sqlite3@11.10.0:
+    resolution: {integrity: sha512-EwhOpyXiOEL/lKzHz9AW1msWFNzGc/z+LzeB3/jnFJpxu+th2yqvzsSWas1v9jgs9+xiXJcD5A8CJxAG2TaghQ==}
+
+  bindings@1.5.0:
+    resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
+
   birpc@2.9.0:
     resolution: {integrity: sha512-KrayHS5pBi69Xi9JmvoqrIgYGDkD6mcSe/i6YKi3w5kekCLzrX4+nawcXqrj2tIp50Kw/mT/s3p+GVK0A0sKxw==}
 
   birpc@4.0.0:
     resolution: {integrity: sha512-LShSxJP0KTmd101b6DRyGBj57LZxSDYWKitQNW/mi8GRMvZb078Uf9+pveax1DrVL89vm7mWe+TovdI/UDOuPw==}
+
+  bl@4.1.0:
+    resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
 
   brace-expansion@2.0.2:
     resolution: {integrity: sha512-Jt0vHyM+jmUBqojB7E1NIYadt0vI0Qxjxd2TErW94wDz+E2LAm5vKMXXwg6ZZBTHPuUlDgQHKXvjGBdfcF1ZDQ==}
@@ -1495,6 +1739,9 @@ packages:
   brace-expansion@5.0.4:
     resolution: {integrity: sha512-h+DEnpVvxmfVefa4jFbCf5HdH5YMDXRsmKflpf1pILZWRFlTbJpxeU55nJl4Smt5HQaGzg1o6RHFPJaOqnmBDg==}
     engines: {node: 18 || 20 || >=22}
+
+  buffer@5.7.1:
+    resolution: {integrity: sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ==}
 
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
@@ -1512,6 +1759,9 @@ packages:
 
   character-entities-legacy@3.0.0:
     resolution: {integrity: sha512-RpPp0asT/6ufRm//AJVwpViZbGM/MkjQFxJccQRHmISF/22NBtsHqAWmL+/pmkPWoIUJdWyeVleTl1wydHATVQ==}
+
+  chownr@1.1.4:
+    resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -1536,6 +1786,14 @@ packages:
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
+
+  decompress-response@6.0.0:
+    resolution: {integrity: sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==}
+    engines: {node: '>=10'}
+
+  deep-extend@0.6.0:
+    resolution: {integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==}
+    engines: {node: '>=4.0.0'}
 
   defu@6.1.4:
     resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
@@ -1578,6 +1836,9 @@ packages:
     resolution: {integrity: sha512-i6UzDscO/XfAcNYD75CfICkmfLedpyPDdozrLMmQc5ORaQcdMoc21OnlEylMIqI7U8eniKrPMxxtj8k0vhmJhA==}
     engines: {node: '>=14'}
 
+  end-of-stream@1.4.5:
+    resolution: {integrity: sha512-ooEGc6HP26xXq/N+GCGOT0JKCLDGrq2bQUZrQ7gyrJiZANJ/8YDTxTpQBXGMn+WbIQXNVpyWymm7KYVICQnyOg==}
+
   entities@7.0.1:
     resolution: {integrity: sha512-TWrgLOFUQTH994YUyl1yT4uyavY5nNB5muff+RtWaqNVCAK408b5ZnnbNAUEWLTCpum9w6arT70i1XdQ4UeOPA==}
     engines: {node: '>=0.12'}
@@ -1591,6 +1852,10 @@ packages:
   estree-walker@3.0.3:
     resolution: {integrity: sha512-7RUKfXgSMMkzt6ZuXmqapOurLGPPfgj6l9uRZ7lRGolvk0y2yocc35LdcxKC5PQZdn2DMqioAQ2NoWcrTKmm6g==}
 
+  expand-template@2.0.3:
+    resolution: {integrity: sha512-XYfuKMvj4O35f/pOXLObndIRvyQ+/+6AhODh+OKWj9S9498pHHn/IMszH+gt0fBCRWMNfk1ZSp5x3AifmnI2vg==}
+    engines: {node: '>=6'}
+
   fdir@6.5.0:
     resolution: {integrity: sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==}
     engines: {node: '>=12.0.0'}
@@ -1600,12 +1865,18 @@ packages:
       picomatch:
         optional: true
 
+  file-uri-to-path@1.0.0:
+    resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
+
   focus-trap@8.0.0:
     resolution: {integrity: sha512-Aa84FOGHs99vVwufDMdq2qgOwXPC2e9U66GcqBhn1/jEHPDhJaP8PYhkIbqG9lhfL5Kddk/567lj46LLHYCRUw==}
 
   foreground-child@3.3.1:
     resolution: {integrity: sha512-gIXjKqtFuWEgzFRJA9WCQeSJLZDjgJUOMCMzxtvFq/37KojM1BFGufqsCy0r4qSQmYLsZYMeyRqzIWOMup03sw==}
     engines: {node: '>=14'}
+
+  fs-constants@1.0.0:
+    resolution: {integrity: sha512-y6OAwoSIf7FyjMIv94u+b5rdheZEjzR63GTyZJm5qh4Bi+2YgwLCcI/fPFZkL5PSixOt6ZNKm+w+Hfp/Bciwow==}
 
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
@@ -1614,6 +1885,9 @@ packages:
 
   get-tsconfig@4.13.6:
     resolution: {integrity: sha512-shZT/QMiSHc/YBLxxOkMtgSid5HFoauqCE3/exfsEcwg1WkeqjG+V40yBbBrsD+jW2HDXcs28xOfcbm2jI8Ddw==}
+
+  github-from-package@0.0.0:
+    resolution: {integrity: sha512-SyHy3T1v2NUXn29OsWdxmK6RwHD+vkj3v8en8AOBZ1wBQ/hCAQ5bAQTD02kW4W9tUp/3Qh6J8r9EvntiyCmOOw==}
 
   glob@10.5.0:
     resolution: {integrity: sha512-DfXN8DfhJ7NH3Oe7cFmu3NCu1wKbkReJ8TorzSAFbSKrlNaQSKfIzqYqVY8zlbs2NLBbWpRiU52GX2PbaBVNkg==}
@@ -1643,9 +1917,15 @@ packages:
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
 
+  ieee754@1.2.1:
+    resolution: {integrity: sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA==}
+
   import-without-cache@0.2.5:
     resolution: {integrity: sha512-B6Lc2s6yApwnD2/pMzFh/d5AVjdsDXjgkeJ766FmFuJELIGHNycKRj+l3A39yZPM4CchqNCB4RITEAYB1KUM6A==}
     engines: {node: '>=20.19.0'}
+
+  inherits@2.0.4:
+    resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
 
   ini@1.3.8:
     resolution: {integrity: sha512-JV/yugV2uzW5iMRSiZAyDtQd+nxtUnjeLt0acNdw98kKLrvuRVyB80tsREOE7yvGVgalhZ6RNXCmEHkUKBKxew==}
@@ -1752,6 +2032,10 @@ packages:
     resolution: {integrity: sha512-/vlFKAoH5Cgt3Ie+JLhRbwOsCQePABiU3tJ1egGvyQ+33R/vcwM2Zl2QR/LzjsBeItPt3oSVXapn+m4nQDvpzw==}
     engines: {node: '>=14'}
 
+  load-tsconfig@0.2.5:
+    resolution: {integrity: sha512-IXO6OCs9yg8tMKzfPZ1YmheJbZCiEsnBdcB03l0OcfK9prKnJb96siuHCr5Fl37/yo9DnKU+TLpxzTUspw9shg==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
@@ -1783,6 +2067,10 @@ packages:
   micromark-util-types@2.0.2:
     resolution: {integrity: sha512-Yw0ECSpJoViF1qTU4DC6NwtC4aWGt1EkzaQB8KPPyCRR8z9TWeV0HbEFGTO+ZY1wB22zmxnJqhPyTpOVCpeHTA==}
 
+  mimic-response@3.1.0:
+    resolution: {integrity: sha512-z0yWI+4FDrrweS8Zmt4Ej5HdJmky15+L2e6Wgn3+iK5fWzb6T3fhNFq2+MeTRb064c6Wr4N/wv0DzQTjNzHNGQ==}
+    engines: {node: '>=10'}
+
   minimatch@10.2.4:
     resolution: {integrity: sha512-oRjTw/97aTBN0RHbYCdtF1MQfvusSIBQM0IZEgzl6426+8jSC0nF1a/GmnVLpfB9yyr6g6FTqWqiZVbxrtaCIg==}
     engines: {node: 18 || 20 || >=22}
@@ -1801,8 +2089,11 @@ packages:
   minisearch@7.2.0:
     resolution: {integrity: sha512-dqT2XBYUOZOiC5t2HRnwADjhNS2cecp9u+TJRiJ1Qp/f5qjkeT5APcGPjHw+bz89Ms8Jp+cG4AlE+QZ/QnDglg==}
 
-  moost@0.6.2:
-    resolution: {integrity: sha512-P1o+MaX2a6hbYrI62VUCWk97SwDiyJpfhOz0T+DTvccEm8YkzwdG/CV46xySVM0NC9a6ve6DXYGRArtUvUqDXg==}
+  mkdirp-classic@0.5.3:
+    resolution: {integrity: sha512-gKLcREMhtuZRwRAfqP3RFW+TK4JqApVBtOIftVgjuABpAtpxhPGaDcfvbhNvD0B8iD1oUr/txX35NjcaY6Ns/A==}
+
+  moost@0.6.4:
+    resolution: {integrity: sha512-QYNThlT6PsiOF5edQFs1tgJVSG2RZx4ag1c2tHOu7cAar9+1GPg+Rp2dwAHJwPHKTuWOZCzkxw99Q13+09TELA==}
     hasBin: true
 
   mrmime@2.0.1:
@@ -1817,6 +2108,13 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
+  napi-build-utils@2.0.0:
+    resolution: {integrity: sha512-GEbrYkbfF7MoNaoh2iGG84Mnf/WZfB0GdGEsM8wz7Expx/LlWf5U8t9nvJKXSp3qr5IsEbK04cBGhol/KwOsWA==}
+
+  node-abi@3.89.0:
+    resolution: {integrity: sha512-6u9UwL0HlAl21+agMN3YAMXcKByMqwGx+pq+P76vii5f7hTPtKDp08/H9py6DY+cfDw7kQNTGEj/rly3IgbNQA==}
+    engines: {node: '>=10'}
+
   nopt@7.2.1:
     resolution: {integrity: sha512-taM24ViiimT/XntxbPyJQzCG+p4EKOpgD3mxFwW38mGjVUrfERQOeY4EDHjdnptttfHuHQXFx+lTP08Q+mLa/w==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
@@ -1824,6 +2122,9 @@ packages:
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
+
+  once@1.4.0:
+    resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
   oniguruma-parser@0.12.1:
     resolution: {integrity: sha512-8Unqkvk1RYc6yq2WBYRj4hdnsAxVze8i7iPfQr8e4uSP3tRv0rpZcbGUDvxfQQcdwHt/e9PrMvGCsa8OqG9X3w==}
@@ -1915,14 +2216,31 @@ packages:
     resolution: {integrity: sha512-OW/rX8O/jXnm82Ey1k44pObPtdblfiuWnrd8X7GJ7emImCOstunGbXUpp7HdBrFQX6rJzn3sPT397Wp5aCwCHg==}
     engines: {node: ^10 || ^12 || >=14}
 
+  prebuild-install@7.1.3:
+    resolution: {integrity: sha512-8Mf2cbV7x1cXPUILADGI3wuhfqWvtiLA1iclTDbFRZkgRQS0NqsPZphna9V+HyTEadheuPmjaJMsbzKQFOzLug==}
+    engines: {node: '>=10'}
+    deprecated: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+    hasBin: true
+
   property-information@7.1.0:
     resolution: {integrity: sha512-TwEZ+X+yCJmYfL7TPUOcvBZ4QfoT5YenQiJuX//0th53DE6w0xxLEtfK3iyryQFddXuvkIk51EEgrJQ0WJkOmQ==}
 
   proto-list@1.2.4:
     resolution: {integrity: sha512-vtK/94akxsTMhe0/cbfpR+syPuszcuwhqVjJq26CuNDgFGj682oRBXOP5MJpv2r7JtE8MsiepGIqvvOTBwn2vA==}
 
+  pump@3.0.4:
+    resolution: {integrity: sha512-VS7sjc6KR7e1ukRFhQSY5LM2uBWAUPiOPa/A3mkKmiMwSmRFUITt0xuj+/lesgnCv+dPIEYlkzrcyXgquIHMcA==}
+
   quansync@1.0.0:
     resolution: {integrity: sha512-5xZacEEufv3HSTPQuchrvV6soaiACMFnq1H8wkVioctoH3TRha9Sz66lOxRwPK/qZj7HPiSveih9yAyh98gvqA==}
+
+  rc@1.2.8:
+    resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
+    hasBin: true
+
+  readable-stream@3.6.2:
+    resolution: {integrity: sha512-9u/sniCrY3D5WdsERHzHE4G2YCXqoG5FTHUiCC4SIbr6XcLZBY05ya9EKjYek9O5xOAwjGq+1JdGBAS7Q9ScoA==}
+    engines: {node: '>= 6'}
 
   regex-recursion@6.0.2:
     resolution: {integrity: sha512-0YCaSCq2VRIebiaUviZNs0cBz1kg5kVS2UKUfNIx8YVs1cN3AV7NTctO5FOKBA+UT2BPJIWZauYHPqJODG50cg==}
@@ -1965,6 +2283,9 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
+  safe-buffer@5.2.1:
+    resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
+
   semver@7.7.4:
     resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
     engines: {node: '>=10'}
@@ -1984,6 +2305,12 @@ packages:
   signal-exit@4.1.0:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
+
+  simple-concat@1.0.1:
+    resolution: {integrity: sha512-cSFtAPtRhljv69IK0hTVZQ+OfE9nePi/rtJmw5UjHeVyVroEqJXP1sFztKUy1qU+xvz3u/sfYJLa947b7nAN2Q==}
+
+  simple-get@4.0.1:
+    resolution: {integrity: sha512-brv7p5WgH0jmQJr1ZDDfKDOSeWWg+OVypG99A/5vYGPqJ6pxiaHLy8nxtFjBA7oMa01ebA9gfh1uMCFqOuXxvA==}
 
   sirv@3.0.2:
     resolution: {integrity: sha512-2wcC/oGxHis/BoHkkPwldgiPSYcpZK3JU28WoMVv55yHJgcZ8rlXvuG9iZggz+sU1d4bRgIGASwyWqjxu3FM0g==}
@@ -2007,6 +2334,9 @@ packages:
     resolution: {integrity: sha512-HnLOCR3vjcY8beoNLtcjZ5/nxn2afmME6lhrDrebokqMap+XbeW8n9TXpPDOqdGK5qcI3oT0GKTW6wC7EMiVqA==}
     engines: {node: '>=12'}
 
+  string_decoder@1.3.0:
+    resolution: {integrity: sha512-hkRX8U1WjJFd8LsDJ2yQ/wWWxaopEsABU1XfkM8A+j0+85JAGppt16cr1Whg6KIbb4okU6Mql6BOj+uup/wKeA==}
+
   stringify-entities@4.0.4:
     resolution: {integrity: sha512-IwfBptatlO+QCJUo19AqvrPNqlVMpW9YEL2LIVY+Rpv2qsjCGxaDLNRgeGsQWJhfItebuJhsGSLjaBbNSQ+ieg==}
 
@@ -2018,8 +2348,19 @@ packages:
     resolution: {integrity: sha512-yDPMNjp4WyfYBkHnjIRLfca1i6KMyGCtsVgoKe/z1+6vukgaENdgGBZt+ZmKPc4gavvEZ5OgHfHdrazhgNyG7w==}
     engines: {node: '>=12'}
 
+  strip-json-comments@2.0.1:
+    resolution: {integrity: sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==}
+    engines: {node: '>=0.10.0'}
+
   tabbable@6.4.0:
     resolution: {integrity: sha512-05PUHKSNE8ou2dwIxTngl4EzcnsCDZGJ/iCLtDflR/SHB/ny14rXc+qU5P4mG9JkusiV7EivzY9Mhm55AzAvCg==}
+
+  tar-fs@2.1.4:
+    resolution: {integrity: sha512-mDAjwmZdh7LTT6pNleZ05Yt65HC3E+NiQzl672vQG38jIrehtJk/J3mNwIg+vShQPcLF/LV7CMnDW6vjj6sfYQ==}
+
+  tar-stream@2.2.0:
+    resolution: {integrity: sha512-ujeqbceABgwMZxEJnk2HDY2DlnUZ+9oEcb1KzTVfYHio0UE6dG71n60d8D2I4qNvleWrrXpmjpt7vZeF1LnMZQ==}
+    engines: {node: '>=6'}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -2078,6 +2419,9 @@ packages:
   tslib@2.8.1:
     resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
 
+  tunnel-agent@0.6.0:
+    resolution: {integrity: sha512-McnNiV1l8RYeY8tBgEpuodCC1mLUdbSN+CYBL7kJsJNInOP8UjDDEwdk6Mw60vdLLrr5NHKZhMAOSrR2NZuQ+w==}
+
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
@@ -2107,11 +2451,16 @@ packages:
   unist-util-visit@5.1.0:
     resolution: {integrity: sha512-m+vIdyeCOpdr/QeQCu2EzxX/ohgS8KbnPDgFni4dQsfSCtpz8UqDyY5GjRru8PDKuYn7Fq19j1CQ+nJSsGKOzg==}
 
-  unplugin-atscript@0.1.41:
-    resolution: {integrity: sha512-6Pw4LgBpT62pVH5AJiBLzyyWT34cC+OPLE/6N6pNsr67QwacYOig01KzwgxZ2Al+UFNScVPu0/2gAQ+1zm42JA==}
+  unplugin-atscript@0.1.44:
+    resolution: {integrity: sha512-agY/hG0oy8hpw+PKmJppJScDP8gSv3UYhkewPRb2An1RDUyZHi0IDq07OC182kbglTEZQksBv8P2WHwZqg/Emw==}
     peerDependencies:
-      '@atscript/core': ^0.1.41
-      '@atscript/typescript': ^0.1.41
+      '@atscript/core': ^0.1.44
+      '@atscript/typescript': ^0.1.44
+
+  unplugin-swc@1.5.9:
+    resolution: {integrity: sha512-RKwK3yf0M+MN17xZfF14bdKqfx0zMXYdtOdxLiE6jHAoidupKq3jGdJYANyIM1X/VmABhh1WpdO+/f4+Ol89+g==}
+    peerDependencies:
+      '@swc/core': ^1.2.108
 
   unplugin@2.3.11:
     resolution: {integrity: sha512-5uKD0nqiYVzlmCRs01Fhs2BdkEgBS3SAVP6ndrBsuK42iC2+JHyxM05Rm9G8+5mkmRtzMZGY8Ct5+mliZxU/Ww==}
@@ -2126,6 +2475,9 @@ packages:
     peerDependenciesMeta:
       synckit:
         optional: true
+
+  util-deprecate@1.0.2:
+    resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
   vfile-message@4.0.3:
     resolution: {integrity: sha512-QTHzsGd1EhbZs4AsQ20JX1rC3cOlt/IWJruk893DfLRr57lcnOeMaWG4K0JrRta4mIJZKth2Au3mM3u03/JWKw==}
@@ -2239,8 +2591,8 @@ packages:
     engines: {node: '>= 8'}
     hasBin: true
 
-  wooks@0.7.4:
-    resolution: {integrity: sha512-jv5lRv8B5uafR0PEqL2bFQFdSAtlcz2Ro1oIeluORSjhtmmKGV8nlcYkD5j1uY7I9YM1Tz/v24cXsRx8Y/a2Jg==}
+  wooks@0.7.7:
+    resolution: {integrity: sha512-70f5dRp3sjSlnvSuGVXGO6tJGAuxN4DEVigsGunXYDVYcm52d3MCenJBY7fWHcUv+IxOiaU1585X8OYxx+2Ugw==}
 
   wrap-ansi@7.0.0:
     resolution: {integrity: sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q==}
@@ -2249,6 +2601,9 @@ packages:
   wrap-ansi@8.1.0:
     resolution: {integrity: sha512-si7QWI6zUMq56bESFvagtmzMdGOtoxfR+Sez11Mobfc7tm+VkUckk9bW2UeffTGVUbOksxmSw0AA2gs8g71NCQ==}
     engines: {node: '>=12'}
+
+  wrappy@1.0.2:
+    resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
   ws@8.19.0:
     resolution: {integrity: sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg==}
@@ -2267,18 +2622,56 @@ packages:
 
 snapshots:
 
-  '@atscript/core@0.1.41':
+  '@atscript/core@0.1.44':
     dependencies:
       '@prostojs/parser': 0.6.0
       defu: 6.1.4
       glob: 13.0.6
       rolldown: 1.0.0-rc.4
 
-  '@atscript/typescript@0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)':
+  '@atscript/db-client@0.1.45(@atscript/db@0.1.45)(@atscript/typescript@0.1.44)':
     dependencies:
-      '@atscript/core': 0.1.41
-      '@moostjs/event-cli': 0.6.2(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(moost@0.6.2)(wooks@0.7.4)
-      moost: 0.6.2
+      '@atscript/db': 0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)
+      '@atscript/typescript': 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@uniqu/url': 0.1.2
+
+  '@atscript/db-sql-tools@0.1.43(@atscript/db@0.1.45)(@uniqu/core@0.1.2)':
+    dependencies:
+      '@atscript/db': 0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)
+      '@uniqu/core': 0.1.2
+
+  '@atscript/db-sqlite@0.1.45(@atscript/core@0.1.44)(@atscript/db-sql-tools@0.1.43(@atscript/db@0.1.45)(@uniqu/core@0.1.2))(@atscript/db@0.1.45)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)(better-sqlite3@11.10.0)':
+    dependencies:
+      '@atscript/core': 0.1.44
+      '@atscript/db': 0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)
+      '@atscript/db-sql-tools': 0.1.43(@atscript/db@0.1.45)(@uniqu/core@0.1.2)
+      '@atscript/typescript': 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@uniqu/core': 0.1.2
+    optionalDependencies:
+      better-sqlite3: 11.10.0
+
+  '@atscript/db@0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)':
+    dependencies:
+      '@atscript/core': 0.1.44
+      '@atscript/typescript': 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@uniqu/core': 0.1.2
+
+  '@atscript/moost-db@0.1.45(@atscript/db@0.1.45)(@atscript/typescript@0.1.44)(@moostjs/event-http@0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7))(@uniqu/core@0.1.2)(moost@0.6.4)':
+    dependencies:
+      '@atscript/db': 0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)
+      '@atscript/typescript': 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@moostjs/event-http': 0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7)
+      '@uniqu/core': 0.1.2
+      '@uniqu/url': 0.1.2
+      moost: 0.6.4
+
+  '@atscript/typescript@0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)':
+    dependencies:
+      '@atscript/core': 0.1.44
+      '@moostjs/event-cli': 0.6.4(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7)
+      moost: 0.6.4
+    optionalDependencies:
+      '@atscript/db': 0.1.45(@atscript/core@0.1.44)(@atscript/typescript@0.1.44)(@uniqu/core@0.1.2)
     transitivePeerDependencies:
       - '@prostojs/logger'
       - '@prostojs/router'
@@ -2376,15 +2769,36 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@moostjs/event-cli@0.6.2(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(moost@0.6.2)(wooks@0.7.4)':
+  '@moostjs/event-cli@0.6.4(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7)':
     dependencies:
-      '@wooksjs/event-cli': 0.7.4(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
-      '@wooksjs/event-core': 0.7.4
-      moost: 0.6.2
-      wooks: 0.7.4
+      '@wooksjs/event-cli': 0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@wooksjs/event-core': 0.7.7
+      moost: 0.6.4
+      wooks: 0.7.7
     transitivePeerDependencies:
       - '@prostojs/logger'
       - '@prostojs/router'
+
+  '@moostjs/event-http@0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7)':
+    dependencies:
+      '@prostojs/infact': 0.4.1
+      '@wooksjs/event-core': 0.7.7
+      '@wooksjs/event-http': 0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
+      '@wooksjs/http-body': 0.7.7(@wooksjs/event-core@0.7.7)(@wooksjs/event-http@0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7))
+      moost: 0.6.4
+    transitivePeerDependencies:
+      - '@prostojs/logger'
+      - '@prostojs/router'
+      - wooks
+
+  '@moostjs/vite@0.6.4(@moostjs/event-http@0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7))(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(typescript@5.9.3))(moost@0.6.4)(sirv@3.0.2)':
+    dependencies:
+      '@moostjs/event-http': 0.6.4(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(moost@0.6.4)(wooks@0.7.7)
+      magic-string: 0.30.21
+      moost: 0.6.4
+      vite: '@voidzero-dev/vite-plus-core@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(typescript@5.9.3)'
+    optionalDependencies:
+      sirv: 3.0.2
 
   '@napi-rs/wasm-runtime@1.1.1':
     dependencies:
@@ -2730,6 +3144,12 @@ snapshots:
 
   '@rolldown/pluginutils@1.0.0-rc.9': {}
 
+  '@rollup/pluginutils@5.3.0':
+    dependencies:
+      '@types/estree': 1.0.8
+      estree-walker: 2.0.2
+      picomatch: 4.0.3
+
   '@shikijs/core@3.23.0':
     dependencies:
       '@shikijs/types': 3.23.0
@@ -2769,6 +3189,58 @@ snapshots:
   '@shikijs/vscode-textmate@10.0.2': {}
 
   '@standard-schema/spec@1.1.0': {}
+
+  '@swc/core-darwin-arm64@1.15.18':
+    optional: true
+
+  '@swc/core-darwin-x64@1.15.18':
+    optional: true
+
+  '@swc/core-linux-arm-gnueabihf@1.15.18':
+    optional: true
+
+  '@swc/core-linux-arm64-gnu@1.15.18':
+    optional: true
+
+  '@swc/core-linux-arm64-musl@1.15.18':
+    optional: true
+
+  '@swc/core-linux-x64-gnu@1.15.18':
+    optional: true
+
+  '@swc/core-linux-x64-musl@1.15.18':
+    optional: true
+
+  '@swc/core-win32-arm64-msvc@1.15.18':
+    optional: true
+
+  '@swc/core-win32-ia32-msvc@1.15.18':
+    optional: true
+
+  '@swc/core-win32-x64-msvc@1.15.18':
+    optional: true
+
+  '@swc/core@1.15.18':
+    dependencies:
+      '@swc/counter': 0.1.3
+      '@swc/types': 0.1.25
+    optionalDependencies:
+      '@swc/core-darwin-arm64': 1.15.18
+      '@swc/core-darwin-x64': 1.15.18
+      '@swc/core-linux-arm-gnueabihf': 1.15.18
+      '@swc/core-linux-arm64-gnu': 1.15.18
+      '@swc/core-linux-arm64-musl': 1.15.18
+      '@swc/core-linux-x64-gnu': 1.15.18
+      '@swc/core-linux-x64-musl': 1.15.18
+      '@swc/core-win32-arm64-msvc': 1.15.18
+      '@swc/core-win32-ia32-msvc': 1.15.18
+      '@swc/core-win32-x64-msvc': 1.15.18
+
+  '@swc/counter@0.1.3': {}
+
+  '@swc/types@0.1.25':
+    dependencies:
+      '@swc/counter': 0.1.3
 
   '@tanstack/virtual-core@3.13.23': {}
 
@@ -2840,6 +3312,10 @@ snapshots:
   '@ungap/structured-clone@1.3.0': {}
 
   '@uniqu/core@0.1.2': {}
+
+  '@uniqu/url@0.1.2':
+    dependencies:
+      '@uniqu/core': 0.1.2
 
   '@vitejs/plugin-vue@6.0.5(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(typescript@5.9.3))(vue@3.5.30(typescript@5.9.3))':
     dependencies:
@@ -3092,16 +3568,28 @@ snapshots:
     dependencies:
       vue: 3.5.30(typescript@5.9.3)
 
-  '@wooksjs/event-cli@0.7.4(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)':
+  '@wooksjs/event-cli@0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)':
     dependencies:
       '@prostojs/cli-help': 0.0.11
       '@prostojs/logger': 0.4.3
       '@prostojs/router': 0.3.3
-      '@wooksjs/event-core': 0.7.4
+      '@wooksjs/event-core': 0.7.7
       minimist: 1.2.8
-      wooks: 0.7.4
+      wooks: 0.7.7
 
-  '@wooksjs/event-core@0.7.4': {}
+  '@wooksjs/event-core@0.7.7': {}
+
+  '@wooksjs/event-http@0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)':
+    dependencies:
+      '@prostojs/logger': 0.4.3
+      '@prostojs/router': 0.3.3
+      '@wooksjs/event-core': 0.7.7
+      wooks: 0.7.7
+
+  '@wooksjs/http-body@0.7.7(@wooksjs/event-core@0.7.7)(@wooksjs/event-http@0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7))':
+    dependencies:
+      '@wooksjs/event-core': 0.7.7
+      '@wooksjs/event-http': 0.7.7(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
 
   abbrev@2.0.0: {}
 
@@ -3133,9 +3621,26 @@ snapshots:
 
   balanced-match@4.0.4: {}
 
+  base64-js@1.5.1: {}
+
+  better-sqlite3@11.10.0:
+    dependencies:
+      bindings: 1.5.0
+      prebuild-install: 7.1.3
+
+  bindings@1.5.0:
+    dependencies:
+      file-uri-to-path: 1.0.0
+
   birpc@2.9.0: {}
 
   birpc@4.0.0: {}
+
+  bl@4.1.0:
+    dependencies:
+      buffer: 5.7.1
+      inherits: 2.0.4
+      readable-stream: 3.6.2
 
   brace-expansion@2.0.2:
     dependencies:
@@ -3144,6 +3649,11 @@ snapshots:
   brace-expansion@5.0.4:
     dependencies:
       balanced-match: 4.0.4
+
+  buffer@5.7.1:
+    dependencies:
+      base64-js: 1.5.1
+      ieee754: 1.2.1
 
   cac@6.7.14: {}
 
@@ -3154,6 +3664,8 @@ snapshots:
   character-entities-html4@2.1.0: {}
 
   character-entities-legacy@3.0.0: {}
+
+  chownr@1.1.4: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -3177,6 +3689,12 @@ snapshots:
       which: 2.0.2
 
   csstype@3.2.3: {}
+
+  decompress-response@6.0.0:
+    dependencies:
+      mimic-response: 3.1.0
+
+  deep-extend@0.6.0: {}
 
   defu@6.1.4: {}
 
@@ -3205,6 +3723,10 @@ snapshots:
 
   empathic@2.0.0: {}
 
+  end-of-stream@1.4.5:
+    dependencies:
+      once: 1.4.0
+
   entities@7.0.1: {}
 
   es-module-lexer@1.7.0: {}
@@ -3215,9 +3737,13 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.8
 
+  expand-template@2.0.3: {}
+
   fdir@6.5.0(picomatch@4.0.3):
     optionalDependencies:
       picomatch: 4.0.3
+
+  file-uri-to-path@1.0.0: {}
 
   focus-trap@8.0.0:
     dependencies:
@@ -3228,12 +3754,16 @@ snapshots:
       cross-spawn: 7.0.6
       signal-exit: 4.1.0
 
+  fs-constants@1.0.0: {}
+
   fsevents@2.3.3:
     optional: true
 
   get-tsconfig@4.13.6:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  github-from-package@0.0.0: {}
 
   glob@10.5.0:
     dependencies:
@@ -3280,7 +3810,11 @@ snapshots:
 
   html-void-elements@3.0.0: {}
 
+  ieee754@1.2.1: {}
+
   import-without-cache@0.2.5: {}
+
+  inherits@2.0.4: {}
 
   ini@1.3.8: {}
 
@@ -3357,6 +3891,8 @@ snapshots:
 
   lilconfig@3.1.3: {}
 
+  load-tsconfig@0.2.5: {}
+
   lru-cache@10.4.3: {}
 
   lru-cache@11.2.7: {}
@@ -3396,6 +3932,8 @@ snapshots:
 
   micromark-util-types@2.0.2: {}
 
+  mimic-response@3.1.0: {}
+
   minimatch@10.2.4:
     dependencies:
       brace-expansion: 5.0.4
@@ -3410,14 +3948,16 @@ snapshots:
 
   minisearch@7.2.0: {}
 
-  moost@0.6.2:
+  mkdirp-classic@0.5.3: {}
+
+  moost@0.6.4:
     dependencies:
       '@prostojs/infact': 0.4.1
       '@prostojs/logger': 0.4.3
       '@prostojs/mate': 0.4.0
-      '@wooksjs/event-core': 0.7.4
+      '@wooksjs/event-core': 0.7.7
       hookable: 5.5.3
-      wooks: 0.7.4
+      wooks: 0.7.7
 
   mrmime@2.0.1: {}
 
@@ -3425,11 +3965,21 @@ snapshots:
 
   nanoid@3.3.11: {}
 
+  napi-build-utils@2.0.0: {}
+
+  node-abi@3.89.0:
+    dependencies:
+      semver: 7.7.4
+
   nopt@7.2.1:
     dependencies:
       abbrev: 2.0.0
 
   obug@2.1.1: {}
+
+  once@1.4.0:
+    dependencies:
+      wrappy: 1.0.2
 
   oniguruma-parser@0.12.1: {}
 
@@ -3560,11 +4110,44 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
+  prebuild-install@7.1.3:
+    dependencies:
+      detect-libc: 2.1.2
+      expand-template: 2.0.3
+      github-from-package: 0.0.0
+      minimist: 1.2.8
+      mkdirp-classic: 0.5.3
+      napi-build-utils: 2.0.0
+      node-abi: 3.89.0
+      pump: 3.0.4
+      rc: 1.2.8
+      simple-get: 4.0.1
+      tar-fs: 2.1.4
+      tunnel-agent: 0.6.0
+
   property-information@7.1.0: {}
 
   proto-list@1.2.4: {}
 
+  pump@3.0.4:
+    dependencies:
+      end-of-stream: 1.4.5
+      once: 1.4.0
+
   quansync@1.0.0: {}
+
+  rc@1.2.8:
+    dependencies:
+      deep-extend: 0.6.0
+      ini: 1.3.8
+      minimist: 1.2.8
+      strip-json-comments: 2.0.1
+
+  readable-stream@3.6.2:
+    dependencies:
+      inherits: 2.0.4
+      string_decoder: 1.3.0
+      util-deprecate: 1.0.2
 
   regex-recursion@6.0.2:
     dependencies:
@@ -3636,6 +4219,8 @@ snapshots:
       '@rolldown/binding-win32-arm64-msvc': 1.0.0-rc.9
       '@rolldown/binding-win32-x64-msvc': 1.0.0-rc.9
 
+  safe-buffer@5.2.1: {}
+
   semver@7.7.4: {}
 
   shebang-command@2.0.0:
@@ -3656,6 +4241,14 @@ snapshots:
       '@types/hast': 3.0.4
 
   signal-exit@4.1.0: {}
+
+  simple-concat@1.0.1: {}
+
+  simple-get@4.0.1:
+    dependencies:
+      decompress-response: 6.0.0
+      once: 1.4.0
+      simple-concat: 1.0.1
 
   sirv@3.0.2:
     dependencies:
@@ -3681,6 +4274,10 @@ snapshots:
       emoji-regex: 9.2.2
       strip-ansi: 7.2.0
 
+  string_decoder@1.3.0:
+    dependencies:
+      safe-buffer: 5.2.1
+
   stringify-entities@4.0.4:
     dependencies:
       character-entities-html4: 2.1.0
@@ -3694,7 +4291,24 @@ snapshots:
     dependencies:
       ansi-regex: 6.2.2
 
+  strip-json-comments@2.0.1: {}
+
   tabbable@6.4.0: {}
+
+  tar-fs@2.1.4:
+    dependencies:
+      chownr: 1.1.4
+      mkdirp-classic: 0.5.3
+      pump: 3.0.4
+      tar-stream: 2.2.0
+
+  tar-stream@2.2.0:
+    dependencies:
+      bl: 4.1.0
+      end-of-stream: 1.4.5
+      fs-constants: 1.0.0
+      inherits: 2.0.4
+      readable-stream: 3.6.2
 
   tinybench@2.9.0: {}
 
@@ -3744,6 +4358,10 @@ snapshots:
   tslib@2.8.1:
     optional: true
 
+  tunnel-agent@0.6.0:
+    dependencies:
+      safe-buffer: 5.2.1
+
   typescript@5.9.3: {}
 
   unconfig-core@7.5.0:
@@ -3778,11 +4396,20 @@ snapshots:
       unist-util-is: 6.0.1
       unist-util-visit-parents: 6.0.2
 
-  unplugin-atscript@0.1.41(@atscript/core@0.1.41)(@atscript/typescript@0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)):
+  unplugin-atscript@0.1.44(@atscript/core@0.1.44)(@atscript/typescript@0.1.44):
     dependencies:
-      '@atscript/core': 0.1.41
-      '@atscript/typescript': 0.1.41(@atscript/core@0.1.41)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.4)(wooks@0.7.4)
+      '@atscript/core': 0.1.44
+      '@atscript/typescript': 0.1.44(@atscript/core@0.1.44)(@atscript/db@0.1.45)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.7)(wooks@0.7.7)
       unplugin: 2.3.11
+
+  unplugin-swc@1.5.9(@swc/core@1.15.18):
+    dependencies:
+      '@rollup/pluginutils': 5.3.0
+      '@swc/core': 1.15.18
+      load-tsconfig: 0.2.5
+      unplugin: 2.3.11
+    transitivePeerDependencies:
+      - rollup
 
   unplugin@2.3.11:
     dependencies:
@@ -3794,6 +4421,8 @@ snapshots:
   unrun@0.2.32:
     dependencies:
       rolldown: 1.0.0-rc.9
+
+  util-deprecate@1.0.2: {}
 
   vfile-message@4.0.3:
     dependencies:
@@ -3955,11 +4584,11 @@ snapshots:
     dependencies:
       isexe: 2.0.0
 
-  wooks@0.7.4:
+  wooks@0.7.7:
     dependencies:
       '@prostojs/logger': 0.4.3
       '@prostojs/router': 0.3.3
-      '@wooksjs/event-core': 0.7.4
+      '@wooksjs/event-core': 0.7.7
 
   wrap-ansi@7.0.0:
     dependencies:
@@ -3972,6 +4601,8 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 5.1.2
       strip-ansi: 7.2.0
+
+  wrappy@1.0.2: {}
 
   ws@8.19.0: {}
 

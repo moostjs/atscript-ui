@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject } from "vue";
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
-import { SelectRadioForm } from "../forms/select-radio-form.as";
+import { SelectRadioForm } from "../../forms/select-radio-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();

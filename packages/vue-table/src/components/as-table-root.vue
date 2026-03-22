@@ -1,24 +1,24 @@
 <script setup lang="ts">
-import { provide } from "vue";
 import type { SortControl } from "@atscript/ui-core";
-import type { FilterExpr } from "@uniqu/core";
+import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { SelectionMode } from "@atscript/ui-table";
-import type { Uniquery } from "@uniqu/core";
 import type { TAsTableComponents } from "../types";
-import { useTable, type UseTableClient } from "../composables/use-table";
-import { TABLE_COMPONENTS_KEY } from "../composables/use-table-state";
+import { useTable, type TableClientFactory } from "../composables/use-table";
+import type { PageResult } from "../composables/use-table-query";
 
 const props = withDefaults(
   defineProps<{
-    client: UseTableClient;
+    /** Table endpoint URL (e.g. "/db/tables/products"). */
+    url: string;
+    /** Factory to create a client from a URL. Falls back to default factory. */
+    clientFactory?: TableClientFactory;
     components?: TAsTableComponents;
     limit?: number;
     forceFilters?: FilterExpr;
     forceSorters?: SortControl[];
     queryOnMount?: boolean;
-    queryFn?: (query: Uniquery) => Promise<{ data: Record<string, unknown>[]; count: number }>;
+    queryFn?: (query: Uniquery, page: number, size: number) => Promise<PageResult>;
     blockQuery?: boolean;
-    blockQueryReason?: string;
     select?: SelectionMode;
     rowValueFn?: (row: Record<string, unknown>) => unknown;
     keepSelectedAfterRefresh?: boolean;
@@ -30,7 +30,7 @@ const props = withDefaults(
   },
 );
 
-const state = useTable(props.client, {
+const state = useTable(props.url, {
   limit: props.limit,
   select: props.select,
   rowValueFn: props.rowValueFn,
@@ -40,12 +40,9 @@ const state = useTable(props.client, {
   queryFn: props.queryFn,
   queryOnMount: props.queryOnMount,
   blockQuery: props.blockQuery,
+  clientFactory: props.clientFactory,
+  components: props.components,
 });
-
-// Provide components map for child components
-if (props.components) {
-  provide(TABLE_COMPONENTS_KEY, props.components);
-}
 </script>
 
 <template>

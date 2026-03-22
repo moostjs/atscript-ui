@@ -3,7 +3,8 @@
   "version": "0.0.1",
   "description": "Type-driven table components for Atscript with Vue 3",
   "files": [
-    "dist"
+    "dist",
+    "styles.d.ts"
   ],
   "type": "module",
   "main": "dist/index.mjs",
@@ -13,6 +14,10 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
+    },
+    "./styles": {
+      "types": "./styles.d.ts",
+      "default": "./dist/style.css"
     },
     "./package.json": "./package.json"
   },
@@ -35,6 +40,7 @@
     "@uniqu/core": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
+    "@vueuse/core": "catalog:",
     "happy-dom": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
@@ -42,6 +48,7 @@
   },
   "peerDependencies": {
     "@tanstack/vue-virtual": "^3",
+    "@vueuse/core": "^12",
     "vue": "^3"
   }
 }

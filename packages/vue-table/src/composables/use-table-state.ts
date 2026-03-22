@@ -1,11 +1,18 @@
-import { shallowRef, ref, computed, provide, inject } from "vue";
+import { shallowRef, ref, computed, provide, inject, type Component } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui-core";
 import { getVisibleColumns } from "@atscript/ui-core";
 import { SelectionState, type FieldFilters, type SelectionOptions } from "@atscript/ui-table";
-import type { ReactiveTableState } from "../types";
+import type { ReactiveTableState, TAsTableComponents } from "../types";
+import type { UseTableClient } from "./use-table";
 
-const TABLE_STATE_KEY = "__as_table";
-export const TABLE_COMPONENTS_KEY = "__as_table_components";
+const TABLE_KEY = "__as_table";
+
+/** Everything provided by as-table-root to its subtree. */
+export interface TableContext {
+  state: ReactiveTableState;
+  client: UseTableClient;
+  components: TAsTableComponents;
+}
 
 export interface CreateTableStateOptions {
   /** Default page size. */
@@ -27,8 +34,6 @@ export interface TableStateInternals {
  *
  * Uses `shallowRef` for arrays/objects (replaced wholesale) and
  * `ref` for scalars, following TABLE.md performance requirements.
- *
- * Returns the public state + internal handles for wiring.
  */
 export function createTableState(opts?: CreateTableStateOptions): {
   state: ReactiveTableState;
@@ -59,7 +64,6 @@ export function createTableState(opts?: CreateTableStateOptions): {
   const selectedValues = computed(() => selection.value.getSelectedValues());
   const selectedCount = computed(() => selection.value.selectedCount);
 
-  // Track query/queryNext function — set by useTableQuery via internals
   let _queryFn: (() => void) | undefined;
   let _queryNextFn: (() => void) | undefined;
 
@@ -92,7 +96,6 @@ export function createTableState(opts?: CreateTableStateOptions): {
     },
     resetFilters() {
       filters.value = {};
-      // Only create new ref if page actually needs to change
       if (pagination.value.page !== 1) {
         pagination.value = { ...pagination.value, page: 1 };
       }
@@ -123,18 +126,19 @@ export function createTableState(opts?: CreateTableStateOptions): {
   return { state, internals };
 }
 
-/** Provide table state to the component subtree. */
-export function provideTableState(state: ReactiveTableState): void {
-  provide(TABLE_STATE_KEY, state);
+/** Provide the full table context to the component subtree. */
+export function provideTableContext(ctx: TableContext): void {
+  provide(TABLE_KEY, ctx);
 }
 
-/** Inject table state (throws if used outside provider). */
-export function useTableState(): ReactiveTableState {
-  const state = inject<ReactiveTableState>(TABLE_STATE_KEY);
-  if (!state) {
+/** Inject the full table context (throws if used outside as-table-root). */
+export function useTableContext(): TableContext {
+  const ctx = inject<TableContext>(TABLE_KEY);
+  if (!ctx) {
     throw new Error(
-      "[vue-table] useTableState() called outside of <as-table-root>. Wrap your table in <as-table-root>.",
+      "[vue-table] useTableContext() called outside of <as-table-root>.",
     );
   }
-  return state;
+  return ctx;
 }
+

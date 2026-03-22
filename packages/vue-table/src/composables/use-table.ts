@@ -1,13 +1,38 @@
-import { createTableDef, type MetaResponse } from "@atscript/ui-core";
+import { createTableDef, type MetaResponse, type TableDef } from "@atscript/ui-core";
 import type { SelectionMode } from "@atscript/ui-table";
-import type { ReactiveTableState } from "../types";
-import { createTableState, provideTableState } from "./use-table-state";
+import type { ReactiveTableState, TAsTableComponents } from "../types";
+import { createTableState, provideTableContext } from "./use-table-state";
 import { useTableQuery, type TableClient, type UseTableQueryOptions } from "./use-table-query";
 import { useTableSelection } from "./use-table-selection";
 
-/** Client interface — structurally compatible with @atscript/db-client Client. */
+/** Full client interface — needs both meta() and pages(). */
 export interface UseTableClient extends TableClient {
   meta(): Promise<MetaResponse>;
+}
+
+/** Factory function that creates a client from a URL path. */
+export type TableClientFactory = (url: string) => UseTableClient;
+
+/** Cached entry: the client instance + parsed TableDef promise. */
+interface CacheEntry {
+  client: UseTableClient;
+  def: Promise<TableDef>;
+}
+
+/** Global cache keyed by URL path. */
+const cache = new Map<string, CacheEntry>();
+
+/** Clear the global table cache (useful for testing). */
+export function clearTableCache() {
+  cache.clear();
+}
+
+/** Default factory — must be set via `setDefaultClientFactory` before using url-only mode. */
+let defaultFactory: TableClientFactory | undefined;
+
+/** Set the default client factory for all tables. Call once at app startup. */
+export function setDefaultClientFactory(factory: TableClientFactory) {
+  defaultFactory = factory;
 }
 
 export interface UseTableOptions extends UseTableQueryOptions {
@@ -21,18 +46,27 @@ export interface UseTableOptions extends UseTableQueryOptions {
   keepSelectedAfterRefresh?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
+  /** Factory to create a client from a URL. Falls back to default factory. */
+  clientFactory?: TableClientFactory;
+  /** Component overrides for table rendering. */
+  components?: TAsTableComponents;
 }
 
 /**
  * Main entry composable for table setup.
  *
- * 1. Creates reactive state
- * 2. Fetches metadata via `client.meta()` → `createTableDef()`
- * 3. Wires up reactive query execution
- * 4. Wires up selection
- * 5. Provides state to component subtree
+ * @param url — Table endpoint URL (e.g. "/db/tables/products")
  */
-export function useTable(client: UseTableClient, opts?: UseTableOptions): ReactiveTableState {
+export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
+  const factory = opts?.clientFactory ?? defaultFactory;
+  if (!factory) {
+    throw new Error(
+      "useTable requires a clientFactory option or a default factory set via setDefaultClientFactory().",
+    );
+  }
+
+  const { client, defPromise } = resolveClient(url, factory);
+
   const { state, internals } = createTableState({
     limit: opts?.limit,
     selection: {
@@ -42,24 +76,15 @@ export function useTable(client: UseTableClient, opts?: UseTableOptions): Reacti
     },
   });
 
-  // Wire up query execution
   useTableQuery(client, state, internals, opts);
-
-  // Wire up selection reactivity
   useTableSelection(state);
+  provideTableContext({ state, client, components: opts?.components ?? {} });
 
-  // Provide state to component subtree
-  provideTableState(state);
-
-  // Fetch metadata and initialize
   const queryOnMount = opts?.queryOnMount ?? true;
 
-  client
-    .meta()
-    .then((meta) => {
-      const def = createTableDef(meta);
+  defPromise
+    .then((def) => {
       internals.init(def);
-
       if (queryOnMount) {
         state.query();
       }
@@ -69,4 +94,21 @@ export function useTable(client: UseTableClient, opts?: UseTableOptions): Reacti
     });
 
   return state;
+}
+
+function resolveClient(
+  url: string,
+  factory: TableClientFactory,
+): { client: UseTableClient; defPromise: Promise<TableDef> } {
+  const cached = cache.get(url);
+  if (cached) {
+    return { client: cached.client, defPromise: cached.def };
+  }
+
+  const client = factory(url);
+  const def = client.meta().then((meta) => createTableDef(meta));
+  def.catch(() => cache.delete(url));
+  cache.set(url, { client, def });
+
+  return { client, defPromise: def };
 }

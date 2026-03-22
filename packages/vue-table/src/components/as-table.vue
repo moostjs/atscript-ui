@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, triggerRef } from "vue";
 import type { ColumnDef } from "@atscript/ui-core";
-import { useTableState } from "../composables/use-table-state";
+import { useTableContext } from "../composables/use-table-state";
 import { useTableComponent } from "../composables/use-table-component";
 import AsTableBase from "./as-table-base.vue";
 import { AsTableDefault, AsTableToolbar, AsTablePagination } from "./defaults";
@@ -30,7 +30,7 @@ const emit = defineEmits<{
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
 }>();
 
-const state = useTableState();
+const { state } = useTableContext();
 
 const TableComp = useTableComponent("table", AsTableDefault);
 const ToolbarComp = useTableComponent("toolbar", AsTableToolbar);
@@ -38,6 +38,10 @@ const PaginationComp = useTableComponent("pagination", AsTablePagination);
 
 const effectiveRows = computed(() => props.rows ?? state.results.value);
 const effectiveColumns = computed(() => props.columns ?? state.columns.value);
+
+function handleHide(column: ColumnDef) {
+  state.setColumns(state.columns.value.filter((c) => c.path !== column.path));
+}
 
 function handleSort(column: ColumnDef, direction: "asc" | "desc" | null) {
   if (direction === null) {
@@ -70,6 +74,7 @@ function handleSelectionToggle(row: Record<string, unknown>) {
       :virtual-row-height="virtualRowHeight"
       :virtual-overscan="virtualOverscan"
       @sort="handleSort"
+      @hide="handleHide"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)

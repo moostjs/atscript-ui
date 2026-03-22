@@ -1,18 +1,28 @@
 <script setup lang="ts">
-import { useTableState } from "../../composables/use-table-state";
+import { useTableContext } from "../../composables/use-table-state";
 
-const state = useTableState();
+const { state } = useTableContext();
+
+let searchTimer: ReturnType<typeof setTimeout>;
+
+function onSearchInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value;
+  state.searchTerm.value = value;
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => state.query(), 300);
+}
 </script>
 
 <template>
   <div class="as-table-toolbar">
     <div class="as-table-toolbar-left">
       <input
+        v-if="state.tableDef.value?.searchable"
         class="as-table-search"
         type="search"
         placeholder="Search..."
         :value="state.searchTerm.value"
-        @input="state.searchTerm.value = ($event.target as HTMLInputElement).value"
+        @input="onSearchInput"
       />
       <slot name="filters" />
     </div>

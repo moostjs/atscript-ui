@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, type Ref } from "vue";
+import { computed, type Ref } from "vue";
 import { useVirtualizer } from "@tanstack/vue-virtual";
+import { useParentElement } from "@vueuse/core";
 
 const props = withDefaults(
   defineProps<{
-    rows: Record<string, unknown>[];
+    count: number;
     estimateSize?: number;
     overscan?: number;
   }>(),
@@ -14,33 +15,35 @@ const props = withDefaults(
   },
 );
 
-const containerRef = ref<HTMLElement | null>(null) as Ref<HTMLElement | null>;
+const parentEl = useParentElement() as Ref<HTMLElement>;
 
-const virtualizer = useVirtualizer(
-  computed(() => ({
-    count: props.rows.length,
-    getScrollElement: () => containerRef.value,
-    estimateSize: () => props.estimateSize,
-    overscan: props.overscan,
+const virtualizer = useVirtualizer({
+  get count() {
+    return props.count;
+  },
+  estimateSize() {
+    return props.estimateSize;
+  },
+  getScrollElement() {
+    return parentEl.value?.closest("[data-virtual-scroll]") as HTMLElement | null;
+  },
+  overscan: props.overscan,
+});
+
+const virtualItems = computed(() => virtualizer.value.getVirtualItems());
+
+const virtualizedItems = computed(() =>
+  virtualItems.value.map((vItem) => ({
+    index: vItem.index,
   })),
 );
 
-const virtualRows = computed(() => virtualizer.value.getVirtualItems());
-const totalSize = computed(() => virtualizer.value.getTotalSize());
-
-defineExpose({ containerRef });
+const spaceBefore = computed(() => virtualItems.value[0]?.start ?? 0);
 </script>
 
 <template>
-  <div
-    ref="containerRef"
-    class="as-table-scroll-container"
-    style="overflow: auto; position: relative"
-  >
-    <slot
-      :virtual-rows="virtualRows"
-      :total-size="totalSize"
-      :measure-element="virtualizer.measureElement"
-    />
-  </div>
+  <tbody :style="{ height: `${virtualizer.getTotalSize()}px` }">
+    <slot v-for="vItem in virtualizedItems" :key="vItem.index" v-bind="vItem" :space-before />
+    <tr />
+  </tbody>
 </template>

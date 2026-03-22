@@ -1,27 +1,23 @@
 <script setup lang="ts">
 import { inject } from "vue";
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
-import { ValidationForm } from "../forms/validation-form.as";
+import { NestedForm } from "../../forms/nested-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();
-const { def, formData } = useForm(ValidationForm);
+const { def, formData } = useForm(NestedForm);
 
 function onSubmit(data: unknown) {
-  console.log("ValidationForm submitted:", data);
+  console.log("NestedForm submitted:", data);
   showToast("Form submitted successfully");
-}
-
-function onError(errors: unknown) {
-  console.log("ValidationForm errors:", errors);
 }
 </script>
 
 <template>
-  <h2>Validation</h2>
+  <h2>Nested Objects</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @error="onError" />
+      <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" />
     </div>
     <div class="form-debug">
       <div class="form-debug-label">Form Data</div>

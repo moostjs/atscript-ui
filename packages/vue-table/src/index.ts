@@ -2,17 +2,24 @@
 export type { TAsTableComponents, ReactiveTableState } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
-export { useTable, type UseTableClient, type UseTableOptions } from "./composables/use-table";
 export {
-  useTableState,
-  provideTableState,
+  useTable,
+  clearTableCache,
+  setDefaultClientFactory,
+  type UseTableClient,
+  type UseTableOptions,
+  type TableClientFactory,
+} from "./composables/use-table";
+export {
+  useTableContext,
   createTableState,
-  TABLE_COMPONENTS_KEY,
+  type TableContext,
   type CreateTableStateOptions,
   type TableStateInternals,
 } from "./composables/use-table-state";
 export {
   useTableQuery,
+  type PageResult,
   type TableClient,
   type UseTableQueryOptions,
 } from "./composables/use-table-query";

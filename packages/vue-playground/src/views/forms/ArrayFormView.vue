@@ -1,34 +1,37 @@
 <script setup lang="ts">
 import { inject } from "vue";
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
-import { DynamicForm } from "../forms/dynamic-form.as";
+import { ArrayForm } from "../../forms/array-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();
-
-const context = {
-  labels: { contextLabel: "Custom Context Label" },
-  descriptions: { contextDescription: "This label and description come from context" },
-};
-
-const { def, formData } = useForm(DynamicForm, context);
+const { def, formData } = useForm(ArrayForm);
 
 function onSubmit(data: unknown) {
-  console.log("DynamicForm submitted:", data);
+  console.log("ArrayForm submitted:", data);
   showToast("Form submitted successfully");
+}
+
+function onAction(action: string) {
+  if (action === "clear-arrays") {
+    formData.value.tags = [];
+    formData.value.scores = [];
+    formData.value.addresses = [];
+    formData.value.contacts = [];
+  }
 }
 </script>
 
 <template>
-  <h2>Dynamic (ui.fn.*)</h2>
+  <h2>Arrays</h2>
   <div class="view-layout">
     <div class="view-form">
       <AsForm
         :def="def"
         :form-data="formData"
-        :form-context="context"
         :types="types"
         @submit="onSubmit"
+        @action="onAction"
       />
     </div>
     <div class="form-debug">

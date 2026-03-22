@@ -2,7 +2,7 @@
 import { provide, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
 
-const routes = [
+const formRoutes = [
   { path: "/", label: "Home" },
   { path: "/basic", label: "Basic Fields" },
   { path: "/nested", label: "Nested Objects" },
@@ -11,6 +11,13 @@ const routes = [
   { path: "/dynamic", label: "Dynamic (ui.fn.*)" },
   { path: "/select-radio", label: "Select / Radio" },
   { path: "/custom", label: "Custom Components" },
+];
+
+const tableRoutes = [
+  { path: "/products-table", label: "Products" },
+  { path: "/customers-table", label: "Customers" },
+  { path: "/custom-slots-table", label: "Custom Slots" },
+  { path: "/virtual-scroll-table", label: "Virtual Scroll (5k)" },
 ];
 
 const toastMessage = ref("");
@@ -34,7 +41,12 @@ provide("showToast", showToast);
     <aside class="app-sidebar">
       <h1>AS UI Playground</h1>
       <nav>
-        <RouterLink v-for="r in routes" :key="r.path" :to="r.path">
+        <span class="nav-section">Forms</span>
+        <RouterLink v-for="r in formRoutes" :key="r.path" :to="r.path">
+          {{ r.label }}
+        </RouterLink>
+        <span class="nav-section">Tables</span>
+        <RouterLink v-for="r in tableRoutes" :key="r.path" :to="r.path">
           {{ r.label }}
         </RouterLink>
       </nav>
@@ -49,6 +61,17 @@ provide("showToast", showToast);
 </template>
 
 <style scoped>
+.nav-section {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9ca3af;
+  margin-top: 12px;
+  padding: 4px 12px;
+}
+
 .toast {
   position: fixed;
   bottom: 24px;

@@ -31,3 +31,7 @@ docs/.vitepress/dist
 *.sw?
 *.local.md
 TODO.md
+TABLE.md
+
+# Playground SQLite data
+.data/

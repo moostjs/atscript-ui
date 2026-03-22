@@ -2,14 +2,14 @@
 import { inject } from "vue";
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
 import type { TAsTypeComponents } from "@atscript/vue-form";
-import { SelectRadioForm } from "../forms/select-radio-form.as";
-import MyStarInput from "../custom-components/MyStarInput.vue";
-import MySelect from "../custom-components/MySelect.vue";
-import MyRadio from "../custom-components/MyRadio.vue";
-import MyCheckbox from "../custom-components/MyCheckbox.vue";
-import MyParagraph from "../custom-components/MyParagraph.vue";
-import MyActionButton from "../custom-components/MyActionButton.vue";
-import MyGroup from "../custom-components/MyGroup.vue";
+import { SelectRadioForm } from "../../forms/select-radio-form.as";
+import MyStarInput from "../../custom-components/MyStarInput.vue";
+import MySelect from "../../custom-components/MySelect.vue";
+import MyRadio from "../../custom-components/MyRadio.vue";
+import MyCheckbox from "../../custom-components/MyCheckbox.vue";
+import MyParagraph from "../../custom-components/MyParagraph.vue";
+import MyActionButton from "../../custom-components/MyActionButton.vue";
+import MyGroup from "../../custom-components/MyGroup.vue";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types: TAsTypeComponents = {

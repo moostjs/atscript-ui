@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { useTableState } from "../../composables/use-table-state";
+import { useTableContext } from "../../composables/use-table-state";
 
 const props = withDefaults(
   defineProps<{
@@ -11,7 +11,7 @@ const props = withDefaults(
   },
 );
 
-const state = useTableState();
+const { state } = useTableContext();
 
 const currentPage = computed(() => state.pagination.value.page);
 const itemsPerPage = computed(() => state.pagination.value.itemsPerPage);
@@ -23,15 +23,18 @@ const hasMore = computed(() => state.loadedCount.value < state.totalCount.value)
 function prevPage() {
   if (currentPage.value <= 1) return;
   state.pagination.value = { ...state.pagination.value, page: currentPage.value - 1 };
+  state.query();
 }
 
 function nextPage() {
   if (currentPage.value >= totalPages.value) return;
   state.pagination.value = { ...state.pagination.value, page: currentPage.value + 1 };
+  state.query();
 }
 
 function setItemsPerPage(value: number) {
   state.pagination.value = { page: 1, itemsPerPage: value };
+  state.query();
 }
 </script>
 
