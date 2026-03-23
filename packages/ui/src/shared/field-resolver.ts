@@ -16,7 +16,7 @@ export interface TResolveOptions<T> {
 
 /**
  * Pluggable resolver interface for field/form metadata.
- * ui-core provides a static implementation (reads only static annotation values).
+ * @atscript/ui provides a static implementation (reads only static annotation values).
  * ui-fns extends it with dynamic `new Function` compilation for `ui.fn.*` keys.
  */
 export interface FieldResolver {
@@ -201,9 +201,9 @@ export function parseStaticAttrs(staticAttrs: unknown): Record<string, unknown> 
   const result: Record<string, unknown> = {};
   let hasAttrs = false;
   for (const item of asArray(staticAttrs)) {
-    if (typeof item === "object" && item !== null && "key" in item && "value" in item) {
-      const { key, value } = item as { key: string; value: string };
-      result[key] = value;
+    if (typeof item === "object" && item !== null && "name" in item && "value" in item) {
+      const { name, value } = item as { name: string; value: string };
+      result[name] = value;
       hasAttrs = true;
     }
   }

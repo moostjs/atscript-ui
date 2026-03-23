@@ -1,4 +1,4 @@
-import type { TFormEntryOptions } from "@atscript/ui-core";
+import type { TFormEntryOptions } from "@atscript/ui";
 
 /**
  * Scope object passed to compiled functions.

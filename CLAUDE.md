@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-atscript-ui is a monorepo for generating automated forms and smart tables driven by atscript type metadata. Framework-agnostic logic lives in `ui-core` and `ui-table`; Vue 3 implementations live in `vue-form` and `vue-table`.
+atscript-ui is a monorepo for generating automated forms and smart tables driven by atscript type metadata. Framework-agnostic logic lives in `ui` and `ui-table`; Vue 3 implementations live in `vue-form` and `vue-table`.
 
 ## Commands
 
@@ -40,7 +40,7 @@ pnpm release:major          # Major bump
 ### Package dependency graph
 
 ```
-@atscript/ui-core          ← framework-agnostic: FormDef, TableDef, annotation keys, field resolver, validators
+@atscript/ui          ← framework-agnostic: FormDef, TableDef, annotation keys, field resolver, validators
   ├─ @atscript/ui-fns      ← opt-in plugin: ui.fn.* dynamic computed props (uses new Function)
   ├─ @atscript/ui-table    ← framework-agnostic: filter model, filter→Uniquery conversion, presets
   ├─ @atscript/vue-form    ← Vue 3 form components + composables
@@ -51,8 +51,8 @@ pnpm release:major          # Major bump
 
 ### Key design principles
 
-- **ui-core and ui-table have zero framework dependencies** — pure TypeScript. Before adding a utility to a Vue package, check if it belongs in ui-core/ui-table so React can reuse it.
-- **Annotation-driven** — all UI configuration flows from `@ui.*`, `@meta.*`, and `@expect.*` atscript annotations. ui-core reads static values; ui-fns adds dynamic `@ui.fn.*` support via a pluggable `FieldResolver`.
+- **ui and ui-table have zero framework dependencies** — pure TypeScript. Before adding a utility to a Vue package, check if it belongs in ui/ui-table so React can reuse it.
+- **Annotation-driven** — all UI configuration flows from `@ui.*`, `@meta.*`, and `@expect.*` atscript annotations. ui reads static values; ui-fns adds dynamic `@ui.fn.*` support via a pluggable `FieldResolver`.
 - **Types map pattern** — both vue-form and vue-table accept a `components`/`types` map that maps field/cell types to Vue components. Default unstyled HTML implementations are provided; users override with their design system (e.g., vunor).
 - **Single-context provide/inject** — each renderless (or rendered) component provides its context as a single object under one provide key. Child composables inject the full context and destructure only what they need. Never use multiple provide keys for the same component's state.
 - **Performance and caching are priority** — cache expensive computations (e.g., parsed metadata, TableDef) globally by key. Avoid redundant network requests; share cached results across component remounts.

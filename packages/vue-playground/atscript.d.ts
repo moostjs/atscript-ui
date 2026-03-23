@@ -8,112 +8,109 @@
  *
  * Use `npx asc -f dts` command to re-generate this file
  */
-export {};
+export {}
 
 declare global {
   interface AtscriptMetadata {
-    "meta.label": string;
-    "meta.id": boolean;
-    "meta.description": string;
-    "meta.documentation": string[];
-    "meta.sensitive": boolean;
-    "meta.readonly": boolean;
-    "meta.required": { message?: string };
-    "meta.default": string;
-    "meta.example": string;
-    "expect.minLength": { length: number; message?: string };
-    "expect.maxLength": { length: number; message?: string };
-    "expect.min": { minValue: number; message?: string };
-    "expect.max": { maxValue: number; message?: string };
-    "expect.int": boolean;
-    "expect.pattern": { pattern: string; flags?: string; message?: string }[];
-    "expect.array.uniqueItems": { message?: string };
-    "expect.array.key": { message?: string };
-    "emit.jsonSchema": boolean;
-    "ui.placeholder": string;
-    "ui.component": string;
-    "ui.hidden": boolean;
-    "ui.group": string;
-    "ui.order": number;
-    "ui.width": string;
-    "ui.icon": string;
-    "ui.hint": string;
-    "ui.disabled": boolean;
-    "ui.type": string;
-    "ui.attr": { name: string; value: string }[];
-    "ui.class": string[];
-    "ui.style": string[];
-    "ui.title": string;
-    "ui.submit.text": string;
-    "ui.submit.disabled": boolean;
-    "ui.altAction": { id: string; label?: string };
-    "ui.readonly": boolean;
-    "ui.options": { label: string; value?: string }[];
-    "ui.array.add.label": string;
-    "ui.array.remove.label": string;
-    "ui.validate": string[];
-    "ui.fn.title": string;
-    "ui.fn.submit.text": string;
-    "ui.fn.submit.disabled": string;
-    "ui.fn.label": string;
-    "ui.fn.description": string;
-    "ui.fn.hint": string;
-    "ui.fn.placeholder": string;
-    "ui.fn.disabled": string;
-    "ui.fn.hidden": string;
-    "ui.fn.readonly": string;
-    "ui.fn.value": string;
-    "ui.fn.classes": string;
-    "ui.fn.styles": string;
-    "ui.fn.options": string;
-    "ui.fn.attr": { name: string; fn: string }[];
+    "meta.label": string
+    "meta.id": boolean
+    "meta.description": string
+    "meta.documentation": (string)[]
+    "meta.sensitive": boolean
+    "meta.readonly": boolean
+    "meta.required": { message?: string }
+    "meta.default": string
+    "meta.example": string
+    "expect.minLength": { length: number, message?: string }
+    "expect.maxLength": { length: number, message?: string }
+    "expect.min": { minValue: number, message?: string }
+    "expect.max": { maxValue: number, message?: string }
+    "expect.int": boolean
+    "expect.pattern": ({ pattern: string, flags?: string, message?: string })[]
+    "expect.array.uniqueItems": { message?: string }
+    "expect.array.key": { message?: string }
+    "emit.jsonSchema": boolean
+    "db.patch.strategy": string
+    "db.table": string | true
+    "db.table.renamed": string
+    "db.schema": string
+    "db.index.plain": ({ name?: string, sort?: string })[]
+    "db.index.unique": (string | true)[]
+    "db.index.fulltext": ({ name?: string, weight?: number })[]
+    "db.column": string
+    "db.column.renamed": string
+    "db.column.collate": string
+    "db.column.precision": { precision: number, scale: number }
+    "db.column.dimension": boolean
+    "db.column.measure": boolean
+    "db.default": string
+    "db.default.increment": number | true
+    "db.default.uuid": boolean
+    "db.default.now": boolean
+    "db.json": boolean
+    "db.ignore": boolean
+    "db.sync.method": string
+    "db.rel.FK": string | true
+    "db.rel.to": string | true
+    "db.rel.from": string | true
+    "db.rel.onDelete": string
+    "db.rel.onUpdate": string
+    "db.rel.via": import("@atscript/typescript/utils").AtscriptRef
+    "db.rel.filter": import("@atscript/typescript/utils").AtscriptQueryNode
+    "db.view": string | true
+    "db.view.for": import("@atscript/typescript/utils").AtscriptRef
+    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode })[]
+    "db.view.filter": import("@atscript/typescript/utils").AtscriptQueryNode
+    "db.view.materialized": boolean
+    "db.view.renamed": string
+    "db.view.having": import("@atscript/typescript/utils").AtscriptQueryNode
+    "db.agg.sum": string
+    "db.agg.avg": string
+    "db.agg.count": string | true
+    "db.agg.min": string
+    "db.agg.max": string
+    "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
+    "db.search.vector.threshold": number
+    "db.search.filter": (string)[]
+    "ui.placeholder": string
+    "ui.group": string
+    "ui.width": string
+    "ui.icon": string
+    "ui.hint": string
+    "ui.class": (string)[]
+    "ui.style": (string)[]
+    "ui.autocomplete": string
+    "ui.type": string
+    "ui.component": string
+    "ui.order": number
+    "ui.hidden": boolean
+    "ui.disabled": boolean
+    "ui.readonly": boolean
+    "ui.options": ({ label: string, value?: string })[]
+    "ui.attr": ({ name: string, value: string })[]
+    "ui.title": string
+    "ui.submit.text": string
+    "ui.submit.disabled": boolean
+    "ui.form.action": { id: string, label?: string }
+    "ui.array.add.label": string
+    "ui.array.remove.label": string
+    "ui.validate": (string)[]
+    "ui.fn.title": string
+    "ui.fn.submit.text": string
+    "ui.fn.submit.disabled": string
+    "ui.fn.label": string
+    "ui.fn.description": string
+    "ui.fn.hint": string
+    "ui.fn.placeholder": string
+    "ui.fn.disabled": string
+    "ui.fn.hidden": string
+    "ui.fn.readonly": string
+    "ui.fn.value": string
+    "ui.fn.classes": string
+    "ui.fn.styles": string
+    "ui.fn.options": string
+    "ui.fn.attr": ({ name: string, fn: string })[]
   }
-  type AtscriptPrimitiveTags =
-    | "never"
-    | "string"
-    | "email"
-    | "phone"
-    | "date"
-    | "isoDate"
-    | "uuid"
-    | "url"
-    | "ipv4"
-    | "ipv6"
-    | "ip"
-    | "char"
-    | "required"
-    | "number"
-    | "positive"
-    | "negative"
-    | "single"
-    | "double"
-    | "int"
-    | "int8"
-    | "int16"
-    | "int32"
-    | "int64"
-    | "uint8"
-    | "byte"
-    | "uint16"
-    | "port"
-    | "uint32"
-    | "uint64"
-    | "timestamp"
-    | "created"
-    | "updated"
-    | "decimal"
-    | "boolean"
-    | "true"
-    | "false"
-    | "null"
-    | "void"
-    | "undefined"
-    | "phantom"
-    | "ui"
-    | "action"
-    | "paragraph"
-    | "select"
-    | "radio"
-    | "checkbox";
+  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
 }
 // prettier-ignore-end

@@ -6,7 +6,7 @@ export default defineConfig({
     dts: true,
     format: ["esm", "cjs"],
     deps: {
-      neverBundle: ["@atscript/core", "@atscript/typescript", "@atscript/ui-core"],
+      neverBundle: ["@atscript/core", "@atscript/typescript", "@atscript/ui"],
     },
   },
 });

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import { getColumnWidth } from "../utils/column-width";
 import AsColumnMenu from "./defaults/as-column-menu.vue";
 
@@ -41,12 +41,7 @@ function sortLabel(): string {
 </script>
 
 <template>
-  <AsColumnMenu
-    :column="props.column"
-    @sort="onMenuSort"
-    @hide="onMenuHide"
-    @filter="onMenuFilter"
-  >
+  <AsColumnMenu :column="props.column" @sort="onMenuSort" @hide="onMenuHide" @filter="onMenuFilter">
     <th
       :style="{ width: getColumnWidth(props.column), minWidth: getColumnWidth(props.column) }"
       :class="{ 'as-th-sortable': props.column.sortable }"

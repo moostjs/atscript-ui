@@ -3,8 +3,22 @@
 ## Installation
 
 ```bash
-pnpm add @atscript/vue-form @atscript/ui-core @atscript/ui-fns
+pnpm add @atscript/vue-form @atscript/ui @atscript/ui-fns
 pnpm add -D unplugin-atscript @atscript/typescript
+```
+
+## Atscript Config
+
+Create an `atscript.config.ts` to register the UI plugin:
+
+```typescript
+import ts from "@atscript/typescript";
+import uiPlugin from "@atscript/ui/plugin";
+import uiFnsPlugin from "@atscript/ui-fns/plugin";
+
+export default {
+  plugins: [ts(), uiPlugin(), uiFnsPlugin()],
+};
 ```
 
 ## Vite Setup

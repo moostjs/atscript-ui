@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isReactive } from "vue";
-import { META_DEFAULT } from "@atscript/ui-core";
+import { META_DEFAULT } from "@atscript/ui";
 import { useForm } from "../composables/use-form";
 import { numberProp, objectType, stringProp } from "./helpers";
 

@@ -1,4 +1,4 @@
-import type { SortControl, PaginationControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { FieldFilters } from "../filters/filter-types";
 import { filtersToUniqueryFilter } from "../filters/filters-to-uniquery";
@@ -17,8 +17,6 @@ export interface BuildTableQueryOptions {
   filters: FieldFilters;
   /** Always-applied Uniquery filter (AND'd with user filters). */
   forceFilters?: FilterExpr;
-  /** Current pagination state. */
-  pagination: PaginationControl;
   /** Full-text search term. */
   search?: string;
   /** Search index name for `$search`. */

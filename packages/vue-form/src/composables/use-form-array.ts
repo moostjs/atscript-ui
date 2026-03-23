@@ -3,13 +3,8 @@ import type {
   FormFieldDef,
   FormUnionFieldDef,
   FormUnionVariant,
-} from "@atscript/ui-core";
-import {
-  getFieldMeta,
-  createFormData,
-  createFormValueResolver,
-  isUnionField,
-} from "@atscript/ui-core";
+} from "@atscript/ui";
+import { getFieldMeta, createFormData, createFormValueResolver, isUnionField } from "@atscript/ui";
 import { computed, inject, reactive, watch, type ComputedRef } from "vue";
 import type { TAsChangeType } from "../components/types";
 import { useFormContext } from "./use-form-context";

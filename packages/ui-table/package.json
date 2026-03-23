@@ -26,7 +26,7 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@atscript/ui-core": "workspace:*"
+    "@atscript/ui": "workspace:*"
   },
   "devDependencies": {
     "@uniqu/core": "catalog:",

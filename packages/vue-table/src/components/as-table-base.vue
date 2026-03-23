@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue";
-import type { ColumnDef, SortControl } from "@atscript/ui-core";
+import type { ColumnDef, SortControl } from "@atscript/ui";
 import type { SelectionState } from "@atscript/ui-table";
 import { getColumnWidth } from "../utils/column-width";
 import { getCellValue } from "../utils/get-cell-value";

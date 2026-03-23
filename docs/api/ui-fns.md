@@ -1,6 +1,8 @@
 # @atscript/ui-fns
 
-Dynamic fn-compiled field properties for `@atscript/ui-core`.
+Dynamic `@ui.fn.*` computed field properties and `@ui.validate` for `@atscript/ui`.
+
+Static `@ui.*` annotations and UI primitives are provided by `@atscript/ui/plugin`.
 
 ## Installation
 

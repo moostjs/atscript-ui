@@ -1,23 +1,10 @@
 import { watch } from "vue";
 import type { Uniquery, FilterExpr } from "@uniqu/core";
-import type { SortControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
+import type { Client, PageResult } from "@atscript/db-client";
 import { buildTableQuery } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 import type { TableStateInternals } from "./use-table-state";
-
-/** Page result shape — matches @atscript/db-client PageResult. */
-export interface PageResult {
-  data: Record<string, unknown>[];
-  count: number;
-  page: number;
-  itemsPerPage: number;
-  pages: number;
-}
-
-/** Client interface — structurally compatible with @atscript/db-client Client. */
-export interface TableClient {
-  pages(query?: Uniquery, page?: number, size?: number): Promise<PageResult>;
-}
 
 export interface UseTableQueryOptions {
   /** Always-applied Uniquery filter expression (AND'd with user filters). */
@@ -25,7 +12,11 @@ export interface UseTableQueryOptions {
   /** Always-applied sorters (prepended before user sorters). */
   forceSorters?: SortControl[];
   /** Override the default query function. */
-  queryFn?: (query: Uniquery, page: number, size: number) => Promise<PageResult>;
+  queryFn?: (
+    query: Uniquery,
+    page: number,
+    size: number,
+  ) => Promise<PageResult<Record<string, unknown>>>;
   /** When true, queries are blocked. */
   blockQuery?: boolean;
 }
@@ -38,7 +29,7 @@ export interface UseTableQueryOptions {
  * automatically re-query on changes.
  */
 export function useTableQuery(
-  client: TableClient,
+  client: Client,
   state: ReactiveTableState,
   internals: TableStateInternals,
   opts?: UseTableQueryOptions,
@@ -60,13 +51,14 @@ export function useTableQuery(
         forceSorters: opts?.forceSorters,
         filters: state.filters.value,
         forceFilters: opts?.forceFilters,
-        pagination: state.pagination.value,
         search: state.searchTerm.value || undefined,
       });
 
       const { page, itemsPerPage } = state.pagination.value;
       const fetcher =
-        opts?.queryFn ?? ((q: Uniquery, p: number, s: number) => client.pages(q, p, s));
+        opts?.queryFn ??
+        ((q: Uniquery, p: number, s: number) =>
+          client.pages(q as Parameters<typeof client.pages>[0], p, s));
       const { data, count } = await fetcher(query, page, itemsPerPage);
 
       if (thisGen !== generation) return;

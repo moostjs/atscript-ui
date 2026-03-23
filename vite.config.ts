@@ -4,7 +4,11 @@ export default defineConfig({
   staged: {
     "*": "vp check --fix",
   },
+  fmt: {
+    ignorePatterns: ["**/*.as.d.ts", "**/atscript.d.ts"],
+  },
   lint: {
+    ignorePatterns: ["**/*.as"],
     categories: {
       correctness: "error",
       suspicious: "warn",

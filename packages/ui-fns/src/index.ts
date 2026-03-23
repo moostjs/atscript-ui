@@ -1,4 +1,4 @@
-import { setResolver } from "@atscript/ui-core";
+import { setResolver } from "@atscript/ui";
 import { DynamicFieldResolver } from "./runtime/dynamic-resolver";
 
 // ── Types ────────────────────────────────────────────────────
@@ -19,7 +19,7 @@ export type { TValidatorContext } from "./runtime/validator-plugin";
 // ── Install ──────────────────────────────────────────────────
 
 /**
- * Installs the dynamic field resolver into @atscript/ui-core.
+ * Installs the dynamic field resolver into @atscript/ui.
  * Call this once at app startup to enable `ui.fn.*` annotation resolution.
  *
  * ```ts

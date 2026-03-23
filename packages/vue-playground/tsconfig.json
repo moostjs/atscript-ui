@@ -6,8 +6,8 @@
     "emitDecoratorMetadata": true,
     "paths": {
       "@/*": ["./src/*"],
-      "@atscript/ui-core": ["../ui-core/src"],
-      "@atscript/ui-core/*": ["../ui-core/src/*"],
+      "@atscript/ui": ["../ui/src"],
+      "@atscript/ui/*": ["../ui/src/*"],
       "@atscript/ui-fns": ["../ui-fns/src"],
       "@atscript/ui-fns/*": ["../ui-fns/src/*"],
       "@atscript/vue-form": ["../vue-form/src"],

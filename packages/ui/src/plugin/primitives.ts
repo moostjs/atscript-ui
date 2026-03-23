@@ -14,7 +14,7 @@ export const uiPrimitives: TAtscriptConfig["primitives"] = {
     extensions: {
       action: {
         documentation:
-          "Form action button — not a data field, excluded from form data. Use with @ui.altAction to define alternate submit actions.",
+          "Form action button — not a data field, excluded from form data. Use with @ui.form.action to define alternate submit actions.",
       },
       paragraph: {
         documentation:

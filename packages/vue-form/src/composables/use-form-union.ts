@@ -1,10 +1,10 @@
-import type { FormFieldDef, FormUnionFieldDef } from "@atscript/ui-core";
+import type { FormFieldDef, FormUnionFieldDef } from "@atscript/ui";
 import {
   isUnionField,
   createFormData,
   createFormValueResolver,
   detectUnionVariant,
-} from "@atscript/ui-core";
+} from "@atscript/ui";
 import { computed, inject, provide, ref, type ComputedRef } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsUnionContext } from "../components/types";
 import { useDropdown } from "./use-dropdown";

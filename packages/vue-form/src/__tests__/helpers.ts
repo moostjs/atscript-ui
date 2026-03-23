@@ -1,6 +1,6 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { defineAnnotatedType } from "@atscript/typescript/utils";
-import { createFormDef, createFormData } from "@atscript/ui-core";
+import { createFormDef, createFormData } from "@atscript/ui";
 import { mount } from "@vue/test-utils";
 import { reactive } from "vue";
 import AsForm from "../components/as-form.vue";

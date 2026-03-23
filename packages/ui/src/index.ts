@@ -14,6 +14,8 @@ export {
   UI_ATTR,
   UI_CLASS,
   UI_STYLE,
+  UI_AUTOCOMPLETE,
+  UI_FORM_ACTION,
   META_LABEL,
   META_ID,
   META_DESCRIPTION,
@@ -47,7 +49,7 @@ export type {
   FormTupleFieldDef,
   FormUnionVariant,
   TFormEntryOptions,
-  TFormAltAction,
+  TFormAction,
 } from "./form/types";
 export { isArrayField, isObjectField, isUnionField, isTupleField } from "./form/types";
 

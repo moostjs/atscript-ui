@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { FormObjectFieldDef } from "@atscript/ui-core";
-import { isObjectField } from "@atscript/ui-core";
+import type { FormObjectFieldDef } from "@atscript/ui";
+import { isObjectField } from "@atscript/ui";
 import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";

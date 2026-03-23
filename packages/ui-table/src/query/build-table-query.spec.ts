@@ -1,23 +1,18 @@
 import { describe, it, expect } from "vitest";
 import { buildTableQuery } from "./build-table-query";
-import type { PaginationControl, SortControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
 import type { FieldFilters } from "../filters/filter-types";
 
-const page1: PaginationControl = { page: 1, itemsPerPage: 50 };
-const page3: PaginationControl = { page: 3, itemsPerPage: 20 };
 const emptyFilters: FieldFilters = {};
 
 describe("buildTableQuery", () => {
-  it("builds a minimal query with pagination only", () => {
+  it("builds a minimal query with empty controls", () => {
     const q = buildTableQuery({
       visibleColumnPaths: [],
       sorters: [],
       filters: emptyFilters,
-      pagination: page1,
     });
-    expect(q).toEqual({
-      controls: { $limit: 50, $skip: 0 },
-    });
+    expect(q).toEqual({ controls: {} });
   });
 
   it("adds $select from visible column paths", () => {
@@ -25,20 +20,8 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: ["name", "age", "address.city"],
       sorters: [],
       filters: emptyFilters,
-      pagination: page1,
     });
     expect(q.controls!.$select).toEqual(["name", "age", "address.city"]);
-  });
-
-  it("computes $skip from page and itemsPerPage", () => {
-    const q = buildTableQuery({
-      visibleColumnPaths: [],
-      sorters: [],
-      filters: emptyFilters,
-      pagination: page3,
-    });
-    expect(q.controls!.$skip).toBe(40);
-    expect(q.controls!.$limit).toBe(20);
   });
 
   it("converts sorters to $sort", () => {
@@ -50,7 +33,6 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: [],
       sorters,
       filters: emptyFilters,
-      pagination: page1,
     });
     expect(q.controls!.$sort).toEqual({ name: 1, age: -1 });
   });
@@ -61,7 +43,6 @@ describe("buildTableQuery", () => {
       sorters: [{ field: "name", direction: "desc" }],
       forceSorters: [{ field: "id", direction: "asc" }],
       filters: emptyFilters,
-      pagination: page1,
     });
     expect(q.controls!.$sort).toEqual({ id: 1, name: -1 });
   });
@@ -75,7 +56,6 @@ describe("buildTableQuery", () => {
       ],
       forceSorters: [{ field: "id", direction: "asc" }],
       filters: emptyFilters,
-      pagination: page1,
     });
     expect(q.controls!.$sort).toEqual({ id: 1, name: 1 });
   });
@@ -88,7 +68,6 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: [],
       sorters: [],
       filters,
-      pagination: page1,
     });
     expect(q.filter).toEqual({ status: "active" });
   });
@@ -103,7 +82,6 @@ describe("buildTableQuery", () => {
       sorters: [],
       filters,
       forceFilters,
-      pagination: page1,
     });
     expect(q.filter).toEqual({
       $and: [{ tenant: "abc" }, { name: { $regex: "john" } }],
@@ -116,7 +94,6 @@ describe("buildTableQuery", () => {
       sorters: [],
       filters: emptyFilters,
       forceFilters: { deleted: false },
-      pagination: page1,
     });
     expect(q.filter).toEqual({ deleted: false });
   });
@@ -126,7 +103,6 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: [],
       sorters: [],
       filters: emptyFilters,
-      pagination: page1,
     });
     expect(q.filter).toBeUndefined();
   });
@@ -136,7 +112,6 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: [],
       sorters: [],
       filters: emptyFilters,
-      pagination: page1,
       search: "hello",
     });
     expect(q.controls!.$search).toBe("hello");
@@ -147,7 +122,6 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: [],
       sorters: [],
       filters: emptyFilters,
-      pagination: page1,
       search: "hello",
       searchIndex: "fulltext",
     });
@@ -160,7 +134,6 @@ describe("buildTableQuery", () => {
       visibleColumnPaths: [],
       sorters: [],
       filters: emptyFilters,
-      pagination: page1,
       search: "",
     });
     expect(q.controls!.$search).toBeUndefined();
@@ -173,7 +146,6 @@ describe("buildTableQuery", () => {
       forceSorters: [{ field: "createdAt", direction: "desc" }],
       filters: { status: [{ type: "eq", value: ["active"] }] },
       forceFilters: { tenant: "t1" },
-      pagination: { page: 2, itemsPerPage: 25 },
       search: "test",
     });
 
@@ -183,8 +155,6 @@ describe("buildTableQuery", () => {
     expect(q.controls).toEqual({
       $select: ["name", "status"],
       $sort: { createdAt: -1, name: 1 },
-      $limit: 25,
-      $skip: 25,
       $search: "test",
     });
   });

@@ -1,4 +1,4 @@
-import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import type { TAtscriptAnnotatedType, TSerializedAnnotatedType } from "@atscript/typescript/utils";
 
 // ── MetaResponse types (structurally compatible with @atscript/db-client) ────
 
@@ -31,8 +31,7 @@ export interface MetaResponse {
   readOnly: boolean;
   relations: RelationInfo[];
   fields: Record<string, FieldMeta>;
-  /** Serialized TAtscriptAnnotatedType (TSerializedAnnotatedType shape). */
-  type: Record<string, unknown>;
+  type: TSerializedAnnotatedType;
 }
 
 // ── Table definition types ──────────────────────────────────

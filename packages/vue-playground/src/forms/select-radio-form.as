@@ -53,7 +53,7 @@ export interface SelectRadioForm {
 
     // Action button
     @meta.label 'Reset Selections'
-    @ui.altAction 'reset'
+    @ui.form.action 'reset'
     @ui.order 7
     resetAction: ui.action
 }

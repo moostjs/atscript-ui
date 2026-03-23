@@ -31,10 +31,11 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@atscript/ui-core": "workspace:^",
+    "@atscript/ui": "workspace:^",
     "@atscript/ui-table": "workspace:^"
   },
   "devDependencies": {
+    "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
     "@tanstack/vue-virtual": "catalog:",
     "@uniqu/core": "catalog:",
@@ -48,6 +49,7 @@
     "vue-tsc": "catalog:"
   },
   "peerDependencies": {
+    "@atscript/db-client": "^0.1.45",
     "@tanstack/vue-virtual": "^3",
     "@vueuse/core": "^12",
     "reka-ui": "^2",

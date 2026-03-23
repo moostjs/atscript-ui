@@ -1,4 +1,4 @@
-import type { ColumnDef, SortControl } from "@atscript/ui-core";
+import type { ColumnDef, SortControl } from "@atscript/ui";
 import type { FieldFilters } from "../filters/filter-types";
 import type { PresetSnapshot } from "./preset-types";
 

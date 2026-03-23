@@ -1,6 +1,6 @@
-import { shallowRef, ref, computed, provide, inject, type Component } from "vue";
-import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui-core";
-import { getVisibleColumns } from "@atscript/ui-core";
+import { shallowRef, ref, computed, provide, inject } from "vue";
+import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
+import { getVisibleColumns } from "@atscript/ui";
 import {
   SelectionState,
   isFilled,
@@ -8,15 +8,15 @@ import {
   type FilterCondition,
   type SelectionOptions,
 } from "@atscript/ui-table";
+import type { Client } from "@atscript/db-client";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
-import type { UseTableClient } from "./use-table";
 
 const TABLE_KEY = "__as_table";
 
 /** Everything provided by as-table-root to its subtree. */
 export interface TableContext {
   state: ReactiveTableState;
-  client: UseTableClient;
+  client: Client;
   components: TAsTableComponents;
 }
 

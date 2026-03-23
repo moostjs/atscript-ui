@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { FormObjectFieldDef } from "@atscript/ui-core";
-import { isObjectField } from "@atscript/ui-core";
+import type { FormObjectFieldDef } from "@atscript/ui";
+import { isObjectField } from "@atscript/ui";
 import type { TAsComponentProps } from "@atscript/vue-form";
 import { AsIterator } from "@atscript/vue-form";
 

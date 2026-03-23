@@ -1,21 +1,17 @@
-import { createTableDef, type MetaResponse, type TableDef } from "@atscript/ui-core";
+import { createTableDef, type TableDef } from "@atscript/ui";
+import type { Client } from "@atscript/db-client";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import { createTableState, provideTableContext } from "./use-table-state";
-import { useTableQuery, type TableClient, type UseTableQueryOptions } from "./use-table-query";
+import { useTableQuery, type UseTableQueryOptions } from "./use-table-query";
 import { useTableSelection } from "./use-table-selection";
 
-/** Full client interface — needs both meta() and pages(). */
-export interface UseTableClient extends TableClient {
-  meta(): Promise<MetaResponse>;
-}
-
 /** Factory function that creates a client from a URL path. */
-export type TableClientFactory = (url: string) => UseTableClient;
+export type TableClientFactory = (url: string) => Client;
 
 /** Cached entry: the client instance + parsed TableDef promise. */
 interface CacheEntry {
-  client: UseTableClient;
+  client: Client;
   def: Promise<TableDef>;
 }
 
@@ -99,7 +95,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
 function resolveClient(
   url: string,
   factory: TableClientFactory,
-): { client: UseTableClient; defPromise: Promise<TableDef> } {
+): { client: Client; defPromise: Promise<TableDef> } {
   const cached = cache.get(url);
   if (cached) {
     return { client: cached.client, defPromise: cached.def };

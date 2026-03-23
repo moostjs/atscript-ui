@@ -20,7 +20,7 @@ function handleClick(action?: { id: string; label: string }) {
     type="button"
     class="custom-action-btn"
     :disabled="disabled"
-    @click="handleClick(altAction)"
+    @click="handleClick(formAction)"
   >
     <span class="custom-action-btn-icon">⚡</span>
     {{ label }}

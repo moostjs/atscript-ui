@@ -7,7 +7,7 @@ import {
   UI_FN_DISABLED,
   UI_FN_VALUE,
   UI_FN_OPTIONS,
-} from "@atscript/ui-core";
+} from "@atscript/ui";
 import { mountForm, objectType, stringProp, phantomProp } from "./helpers";
 
 beforeAll(() => {

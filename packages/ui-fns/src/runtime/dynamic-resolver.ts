@@ -1,5 +1,5 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import type { FieldResolver, TResolveOptions } from "@atscript/ui-core";
+import type { FieldResolver, TResolveOptions } from "@atscript/ui";
 import {
   META_READONLY,
   UI_COMPONENT,
@@ -16,7 +16,7 @@ import {
   resolveFieldProp,
   resolveOptions,
   resolveStatic,
-} from "@atscript/ui-core";
+} from "@atscript/ui";
 import { compileFieldFn, compileTopFn } from "./fn-compiler";
 import type { TFieldEvaluated, TFnScope } from "./types";
 
@@ -119,7 +119,7 @@ function resolveAnnotatedProp<T>(
     return compileFn(fnStr)(scope);
   }
 
-  // Reuse ui-core's static resolution for the fallback path
+  // Reuse @atscript/ui's static resolution for the fallback path
   return resolveStatic(metadata, staticKey, opts);
 }
 

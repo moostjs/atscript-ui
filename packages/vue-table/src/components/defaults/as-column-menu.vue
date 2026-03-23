@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import {
   ContextMenuRoot,
   ContextMenuTrigger,
@@ -52,11 +52,7 @@ const emit = defineEmits<{
         >
           &#x1F50D; Filter
         </ContextMenuItem>
-        <ContextMenuItem
-          v-if="config.hide"
-          class="as-column-menu-item"
-          @select="emit('hide')"
-        >
+        <ContextMenuItem v-if="config.hide" class="as-column-menu-item" @select="emit('hide')">
           &#x2716; Hide Column
         </ContextMenuItem>
       </ContextMenuContent>

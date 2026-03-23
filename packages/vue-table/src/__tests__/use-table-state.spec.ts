@@ -3,12 +3,12 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import {
   createTableState,
-  provideTableState,
-  useTableState,
+  provideTableContext,
+  useTableContext,
   type TableStateInternals,
 } from "../composables/use-table-state";
 import type { ReactiveTableState } from "../types";
-import { mockColumn, mockTableDef } from "./helpers";
+import { createMockMeta, createMockClient, mockColumn, mockTableDef } from "./helpers";
 
 describe("createTableState", () => {
   it("creates state with default values", () => {
@@ -112,13 +112,13 @@ describe("createTableState", () => {
   });
 });
 
-describe("provideTableState / useTableState", () => {
+describe("provideTableContext / useTableContext", () => {
   it("provides and injects state", () => {
     let injected!: ReactiveTableState;
 
     const Child = defineComponent({
       setup() {
-        injected = useTableState();
+        injected = useTableContext().state;
         return () => h("div");
       },
     });
@@ -127,7 +127,8 @@ describe("provideTableState / useTableState", () => {
       defineComponent({
         setup() {
           const { state } = createTableState();
-          provideTableState(state);
+          const { client } = createMockClient({ meta: createMockMeta([]) });
+          provideTableContext({ state, client, components: {} });
           return () => h(Child);
         },
       }),
@@ -142,11 +143,11 @@ describe("provideTableState / useTableState", () => {
       mount(
         defineComponent({
           setup() {
-            useTableState();
+            useTableContext();
             return () => h("div");
           },
         }),
       );
-    }).toThrow("[vue-table] useTableState() called outside of <as-table-root>");
+    }).toThrow();
   });
 });

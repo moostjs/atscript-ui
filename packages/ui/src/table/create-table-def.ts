@@ -3,7 +3,6 @@ import type {
   TAtscriptTypeComplex,
   TAtscriptTypeFinal,
   TAtscriptTypeObject,
-  TSerializedAnnotatedType,
 } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typescript/utils";
 import { getFieldMeta } from "../shared/field-resolver";
@@ -26,7 +25,7 @@ import type { ColumnDef, MetaResponse, TableDef } from "./types";
  * 4. Sorts by @ui.order
  */
 export function createTableDef(meta: MetaResponse): TableDef {
-  const type = deserializeAnnotatedType(meta.type as unknown as TSerializedAnnotatedType);
+  const type = deserializeAnnotatedType(meta.type);
 
   // Only flatten if the root is an object type
   const flatMap =

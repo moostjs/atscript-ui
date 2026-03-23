@@ -1,5 +1,5 @@
 import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
-import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui-core";
+import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type { FieldFilters, SelectionState, TableStateMethods } from "@atscript/ui-table";
 
 /**

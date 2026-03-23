@@ -8,7 +8,7 @@ import {
   getResolver,
   resolveFieldProp,
   resolveFormProp,
-} from "@atscript/ui-core";
+} from "@atscript/ui";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { DynamicFieldResolver, buildFieldEntry } from "./dynamic-resolver";
 import { compileFieldFn, compileTopFn, compileValidatorFn } from "./fn-compiler";

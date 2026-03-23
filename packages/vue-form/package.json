@@ -31,7 +31,7 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@atscript/ui-core": "workspace:^"
+    "@atscript/ui": "workspace:^"
   },
   "devDependencies": {
     "@atscript/typescript": "catalog:",

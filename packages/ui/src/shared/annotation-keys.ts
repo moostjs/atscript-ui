@@ -1,4 +1,4 @@
-// ── UI annotation keys (exist in @atscript/core) ────────────
+// ── UI annotation keys (registered by @atscript/ui plugin) ───
 export const UI_PLACEHOLDER = "ui.placeholder" as const;
 export const UI_COMPONENT = "ui.component" as const;
 export const UI_HIDDEN = "ui.hidden" as const;
@@ -13,6 +13,8 @@ export const UI_OPTIONS = "ui.options" as const;
 export const UI_ATTR = "ui.attr" as const;
 export const UI_CLASS = "ui.class" as const;
 export const UI_STYLE = "ui.style" as const;
+export const UI_AUTOCOMPLETE = "ui.autocomplete" as const;
+export const UI_FORM_ACTION = "ui.form.action" as const;
 
 // ── Meta annotation keys (exist in @atscript/core) ──────────
 export const META_LABEL = "meta.label" as const;

@@ -1,27 +1,35 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
-import { useTable } from "../composables/use-table";
-import { useTableState } from "../composables/use-table-state";
+import type { Client } from "@atscript/db-client";
+import { useTable, clearTableCache } from "../composables/use-table";
+import { useTableContext } from "../composables/use-table-state";
 import type { ReactiveTableState } from "../types";
 import { createMockMeta, createMockClient } from "./helpers";
+
+afterEach(() => {
+  clearTableCache();
+});
+
+function withClientFactory(client: Client) {
+  return { clientFactory: () => client };
+}
 
 describe("useTable", () => {
   it("fetches metadata and initializes tableDef", async () => {
     const meta = createMockMeta(["name", "age"]);
-    const client = createMockClient({ meta });
+    const { client } = createMockClient({ meta });
     let state!: ReactiveTableState;
 
     mount(
       defineComponent({
         setup() {
-          state = useTable(client);
+          state = useTable("/test", withClientFactory(client));
           return () => h("div");
         },
       }),
     );
 
-    // Before meta loads
     expect(state.tableDef.value).toBeNull();
 
     await flushPromises();
@@ -34,13 +42,13 @@ describe("useTable", () => {
   it("triggers initial query when queryOnMount is true (default)", async () => {
     const meta = createMockMeta(["name"]);
     const data = [{ name: "Alice" }, { name: "Bob" }];
-    const client = createMockClient({ meta, data, count: 2 });
+    const { client } = createMockClient({ meta, data, count: 2 });
 
     let state!: ReactiveTableState;
     mount(
       defineComponent({
         setup() {
-          state = useTable(client);
+          state = useTable("/test2", withClientFactory(client));
           return () => h("div");
         },
       }),
@@ -55,13 +63,12 @@ describe("useTable", () => {
 
   it("does not query on mount when queryOnMount is false", async () => {
     const meta = createMockMeta(["name"]);
-    const findManyWithCount = vi.fn().mockResolvedValue({ data: [], count: 0 });
-    const client = { meta: () => Promise.resolve(meta), findManyWithCount };
+    const { client, pagesFn } = createMockClient({ meta });
 
     mount(
       defineComponent({
         setup() {
-          useTable(client, { queryOnMount: false });
+          useTable("/test3", { queryOnMount: false, ...withClientFactory(client) });
           return () => h("div");
         },
       }),
@@ -69,20 +76,18 @@ describe("useTable", () => {
 
     await flushPromises();
 
-    expect(findManyWithCount).not.toHaveBeenCalled();
+    expect(pagesFn).not.toHaveBeenCalled();
   });
 
   it("sets metadataError when meta() fails", async () => {
-    const client = {
-      meta: () => Promise.reject(new Error("Network error")),
-      findManyWithCount: vi.fn().mockResolvedValue({ data: [], count: 0 }),
-    };
+    const { client } = createMockClient({ meta: createMockMeta([]) });
+    client.meta = () => Promise.reject(new Error("Network error"));
 
     let state!: ReactiveTableState;
     mount(
       defineComponent({
         setup() {
-          state = useTable(client);
+          state = useTable("/test4", withClientFactory(client));
           return () => h("div");
         },
       }),
@@ -97,12 +102,12 @@ describe("useTable", () => {
 
   it("provides state so children can inject", async () => {
     const meta = createMockMeta(["name"]);
-    const client = createMockClient({ meta });
+    const { client } = createMockClient({ meta });
     let childState!: ReactiveTableState;
 
     const Child = defineComponent({
       setup() {
-        childState = useTableState();
+        childState = useTableContext().state;
         return () => h("div");
       },
     });
@@ -110,7 +115,7 @@ describe("useTable", () => {
     mount(
       defineComponent({
         setup() {
-          useTable(client);
+          useTable("/test5", withClientFactory(client));
           return () => h(Child);
         },
       }),
@@ -124,13 +129,13 @@ describe("useTable", () => {
 
   it("passes limit option to pagination", async () => {
     const meta = createMockMeta(["name"]);
-    const client = createMockClient({ meta });
+    const { client } = createMockClient({ meta });
     let state!: ReactiveTableState;
 
     mount(
       defineComponent({
         setup() {
-          state = useTable(client, { limit: 10 });
+          state = useTable("/test6", { limit: 10, ...withClientFactory(client) });
           return () => h("div");
         },
       }),

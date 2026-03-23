@@ -22,11 +22,11 @@ console.log(`✅ Schema synced: ${result.status}`);
 const productsTable = db.getTable(ProductsTable);
 const customersTable = db.getTable(CustomersTable);
 
-const products = seedProducts();
+const products = seedProducts() as Record<string, unknown>[];
 await productsTable.insertMany(products);
 console.log(`📦 Seeded ${products.length} products`);
 
-const customers = seedCustomers();
+const customers = seedCustomers() as Record<string, unknown>[];
 await customersTable.insertMany(customers);
 console.log(`👥 Seeded ${customers.length} customers`);
 

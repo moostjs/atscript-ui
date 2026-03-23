@@ -7,7 +7,7 @@ import {
   UI_DISABLED,
   UI_PLACEHOLDER,
   UI_HINT,
-} from "@atscript/ui-core";
+} from "@atscript/ui";
 
 describe("AsField", () => {
   it("resolves label from @meta.label", () => {

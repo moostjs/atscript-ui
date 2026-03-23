@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@atscript/db-client": "catalog:",
-    "@atscript/ui-core": "workspace:^",
+    "@atscript/ui": "workspace:^",
     "@atscript/ui-fns": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",

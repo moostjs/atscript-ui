@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import { deserializePreset, serializePreset } from "./preset-serializer";
 import type { FieldFilters } from "../filters/filter-types";
 import type { PresetSnapshot } from "./preset-types";

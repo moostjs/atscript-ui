@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import { isFilled, filterTokenLabel } from "@atscript/ui-table";
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";

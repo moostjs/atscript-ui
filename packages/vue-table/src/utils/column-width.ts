@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 
 const DEFAULT_WIDTHS: Record<string, string> = {
   boolean: "5em",

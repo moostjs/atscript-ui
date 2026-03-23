@@ -1,4 +1,4 @@
-import type { SortControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
 
 /**
  * Merge force sorters with user sorters.

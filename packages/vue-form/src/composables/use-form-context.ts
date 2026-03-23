@@ -1,5 +1,5 @@
 import type { TFieldEvaluated, TFnScope } from "@atscript/ui-fns";
-import { getByPath as _getByPath, setByPath as _setByPath } from "@atscript/ui-core";
+import { getByPath as _getByPath, setByPath as _setByPath } from "@atscript/ui";
 import type { TFormState } from "./types";
 import { computed, inject, provide, type ComputedRef } from "vue";
 import type { TAsUnionContext } from "../components/types";

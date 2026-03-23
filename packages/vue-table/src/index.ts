@@ -6,7 +6,6 @@ export {
   useTable,
   clearTableCache,
   setDefaultClientFactory,
-  type UseTableClient,
   type UseTableOptions,
   type TableClientFactory,
 } from "./composables/use-table";
@@ -17,12 +16,7 @@ export {
   type CreateTableStateOptions,
   type TableStateInternals,
 } from "./composables/use-table-state";
-export {
-  useTableQuery,
-  type PageResult,
-  type TableClient,
-  type UseTableQueryOptions,
-} from "./composables/use-table-query";
+export { useTableQuery, type UseTableQueryOptions } from "./composables/use-table-query";
 export { useTableSelection } from "./composables/use-table-selection";
 export { useTableFilter } from "./composables/use-table-filter";
 

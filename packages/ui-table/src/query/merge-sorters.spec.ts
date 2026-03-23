@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mergeSorters } from "./merge-sorters";
-import type { SortControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
 
 const asc = (field: string): SortControl => ({ field, direction: "asc" });
 const desc = (field: string): SortControl => ({ field, direction: "desc" });

@@ -1,6 +1,7 @@
-import type { ColumnDef, MetaResponse, TableDef } from "@atscript/ui-core";
+import type { ColumnDef, MetaResponse, TableDef } from "@atscript/ui";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
-import type { UseTableClient } from "../composables/use-table";
+import type { Client } from "@atscript/db-client";
+import { vi } from "vitest";
 
 /**
  * Build a simple MetaResponse for testing.
@@ -21,7 +22,7 @@ export function createMockMeta(fieldNames: string[]): MetaResponse {
   }
 
   return {
-    type: serialized as unknown as Record<string, unknown>,
+    type: serialized,
     fields,
     primaryKeys: ["id"],
     readOnly: false,
@@ -35,20 +36,26 @@ export function createMockMeta(fieldNames: string[]): MetaResponse {
 /**
  * Create a mock client for testing.
  * Returns a client whose meta() returns the given MetaResponse
- * and findManyWithCount() returns the given data/count.
+ * and pages() returns the given data/count.
  */
 export function createMockClient(opts: {
   meta: MetaResponse;
   data?: Record<string, unknown>[];
   count?: number;
-}): UseTableClient {
+}): { client: Client; pagesFn: ReturnType<typeof vi.fn> } {
+  const pagesFn = vi.fn().mockResolvedValue({
+    data: opts.data ?? [],
+    count: opts.count ?? opts.data?.length ?? 0,
+    page: 1,
+    itemsPerPage: 50,
+    pages: 1,
+  });
   return {
-    meta: () => Promise.resolve(opts.meta),
-    findManyWithCount: () =>
-      Promise.resolve({
-        data: opts.data ?? [],
-        count: opts.count ?? opts.data?.length ?? 0,
-      }),
+    client: {
+      meta: () => Promise.resolve(opts.meta),
+      pages: pagesFn,
+    } as unknown as Client,
+    pagesFn,
   };
 }
 

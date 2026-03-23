@@ -1,4 +1,4 @@
-import type { SortControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
 import type { FieldFilters } from "../filters/filter-types";
 
 /** Serialized snapshot of table state for preset storage. */

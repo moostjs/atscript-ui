@@ -10,11 +10,11 @@ Atscript UI is a type-driven UI toolkit that generates forms and tables from [At
 
 ## Packages
 
-| Package              | Description                                               |
-| -------------------- | --------------------------------------------------------- |
-| `@atscript/ui-core`  | Framework-agnostic runtime for form and table definitions |
-| `@atscript/ui-fns`   | Dynamic fn-compiled field properties (opt-in)             |
-| `@atscript/vue-form` | Vue 3 form components with `as-` prefix                   |
+| Package              | Description                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| `@atscript/ui`       | Framework-agnostic runtime + `@ui.*` annotation plugin + UI primitives |
+| `@atscript/ui-fns`   | Dynamic `@ui.fn.*` computed properties and `@ui.validate` (opt-in)     |
+| `@atscript/vue-form` | Vue 3 form components with `as-` prefix                                |
 
 ## Requirements
 

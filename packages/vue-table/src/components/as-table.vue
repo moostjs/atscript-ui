@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, triggerRef } from "vue";
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import { useTableContext } from "../composables/use-table-state";
 import { useTableComponent } from "../composables/use-table-component";
 import AsTableBase from "./as-table-base.vue";

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import type { FilterCondition, FilterConditionType, ColumnFilterType } from "@atscript/ui-table";
 import { hasSecondValue } from "@atscript/ui-table";
 import {

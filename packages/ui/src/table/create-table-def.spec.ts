@@ -58,7 +58,7 @@ function buildMeta(
     fields:
       fields ??
       Object.fromEntries(Object.keys(props).map((k) => [k, { sortable: false, filterable: true }])),
-    type: serialized as unknown as Record<string, unknown>,
+    type: serialized,
     ...overrides,
   };
 }

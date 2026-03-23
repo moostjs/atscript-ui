@@ -1,4 +1,4 @@
-import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui-core";
+import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type { FilterCondition, FieldFilters } from "../filters/filter-types";
 
 /**

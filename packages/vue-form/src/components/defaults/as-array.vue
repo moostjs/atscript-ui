@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { FormArrayFieldDef } from "@atscript/ui-core";
-import { isArrayField } from "@atscript/ui-core";
+import type { FormArrayFieldDef } from "@atscript/ui";
+import { isArrayField } from "@atscript/ui";
 import { computed, ref } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useConsumeUnionContext } from "../../composables/use-form-context";

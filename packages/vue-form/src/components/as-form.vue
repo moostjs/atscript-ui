@@ -2,8 +2,8 @@
 import { useFormState } from "../composables/use-form-state";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
-import type { FormDef } from "@atscript/ui-core";
-import { getFormValidator, resolveFormProp, getFieldMeta } from "@atscript/ui-core";
+import type { FormDef } from "@atscript/ui";
+import { getFormValidator, resolveFormProp, getFieldMeta } from "@atscript/ui";
 import type { TFnScope } from "@atscript/ui-fns";
 import { computed, provide, ref, toRaw, type Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
@@ -108,12 +108,12 @@ const emit = defineEmits<{
 // ── Action handler (provided to AsField tree) ──────────────
 const domainData = () => toRaw(getDomainData()) as TFormData;
 
-function supportsAltAction(def: FormDef, altAction: string): boolean {
-  return def.fields.some((f) => getFieldMeta(f.prop, "ui.altAction")?.id === altAction);
+function supportsAction(def: FormDef, actionId: string): boolean {
+  return def.fields.some((f) => getFieldMeta(f.prop, "ui.form.action")?.id === actionId);
 }
 
 function handleAction(name: string) {
-  if (supportsAltAction(props.def, name)) {
+  if (supportsAction(props.def, name)) {
     emit("action", name, domainData());
   } else {
     emit("unsupported-action", name, domainData());

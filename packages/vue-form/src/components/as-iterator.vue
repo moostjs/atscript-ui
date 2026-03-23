@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormDef } from "@atscript/ui-core";
+import type { FormDef } from "@atscript/ui";
 import { computed, inject, provide, type ComputedRef } from "vue";
 import AsField from "./as-field.vue";
 

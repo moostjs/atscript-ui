@@ -1,5 +1,5 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import { createFormDef, createFormData, createFormValueResolver } from "@atscript/ui-core";
+import { createFormDef, createFormData, createFormValueResolver } from "@atscript/ui";
 import { reactive } from "vue";
 
 /**

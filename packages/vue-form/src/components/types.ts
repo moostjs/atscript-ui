@@ -1,9 +1,4 @@
-import type {
-  FormFieldDef,
-  FormUnionVariant,
-  TFormAltAction,
-  TFormEntryOptions,
-} from "@atscript/ui-core";
+import type { FormFieldDef, FormUnionVariant, TFormAction, TFormEntryOptions } from "@atscript/ui";
 import type { Component, Ref } from "vue";
 
 /**
@@ -57,8 +52,8 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   readonly?: boolean | undefined;
   /** The resolved field input type (e.g., `'text'`, `'select'`, `'checkbox'`). */
   type: string;
-  /** Alternate action from `@ui.altAction`. Contains the action id and display label. */
-  altAction?: TFormAltAction;
+  /** Form action from `@ui.form.action`. Contains the action id and display label. */
+  formAction?: TFormAction;
   /** The field name (last segment of the dot-separated path). */
   name?: string;
   /** The full FormFieldDef for advanced use cases. */

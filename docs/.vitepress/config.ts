@@ -213,7 +213,7 @@ const apiSidebar = [
   {
     text: "Packages",
     items: [
-      { text: "ui-core", link: "/api/ui-core" },
+      { text: "ui", link: "/api/ui" },
       { text: "ui-fns", link: "/api/ui-fns" },
       { text: "vue-form", link: "/api/vue-form" },
     ],

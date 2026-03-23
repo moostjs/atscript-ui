@@ -1,5 +1,5 @@
 import type { TValidatorPlugin } from "@atscript/typescript/utils";
-import { UI_VALIDATE, asArray, getFieldMeta } from "@atscript/ui-core";
+import { UI_VALIDATE, asArray, getFieldMeta } from "@atscript/ui";
 import { buildFieldEntry } from "./dynamic-resolver";
 import { compileValidatorFn } from "./fn-compiler";
 

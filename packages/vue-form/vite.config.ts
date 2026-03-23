@@ -11,7 +11,7 @@ export default defineConfig({
     format: ["esm", "cjs"],
     plugins: [vue()],
     deps: {
-      neverBundle: ["vue", "@atscript/ui-core", "@atscript/ui-fns", "@atscript/typescript"],
+      neverBundle: ["vue", "@atscript/ui", "@atscript/ui-fns", "@atscript/typescript"],
     },
   },
 });

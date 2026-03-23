@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { nextTick } from "vue";
 import { mountForm, objectType, stringProp } from "./helpers";
-import { META_LABEL, META_REQUIRED } from "@atscript/ui-core";
+import { META_LABEL, META_REQUIRED } from "@atscript/ui";
 
 describe("AsForm", () => {
   it("renders a <form> element", () => {

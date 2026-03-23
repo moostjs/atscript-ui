@@ -75,7 +75,7 @@ export interface ArrayForm {
 
     // Action button
     @meta.label 'Clear All Arrays'
-    @ui.altAction 'clear-arrays'
+    @ui.form.action 'clear-arrays'
     @ui.order 9
     clearAction: ui.action
 }

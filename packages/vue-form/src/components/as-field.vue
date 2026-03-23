@@ -25,8 +25,8 @@ import {
   createFormValueResolver,
   createFieldValidator,
   type FormFieldDef,
-  type TFormAltAction,
-} from "@atscript/ui-core";
+  type TFormAction,
+} from "@atscript/ui";
 import { buildFieldEntry } from "@atscript/ui-fns";
 import { computed, inject, isRef, provide, watch, type Component, type ComputedRef } from "vue";
 import { useFormContext } from "../composables/use-form-context";
@@ -117,11 +117,11 @@ const prop = props.field.prop;
 const autocomplete = getFieldMeta(prop, "ui.autocomplete");
 const maxLength = getFieldMeta(prop, "expect.maxLength")?.length;
 const componentName = getFieldMeta(prop, "ui.component");
-const altActionMeta = getFieldMeta(prop, "ui.altAction");
-const altAction: TFormAltAction | undefined = altActionMeta
+const formActionMeta = getFieldMeta(prop, "ui.form.action");
+const formAction: TFormAction | undefined = formActionMeta
   ? {
-      id: altActionMeta.id,
-      label: altActionMeta.label ?? getFieldMeta(prop, "meta.label") ?? props.field.name,
+      id: formActionMeta.id,
+      label: formActionMeta.label ?? getFieldMeta(prop, "meta.label") ?? props.field.name,
     }
   : undefined;
 
@@ -455,7 +455,7 @@ const invariantProps = {
   onBlur,
   model: slotModel,
   type: props.field.type,
-  altAction,
+  formAction,
   name: props.field.name,
   field: props.field,
   maxLength,

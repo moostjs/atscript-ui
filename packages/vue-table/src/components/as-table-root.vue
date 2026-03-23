@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import type { SortControl } from "@atscript/ui-core";
+import type { SortControl } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { TAsTableComponents } from "../types";
 import { useTable, type TableClientFactory } from "../composables/use-table";
-import type { PageResult } from "../composables/use-table-query";
+import type { PageResult } from "@atscript/db-client";
 
 const props = withDefaults(
   defineProps<{
@@ -17,7 +17,11 @@ const props = withDefaults(
     forceFilters?: FilterExpr;
     forceSorters?: SortControl[];
     queryOnMount?: boolean;
-    queryFn?: (query: Uniquery, page: number, size: number) => Promise<PageResult>;
+    queryFn?: (
+      query: Uniquery,
+      page: number,
+      size: number,
+    ) => Promise<PageResult<Record<string, unknown>>>;
     blockQuery?: boolean;
     select?: SelectionMode;
     rowValueFn?: (row: Record<string, unknown>) => unknown;

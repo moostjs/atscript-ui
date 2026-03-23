@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { FormTupleFieldDef } from "@atscript/ui-core";
-import { isTupleField } from "@atscript/ui-core";
+import type { FormTupleFieldDef } from "@atscript/ui";
+import { isTupleField } from "@atscript/ui";
 import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useConsumeUnionContext } from "../../composables/use-form-context";

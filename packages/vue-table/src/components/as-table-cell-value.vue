@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ColumnDef } from "@atscript/ui-core";
+import type { ColumnDef } from "@atscript/ui";
 import { getCellValue } from "../utils/get-cell-value";
 import { formatCellValue } from "../utils/format-cell";
 
