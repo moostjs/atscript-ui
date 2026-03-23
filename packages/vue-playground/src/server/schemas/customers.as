@@ -24,7 +24,7 @@ export interface CustomersTable {
     country?: string
 
     @meta.label 'Active'
-    @db.default true
+    @db.default 'true'
     active: boolean
 
     @meta.label 'Joined'

@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { useTableContext } from "../../composables/use-table-state";
+import { useTableComponent } from "../../composables/use-table-component";
+import AsFilterBar from "./as-filter-bar.vue";
 
 const { state } = useTableContext();
+
+const FilterBarComp = useTableComponent("filterBar", AsFilterBar);
 
 let searchTimer: ReturnType<typeof setTimeout>;
 
@@ -24,7 +28,7 @@ function onSearchInput(event: Event) {
         :value="state.searchTerm.value"
         @input="onSearchInput"
       />
-      <slot name="filters" />
+      <component :is="FilterBarComp" />
     </div>
     <div class="as-table-toolbar-right">
       <span class="as-table-count">

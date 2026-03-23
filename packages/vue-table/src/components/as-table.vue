@@ -4,7 +4,7 @@ import type { ColumnDef } from "@atscript/ui-core";
 import { useTableContext } from "../composables/use-table-state";
 import { useTableComponent } from "../composables/use-table-component";
 import AsTableBase from "./as-table-base.vue";
-import { AsTableDefault, AsTableToolbar, AsTablePagination } from "./defaults";
+import { AsTableDefault, AsTableToolbar, AsTablePagination, AsFilterDialog } from "./defaults";
 
 const props = withDefaults(
   defineProps<{
@@ -35,6 +35,7 @@ const { state } = useTableContext();
 const TableComp = useTableComponent("table", AsTableDefault);
 const ToolbarComp = useTableComponent("toolbar", AsTableToolbar);
 const PaginationComp = useTableComponent("pagination", AsTablePagination);
+const FilterDialogComp = useTableComponent("filterDialog", AsFilterDialog);
 
 const effectiveRows = computed(() => props.rows ?? state.results.value);
 const effectiveColumns = computed(() => props.columns ?? state.columns.value);
@@ -50,6 +51,10 @@ function handleSort(column: ColumnDef, direction: "asc" | "desc" | null) {
     const existing = state.sorters.value.filter((s) => s.field !== column.path);
     state.setSorters([...existing, { field: column.path, direction }]);
   }
+}
+
+function handleFilter(column: ColumnDef) {
+  state.openFilterDialog(column);
 }
 
 function handleSelectionToggle(row: Record<string, unknown>) {
@@ -75,6 +80,7 @@ function handleSelectionToggle(row: Record<string, unknown>) {
       :virtual-overscan="virtualOverscan"
       @sort="handleSort"
       @hide="handleHide"
+      @filter="handleFilter"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)
@@ -88,5 +94,7 @@ function handleSelectionToggle(row: Record<string, unknown>) {
     </AsTableBase>
 
     <component :is="PaginationComp" :mode="rowsControl" />
+
+    <component :is="FilterDialogComp" />
   </component>
 </template>

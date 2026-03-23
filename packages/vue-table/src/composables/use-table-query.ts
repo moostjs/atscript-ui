@@ -65,7 +65,8 @@ export function useTableQuery(
       });
 
       const { page, itemsPerPage } = state.pagination.value;
-      const fetcher = opts?.queryFn ?? ((q: Uniquery, p: number, s: number) => client.pages(q, p, s));
+      const fetcher =
+        opts?.queryFn ?? ((q: Uniquery, p: number, s: number) => client.pages(q, p, s));
       const { data, count } = await fetcher(query, page, itemsPerPage);
 
       if (thisGen !== generation) return;

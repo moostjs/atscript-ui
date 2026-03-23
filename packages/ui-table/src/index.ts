@@ -2,7 +2,13 @@
 export type { FilterConditionType, FilterCondition, FieldFilters } from "./filters/filter-types";
 
 // ── Filter condition helpers ────────────────────────────────
-export { isFilled, hasSecondValue, conditionLabel } from "./filters/filter-conditions";
+export {
+  isFilled,
+  hasSecondValue,
+  conditionLabel,
+  filledFilterCount,
+  filterTokenLabel,
+} from "./filters/filter-conditions";
 
 // ── Filter conditions map ───────────────────────────────────
 export type { ColumnFilterType } from "./filters/filter-conditions-map";

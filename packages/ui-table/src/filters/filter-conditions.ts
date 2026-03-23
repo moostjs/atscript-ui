@@ -1,4 +1,4 @@
-import type { FilterCondition, FilterConditionType } from "./filter-types";
+import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
 
 /** Check if a condition has a filled/meaningful value. */
 export function isFilled(condition: FilterCondition): boolean {
@@ -53,4 +53,33 @@ const CONDITION_LABELS: Record<FilterConditionType, string> = {
 /** Human-readable label for a condition type. */
 export function conditionLabel(type: FilterConditionType): string {
   return CONDITION_LABELS[type] ?? type;
+}
+
+/** Count of fields that have at least one filled condition. */
+export function filledFilterCount(filters: FieldFilters): number {
+  let count = 0;
+  for (const path in filters) {
+    if (filters[path].some(isFilled)) count++;
+  }
+  return count;
+}
+
+/** Summarize a field's conditions into a human-readable token label. */
+export function filterTokenLabel(
+  path: string,
+  conditions: FilterCondition[],
+  columnLabel?: string,
+): string {
+  const filled = conditions.filter(isFilled);
+  if (filled.length === 0) return "";
+  const label = columnLabel ?? path;
+  if (filled.length === 1) {
+    const c = filled[0];
+    if (c.type === "null") return `${label}: empty`;
+    if (c.type === "notNull") return `${label}: not empty`;
+    if (c.type === "in") return `${label}: ${c.value.join(", ")}`;
+    if (c.type === "bw") return `${label}: ${c.value[0]} – ${c.value[1]}`;
+    return `${label} ${conditionLabel(c.type)} ${c.value[0]}`;
+  }
+  return `${label}: ${filled.length} conditions`;
 }

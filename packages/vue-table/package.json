@@ -42,6 +42,7 @@
     "@vue/test-utils": "catalog:",
     "@vueuse/core": "catalog:",
     "happy-dom": "catalog:",
+    "reka-ui": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
     "vue-tsc": "catalog:"
@@ -49,6 +50,7 @@
   "peerDependencies": {
     "@tanstack/vue-virtual": "^3",
     "@vueuse/core": "^12",
+    "reka-ui": "^2",
     "vue": "^3"
   }
 }

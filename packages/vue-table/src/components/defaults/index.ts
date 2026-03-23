@@ -6,8 +6,19 @@ import AsTablePagination from "./as-table-pagination.vue";
 import AsColumnMenu from "./as-column-menu.vue";
 import AsTableCellValue from "../as-table-cell-value.vue";
 import AsTableHeaderCell from "../as-table-header-cell.vue";
+import AsFilterBar from "./as-filter-bar.vue";
+import AsFilterDialog from "./as-filter-dialog.vue";
+import AsFilterInput from "./as-filter-input.vue";
 
-export { AsTableDefault, AsTableToolbar, AsTablePagination, AsColumnMenu };
+export {
+  AsTableDefault,
+  AsTableToolbar,
+  AsTablePagination,
+  AsColumnMenu,
+  AsFilterBar,
+  AsFilterDialog,
+  AsFilterInput,
+};
 
 export function createDefaultTableComponents() {
   return {
@@ -17,5 +28,8 @@ export function createDefaultTableComponents() {
     headerCell: AsTableHeaderCell,
     cellValue: AsTableCellValue,
     columnMenu: AsColumnMenu,
+    filterBar: AsFilterBar,
+    filterDialog: AsFilterDialog,
+    filterInput: AsFilterInput,
   };
 }

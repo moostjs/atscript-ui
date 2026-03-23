@@ -24,6 +24,7 @@ export {
   type UseTableQueryOptions,
 } from "./composables/use-table-query";
 export { useTableSelection } from "./composables/use-table-selection";
+export { useTableFilter } from "./composables/use-table-filter";
 
 // ── Component resolution ────────────────────────────────────
 export { useTableComponent } from "./composables/use-table-component";

@@ -31,6 +31,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: "sort", column: ColumnDef, direction: "asc" | "desc" | null): void;
   (e: "hide", column: ColumnDef): void;
+  (e: "filter", column: ColumnDef): void;
   (e: "row-click", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "selection-toggle", row: Record<string, unknown>): void;
@@ -61,6 +62,10 @@ function onSort(column: ColumnDef, direction: "asc" | "desc" | null) {
 
 function onHide(column: ColumnDef) {
   emit("hide", column);
+}
+
+function onFilter(column: ColumnDef) {
+  emit("filter", column);
 }
 
 function onRowClick(row: Record<string, unknown>, event: MouseEvent) {
@@ -113,18 +118,12 @@ const useVirtual = computed(() => props.rows.length > 50);
     <table class="as-table" :class="{ 'as-table-sticky': stickyHeader }">
       <thead>
         <tr>
-          <th
-            v-if="selection && selection.mode !== 'none'"
-            class="as-th-select"
-            style="width: 3em"
-          >
+          <th v-if="selection && selection.mode !== 'none'" class="as-th-select" style="width: 3em">
             <input
               v-if="selection.mode === 'multi'"
               type="checkbox"
               :checked="selection.selectedCount === rows.length && rows.length > 0"
-              :indeterminate="
-                selection.selectedCount > 0 && selection.selectedCount < rows.length
-              "
+              :indeterminate="selection.selectedCount > 0 && selection.selectedCount < rows.length"
               @change="
                 selection!.selectedCount === rows.length
                   ? selection!.deselectAll()
@@ -145,6 +144,7 @@ const useVirtual = computed(() => props.rows.length > 50);
               :sort-direction="sortMap[col.path] ?? null"
               @sort="onSort"
               @hide="onHide"
+              @filter="onFilter"
             />
           </template>
         </tr>
@@ -216,6 +216,7 @@ const useVirtual = computed(() => props.rows.length > 50);
               :sort-direction="sortMap[col.path] ?? null"
               @sort="onSort"
               @hide="onHide"
+              @filter="onFilter"
             />
           </template>
         </tr>

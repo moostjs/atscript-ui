@@ -70,4 +70,6 @@ export interface ReactiveTableState extends TableStateMethods {
   selection: ShallowRef<SelectionState>;
   selectedValues: ComputedRef<unknown[]>;
   selectedCount: ComputedRef<number>;
+  /** Column currently open in the filter dialog (null when closed). */
+  filterDialogColumn: ShallowRef<ColumnDef | null>;
 }

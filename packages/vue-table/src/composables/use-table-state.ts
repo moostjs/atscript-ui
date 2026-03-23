@@ -1,7 +1,13 @@
 import { shallowRef, ref, computed, provide, inject, type Component } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui-core";
 import { getVisibleColumns } from "@atscript/ui-core";
-import { SelectionState, type FieldFilters, type SelectionOptions } from "@atscript/ui-table";
+import {
+  SelectionState,
+  isFilled,
+  type FieldFilters,
+  type FilterCondition,
+  type SelectionOptions,
+} from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import type { UseTableClient } from "./use-table";
 
@@ -58,6 +64,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
   const mustRefresh = ref(false);
   const searchTerm = ref("");
   const configDialogOpen = ref(false);
+  const filterDialogColumn = shallowRef<ColumnDef | null>(null);
 
   const selectionOpts = opts?.selection ?? { mode: "none" as const };
   const selection = shallowRef(new SelectionState(selectionOpts));
@@ -84,6 +91,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
     mustRefresh,
     searchTerm,
     configDialogOpen,
+    filterDialogColumn,
     selection,
     selectedValues,
     selectedCount,
@@ -108,6 +116,31 @@ export function createTableState(opts?: CreateTableStateOptions): {
     },
     setSorters(s: SortControl[]) {
       sorters.value = s;
+    },
+    setFieldFilter(path: string, conditions: FilterCondition[]) {
+      const filled = conditions.filter((c) => isFilled(c));
+      if (filled.length === 0) {
+        const { [path]: _, ...rest } = filters.value;
+        filters.value = rest;
+      } else {
+        filters.value = { ...filters.value, [path]: conditions };
+      }
+      if (pagination.value.page !== 1) {
+        pagination.value = { ...pagination.value, page: 1 };
+      }
+    },
+    removeFieldFilter(path: string) {
+      const { [path]: _, ...rest } = filters.value;
+      filters.value = rest;
+      if (pagination.value.page !== 1) {
+        pagination.value = { ...pagination.value, page: 1 };
+      }
+    },
+    openFilterDialog(column: ColumnDef) {
+      filterDialogColumn.value = column;
+    },
+    closeFilterDialog() {
+      filterDialogColumn.value = null;
     },
   };
 
@@ -135,10 +168,7 @@ export function provideTableContext(ctx: TableContext): void {
 export function useTableContext(): TableContext {
   const ctx = inject<TableContext>(TABLE_KEY);
   if (!ctx) {
-    throw new Error(
-      "[vue-table] useTableContext() called outside of <as-table-root>.",
-    );
+    throw new Error("[vue-table] useTableContext() called outside of <as-table-root>.");
   }
   return ctx;
 }
-

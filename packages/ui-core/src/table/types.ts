@@ -69,6 +69,8 @@ export interface ColumnDef {
   order: number;
   /** Icon hint from @ui.icon. */
   icon?: string;
+  /** Enumerated options for union literal types (e.g. 'a' | 'b' | 'c'). */
+  options?: { key: string; label: string }[];
 }
 
 // ── Query state types ───────────────────────────────────────

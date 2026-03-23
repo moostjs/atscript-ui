@@ -13,6 +13,7 @@
     "@atscript/ui-fns": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",
+    "reka-ui": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"
   },

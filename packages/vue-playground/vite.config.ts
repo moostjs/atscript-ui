@@ -22,10 +22,6 @@ export default defineConfig({
   },
   oxc: false,
   ssr: {
-    external: [
-      "@atscript/db",
-      "@atscript/db-sqlite",
-      "better-sqlite3",
-    ],
+    external: ["@atscript/db", "@atscript/db-sqlite", "better-sqlite3"],
   },
 });

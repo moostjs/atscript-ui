@@ -1,4 +1,4 @@
-const categories = ["Electronics", "Clothing", "Books", "Home", "Sports", "Food", "Toys"];
+const categories = ["electronics", "clothing", "food", "books", "toys", "other"];
 
 export function seedProducts() {
   const products = [];
@@ -16,28 +16,95 @@ export function seedProducts() {
 }
 
 const firstNames = [
-  "Alice", "Bob", "Charlie", "Diana", "Eve", "Frank", "Grace", "Henry",
-  "Ivy", "Jack", "Kate", "Leo", "Mia", "Noah", "Olivia", "Paul",
-  "Quinn", "Ruby", "Sam", "Tina", "Uma", "Victor", "Wendy", "Xavier",
-  "Yara", "Zack", "Anna", "Ben", "Clara", "David",
+  "Alice",
+  "Bob",
+  "Charlie",
+  "Diana",
+  "Eve",
+  "Frank",
+  "Grace",
+  "Henry",
+  "Ivy",
+  "Jack",
+  "Kate",
+  "Leo",
+  "Mia",
+  "Noah",
+  "Olivia",
+  "Paul",
+  "Quinn",
+  "Ruby",
+  "Sam",
+  "Tina",
+  "Uma",
+  "Victor",
+  "Wendy",
+  "Xavier",
+  "Yara",
+  "Zack",
+  "Anna",
+  "Ben",
+  "Clara",
+  "David",
 ];
 
 const lastNames = [
-  "Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller",
-  "Davis", "Rodriguez", "Martinez", "Anderson", "Taylor", "Thomas",
-  "Hernandez", "Moore", "Martin", "Jackson", "Thompson", "White",
-  "Lopez", "Lee", "Gonzalez", "Harris", "Clark", "Lewis", "Robinson",
-  "Walker", "Perez", "Hall", "Young",
+  "Smith",
+  "Johnson",
+  "Williams",
+  "Brown",
+  "Jones",
+  "Garcia",
+  "Miller",
+  "Davis",
+  "Rodriguez",
+  "Martinez",
+  "Anderson",
+  "Taylor",
+  "Thomas",
+  "Hernandez",
+  "Moore",
+  "Martin",
+  "Jackson",
+  "Thompson",
+  "White",
+  "Lopez",
+  "Lee",
+  "Gonzalez",
+  "Harris",
+  "Clark",
+  "Lewis",
+  "Robinson",
+  "Walker",
+  "Perez",
+  "Hall",
+  "Young",
 ];
 
 const cities = [
-  "New York", "London", "Berlin", "Tokyo", "Paris", "Sydney", "Toronto",
-  "Amsterdam", "Barcelona", "Singapore",
+  "New York",
+  "London",
+  "Berlin",
+  "Tokyo",
+  "Paris",
+  "Sydney",
+  "Toronto",
+  "Amsterdam",
+  "Barcelona",
+  "Singapore",
 ];
 
 const countries = [
-  "USA", "UK", "Germany", "Japan", "France", "Australia", "Canada",
-  "Netherlands", "Spain", "Singapore",
+  "USA",
+  "UK",
+  "Germany",
+  "Japan",
+  "France",
+  "Australia",
+  "Canada",
+  "Netherlands",
+  "Spain",
+  "Singapore",
 ];
 
 export function seedCustomers() {
@@ -49,7 +116,10 @@ export function seedCustomers() {
       firstName: first,
       lastName: last,
       email: `${first.toLowerCase()}.${last.toLowerCase()}@example.com`,
-      phone: Math.random() > 0.3 ? `+1-555-${String(1000 + i).slice(1)}-${String(1000 + i * 3).slice(1)}` : undefined,
+      phone:
+        Math.random() > 0.3
+          ? `+1-555-${String(1000 + i).slice(1)}-${String(1000 + i * 3).slice(1)}`
+          : undefined,
       city: cities[i % cities.length],
       country: countries[i % countries.length],
       active: Math.random() > 0.15,

@@ -1,5 +1,7 @@
 import type {
   TAtscriptAnnotatedType,
+  TAtscriptTypeComplex,
+  TAtscriptTypeFinal,
   TAtscriptTypeObject,
   TSerializedAnnotatedType,
 } from "@atscript/typescript/utils";
@@ -51,6 +53,7 @@ export function createTableDef(meta: MetaResponse): TableDef {
       width: getFieldMeta(prop, UI_WIDTH) as string | undefined,
       order: (getFieldMeta(prop, UI_ORDER) as number | undefined) ?? Infinity,
       icon: getFieldMeta(prop, UI_ICON) as string | undefined,
+      options: extractUnionOptions(prop),
     });
   }
 
@@ -73,13 +76,62 @@ function inferDisplayType(prop: TAtscriptAnnotatedType): string {
   const kind = prop.type.kind;
   if (kind === "array") return "array";
   if (kind === "object") return "object";
+  if (kind === "union") {
+    const literals = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
+    if (literals !== null && literals.length > 0) return "enum";
+    return "text";
+  }
   if (kind === "") {
-    const dt = prop.type.designType;
+    const dt = (prop.type as TAtscriptTypeFinal).designType;
     if (dt === "number" || dt === "decimal") return "number";
     if (dt === "boolean") return "boolean";
     return "text";
   }
   return "text";
+}
+
+/**
+ * Extracts options from a union of literal types (e.g. 'a' | 'b' | 'c').
+ * Returns undefined if the type is not a pure union of literals.
+ *
+ * Handles nested unions created by flattenAnnotatedType, which recurses
+ * into union items and produces synthetic unions containing both individual
+ * literals and the original union type as nested items.
+ */
+function extractUnionOptions(
+  prop: TAtscriptAnnotatedType,
+): { key: string; label: string }[] | undefined {
+  if (prop.type.kind !== "union") return undefined;
+  const result = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
+  return result && result.length > 0 ? result : undefined;
+}
+
+/**
+ * Recursively collects literal values from union items.
+ * Returns null if any non-literal, non-union item is found (invalid union).
+ * Returns empty array when all items are valid but already seen (deduped).
+ */
+function collectLiterals(
+  items: TAtscriptAnnotatedType[],
+  seen: Set<string>,
+): { key: string; label: string }[] | null {
+  const result: { key: string; label: string }[] = [];
+  for (const item of items) {
+    if (item.type.kind === "" && (item.type as TAtscriptTypeFinal).value !== undefined) {
+      const val = String((item.type as TAtscriptTypeFinal).value);
+      if (!seen.has(val)) {
+        seen.add(val);
+        result.push({ key: val, label: val });
+      }
+    } else if (item.type.kind === "union") {
+      const nested = collectLiterals((item.type as TAtscriptTypeComplex).items, seen);
+      if (nested === null) return null;
+      result.push(...nested);
+    } else {
+      return null;
+    }
+  }
+  return result;
 }
 
 /** Converts a dot-path to a human-readable label (e.g. 'firstName' → 'First Name'). */

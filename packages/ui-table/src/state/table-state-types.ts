@@ -1,5 +1,5 @@
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui-core";
-import type { FieldFilters } from "../filters/filter-types";
+import type { FilterCondition, FieldFilters } from "../filters/filter-types";
 
 /**
  * Framework-agnostic table state data.
@@ -54,4 +54,12 @@ export interface TableStateMethods {
   setColumns(columns: ColumnDef[]): void;
   /** Replace active sorters. */
   setSorters(sorters: SortControl[]): void;
+  /** Set filter conditions for a specific field (replaces existing). */
+  setFieldFilter(path: string, conditions: FilterCondition[]): void;
+  /** Remove all filter conditions for a specific field. */
+  removeFieldFilter(path: string): void;
+  /** Open filter dialog for a column. */
+  openFilterDialog(column: ColumnDef): void;
+  /** Close filter dialog. */
+  closeFilterDialog(): void;
 }
