@@ -36,3 +36,6 @@ WF.md
 
 # Playground SQLite data
 .data/
+
+.claude/projects
+.playwright-mcp
