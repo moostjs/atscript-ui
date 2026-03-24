@@ -10,7 +10,10 @@ catalog:
   "@atscript/moost-db": ^0.1.45
   "@atscript/typescript": ^0.1.45
   "@moostjs/event-http": ^0.6.4
+  "@moostjs/event-wf": ^0.6.4
   "@moostjs/vite": ^0.6.4
+  "@wooksjs/event-core": ^0.7.8
+  "@wooksjs/event-wf": ^0.7.8
   "@prostojs/deserialize-fn": ^0.0.5
   "@swc/core": ^1.15.18
   "@tanstack/vue-virtual": ^3.13.23

@@ -27,7 +27,9 @@
       "@atscript/ui-table": ["./packages/ui-table/src"],
       "@atscript/ui-table/*": ["./packages/ui-table/src/*"],
       "@atscript/vue-table": ["./packages/vue-table/src"],
-      "@atscript/vue-table/*": ["./packages/vue-table/src/*"]
+      "@atscript/vue-table/*": ["./packages/vue-table/src/*"],
+      "@atscript/moost-wf": ["./packages/moost-wf/src"],
+      "@atscript/moost-wf/*": ["./packages/moost-wf/src/*"]
     }
   }
 }

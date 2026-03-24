@@ -1,0 +1,47 @@
+{
+  "name": "@atscript/moost-wf",
+  "version": "0.0.1",
+  "description": "Workflow form integration for moost — decorators, interceptors, and serialization driven by atscript type metadata",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.mts",
+      "import": "./dist/plugin.mjs",
+      "require": "./dist/plugin.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "devDependencies": {
+    "@atscript/core": "catalog:",
+    "@atscript/typescript": "catalog:",
+    "@moostjs/event-wf": "catalog:",
+    "@wooksjs/event-core": "catalog:",
+    "moost": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@atscript/core": "^0.1.45",
+    "@atscript/typescript": "^0.1.45",
+    "@moostjs/event-wf": "^0.6.4",
+    "moost": "^0.6.4"
+  }
+}
