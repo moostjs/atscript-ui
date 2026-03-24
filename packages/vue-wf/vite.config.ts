@@ -10,10 +10,10 @@ export default defineConfig({
   },
   pack: {
     dts: { vue: true },
-    format: ["esm", "cjs"],
+    format: ["esm"],
     plugins: [vue()],
     deps: {
-      neverBundle: ["vue", "@atscript/ui", "@atscript/ui-fns", "@atscript/typescript"],
+      neverBundle: ["vue", "@atscript/ui", "@atscript/vue-form", "@atscript/typescript"],
     },
   },
 });

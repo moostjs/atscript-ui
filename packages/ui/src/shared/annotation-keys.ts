@@ -16,6 +16,9 @@ export const UI_STYLE = "ui.style" as const;
 export const UI_AUTOCOMPLETE = "ui.autocomplete" as const;
 export const UI_FORM_ACTION = "ui.form.action" as const;
 
+// ── Workflow annotation keys (registered by @atscript/moost-wf plugin) ──
+export const WF_ACTION_WITH_DATA = "wf.action.withData" as const;
+
 // ── Meta annotation keys (exist in @atscript/core) ──────────
 export const META_LABEL = "meta.label" as const;
 export const META_ID = "meta.id" as const;

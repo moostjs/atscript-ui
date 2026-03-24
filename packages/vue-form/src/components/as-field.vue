@@ -24,6 +24,7 @@ import {
   createFormData,
   createFormValueResolver,
   createFieldValidator,
+  WF_ACTION_WITH_DATA,
   type FormFieldDef,
   type TFormAction,
 } from "@atscript/ui";
@@ -118,12 +119,15 @@ const autocomplete = getFieldMeta(prop, "ui.autocomplete");
 const maxLength = getFieldMeta(prop, "expect.maxLength")?.length;
 const componentName = getFieldMeta(prop, "ui.component");
 const formActionMeta = getFieldMeta(prop, "ui.form.action");
+const wfActionWithData = getFieldMeta(prop, WF_ACTION_WITH_DATA) as string | undefined;
 const formAction: TFormAction | undefined = formActionMeta
   ? {
       id: formActionMeta.id,
       label: formActionMeta.label ?? getFieldMeta(prop, "meta.label") ?? props.field.name,
     }
-  : undefined;
+  : wfActionWithData
+    ? { id: wfActionWithData, label: getFieldMeta(prop, "meta.label") ?? props.field.name }
+    : undefined;
 
 // ── Cached validator (created once per field) ────────────────
 const formValidate = createFieldValidator(

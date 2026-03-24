@@ -1,10 +1,9 @@
 {
-  "name": "@atscript/vue-form",
+  "name": "@atscript/vue-wf",
   "version": "0.0.1",
-  "description": "Type-driven form rendering for Atscript with Vue 3",
+  "description": "Workflow form integration for Vue 3 — HTTP round-trip loop driven by atscript type metadata",
   "files": [
-    "dist",
-    "styles.d.ts"
+    "dist"
   ],
   "type": "module",
   "main": "dist/index.mjs",
@@ -12,17 +11,9 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    },
-    "./styles": {
-      "types": "./styles.d.ts",
-      "default": "./dist/style.css"
+      "import": "./dist/index.mjs"
     },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "scripts": {
     "build": "vp pack",
@@ -35,9 +26,9 @@
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
+    "@atscript/moost-wf": "workspace:^",
     "@atscript/typescript": "catalog:",
-    "@atscript/ui-fns": "workspace:^",
-    "@tsdown/css": "catalog:",
+    "@atscript/vue-form": "workspace:^",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
     "happy-dom": "catalog:",
@@ -47,7 +38,8 @@
     "vue-tsc": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/ui-fns": "^0.0.1",
+    "@atscript/typescript": "^0.1.45",
+    "@atscript/vue-form": "^0.0.1",
     "vue": "^3"
   }
 }

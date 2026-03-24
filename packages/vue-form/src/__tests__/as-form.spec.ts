@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { nextTick } from "vue";
 import { mountForm, objectType, stringProp } from "./helpers";
-import { META_LABEL, META_REQUIRED } from "@atscript/ui";
 
 describe("AsForm", () => {
   it("renders a <form> element", () => {
@@ -22,12 +21,9 @@ describe("AsForm", () => {
     expect(button.text()).toBe("Submit");
   });
 
-  it("renders input fields for string props", () => {
-    const type = objectType({
-      firstName: stringProp({ [META_LABEL]: "First Name" }),
-      lastName: stringProp({ [META_LABEL]: "Last Name" }),
-    });
-    const { wrapper } = mountForm(type);
+  it("renders input fields for string props", async () => {
+    const { LabeledForm } = await import("./fixtures/form-features.as");
+    const { wrapper } = mountForm(LabeledForm);
     const inputs = wrapper.findAll("input");
     expect(inputs.length).toBe(2);
   });
@@ -50,12 +46,8 @@ describe("AsForm", () => {
   });
 
   it('emits "error" with error array when required field is empty', async () => {
-    const type = objectType({
-      name: stringProp({
-        [META_REQUIRED]: { message: "Name is required" },
-      }),
-    });
-    const { wrapper } = mountForm(type);
+    const { RequiredForm } = await import("./fixtures/form-features.as");
+    const { wrapper } = mountForm(RequiredForm);
 
     await wrapper.find("form").trigger("submit");
     await nextTick();
@@ -69,9 +61,9 @@ describe("AsForm", () => {
     expect(errors.some((e) => e.message === "Name is required")).toBe(true);
   });
 
-  it("static @ui.submit.text changes button text", () => {
-    const type = objectType({ name: stringProp() }, { "ui.submit.text": "Save" });
-    const { wrapper } = mountForm(type);
+  it("static @ui.submit.text changes button text", async () => {
+    const { SubmitTextForm } = await import("./fixtures/form-features.as");
+    const { wrapper } = mountForm(SubmitTextForm);
     const button = wrapper.find("form > button");
     expect(button.text()).toBe("Save");
   });

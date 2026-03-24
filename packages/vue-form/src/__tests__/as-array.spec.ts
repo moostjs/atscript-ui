@@ -61,12 +61,8 @@ describe("AsArray", () => {
   });
 
   it("disables add button when at maxLength", async () => {
-    const type = objectType({
-      items: arrayType(stringProp(), {
-        "expect.maxLength": { length: 2 },
-      }),
-    });
-    const { wrapper, formData } = mountForm(type);
+    const { MaxLengthArrayForm } = await import("./fixtures/array-forms.as");
+    const { wrapper, formData } = mountForm(MaxLengthArrayForm);
 
     formData.value.items = ["a", "b"];
     await nextTick();
@@ -76,12 +72,8 @@ describe("AsArray", () => {
   });
 
   it("disables remove buttons when at minLength", async () => {
-    const type = objectType({
-      items: arrayType(stringProp(), {
-        "expect.minLength": { length: 2 },
-      }),
-    });
-    const { wrapper, formData } = mountForm(type);
+    const { MinLengthArrayForm } = await import("./fixtures/array-forms.as");
+    const { wrapper, formData } = mountForm(MinLengthArrayForm);
 
     formData.value.items = ["a", "b"];
     await nextTick();
@@ -93,24 +85,16 @@ describe("AsArray", () => {
     }
   });
 
-  it("custom add label from @ui.array.add.label annotation", () => {
-    const type = objectType({
-      items: arrayType(stringProp(), {
-        "ui.array.add.label": "Add tag",
-      }),
-    });
-    const { wrapper } = mountForm(type);
+  it("custom add label from @ui.array.add.label annotation", async () => {
+    const { CustomAddLabelArray } = await import("./fixtures/array-forms.as");
+    const { wrapper } = mountForm(CustomAddLabelArray);
     const addBtn = wrapper.find(".as-array-add-btn");
     expect(addBtn.text()).toBe("Add tag");
   });
 
   it("array validation error displayed on submit", async () => {
-    const type = objectType({
-      items: arrayType(stringProp(), {
-        "expect.minLength": { length: 1, message: "At least one item required" },
-      }),
-    });
-    const { wrapper } = mountForm(type);
+    const { RequiredArrayForm } = await import("./fixtures/array-forms.as");
+    const { wrapper } = mountForm(RequiredArrayForm);
 
     // Items is empty by default — submit should trigger validation
     await wrapper.find("form").trigger("submit");

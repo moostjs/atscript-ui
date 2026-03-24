@@ -6,7 +6,7 @@ import { reactive } from "vue";
 import AsForm from "../components/as-form.vue";
 import { createDefaultTypes } from "../composables/create-default-types";
 
-// ── Type builders ──────────────────────────────────────────
+// ── Type builders (for tests that need inline types) ─────────
 
 function annotate(h: ReturnType<typeof defineAnnotatedType>, meta?: Record<string, unknown>) {
   if (meta) {
@@ -16,18 +16,6 @@ function annotate(h: ReturnType<typeof defineAnnotatedType>, meta?: Record<strin
 
 export function stringProp(meta?: Record<string, unknown>) {
   const h = defineAnnotatedType().designType("string");
-  annotate(h, meta);
-  return h.$type;
-}
-
-export function numberProp(meta?: Record<string, unknown>) {
-  const h = defineAnnotatedType().designType("number");
-  annotate(h, meta);
-  return h.$type;
-}
-
-export function booleanProp(meta?: Record<string, unknown>) {
-  const h = defineAnnotatedType().designType("boolean");
   annotate(h, meta);
   return h.$type;
 }
@@ -50,13 +38,6 @@ export function objectType(
 
 export function arrayType(itemType: TAtscriptAnnotatedType, meta?: Record<string, unknown>) {
   const h = defineAnnotatedType("array").of(itemType);
-  annotate(h, meta);
-  return h.$type;
-}
-
-export function unionType(items: TAtscriptAnnotatedType[], meta?: Record<string, unknown>) {
-  const h = defineAnnotatedType("union");
-  for (const item of items) h.item(item);
   annotate(h, meta);
   return h.$type;
 }

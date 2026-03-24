@@ -3,7 +3,7 @@ import { useFormState } from "../composables/use-form-state";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import type { FormDef } from "@atscript/ui";
-import { getFormValidator, resolveFormProp, getFieldMeta } from "@atscript/ui";
+import { getFormValidator, resolveFormProp, getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
 import type { TFnScope } from "@atscript/ui-fns";
 import { computed, provide, ref, toRaw, type Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
@@ -109,7 +109,11 @@ const emit = defineEmits<{
 const domainData = () => toRaw(getDomainData()) as TFormData;
 
 function supportsAction(def: FormDef, actionId: string): boolean {
-  return def.fields.some((f) => getFieldMeta(f.prop, "ui.form.action")?.id === actionId);
+  return def.fields.some((f) => {
+    const a = getFieldMeta(f.prop, "ui.form.action");
+    if (a?.id === actionId) return true;
+    return getFieldMeta(f.prop, WF_ACTION_WITH_DATA) === actionId;
+  });
 }
 
 function handleAction(name: string) {

@@ -33,9 +33,11 @@
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/typescript": "catalog:",
+    "@atscript/ui": "workspace:^",
     "@moostjs/event-wf": "catalog:",
     "@wooksjs/event-core": "catalog:",
     "moost": "catalog:",
+    "unplugin-atscript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
