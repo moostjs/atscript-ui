@@ -33,6 +33,8 @@ export interface UseWfFormReturn {
   formData: ShallowRef<Record<string, unknown> | null>;
   formContext: ShallowRef<Record<string, unknown>>;
   errors: ShallowRef<Record<string, string>>;
+  /** Increments each time the form schema changes — use as :key on AsForm to force remount. */
+  formKey: Ref<number>;
   loading: Ref<boolean>;
   finished: Ref<boolean>;
   response: ShallowRef<unknown>;
@@ -59,6 +61,9 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   const error = shallowRef<unknown>(null);
   const loading = ref(false);
   const finished = ref(false);
+
+  /** Increments each time the form schema changes — used as :key on AsForm to force remount. */
+  const formKey = ref(0);
 
   let token: string | undefined;
   let lastRequestBody: Record<string, unknown> | undefined;
@@ -139,6 +144,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     const payloadJson = JSON.stringify(ir.payload);
     if (payloadJson !== lastPayloadJson) {
       lastPayloadJson = payloadJson;
+      formKey.value++;
       const type = deserializeAnnotatedType(ir.payload as TSerializedAnnotatedType);
       formDef.value = createFormDef(type);
       formData.value = reactive(createFormData(type)) as Record<string, unknown>;
@@ -220,6 +226,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     formData,
     formContext,
     errors,
+    formKey,
     loading,
     finished,
     response,

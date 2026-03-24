@@ -11,7 +11,6 @@ export default defineConfig({
     moostVite({
       entry: "./src/server/main.ts",
       middleware: true,
-      prefix: "/db",
     }),
     swc.vite(),
   ],

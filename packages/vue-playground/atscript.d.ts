@@ -110,6 +110,8 @@ declare global {
     "ui.fn.styles": string
     "ui.fn.options": string
     "ui.fn.attr": ({ name: string, fn: string })[]
+    "wf.context.pass": (string)[]
+    "wf.action.withData": string
   }
   type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
 }

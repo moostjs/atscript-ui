@@ -24,7 +24,8 @@
 }
 
 .as-default-field input,
-.as-default-field select {
+.as-default-field select,
+.as-default-field textarea {
   padding: 8px 12px;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -37,30 +38,43 @@
   outline: none;
 }
 
-.as-default-field input::placeholder {
+.as-default-field textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.as-default-field input::placeholder,
+.as-default-field textarea::placeholder {
   color: #9ca3af;
 }
 
 .as-default-field input:focus,
-.as-default-field select:focus {
+.as-default-field select:focus,
+.as-default-field textarea:focus {
   border-color: #6366f1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
 }
 
 .as-default-field input:disabled,
-.as-default-field select:disabled {
+.as-default-field select:disabled,
+.as-default-field textarea:disabled {
   background: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;
 }
 
 .as-default-field.error input,
-.as-default-field.error select {
+.as-default-field.error select,
+.as-default-field.error textarea {
   border-color: #ef4444;
 }
 
 .as-default-field.error input:focus,
-.as-default-field.error select:focus {
+.as-default-field.error select:focus,
+.as-default-field.error textarea:focus {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
@@ -77,7 +91,8 @@
 }
 
 .as-field-input-row > input,
-.as-field-input-row > select {
+.as-field-input-row > select,
+.as-field-input-row > textarea {
   flex: 1;
 }
 

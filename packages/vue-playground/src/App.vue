@@ -13,6 +13,11 @@ const formRoutes = [
   { path: "/custom", label: "Custom Components" },
 ];
 
+const wfRoutes = [
+  { path: "/wf-auth", label: "Auth Flow" },
+  { path: "/wf-profile", label: "Profile Draft" },
+];
+
 const tableRoutes = [
   { path: "/products-table", label: "Products" },
   { path: "/customers-table", label: "Customers" },
@@ -43,6 +48,10 @@ provide("showToast", showToast);
       <nav>
         <span class="nav-section">Forms</span>
         <RouterLink v-for="r in formRoutes" :key="r.path" :to="r.path">
+          {{ r.label }}
+        </RouterLink>
+        <span class="nav-section">Workflows</span>
+        <RouterLink v-for="r in wfRoutes" :key="r.path" :to="r.path">
           {{ r.label }}
         </RouterLink>
         <span class="nav-section">Tables</span>

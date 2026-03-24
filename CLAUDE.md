@@ -47,7 +47,14 @@ pnpm release:major          # Major bump
   └─ @atscript/vue-table   ← Vue 3 table components + composables (depends on ui-table)
 ```
 
-`vue-playground` is a private dev app that imports vue-form and vue-table for manual testing.
+`vue-playground` is a private dev app that imports vue-form, vue-table, and vue-wf for manual testing.
+
+**Important:** vue-playground imports library packages from their built `dist/` files (via `package.json` `main`/`exports`), not from source. After changing code in any library package (vue-form, vue-wf, ui, etc.), you must rebuild before the playground picks up the changes:
+
+```bash
+pnpm --filter @atscript/vue-wf run build   # rebuild a single package
+pnpm build                                  # rebuild all packages
+```
 
 ### Key design principles
 

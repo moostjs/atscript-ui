@@ -23,6 +23,7 @@ import {
 export function createDefaultTypes(): TAsTypeComponents {
   return {
     text: AsInput,
+    textarea: AsInput,
     password: AsInput,
     number: AsInput,
     select: AsSelect,

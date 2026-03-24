@@ -51,12 +51,9 @@ watch(
     if (v) emit("error", v as { message: string; status?: number });
   },
 );
-watch(
-  () => wf.formDef.value,
-  (def) => {
-    if (def) emit("form", def, wf.formContext.value);
-  },
-);
+watch([() => wf.formDef.value, () => wf.formContext.value], ([def, ctx]) => {
+  if (def) emit("form", def, ctx);
+});
 
 // ── Action classification ───────────────────────────────────
 // Build a Set of "withData" action IDs from the current FormDef.
@@ -118,6 +115,7 @@ function onAction(name: string, data: unknown) {
 
     <AsForm
       v-else-if="wf.formDef.value && wf.formData.value"
+      :key="wf.formKey.value"
       :def="wf.formDef.value"
       :form-data="wf.formData.value"
       :types="types"

@@ -13,6 +13,7 @@
     "@atscript/ui-fns": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",
+    "@atscript/vue-wf": "workspace:^",
     "reka-ui": "catalog:",
     "vue": "catalog:",
     "vue-router": "catalog:"
@@ -21,8 +22,10 @@
     "@atscript/db": "catalog:",
     "@atscript/db-sqlite": "catalog:",
     "@atscript/moost-db": "catalog:",
+    "@atscript/moost-wf": "workspace:^",
     "@atscript/typescript": "catalog:",
     "@moostjs/event-http": "catalog:",
+    "@moostjs/event-wf": "catalog:",
     "@moostjs/vite": "catalog:",
     "@swc/core": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
