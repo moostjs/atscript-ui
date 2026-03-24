@@ -3,15 +3,15 @@ packages:
   - docs
 
 catalog:
-  "@atscript/core": ^0.1.45
-  "@atscript/db": ^0.1.45
-  "@atscript/db-client": ^0.1.45
-  "@atscript/db-sqlite": ^0.1.45
-  "@atscript/moost-db": ^0.1.45
-  "@atscript/typescript": ^0.1.45
-  "@moostjs/event-http": ^0.6.4
-  "@moostjs/event-wf": ^0.6.4
-  "@moostjs/vite": ^0.6.4
+  "@atscript/core": ^0.1.47
+  "@atscript/db": ^0.1.46
+  "@atscript/db-client": ^0.1.46
+  "@atscript/db-sqlite": ^0.1.46
+  "@atscript/moost-db": ^0.1.46
+  "@atscript/typescript": ^0.1.47
+  "@moostjs/event-http": ^0.6.6
+  "@moostjs/event-wf": ^0.6.6
+  "@moostjs/vite": ^0.6.6
   "@wooksjs/event-core": ^0.7.8
   "@wooksjs/event-wf": ^0.7.8
   "@prostojs/deserialize-fn": ^0.0.5
@@ -25,9 +25,9 @@ catalog:
   "@vueuse/core": ^14.2.1
   reka-ui: ^2.9.2
   happy-dom: ^18
-  "moost": ^0.6.4
+  "moost": ^0.6.6
   typescript: ^5
-  unplugin-atscript: ^0.1.45
+  unplugin-atscript: ^0.1.47
   unplugin-swc: ^1.5.9
   vite: npm:@voidzero-dev/vite-plus-core@0.1.12
   vite-plus: latest
