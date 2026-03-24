@@ -1,6 +1,5 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import type { TFormEntryOptions } from "../form/types";
-import { UI_ATTR, UI_FN_ATTR, UI_FN_OPTIONS, UI_OPTIONS } from "./annotation-keys";
+import { UI_ATTR, UI_FN_ATTR } from "./annotation-keys";
 
 // ── Resolve options ──────────────────────────────────────────
 
@@ -153,44 +152,7 @@ export function asArray<T>(x: T | T[]): T[] {
   return Array.isArray(x) ? x : [x];
 }
 
-/** Extracts the key from an option entry. */
-export function optKey(opt: TFormEntryOptions): string {
-  return typeof opt === "string" ? opt : opt.key;
-}
-
-/** Extracts the display label from an option entry. */
-export function optLabel(opt: TFormEntryOptions): string {
-  return typeof opt === "string" ? opt : opt.label;
-}
-
-/**
- * Converts raw option annotation value to a normalized array.
- */
-export function parseStaticOptions(raw: unknown): TFormEntryOptions[] {
-  const items = asArray(raw);
-  return items.map((item) => {
-    if (typeof item === "object" && item !== null && "label" in item) {
-      const { label, value } = item as { label: string; value?: string };
-      return value !== undefined ? { key: value, label } : label;
-    }
-    return String(item);
-  });
-}
-
 // ── Specialized resolve helpers ──────────────────────────────
-
-/**
- * Resolves options from `ui.fn.options` / `ui.options` metadata on demand.
- * The fn key is only resolved when ui-fns is installed.
- */
-export function resolveOptions(
-  prop: TAtscriptAnnotatedType,
-  scope: Record<string, unknown>,
-): TFormEntryOptions[] | undefined {
-  return resolveFieldProp<TFormEntryOptions[]>(prop, UI_FN_OPTIONS, UI_OPTIONS, scope, {
-    transform: parseStaticOptions,
-  });
-}
 
 /**
  * Parses static `ui.attr` metadata into a key-value record.

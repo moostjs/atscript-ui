@@ -1,6 +1,5 @@
 import type {
   TAtscriptAnnotatedType,
-  TAtscriptTypeComplex,
   TAtscriptTypeFinal,
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
@@ -14,6 +13,7 @@ import {
   UI_TYPE,
   UI_WIDTH,
 } from "../shared/annotation-keys";
+import { extractLiteralOptions } from "../value-help/extract-literals";
 import type { ColumnDef, MetaResponse, TableDef } from "./types";
 
 /**
@@ -41,18 +41,19 @@ export function createTableDef(meta: MetaResponse): TableDef {
     if (path === "") continue;
 
     const fieldMeta = meta.fields[path];
+    const options = extractLiteralOptions(prop);
 
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
-      type: (getFieldMeta(prop, UI_TYPE) as string | undefined) ?? inferDisplayType(prop),
+      type: (getFieldMeta(prop, UI_TYPE) as string | undefined) ?? inferDisplayType(prop, options),
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
       visible: getFieldMeta(prop, UI_HIDDEN) === undefined,
       width: getFieldMeta(prop, UI_WIDTH) as string | undefined,
       order: (getFieldMeta(prop, UI_ORDER) as number | undefined) ?? Infinity,
       icon: getFieldMeta(prop, UI_ICON) as string | undefined,
-      options: extractUnionOptions(prop),
+      options,
     });
   }
 
@@ -71,15 +72,11 @@ export function createTableDef(meta: MetaResponse): TableDef {
 }
 
 /** Infers a display type string from the annotated type's kind and designType. */
-function inferDisplayType(prop: TAtscriptAnnotatedType): string {
+function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: unknown): string {
   const kind = prop.type.kind;
   if (kind === "array") return "array";
   if (kind === "object") return "object";
-  if (kind === "union") {
-    const literals = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
-    if (literals !== null && literals.length > 0) return "enum";
-    return "text";
-  }
+  if (kind === "union") return literalOpts !== undefined ? "enum" : "text";
   if (kind === "") {
     const dt = (prop.type as TAtscriptTypeFinal).designType;
     if (dt === "number" || dt === "decimal") return "number";
@@ -87,50 +84,6 @@ function inferDisplayType(prop: TAtscriptAnnotatedType): string {
     return "text";
   }
   return "text";
-}
-
-/**
- * Extracts options from a union of literal types (e.g. 'a' | 'b' | 'c').
- * Returns undefined if the type is not a pure union of literals.
- *
- * Handles nested unions created by flattenAnnotatedType, which recurses
- * into union items and produces synthetic unions containing both individual
- * literals and the original union type as nested items.
- */
-function extractUnionOptions(
-  prop: TAtscriptAnnotatedType,
-): { key: string; label: string }[] | undefined {
-  if (prop.type.kind !== "union") return undefined;
-  const result = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
-  return result && result.length > 0 ? result : undefined;
-}
-
-/**
- * Recursively collects literal values from union items.
- * Returns null if any non-literal, non-union item is found (invalid union).
- * Returns empty array when all items are valid but already seen (deduped).
- */
-function collectLiterals(
-  items: TAtscriptAnnotatedType[],
-  seen: Set<string>,
-): { key: string; label: string }[] | null {
-  const result: { key: string; label: string }[] = [];
-  for (const item of items) {
-    if (item.type.kind === "" && (item.type as TAtscriptTypeFinal).value !== undefined) {
-      const val = String((item.type as TAtscriptTypeFinal).value);
-      if (!seen.has(val)) {
-        seen.add(val);
-        result.push({ key: val, label: val });
-      }
-    } else if (item.type.kind === "union") {
-      const nested = collectLiterals((item.type as TAtscriptTypeComplex).items, seen);
-      if (nested === null) return null;
-      result.push(...nested);
-    } else {
-      return null;
-    }
-  }
-  return result;
 }
 
 /** Converts a dot-path to a human-readable label (e.g. 'firstName' → 'First Name'). */

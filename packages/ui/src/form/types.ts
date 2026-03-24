@@ -1,7 +1,6 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 
-/** An option for select/radio fields — either a plain string or a `{ key, label }` pair. */
-export type TFormEntryOptions = { key: string; label: string } | string;
+export type { TFormEntryOptions } from "../value-help/types";
 
 /** Form action metadata — the action id and display label. */
 export interface TFormAction {

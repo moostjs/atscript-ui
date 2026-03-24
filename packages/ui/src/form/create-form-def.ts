@@ -16,6 +16,7 @@ import type {
 } from "./types";
 import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
 import { META_LABEL, UI_COMPONENT, UI_ORDER, UI_TYPE } from "../shared/annotation-keys";
+import { isPureLiteralUnion } from "../value-help/extract-literals";
 
 /** Known atscript primitive extension tags that map directly to field types. */
 const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
@@ -118,8 +119,13 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     } as FormObjectFieldDef;
   }
 
-  // Union → union (multi) or unwrap (single)
+  // Union → select (pure literals) or union (multi) or unwrap (single)
   if (kind === "union") {
+    // Pure literal union → select (or @ui.type override like 'radio')
+    if (isPureLiteralUnion(prop)) {
+      return { ...base, type: uiType ?? "select" };
+    }
+
     const unionVariants = buildUnionVariants(prop);
     if (unionVariants.length > 1) {
       return { ...base, type: "union", unionVariants } as FormUnionFieldDef;

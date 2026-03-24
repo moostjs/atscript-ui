@@ -228,6 +228,42 @@ describe("createFormDef", () => {
       expect(field!.type).not.toBe("union");
       expect(field!.type).toBe("text");
     });
+
+    it("pure literal union becomes select (not union)", () => {
+      const literalA = defineAnnotatedType().designType("string").value("a").$type;
+      const literalB = defineAnnotatedType().designType("string").value("b").$type;
+      const unionType = defineAnnotatedType("union").item(literalA).item(literalB).$type;
+      const type = defineAnnotatedType("object").prop("choice", unionType).$type;
+      const def = createFormDef(type);
+
+      const field = def.fields.find((f) => f.path === "choice");
+      expect(field).toBeDefined();
+      expect(field!.type).toBe("select");
+      expect(isUnionField(field!)).toBe(false);
+    });
+
+    it("@ui.type overrides literal union auto-select (e.g. radio)", () => {
+      const literalA = defineAnnotatedType().designType("string").value("a").$type;
+      const literalB = defineAnnotatedType().designType("string").value("b").$type;
+      const unionType = defineAnnotatedType("union").item(literalA).item(literalB).$type;
+      unionType.metadata.set(UI_TYPE as keyof AtscriptMetadata, "radio" as never);
+      const type = defineAnnotatedType("object").prop("choice", unionType).$type;
+      const def = createFormDef(type);
+
+      const field = def.fields.find((f) => f.path === "choice");
+      expect(field!.type).toBe("radio");
+    });
+
+    it("mixed union (literal + non-literal) stays as union", () => {
+      const literalA = defineAnnotatedType().designType("string").value("a").$type;
+      const unionType = defineAnnotatedType("union").item(literalA).item(numberProp()).$type;
+      const type = defineAnnotatedType("object").prop("value", unionType).$type;
+      const def = createFormDef(type);
+
+      const field = def.fields.find((f) => f.path === "value");
+      expect(field!.type).toBe("union");
+      expect(isUnionField(field!)).toBe(true);
+    });
   });
 
   describe("tuple fields", () => {

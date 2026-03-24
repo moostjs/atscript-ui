@@ -69,14 +69,11 @@ export {
   resolveStatic,
   hasComputedAnnotations,
   getFieldMeta,
-  optKey,
-  optLabel,
   asArray,
-  parseStaticOptions,
   parseStaticAttrs,
-  resolveOptions,
   resolveAttrs,
 } from "./shared/field-resolver";
+export { optKey, optLabel, parseStaticOptions, resolveOptions } from "./value-help";
 
 // ── Path utilities ──────────────────────────────────────────
 export {
@@ -107,6 +104,9 @@ export type {
 
 // ── Table definition builder ────────────────────────────────
 export { createTableDef } from "./table/create-table-def";
+
+// ── Value-help (unified options resolution) ─────────────────
+export { extractLiteralOptions, isPureLiteralUnion } from "./value-help";
 
 // ── Table column helpers ────────────────────────────────────
 export {
