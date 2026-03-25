@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef, ValueHelpInfo } from "@atscript/ui";
 import { str, ValueHelpClient } from "@atscript/ui";
 import { debounce } from "@atscript/ui-table";
@@ -121,10 +121,6 @@ function displayValue(): string {
   return "";
 }
 
-function filterFunction(): unknown[] {
-  return innerState.results.value;
-}
-
 const searchTerm = ref("");
 const debouncedSearch = debounce(() => {
   void doSearch(searchTerm.value);
@@ -153,6 +149,13 @@ async function doSearch(text: string) {
   } finally {
     innerState.querying.value = false;
   }
+  // Close and reopen dropdown to force Combobox to re-evaluate items
+  // (workaround for reka-ui/radix-vue not detecting async item changes)
+  dropdownOpen.value = false;
+  await nextTick();
+  await nextTick();
+  await nextTick();
+  dropdownOpen.value = true;
 }
 
 const dropdownOpen = ref(false);
@@ -186,7 +189,7 @@ function onBackspace() {
         v-model:open="dropdownOpen"
         v-model:search-term="searchTerm"
         :display-value="displayValue"
-        :filter-function="filterFunction"
+        :filter-function="(val: unknown[]) => val"
         :multiple="true"
         :reset-search-term-on-blur="false"
         class="as-filter-ref-inline-combobox"
@@ -230,7 +233,6 @@ function onBackspace() {
               :sorters="innerState.sorters.value"
               :querying="innerState.querying.value"
               :sticky-header="true"
-              :virtual-row-height="36"
             />
           </ComboboxViewport>
 

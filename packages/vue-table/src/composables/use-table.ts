@@ -70,15 +70,12 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
 
   const { state, internals } = createTableState({
     limit: opts?.limit,
-    selection: {
-      mode: opts?.select ?? "none",
-      rowValueFn: opts?.rowValueFn,
-      keepAfterRefresh: opts?.keepSelectedAfterRefresh,
-    },
+    select: opts?.select ?? "none",
+    rowValueFn: opts?.rowValueFn,
   });
 
   useTableQuery(client, state, internals, opts);
-  useTableSelection(state);
+  useTableSelection(state, { keepAfterRefresh: opts?.keepSelectedAfterRefresh });
   provideTableContext({ state, client, components: opts?.components ?? {} });
 
   const queryOnMount = opts?.queryOnMount ?? true;

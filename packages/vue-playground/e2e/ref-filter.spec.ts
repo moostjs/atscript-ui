@@ -109,7 +109,7 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await expect(chip).toHaveCount(0);
   });
 
-  test("search filters dropdown results", async ({ page }) => {
+  test("search filters dropdown results and shows matching data", async ({ page }) => {
     // Add Customer filter
     await page.locator(".as-filter-add-btn").click();
     await page.locator(".as-filter-add-item").filter({ hasText: "Customer" }).click();
@@ -121,19 +121,20 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     const dropdown = page.locator(".as-filter-ref-dropdown");
     await expect(dropdown).toBeVisible({ timeout: 10_000 });
 
-    // Wait for initial results
+    // Wait for initial results (should have 10 rows)
     const tableRows = dropdown.locator(".as-table tr:has(td)");
     await expect(tableRows.first()).toBeVisible({ timeout: 5000 });
+    const initialCount = await tableRows.count();
+    expect(initialCount).toBe(10);
 
-    // Type search text
-    await searchInput.fill("Ali");
-    await page.waitForTimeout(500); // wait for debounce
+    // Search for "Anna" — server returns exactly 1 result
+    await searchInput.fill("Anna");
 
-    // Results should be filtered (Alice matches)
-    const filteredRows = dropdown.locator(".as-table tr:has(td)");
-    const count = await filteredRows.count();
-    expect(count).toBeGreaterThan(0);
-    expect(count).toBeLessThanOrEqual(5);
+    // Wait for debounce + network + dropdown reopen
+    await expect(tableRows).toHaveCount(1, { timeout: 3000 });
+
+    // The row must contain "Anna", not stale data
+    await expect(tableRows.first()).toContainText("Anna");
   });
 
   test("removing inline filter with × button", async ({ page }) => {

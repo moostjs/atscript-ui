@@ -1,92 +1,75 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import { defineComponent, h } from "vue";
+import { defineComponent, h, nextTick } from "vue";
 import { createTableState } from "../composables/use-table-state";
 import { useTableSelection } from "../composables/use-table-selection";
 import type { ReactiveTableState } from "../types";
 
-function setupSelection(mode: "none" | "single" | "multi") {
+function setup(mode: "none" | "single" | "multi", keepAfterRefresh = false) {
   let state!: ReactiveTableState;
-  let api!: ReturnType<typeof useTableSelection>;
 
   mount(
     defineComponent({
       setup() {
         ({ state } = createTableState({
-          selection: {
-            mode,
-            rowValueFn: (r) => r.id,
-          },
+          select: mode,
+          rowValueFn: (r) => r.id,
         }));
-        api = useTableSelection(state);
+        useTableSelection(state, { keepAfterRefresh });
         return () => h("div");
       },
     }),
   );
 
-  return { state, api };
+  return state;
 }
 
 describe("useTableSelection", () => {
-  it("toggle adds and removes items (multi mode)", () => {
-    const { state, api } = setupSelection("multi");
-
-    api.toggle({ id: 1 });
-    expect(state.selectedCount.value).toBe(1);
-    expect(state.selectedValues.value).toEqual([1]);
-
-    api.toggle({ id: 2 });
-    expect(state.selectedCount.value).toBe(2);
-
-    api.toggle({ id: 1 });
-    expect(state.selectedCount.value).toBe(1);
-    expect(state.selectedValues.value).toEqual([2]);
+  it("selectedRows is a plain shallowRef array", () => {
+    const state = setup("multi");
+    expect(state.selectedRows.value).toEqual([]);
+    expect(state.selectedCount.value).toBe(0);
   });
 
-  it("single mode keeps only one selection", () => {
-    const { state, api } = setupSelection("single");
-
-    api.toggle({ id: 1 });
-    api.toggle({ id: 2 });
-
-    expect(state.selectedCount.value).toBe(1);
-    expect(state.selectedValues.value).toEqual([2]);
-  });
-
-  it("selectAll works in multi mode", () => {
-    const { state, api } = setupSelection("multi");
-
-    state.results.value = [{ id: 1 }, { id: 2 }, { id: 3 }];
-    api.selectAll();
-
+  it("setting selectedRows updates selectedCount", () => {
+    const state = setup("multi");
+    state.selectedRows.value = [1, 2, 3];
     expect(state.selectedCount.value).toBe(3);
   });
 
-  it("deselectAll clears selection", () => {
-    const { state, api } = setupSelection("multi");
+  it("clears selection on results change (keepAfterRefresh=false)", async () => {
+    const state = setup("multi", false);
 
-    api.toggle({ id: 1 });
-    api.toggle({ id: 2 });
-    api.deselectAll();
+    state.selectedRows.value = [1, 2];
+    expect(state.selectedCount.value).toBe(2);
 
-    expect(state.selectedCount.value).toBe(0);
+    // Simulate results refresh
+    state.results.value = [{ id: 1 }, { id: 3 }];
+    await nextTick();
+
+    expect(state.selectedRows.value).toEqual([]);
   });
 
-  it("isSelected returns correct state", () => {
-    const { api } = setupSelection("multi");
+  it("keeps matching selection on results change (keepAfterRefresh=true)", async () => {
+    const state = setup("multi", true);
 
-    api.toggle({ id: 1 });
-    expect(api.isSelected({ id: 1 })).toBe(true);
-    expect(api.isSelected({ id: 2 })).toBe(false);
+    state.selectedRows.value = [1, 2];
+    expect(state.selectedCount.value).toBe(2);
+
+    // Simulate results refresh — id=2 is gone
+    state.results.value = [{ id: 1 }, { id: 3 }];
+    await nextTick();
+
+    expect(state.selectedRows.value).toEqual([1]);
   });
 
-  it("none mode ignores all operations", () => {
-    const { state, api } = setupSelection("none");
+  it("rowValueFn extracts value for reconciliation", async () => {
+    const state = setup("multi", true);
 
-    api.toggle({ id: 1 });
-    api.select({ id: 2 });
+    state.selectedRows.value = [10, 20, 30];
+    state.results.value = [{ id: 20 }, { id: 30 }, { id: 40 }];
+    await nextTick();
 
-    expect(state.selectedCount.value).toBe(0);
-    expect(api.isSelected({ id: 1 })).toBe(false);
+    expect(state.selectedRows.value).toEqual([20, 30]);
   });
 });

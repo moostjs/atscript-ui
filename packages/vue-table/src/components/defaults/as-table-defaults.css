@@ -140,7 +140,7 @@
   background: #f9fafb;
 }
 
-.as-row-selected {
+.as-table tbody tr[data-state="checked"] {
   background: #eef2ff !important;
 }
 

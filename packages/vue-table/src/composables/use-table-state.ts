@@ -2,11 +2,10 @@ import { shallowRef, ref, computed, provide, inject } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import { getVisibleColumns } from "@atscript/ui";
 import {
-  SelectionState,
   isFilled,
   type FieldFilters,
   type FilterCondition,
-  type SelectionOptions,
+  type SelectionMode,
 } from "@atscript/ui-table";
 import type { Client } from "@atscript/db-client";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
@@ -23,8 +22,12 @@ export interface TableContext {
 export interface CreateTableStateOptions {
   /** Default page size. */
   limit?: number;
-  /** Selection options. */
-  selection?: SelectionOptions;
+  /** Selection mode (default: 'none'). */
+  select?: SelectionMode;
+  /** Extract unique value from a row for selection tracking. */
+  rowValueFn?: (row: Record<string, unknown>) => unknown;
+  /** Preserve selection across data refreshes. */
+  keepSelectedAfterRefresh?: boolean;
 }
 
 /** Internal handles returned alongside the public state. */
@@ -66,10 +69,10 @@ export function createTableState(opts?: CreateTableStateOptions): {
   const configDialogOpen = ref(false);
   const filterDialogColumn = shallowRef<ColumnDef | null>(null);
 
-  const selectionOpts = opts?.selection ?? { mode: "none" as const };
-  const selection = shallowRef(new SelectionState(selectionOpts));
-  const selectedValues = computed(() => selection.value.getSelectedValues());
-  const selectedCount = computed(() => selection.value.selectedCount);
+  const selectedRows = shallowRef<unknown[]>([]);
+  const selectedCount = computed(() => selectedRows.value.length);
+  const selectionMode: SelectionMode = opts?.select ?? "none";
+  const rowValueFn = opts?.rowValueFn ?? ((row: Record<string, unknown>) => row);
 
   let _queryFn: (() => void) | undefined;
   let _queryNextFn: (() => void) | undefined;
@@ -92,9 +95,10 @@ export function createTableState(opts?: CreateTableStateOptions): {
     searchTerm,
     configDialogOpen,
     filterDialogColumn,
-    selection,
-    selectedValues,
+    selectedRows,
     selectedCount,
+    selectionMode,
+    rowValueFn,
 
     query() {
       _queryFn?.();

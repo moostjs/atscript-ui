@@ -1,6 +1,6 @@
 import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
-import type { FieldFilters, SelectionState, TableStateMethods } from "@atscript/ui-table";
+import type { FieldFilters, SelectionMode, TableStateMethods } from "@atscript/ui-table";
 
 /**
  * Component override map for table UI.
@@ -68,9 +68,13 @@ export interface ReactiveTableState extends TableStateMethods {
   mustRefresh: Ref<boolean>;
   searchTerm: Ref<string>;
   configDialogOpen: Ref<boolean>;
-  selection: ShallowRef<SelectionState>;
-  selectedValues: ComputedRef<unknown[]>;
+  /** Selected row values (same values as ListboxItem :value). */
+  selectedRows: ShallowRef<unknown[]>;
   selectedCount: ComputedRef<number>;
+  /** Selection mode. */
+  selectionMode: SelectionMode;
+  /** Extract unique value from a row for selection tracking + ListboxItem :value. */
+  rowValueFn: (row: Record<string, unknown>) => unknown;
   /** Column currently open in the filter dialog (null when closed). */
   filterDialogColumn: ShallowRef<ColumnDef | null>;
 }
