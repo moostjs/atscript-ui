@@ -109,20 +109,8 @@ export type {
 export { createTableDef } from "./table/create-table-def";
 
 // ── Value-help (unified options resolution) ─────────────────
-export {
-  extractLiteralOptions,
-  isPureLiteralUnion,
-  extractValueHelp,
-  createValueHelpClient,
-} from "./value-help";
-export type {
-  ValueHelpInfo,
-  ValueHelpQuery,
-  ValueHelpResult,
-  TargetTableMeta,
-  ValueHelpClientOptions,
-  ValueHelpClient,
-} from "./value-help";
+export { extractLiteralOptions, isPureLiteralUnion, extractValueHelp } from "./value-help";
+export type { ValueHelpInfo } from "./value-help";
 
 // ── Table column helpers ────────────────────────────────────
 export {

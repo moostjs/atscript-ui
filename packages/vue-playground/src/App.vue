@@ -11,6 +11,7 @@ const formRoutes = [
   { path: "/dynamic", label: "Dynamic (ui.fn.*)" },
   { path: "/select-radio", label: "Select / Radio" },
   { path: "/custom", label: "Custom Components" },
+  { path: "/ref", label: "FK Ref (Value Help)" },
 ];
 
 const wfRoutes = [

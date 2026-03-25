@@ -49,6 +49,7 @@ declare global {
     "db.default.now": boolean
     "db.json": boolean
     "db.ignore": boolean
+    "db.http.path": string
     "db.sync.method": string
     "db.rel.FK": string | true
     "db.rel.to": string | true
@@ -92,6 +93,9 @@ declare global {
     "ui.submit.text": string
     "ui.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }
+    "ui.dict.label": boolean
+    "ui.dict.descr": boolean
+    "ui.dict.attr": (boolean)[]
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "ui.validate": (string)[]

@@ -27,6 +27,7 @@
     "@moostjs/event-http": "catalog:",
     "@moostjs/event-wf": "catalog:",
     "@moostjs/vite": "catalog:",
+    "@playwright/test": "catalog:",
     "@swc/core": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "better-sqlite3": "^11",

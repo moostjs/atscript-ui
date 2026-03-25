@@ -4,16 +4,15 @@ packages:
 
 catalog:
   "@atscript/core": ^0.1.47
-  "@atscript/db": ^0.1.46
-  "@atscript/db-client": ^0.1.46
-  "@atscript/db-sqlite": ^0.1.46
-  "@atscript/moost-db": ^0.1.46
+  "@atscript/db": ^0.1.47
+  "@atscript/db-client": ^0.1.47
+  "@atscript/db-sqlite": ^0.1.47
+  "@atscript/moost-db": ^0.1.47
   "@atscript/typescript": ^0.1.47
   "@moostjs/event-http": ^0.6.6
   "@moostjs/event-wf": ^0.6.6
   "@moostjs/vite": ^0.6.6
-  "@wooksjs/event-core": ^0.7.8
-  "@wooksjs/event-wf": ^0.7.8
+  "@playwright/test": ^1.58.2
   "@prostojs/deserialize-fn": ^0.0.5
   "@swc/core": ^1.15.18
   "@tanstack/vue-virtual": ^3.13.23
@@ -23,9 +22,11 @@ catalog:
   "@vitejs/plugin-vue": ^6
   "@vue/test-utils": ^2
   "@vueuse/core": ^14.2.1
-  reka-ui: ^2.9.2
+  "@wooksjs/event-core": ^0.7.8
+  "@wooksjs/event-wf": ^0.7.8
   happy-dom: ^18
   "moost": ^0.6.6
+  reka-ui: ^2.9.2
   typescript: ^5
   unplugin-atscript: ^0.1.47
   unplugin-swc: ^1.5.9

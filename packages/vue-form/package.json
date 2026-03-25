@@ -35,19 +35,23 @@
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
+    "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
     "@atscript/ui-fns": "workspace:^",
     "@tsdown/css": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
     "happy-dom": "catalog:",
+    "reka-ui": "catalog:",
     "unplugin-atscript": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
     "vue-tsc": "catalog:"
   },
   "peerDependencies": {
+    "@atscript/db-client": "^0.1",
     "@atscript/ui-fns": "^0.0.1",
+    "reka-ui": "^2",
     "vue": "^3"
   }
 }

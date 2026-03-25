@@ -44,6 +44,11 @@ const router = createRouter({
       name: "custom",
       component: () => import("./views/forms/CustomComponentsView.vue"),
     },
+    {
+      path: "/ref",
+      name: "ref",
+      component: () => import("./views/forms/RefFormView.vue"),
+    },
     // Tables
     {
       path: "/products-table",

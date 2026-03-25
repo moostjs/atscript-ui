@@ -10,6 +10,7 @@ import {
   AsArray,
   AsUnion,
   AsTuple,
+  AsRef,
 } from "../components/defaults";
 
 /**
@@ -35,5 +36,6 @@ export function createDefaultTypes(): TAsTypeComponents {
     array: AsArray,
     union: AsUnion,
     tuple: AsTuple,
+    ref: AsRef,
   };
 }

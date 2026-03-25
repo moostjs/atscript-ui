@@ -105,6 +105,7 @@ export type TAsTypeComponents = {
   array: Component;
   union: Component;
   tuple: Component;
+  ref: Component;
 } & Record<string, Component>;
 
 /**

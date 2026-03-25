@@ -4,6 +4,7 @@ import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import type { FormDef } from "@atscript/ui";
 import { getFormValidator, resolveFormProp, getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
+import type { ValueHelpClientFactory } from "../composables/use-value-help";
 import type { TFnScope } from "@atscript/ui-fns";
 import { computed, provide, ref, toRaw, type Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
@@ -21,6 +22,8 @@ export interface Props<TF, TC> {
    */
   types: TAsTypeComponents;
   errors?: Record<string, string | undefined>;
+  /** Client factory for FK ref fields (value-help). Creates Client instances from URL paths. */
+  valueHelpClientFactory?: ValueHelpClientFactory;
 }
 
 const props = defineProps<Props<TFormData, TFormContext>>();
@@ -73,6 +76,9 @@ provide(
   "__as_errors",
   computed(() => props.errors),
 );
+if (props.valueHelpClientFactory) {
+  provide("__as_vh_client_factory", props.valueHelpClientFactory);
+}
 
 // ── Form-level resolved props ──────────────────────────────
 const ctx = computed<TFnScope>(() => ({

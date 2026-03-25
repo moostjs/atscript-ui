@@ -10,3 +10,4 @@ export { default as AsObject } from "./as-object.vue";
 export { default as AsArray } from "./as-array.vue";
 export { default as AsUnion } from "./as-union.vue";
 export { default as AsTuple } from "./as-tuple.vue";
+export { default as AsRef } from "./as-ref.vue";

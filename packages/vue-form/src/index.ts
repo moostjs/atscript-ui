@@ -15,6 +15,7 @@ export {
   AsArray,
   AsUnion,
   AsTuple,
+  AsRef,
 } from "./components/defaults";
 
 // Types
@@ -32,6 +33,12 @@ export { useFormArray } from "./composables/use-form-array";
 export { useFormUnion } from "./composables/use-form-union";
 export { useConsumeUnionContext, formatIndexedLabel } from "./composables/use-form-context";
 export { createDefaultTypes } from "./composables/create-default-types";
+export { useValueHelp } from "./composables/use-value-help";
+export type {
+  UseValueHelpOptions,
+  UseValueHelpReturn,
+  ValueHelpClientFactory,
+} from "./composables/use-value-help";
 
 // Composable types (for advanced use)
 export type {
