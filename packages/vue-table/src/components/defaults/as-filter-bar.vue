@@ -1,42 +1,95 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, ref } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { isFilled, filterTokenLabel } from "@atscript/ui-table";
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
+import AsFilterRefInline from "./as-filter-ref-inline.vue";
 
 const { state } = useTableContext();
 
-/** Columns that have active (filled) filters. */
-const activeFilterColumns = computed(() => {
+/** Ref column paths the user has opened (even without filter values yet). */
+const activeRefPaths = ref(new Set<string>());
+
+const columnMap = computed(() => {
   const tableDef = state.tableDef.value;
-  if (!tableDef) return [];
+  if (!tableDef) return new Map<string, ColumnDef>();
+  const map = new Map<string, ColumnDef>();
+  for (const col of tableDef.columns) {
+    map.set(col.path, col);
+  }
+  return map;
+});
+
+const activeTokenColumns = computed(() => {
+  const map = columnMap.value;
+  if (map.size === 0) return [];
   const result: { column: ColumnDef; label: string }[] = [];
   for (const path in state.filters.value) {
     const conditions = state.filters.value[path];
     if (conditions.some(isFilled)) {
-      const col = tableDef.columns.find((c) => c.path === path);
-      if (col) {
-        result.push({
-          column: col,
-          label: filterTokenLabel(path, conditions, col.label),
-        });
+      const col = map.get(path);
+      if (col && !col.valueHelpInfo) {
+        result.push({ column: col, label: filterTokenLabel(path, conditions, col.label) });
       }
     }
   }
   return result;
 });
 
-/** Filterable columns that do NOT have an active filter. */
+const activeRefColumns = computed(() => {
+  const map = columnMap.value;
+  if (map.size === 0) return [];
+  const result: ColumnDef[] = [];
+  const seen = new Set<string>();
+
+  for (const path in state.filters.value) {
+    const conditions = state.filters.value[path];
+    if (conditions.some(isFilled)) {
+      const col = map.get(path);
+      if (col?.valueHelpInfo) {
+        result.push(col);
+        seen.add(path);
+      }
+    }
+  }
+
+  for (const path of activeRefPaths.value) {
+    if (!seen.has(path)) {
+      const col = map.get(path);
+      if (col?.valueHelpInfo) {
+        result.push(col);
+      }
+    }
+  }
+
+  return result;
+});
+
+/** Filterable columns that do NOT have an active filter and are not open as inline. */
 const addableColumns = computed(() => {
   const tableDef = state.tableDef.value;
   if (!tableDef) return [];
   const activeSet = new Set(Object.keys(state.filters.value));
-  return tableDef.columns.filter((c) => c.filterable && !activeSet.has(c.path));
+  return tableDef.columns.filter(
+    (c) => c.filterable && !activeSet.has(c.path) && !activeRefPaths.value.has(c.path),
+  );
 });
 
-const hasFilters = computed(() => activeFilterColumns.value.length > 0);
+const hasFilters = computed(
+  () => activeTokenColumns.value.length > 0 || activeRefColumns.value.length > 0,
+);
 const showBar = computed(() => hasFilters.value || addableColumns.value.length > 0);
+
+function addFilter(column: ColumnDef) {
+  if (column.valueHelpInfo) {
+    // Ref column → show inline input
+    activeRefPaths.value = new Set([...activeRefPaths.value, column.path]);
+  } else {
+    // Non-ref → open dialog
+    state.openFilterDialog(column);
+  }
+}
 
 function openFilter(column: ColumnDef) {
   state.openFilterDialog(column);
@@ -47,7 +100,15 @@ function removeFilter(path: string) {
   state.query();
 }
 
+function removeRefFilter(path: string) {
+  activeRefPaths.value.delete(path);
+  activeRefPaths.value = new Set(activeRefPaths.value);
+  state.removeFieldFilter(path);
+  state.query();
+}
+
 function clearAll() {
+  activeRefPaths.value = new Set();
   state.resetFilters();
   state.query();
 }
@@ -55,8 +116,15 @@ function clearAll() {
 
 <template>
   <div v-if="showBar" class="as-filter-bar">
+    <AsFilterRefInline
+      v-for="col in activeRefColumns"
+      :key="col.path"
+      :column="col"
+      @remove="removeRefFilter(col.path)"
+    />
+
     <button
-      v-for="item in activeFilterColumns"
+      v-for="item in activeTokenColumns"
       :key="item.column.path"
       type="button"
       class="as-filter-token"
@@ -84,7 +152,7 @@ function clearAll() {
             :key="col.path"
             type="button"
             class="as-filter-add-item"
-            @click="openFilter(col)"
+            @click="addFilter(col)"
           >
             {{ col.label }}
           </button>

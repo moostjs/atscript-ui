@@ -9,6 +9,7 @@ import AsTableHeaderCell from "../as-table-header-cell.vue";
 import AsFilterBar from "./as-filter-bar.vue";
 import AsFilterDialog from "./as-filter-dialog.vue";
 import AsFilterInput from "./as-filter-input.vue";
+import AsFilterRefInline from "./as-filter-ref-inline.vue";
 
 export {
   AsTableDefault,
@@ -18,6 +19,7 @@ export {
   AsFilterBar,
   AsFilterDialog,
   AsFilterInput,
+  AsFilterRefInline,
 };
 
 export function createDefaultTableComponents() {
@@ -31,5 +33,6 @@ export function createDefaultTableComponents() {
     filterBar: AsFilterBar,
     filterDialog: AsFilterDialog,
     filterInput: AsFilterInput,
+    filterRefInput: AsFilterRefInline,
   };
 }

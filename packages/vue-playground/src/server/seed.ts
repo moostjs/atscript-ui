@@ -107,6 +107,26 @@ const countries = [
   "Singapore",
 ];
 
+const statuses = ["pending", "shipped", "delivered", "cancelled"];
+
+export function seedOrders() {
+  const orders = [];
+  for (let i = 1; i <= 200; i++) {
+    const customerId = ((i - 1) % 30) + 1;
+    const productId = ((i - 1) % 100) + 1;
+    const quantity = Math.floor(Math.random() * 5) + 1;
+    const price = Math.round((Math.random() * 200 + 10) * 100) / 100;
+    orders.push({
+      customerId,
+      productId,
+      quantity,
+      total: Math.round(price * quantity * 100) / 100,
+      status: statuses[(i - 1) % statuses.length]!,
+    });
+  }
+  return orders;
+}
+
 export function seedCustomers() {
   const customers = [];
   for (let i = 0; i < 30; i++) {

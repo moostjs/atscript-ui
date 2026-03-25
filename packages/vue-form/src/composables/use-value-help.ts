@@ -1,3 +1,4 @@
+import { ValueHelpClient, str } from "@atscript/ui";
 import type { ValueHelpInfo } from "@atscript/ui";
 import type { Client } from "@atscript/db-client";
 import { type Ref, type ShallowRef, inject, onUnmounted, ref, shallowRef, watch } from "vue";
@@ -28,11 +29,6 @@ export interface UseValueHelpReturn {
 
 const DEBOUNCE_MS = 300;
 
-/** Safely stringify a value that may be string, number, or other primitive. */
-function str(v: unknown): string {
-  return `${v as string | number}`;
-}
-
 export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
   const { info, model, onBlur } = options;
 
@@ -42,7 +38,8 @@ export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
       "useValueHelp requires a clientFactory. Provide it via the valueHelpClientFactory prop on AsForm.",
     );
   }
-  const client = factory(info.path);
+  const dbClient = factory(info.path);
+  const vhClient = new ValueHelpClient(dbClient);
 
   const labelIsFkValue = info.targetField === info.labelField;
 
@@ -78,22 +75,16 @@ export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
   async function doSearch(text: string) {
     loading.value = true;
     try {
-      const query: Record<string, unknown> = {
-        controls: { $select: selectFields, $limit: 20 },
-      };
-      if (text) {
-        const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        query.filter = {
-          $or: [{ [info.labelField]: { $regex: `^${escaped}` } }, { [info.targetField]: text }],
-        };
-      }
-      const items = await client.query(query as any);
-      const resultItems = items as Record<string, unknown>[];
-      for (const item of resultItems) {
+      const result = await vhClient.search(info, {
+        text: text || undefined,
+        mode: "form",
+        limit: 20,
+      });
+      for (const item of result.items) {
         const key = item[info.targetField];
         if (key != null) labelCache.set(str(key), str(item[info.labelField] ?? key));
       }
-      results.value = resultItems;
+      results.value = result.items;
     } catch {
       results.value = [];
     } finally {
@@ -142,16 +133,10 @@ export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
     }
 
     try {
-      const item = await client.one(value as any, {
-        controls: { $select: selectFields as any },
-      });
-      if (item) {
-        const label = str((item as Record<string, unknown>)[info.labelField] ?? value);
-        displayLabel.value = label;
-        labelCache.set(sval, label);
-      } else {
-        displayLabel.value = sval;
-      }
+      const labels = await vhClient.resolveLabels(info, [value]);
+      const label = labels.get(value) ?? sval;
+      displayLabel.value = label;
+      labelCache.set(sval, label);
     } catch {
       displayLabel.value = sval;
     }
@@ -168,8 +153,8 @@ export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
     const labelPromise =
       model.value != null && model.value !== "" ? resolveLabel(model.value) : undefined;
     try {
-      const meta = await client.meta();
-      accessible.value = meta !== undefined;
+      await vhClient.getMeta();
+      accessible.value = true;
     } catch {
       accessible.value = false;
     }

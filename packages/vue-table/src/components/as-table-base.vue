@@ -2,6 +2,7 @@
 import { computed, useSlots } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
 import type { SelectionState } from "@atscript/ui-table";
+import { ComboboxItem, ComboboxItemIndicator, Primitive } from "reka-ui";
 import { getColumnWidth } from "../utils/column-width";
 import { getCellValue } from "../utils/get-cell-value";
 import AsTableHeaderCell from "./as-table-header-cell.vue";
@@ -14,6 +15,10 @@ const props = withDefaults(
     rows: Record<string, unknown>[];
     sorters: SortControl[];
     selection?: SelectionState;
+    /** When true, rows render as ComboboxItem (must be inside a ComboboxRoot). */
+    asCombobox?: boolean;
+    /** Extract unique value from a row (required when asCombobox is true). */
+    rowValueFn?: (row: Record<string, unknown>) => unknown;
     querying?: boolean;
     queryError?: Error | null;
     onRetry?: () => void;
@@ -26,6 +31,10 @@ const props = withDefaults(
     virtualRowHeight: 40,
     virtualOverscan: 5,
   },
+);
+
+const showCheckbox = computed(
+  () => props.asCombobox || (props.selection && props.selection.mode !== "none"),
 );
 
 const emit = defineEmits<{
@@ -118,9 +127,9 @@ const useVirtual = computed(() => props.rows.length > 50);
     <table class="as-table" :class="{ 'as-table-sticky': stickyHeader }">
       <thead>
         <tr>
-          <th v-if="selection && selection.mode !== 'none'" class="as-th-select" style="width: 3em">
+          <th v-if="showCheckbox" class="as-th-select" style="width: 3em">
             <input
-              v-if="selection.mode === 'multi'"
+              v-if="!asCombobox && selection && selection.mode === 'multi'"
               type="checkbox"
               :checked="selection.selectedCount === rows.length && rows.length > 0"
               :indeterminate="selection.selectedCount > 0 && selection.selectedCount < rows.length"
@@ -155,17 +164,23 @@ const useVirtual = computed(() => props.rows.length > 50);
         :overscan="virtualOverscan"
       >
         <template #default="{ index, spaceBefore }">
-          <tr
+          <component
+            :is="asCombobox ? ComboboxItem : 'tr'"
+            :as="asCombobox ? 'tr' : undefined"
+            :value="asCombobox && rowValueFn ? rowValueFn(rows[index]!) : undefined"
             :style="{
               height: `${virtualRowHeight}px`,
               transform: spaceBefore ? `translateY(${spaceBefore}px)` : undefined,
             }"
-            :class="{ 'as-row-selected': isSelected(rows[index]!) }"
+            :class="{ 'as-row-selected': !asCombobox && isSelected(rows[index]!) }"
             @click="onRowClick(rows[index]!, $event)"
             @dblclick="onRowDblClick(rows[index]!, $event)"
           >
-            <td v-if="selection && selection.mode !== 'none'" class="as-td-select">
-              <input type="checkbox" :checked="isSelected(rows[index]!)" tabindex="-1" />
+            <td v-if="showCheckbox" class="as-td-select">
+              <ComboboxItemIndicator v-if="asCombobox" class="as-combobox-indicator">
+                &#x2713;
+              </ComboboxItemIndicator>
+              <input v-else type="checkbox" :checked="isSelected(rows[index]!)" tabindex="-1" />
             </td>
             <template v-for="col in columns" :key="col.path">
               <td v-if="hasCellSlot(col.path)">
@@ -178,7 +193,7 @@ const useVirtual = computed(() => props.rows.length > 50);
               </td>
               <AsTableCellValue v-else :row="rows[index]!" :column="col" />
             </template>
-          </tr>
+          </component>
         </template>
       </AsTableVirtualizer>
     </table>
@@ -190,9 +205,9 @@ const useVirtual = computed(() => props.rows.length > 50);
     <table class="as-table" :class="{ 'as-table-sticky': stickyHeader }">
       <thead>
         <tr>
-          <th v-if="selection && selection.mode !== 'none'" class="as-th-select" style="width: 3em">
+          <th v-if="showCheckbox" class="as-th-select" style="width: 3em">
             <input
-              v-if="selection.mode === 'multi'"
+              v-if="!asCombobox && selection && selection.mode === 'multi'"
               type="checkbox"
               :checked="selection.selectedCount === rows.length && rows.length > 0"
               :indeterminate="selection.selectedCount > 0 && selection.selectedCount < rows.length"
@@ -221,16 +236,22 @@ const useVirtual = computed(() => props.rows.length > 50);
           </template>
         </tr>
       </thead>
-      <tbody>
-        <tr
+      <component :is="asCombobox ? Primitive : 'tbody'" :as-child="asCombobox || undefined">
+        <component
+          :is="asCombobox ? ComboboxItem : 'tr'"
           v-for="(row, idx) in rows"
           :key="idx"
-          :class="{ 'as-row-selected': isSelected(row) }"
+          :as="asCombobox ? 'tr' : undefined"
+          :value="asCombobox && rowValueFn ? rowValueFn(row) : undefined"
+          :class="{ 'as-row-selected': !asCombobox && isSelected(row) }"
           @click="onRowClick(row, $event)"
           @dblclick="onRowDblClick(row, $event)"
         >
-          <td v-if="selection && selection.mode !== 'none'" class="as-td-select">
-            <input type="checkbox" :checked="isSelected(row)" tabindex="-1" />
+          <td v-if="showCheckbox" class="as-td-select">
+            <ComboboxItemIndicator v-if="asCombobox" class="as-combobox-indicator">
+              &#x2713;
+            </ComboboxItemIndicator>
+            <input v-else type="checkbox" :checked="isSelected(row)" tabindex="-1" />
           </td>
           <template v-for="col in columns" :key="col.path">
             <td v-if="hasCellSlot(col.path)">
@@ -243,8 +264,8 @@ const useVirtual = computed(() => props.rows.length > 50);
             </td>
             <AsTableCellValue v-else :row="row" :column="col" />
           </template>
-        </tr>
-      </tbody>
+        </component>
+      </component>
     </table>
     <slot name="last-row" />
   </div>

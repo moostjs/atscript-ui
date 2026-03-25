@@ -1,7 +1,7 @@
 import type { FilterConditionType } from "./filter-types";
 
 /** Column type categories for condition availability. */
-export type ColumnFilterType = "text" | "number" | "date" | "boolean" | "enum";
+export type ColumnFilterType = "text" | "number" | "date" | "boolean" | "enum" | "ref";
 
 const TEXT_CONDITIONS: FilterConditionType[] = [
   "eq",
@@ -53,6 +53,7 @@ const CONDITIONS_MAP: Record<ColumnFilterType, FilterConditionType[]> = {
   boolean: BOOLEAN_CONDITIONS,
   date: DATE_CONDITIONS,
   enum: ENUM_CONDITIONS,
+  ref: ENUM_CONDITIONS,
 };
 
 /** Available filter conditions for a given column filter type. */
@@ -71,6 +72,8 @@ export function columnFilterType(columnType: string): ColumnFilterType {
       return "date";
     case "enum":
       return "enum";
+    case "ref":
+      return "ref";
     default:
       return "text";
   }

@@ -31,6 +31,11 @@ export function setDefaultClientFactory(factory: TableClientFactory) {
   defaultFactory = factory;
 }
 
+/** Get the default client factory. Returns undefined if not yet set. */
+export function getDefaultClientFactory(): TableClientFactory | undefined {
+  return defaultFactory;
+}
+
 export interface UseTableOptions extends UseTableQueryOptions {
   /** Default page size (default: 50). */
   limit?: number;

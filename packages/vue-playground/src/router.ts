@@ -70,6 +70,11 @@ const router = createRouter({
       name: "virtual-scroll-table",
       component: () => import("./views/tables/VirtualScrollTableView.vue"),
     },
+    {
+      path: "/orders-table",
+      name: "orders-table",
+      component: () => import("./views/tables/OrdersTableView.vue"),
+    },
     // Workflows
     {
       path: "/wf-auth",

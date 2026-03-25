@@ -20,6 +20,7 @@
   },
   "devDependencies": {
     "@atscript/db": "catalog:",
+    "@atscript/db-sql-tools": "catalog:",
     "@atscript/db-sqlite": "catalog:",
     "@atscript/moost-db": "catalog:",
     "@atscript/moost-wf": "workspace:^",

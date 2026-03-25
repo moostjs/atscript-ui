@@ -30,6 +30,9 @@
     "test": "vp test",
     "check": "vp check"
   },
+  "dependencies": {
+    "@atscript/db-client": "catalog:"
+  },
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/db": "catalog:",

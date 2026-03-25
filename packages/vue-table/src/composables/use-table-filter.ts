@@ -17,7 +17,7 @@ export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
   const availableConditions = conditionsForType(filterType);
 
   const defaultCondition: FilterConditionType =
-    filterType === "enum"
+    filterType === "enum" || filterType === "ref"
       ? "in"
       : filterType === "boolean"
         ? "eq"

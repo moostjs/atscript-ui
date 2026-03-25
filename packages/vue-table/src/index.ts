@@ -6,6 +6,7 @@ export {
   useTable,
   clearTableCache,
   setDefaultClientFactory,
+  getDefaultClientFactory,
   type UseTableOptions,
   type TableClientFactory,
 } from "./composables/use-table";
@@ -32,7 +33,7 @@ export { default as AsTableCellValue } from "./components/as-table-cell-value.vu
 export { default as AsTableVirtualizer } from "./components/as-table-virtualizer.vue";
 
 // ── Default components ──────────────────────────────────────
-export { createDefaultTableComponents } from "./components/defaults";
+export { createDefaultTableComponents, AsFilterRefInline } from "./components/defaults";
 
 // ── Utilities ───────────────────────────────────────────────
 export { getColumnWidth } from "./utils/column-width";

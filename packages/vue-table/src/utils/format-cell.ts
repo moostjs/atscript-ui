@@ -1,13 +1,7 @@
+import { str } from "@atscript/ui";
+
 const numberFmt = new Intl.NumberFormat();
 const dateFmt = new Intl.DateTimeFormat();
-
-function str(value: unknown): string {
-  if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "bigint" || typeof value === "boolean") {
-    return `${value}`;
-  }
-  return JSON.stringify(value) ?? "";
-}
 
 /** Format a cell value based on column type. */
 export function formatCellValue(value: unknown, type: string): string {
