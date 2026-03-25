@@ -2,6 +2,13 @@ import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type { FieldFilters, SelectionMode, TableStateMethods } from "@atscript/ui-table";
 
+/** Controls which sections appear in the column header dropdown menu. */
+export interface ColumnMenuConfig {
+  sort?: boolean;
+  filters?: boolean;
+  hide?: boolean;
+}
+
 /**
  * Component override map for table UI.
  *

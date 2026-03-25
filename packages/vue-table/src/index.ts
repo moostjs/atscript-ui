@@ -1,5 +1,5 @@
 // ── Types ───────────────────────────────────────────────────
-export type { TAsTableComponents, ReactiveTableState } from "./types";
+export type { TAsTableComponents, ReactiveTableState, ColumnMenuConfig } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
 export {

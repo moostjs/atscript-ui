@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ColumnDef } from "@atscript/ui";
+import type { ColumnMenuConfig } from "../types";
 import { useTableComponent } from "../composables/use-table-component";
 import AsTableView from "./as-table-view.vue";
 import { AsTableDefault, AsTableToolbar, AsTablePagination, AsFilterDialog } from "./defaults";
@@ -12,7 +13,7 @@ const props = withDefaults(
     rowsControl?: "hard-limit" | "pagination" | "load-more-btn" | "scroll-to-load";
     virtualRowHeight?: number;
     virtualOverscan?: number;
-    columnMenu?: { sort?: boolean; filters?: boolean; hide?: boolean };
+    columnMenu?: ColumnMenuConfig;
     stretch?: boolean;
   }>(),
   {
@@ -43,6 +44,7 @@ const FilterDialogComp = useTableComponent("filterDialog", AsFilterDialog);
       :sticky-header="stickyHeader"
       :virtual-row-height="virtualRowHeight"
       :virtual-overscan="virtualOverscan"
+      :column-menu="columnMenu"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)

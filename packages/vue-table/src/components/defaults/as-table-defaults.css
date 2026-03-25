@@ -97,18 +97,68 @@
   user-select: none;
 }
 
-.as-th-sortable {
+/* ── Header cell button (DropdownMenu trigger) ───────── */
+
+.as-th-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  color: #374151;
+  text-align: left;
   cursor: pointer;
+  outline: none;
+  white-space: nowrap;
 }
 
-.as-th-sortable:hover {
-  background: #f3f4f6;
+.as-th-btn:hover {
+  color: #6366f1;
 }
 
 .as-th-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 1;
+}
+
+.as-th-indicators {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
+}
+
+.as-th-sort {
+  font-size: 10px;
+  color: #6366f1;
+}
+
+.as-th-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: #6366f1;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.as-th-chevron {
+  font-size: 10px;
+  color: #9ca3af;
 }
 
 .as-table td {
@@ -233,7 +283,7 @@
   cursor: not-allowed;
 }
 
-/* ── Column menu (reka-ui ContextMenu) ───────────────── */
+/* ── Column menu (reka-ui DropdownMenu) ──────────────── */
 
 .as-column-menu-content {
   z-index: 50;
@@ -262,6 +312,11 @@
 .as-column-menu-item:hover,
 .as-column-menu-item[data-highlighted] {
   background: #f3f4f6;
+  color: #6366f1;
+}
+
+.as-column-menu-item-active {
+  font-weight: 600;
   color: #6366f1;
 }
 

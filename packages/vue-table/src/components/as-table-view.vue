@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { ListboxRoot } from "reka-ui";
+import type { ColumnMenuConfig } from "../types";
 import { useTableContext } from "../composables/use-table-state";
 import AsTableBase from "./as-table-base.vue";
 
@@ -12,6 +13,7 @@ const props = withDefaults(
     stickyHeader?: boolean;
     virtualRowHeight?: number;
     virtualOverscan?: number;
+    columnMenu?: ColumnMenuConfig;
   }>(),
   {
     stickyHeader: true,
@@ -57,6 +59,11 @@ function handleFilter(column: ColumnDef) {
   state.openFilterDialog(column);
 }
 
+function handleFiltersOff(column: ColumnDef) {
+  state.removeFieldFilter(column.path);
+  state.query();
+}
+
 function handleSelectAll() {
   state.selectedRows.value = effectiveRows.value.map((r) => state.rowValueFn(r));
 }
@@ -87,9 +94,12 @@ function handleDeselectAll() {
       :sticky-header="stickyHeader"
       :virtual-row-height="virtualRowHeight"
       :virtual-overscan="virtualOverscan"
+      :filters="state.filters.value"
+      :column-menu="columnMenu"
       @sort="handleSort"
       @hide="handleHide"
       @filter="handleFilter"
+      @filters-off="handleFiltersOff"
       @select-all="handleSelectAll"
       @deselect-all="handleDeselectAll"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"

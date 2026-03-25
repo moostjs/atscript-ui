@@ -1,61 +1,90 @@
 <script setup lang="ts">
+import { computed, ref } from "vue";
 import type { ColumnDef } from "@atscript/ui";
+import type { FilterCondition } from "@atscript/ui-table";
+import { isFilled } from "@atscript/ui-table";
 import {
-  ContextMenuRoot,
-  ContextMenuTrigger,
-  ContextMenuPortal,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "reka-ui";
+import type { ColumnMenuConfig } from "../../types";
 
-const props = withDefaults(
-  defineProps<{
-    column: ColumnDef;
-    config?: { sort?: boolean; filters?: boolean; hide?: boolean };
-  }>(),
-  {
-    config: () => ({ sort: true, filters: true, hide: true }),
-  },
-);
+const props = defineProps<{
+  column: ColumnDef;
+  order?: "asc" | "desc" | null;
+  filters?: FilterCondition[];
+  config: ColumnMenuConfig;
+}>();
+
+const open = ref(false);
 
 const emit = defineEmits<{
-  (e: "sort", direction: "asc" | "desc"): void;
+  (e: "sort", direction: "asc" | "desc" | null): void;
   (e: "hide"): void;
   (e: "filter"): void;
+  (e: "filters-off"): void;
 }>();
+
+function emitSort(direction: "asc" | "desc") {
+  if (direction === props.order) {
+    emit("sort", null);
+  } else {
+    emit("sort", direction);
+  }
+}
+
+const showSort = computed(() => props.config.sort && props.column.sortable);
+const showFilters = computed(() => props.config.filters && props.column.filterable);
+const showHide = computed(() => props.config.hide);
+const filledCount = computed(() => props.filters?.filter(isFilled).length ?? 0);
 </script>
 
 <template>
-  <ContextMenuRoot>
-    <ContextMenuTrigger as-child>
-      <slot />
-    </ContextMenuTrigger>
-    <ContextMenuPortal>
-      <ContextMenuContent class="as-column-menu-content" :side-offset="4" align="start">
-        <template v-if="config.sort && props.column.sortable">
-          <ContextMenuItem class="as-column-menu-item" @select="emit('sort', 'asc')">
+  <DropdownMenuRoot :modal="false" v-model:open="open">
+    <DropdownMenuTrigger as-child>
+      <slot :open="open" />
+    </DropdownMenuTrigger>
+    <DropdownMenuPortal>
+      <DropdownMenuContent class="as-column-menu-content" :side-offset="4" align="start">
+        <template v-if="showSort">
+          <DropdownMenuItem
+            class="as-column-menu-item"
+            :class="{ 'as-column-menu-item-active': order === 'asc' }"
+            @select="emitSort('asc')"
+          >
             &#x25B2; Sort Ascending
-          </ContextMenuItem>
-          <ContextMenuItem class="as-column-menu-item" @select="emit('sort', 'desc')">
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            class="as-column-menu-item"
+            :class="{ 'as-column-menu-item-active': order === 'desc' }"
+            @select="emitSort('desc')"
+          >
             &#x25BC; Sort Descending
-          </ContextMenuItem>
+          </DropdownMenuItem>
         </template>
-        <ContextMenuSeparator
-          v-if="config.sort && props.column.sortable && (config.filters || config.hide)"
+        <DropdownMenuSeparator
+          v-if="showSort && (showFilters || showHide)"
           class="as-column-menu-separator"
         />
-        <ContextMenuItem
-          v-if="config.filters && props.column.filterable"
+        <DropdownMenuItem v-if="showFilters" class="as-column-menu-item" @select="emit('filter')">
+          &#x1F50D; {{ filledCount ? `Filters (${filledCount})` : "Filters" }}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          v-if="showFilters && filledCount"
           class="as-column-menu-item"
-          @select="emit('filter')"
+          @select="emit('filters-off')"
         >
-          &#x1F50D; Filter
-        </ContextMenuItem>
-        <ContextMenuItem v-if="config.hide" class="as-column-menu-item" @select="emit('hide')">
+          &#x2716; Clear Filters
+        </DropdownMenuItem>
+        <DropdownMenuSeparator v-if="showFilters && showHide" class="as-column-menu-separator" />
+        <DropdownMenuItem v-if="showHide" class="as-column-menu-item" @select="emit('hide')">
           &#x2716; Hide Column
-        </ContextMenuItem>
-      </ContextMenuContent>
-    </ContextMenuPortal>
-  </ContextMenuRoot>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenuPortal>
+  </DropdownMenuRoot>
 </template>

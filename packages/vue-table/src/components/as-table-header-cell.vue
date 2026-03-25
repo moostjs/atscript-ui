@@ -1,27 +1,34 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
+import type { FilterCondition } from "@atscript/ui-table";
+import { isFilled } from "@atscript/ui-table";
+import type { ColumnMenuConfig } from "../types";
 import { getColumnWidth } from "../utils/column-width";
 import AsColumnMenu from "./defaults/as-column-menu.vue";
 
-const props = defineProps<{
-  column: ColumnDef;
-  sortDirection?: "asc" | "desc" | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    column: ColumnDef;
+    sortDirection?: "asc" | "desc" | null;
+    filters?: FilterCondition[];
+    columnMenu?: ColumnMenuConfig;
+  }>(),
+  {
+    columnMenu: () => ({ sort: true, filters: true, hide: true }),
+  },
+);
 
 const emit = defineEmits<{
   (e: "sort", column: ColumnDef, direction: "asc" | "desc" | null): void;
   (e: "hide", column: ColumnDef): void;
   (e: "filter", column: ColumnDef): void;
+  (e: "filters-off", column: ColumnDef): void;
 }>();
 
-function toggleSort() {
-  if (!props.column.sortable) return;
-  const next =
-    props.sortDirection === "asc" ? "desc" : props.sortDirection === "desc" ? null : "asc";
-  emit("sort", props.column, next);
-}
+const filledCount = computed(() => props.filters?.filter(isFilled).length ?? 0);
 
-function onMenuSort(direction: "asc" | "desc") {
+function onMenuSort(direction: "asc" | "desc" | null) {
   emit("sort", props.column, direction);
 }
 
@@ -33,21 +40,36 @@ function onMenuFilter() {
   emit("filter", props.column);
 }
 
-function sortLabel(): string {
-  if (props.sortDirection === "asc") return " \u25B2";
-  if (props.sortDirection === "desc") return " \u25BC";
-  return "";
+function onMenuFiltersOff() {
+  emit("filters-off", props.column);
 }
 </script>
 
 <template>
-  <AsColumnMenu :column="props.column" @sort="onMenuSort" @hide="onMenuHide" @filter="onMenuFilter">
-    <th
-      :style="{ width: getColumnWidth(props.column), minWidth: getColumnWidth(props.column) }"
-      :class="{ 'as-th-sortable': props.column.sortable }"
-      @click="toggleSort"
+  <th :style="{ width: getColumnWidth(props.column), minWidth: getColumnWidth(props.column) }">
+    <AsColumnMenu
+      :column="props.column"
+      :order="sortDirection"
+      :filters="filters"
+      :config="columnMenu"
+      @sort="onMenuSort"
+      @hide="onMenuHide"
+      @filter="onMenuFilter"
+      @filters-off="onMenuFiltersOff"
+      v-slot="{ open }"
     >
-      <span class="as-th-label"> {{ props.column.label }}{{ sortLabel() }} </span>
-    </th>
-  </AsColumnMenu>
+      <button class="as-th-btn" type="button">
+        <span class="as-th-label">{{ props.column.label }}</span>
+        <span class="as-th-indicators">
+          <span v-if="filledCount" class="as-th-filter-badge">{{ filledCount }}</span>
+          <span v-if="sortDirection" class="as-th-sort">{{
+            sortDirection === "asc" ? "\u25B2" : "\u25BC"
+          }}</span>
+          <span v-if="!sortDirection && !filledCount" class="as-th-chevron">{{
+            open ? "\u25B4" : "\u25BE"
+          }}</span>
+        </span>
+      </button>
+    </AsColumnMenu>
+  </th>
 </template>

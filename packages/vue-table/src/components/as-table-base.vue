@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
+import type { FieldFilters } from "@atscript/ui-table";
+import type { ColumnMenuConfig } from "../types";
 import {
   ComboboxItem,
   ComboboxItemIndicator,
@@ -34,6 +36,8 @@ const props = withDefaults(
     stickyHeader?: boolean;
     virtualRowHeight?: number;
     virtualOverscan?: number;
+    filters?: FieldFilters;
+    columnMenu?: ColumnMenuConfig;
   }>(),
   {
     select: "none",
@@ -48,6 +52,7 @@ const emit = defineEmits<{
   (e: "sort", column: ColumnDef, direction: "asc" | "desc" | null): void;
   (e: "hide", column: ColumnDef): void;
   (e: "filter", column: ColumnDef): void;
+  (e: "filters-off", column: ColumnDef): void;
   (e: "row-click", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "select-all"): void;
@@ -83,6 +88,10 @@ function onHide(column: ColumnDef) {
 
 function onFilter(column: ColumnDef) {
   emit("filter", column);
+}
+
+function onFiltersOff(column: ColumnDef) {
+  emit("filters-off", column);
 }
 
 function onRowClick(row: Record<string, unknown>, event: MouseEvent) {
@@ -143,9 +152,12 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               v-else
               :column="col"
               :sort-direction="sortMap[col.path] ?? null"
+              :filters="filters?.[col.path]"
+              :column-menu="columnMenu"
               @sort="onSort"
               @hide="onHide"
               @filter="onFilter"
+              @filters-off="onFiltersOff"
             />
           </template>
         </tr>
