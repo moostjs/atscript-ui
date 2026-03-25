@@ -203,6 +203,45 @@ describe("createTableDef", () => {
     expect(def.searchIndexes).toHaveLength(1);
     expect(def.searchIndexes[0]!.name).toBe("default");
   });
+
+  // ── FK / value-help columns (uses pre-compiled .as fixtures) ─
+
+  it("FK column gets valueHelpInfo and type: ref", async () => {
+    const { BookForm } = await import("../__tests__/fixtures/value-help-fk.as");
+    const serialized = serializeAnnotatedType(BookForm, { refDepth: 1 });
+    const meta: MetaResponse = {
+      searchable: false,
+      vectorSearchable: false,
+      searchIndexes: [],
+      primaryKeys: ["authorId"],
+      readOnly: false,
+      relations: [],
+      fields: {
+        title: { sortable: false, filterable: true },
+        authorId: { sortable: true, filterable: true },
+      },
+      type: serialized,
+    };
+
+    const def = createTableDef(meta);
+    const authorCol = def.columns.find((c) => c.path === "authorId");
+
+    expect(authorCol).toBeDefined();
+    expect(authorCol!.type).toBe("ref");
+    expect(authorCol!.valueHelpInfo).toBeDefined();
+    expect(authorCol!.valueHelpInfo!.path).toBe("/authors");
+    expect(authorCol!.valueHelpInfo!.targetField).toBe("id");
+    expect(authorCol!.valueHelpInfo!.labelField).toBe("name");
+  });
+
+  it("non-FK columns have undefined valueHelpInfo", () => {
+    const meta = buildMeta({ name: stringProp(), age: numberProp() });
+    const def = createTableDef(meta);
+
+    for (const col of def.columns) {
+      expect(col.valueHelpInfo).toBeUndefined();
+    }
+  });
 });
 
 // ── Column resolver helpers ──────────────────────────────────

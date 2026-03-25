@@ -156,9 +156,15 @@ importers:
       '@atscript/core':
         specifier: 'catalog:'
         version: 0.1.47
+      '@atscript/db':
+        specifier: 'catalog:'
+        version: 0.1.46(@atscript/core@0.1.47)(@atscript/typescript@0.1.47)(@uniqu/core@0.1.2)
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.1.47(@atscript/core@0.1.47)(@atscript/db@0.1.46)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.8)(wooks@0.7.8)
+      unplugin-atscript:
+        specifier: 'catalog:'
+        version: 0.1.47(@atscript/core@0.1.47)(@atscript/typescript@0.1.47)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0))'

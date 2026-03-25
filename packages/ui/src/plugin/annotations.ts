@@ -305,6 +305,25 @@ export const uiAnnotations: TAnnotationsTree = {
       }),
     },
 
+    // ── Dictionary annotations (value-help display) ────────────
+    dict: {
+      label: new AnnotationSpec({
+        description:
+          "Marks this field as the primary display label when the table is used as a value-help dictionary",
+        nodeType: ["prop"],
+      }),
+      descr: new AnnotationSpec({
+        description: "Marks this field as the secondary description in value-help display",
+        nodeType: ["prop"],
+      }),
+      attr: new AnnotationSpec({
+        description: "Marks this field as an additional attribute column in table-mode value help",
+        nodeType: ["prop"],
+        multiple: true,
+        mergeStrategy: "append",
+      }),
+    },
+
     // ── Array annotations ────────────────────────────────────────
 
     array: {

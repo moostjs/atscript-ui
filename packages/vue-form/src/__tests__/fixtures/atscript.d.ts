@@ -50,6 +50,9 @@ declare global {
     "ui.submit.text": string
     "ui.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }
+    "ui.dict.label": boolean
+    "ui.dict.descr": boolean
+    "ui.dict.attr": (boolean)[]
     "ui.array.add.label": string
     "ui.array.remove.label": string
   }

@@ -32,7 +32,9 @@
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
+    "@atscript/db": "catalog:",
     "@atscript/typescript": "catalog:",
+    "unplugin-atscript": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

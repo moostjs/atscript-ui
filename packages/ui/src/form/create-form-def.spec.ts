@@ -374,3 +374,32 @@ describe("buildUnionVariants", () => {
     expect(variants[1]!.label).toMatch(/^2\./);
   });
 });
+
+// ── FK ref auto-detection (uses pre-compiled .as fixtures) ────
+
+describe("FK ref fields", () => {
+  it("FK prop auto-detects as type: ref", async () => {
+    const { BookForm } = await import("../__tests__/fixtures/value-help-fk.as");
+    const def = createFormDef(BookForm);
+
+    const fkField = def.fields.find((f) => f.path === "authorId");
+    expect(fkField).toBeDefined();
+    expect(fkField!.type).toBe("ref");
+  });
+
+  it("FK prop respects @ui.type override", async () => {
+    const { OverriddenForm } = await import("../__tests__/fixtures/value-help-fk.as");
+    const def = createFormDef(OverriddenForm);
+
+    const fkField = def.fields.find((f) => f.path === "authorId");
+    expect(fkField!.type).toBe("text");
+  });
+
+  it("prop with .ref but no @db.http.path falls through to normal type", async () => {
+    const { OrphanRefForm } = await import("../__tests__/fixtures/value-help-fk.as");
+    const def = createFormDef(OrphanRefForm);
+
+    const fkField = def.fields.find((f) => f.path === "orphanId");
+    expect(fkField!.type).toBe("number");
+  });
+});

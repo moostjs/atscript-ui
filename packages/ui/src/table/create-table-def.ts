@@ -14,6 +14,7 @@ import {
   UI_WIDTH,
 } from "../shared/annotation-keys";
 import { extractLiteralOptions } from "../value-help/extract-literals";
+import { extractValueHelp } from "../value-help/extract-ref";
 import type { ColumnDef, MetaResponse, TableDef } from "./types";
 
 /**
@@ -42,11 +43,14 @@ export function createTableDef(meta: MetaResponse): TableDef {
 
     const fieldMeta = meta.fields[path];
     const options = extractLiteralOptions(prop);
+    const valueHelpInfo = extractValueHelp(prop);
 
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
-      type: (getFieldMeta(prop, UI_TYPE) as string | undefined) ?? inferDisplayType(prop, options),
+      type:
+        (getFieldMeta(prop, UI_TYPE) as string | undefined) ??
+        (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
       visible: getFieldMeta(prop, UI_HIDDEN) === undefined,
@@ -54,6 +58,7 @@ export function createTableDef(meta: MetaResponse): TableDef {
       order: (getFieldMeta(prop, UI_ORDER) as number | undefined) ?? Infinity,
       icon: getFieldMeta(prop, UI_ICON) as string | undefined,
       options,
+      valueHelpInfo,
     });
   }
 

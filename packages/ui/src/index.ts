@@ -16,6 +16,9 @@ export {
   UI_STYLE,
   UI_AUTOCOMPLETE,
   UI_FORM_ACTION,
+  UI_DICT_LABEL,
+  UI_DICT_DESCR,
+  UI_DICT_ATTR,
   WF_ACTION_WITH_DATA,
   META_LABEL,
   META_ID,
@@ -106,7 +109,20 @@ export type {
 export { createTableDef } from "./table/create-table-def";
 
 // ── Value-help (unified options resolution) ─────────────────
-export { extractLiteralOptions, isPureLiteralUnion } from "./value-help";
+export {
+  extractLiteralOptions,
+  isPureLiteralUnion,
+  extractValueHelp,
+  createValueHelpClient,
+} from "./value-help";
+export type {
+  ValueHelpInfo,
+  ValueHelpQuery,
+  ValueHelpResult,
+  TargetTableMeta,
+  ValueHelpClientOptions,
+  ValueHelpClient,
+} from "./value-help";
 
 // ── Table column helpers ────────────────────────────────────
 export {

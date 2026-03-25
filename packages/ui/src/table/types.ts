@@ -1,4 +1,5 @@
 import type { TAtscriptAnnotatedType, TSerializedAnnotatedType } from "@atscript/typescript/utils";
+import type { ValueHelpInfo } from "../value-help/types";
 
 // ── MetaResponse types (structurally compatible with @atscript/db-client) ────
 
@@ -70,6 +71,8 @@ export interface ColumnDef {
   icon?: string;
   /** Enumerated options for union literal types (e.g. 'a' | 'b' | 'c'). */
   options?: { key: string; label: string }[];
+  /** Value-help info for FK columns (from extractValueHelp). */
+  valueHelpInfo?: ValueHelpInfo;
 }
 
 // ── Query state types ───────────────────────────────────────

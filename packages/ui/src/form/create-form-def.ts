@@ -17,6 +17,7 @@ import type {
 import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
 import { META_LABEL, UI_COMPONENT, UI_ORDER, UI_TYPE } from "../shared/annotation-keys";
 import { isPureLiteralUnion } from "../value-help/extract-literals";
+import { extractValueHelp } from "../value-help/extract-ref";
 
 /** Known atscript primitive extension tags that map directly to field types. */
 const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
@@ -149,6 +150,10 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
         return field;
       }),
     } as FormTupleFieldDef;
+  }
+
+  if (extractValueHelp(prop)) {
+    return { ...base, type: uiType ?? "ref" };
   }
 
   // Primitive / intersection / fallback
