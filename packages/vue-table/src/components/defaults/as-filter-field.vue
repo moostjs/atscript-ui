@@ -149,10 +149,7 @@ if (hasDropdown) {
     if (merged.length > 0 && merged.some(isFilled)) {
       state.setFieldFilter(props.column.path, merged);
     } else {
-      state.filters.value = {
-        ...state.filters.value,
-        [props.column.path]: [{ type: "eq" as const, value: [] }],
-      };
+      state.removeFieldFilter(props.column.path);
     }
     debouncedQuery();
   });
@@ -256,19 +253,13 @@ function removeChip(chip: ChipItem) {
   if (remaining.length > 0 && remaining.some(isFilled)) {
     state.setFieldFilter(props.column.path, remaining);
   } else {
-    state.filters.value = {
-      ...state.filters.value,
-      [props.column.path]: [{ type: "eq" as const, value: [] }],
-    };
+    state.removeFieldFilter(props.column.path);
   }
   debouncedQuery();
 }
 
 function clearAll() {
-  state.filters.value = {
-    ...state.filters.value,
-    [props.column.path]: [{ type: "eq" as const, value: [] }],
-  };
+  state.removeFieldFilter(props.column.path);
   debouncedQuery();
 }
 
@@ -281,10 +272,14 @@ function onBackspace() {
   if (searchTerm.value !== "" || chips.value.length === 0) return;
   const existing = state.filters.value[props.column.path] ?? [];
   const filled = existing.filter(isFilled);
-  if (filled.length > 0) {
-    state.setFieldFilter(props.column.path, filled.slice(0, -1));
-    debouncedQuery();
+  if (filled.length === 0) return;
+  const remaining = filled.slice(0, -1);
+  if (remaining.length > 0) {
+    state.setFieldFilter(props.column.path, remaining);
+  } else {
+    state.removeFieldFilter(props.column.path);
   }
+  debouncedQuery();
 }
 
 function onEnter() {

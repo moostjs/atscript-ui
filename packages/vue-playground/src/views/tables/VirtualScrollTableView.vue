@@ -2,11 +2,11 @@
 import {
   AsTableRoot,
   AsTableView,
-  AsFilterBar,
   createDefaultTableComponents,
 } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
+import TableFilterBar from "../../components/TableFilterBar.vue";
 
 const components = createDefaultTableComponents();
 </script>
@@ -21,7 +21,7 @@ const components = createDefaultTableComponents();
       <AsTableRoot url="/db/tables/products" :components="components" :limit="5000"
         v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }">
         <TableToolbar :table-def="tableDef" :loaded-count="loadedCount" :total-count="totalCount" @config="showConfigDialog()" />
-        <AsFilterBar />
+        <TableFilterBar />
         <AsTableView
           sticky-header
           :virtual-row-height="36"

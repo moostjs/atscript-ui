@@ -25,6 +25,7 @@ function setupQuery(opts?: { client?: Client }) {
         ({ state, internals } = createTableState());
         const cols = [mockColumn("name"), mockColumn("age")];
         internals.init(mockTableDef(cols));
+        state.columnNames.value = ["name", "age"];
 
         useTableQuery(client, state, internals);
         return () => h("div");

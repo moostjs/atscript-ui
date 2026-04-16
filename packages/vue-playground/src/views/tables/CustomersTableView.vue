@@ -2,12 +2,12 @@
 import {
   AsTableRoot,
   AsTableView,
-  AsFilterBar,
-  AsTablePagination,
   createDefaultTableComponents,
 } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
+import TableFilterBar from "../../components/TableFilterBar.vue";
+import TablePagination from "../../components/TablePagination.vue";
 
 const components = createDefaultTableComponents();
 </script>
@@ -19,7 +19,7 @@ const components = createDefaultTableComponents();
     <AsTableRoot url="/db/tables/customers" :components="components" select="multi" :limit="10"
       v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }">
       <TableToolbar :table-def="tableDef" :loaded-count="loadedCount" :total-count="totalCount" @config="showConfigDialog()" />
-      <AsFilterBar />
+      <TableFilterBar />
       <AsTableView :column-menu="{ sort: true, filters: true, hide: true }">
         <template #cell-email="{ value }">
           <td>
@@ -34,7 +34,7 @@ const components = createDefaultTableComponents();
           </td>
         </template>
       </AsTableView>
-      <AsTablePagination mode="load-more-btn" />
+      <TablePagination mode="load-more" />
     </AsTableRoot>
   </div>
 </template>

@@ -1,5 +1,5 @@
 // ── Types ───────────────────────────────────────────────────
-export type { TAsTableComponents, ReactiveTableState, ColumnMenuConfig } from "./types";
+export type { TAsTableComponents, ReactiveTableState, ColumnMenuConfig, ConfigTab } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
 export {
@@ -36,12 +36,15 @@ export { default as AsTableVirtualizer } from "./components/as-table-virtualizer
 // ── Default components ──────────────────────────────────────
 export {
   createDefaultTableComponents,
-  AsFilterBar,
+  AsFilters,
   AsFilterField,
   AsFilterDialog,
   AsFilterInput,
-  AsTablePagination,
   AsColumnMenu,
+  AsConfigDialog,
+  AsFieldsSelector,
+  AsSortersConfig,
+  AsOrderableList,
 } from "./components/defaults";
 
 // ── Utilities ───────────────────────────────────────────────

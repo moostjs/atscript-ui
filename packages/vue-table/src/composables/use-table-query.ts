@@ -47,7 +47,7 @@ export function useTableQuery(
 
     try {
       const query = buildTableQuery({
-        visibleColumnPaths: state.columns.value.map((c) => c.path),
+        visibleColumnPaths: state.columnNames.value,
         sorters: state.sorters.value,
         forceSorters: opts?.forceSorters,
         filters: state.filters.value,
@@ -94,7 +94,7 @@ export function useTableQuery(
   }
 
   // After first query, auto re-query on column/sorter changes
-  watch([() => state.columns.value, () => state.sorters.value], () => {
+  watch([() => state.columnNames.value, () => state.sorters.value], () => {
     if (queryDetected) {
       queryImmediate();
     }

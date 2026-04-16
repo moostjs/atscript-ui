@@ -152,70 +152,6 @@
   color: #ef4444;
 }
 
-/* ── Pagination ──────────────────────────────────────── */
-
-.as-table-pagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 8px 0;
-  font-size: 13px;
-  color: #6b7280;
-}
-
-.as-table-pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.as-table-pagination button {
-  padding: 4px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.as-table-pagination button:hover:not(:disabled) {
-  border-color: #6366f1;
-  color: #6366f1;
-}
-
-.as-table-pagination button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.as-table-pagination select {
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-}
-
-.as-table-load-more {
-  padding: 6px 20px;
-  border: 1px solid #6366f1;
-  border-radius: 6px;
-  background: #fff;
-  color: #6366f1;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.as-table-load-more:hover:not(:disabled) {
-  background: #eef2ff;
-}
-
-.as-table-load-more:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* ── Column menu (reka-ui DropdownMenu) ──────────────── */
 
 .as-column-menu-content {
@@ -259,73 +195,7 @@
   margin: 4px 0;
 }
 
-/* ── Filter bar ─────────────────────────────────────── */
-
-.as-filter-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.as-filter-add-btn {
-  padding: 3px 10px;
-  border: 1px dashed #d1d5db;
-  border-radius: 16px;
-  background: none;
-  font-size: 12px;
-  color: #6b7280;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.as-filter-add-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-}
-
-.as-filter-add-content {
-  z-index: 50;
-  padding: 4px 0;
-  background: #fff;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  min-width: 160px;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.as-filter-add-item {
-  display: block;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  background: none;
-  font-size: 13px;
-  color: #374151;
-  text-align: left;
-  cursor: pointer;
-}
-
-.as-filter-add-item:hover {
-  background: #f3f4f6;
-  color: #6366f1;
-}
-
-.as-filter-clear-all {
-  padding: 3px 10px;
-  border: none;
-  background: none;
-  font-size: 12px;
-  color: #ef4444;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.as-filter-clear-all:hover {
-  text-decoration: underline;
-}
+/* ── Filters ───────────────────────────────────────── */
 
 /* ── Filter dialog (reka-ui Dialog) ──────────────────── */
 
@@ -688,4 +558,354 @@
 
 .as-table-scroll-container {
   overflow: auto;
+}
+
+/* ── Config dialog ──────────────────────────────────── */
+
+.as-config-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+.as-config-dialog-content {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 101;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+  width: 640px;
+  max-width: 92vw;
+  min-height: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .as-config-dialog-content {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+  }
+}
+
+.as-config-dialog-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.as-config-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.as-config-dialog-close {
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  font-size: 20px;
+  color: #9ca3af;
+  cursor: pointer;
+  line-height: 1;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.as-config-dialog-close:hover {
+  color: #374151;
+}
+
+.as-config-dialog-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.as-config-tabs-list {
+  display: flex;
+  gap: 0;
+  flex-shrink: 0;
+}
+
+.as-config-tab-trigger {
+  padding: 6px 14px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: none;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  cursor: pointer;
+  white-space: nowrap;
+  outline: none;
+}
+
+.as-config-tab-trigger:hover {
+  color: #374151;
+}
+
+.as-config-tab-trigger[data-state="active"] {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+.as-config-tab-content {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.as-config-tab-content[data-state="active"] {
+  display: flex;
+}
+
+.as-config-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+/* ── Orderable list ─────────────────────────────────── */
+
+.as-orderable-list-toolbar {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.as-orderable-list-search {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  min-width: 120px;
+}
+
+.as-orderable-list-search:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.as-orderable-list-toolbar-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.as-orderable-list-toolbar-btn {
+  padding: 4px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  line-height: 1;
+  color: #374151;
+}
+
+.as-orderable-list-toolbar-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.as-orderable-list-items {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.as-orderable-list-item {
+  position: relative;
+  cursor: grab;
+  outline: none;
+}
+
+.as-orderable-list-item:hover {
+  background: #f9fafb;
+}
+
+.as-orderable-list-item[data-highlighted] {
+  background: #f3f4f6;
+}
+
+.as-orderable-list-item-dragging {
+  opacity: 0.25;
+}
+
+.as-orderable-list-item-disabled {
+  pointer-events: none;
+  cursor: default;
+}
+
+.as-orderable-list-item-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+}
+
+.as-orderable-list-checkbox {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #d1d5db;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+}
+
+.as-orderable-list-item[data-state="checked"] .as-orderable-list-checkbox {
+  background: #6366f1;
+  border-color: #6366f1;
+}
+
+.as-orderable-list-checkbox-disabled {
+  opacity: 0.5;
+}
+
+.as-orderable-list-check-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.as-orderable-list-item-body {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.as-orderable-list-item-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #374151;
+}
+
+.as-orderable-list-item-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  flex-shrink: 0;
+}
+
+.as-orderable-list-item:hover .as-orderable-list-item-actions {
+  opacity: 1;
+}
+
+.as-orderable-list-item-actions button {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  font-size: 10px;
+  cursor: pointer;
+  color: #9ca3af;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.as-orderable-list-item-actions button:hover {
+  color: #6366f1;
+  background: #eef2ff;
+}
+
+/* ── Drop indicator ─────────────────────────────────── */
+
+.as-orderable-list-drop-indicator {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -1px;
+  height: 2px;
+  background: #6366f1;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.as-orderable-list-drop-indicator::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: -2px;
+  width: 6px;
+  height: 6px;
+  background: #6366f1;
+  border-radius: 50%;
+}
+
+/* ── Sorter extras ──────────────────────────────────── */
+
+.as-sorter-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.as-sorter-direction-btn {
+  padding: 2px 6px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: #fff;
+  font-size: 10px;
+  cursor: pointer;
+  line-height: 1;
+  color: #374151;
+  flex-shrink: 0;
+}
+
+.as-sorter-direction-btn:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.as-sorter-direction-disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.as-sorter-lock {
+  font-size: 12px;
+  opacity: 0.5;
+  flex-shrink: 0;
 }

@@ -3,12 +3,12 @@ import { ref } from "vue";
 import {
   AsTableRoot,
   AsTableView,
-  AsFilterBar,
-  AsTablePagination,
   createDefaultTableComponents,
 } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
+import TableFilterBar from "../../components/TableFilterBar.vue";
+import TablePagination from "../../components/TablePagination.vue";
 
 const components = createDefaultTableComponents();
 const selectedProduct = ref<Record<string, unknown> | null>(null);
@@ -28,7 +28,7 @@ function onRowClick(row: Record<string, unknown>) {
         <AsTableRoot url="/db/tables/products" :components="components" :limit="10"
           v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }">
           <TableToolbar :table-def="tableDef" :loaded-count="loadedCount" :total-count="totalCount" @config="showConfigDialog()" />
-          <AsFilterBar />
+          <TableFilterBar />
           <AsTableView
             :column-menu="{ sort: true, filters: true, hide: true }"
             @row-click="onRowClick"
@@ -117,7 +117,7 @@ function onRowClick(row: Record<string, unknown>) {
               </div>
             </template>
           </AsTableView>
-          <AsTablePagination mode="pagination" />
+          <TablePagination mode="pagination" />
         </AsTableRoot>
       </div>
 

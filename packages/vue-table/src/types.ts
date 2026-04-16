@@ -2,6 +2,8 @@ import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type { FieldFilters, SelectionMode, TableStateMethods } from "@atscript/ui-table";
 
+export type ConfigTab = "columns" | "filters" | "sorters";
+
 /** Controls which sections appear in the column header dropdown menu. */
 export interface ColumnMenuConfig {
   sort?: boolean;
@@ -50,8 +52,10 @@ export interface TAsTableComponents {
  */
 export interface ReactiveTableState extends TableStateMethods {
   tableDef: ShallowRef<TableDef | null>;
-  columns: ShallowRef<ColumnDef[]>;
+  columnNames: ShallowRef<string[]>;
+  columns: ComputedRef<ColumnDef[]>;
   allColumns: ShallowRef<ColumnDef[]>;
+  filterFields: ShallowRef<string[]>;
   filters: ShallowRef<FieldFilters>;
   sorters: ShallowRef<SortControl[]>;
   results: ShallowRef<Record<string, unknown>[]>;
@@ -65,6 +69,7 @@ export interface ReactiveTableState extends TableStateMethods {
   mustRefresh: Ref<boolean>;
   searchTerm: Ref<string>;
   configDialogOpen: Ref<boolean>;
+  configTab: Ref<ConfigTab>;
   /** Selected row values (same values as ListboxItem :value). */
   selectedRows: ShallowRef<unknown[]>;
   selectedCount: ComputedRef<number>;

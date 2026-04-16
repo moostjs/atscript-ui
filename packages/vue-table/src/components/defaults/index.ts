@@ -1,21 +1,27 @@
 import "./as-table-defaults.css";
 
-import AsTablePagination from "./as-table-pagination.vue";
 import AsColumnMenu from "./as-column-menu.vue";
 import AsTableCellValue from "../as-table-cell-value.vue";
 import AsTableHeaderCell from "../as-table-header-cell.vue";
-import AsFilterBar from "./as-filter-bar.vue";
+import AsFilters from "./as-filters.vue";
 import AsFilterDialog from "./as-filter-dialog.vue";
 import AsFilterInput from "./as-filter-input.vue";
 import AsFilterField from "./as-filter-field.vue";
+import AsConfigDialog from "./as-config-dialog.vue";
+import AsFieldsSelector from "./as-fields-selector.vue";
+import AsSortersConfig from "./as-sorters-config.vue";
+import AsOrderableList from "./as-orderable-list.vue";
 
 export {
-  AsTablePagination,
   AsColumnMenu,
-  AsFilterBar,
+  AsFilters,
   AsFilterDialog,
   AsFilterInput,
   AsFilterField,
+  AsConfigDialog,
+  AsFieldsSelector,
+  AsSortersConfig,
+  AsOrderableList,
 };
 
 export function createDefaultTableComponents() {
@@ -26,5 +32,6 @@ export function createDefaultTableComponents() {
     filterDialog: AsFilterDialog,
     filterInput: AsFilterInput,
     filterField: AsFilterField,
+    configDialog: AsConfigDialog,
   };
 }

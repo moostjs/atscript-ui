@@ -52,7 +52,7 @@ function handleSort(column: ColumnDef, direction: "asc" | "desc" | null) {
 }
 
 function handleHide(column: ColumnDef) {
-  state.setColumns(state.columns.value.filter((c) => c.path !== column.path));
+  state.setColumnNames(state.columnNames.value.filter((name) => name !== column.path));
 }
 
 function handleFilter(column: ColumnDef) {
@@ -60,7 +60,7 @@ function handleFilter(column: ColumnDef) {
 }
 
 function handleFiltersOff(column: ColumnDef) {
-  state.removeFieldFilter(column.path);
+  state.removeFilterField(column.path);
   state.query();
 }
 

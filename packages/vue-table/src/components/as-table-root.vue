@@ -6,7 +6,7 @@ import type { SelectionMode } from "@atscript/ui-table";
 import type { TAsTableComponents } from "../types";
 import { useTable, type TableClientFactory } from "../composables/use-table";
 import type { PageResult } from "@atscript/db-client";
-import { AsFilterDialog } from "./defaults";
+import { AsFilterDialog, AsConfigDialog } from "./defaults";
 
 const props = withDefaults(
   defineProps<{
@@ -36,6 +36,10 @@ const props = withDefaults(
   },
 );
 
+const filterFields = defineModel<string[]>('filterFields', { default: () => [] });
+const columnNames = defineModel<string[]>('columnNames', { default: () => [] });
+const sorters = defineModel<SortControl[]>('sorters', { default: () => [] });
+
 const state = useTable(props.url, {
   limit: props.limit,
   select: props.select,
@@ -48,6 +52,9 @@ const state = useTable(props.url, {
   blockQuery: props.blockQuery,
   clientFactory: props.clientFactory,
   components: props.components,
+  filterFields,
+  columnNames,
+  sorters,
 });
 
 // Resolve the filter dialog component (cannot use useTableComponent here
@@ -55,13 +62,18 @@ const state = useTable(props.url, {
 const FilterDialogComp = computed(
   () => props.components?.filterDialog ?? AsFilterDialog,
 );
+const ConfigDialogComp = computed(
+  () => props.components?.configDialog ?? AsConfigDialog,
+);
 </script>
 
 <template>
   <slot
     :table-def="state.tableDef.value"
     :all-columns="state.allColumns.value"
+    :column-names="state.columnNames.value"
     :columns="state.columns.value"
+    :filter-fields="state.filterFields.value"
     :filters="state.filters.value"
     :sorters="state.sorters.value"
     :results="state.results.value"
@@ -84,8 +96,12 @@ const FilterDialogComp = computed(
     :close-filter-dialog="state.closeFilterDialog"
     :set-field-filter="state.setFieldFilter"
     :remove-field-filter="state.removeFieldFilter"
+    :add-filter-field="state.addFilterField"
+    :remove-filter-field="state.removeFilterField"
+    :set-column-names="state.setColumnNames"
   />
 
   <!-- Dialogs rendered outside user layout (like not-sap SmartTableRoot) -->
   <component :is="FilterDialogComp" />
+  <component :is="ConfigDialogComp" />
 </template>

@@ -1,6 +1,5 @@
-import { shallowRef, ref, computed, provide, inject } from "vue";
+import { shallowRef, ref, computed, provide, inject, type Ref } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
-import { getVisibleColumns } from "@atscript/ui";
 import {
   isFilled,
   type FieldFilters,
@@ -8,7 +7,7 @@ import {
   type SelectionMode,
 } from "@atscript/ui-table";
 import type { Client } from "@atscript/db-client";
-import type { ReactiveTableState, TAsTableComponents } from "../types";
+import type { ConfigTab, ReactiveTableState, TAsTableComponents } from "../types";
 
 const TABLE_KEY = "__as_table";
 
@@ -28,6 +27,12 @@ export interface CreateTableStateOptions {
   rowValueFn?: (row: Record<string, unknown>) => unknown;
   /** Preserve selection across data refreshes. */
   keepSelectedAfterRefresh?: boolean;
+  /** External ref for filter field names (from defineModel). */
+  filterFields?: Ref<string[]>;
+  /** External ref for visible column names (from defineModel). */
+  columnNames?: Ref<string[]>;
+  /** External ref for sorters (from defineModel). */
+  sorters?: Ref<SortControl[]>;
 }
 
 /** Internal handles returned alongside the public state. */
@@ -43,6 +48,9 @@ export interface TableStateInternals {
  *
  * Uses `shallowRef` for arrays/objects (replaced wholesale) and
  * `ref` for scalars, following TABLE.md performance requirements.
+ *
+ * When external refs are provided (from defineModel), they are used
+ * directly — this enables v-model binding on AsTableRoot.
  */
 export function createTableState(opts?: CreateTableStateOptions): {
   state: ReactiveTableState;
@@ -50,9 +58,26 @@ export function createTableState(opts?: CreateTableStateOptions): {
 } {
   const tableDef = shallowRef<TableDef | null>(null);
   const allColumns = shallowRef<ColumnDef[]>([]);
-  const columns = shallowRef<ColumnDef[]>([]);
+
+  // Model refs — use external if provided, otherwise create local
+  const filterFields = opts?.filterFields ?? shallowRef<string[]>([]);
+  const columnNames = opts?.columnNames ?? shallowRef<string[]>([]);
+  const sorters = opts?.sorters ?? shallowRef<SortControl[]>([]);
+
+  // columns is DERIVED from columnNames + allColumns
+  const columns = computed<ColumnDef[]>(() => {
+    const all = allColumns.value;
+    if (all.length === 0 || columnNames.value.length === 0) return [];
+    const map = new Map(all.map((c) => [c.path, c]));
+    const result: ColumnDef[] = [];
+    for (const name of columnNames.value) {
+      const col = map.get(name);
+      if (col) result.push(col);
+    }
+    return result;
+  });
+
   const filters = shallowRef<FieldFilters>({});
-  const sorters = shallowRef<SortControl[]>([]);
   const results = shallowRef<Record<string, unknown>[]>([]);
   const querying = ref(false);
   const queryingNext = ref(false);
@@ -67,6 +92,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
   const mustRefresh = ref(false);
   const searchTerm = ref("");
   const configDialogOpen = ref(false);
+  const configTab = ref<ConfigTab>("columns");
   const filterDialogColumn = shallowRef<ColumnDef | null>(null);
 
   const selectedRows = shallowRef<unknown[]>([]);
@@ -77,10 +103,18 @@ export function createTableState(opts?: CreateTableStateOptions): {
   let _queryFn: (() => void) | undefined;
   let _queryNextFn: (() => void) | undefined;
 
+  function resetPagination() {
+    if (pagination.value.page !== 1) {
+      pagination.value = { ...pagination.value, page: 1 };
+    }
+  }
+
   const state: ReactiveTableState = {
     tableDef,
-    allColumns,
+    columnNames,
     columns,
+    allColumns,
+    filterFields,
     filters,
     sorters,
     results,
@@ -94,6 +128,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
     mustRefresh,
     searchTerm,
     configDialogOpen,
+    configTab,
     filterDialogColumn,
     selectedRows,
     selectedCount,
@@ -108,18 +143,31 @@ export function createTableState(opts?: CreateTableStateOptions): {
     },
     resetFilters() {
       filters.value = {};
-      if (pagination.value.page !== 1) {
-        pagination.value = { ...pagination.value, page: 1 };
-      }
+      resetPagination();
     },
-    showConfigDialog() {
+    showConfigDialog(tab?: ConfigTab) {
+      configTab.value = tab ?? "columns";
       configDialogOpen.value = true;
     },
+    setColumnNames(names: string[]) {
+      columnNames.value = names;
+    },
     setColumns(cols: ColumnDef[]) {
-      columns.value = cols;
+      columnNames.value = cols.map((c) => c.path);
     },
     setSorters(s: SortControl[]) {
       sorters.value = s;
+    },
+    addFilterField(path: string) {
+      if (!filterFields.value.includes(path)) {
+        filterFields.value = [...filterFields.value, path];
+      }
+    },
+    removeFilterField(path: string) {
+      filterFields.value = filterFields.value.filter((f) => f !== path);
+      const { [path]: _, ...rest } = filters.value;
+      filters.value = rest;
+      resetPagination();
     },
     setFieldFilter(path: string, conditions: FilterCondition[]) {
       const filled = conditions.filter((c) => isFilled(c));
@@ -129,16 +177,12 @@ export function createTableState(opts?: CreateTableStateOptions): {
       } else {
         filters.value = { ...filters.value, [path]: conditions };
       }
-      if (pagination.value.page !== 1) {
-        pagination.value = { ...pagination.value, page: 1 };
-      }
+      resetPagination();
     },
     removeFieldFilter(path: string) {
       const { [path]: _, ...rest } = filters.value;
       filters.value = rest;
-      if (pagination.value.page !== 1) {
-        pagination.value = { ...pagination.value, page: 1 };
-      }
+      resetPagination();
     },
     openFilterDialog(column: ColumnDef) {
       filterDialogColumn.value = column;
@@ -152,7 +196,6 @@ export function createTableState(opts?: CreateTableStateOptions): {
     init(def: TableDef) {
       tableDef.value = def;
       allColumns.value = def.columns;
-      columns.value = getVisibleColumns(def);
     },
     setQueryFns(q: () => void, qn: () => void) {
       _queryFn = q;

@@ -1,4 +1,5 @@
-import { createTableDef, type TableDef } from "@atscript/ui";
+import type { Ref } from "vue";
+import { createTableDef, getVisibleColumns, type SortControl, type TableDef } from "@atscript/ui";
 import type { Client } from "@atscript/db-client";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
@@ -53,6 +54,12 @@ export interface UseTableOptions extends UseTableQueryOptions {
   components?: TAsTableComponents;
   /** Whether to provide table context to the subtree (default: true). */
   provideContext?: boolean;
+  /** External model ref for filter field names. */
+  filterFields?: Ref<string[]>;
+  /** External model ref for visible column names. */
+  columnNames?: Ref<string[]>;
+  /** External model ref for sorters. */
+  sorters?: Ref<SortControl[]>;
 }
 
 /**
@@ -74,6 +81,9 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     limit: opts?.limit,
     select: opts?.select ?? "none",
     rowValueFn: opts?.rowValueFn,
+    filterFields: opts?.filterFields,
+    columnNames: opts?.columnNames,
+    sorters: opts?.sorters,
   });
 
   useTableQuery(client, state, internals, opts);
@@ -87,6 +97,10 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   defPromise
     .then((def) => {
       internals.init(def);
+      // Populate columnNames from metadata if not externally set
+      if (state.columnNames.value.length === 0) {
+        state.columnNames.value = getVisibleColumns(def).map((c) => c.path);
+      }
       if (queryOnMount) {
         state.query();
       }
