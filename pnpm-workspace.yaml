@@ -3,16 +3,16 @@ packages:
   - docs
 
 catalog:
-  "@atscript/core": ^0.1.47
-  "@atscript/db": ^0.1.50
-  "@atscript/db-client": ^0.1.50
-  "@atscript/db-sql-tools": ^0.1.50
-  "@atscript/db-sqlite": ^0.1.50
-  "@atscript/moost-db": ^0.1.50
-  "@atscript/typescript": ^0.1.47
-  "@moostjs/event-http": ^0.6.6
-  "@moostjs/event-wf": ^0.6.6
-  "@moostjs/vite": ^0.6.6
+  "@atscript/core": ^0.1.48
+  "@atscript/db": ^0.1.51
+  "@atscript/db-client": ^0.1.51
+  "@atscript/db-sql-tools": ^0.1.51
+  "@atscript/db-sqlite": ^0.1.51
+  "@atscript/moost-db": ^0.1.51
+  "@atscript/typescript": ^0.1.48
+  "@moostjs/event-http": ^0.6.7
+  "@moostjs/event-wf": ^0.6.7
+  "@moostjs/vite": ^0.6.7
   "@playwright/test": ^1.58.2
   "@prostojs/deserialize-fn": ^0.0.5
   "@swc/core": ^1.15.18
@@ -23,13 +23,13 @@ catalog:
   "@vitejs/plugin-vue": ^6
   "@vue/test-utils": ^2
   "@vueuse/core": ^14.2.1
-  "@wooksjs/event-core": ^0.7.8
-  "@wooksjs/event-wf": ^0.7.8
+  "@wooksjs/event-core": ^0.7.9
+  "@wooksjs/event-wf": ^0.7.9
   happy-dom: ^18
-  "moost": ^0.6.6
+  "moost": ^0.6.7
   reka-ui: ^2.9.2
   typescript: ^5
-  unplugin-atscript: ^0.1.47
+  unplugin-atscript: ^0.1.48
   unplugin-swc: ^1.5.9
   vite: npm:@voidzero-dev/vite-plus-core@0.1.12
   vite-plus: latest

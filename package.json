@@ -26,6 +26,10 @@
   "packageManager": "pnpm@10.32.1",
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@atscript/db",
+      "@atscript/db-client",
+      "@atscript/db-sqlite",
+      "@atscript/moost-db",
       "@swc/core",
       "better-sqlite3"
     ]
