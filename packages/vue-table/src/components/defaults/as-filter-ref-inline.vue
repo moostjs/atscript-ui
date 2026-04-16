@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef, ValueHelpInfo } from "@atscript/ui";
 import { str, ValueHelpClient } from "@atscript/ui";
-import { debounce } from "@atscript/ui-table";
+import { debounce, type FilterCondition } from "@atscript/ui-table";
 import {
   ComboboxRoot,
   ComboboxAnchor,
@@ -34,6 +34,7 @@ const innerState = useTable(info.path, {
   select: "none",
   queryOnMount: true,
   limit: 10,
+  provideContext: false,
 });
 
 const dictPaths = new Set(
@@ -45,16 +46,28 @@ const dictColumns = computed(() =>
   innerState.allColumns.value.filter((c) => dictPaths.has(c.path)),
 );
 
-const selectedValues = ref<unknown[]>([]);
+function arraysEqual(a: unknown[], b: unknown[]): boolean {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
 
-const existing = state.filters.value[props.column.path];
-if (existing) {
-  for (const cond of existing) {
-    if (cond.type === "in" || cond.type === "eq") {
-      selectedValues.value = [...cond.value];
+function extractValues(conditions: FilterCondition[] | undefined): unknown[] {
+  if (!conditions || conditions.length === 0) return [];
+  const values: unknown[] = [];
+  for (const cond of conditions) {
+    if (cond.type === "in" && Array.isArray(cond.value)) {
+      values.push(...cond.value);
+    } else if (cond.type === "eq" && cond.value != null) {
+      values.push(cond.value);
     }
   }
+  return values;
 }
+
+const selectedValues = ref<unknown[]>(extractValues(state.filters.value[props.column.path]));
 
 const labelCache = new Map<unknown, string>();
 
@@ -77,38 +90,26 @@ const chips = computed(() =>
   })),
 );
 
-// Prevents the parent-sync watcher from echoing back changes we just made
-let syncing = false;
-
 watch(selectedValues, (values) => {
-  syncing = true;
   if (values.length > 0) {
     state.setFieldFilter(props.column.path, [
       { type: "in", value: values as (string | number | boolean)[] },
     ]);
   } else {
-    state.removeFieldFilter(props.column.path);
+    // Keep placeholder so the inline input stays visible
+    state.filters.value = {
+      ...state.filters.value,
+      [props.column.path]: [{ type: "in" as const, value: [] }],
+    };
   }
   state.query();
-  queueMicrotask(() => {
-    syncing = false;
-  });
 });
 
 watch(
   () => state.filters.value[props.column.path],
   (conditions) => {
-    if (syncing) return;
-    if (!conditions || conditions.length === 0) {
-      if (selectedValues.value.length > 0) selectedValues.value = [];
-      return;
-    }
-    const newValues: unknown[] = [];
-    for (const cond of conditions) {
-      if (cond.type === "in" || cond.type === "eq") {
-        newValues.push(...cond.value);
-      }
-    }
+    const newValues = extractValues(conditions);
+    if (arraysEqual(newValues, selectedValues.value)) return;
     selectedValues.value = newValues;
   },
 );
@@ -166,6 +167,11 @@ function removeChip(value: unknown) {
 
 function clearAll() {
   selectedValues.value = [];
+}
+
+function openFullDialog() {
+  dropdownOpen.value = false;
+  state.openFilterDialog(props.column);
 }
 
 function removeFilter() {
@@ -236,8 +242,20 @@ function onBackspace() {
             />
           </ComboboxViewport>
 
-          <div v-if="selectedValues.length > 0" class="as-filter-ref-dropdown-footer">
-            <button type="button" @click="clearAll">Reset</button>
+          <div
+            v-if="selectedValues.length > 0 || innerState.totalCount.value > 10"
+            class="as-filter-ref-dropdown-footer"
+          >
+            <button v-if="selectedValues.length > 0" type="button" @click="clearAll">
+              Reset
+            </button>
+            <button
+              v-if="innerState.totalCount.value > 10"
+              type="button"
+              @click="openFullDialog"
+            >
+              See All ({{ innerState.totalCount.value }})
+            </button>
           </div>
         </ComboboxContent>
       </ComboboxRoot>

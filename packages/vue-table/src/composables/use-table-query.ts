@@ -38,6 +38,7 @@ export function useTableQuery(
   let queryDetected = false;
 
   async function executeQuery(append: boolean) {
+    state.mustRefresh.value = false;
     if (opts?.blockQuery) return;
 
     const thisGen = ++generation;

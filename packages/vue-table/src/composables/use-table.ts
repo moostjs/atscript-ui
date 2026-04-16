@@ -51,6 +51,8 @@ export interface UseTableOptions extends UseTableQueryOptions {
   clientFactory?: TableClientFactory;
   /** Component overrides for table rendering. */
   components?: TAsTableComponents;
+  /** Whether to provide table context to the subtree (default: true). */
+  provideContext?: boolean;
 }
 
 /**
@@ -76,7 +78,9 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
 
   useTableQuery(client, state, internals, opts);
   useTableSelection(state, { keepAfterRefresh: opts?.keepSelectedAfterRefresh });
-  provideTableContext({ state, client, components: opts?.components ?? {} });
+  if (opts?.provideContext !== false) {
+    provideTableContext({ state, client, components: opts?.components ?? {} });
+  }
 
   const queryOnMount = opts?.queryOnMount ?? true;
 

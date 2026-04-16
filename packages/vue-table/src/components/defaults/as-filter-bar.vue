@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { isFilled, filterTokenLabel } from "@atscript/ui-table";
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from "reka-ui";
@@ -7,9 +7,6 @@ import { useTableContext } from "../../composables/use-table-state";
 import AsFilterRefInline from "./as-filter-ref-inline.vue";
 
 const { state } = useTableContext();
-
-/** Ref column paths the user has opened (even without filter values yet). */
-const activeRefPaths = ref(new Set<string>());
 
 const columnMap = computed(() => {
   const tableDef = state.tableDef.value;
@@ -41,39 +38,19 @@ const activeRefColumns = computed(() => {
   const map = columnMap.value;
   if (map.size === 0) return [];
   const result: ColumnDef[] = [];
-  const seen = new Set<string>();
-
   for (const path in state.filters.value) {
-    const conditions = state.filters.value[path];
-    if (conditions.some(isFilled)) {
-      const col = map.get(path);
-      if (col?.valueHelpInfo) {
-        result.push(col);
-        seen.add(path);
-      }
-    }
+    const col = map.get(path);
+    if (col?.valueHelpInfo) result.push(col);
   }
-
-  for (const path of activeRefPaths.value) {
-    if (!seen.has(path)) {
-      const col = map.get(path);
-      if (col?.valueHelpInfo) {
-        result.push(col);
-      }
-    }
-  }
-
   return result;
 });
 
-/** Filterable columns that do NOT have an active filter and are not open as inline. */
+/** Filterable columns that do NOT have an active filter. */
 const addableColumns = computed(() => {
   const tableDef = state.tableDef.value;
   if (!tableDef) return [];
   const activeSet = new Set(Object.keys(state.filters.value));
-  return tableDef.columns.filter(
-    (c) => c.filterable && !activeSet.has(c.path) && !activeRefPaths.value.has(c.path),
-  );
+  return tableDef.columns.filter((c) => c.filterable && !activeSet.has(c.path));
 });
 
 const hasFilters = computed(
@@ -83,10 +60,13 @@ const showBar = computed(() => hasFilters.value || addableColumns.value.length >
 
 function addFilter(column: ColumnDef) {
   if (column.valueHelpInfo) {
-    // Ref column → show inline input
-    activeRefPaths.value = new Set([...activeRefPaths.value, column.path]);
+    // Set placeholder filter to make the inline input appear.
+    // Bypass setFieldFilter (which strips unfilled conditions).
+    state.filters.value = {
+      ...state.filters.value,
+      [column.path]: [{ type: "in" as const, value: [] }],
+    };
   } else {
-    // Non-ref → open dialog
     state.openFilterDialog(column);
   }
 }
@@ -100,15 +80,7 @@ function removeFilter(path: string) {
   state.query();
 }
 
-function removeRefFilter(path: string) {
-  activeRefPaths.value.delete(path);
-  activeRefPaths.value = new Set(activeRefPaths.value);
-  state.removeFieldFilter(path);
-  state.query();
-}
-
 function clearAll() {
-  activeRefPaths.value = new Set();
   state.resetFilters();
   state.query();
 }
@@ -120,7 +92,7 @@ function clearAll() {
       v-for="col in activeRefColumns"
       :key="col.path"
       :column="col"
-      @remove="removeRefFilter(col.path)"
+      @remove="removeFilter(col.path)"
     />
 
     <button
