@@ -18,11 +18,6 @@ export function isFilled(condition: FilterCondition): boolean {
     );
   }
 
-  // in/nin need at least one non-empty value
-  if (type === "in" || type === "nin") {
-    return value.some((v) => v != null && v !== "");
-  }
-
   // all others need value[0]
   return value.length > 0 && value[0] != null && value[0] !== "";
 }
@@ -43,8 +38,6 @@ const CONDITION_LABELS: Record<FilterConditionType, string> = {
   starts: "starts with",
   ends: "ends with",
   bw: "between",
-  in: "in set",
-  nin: "not in set",
   null: "is empty",
   notNull: "is not empty",
   regex: "matches pattern",
@@ -77,7 +70,6 @@ export function filterTokenLabel(
     const c = filled[0];
     if (c.type === "null") return `${label}: empty`;
     if (c.type === "notNull") return `${label}: not empty`;
-    if (c.type === "in") return `${label}: ${c.value.join(", ")}`;
     if (c.type === "bw") return `${label}: ${c.value[0]} – ${c.value[1]}`;
     return `${label} ${conditionLabel(c.type)} ${c.value[0]}`;
   }

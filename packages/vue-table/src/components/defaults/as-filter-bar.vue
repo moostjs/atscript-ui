@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import { isFilled, filterTokenLabel } from "@atscript/ui-table";
 import { PopoverRoot, PopoverTrigger, PopoverPortal, PopoverContent } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
-import AsFilterRefInline from "./as-filter-ref-inline.vue";
+import AsFilterField from "./as-filter-field.vue";
 
 const { state } = useTableContext();
 
@@ -18,29 +17,14 @@ const columnMap = computed(() => {
   return map;
 });
 
-const activeTokenColumns = computed(() => {
-  const map = columnMap.value;
-  if (map.size === 0) return [];
-  const result: { column: ColumnDef; label: string }[] = [];
-  for (const path in state.filters.value) {
-    const conditions = state.filters.value[path];
-    if (conditions.some(isFilled)) {
-      const col = map.get(path);
-      if (col && !col.valueHelpInfo) {
-        result.push({ column: col, label: filterTokenLabel(path, conditions, col.label) });
-      }
-    }
-  }
-  return result;
-});
-
-const activeRefColumns = computed(() => {
+/** Columns that have an active filter entry (including empty placeholders). */
+const activeColumns = computed(() => {
   const map = columnMap.value;
   if (map.size === 0) return [];
   const result: ColumnDef[] = [];
   for (const path in state.filters.value) {
     const col = map.get(path);
-    if (col?.valueHelpInfo) result.push(col);
+    if (col) result.push(col);
   }
   return result;
 });
@@ -53,31 +37,15 @@ const addableColumns = computed(() => {
   return tableDef.columns.filter((c) => c.filterable && !activeSet.has(c.path));
 });
 
-const hasFilters = computed(
-  () => activeTokenColumns.value.length > 0 || activeRefColumns.value.length > 0,
-);
+const hasFilters = computed(() => activeColumns.value.length > 0);
 const showBar = computed(() => hasFilters.value || addableColumns.value.length > 0);
 
 function addFilter(column: ColumnDef) {
-  if (column.valueHelpInfo) {
-    // Set placeholder filter to make the inline input appear.
-    // Bypass setFieldFilter (which strips unfilled conditions).
-    state.filters.value = {
-      ...state.filters.value,
-      [column.path]: [{ type: "in" as const, value: [] }],
-    };
-  } else {
-    state.openFilterDialog(column);
-  }
-}
-
-function openFilter(column: ColumnDef) {
-  state.openFilterDialog(column);
-}
-
-function removeFilter(path: string) {
-  state.removeFieldFilter(path);
-  state.query();
+  // Set placeholder filter to make the inline input appear.
+  state.filters.value = {
+    ...state.filters.value,
+    [column.path]: [{ type: "eq" as const, value: [] }],
+  };
 }
 
 function clearAll() {
@@ -88,32 +56,11 @@ function clearAll() {
 
 <template>
   <div v-if="showBar" class="as-filter-bar">
-    <AsFilterRefInline
-      v-for="col in activeRefColumns"
+    <AsFilterField
+      v-for="col in activeColumns"
       :key="col.path"
       :column="col"
-      @remove="removeFilter(col.path)"
     />
-
-    <button
-      v-for="item in activeTokenColumns"
-      :key="item.column.path"
-      type="button"
-      class="as-filter-token"
-      @click="openFilter(item.column)"
-    >
-      <span class="as-filter-token-label">{{ item.label }}</span>
-      <span
-        class="as-filter-token-remove"
-        role="button"
-        tabindex="0"
-        aria-label="Remove filter"
-        @click.stop="removeFilter(item.column.path)"
-        @keydown.enter.stop="removeFilter(item.column.path)"
-      >
-        &times;
-      </span>
-    </button>
 
     <PopoverRoot v-if="addableColumns.length > 0">
       <PopoverTrigger class="as-filter-add-btn" aria-label="Add filter"> + Filter </PopoverTrigger>

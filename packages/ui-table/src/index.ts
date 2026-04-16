@@ -17,6 +17,9 @@ export { conditionsForType, columnFilterType } from "./filters/filter-conditions
 // ── Escape regex ────────────────────────────────────────────
 export { escapeRegex } from "./filters/escape-regex";
 
+// ── Filter input format ─────────────────────────────────────
+export { parseFilterInput, formatFilterCondition, defaultCondition } from "./filters/filter-input-format";
+
 // ── Filters to Uniquery ─────────────────────────────────────
 export { filtersToUniqueryFilter } from "./filters/filters-to-uniquery";
 

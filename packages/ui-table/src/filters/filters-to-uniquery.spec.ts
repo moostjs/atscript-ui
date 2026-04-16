@@ -82,20 +82,6 @@ describe("filtersToUniqueryFilter", () => {
     expect(filtersToUniqueryFilter(filters)).toEqual({ price: { $gte: 10, $lte: 100 } });
   });
 
-  it("converts in to $in", () => {
-    const filters: FieldFilters = {
-      status: [{ type: "in", value: ["active", "pending"] }],
-    };
-    expect(filtersToUniqueryFilter(filters)).toEqual({ status: { $in: ["active", "pending"] } });
-  });
-
-  it("converts nin to $nin", () => {
-    const filters: FieldFilters = {
-      status: [{ type: "nin", value: ["deleted", "archived"] }],
-    };
-    expect(filtersToUniqueryFilter(filters)).toEqual({ status: { $nin: ["deleted", "archived"] } });
-  });
-
   it("converts null to $exists: false", () => {
     const filters: FieldFilters = {
       deletedAt: [{ type: "null", value: [] }],

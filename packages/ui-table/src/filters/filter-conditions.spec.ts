@@ -29,16 +29,6 @@ describe("isFilled", () => {
     expect(isFilled({ type: "bw", value: ["10", ""] })).toBe(false);
   });
 
-  it("returns true for in/nin with at least one non-empty value", () => {
-    expect(isFilled({ type: "in", value: ["a", "b"] })).toBe(true);
-    expect(isFilled({ type: "nin", value: [1] })).toBe(true);
-  });
-
-  it("returns false for in/nin with no meaningful values", () => {
-    expect(isFilled({ type: "in", value: [] })).toBe(false);
-    expect(isFilled({ type: "nin", value: [""] })).toBe(false);
-  });
-
   it("returns true for comparison conditions with a value", () => {
     expect(isFilled({ type: "gt", value: [5] })).toBe(true);
     expect(isFilled({ type: "contains", value: ["test"] })).toBe(true);
@@ -64,7 +54,6 @@ describe("hasSecondValue", () => {
     expect(hasSecondValue("eq")).toBe(false);
     expect(hasSecondValue("ne")).toBe(false);
     expect(hasSecondValue("gt")).toBe(false);
-    expect(hasSecondValue("in")).toBe(false);
     expect(hasSecondValue("null")).toBe(false);
     expect(hasSecondValue("contains")).toBe(false);
   });
@@ -82,8 +71,6 @@ describe("conditionLabel", () => {
     expect(conditionLabel("starts")).toBe("starts with");
     expect(conditionLabel("ends")).toBe("ends with");
     expect(conditionLabel("bw")).toBe("between");
-    expect(conditionLabel("in")).toBe("in set");
-    expect(conditionLabel("nin")).toBe("not in set");
     expect(conditionLabel("null")).toBe("is empty");
     expect(conditionLabel("notNull")).toBe("is not empty");
     expect(conditionLabel("regex")).toBe("matches pattern");

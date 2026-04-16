@@ -24,14 +24,14 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await customerItem.click();
 
     // Inline ref input should appear in the filter bar
-    const refInline = page.locator(".as-filter-ref-inline").first();
+    const refInline = page.locator(".as-filter-field").first();
     await expect(refInline).toBeVisible({ timeout: 3000 });
 
     // Should have a label
-    await expect(refInline.locator(".as-filter-ref-inline-label")).toContainText("Customer");
+    await expect(refInline.locator(".as-filter-field-label")).toContainText("Customer");
 
     // Should have a search input
-    await expect(refInline.locator(".as-filter-ref-inline-search")).toBeVisible();
+    await expect(refInline.locator(".as-filter-field-search")).toBeVisible();
   });
 
   test("focusing search input opens dropdown with table", async ({ page }) => {
@@ -39,15 +39,15 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await page.locator(".as-filter-add-btn").click();
     await page.locator(".as-filter-add-item").filter({ hasText: "Customer" }).click();
 
-    const refInline = page.locator(".as-filter-ref-inline").first();
+    const refInline = page.locator(".as-filter-field").first();
     await expect(refInline).toBeVisible({ timeout: 3000 });
 
     // Focus the search input
-    const searchInput = refInline.locator(".as-filter-ref-inline-search");
+    const searchInput = refInline.locator(".as-filter-field-search");
     await searchInput.focus();
 
     // Dropdown should open with a table inside
-    const dropdown = page.locator(".as-filter-ref-dropdown");
+    const dropdown = page.locator(".as-filter-field-dropdown");
     await expect(dropdown).toBeVisible({ timeout: 10_000 });
 
     // Should have a table with rows
@@ -60,14 +60,14 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await page.locator(".as-filter-add-btn").click();
     await page.locator(".as-filter-add-item").filter({ hasText: "Customer" }).click();
 
-    const refInline = page.locator(".as-filter-ref-inline").first();
+    const refInline = page.locator(".as-filter-field").first();
     await expect(refInline).toBeVisible({ timeout: 3000 });
 
     // Open dropdown
-    const searchInput = refInline.locator(".as-filter-ref-inline-search");
+    const searchInput = refInline.locator(".as-filter-field-search");
     await searchInput.focus();
 
-    const dropdown = page.locator(".as-filter-ref-dropdown");
+    const dropdown = page.locator(".as-filter-field-dropdown");
     await expect(dropdown).toBeVisible({ timeout: 10_000 });
 
     // Wait for table rows to load
@@ -78,7 +78,7 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await tableRows.first().click();
 
     // Should show a chip
-    const chip = refInline.locator(".as-filter-ref-inline-chip");
+    const chip = refInline.locator(".as-filter-field-chip");
     await expect(chip.first()).toBeVisible({ timeout: 3000 });
   });
 
@@ -87,11 +87,11 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await page.locator(".as-filter-add-btn").click();
     await page.locator(".as-filter-add-item").filter({ hasText: "Customer" }).click();
 
-    const refInline = page.locator(".as-filter-ref-inline").first();
-    const searchInput = refInline.locator(".as-filter-ref-inline-search");
+    const refInline = page.locator(".as-filter-field").first();
+    const searchInput = refInline.locator(".as-filter-field-search");
     await searchInput.focus();
 
-    const dropdown = page.locator(".as-filter-ref-dropdown");
+    const dropdown = page.locator(".as-filter-field-dropdown");
     await expect(dropdown).toBeVisible({ timeout: 10_000 });
 
     const tableRows = dropdown.locator(".as-table tr:has(td)");
@@ -99,11 +99,11 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await tableRows.first().click();
 
     // Chip should be visible
-    const chip = refInline.locator(".as-filter-ref-inline-chip");
+    const chip = refInline.locator(".as-filter-field-chip");
     await expect(chip.first()).toBeVisible({ timeout: 3000 });
 
     // Click × on the chip
-    await chip.first().locator(".as-filter-ref-inline-chip-remove").click();
+    await chip.first().locator(".as-filter-field-chip-remove").click();
 
     // Chip should be gone
     await expect(chip).toHaveCount(0);
@@ -114,11 +114,11 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await page.locator(".as-filter-add-btn").click();
     await page.locator(".as-filter-add-item").filter({ hasText: "Customer" }).click();
 
-    const refInline = page.locator(".as-filter-ref-inline").first();
-    const searchInput = refInline.locator(".as-filter-ref-inline-search");
+    const refInline = page.locator(".as-filter-field").first();
+    const searchInput = refInline.locator(".as-filter-field-search");
     await searchInput.focus();
 
-    const dropdown = page.locator(".as-filter-ref-dropdown");
+    const dropdown = page.locator(".as-filter-field-dropdown");
     await expect(dropdown).toBeVisible({ timeout: 10_000 });
 
     // Wait for initial results (should have 10 rows)
@@ -137,18 +137,18 @@ test.describe("FK Ref inline filter (value-help dropdown)", () => {
     await expect(tableRows.first()).toContainText("Anna");
   });
 
-  test("removing inline filter with × button", async ({ page }) => {
+  test("clear all removes all filters", async ({ page }) => {
     // Add Customer filter
     await page.locator(".as-filter-add-btn").click();
     await page.locator(".as-filter-add-item").filter({ hasText: "Customer" }).click();
 
-    const refInline = page.locator(".as-filter-ref-inline");
-    await expect(refInline.first()).toBeVisible({ timeout: 3000 });
+    const filterField = page.locator(".as-filter-field");
+    await expect(filterField.first()).toBeVisible({ timeout: 3000 });
 
-    // Click the × remove button on the inline filter
-    await refInline.first().locator(".as-filter-ref-inline-remove").click();
+    // Click "Clear all"
+    await page.locator(".as-filter-clear-all").click();
 
-    // Inline filter should be gone
-    await expect(refInline).toHaveCount(0);
+    // Filter field should be gone
+    await expect(filterField).toHaveCount(0);
   });
 });

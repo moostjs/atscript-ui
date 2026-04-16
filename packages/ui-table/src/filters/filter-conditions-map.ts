@@ -10,8 +10,6 @@ const TEXT_CONDITIONS: FilterConditionType[] = [
   "starts",
   "ends",
   "bw",
-  "in",
-  "nin",
   "null",
   "notNull",
   "regex",
@@ -25,8 +23,6 @@ const NUMBER_CONDITIONS: FilterConditionType[] = [
   "lt",
   "lte",
   "bw",
-  "in",
-  "nin",
   "null",
   "notNull",
 ];
@@ -45,15 +41,13 @@ const DATE_CONDITIONS: FilterConditionType[] = [
   "notNull",
 ];
 
-const ENUM_CONDITIONS: FilterConditionType[] = ["in", "nin", "eq", "ne", "null", "notNull"];
-
 const CONDITIONS_MAP: Record<ColumnFilterType, FilterConditionType[]> = {
   text: TEXT_CONDITIONS,
   number: NUMBER_CONDITIONS,
   boolean: BOOLEAN_CONDITIONS,
   date: DATE_CONDITIONS,
-  enum: ENUM_CONDITIONS,
-  ref: ENUM_CONDITIONS,
+  enum: TEXT_CONDITIONS,
+  ref: TEXT_CONDITIONS,
 };
 
 /** Available filter conditions for a given column filter type. */

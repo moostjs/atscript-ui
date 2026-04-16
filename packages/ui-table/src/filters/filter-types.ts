@@ -10,8 +10,6 @@ export type FilterConditionType =
   | "starts"
   | "ends"
   | "bw"
-  | "in"
-  | "nin"
   | "null"
   | "notNull"
   | "regex";
@@ -21,7 +19,6 @@ export type FilterConditionType =
  *
  * - Most conditions use `value[0]`.
  * - `bw` (between) uses `value[0]` (low) and `value[1]` (high).
- * - `in`/`nin` use all values.
  * - `null`/`notNull` ignore value.
  */
 export interface FilterCondition {

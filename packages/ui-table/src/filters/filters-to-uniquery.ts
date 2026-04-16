@@ -4,7 +4,7 @@ import { isFilled } from "./filter-conditions";
 import { escapeRegex } from "./escape-regex";
 
 /** Exclusion condition types — AND'd together per field. */
-const EXCLUSION_TYPES = new Set<FilterConditionType>(["ne", "nin", "notNull"]);
+const EXCLUSION_TYPES = new Set<FilterConditionType>(["ne", "notNull"]);
 
 /**
  * Convert a single condition to a Uniquery filter expression.
@@ -33,10 +33,6 @@ function conditionToExpr(field: string, condition: FilterCondition): FilterExpr 
       return { [field]: { $regex: escapeRegex(String(v[0])) + "$" } };
     case "bw":
       return { [field]: { $gte: v[0], $lte: v[1] } };
-    case "in":
-      return { [field]: { $in: v } };
-    case "nin":
-      return { [field]: { $nin: v } };
     case "null":
       return { [field]: { $exists: false } };
     case "notNull":

@@ -11,8 +11,6 @@ describe("conditionsForType", () => {
     expect(conditions).toContain("eq");
     expect(conditions).toContain("ne");
     expect(conditions).toContain("bw");
-    expect(conditions).toContain("in");
-    expect(conditions).toContain("nin");
     expect(conditions).toContain("null");
     expect(conditions).toContain("notNull");
   });

@@ -1,7 +1,7 @@
 import { ref, computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import type { FilterCondition, FilterConditionType } from "@atscript/ui-table";
-import { conditionsForType, columnFilterType, isFilled } from "@atscript/ui-table";
+import type { FilterCondition } from "@atscript/ui-table";
+import { conditionsForType, columnFilterType, isFilled, defaultCondition } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 
 /**
@@ -16,21 +16,14 @@ export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
   const filterType = columnFilterType(column.type);
   const availableConditions = conditionsForType(filterType);
 
-  const defaultCondition: FilterConditionType =
-    filterType === "enum" || filterType === "ref"
-      ? "in"
-      : filterType === "boolean"
-        ? "eq"
-        : filterType === "text"
-          ? "contains"
-          : "eq";
+  const defCondition = defaultCondition(filterType);
 
   function cloneConditions(): FilterCondition[] {
     const existing = state.filters.value[column.path];
     if (existing && existing.length > 0) {
       return existing.map((c) => ({ type: c.type, value: [...c.value] }));
     }
-    return [{ type: defaultCondition, value: [] }];
+    return [{ type: defCondition, value: [] }];
   }
 
   const conditions = ref<FilterCondition[]>(cloneConditions());
@@ -38,13 +31,13 @@ export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
   const filledCount = computed(() => conditions.value.filter(isFilled).length);
 
   function addCondition() {
-    conditions.value = [...conditions.value, { type: defaultCondition, value: [] }];
+    conditions.value = [...conditions.value, { type: defCondition, value: [] }];
   }
 
   function removeCondition(index: number) {
     conditions.value = conditions.value.filter((_, i) => i !== index);
     if (conditions.value.length === 0) {
-      conditions.value = [{ type: defaultCondition, value: [] }];
+      conditions.value = [{ type: defCondition, value: [] }];
     }
   }
 
@@ -59,7 +52,7 @@ export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
 
   function clear() {
     state.removeFieldFilter(column.path);
-    conditions.value = [{ type: defaultCondition, value: [] }];
+    conditions.value = [{ type: defCondition, value: [] }];
     state.query();
   }
 
@@ -70,7 +63,7 @@ export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
   return {
     filterType,
     availableConditions,
-    defaultCondition,
+    defaultCondition: defCondition,
     conditions,
     filledCount,
     addCondition,

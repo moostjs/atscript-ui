@@ -14,24 +14,22 @@ export interface ColumnMenuConfig {
  *
  * Same pattern as vue-form's TAsTypeComponents: unstyled defaults
  * ship out of the box, user overrides any piece via this map.
+ *
+ * Only contains deep sub-components that are rendered inside other
+ * components and cannot be composed directly by the user.
+ * Layout components (toolbar, pagination, filter bar) are standalone
+ * — users import and place them in their template.
  */
 export interface TAsTableComponents {
-  // Layout
-  table?: Component;
-  toolbar?: Component;
-  pagination?: Component;
-
   // Cells & headers
   headerCell?: Component;
   cellValue?: Component;
   columnMenu?: Component;
 
   // Filters
-  filterBar?: Component;
-  filterToken?: Component;
   filterInput?: Component;
   filterDialog?: Component;
-  filterRefInput?: Component;
+  filterField?: Component;
 
   // Config
   configDialog?: Component;
@@ -41,14 +39,6 @@ export interface TAsTableComponents {
   // Presets
   createPreset?: Component;
   managePresets?: Component;
-
-  // Primitives (shared with vue-form where possible)
-  input?: Component;
-  select?: Component;
-  checkbox?: Component;
-  button?: Component;
-  dialog?: Component;
-  icon?: Component;
 }
 
 /**
