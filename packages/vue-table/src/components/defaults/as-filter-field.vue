@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef, ValueHelpInfo } from "@atscript/ui";
-import { ValueHelpClient } from "@atscript/ui";
+import { ValueHelpClient, valueHelpDictPaths } from "@atscript/ui";
 import {
   debounce,
   isFilled,
+  isSimpleEq,
   columnFilterType,
   parseFilterInput,
   formatFilterCondition,
@@ -52,14 +53,8 @@ if (hasValueHelp && info) {
     provideContext: false,
   });
 
-  const dictPaths = new Set(
-    [...info.primaryKeys, info.labelField, info.descrField, ...info.attrFields].filter(
-      Boolean,
-    ) as string[],
-  );
-  dictColumns = computed(() =>
-    innerState!.allColumns.value.filter((c) => dictPaths.has(c.path)),
-  );
+  const dictPaths = valueHelpDictPaths(info);
+  dictColumns = computed(() => innerState!.allColumns.value.filter((c) => dictPaths.has(c.path)));
 }
 
 // ── Enum options (static data for dropdown) ────────────────
@@ -74,8 +69,15 @@ const enumRows = hasOptions
 
 const enumColumns: ColumnDef[] | undefined = hasOptions
   ? [
-      { path: "__key", label: "Value", type: "text", sortable: false, filterable: false, visible: true, order: 0 },
-      { path: "__label", label: "Label", type: "text", sortable: false, filterable: false, visible: true, order: 1 },
+      {
+        path: "__label",
+        label: "Value",
+        type: "text",
+        sortable: false,
+        filterable: false,
+        visible: true,
+        order: 0,
+      },
     ]
   : undefined;
 
@@ -107,14 +109,11 @@ interface ChipItem {
   condition: FilterCondition;
 }
 
-// ── Dropdown: selectedValues for ComboboxRoot v-model ─────────
 function extractEqValues(conditions: FilterCondition[] | undefined): unknown[] {
-  if (!conditions || conditions.length === 0) return [];
+  if (!conditions) return [];
   const values: unknown[] = [];
-  for (const cond of conditions) {
-    if (cond.type === "eq" && cond.value.length > 0 && cond.value[0] != null && cond.value[0] !== "") {
-      values.push(cond.value[0]);
-    }
+  for (const c of conditions) {
+    if (isSimpleEq(c)) values.push(c.value[0]);
   }
   return values;
 }
@@ -143,10 +142,13 @@ if (hasDropdown) {
 
     const existing = state.filters.value[props.column.path] ?? [];
     const nonEq = existing.filter((c) => c.type !== "eq");
-    const eqConditions = values.map((v) => ({ type: "eq" as const, value: [v as string | number | boolean] }));
+    const eqConditions = values.map((v) => ({
+      type: "eq" as const,
+      value: [v as string | number | boolean],
+    }));
     const merged = [...eqConditions, ...nonEq];
 
-    if (merged.length > 0 && merged.some(isFilled)) {
+    if (merged.some(isFilled)) {
       state.setFieldFilter(props.column.path, merged);
     } else {
       state.removeFieldFilter(props.column.path);
@@ -238,8 +240,12 @@ function filterFunction(val: unknown[]): unknown[] {
     if (typeof item === "object" && item !== null) {
       const row = item as Record<string, unknown>;
       return (
-        String(row.__key ?? "").toLowerCase().includes(term) ||
-        String(row.__label ?? "").toLowerCase().includes(term)
+        String(row.__key ?? "")
+          .toLowerCase()
+          .includes(term) ||
+        String(row.__label ?? "")
+          .toLowerCase()
+          .includes(term)
       );
     }
     return String(item).toLowerCase().includes(term);
@@ -250,7 +256,7 @@ function filterFunction(val: unknown[]): unknown[] {
 function removeChip(chip: ChipItem) {
   const existing = state.filters.value[props.column.path] ?? [];
   const remaining = existing.filter((c) => c !== chip.condition);
-  if (remaining.length > 0 && remaining.some(isFilled)) {
+  if (remaining.some(isFilled)) {
     state.setFieldFilter(props.column.path, remaining);
   } else {
     state.removeFieldFilter(props.column.path);
@@ -357,9 +363,7 @@ function onEnter() {
             v-if="chips.length > 0 || (innerState && innerState.totalCount.value > 10)"
             class="as-filter-field-dropdown-footer"
           >
-            <button v-if="chips.length > 0" type="button" @click="clearAll">
-              Reset
-            </button>
+            <button v-if="chips.length > 0" type="button" @click="clearAll">Reset</button>
             <button
               v-if="innerState && innerState.totalCount.value > 10"
               type="button"

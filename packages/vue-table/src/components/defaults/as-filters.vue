@@ -34,10 +34,5 @@ const activeColumns = computed(() => {
 </script>
 
 <template>
-  <AsFilterField
-    v-for="col in activeColumns"
-    :key="col.path"
-    :column="col"
-    v-bind="$attrs"
-  />
+  <AsFilterField v-for="col in activeColumns" :key="col.path" :column="col" v-bind="$attrs" />
 </template>

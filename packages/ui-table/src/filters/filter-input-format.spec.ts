@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { parseFilterInput, formatFilterCondition } from "./filter-input-format";
-import type { FilterCondition } from "./filter-types";
 
 describe("parseFilterInput", () => {
   // ── Null / not-null literals ───────────────────────────────

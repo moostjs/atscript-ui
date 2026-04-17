@@ -7,6 +7,8 @@ import AsFilters from "./as-filters.vue";
 import AsFilterDialog from "./as-filter-dialog.vue";
 import AsFilterInput from "./as-filter-input.vue";
 import AsFilterField from "./as-filter-field.vue";
+import AsFilterConditions from "./as-filter-conditions.vue";
+import AsFilterValueHelp from "./as-filter-value-help.vue";
 import AsConfigDialog from "./as-config-dialog.vue";
 import AsFieldsSelector from "./as-fields-selector.vue";
 import AsSortersConfig from "./as-sorters-config.vue";
@@ -18,6 +20,8 @@ export {
   AsFilterDialog,
   AsFilterInput,
   AsFilterField,
+  AsFilterConditions,
+  AsFilterValueHelp,
   AsConfigDialog,
   AsFieldsSelector,
   AsSortersConfig,

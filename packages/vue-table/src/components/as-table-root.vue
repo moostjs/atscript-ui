@@ -36,9 +36,9 @@ const props = withDefaults(
   },
 );
 
-const filterFields = defineModel<string[]>('filterFields', { default: () => [] });
-const columnNames = defineModel<string[]>('columnNames', { default: () => [] });
-const sorters = defineModel<SortControl[]>('sorters', { default: () => [] });
+const filterFields = defineModel<string[]>("filterFields", { default: () => [] });
+const columnNames = defineModel<string[]>("columnNames", { default: () => [] });
+const sorters = defineModel<SortControl[]>("sorters", { default: () => [] });
 
 const state = useTable(props.url, {
   limit: props.limit,
@@ -59,12 +59,8 @@ const state = useTable(props.url, {
 
 // Resolve the filter dialog component (cannot use useTableComponent here
 // because provideTableContext is called in the same setup by useTable).
-const FilterDialogComp = computed(
-  () => props.components?.filterDialog ?? AsFilterDialog,
-);
-const ConfigDialogComp = computed(
-  () => props.components?.configDialog ?? AsConfigDialog,
-);
+const FilterDialogComp = computed(() => props.components?.filterDialog ?? AsFilterDialog);
+const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConfigDialog);
 </script>
 
 <template>

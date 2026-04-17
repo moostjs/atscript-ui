@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import {
-  AsTableRoot,
-  AsTableView,
-  createDefaultTableComponents,
-} from "@atscript/vue-table";
+import { AsTableRoot, AsTableView, createDefaultTableComponents } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
@@ -25,9 +21,18 @@ function onRowClick(row: Record<string, unknown>) {
 
     <div class="demo-layout">
       <div>
-        <AsTableRoot url="/db/tables/products" :components="components" :limit="10"
-          v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }">
-          <TableToolbar :table-def="tableDef" :loaded-count="loadedCount" :total-count="totalCount" @config="showConfigDialog()" />
+        <AsTableRoot
+          url="/db/tables/products"
+          :components="components"
+          :limit="10"
+          v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }"
+        >
+          <TableToolbar
+            :table-def="tableDef"
+            :loaded-count="loadedCount"
+            :total-count="totalCount"
+            @config="showConfigDialog()"
+          />
           <TableFilterBar />
           <AsTableView
             :column-menu="{ sort: true, filters: true, hide: true }"

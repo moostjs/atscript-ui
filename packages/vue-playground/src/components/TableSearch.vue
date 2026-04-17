@@ -5,10 +5,5 @@ const { searchTerm, onSearchInput } = useTableSearch();
 </script>
 
 <template>
-  <input
-    type="search"
-    placeholder="Search..."
-    :value="searchTerm"
-    @input="onSearchInput"
-  />
+  <input type="search" placeholder="Search..." :value="searchTerm" @input="onSearchInput" />
 </template>

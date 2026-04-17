@@ -27,6 +27,10 @@ export function hasSecondValue(type: FilterConditionType): boolean {
   return type === "bw";
 }
 
+export function isSimpleEq(condition: FilterCondition): boolean {
+  return condition.type === "eq" && isFilled(condition);
+}
+
 const CONDITION_LABELS: Record<FilterConditionType, string> = {
   eq: "equals",
   ne: "not equals",

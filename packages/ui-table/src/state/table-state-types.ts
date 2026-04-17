@@ -53,7 +53,7 @@ export interface TableStateMethods {
   /** Reset all filters to empty. */
   resetFilters(): void;
   /** Open the config dialog (optionally to a specific tab). */
-  showConfigDialog(tab?: 'columns' | 'filters' | 'sorters'): void;
+  showConfigDialog(tab?: "columns" | "filters" | "sorters"): void;
   /** Set visible column names in display order. */
   setColumnNames(names: string[]): void;
   /** Replace visible columns (extracts paths — backward compat). */

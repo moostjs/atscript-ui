@@ -41,8 +41,8 @@ const searchTerm = ref("");
 const orderedItemsWithSearch = computed<TModelItem[]>(() => {
   if (!searchTerm.value.trim()) return orderedItems.value as TModelItem[];
   const term = searchTerm.value.trim().toLowerCase();
-  return (orderedItems.value as TModelItem[]).filter(
-    (f) => (f.label || f.value).toLowerCase().includes(term),
+  return (orderedItems.value as TModelItem[]).filter((f) =>
+    (f.label || f.value).toLowerCase().includes(term),
   );
 });
 
@@ -65,7 +65,7 @@ function buildOrderedItems() {
   const selected = Array.from(modelSet);
   listBoxModel.value = selected;
   const unselected = Array.from(unselectedSet.values())
-    .sort((a, b) => (a.label > b.label ? 1 : -1))
+    .toSorted((a, b) => (a.label > b.label ? 1 : -1))
     .map((v) => v.value);
   const ordered: Omit<TModelItem, "index">[] = [];
   for (const name of selected) {
@@ -74,12 +74,17 @@ function buildOrderedItems() {
   for (const name of unselected) {
     ordered.push(itemsMap.value.get(name)!);
   }
-  orderedItems.value = ordered.map((o, index) => ({
-    ...o,
-    label: o.label || o.value,
-    data: o.data as UnwrapRef<T>,
-    index,
-  }));
+  const next: TModelItem[] = [];
+  for (let index = 0; index < ordered.length; index++) {
+    const o = ordered[index];
+    next.push({
+      value: o.value,
+      label: o.label || o.value,
+      data: o.data as UnwrapRef<T>,
+      index,
+    });
+  }
+  orderedItems.value = next;
 }
 
 // Sort once on mount (selected first, unselected alphabetical).
@@ -108,7 +113,7 @@ function over(event: DragEvent, index: number) {
   const item = event.target as HTMLDivElement;
   const { y, height } = item.getBoundingClientRect();
   const atTop = event.clientY - y < height / 2;
-  const overIndex = atTop ? index : findFilteredIndex(index, 1) ?? index + 1;
+  const overIndex = atTop ? index : (findFilteredIndex(index, 1) ?? index + 1);
   if (dragOverIndex.value !== overIndex) {
     dragOverIndex.value = overIndex;
   }
@@ -160,19 +165,14 @@ function selectAll() {
 }
 
 function deselectAll() {
-  listBoxModel.value = (listBoxModel.value as string[]).filter(
-    (v) => disabledSet.value.has(v),
-  );
+  listBoxModel.value = (listBoxModel.value as string[]).filter((v) => disabledSet.value.has(v));
   updateModel();
 }
 </script>
 
 <template>
   <ListboxRoot multiple v-model="listBoxModel" @update:model-value="updateModel">
-    <ListboxFilter
-      as-child
-      class="as-orderable-list-toolbar"
-    >
+    <ListboxFilter as-child class="as-orderable-list-toolbar">
       <div>
         <input
           v-model="searchTerm"
@@ -218,10 +218,7 @@ function deselectAll() {
         @drop="drop()"
       >
         <!-- drop indicator -->
-        <div
-          v-if="dragOverIndex === item.index"
-          class="as-orderable-list-drop-indicator"
-        />
+        <div v-if="dragOverIndex === item.index" class="as-orderable-list-drop-indicator" />
 
         <div class="as-orderable-list-item-content">
           <div
@@ -234,37 +231,25 @@ function deselectAll() {
           </div>
 
           <div class="as-orderable-list-item-body" @click.stop>
-            <slot name="label" :item="(item.data as T)" :label="item.label" :value="item.value">
+            <slot name="label" :item="item.data as T" :label="item.label" :value="item.value">
               <span class="as-orderable-list-item-label">{{ item.label }}</span>
             </slot>
 
             <slot
               name="item-extra"
-              :item="(item.data as T)"
+              :item="item.data as T"
               :value="item.value"
               :selected="(listBoxModel as string[]).includes(item.value)"
             />
 
             <div class="as-orderable-list-item-actions">
-              <button
-                type="button"
-                title="Move to top"
-                @click.stop="moveExact(item.index, 0)"
-              >
+              <button type="button" title="Move to top" @click.stop="moveExact(item.index, 0)">
                 &#x23EB;
               </button>
-              <button
-                type="button"
-                title="Move up"
-                @click.stop="moveOneStep(item.index, -1)"
-              >
+              <button type="button" title="Move up" @click.stop="moveOneStep(item.index, -1)">
                 &#x25B2;
               </button>
-              <button
-                type="button"
-                title="Move down"
-                @click.stop="moveOneStep(item.index, 1)"
-              >
+              <button type="button" title="Move down" @click.stop="moveOneStep(item.index, 1)">
                 &#x25BC;
               </button>
               <button

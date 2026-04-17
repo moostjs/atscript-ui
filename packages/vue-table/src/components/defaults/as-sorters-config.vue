@@ -10,9 +10,7 @@ const props = defineProps<{
 
 const externalModel = defineModel<SortControl[]>({ default: () => [] });
 
-const forceSortersList = computed(
-  () => props.forceSorters?.map((s) => s.field) ?? undefined,
-);
+const forceSortersList = computed(() => props.forceSorters?.map((s) => s.field) ?? undefined);
 
 const selected = ref<string[]>([
   ...(forceSortersList.value ?? []),

@@ -1,7 +1,12 @@
 import { ref, computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import type { FilterCondition } from "@atscript/ui-table";
-import { conditionsForType, columnFilterType, isFilled, defaultCondition } from "@atscript/ui-table";
+import {
+  conditionsForType,
+  columnFilterType,
+  isFilled,
+  defaultCondition,
+} from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 
 /**

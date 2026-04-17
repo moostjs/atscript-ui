@@ -40,6 +40,8 @@ export {
   AsFilterField,
   AsFilterDialog,
   AsFilterInput,
+  AsFilterConditions,
+  AsFilterValueHelp,
   AsColumnMenu,
   AsConfigDialog,
   AsFieldsSelector,

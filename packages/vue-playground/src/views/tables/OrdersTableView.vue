@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  AsTableRoot,
-  AsTableView,
-  createDefaultTableComponents,
-} from "@atscript/vue-table";
+import { AsTableRoot, AsTableView, createDefaultTableComponents } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
@@ -19,9 +15,18 @@ const components = createDefaultTableComponents();
       Orders with FK columns (customerId, productId). Open filter on these columns to see value-help
       mini-table with data from the referenced table.
     </p>
-    <AsTableRoot url="/db/tables/orders" :components="components" :limit="10"
-      v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }">
-      <TableToolbar :table-def="tableDef" :loaded-count="loadedCount" :total-count="totalCount" @config="showConfigDialog()" />
+    <AsTableRoot
+      url="/db/tables/orders"
+      :components="components"
+      :limit="10"
+      v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }"
+    >
+      <TableToolbar
+        :table-def="tableDef"
+        :loaded-count="loadedCount"
+        :total-count="totalCount"
+        @config="showConfigDialog()"
+      />
       <TableFilterBar />
       <AsTableView :column-menu="{ sort: true, filters: true, hide: true }" />
       <TablePagination mode="pagination" />

@@ -1,10 +1,19 @@
 /* ── Table ───────────────────────────────────────────── */
 
 .as-table {
-  width: 100%;
+  width: max-content;
   border-collapse: collapse;
   font-size: 14px;
-  table-layout: fixed;
+}
+
+.as-table-stretch {
+  min-width: 100%;
+}
+
+.as-th-filler,
+.as-td-filler {
+  padding: 0;
+  width: auto;
 }
 
 .as-table thead {
@@ -215,12 +224,32 @@
   background: #fff;
   border-radius: 10px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-  width: 480px;
+  width: 640px;
   max-width: 92vw;
-  max-height: 85vh;
+  min-height: 520px;
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
   outline: none;
+}
+
+.as-filter-dialog-content.as-filter-dialog-has-value-help {
+  width: 900px;
+}
+
+@media (max-width: 640px) {
+  .as-filter-dialog-content,
+  .as-filter-dialog-content.as-filter-dialog-has-value-help {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    min-height: 100vh;
+    border-radius: 0;
+    top: 0;
+    left: 0;
+    transform: none;
+  }
 }
 
 .as-filter-dialog-header {
@@ -259,6 +288,142 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+/* When tabs are present, body is the tabs root + content wrapper */
+.as-filter-dialog-tabs {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.as-filter-dialog-tab-content {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.as-filter-dialog-tab-content[data-state="active"] {
+  display: flex;
+}
+
+.as-filter-dialog-tab-conditions {
+  padding: 16px 20px;
+  overflow-y: auto;
+  gap: 12px;
+}
+
+/* ── Filter dialog chips footer ─────────────────────── */
+
+.as-filter-dialog-chips-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 20px;
+  border-top: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.as-filter-dialog-chips-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.as-filter-dialog-clear-all {
+  border: none;
+  background: none;
+  color: #ef4444;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.as-filter-dialog-clear-all:hover {
+  text-decoration: underline;
+}
+
+.as-filter-dialog-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.as-filter-dialog-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #4338ca;
+  white-space: nowrap;
+}
+
+.as-filter-dialog-chip-remove {
+  cursor: pointer;
+  opacity: 0.7;
+  font-size: 14px;
+  line-height: 1;
+  border: none;
+  background: none;
+  padding: 0 2px;
+  color: inherit;
+}
+
+.as-filter-dialog-chip-remove:hover {
+  opacity: 1;
+}
+
+/* ── Value Help tab ──────────────────────────────────── */
+
+.as-filter-value-help {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.as-filter-value-help-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.as-filter-value-help-search {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  min-width: 120px;
+}
+
+.as-filter-value-help-search:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.as-filter-value-help-count {
+  font-size: 12px;
+  color: #9ca3af;
+  white-space: nowrap;
+}
+
+.as-filter-value-help-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
 }
 
 .as-filter-condition-row {

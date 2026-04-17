@@ -48,12 +48,8 @@ watch(isOpen, (open) => {
   }
 });
 
-const filterableColumns = computed(() =>
-  state.allColumns.value.filter((c) => c.filterable),
-);
-const sortableColumns = computed(() =>
-  state.allColumns.value.filter((c) => c.sortable),
-);
+const filterableColumns = computed(() => state.allColumns.value.filter((c) => c.filterable));
+const sortableColumns = computed(() => state.allColumns.value.filter((c) => c.sortable));
 
 function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);

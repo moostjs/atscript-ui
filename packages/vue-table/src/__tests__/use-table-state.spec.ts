@@ -236,7 +236,6 @@ describe("createTableState", () => {
     state.results.value = [{ id: 1 }, { id: 2 }, { id: 3 }];
     expect(state.loadedCount.value).toBe(3);
   });
-
 });
 
 describe("provideTableContext / useTableContext", () => {

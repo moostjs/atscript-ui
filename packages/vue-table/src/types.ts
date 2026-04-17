@@ -32,6 +32,7 @@ export interface TAsTableComponents {
   filterInput?: Component;
   filterDialog?: Component;
   filterField?: Component;
+  filterValueHelp?: Component;
 
   // Config
   configDialog?: Component;

@@ -11,7 +11,6 @@ import {
   ListboxItemIndicator,
   Primitive,
 } from "reka-ui";
-import { getColumnWidth } from "../utils/column-width";
 import { getCellValue } from "../utils/get-cell-value";
 import AsTableHeaderCell from "./as-table-header-cell.vue";
 import AsTableCellValue from "./as-table-cell-value.vue";
@@ -38,11 +37,13 @@ const props = withDefaults(
     virtualOverscan?: number;
     filters?: FieldFilters;
     columnMenu?: ColumnMenuConfig;
+    stretch?: boolean;
   }>(),
   {
     select: "none",
     stickyHeader: true,
     virtualOverscan: 5,
+    stretch: true,
   },
 );
 
@@ -127,7 +128,10 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
 
   <!-- Table -->
   <div v-else class="as-table-scroll-container">
-    <table class="as-table" :class="{ 'as-table-sticky': stickyHeader }">
+    <table
+      class="as-table"
+      :class="{ 'as-table-sticky': stickyHeader, 'as-table-stretch': stretch }"
+    >
       <thead>
         <tr>
           <th v-if="hasValue" class="as-th-select" style="width: 3em">
@@ -144,7 +148,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
           <template v-for="col in columns" :key="col.path">
             <th
               v-if="hasHeaderSlot(col.path)"
-              :style="{ width: getColumnWidth(col), minWidth: getColumnWidth(col) }"
+              :style="col.width ? { width: col.width } : undefined"
             >
               <slot :name="`header-${col.path}`" :column="col" />
             </th>
@@ -160,6 +164,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               @filters-off="onFiltersOff"
             />
           </template>
+          <th v-if="stretch" class="as-th-filler" />
         </tr>
       </thead>
       <!-- With selection/combobox: wrap in ListboxContent/Primitive -->
@@ -203,6 +208,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
                   </td>
                   <AsTableCellValue v-else :row="item" :column="col" />
                 </template>
+                <td v-if="stretch" class="as-td-filler" />
               </component>
             </template>
           </AsTableVirtualizer>
@@ -237,6 +243,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               </td>
               <AsTableCellValue v-else :row="item" :column="col" />
             </template>
+            <td v-if="stretch" class="as-td-filler" />
           </tr>
         </template>
       </AsTableVirtualizer>

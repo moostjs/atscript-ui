@@ -4,7 +4,6 @@ import type { ColumnDef } from "@atscript/ui";
 import type { FilterCondition } from "@atscript/ui-table";
 import { isFilled } from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../types";
-import { getColumnWidth } from "../utils/column-width";
 import AsColumnMenu from "./defaults/as-column-menu.vue";
 
 const props = withDefaults(
@@ -46,7 +45,7 @@ function onMenuFiltersOff() {
 </script>
 
 <template>
-  <th :style="{ width: getColumnWidth(props.column), minWidth: getColumnWidth(props.column) }">
+  <th :style="props.column.width ? { width: props.column.width } : undefined">
     <AsColumnMenu
       :column="props.column"
       :order="sortDirection"

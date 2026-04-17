@@ -100,7 +100,11 @@ export function parseFilterInput(
     const lo = trimmed.slice(0, bwIdx).trim();
     const hi = trimmed.slice(bwIdx + 3).trim();
     if (lo !== "" && hi !== "") {
-      return buildCondition("bw", [coerceValue(lo, columnType), coerceValue(hi, columnType)], columnType);
+      return buildCondition(
+        "bw",
+        [coerceValue(lo, columnType), coerceValue(hi, columnType)],
+        columnType,
+      );
     }
   }
 

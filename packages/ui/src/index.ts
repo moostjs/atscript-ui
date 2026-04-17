@@ -113,6 +113,7 @@ export {
   extractLiteralOptions,
   isPureLiteralUnion,
   extractValueHelp,
+  valueHelpDictPaths,
   ValueHelpClient,
 } from "./value-help";
 export type { ValueHelpInfo, ValueHelpSearchOptions, ValueHelpResult } from "./value-help";

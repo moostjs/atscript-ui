@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import {
-  AsTableRoot,
-  AsTableView,
-  createDefaultTableComponents,
-} from "@atscript/vue-table";
+import { AsTableRoot, AsTableView, createDefaultTableComponents } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
@@ -18,15 +14,20 @@ const components = createDefaultTableComponents();
       <p>Full-page table with virtual scrolling. Only visible rows are rendered.</p>
     </div>
     <div class="fullpage-body">
-      <AsTableRoot url="/db/tables/products" :components="components" :limit="5000"
-        v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }">
-        <TableToolbar :table-def="tableDef" :loaded-count="loadedCount" :total-count="totalCount" @config="showConfigDialog()" />
-        <TableFilterBar />
-        <AsTableView
-          sticky-header
-          :virtual-row-height="36"
-          :virtual-overscan="10"
+      <AsTableRoot
+        url="/db/tables/products"
+        :components="components"
+        :limit="5000"
+        v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }"
+      >
+        <TableToolbar
+          :table-def="tableDef"
+          :loaded-count="loadedCount"
+          :total-count="totalCount"
+          @config="showConfigDialog()"
         />
+        <TableFilterBar />
+        <AsTableView sticky-header :virtual-row-height="36" :virtual-overscan="10" />
       </AsTableRoot>
     </div>
   </div>
