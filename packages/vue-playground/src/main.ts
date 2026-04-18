@@ -4,8 +4,8 @@ import { setDefaultClientFactory } from "@atscript/vue-table";
 import { createApp } from "vue";
 import App from "./App.vue";
 import router from "./router";
-import "virtual:uno.css";
 import "@atscript/vue-form/styles";
+import "virtual:uno.css";
 import "./styles/app.css";
 
 installDynamicResolver();

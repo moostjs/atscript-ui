@@ -52,23 +52,3 @@ const optionalEnabled = computed(() => props.model?.value !== undefined);
   </div>
 </template>
 
-<style>
-.as-object {
-  margin: 12px 0;
-}
-
-.as-object--nested {
-  padding-left: 16px;
-  border-left: 2px solid #d1d5db;
-}
-
-.as-object--root {
-  /* Root object: no left border, no extra padding */
-}
-
-.as-object-error {
-  font-size: 12px;
-  color: #ef4444;
-  margin-bottom: 4px;
-}
-</style>
