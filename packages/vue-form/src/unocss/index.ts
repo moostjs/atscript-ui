@@ -1,0 +1,1 @@
+export { asFormShortcuts } from "./shortcuts";

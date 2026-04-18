@@ -46,7 +46,10 @@ provide("showToast", showToast);
 <template>
   <div class="app-layout">
     <aside class="app-sidebar">
-      <h1>AS UI Playground</h1>
+      <h1>
+        <span class="i-as-sparkle inline-block align-middle text-xl" aria-hidden="true" />
+        AS UI Playground
+      </h1>
       <nav>
         <span class="nav-section">Forms</span>
         <RouterLink v-for="r in formRoutes" :key="r.path" :to="r.path">

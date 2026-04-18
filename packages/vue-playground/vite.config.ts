@@ -1,5 +1,6 @@
 import atscript from "unplugin-atscript/vite";
 import swc from "unplugin-swc";
+import UnoCSS from "unocss/vite";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 import { moostVite } from "@moostjs/vite";
@@ -7,6 +8,7 @@ import { moostVite } from "@moostjs/vite";
 export default defineConfig({
   plugins: [
     atscript() as any,
+    UnoCSS(),
     vue(),
     moostVite({
       entry: "./src/server/main.ts",

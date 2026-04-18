@@ -15,17 +15,23 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./unocss": {
+      "types": "./dist/unocss/index.d.mts",
+      "import": "./dist/unocss/index.mjs",
+      "require": "./dist/unocss/index.cjs"
+    },
     "./styles": {
       "types": "./styles.d.ts",
       "default": "./dist/style.css"
     },
+    "./unocss.css": "./dist/unocss.css",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "vp pack",
+    "build": "vp pack && unocss 'src/**/*.{vue,ts}' -o dist/unocss.css --minify",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check"
@@ -38,15 +44,19 @@
     "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
     "@atscript/ui-fns": "workspace:^",
+    "@atscript/unocss-preset": "workspace:^",
     "@tsdown/css": "catalog:",
+    "@unocss/cli": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
     "happy-dom": "catalog:",
     "reka-ui": "catalog:",
+    "unocss": "catalog:",
     "unplugin-atscript": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
-    "vue-tsc": "catalog:"
+    "vue-tsc": "catalog:",
+    "vunor": "catalog:"
   },
   "peerDependencies": {
     "@atscript/db-client": "^0.1",

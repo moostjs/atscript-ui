@@ -11,12 +11,15 @@
     "@atscript/db-client": "catalog:",
     "@atscript/ui": "workspace:^",
     "@atscript/ui-fns": "workspace:^",
+    "@atscript/unocss-preset": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",
     "@atscript/vue-wf": "workspace:^",
     "reka-ui": "catalog:",
+    "unocss": "catalog:",
     "vue": "catalog:",
-    "vue-router": "catalog:"
+    "vue-router": "catalog:",
+    "vunor": "catalog:"
   },
   "devDependencies": {
     "@atscript/db": "catalog:",
