@@ -67,13 +67,14 @@ function applyShortcut(dates: [string, string]) {
     />
 
     <button
-      v-if="model.length > 1"
       type="button"
       class="as-filter-condition-remove"
+      :disabled="model.length <= 1"
+      :style="model.length <= 1 ? 'visibility:hidden' : ''"
       aria-label="Remove condition"
       @click="removeCondition(index)"
     >
-      &times;
+      <span class="i-as-close" aria-hidden="true" />
     </button>
   </div>
 

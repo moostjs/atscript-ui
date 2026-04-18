@@ -140,14 +140,39 @@ function onCancel() {
         :class="{ 'as-filter-dialog-has-value-help': hasValueHelp }"
       >
         <div class="as-filter-dialog-header">
-          <DialogTitle class="as-filter-dialog-title"> Filter: {{ column?.label }} </DialogTitle>
-          <DialogClose class="as-filter-dialog-close" aria-label="Close"> &times; </DialogClose>
+          <DialogTitle class="as-filter-dialog-title">
+            <span class="as-filter-dialog-title-label">Filter</span>
+            <span class="as-filter-dialog-title-value">{{ column?.label }}</span>
+          </DialogTitle>
+          <DialogClose class="as-filter-dialog-close" aria-label="Close">
+            <span class="i-as-close" aria-hidden="true" />
+          </DialogClose>
         </div>
 
         <TabsRoot v-if="column && hasValueHelp" v-model="activeTab" class="as-filter-dialog-tabs">
           <TabsList class="as-config-tabs-list">
-            <TabsTrigger value="value-help" class="as-config-tab-trigger"> Value Help </TabsTrigger>
-            <TabsTrigger value="conditions" class="as-config-tab-trigger"> Conditions </TabsTrigger>
+            <TabsTrigger value="value-help" class="as-config-tab-trigger">
+              <span class="as-config-tab-icon i-as-list-checks" aria-hidden="true" />
+              Values
+              <span
+                v-if="valueHelpConditions.length > 0"
+                class="as-config-tab-count"
+                :class="{ 'as-config-tab-count-active': activeTab === 'value-help' }"
+              >
+                {{ valueHelpConditions.length }}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="conditions" class="as-config-tab-trigger">
+              <span class="as-config-tab-icon i-as-funnel" aria-hidden="true" />
+              Conditions
+              <span
+                v-if="freeConditions.filter((c) => isFilled(c)).length > 0"
+                class="as-config-tab-count"
+                :class="{ 'as-config-tab-count-active': activeTab === 'conditions' }"
+              >
+                {{ freeConditions.filter((c) => isFilled(c)).length }}
+              </span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="value-help" class="as-filter-dialog-tab-content">
@@ -168,9 +193,12 @@ function onCancel() {
 
         <div v-if="chips.length > 0" class="as-filter-dialog-chips-bar">
           <div class="as-filter-dialog-chips-header">
-            <span>Added {{ chips.length }} conditions:</span>
+            <span>
+              <span class="as-filter-dialog-chips-count">{{ chips.length }}</span>
+              {{ chips.length === 1 ? "condition" : "conditions" }} applied
+            </span>
             <button type="button" class="as-filter-dialog-clear-all" @click="clearAll">
-              Clear All
+              Clear all
             </button>
           </div>
           <div class="as-filter-dialog-chips">
@@ -182,7 +210,7 @@ function onCancel() {
                 aria-label="Remove"
                 @click="removeChip(chip)"
               >
-                &times;
+                <span class="i-as-close" aria-hidden="true" />
               </button>
             </span>
           </div>
@@ -190,12 +218,8 @@ function onCancel() {
 
         <div class="as-filter-dialog-footer">
           <div class="as-filter-dialog-footer-right">
-            <button type="button" class="as-filter-btn as-filter-btn-cancel" @click="onCancel">
-              Cancel
-            </button>
-            <button type="button" class="as-filter-btn as-filter-btn-apply" @click="onApply">
-              Apply
-            </button>
+            <button type="button" class="as-filter-btn" @click="onCancel">Cancel</button>
+            <button type="button" class="as-filter-btn-apply" @click="onApply">Apply</button>
           </div>
         </div>
       </DialogContent>

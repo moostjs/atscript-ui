@@ -41,8 +41,8 @@ const inputType = computed(() => {
 </script>
 
 <template>
-  <!-- No input needed for null/notNull -->
-  <template v-if="!needsInput" />
+  <!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+  <div v-if="!needsInput" class="as-filter-input-disabled" aria-hidden="true" />
 
   <!-- Boolean select -->
   <select

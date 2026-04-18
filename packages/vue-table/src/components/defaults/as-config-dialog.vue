@@ -93,16 +93,45 @@ function onCancel() {
     <DialogPortal>
       <DialogOverlay class="as-config-dialog-overlay" />
       <DialogContent class="as-config-dialog-content">
+        <div class="as-config-dialog-header">
+          <DialogTitle class="as-config-dialog-title">Table Settings</DialogTitle>
+          <DialogClose class="as-config-dialog-close" aria-label="Close">
+            <span class="i-as-close" aria-hidden="true" />
+          </DialogClose>
+        </div>
         <TabsRoot v-model="activeTab" class="as-config-dialog-tabs">
-          <div class="as-config-dialog-header">
-            <DialogTitle class="as-config-dialog-title">Table Settings</DialogTitle>
-            <TabsList class="as-config-tabs-list">
-              <TabsTrigger value="columns" class="as-config-tab-trigger">Columns</TabsTrigger>
-              <TabsTrigger value="filters" class="as-config-tab-trigger">Filters</TabsTrigger>
-              <TabsTrigger value="sorters" class="as-config-tab-trigger">Sorters</TabsTrigger>
-            </TabsList>
-            <DialogClose class="as-config-dialog-close" aria-label="Close">&times;</DialogClose>
-          </div>
+          <TabsList class="as-config-tabs-list">
+            <TabsTrigger value="columns" class="as-config-tab-trigger">
+              <span class="as-config-tab-icon i-as-columns" aria-hidden="true" />
+              Columns
+              <span
+                class="as-config-tab-count"
+                :class="{ 'as-config-tab-count-active': activeTab === 'columns' }"
+              >
+                {{ columnsModel.length }}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="filters" class="as-config-tab-trigger">
+              <span class="as-config-tab-icon i-as-sliders-horizontal" aria-hidden="true" />
+              Filters
+              <span
+                class="as-config-tab-count"
+                :class="{ 'as-config-tab-count-active': activeTab === 'filters' }"
+              >
+                {{ filtersModel.length }}
+              </span>
+            </TabsTrigger>
+            <TabsTrigger value="sorters" class="as-config-tab-trigger">
+              <span class="as-config-tab-icon i-as-arrows-down-up" aria-hidden="true" />
+              Sorters
+              <span
+                class="as-config-tab-count"
+                :class="{ 'as-config-tab-count-active': activeTab === 'sorters' }"
+              >
+                {{ sortersModel.length }}
+              </span>
+            </TabsTrigger>
+          </TabsList>
 
           <TabsContent value="columns" class="as-config-tab-content">
             <AsFieldsSelector :columns="state.allColumns.value" v-model="columnsModel" />
@@ -117,11 +146,53 @@ function onCancel() {
           </TabsContent>
         </TabsRoot>
 
+        <div class="as-config-tab-summary">
+          <span class="as-config-tab-summary-count">
+            <template v-if="activeTab === 'columns'">
+              <span class="as-config-tab-summary-count-num">
+                {{ columnsModel.length }}
+              </span>
+              of {{ state.allColumns.value.length }} columns visible
+            </template>
+            <template v-else-if="activeTab === 'filters'">
+              <span class="as-config-tab-summary-count-num">
+                {{ filtersModel.length }}
+              </span>
+              of {{ filterableColumns.length }} filterable columns shown as filter pills
+            </template>
+            <template v-else>
+              <span class="as-config-tab-summary-count-num">
+                {{ sortersModel.length }}
+              </span>
+              of {{ sortableColumns.length }} sortable columns in effect
+            </template>
+          </span>
+          <span class="as-config-tab-summary-hint">
+            <template v-if="activeTab === 'columns'">
+              Checked columns are rendered in the table. Drag rows to reorder.
+            </template>
+            <template v-else-if="activeTab === 'filters'">
+              Checked columns appear in the filter bar for quick filtering.
+            </template>
+            <template v-else>
+              Rows are ordered by these fields, top-to-bottom.
+            </template>
+          </span>
+        </div>
+
         <div class="as-config-dialog-footer">
-          <button type="button" class="as-filter-btn" @click="onCancel">Cancel</button>
-          <button type="button" class="as-filter-btn as-filter-btn-apply" @click="onApply">
-            Apply
+          <button
+            v-if="activeTab === 'sorters' && sortersModel.length > 0"
+            type="button"
+            class="as-filter-btn-ghost"
+            @click="sortersModel = []"
+          >
+            Clear all
           </button>
+          <div class="as-filter-dialog-footer-right">
+            <button type="button" class="as-filter-btn" @click="onCancel">Cancel</button>
+            <button type="button" class="as-filter-btn-apply" @click="onApply">Apply</button>
+          </div>
         </div>
       </DialogContent>
     </DialogPortal>

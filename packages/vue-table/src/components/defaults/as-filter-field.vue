@@ -332,7 +332,7 @@ function onEnter() {
               tabindex="-1"
               @click.stop.prevent="removeChip(chip)"
             >
-              &times;
+              <span class="i-as-close" aria-hidden="true" />
             </span>
           </span>
 
@@ -362,6 +362,7 @@ function onEnter() {
               :sorters="[]"
               :querying="dropdownQuerying"
               :sticky-header="true"
+              :column-menu="{ sort: false, filters: false, hide: false }"
             />
           </ComboboxViewport>
 
@@ -403,7 +404,7 @@ function onEnter() {
         aria-label="Open filter dialog"
         @click="openFilterDialog"
       >
-        &#x2026;
+        <span class="i-as-value-help" aria-hidden="true" />
       </button>
     </div>
   </div>

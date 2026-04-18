@@ -51,28 +51,28 @@ describe("filtersToUniqueryFilter", () => {
     const filters: FieldFilters = {
       name: [{ type: "contains", value: ["john"] }],
     };
-    expect(filtersToUniqueryFilter(filters)).toEqual({ name: { $regex: "john" } });
+    expect(filtersToUniqueryFilter(filters)).toEqual({ name: { $regex: "/john/i" } });
   });
 
   it("converts contains with special regex chars to escaped $regex", () => {
     const filters: FieldFilters = {
       name: [{ type: "contains", value: ["a.b"] }],
     };
-    expect(filtersToUniqueryFilter(filters)).toEqual({ name: { $regex: "a\\.b" } });
+    expect(filtersToUniqueryFilter(filters)).toEqual({ name: { $regex: "/a\\.b/i" } });
   });
 
   it("converts starts to $regex with ^ prefix", () => {
     const filters: FieldFilters = {
       name: [{ type: "starts", value: ["Jo"] }],
     };
-    expect(filtersToUniqueryFilter(filters)).toEqual({ name: { $regex: "^Jo" } });
+    expect(filtersToUniqueryFilter(filters)).toEqual({ name: { $regex: "/^Jo/i" } });
   });
 
   it("converts ends to $regex with $ suffix", () => {
     const filters: FieldFilters = {
       email: [{ type: "ends", value: ["gmail.com"] }],
     };
-    expect(filtersToUniqueryFilter(filters)).toEqual({ email: { $regex: "gmail\\.com$" } });
+    expect(filtersToUniqueryFilter(filters)).toEqual({ email: { $regex: "/gmail\\.com$/i" } });
   });
 
   it("converts bw to $gte + $lte", () => {
@@ -147,7 +147,7 @@ describe("filtersToUniqueryFilter", () => {
       ],
     };
     expect(filtersToUniqueryFilter(filters)).toEqual({
-      $and: [{ name: { $regex: "john" } }, { name: { $ne: "admin" } }],
+      $and: [{ name: { $regex: "/john/i" } }, { name: { $ne: "admin" } }],
     });
   });
 
@@ -165,7 +165,7 @@ describe("filtersToUniqueryFilter", () => {
     expect(filtersToUniqueryFilter(filters)).toEqual({
       $and: [
         { $or: [{ status: "active" }, { status: "pending" }] },
-        { name: { $regex: "john" } },
+        { name: { $regex: "/john/i" } },
         { name: { $ne: "admin" } },
       ],
     });

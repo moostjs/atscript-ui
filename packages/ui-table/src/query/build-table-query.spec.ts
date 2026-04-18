@@ -84,7 +84,7 @@ describe("buildTableQuery", () => {
       forceFilters,
     });
     expect(q.filter).toEqual({
-      $and: [{ tenant: "abc" }, { name: { $regex: "john" } }],
+      $and: [{ tenant: "abc" }, { name: { $regex: "/john/i" } }],
     });
   });
 

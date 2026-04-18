@@ -1,11 +1,15 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { valueHelpDictPaths } from "@atscript/ui";
 import { debounce, isSimpleEq, type FilterCondition } from "@atscript/ui-table";
 import { ListboxRoot } from "reka-ui";
 import { useTable } from "../../composables/use-table";
+import AsTable from "../as-table.vue";
 import AsTableBase from "../as-table-base.vue";
+import AsFilterDialog from "./as-filter-dialog.vue";
+import AsConfigDialog from "./as-config-dialog.vue";
+import AsFilters from "./as-filters.vue";
 
 const props = defineProps<{
   column: ColumnDef;
@@ -33,23 +37,91 @@ const selectedValues = computed<unknown[]>({
   },
 });
 
+const dictPaths = info ? valueHelpDictPaths(info) : undefined;
+
+// For FK: spin up our own table state and provide it to the subtree so
+// <AsTable> below uses it for columnNames, sorters, hide, etc.
 const innerState = info
   ? useTable(info.path, {
       limit: 1000,
-      select: "none",
+      select: "multi",
       queryOnMount: true,
-      provideContext: false,
+      provideContext: true,
+      rowValueFn: (row) => row[info.targetField],
     })
   : undefined;
 
-const dictPaths = info ? valueHelpDictPaths(info) : undefined;
-const dictColumns = computed<ColumnDef[]>(() => {
-  if (!dictPaths || !innerState) return [];
-  return innerState.allColumns.value.filter((c) => dictPaths.has(c.path));
-});
+// Clamp visible columns to the value-help whitelist once metadata loads,
+// then let the user hide further via the header menu.
+// Also seed filterFields with all filterable dict columns — filter pills
+// are the primary query UX when the target table isn't searchable, and
+// a useful companion when it is.
+if (innerState && dictPaths) {
+  let initialized = false;
+  const stop = watch(
+    () => innerState.tableDef.value,
+    (def) => {
+      if (!def || initialized) return;
+      initialized = true;
+      const dictCols = innerState.allColumns.value.filter((c) => dictPaths.has(c.path));
+      innerState.setColumnNames(dictCols.map((c) => c.path));
+      if (innerState.filterFields.value.length === 0) {
+        innerState.filterFields.value = dictCols.filter((c) => c.filterable).map((c) => c.path);
+      }
+      stop();
+    },
+    { immediate: true },
+  );
+}
+
+// Two-way sync between our model (FilterCondition[]) and state.selectedRows.
+if (innerState) {
+  watch(
+    selectedValues,
+    (v) => {
+      if (!arraysEq(v, innerState.selectedRows.value)) {
+        innerState.selectedRows.value = v;
+      }
+    },
+    { immediate: true, deep: true },
+  );
+  watch(
+    () => innerState.selectedRows.value,
+    (v) => {
+      if (!arraysEq(v, selectedValues.value)) {
+        selectedValues.value = v;
+      }
+    },
+    { deep: true },
+  );
+}
+
+function arraysEq(a: unknown[], b: unknown[]): boolean {
+  if (a.length !== b.length) return false;
+  const sa = new Set(a);
+  for (const v of b) if (!sa.has(v)) return false;
+  return true;
+}
 
 const searchable = computed(() => !!innerState?.tableDef.value?.searchable);
 
+// Filter bar visibility: default off when search is available (search is the
+// primary query UX), default on when not searchable. User can toggle via
+// the button in the toolbar.
+const showFilters = ref(false);
+watch(
+  searchable,
+  (v) => {
+    showFilters.value = !v;
+  },
+  { immediate: true },
+);
+
+const hasFilterableFields = computed(
+  () => !!innerState && innerState.filterFields.value.length > 0,
+);
+
+// Enum path: static rows, single synthetic column, no innerState.
 const enumRows: Record<string, unknown>[] = options
   ? options.map((o) => ({ __value: o.key, __label: o.label }))
   : [];
@@ -59,12 +131,19 @@ const enumColumns: ColumnDef[] = [
     path: "__label",
     label: "Value",
     type: "text",
-    sortable: false,
+    sortable: true,
     filterable: false,
     visible: true,
     order: 0,
   },
 ];
+
+const enumSort = ref<{ field: string; direction: "asc" | "desc" } | null>(null);
+const enumSorters = computed(() => (enumSort.value ? [enumSort.value] : []));
+
+function onEnumSort(column: ColumnDef, direction: "asc" | "desc" | null) {
+  enumSort.value = direction ? { field: column.path, direction } : null;
+}
 
 const searchTerm = ref("");
 
@@ -92,32 +171,73 @@ function onSearchEnter() {
 
 const filteredEnumRows = computed(() => {
   const term = searchTerm.value.trim().toLowerCase();
-  if (!term) return enumRows;
-  return enumRows.filter((r) =>
-    String(r.__label ?? "")
-      .toLowerCase()
-      .includes(term),
-  );
+  const base = term
+    ? enumRows.filter((r) =>
+        String(r.__label ?? "")
+          .toLowerCase()
+          .includes(term),
+      )
+    : enumRows;
+  if (!enumSort.value) return base;
+  const dir = enumSort.value.direction === "desc" ? -1 : 1;
+  return [...base].sort((a, b) => {
+    const av = String(a.__label ?? "").toLowerCase();
+    const bv = String(b.__label ?? "").toLowerCase();
+    return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+  });
 });
 
-function rowValueFn(row: Record<string, unknown>): unknown {
-  if (info) return row[info.targetField];
+function enumRowValueFn(row: Record<string, unknown>): unknown {
   return row.__value;
 }
 
-const tableColumns = computed(() => (info ? dictColumns.value : enumColumns));
-const tableRows = computed(() =>
-  info ? (innerState?.results.value ?? []) : filteredEnumRows.value,
-);
-const querying = computed(() => innerState?.querying.value ?? false);
 const totalCount = computed(() => (info ? (innerState?.totalCount.value ?? 0) : enumRows.length));
 
 function onSelectAll() {
-  selectedValues.value = tableRows.value.map(rowValueFn);
+  selectedValues.value = filteredEnumRows.value.map(enumRowValueFn);
 }
 
 function onDeselectAll() {
   selectedValues.value = [];
+}
+
+const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0);
+const hasActiveFilters = computed(() => {
+  if (!innerState) return false;
+  const f = innerState.filters.value;
+  for (const key in f) {
+    if (f[key] && f[key].length > 0) return true;
+  }
+  return false;
+});
+
+function clearSearch() {
+  searchTerm.value = "";
+  if (innerState) {
+    innerState.searchTerm.value = "";
+    innerState.query();
+  }
+}
+
+function clearAllFilters() {
+  if (!innerState) return;
+  const f = innerState.filters.value;
+  for (const key in f) {
+    innerState.removeFieldFilter(key);
+  }
+  innerState.query();
+}
+
+function clearSearchAndFilters() {
+  searchTerm.value = "";
+  if (innerState) {
+    innerState.searchTerm.value = "";
+    const f = innerState.filters.value;
+    for (const key in f) {
+      innerState.removeFieldFilter(key);
+    }
+    innerState.query();
+  }
 }
 </script>
 
@@ -134,27 +254,133 @@ function onDeselectAll() {
         @input="onSearchInput"
         @keydown.enter="onSearchEnter"
       />
-      <span class="as-filter-value-help-count">{{ totalCount }} records</span>
+      <span class="as-filter-value-help-count">
+        <button
+          v-if="searchable && hasFilterableFields"
+          type="button"
+          class="as-filter-value-help-filters-toggle"
+          :class="{ 'as-filter-value-help-filters-toggle-active': showFilters }"
+          :title="showFilters ? 'Hide filters' : 'Show filters'"
+          @click="showFilters = !showFilters"
+        >
+          <span class="i-as-funnel" aria-hidden="true" />
+        </button>
+        {{ totalCount }} records
+      </span>
+    </div>
+    <div v-if="info && showFilters" class="as-filter-value-help-filters">
+      <AsFilters />
     </div>
 
+    <!-- FK: full AsTable using provided innerState (sort/filter via state). Hiding disabled.
+         Render the inner filter/config dialogs so the inner table is fully functional
+         (clicking "Filter" in its column menu opens a nested filter dialog). -->
+    <template v-if="info">
+      <AsTable
+        :column-menu="{ sort: true, filters: true, hide: false }"
+        :sticky-header="true"
+      >
+        <template #empty>
+          <div class="as-vh-empty">
+            <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
+            <p class="as-vh-empty-title">No matching values</p>
+            <p v-if="hasActiveSearch && hasActiveFilters" class="as-vh-empty-body">
+              No entries match
+              <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
+              with the current filters. Try a different search, clear the filters, or
+              switch to the Conditions tab.
+            </p>
+            <p v-else-if="hasActiveSearch" class="as-vh-empty-body">
+              No entries match
+              <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
+              . Try a different search or switch to the Conditions tab to build a custom
+              filter.
+            </p>
+            <p v-else-if="hasActiveFilters" class="as-vh-empty-body">
+              No entries match the current filters. Try adjusting the filter values or
+              switch to the Conditions tab to build a custom filter.
+            </p>
+            <p v-else class="as-vh-empty-body">
+              No entries available.
+            </p>
+            <button
+              v-if="hasActiveSearch && hasActiveFilters"
+              type="button"
+              class="as-vh-empty-clear"
+              @click="clearSearchAndFilters"
+            >
+              <span class="i-as-refresh" aria-hidden="true" />
+              Clear search &amp; filters
+            </button>
+            <button
+              v-else-if="hasActiveSearch"
+              type="button"
+              class="as-vh-empty-clear"
+              @click="clearSearch"
+            >
+              <span class="i-as-refresh" aria-hidden="true" />
+              Clear search
+            </button>
+            <button
+              v-else-if="hasActiveFilters"
+              type="button"
+              class="as-vh-empty-clear"
+              @click="clearAllFilters"
+            >
+              <span class="i-as-refresh" aria-hidden="true" />
+              Clear filters
+            </button>
+          </div>
+        </template>
+      </AsTable>
+      <AsFilterDialog />
+      <AsConfigDialog />
+    </template>
+
+    <!-- Enum: fixed single-column list. Sort enabled, hide disabled. -->
     <ListboxRoot
+      v-else
       v-model="selectedValues"
       :multiple="true"
-      class="as-filter-value-help-table as-table-scroll-container"
+      class="as-filter-value-help-table"
     >
       <AsTableBase
-        :columns="tableColumns"
-        :rows="tableRows"
-        :sorters="[]"
+        :columns="enumColumns"
+        :rows="filteredEnumRows"
+        :sorters="enumSorters"
         :selected-rows="selectedValues"
         select="multi"
-        :row-value-fn="rowValueFn"
-        :querying="querying"
+        :row-value-fn="enumRowValueFn"
         :sticky-header="true"
-        :stretch="false"
+        :stretch="true"
+        :column-menu="{ sort: true, filters: false, hide: false }"
+        @sort="onEnumSort"
         @select-all="onSelectAll"
         @deselect-all="onDeselectAll"
-      />
+      >
+        <template #empty>
+          <div class="as-vh-empty">
+            <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
+            <p class="as-vh-empty-title">No matching values</p>
+            <p v-if="hasActiveSearch" class="as-vh-empty-body">
+              No entries match
+              <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
+              . Try a different search or switch to the Conditions tab to build a custom
+              filter.
+            </p>
+            <p v-else class="as-vh-empty-body">No entries available.</p>
+            <button
+              v-if="hasActiveSearch"
+              type="button"
+              class="as-vh-empty-clear"
+              @click="clearSearch"
+            >
+              <span class="i-as-refresh" aria-hidden="true" />
+              Clear search
+            </button>
+          </div>
+        </template>
+      </AsTableBase>
     </ListboxRoot>
   </div>
 </template>

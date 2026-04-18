@@ -105,29 +105,10 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
 </script>
 
 <template>
-  <!-- Error state -->
-  <div v-if="queryError" class="as-table-error">
-    <slot name="error" :error="queryError" :retry="onRetry">
-      <p>Error: {{ queryError.message }}</p>
-    </slot>
-  </div>
-
-  <!-- Loading state (initial, no rows yet) -->
-  <div v-else-if="querying && rows.length === 0" class="as-table-loading">
-    <slot name="loading">
-      <p>Loading...</p>
-    </slot>
-  </div>
-
-  <!-- Empty state -->
-  <div v-else-if="!querying && rows.length === 0" class="as-table-empty">
-    <slot name="empty">
-      <p>No data</p>
-    </slot>
-  </div>
-
-  <!-- Table -->
-  <div v-else class="as-table-scroll-container">
+  <!-- Always render the table + header so filter/sort/hide menus stay reachable
+       even when rows are empty or the last query errored. Empty/loading/error
+       status rows render inside the table below the header. -->
+  <div class="as-table-scroll-container">
     <table
       class="as-table"
       :class="{ 'as-table-sticky': stickyHeader, 'as-table-stretch': stretch }"
@@ -135,15 +116,39 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
       <thead>
         <tr>
           <th v-if="hasValue" class="as-th-select" style="width: 3em">
-            <input
+            <span
               v-if="!asCombobox && select === 'multi' && selectedRows"
-              type="checkbox"
-              :checked="selectedRows.length === rows.length && rows.length > 0"
-              :indeterminate="selectedRows.length > 0 && selectedRows.length < rows.length"
-              @change="
+              class="as-table-checkbox"
+              :class="{
+                'as-table-checkbox-checked':
+                  selectedRows.length === rows.length && rows.length > 0,
+                'as-table-checkbox-indeterminate':
+                  selectedRows.length > 0 && selectedRows.length < rows.length,
+              }"
+              role="checkbox"
+              tabindex="0"
+              :aria-checked="
+                selectedRows.length === 0
+                  ? 'false'
+                  : selectedRows.length === rows.length
+                    ? 'true'
+                    : 'mixed'
+              "
+              @click="
                 selectedRows!.length === rows.length ? emit('deselect-all') : emit('select-all')
               "
-            />
+            >
+              <span
+                v-if="selectedRows.length === rows.length && rows.length > 0"
+                class="as-table-checkbox-tick"
+              >
+                &#x2713;
+              </span>
+              <span
+                v-else-if="selectedRows.length > 0"
+                class="as-table-checkbox-dash"
+              />
+            </span>
           </th>
           <template v-for="col in columns" :key="col.path">
             <th
@@ -168,7 +173,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
         </tr>
       </thead>
       <!-- With selection/combobox: wrap in ListboxContent/Primitive -->
-      <template v-if="hasValue">
+      <template v-if="hasValue && !queryError">
         <component :is="asCombobox ? Primitive : ListboxContent" as-child>
           <AsTableVirtualizer
             :options="rows"
@@ -190,12 +195,14 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
                 @dblclick="onRowDblClick(item, $event)"
               >
                 <td v-if="hasValue" class="as-td-select">
-                  <component
-                    :is="asCombobox ? ComboboxItemIndicator : ListboxItemIndicator"
-                    class="as-selection-indicator"
-                  >
-                    &#x2713;
-                  </component>
+                  <span class="as-table-checkbox">
+                    <component
+                      :is="asCombobox ? ComboboxItemIndicator : ListboxItemIndicator"
+                      class="as-table-checkbox-tick"
+                    >
+                      &#x2713;
+                    </component>
+                  </span>
                 </td>
                 <template v-for="col in columns" :key="col.path">
                   <td v-if="hasCellSlot(col.path)">
@@ -216,7 +223,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
       </template>
       <!-- No selection: plain rows -->
       <AsTableVirtualizer
-        v-else
+        v-else-if="!queryError"
         :options="rows"
         :estimate-size="virtualRowHeight"
         :overscan="virtualOverscan"
@@ -247,6 +254,27 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
           </tr>
         </template>
       </AsTableVirtualizer>
+      <tbody v-if="queryError || rows.length === 0">
+        <tr>
+          <td :colspan="columns.length + (hasValue ? 1 : 0) + (stretch ? 1 : 0)">
+            <div v-if="queryError" class="as-table-error">
+              <slot name="error" :error="queryError" :retry="onRetry">
+                <p>Error: {{ queryError.message }}</p>
+              </slot>
+            </div>
+            <div v-else-if="querying" class="as-table-loading">
+              <slot name="loading">
+                <p>Loading...</p>
+              </slot>
+            </div>
+            <div v-else class="as-table-empty">
+              <slot name="empty">
+                <p>No data</p>
+              </slot>
+            </div>
+          </td>
+        </tr>
+      </tbody>
     </table>
     <slot name="last-row" />
   </div>

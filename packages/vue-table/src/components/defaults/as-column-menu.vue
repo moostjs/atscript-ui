@@ -41,10 +41,12 @@ const showSort = computed(() => props.config.sort && props.column.sortable);
 const showFilters = computed(() => props.config.filters && props.column.filterable);
 const showHide = computed(() => props.config.hide);
 const filledCount = computed(() => props.filters?.filter(isFilled).length ?? 0);
+const hasAnyItem = computed(() => showSort.value || showFilters.value || showHide.value);
 </script>
 
 <template>
-  <DropdownMenuRoot :modal="false" v-model:open="open">
+  <slot v-if="!hasAnyItem" :open="false" />
+  <DropdownMenuRoot v-else :modal="false" v-model:open="open">
     <DropdownMenuTrigger as-child>
       <slot :open="open" />
     </DropdownMenuTrigger>

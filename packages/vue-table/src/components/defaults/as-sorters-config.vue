@@ -33,10 +33,10 @@ const forceMap = (() => {
   return m;
 })();
 
-function switchDirection(field: string) {
+function setDirection(field: string, dir: "asc" | "desc") {
   if (forceMap.has(field)) return;
-  const current = directionMap.get(field) ?? "asc";
-  directionMap.set(field, current === "asc" ? "desc" : "asc");
+  if (directionMap.get(field) === dir) return;
+  directionMap.set(field, dir);
   updateExternalModel();
 }
 
@@ -54,6 +54,11 @@ function onListUpdate(values: string[]) {
 
 const getLabel = (col: ColumnDef) => col.label;
 const getValue = (col: ColumnDef) => col.path;
+
+const sorterIndex = (value: string): number | null => {
+  const i = selected.value.indexOf(value);
+  return i >= 0 ? i + 1 : null;
+};
 </script>
 
 <template>
@@ -67,17 +72,46 @@ const getValue = (col: ColumnDef) => col.path;
   >
     <template #label="{ item, label, value }">
       <div class="as-sorter-label">
-        <span class="as-orderable-list-item-label" :title="label">{{ label }}</span>
-        <button
-          v-if="selected.includes(value)"
-          type="button"
-          class="as-sorter-direction-btn"
-          :class="{ 'as-sorter-direction-disabled': forceMap.has(value) }"
-          :title="(directionMap.get(value) ?? 'asc') === 'desc' ? 'Descending' : 'Ascending'"
-          @click.stop="switchDirection(value)"
+        <span
+          v-if="sorterIndex(value) !== null"
+          class="as-sorter-index"
+          :title="`Sort priority ${sorterIndex(value)}`"
         >
-          {{ (directionMap.get(value) ?? "asc") === "desc" ? "&#x25BC;" : "&#x25B2;" }}
-        </button>
+          {{ sorterIndex(value) }}
+        </span>
+        <span class="as-orderable-list-item-label" :title="label">{{ label }}</span>
+        <span
+          v-if="selected.includes(value)"
+          class="as-sorter-segment"
+          :class="{ 'as-sorter-direction-disabled': forceMap.has(value) }"
+          role="group"
+          aria-label="Sort direction"
+        >
+          <button
+            type="button"
+            class="as-sorter-segment-btn"
+            :class="{
+              'as-sorter-segment-btn-active': (directionMap.get(value) ?? 'asc') === 'asc',
+            }"
+            :disabled="forceMap.has(value)"
+            title="Ascending"
+            @click.stop="setDirection(value, 'asc')"
+          >
+            &#x2191; Asc
+          </button>
+          <button
+            type="button"
+            class="as-sorter-segment-btn"
+            :class="{
+              'as-sorter-segment-btn-active': (directionMap.get(value) ?? 'asc') === 'desc',
+            }"
+            :disabled="forceMap.has(value)"
+            title="Descending"
+            @click.stop="setDirection(value, 'desc')"
+          >
+            &#x2193; Desc
+          </button>
+        </span>
       </div>
     </template>
     <template #item-extra="{ value }">

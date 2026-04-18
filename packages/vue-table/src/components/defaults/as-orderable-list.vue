@@ -171,7 +171,12 @@ function deselectAll() {
 </script>
 
 <template>
-  <ListboxRoot multiple v-model="listBoxModel" @update:model-value="updateModel">
+  <ListboxRoot
+    multiple
+    v-model="listBoxModel"
+    class="as-orderable-list-box"
+    @update:model-value="updateModel"
+  >
     <ListboxFilter as-child class="as-orderable-list-toolbar">
       <div>
         <input
@@ -181,21 +186,11 @@ function deselectAll() {
           placeholder="Search..."
         />
         <div class="as-orderable-list-toolbar-actions">
-          <button
-            type="button"
-            class="as-orderable-list-toolbar-btn"
-            title="Select All"
-            @click="selectAll"
-          >
-            &#x2611;
+          <button type="button" class="as-orderable-list-toolbar-btn" @click="selectAll">
+            Select all
           </button>
-          <button
-            type="button"
-            class="as-orderable-list-toolbar-btn"
-            title="Deselect All"
-            @click="deselectAll"
-          >
-            &#x2610;
+          <button type="button" class="as-orderable-list-toolbar-btn" @click="deselectAll">
+            None
           </button>
         </div>
       </div>
@@ -205,14 +200,12 @@ function deselectAll() {
         v-for="item of orderedItemsWithSearch"
         :key="item.value"
         :value="item.value"
-        class="as-orderable-list-item"
+        class="as-orderable-list-item group"
         :disabled="disabledSet.has(item.value)"
-        :draggable="disabledSet.has(item.value) ? false : true"
         :class="{
           'as-orderable-list-item-dragging': dragIndex === item.index,
           'as-orderable-list-item-disabled': dragIndex >= 0 && disabledSet.has(item.value),
         }"
-        @dragstart="dragStart(item.index, $event)"
         @dragenter.prevent="over($event, item.index)"
         @dragover.prevent="over($event, item.index)"
         @drop="drop()"
@@ -221,6 +214,14 @@ function deselectAll() {
         <div v-if="dragOverIndex === item.index" class="as-orderable-list-drop-indicator" />
 
         <div class="as-orderable-list-item-content">
+          <span
+            class="as-orderable-list-grip i-as-grip"
+            :class="{ 'as-orderable-list-grip-disabled': disabledSet.has(item.value) }"
+            :draggable="disabledSet.has(item.value) ? false : true"
+            aria-hidden="true"
+            @dragstart="dragStart(item.index, $event)"
+            @click.stop.prevent
+          />
           <div
             class="as-orderable-list-checkbox"
             :class="{ 'as-orderable-list-checkbox-disabled': disabledSet.has(item.value) }"
@@ -230,7 +231,7 @@ function deselectAll() {
             </ListboxItemIndicator>
           </div>
 
-          <div class="as-orderable-list-item-body" @click.stop>
+          <div class="as-orderable-list-item-body">
             <slot name="label" :item="item.data as T" :label="item.label" :value="item.value">
               <span class="as-orderable-list-item-label">{{ item.label }}</span>
             </slot>

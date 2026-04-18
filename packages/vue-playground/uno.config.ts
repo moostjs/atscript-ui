@@ -41,6 +41,9 @@ export default defineConfig({
       refresh: "ph:arrows-clockwise",
       columns: "ph:columns",
       inbox: "ph:tray",
+      "list-checks": "ph:list-checks",
+      "sliders-horizontal": "ph:sliders-horizontal",
+      "arrows-down-up": "ph:arrows-down-up",
     },
   }),
   shortcuts: [

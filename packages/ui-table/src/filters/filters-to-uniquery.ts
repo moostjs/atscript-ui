@@ -26,11 +26,11 @@ function conditionToExpr(field: string, condition: FilterCondition): FilterExpr 
     case "lte":
       return { [field]: { $lte: v[0] } };
     case "contains":
-      return { [field]: { $regex: escapeRegex(String(v[0])) } };
+      return { [field]: { $regex: `/${escapeRegex(String(v[0]))}/i` } };
     case "starts":
-      return { [field]: { $regex: "^" + escapeRegex(String(v[0])) } };
+      return { [field]: { $regex: `/^${escapeRegex(String(v[0]))}/i` } };
     case "ends":
-      return { [field]: { $regex: escapeRegex(String(v[0])) + "$" } };
+      return { [field]: { $regex: `/${escapeRegex(String(v[0]))}$/i` } };
     case "bw":
       return { [field]: { $gte: v[0], $lte: v[1] } };
     case "null":
