@@ -26,15 +26,17 @@ function onForm(_def: unknown, context?: Record<string, unknown>) {
 </script>
 
 <template>
-  <h2>Profile Draft (Workflow)</h2>
-  <p class="view-hint">
-    Edit profile with save-draft support. Click "Save Draft" to send partial data with deep-partial
-    validation (tests <code>@wf.action.withData</code>). <br />Click "Save Profile" for full
-    validation and submit.
-  </p>
   <div class="view-layout">
     <div class="view-form">
-      <WfForm
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Workflows</div>
+        <h2>Profile Draft (Workflow)</h2>
+        <p class="view-intro">
+          Edit profile with save-draft support. Click "Save Draft" to send partial data with
+          deep-partial validation (tests <code>@wf.action.withData</code>). Click "Save Profile" for
+          full validation and submit.
+        </p>
+        <WfForm
         path="/wf/trigger"
         name="profile/edit"
         :types="types"
@@ -58,28 +60,31 @@ function onForm(_def: unknown, context?: Record<string, unknown>) {
             <pre>{{ JSON.stringify(response, null, 2) }}</pre>
           </div>
         </template>
-      </WfForm>
+        </WfForm>
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Workflow State</div>
-      <template v-if="finishedData">
-        Finished: {{ JSON.stringify(finishedData, null, 2) }}
-      </template>
-      <template v-else-if="formContext.draftSaved">
-        <div style="color: #4ade80; margin-bottom: 8px">Draft saved on server</div>
-        <pre
-          style="
-            font-size: 12px;
-            background: rgba(255, 255, 255, 0.08);
-            padding: 8px;
-            border-radius: 4px;
-            overflow: auto;
-            color: #e2e8f0;
-          "
-          >{{ JSON.stringify(formContext, null, 2) }}</pre
-        >
-      </template>
-      <template v-else>Waiting for workflow to complete...</template>
+      <div class="form-debug-card">
+        <div class="form-debug-label">Workflow State</div>
+        <template v-if="finishedData">
+          Finished: {{ JSON.stringify(finishedData, null, 2) }}
+        </template>
+        <template v-else-if="formContext.draftSaved">
+          <div style="color: #4ade80; margin-bottom: 8px">Draft saved on server</div>
+          <pre
+            style="
+              font-size: 12px;
+              background: rgba(255, 255, 255, 0.08);
+              padding: 8px;
+              border-radius: 4px;
+              overflow: auto;
+              color: #e2e8f0;
+            "
+            >{{ JSON.stringify(formContext, null, 2) }}</pre
+          >
+        </template>
+        <template v-else>Waiting for workflow to complete...</template>
+      </div>
     </div>
   </div>
 </template>

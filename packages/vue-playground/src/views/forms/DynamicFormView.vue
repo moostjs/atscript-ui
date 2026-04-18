@@ -20,20 +20,29 @@ function onSubmit(data: unknown) {
 </script>
 
 <template>
-  <h2>Dynamic (ui.fn.*)</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm
-        :def="def"
-        :form-data="formData"
-        :form-context="context"
-        :types="types"
-        @submit="onSubmit"
-      />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Workflows</div>
+        <h2>Dynamic (ui.fn.*)</h2>
+        <p class="view-intro">
+          Computed labels, hidden state, disabled state and options — all driven from
+          <code>@ui.fn.*</code> expressions over form data and context.
+        </p>
+        <AsForm
+          :def="def"
+          :form-data="formData"
+          :form-context="context"
+          :types="types"
+          @submit="onSubmit"
+        />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

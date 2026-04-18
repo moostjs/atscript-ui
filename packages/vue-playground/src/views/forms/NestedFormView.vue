@@ -14,14 +14,22 @@ function onSubmit(data: unknown) {
 </script>
 
 <template>
-  <h2>Nested Objects</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Forms</div>
+        <h2>Nested Objects</h2>
+        <p class="view-intro">
+          Nested structs are rendered with indented rails so the shape of your data stays visible.
+        </p>
+        <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

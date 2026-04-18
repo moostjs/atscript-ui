@@ -8,41 +8,28 @@ const components = createDefaultTableComponents();
 </script>
 
 <template>
-  <div class="demo-page">
-    <h2>Orders Table</h2>
-    <p>
-      Orders with FK columns (customerId, productId). Open filter on these columns to see value-help
-      mini-table with data from the referenced table.
-    </p>
+  <div class="table-page">
     <AsTableRoot
       url="/db/tables/orders"
       :components="components"
       :limit="10"
-      v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }"
+      v-slot="{ tableDef, loadedCount, totalCount }"
     >
       <TableToolbar
+        title="Orders (FK)"
+        subtitle="Orders with FK columns (customerId, productId). Open filter on these columns to see value-help mini-table."
         :table-def="tableDef"
         :loaded-count="loadedCount"
         :total-count="totalCount"
-        @config="showConfigDialog()"
       />
-      <TableFilterBar />
-      <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+      <div class="table-page-filters">
+        <TableFilterBar />
+      </div>
+      <div class="table-page-body">
+        <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+      </div>
       <TablePagination mode="pagination" />
     </AsTableRoot>
   </div>
 </template>
 
-<style scoped>
-.demo-page {
-  max-width: 1200px;
-}
-.demo-page h2 {
-  margin-bottom: 8px;
-}
-.demo-page p {
-  color: #6b7280;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-</style>

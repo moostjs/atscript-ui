@@ -1,62 +1,81 @@
 <script setup lang="ts">
 import type { TableDef } from "@atscript/ui";
-import TableSearch from "./TableSearch.vue";
+import { useTableContext } from "@atscript/vue-table";
 
-defineProps<{
+const props = defineProps<{
+  title: string;
+  subtitle?: string;
   tableDef?: TableDef;
   loadedCount: number;
   totalCount: number;
 }>();
 
-const emit = defineEmits<{
-  (e: "config"): void;
-}>();
+const { state } = useTableContext();
+
+function onSearchInput(e: Event) {
+  const value = (e.target as HTMLInputElement).value;
+  state.searchTerm.value = value;
+  state.query();
+}
+
+function refresh() {
+  state.query();
+}
+
+function openConfig(tab: "columns" | "filters" | "sorters") {
+  state.showConfigDialog(tab);
+}
+
+// avoid unused warning
+void props;
 </script>
 
 <template>
-  <div class="table-toolbar">
-    <TableSearch v-if="tableDef?.searchable" />
-    <span class="table-count">{{ loadedCount }} of {{ totalCount }}</span>
-    <button class="table-config-btn" type="button" @click="emit('config')">&#x2699;</button>
+  <header class="as-page-header">
+    <div class="as-page-header-titles">
+      <div class="as-page-header-eyebrow">atscript-ui · Tables</div>
+      <h1 class="as-page-header-title">{{ title }}</h1>
+      <div v-if="subtitle" class="as-page-header-sub">{{ subtitle }}</div>
+    </div>
+    <div class="as-page-header-actions">
+      <button type="button" class="as-page-toolbar-btn" @click="refresh">
+        <span class="i-as-refresh" aria-hidden="true" />
+        <span>Refresh</span>
+      </button>
+      <button type="button" class="as-page-toolbar-btn" @click="openConfig('columns')">
+        <span class="i-as-columns" aria-hidden="true" />
+        <span>Columns</span>
+      </button>
+      <button type="button" class="as-page-toolbar-btn" @click="openConfig('filters')">
+        <span class="i-as-funnel" aria-hidden="true" />
+        <span>Filters</span>
+      </button>
+      <button type="button" class="as-page-toolbar-btn" @click="openConfig('sorters')">
+        <span class="i-as-sort-asc" aria-hidden="true" />
+        <span>Sorters</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="as-page-toolbar">
+    <div v-if="tableDef?.searchable" class="as-page-search">
+      <span class="as-page-search-icon i-as-search" aria-hidden="true" />
+      <input
+        type="search"
+        class="as-page-search-input"
+        placeholder="Search across all columns…"
+        :value="state.searchTerm.value"
+        @input="onSearchInput"
+      />
+    </div>
+    <div v-else class="as-page-search" />
+
+    <div class="as-page-toolbar-right">
+      <span class="as-page-pill">
+        <strong class="as-page-pill-strong">{{ loadedCount }}</strong>
+        of
+        <strong class="as-page-pill-strong">{{ totalCount }}</strong>
+      </span>
+    </div>
   </div>
 </template>
-
-<style scoped>
-.table-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 0;
-}
-.table-toolbar :deep(input[type="search"]) {
-  padding: 6px 10px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 13px;
-  outline: none;
-  min-width: 200px;
-}
-.table-toolbar :deep(input[type="search"]:focus) {
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-}
-.table-count {
-  font-size: 13px;
-  color: #6b7280;
-  white-space: nowrap;
-  margin-left: auto;
-}
-.table-config-btn {
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #fff;
-  font-size: 16px;
-  cursor: pointer;
-  line-height: 1;
-}
-.table-config-btn:hover {
-  border-color: #6366f1;
-  color: #6366f1;
-}
-</style>

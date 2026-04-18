@@ -1,20 +1,24 @@
 <script setup lang="ts">
 import { onMounted, provide, ref } from "vue";
 import { RouterLink, RouterView } from "vue-router";
+import vueFormPkg from "@atscript/vue-form/package.json";
+
+const version = `v${vueFormPkg.version}`;
+
+const getStartedRoutes = [{ path: "/", label: "Home", icon: "sun" }];
 
 const formRoutes = [
-  { path: "/", label: "Home" },
   { path: "/basic", label: "Basic Fields" },
   { path: "/nested", label: "Nested Objects" },
   { path: "/array", label: "Arrays" },
   { path: "/validation", label: "Validation" },
-  { path: "/dynamic", label: "Dynamic (ui.fn.*)" },
   { path: "/select-radio", label: "Select / Radio" },
-  { path: "/custom", label: "Custom Components" },
-  { path: "/ref", label: "FK Ref (Value Help)" },
 ];
 
 const wfRoutes = [
+  { path: "/dynamic", label: "Dynamic (ui.fn.*)" },
+  { path: "/custom", label: "Custom Components" },
+  { path: "/ref", label: "FK Ref (Value Help)" },
   { path: "/wf-auth", label: "Auth Flow" },
   { path: "/wf-profile", label: "Profile Draft" },
 ];
@@ -23,7 +27,7 @@ const tableRoutes = [
   { path: "/products-table", label: "Products" },
   { path: "/customers-table", label: "Customers" },
   { path: "/custom-slots-table", label: "Custom Slots" },
-  { path: "/virtual-scroll-table", label: "Virtual Scroll (5k)" },
+  { path: "/virtual-scroll-table", label: "Virtual Scroll (5k)", count: "5k" },
   { path: "/orders-table", label: "Orders (FK)" },
 ];
 
@@ -71,129 +75,107 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="scope-primary layer-0 min-h-100vh flex font-[var(--as-font-ui)] text-[length:var(--as-fs-base)]">
+  <div
+    class="h-100vh overflow-hidden flex font-[var(--as-font-ui)] text-[length:var(--as-fs-base)] layer-1"
+  >
     <aside
-      class="layer-1 w-[220px] shrink-0 sticky top-0 h-100vh overflow-y-auto border-r-1 border-r-solid border-r-current/10 flex flex-col"
+      class="w-[232px] shrink-0 sticky top-0 h-100vh overflow-y-auto flex flex-col layer-0 border-r-1"
     >
-      <div class="flex items-center gap-$xs px-$m pt-$m pb-$s border-b-1 border-b-solid border-b-current/10">
-        <span class="i-as-sparkle text-lg text-scope-primary-500" aria-hidden="true" />
-        <h1 class="m-0 text-[length:var(--as-fs-md)] font-600 tracking-tight">
-          AS UI Playground
-        </h1>
+      <div class="flex items-center gap-2 px-4 pt-4 pb-[14px] border-b-1">
+        <span
+          class="w-[22px] h-[22px] rounded-[var(--as-radius-sm)] bg-primary-600 text-white grid place-items-center font-700 text-[11px] tracking-tight font-mono"
+          >AS</span
+        >
+        <span
+          class="font-600 text-[length:var(--as-fs-md)] tracking-tight text-grey-800 dark:text-grey-100"
+          >UI Playground</span
+        >
+        <span
+          class="scope-grey ml-auto font-mono text-[10px] text-current/60 px-[6px] py-[2px] rounded-[4px] layer-2"
+          >{{ version }}</span
+        >
       </div>
-      <nav class="flex flex-col gap-[2px] px-$xs py-$s flex-1">
+      <nav class="flex flex-col px-[6px] pb-4 pt-0 flex-1">
+        <span class="nav-section">Getting Started</span>
+        <RouterLink
+          v-for="r in getStartedRoutes"
+          :key="r.path"
+          :to="r.path"
+          class="nav-link"
+          active-class="nav-link-active"
+        >
+          <span class="i-as-sun w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
+        </RouterLink>
+
         <span class="nav-section">Forms</span>
-        <RouterLink v-for="r in formRoutes" :key="r.path" :to="r.path" class="nav-link">
-          {{ r.label }}
+        <RouterLink
+          v-for="r in formRoutes"
+          :key="r.path"
+          :to="r.path"
+          class="nav-link"
+          active-class="nav-link-active"
+        >
+          <span class="i-as-check-square w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
         </RouterLink>
+
         <span class="nav-section">Workflows</span>
-        <RouterLink v-for="r in wfRoutes" :key="r.path" :to="r.path" class="nav-link">
-          {{ r.label }}
+        <RouterLink
+          v-for="r in wfRoutes"
+          :key="r.path"
+          :to="r.path"
+          class="nav-link"
+          active-class="nav-link-active"
+        >
+          <span class="i-as-refresh w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
         </RouterLink>
+
         <span class="nav-section">Tables</span>
-        <RouterLink v-for="r in tableRoutes" :key="r.path" :to="r.path" class="nav-link">
-          {{ r.label }}
+        <RouterLink
+          v-for="r in tableRoutes"
+          :key="r.path"
+          :to="r.path"
+          class="nav-link"
+          active-class="nav-link-active"
+        >
+          <span class="i-as-columns w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
+          <span
+            v-if="r.count"
+            class="scope-grey font-mono text-[10px] text-current/60 px-[5px] py-[1px] rounded-[3px] layer-2"
+            >{{ r.count }}</span
+          >
         </RouterLink>
       </nav>
-      <div class="px-$m py-$s border-t-1 border-t-solid border-t-current/10">
+      <div class="p-[10px] border-t-1">
         <button
           type="button"
-          class="theme-toggle"
+          class="c8-flat scope-grey inline-flex items-center gap-[6px] w-full px-[10px] py-[6px] border-1 rounded-[var(--as-radius-sm)] cursor-pointer text-[length:var(--as-fs-sm)] font-inherit"
           :aria-label="dark ? 'Switch to light mode' : 'Switch to dark mode'"
           @click="toggleDark"
         >
           <span :class="dark ? 'i-as-sun' : 'i-as-moon'" aria-hidden="true" />
-          {{ dark ? "Light mode" : "Dark mode" }}
+          <span>{{ dark ? "Light mode" : "Dark mode" }}</span>
         </button>
       </div>
     </aside>
-    <main class="flex-1 min-w-0 px-[40px] py-[28px] overflow-x-hidden">
+    <main class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
       <RouterView />
     </main>
     <Transition name="toast">
-      <div v-if="toastVisible" class="toast">{{ toastMessage }}</div>
+      <div
+        v-if="toastVisible"
+        class="fixed bottom-[24px] right-[24px] px-[20px] py-[12px] bg-primary-600 text-white rounded-[var(--as-radius)] text-[length:var(--as-fs-sm)] font-500 shadow-[var(--as-shadow-dialog)] z-100"
+      >
+        {{ toastMessage }}
+      </div>
     </Transition>
   </div>
 </template>
 
 <style scoped>
-.nav-section {
-  display: block;
-  font-family: var(--as-font-mono);
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: currentColor;
-  opacity: 0.45;
-  margin-top: 10px;
-  padding: 4px 12px 2px;
-}
-
-.nav-link {
-  display: block;
-  padding: 6px 12px;
-  border-radius: var(--as-radius-sm);
-  font-size: var(--as-fs-sm);
-  color: currentColor;
-  text-decoration: none;
-  transition:
-    background 0.15s,
-    color 0.15s;
-  opacity: 0.85;
-}
-
-.nav-link:hover {
-  background: rgba(148, 163, 184, 0.12);
-  opacity: 1;
-}
-
-.nav-link.router-link-active {
-  background: rgb(var(--scope-color-500) / 0.12);
-  color: rgb(var(--scope-color-600));
-  font-weight: 500;
-  opacity: 1;
-}
-
-.theme-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: 100%;
-  padding: 6px 10px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  border-radius: var(--as-radius-sm);
-  background: transparent;
-  color: currentColor;
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--as-fs-sm);
-  transition:
-    background 0.15s,
-    border-color 0.15s;
-  opacity: 0.8;
-}
-
-.theme-toggle:hover {
-  background: rgba(148, 163, 184, 0.12);
-  border-color: rgba(148, 163, 184, 0.35);
-  opacity: 1;
-}
-
-.toast {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  padding: 12px 20px;
-  background: rgb(var(--scope-color-600));
-  color: #fff;
-  border-radius: var(--as-radius);
-  font-size: var(--as-fs-sm);
-  font-weight: 500;
-  box-shadow: var(--as-shadow-dialog);
-  z-index: 100;
-}
-
 .toast-enter-active,
 .toast-leave-active {
   transition: all 0.25s ease;

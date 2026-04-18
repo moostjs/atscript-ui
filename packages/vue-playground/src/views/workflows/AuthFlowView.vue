@@ -18,14 +18,16 @@ function onError(err: { message: string }) {
 </script>
 
 <template>
-  <h2>Auth Flow (Workflow)</h2>
-  <p class="view-hint">
-    Multi-step login flow: Login (admin/password) &rarr; MFA (123456) &rarr; Done.
-    <br />Try wrong credentials, alt actions (forgot password, resend, switch method).
-  </p>
   <div class="view-layout">
     <div class="view-form">
-      <WfForm
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Workflows</div>
+        <h2>Auth Flow (Workflow)</h2>
+        <p class="view-intro">
+          Multi-step login flow: Login (admin/password) &rarr; MFA (123456) &rarr; Done. Try wrong
+          credentials, alt actions (forgot password, resend, switch method).
+        </p>
+        <WfForm
         path="/wf/trigger"
         name="auth/login"
         :types="types"
@@ -48,14 +50,17 @@ function onError(err: { message: string }) {
             <pre>{{ JSON.stringify(response, null, 2) }}</pre>
           </div>
         </template>
-      </WfForm>
+        </WfForm>
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Workflow State</div>
-      <template v-if="finishedData">
-        Finished: {{ JSON.stringify(finishedData, null, 2) }}
-      </template>
-      <template v-else>Waiting for workflow to complete...</template>
+      <div class="form-debug-card">
+        <div class="form-debug-label">Workflow State</div>
+        <template v-if="finishedData">
+          Finished: {{ JSON.stringify(finishedData, null, 2) }}
+        </template>
+        <template v-else>Waiting for workflow to complete...</template>
+      </div>
     </div>
   </div>
 </template>

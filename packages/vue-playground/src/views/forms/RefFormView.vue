@@ -16,24 +16,29 @@ function onSubmit(data: unknown) {
 </script>
 
 <template>
-  <h2>FK Ref (Value Help)</h2>
-  <p style="margin-bottom: 16px; color: #6b7280; font-size: 14px">
-    Form with FK reference fields that query the Products and Customers tables via value-help
-    combobox.
-  </p>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm
-        :def="def"
-        :form-data="formData"
-        :types="types"
-        :value-help-client-factory="clientFactory"
-        @submit="onSubmit"
-      />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Workflows</div>
+        <h2>FK Ref (Value Help)</h2>
+        <p class="view-intro">
+          Form with FK reference fields that query the Products and Customers tables via value-help
+          combobox.
+        </p>
+        <AsForm
+          :def="def"
+          :form-data="formData"
+          :types="types"
+          :value-help-client-factory="clientFactory"
+          @submit="onSubmit"
+        />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

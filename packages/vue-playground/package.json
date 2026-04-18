@@ -15,6 +15,7 @@
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",
     "@atscript/vue-wf": "workspace:^",
+    "@unocss/reset": "catalog:",
     "reka-ui": "catalog:",
     "unocss": "catalog:",
     "vue": "catalog:",

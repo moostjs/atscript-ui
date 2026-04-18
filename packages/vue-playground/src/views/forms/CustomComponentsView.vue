@@ -54,25 +54,30 @@ function onAction(action: string) {
 </script>
 
 <template>
-  <h2>Custom Components (BYOUI)</h2>
-  <p style="color: #6b7280; margin-bottom: 16px">
-    All field types overridden with custom components: star input, pill radio, toggle checkbox,
-    styled select, gradient paragraph, lightning action button, and purple group.
-  </p>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm
-        :def="def"
-        :form-data="formData"
-        :form-context="context"
-        :types="types"
-        @submit="onSubmit"
-        @action="onAction"
-      />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Workflows</div>
+        <h2>Custom Components (BYOUI)</h2>
+        <p class="view-intro">
+          All field types overridden with custom components: star input, pill radio, toggle
+          checkbox, styled select, gradient paragraph, lightning action button, and purple group.
+        </p>
+        <AsForm
+          :def="def"
+          :form-data="formData"
+          :form-context="context"
+          :types="types"
+          @submit="onSubmit"
+          @action="onAction"
+        />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

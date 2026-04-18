@@ -8,38 +8,28 @@ const components = createDefaultTableComponents();
 </script>
 
 <template>
-  <div class="demo-page">
-    <h2>Products Table</h2>
-    <p>Live data from SQLite via Moost server. Try sorting columns and paginating.</p>
+  <div class="table-page">
     <AsTableRoot
       url="/db/tables/products"
       :components="components"
       :limit="10"
-      v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }"
+      v-slot="{ tableDef, loadedCount, totalCount }"
     >
       <TableToolbar
+        title="Products"
+        subtitle="Product catalogue with sorting, filtering and column management."
         :table-def="tableDef"
         :loaded-count="loadedCount"
         :total-count="totalCount"
-        @config="showConfigDialog()"
       />
-      <TableFilterBar />
-      <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+      <div class="table-page-filters">
+        <TableFilterBar />
+      </div>
+      <div class="table-page-body">
+        <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+      </div>
       <TablePagination mode="pagination" />
     </AsTableRoot>
   </div>
 </template>
 
-<style scoped>
-.demo-page {
-  max-width: 1200px;
-}
-.demo-page h2 {
-  margin-bottom: 8px;
-}
-.demo-page p {
-  color: #6b7280;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
-</style>

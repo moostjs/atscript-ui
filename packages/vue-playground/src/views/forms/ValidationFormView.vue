@@ -18,14 +18,23 @@ function onError(errors: unknown) {
 </script>
 
 <template>
-  <h2>Validation</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @error="onError" />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Forms</div>
+        <h2>Validation</h2>
+        <p class="view-intro">
+          Required, format, range and collection rules — all driven from atscript
+          <code>@expect.*</code> annotations.
+        </p>
+        <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @error="onError" />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

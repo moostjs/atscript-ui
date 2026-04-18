@@ -35,21 +35,30 @@ function onAction(action: string) {
 </script>
 
 <template>
-  <h2>Select / Radio</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm
-        :def="def"
-        :form-data="formData"
-        :form-context="context"
-        :types="types"
-        @submit="onSubmit"
-        @action="onAction"
-      />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Forms</div>
+        <h2>Select / Radio</h2>
+        <p class="view-intro">
+          Enum-typed fields are rendered as dropdowns or radio groups depending on
+          <code>@ui.component</code>.
+        </p>
+        <AsForm
+          :def="def"
+          :form-data="formData"
+          :form-context="context"
+          :types="types"
+          @submit="onSubmit"
+          @action="onAction"
+        />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

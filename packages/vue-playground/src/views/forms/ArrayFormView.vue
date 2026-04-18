@@ -23,20 +23,28 @@ function onAction(action: string) {
 </script>
 
 <template>
-  <h2>Arrays</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm
-        :def="def"
-        :form-data="formData"
-        :types="types"
-        @submit="onSubmit"
-        @action="onAction"
-      />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Forms</div>
+        <h2>Arrays</h2>
+        <p class="view-intro">
+          Arrays of scalars and of structs with per-item remove buttons and "add" actions.
+        </p>
+        <AsForm
+          :def="def"
+          :form-data="formData"
+          :types="types"
+          @submit="onSubmit"
+          @action="onAction"
+        />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>

@@ -185,7 +185,7 @@ function onSubmit() {
       :set-errors="setErrors"
       :formContext="formContext"
     >
-      <button :disabled="_submitDisabled">{{ _submitText }}</button>
+      <button class="as-submit-btn" :disabled="_submitDisabled">{{ _submitText }}</button>
     </slot>
     <slot
       name="form.footer"

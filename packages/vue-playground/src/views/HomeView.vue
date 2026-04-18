@@ -1,74 +1,202 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
 
-const demos = [
+interface Demo {
+  path: string;
+  label: string;
+  kind: string;
+  desc: string;
+}
+
+interface Section {
+  title: string;
+  icon: string;
+  lede?: string;
+  items: Demo[];
+}
+
+const sections: Section[] = [
   {
-    path: "/basic",
-    label: "Basic Fields",
-    desc: "Text, number, email, password, disabled, readonly",
+    title: "Forms",
+    icon: "check-square",
+    lede: "Auto-generated forms driven by atscript types.",
+    items: [
+      {
+        path: "/basic",
+        label: "Basic Fields",
+        kind: "BasicFields",
+        desc: "Required, optional, disabled, read-only",
+      },
+      {
+        path: "/nested",
+        label: "Nested Objects",
+        kind: "NestedObjects",
+        desc: "Nested structs with indented rails",
+      },
+      {
+        path: "/array",
+        label: "Arrays",
+        kind: "Arrays",
+        desc: "Arrays of scalars and of structs",
+      },
+      {
+        path: "/validation",
+        label: "Validation",
+        kind: "Validation",
+        desc: "Required, format, range and collection rules",
+      },
+      {
+        path: "/select-radio",
+        label: "Select / Radio",
+        kind: "SelectRadio",
+        desc: "Enum-typed fields as dropdown or radio",
+      },
+    ],
   },
-  { path: "/nested", label: "Nested Objects", desc: "Deep nested objects with grouped fields" },
-  { path: "/array", label: "Arrays", desc: "String, number, object, and union arrays" },
-  { path: "/validation", label: "Validation", desc: "@expect.* constraints and @ui.validate" },
   {
-    path: "/dynamic",
-    label: "Dynamic (ui.fn.*)",
-    desc: "Computed labels, hidden, disabled, options",
+    title: "Workflows",
+    icon: "refresh",
+    lede: "Dynamic field state, custom components, FK refs and multi-step flows.",
+    items: [
+      {
+        path: "/dynamic",
+        label: "Dynamic (ui.fn.*)",
+        kind: "Dynamic",
+        desc: "Computed labels, hidden, disabled, options",
+      },
+      {
+        path: "/custom",
+        label: "Custom Components",
+        kind: "CustomComponents",
+        desc: "Bring-your-own-UI for every field type",
+      },
+      {
+        path: "/ref",
+        label: "FK Ref (Value Help)",
+        kind: "FkRef",
+        desc: "Foreign-key fields with value-help combobox",
+      },
+      {
+        path: "/wf-auth",
+        label: "Auth Flow",
+        kind: "AuthFlow",
+        desc: "Multi-step login → MFA → done",
+      },
+      {
+        path: "/wf-profile",
+        label: "Profile Draft",
+        kind: "ProfileDraft",
+        desc: "Save-draft support with deep-partial validation",
+      },
+    ],
   },
   {
-    path: "/select-radio",
-    label: "Select / Radio",
-    desc: "Select, radio, checkbox with static options",
+    title: "Tables",
+    icon: "columns",
+    lede: "Smart tables with sorting, filtering, column menus, FK value-help and virtual scroll.",
+    items: [
+      {
+        path: "/products-table",
+        label: "Products",
+        kind: "Products",
+        desc: "Catalogue with sorting, filtering and column management",
+      },
+      {
+        path: "/customers-table",
+        label: "Customers",
+        kind: "Customers",
+        desc: "Custom cell slots, multi-select, load-more pagination",
+      },
+      {
+        path: "/custom-slots-table",
+        label: "Custom Slots",
+        kind: "CustomSlots",
+        desc: "Every table slot customised — cells, header, empty, footer",
+      },
+      {
+        path: "/virtual-scroll-table",
+        label: "Virtual Scroll (5k)",
+        kind: "VirtualScroll",
+        desc: "5,000 rows full-page, only visible rows rendered",
+      },
+      {
+        path: "/orders-table",
+        label: "Orders (FK)",
+        kind: "OrdersFk",
+        desc: "FK columns with value-help mini-table inside filters",
+      },
+    ],
   },
-  { path: "/custom", label: "Custom Components", desc: "BYOUI pattern with custom type overrides" },
 ];
 </script>
 
 <template>
-  <h2>ATScript UI Playground</h2>
-  <p style="color: #6b7280; margin-bottom: 24px">
-    Demo and test cases for <code>@atscript/vue-form</code> components.
-  </p>
-  <div class="demo-grid">
-    <RouterLink v-for="d in demos" :key="d.path" :to="d.path" class="demo-card">
-      <span class="demo-card-label">{{ d.label }}</span>
-      <span class="demo-card-desc">{{ d.desc }}</span>
-    </RouterLink>
+  <div class="flex-1 min-h-0 overflow-y-auto">
+    <div class="max-w-[1100px] px-[40px] py-[28px]">
+    <div
+      class="font-mono text-[10px] font-600 tracking-[0.14em] uppercase text-grey-500 mb-[10px]"
+    >
+      atscript-ui · Playground
+    </div>
+    <h1
+      class="text-[32px] font-700 tracking-[-0.03em] m-0 mb-[10px] leading-[1.15] text-grey-900 dark:text-grey-50"
+    >
+      Auto-generated forms and smart tables from atscript types.
+    </h1>
+    <p class="text-[15px] text-grey-500 max-w-[72ch] leading-[1.55] m-0 mb-[32px]">
+      Forms are built directly from your atscript interface. Optional fields stay
+      <code
+        class="font-mono text-[12px] px-[6px] py-[1px] rounded-[4px] layer-2 text-grey-700 dark:text-grey-200"
+        >undefined</code
+      >
+      until the user fills them in — and can be cleared back to undefined. Nested structs
+      and arrays are rendered with rails so the shape of your data stays visible. Tables
+      come with column menus, filter pills, value-help for FK columns and virtual scroll.
+    </p>
+
+    <section v-for="sec in sections" :key="sec.title" class="mb-[28px]">
+      <header class="flex items-baseline gap-[10px] mb-[12px]">
+        <span
+          :class="`i-as-${sec.icon}`"
+          class="w-[14px] h-[14px] op-70 text-primary-600"
+          aria-hidden="true"
+        />
+        <h2
+          class="m-0 text-[18px] font-600 tracking-[-0.01em] text-grey-900 dark:text-grey-50"
+        >
+          {{ sec.title }}
+        </h2>
+        <span v-if="sec.lede" class="text-[length:var(--as-fs-sm)] text-grey-500">
+          — {{ sec.lede }}
+        </span>
+      </header>
+
+      <div class="grid grid-cols-2 gap-[12px] md:grid-cols-2 max-md:grid-cols-1">
+        <RouterLink
+          v-for="d in sec.items"
+          :key="d.path"
+          :to="d.path"
+          class="home-card card border surface-0 flex flex-col gap-[4px] px-[18px] py-[16px] rounded-[var(--as-radius-lg)] no-underline transition-all"
+        >
+          <div class="flex items-center gap-[8px] font-600 text-grey-900 dark:text-grey-100">
+            <span>{{ d.label }}</span>
+            <span class="scope-grey ml-auto font-mono text-[10px] font-500 text-current/60">{{
+              d.kind
+            }}</span>
+          </div>
+          <div class="text-[length:var(--as-fs-sm)] text-grey-500 leading-[1.5]">
+            {{ d.desc }}
+          </div>
+        </RouterLink>
+      </div>
+    </section>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.demo-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-}
-
-.demo-card {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  background: #fff;
-  text-decoration: none;
-  transition: all 0.15s;
-}
-
-.demo-card:hover {
-  border-color: #6366f1;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1);
-}
-
-.demo-card-label {
-  font-size: 15px;
-  font-weight: 600;
-  color: #111827;
-}
-
-.demo-card-desc {
-  font-size: 13px;
-  color: #6b7280;
+.home-card:hover {
+  border-color: rgb(37 99 235);
+  box-shadow: 0 0 0 3px rgb(37 99 235 / 0.18);
 }
 </style>

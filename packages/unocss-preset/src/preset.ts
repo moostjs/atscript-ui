@@ -48,6 +48,10 @@ export const defaultAsIconAliases: Record<string, string> = {
   table: "ph:table",
   "list-bullets": "ph:list-bullets",
   "squares-four": "ph:squares-four",
+  "check-square": "ph:check-square",
+  refresh: "ph:arrows-clockwise",
+  columns: "ph:columns",
+  inbox: "ph:tray",
 };
 
 export interface AsPresetVunorOptions {
@@ -63,11 +67,7 @@ export interface AsPresetVunorOptions {
  * through vunor's scope/layer system.
  */
 export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
-  const {
-    iconsDir = ".icons",
-    iconAliases = {},
-    iconCollection = "as",
-  } = options;
+  const { iconsDir = ".icons", iconAliases = {}, iconCollection = "as" } = options;
 
   return [
     asIconsPreset({
@@ -94,9 +94,9 @@ export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
           // Design danger — red-600
           error: "#dc2626",
         },
-        lightest: 0.98,
-        darkest: 0.07,
-        layersDepth: 0.02,
+        lightest: 0.97,
+        darkest: 0.22,
+        layersDepth: 0.08,
       },
     }) as Preset,
     asTokensPreflight(),

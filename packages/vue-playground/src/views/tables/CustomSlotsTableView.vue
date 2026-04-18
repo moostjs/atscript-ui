@@ -15,22 +15,20 @@ function onRowClick(row: Record<string, unknown>) {
 
 <template>
   <div class="demo-page">
-    <h2>Custom Slots Demo</h2>
-    <p>All available table slots with custom rendering and logic.</p>
-
     <div class="demo-layout">
       <div>
         <AsTableRoot
           url="/db/tables/products"
           :components="components"
           :limit="10"
-          v-slot="{ tableDef, loadedCount, totalCount, showConfigDialog }"
+          v-slot="{ tableDef, loadedCount, totalCount }"
         >
           <TableToolbar
+            title="Custom Slots Demo"
+            subtitle="All available table slots with custom rendering and logic."
             :table-def="tableDef"
             :loaded-count="loadedCount"
             :total-count="totalCount"
-            @config="showConfigDialog()"
           />
           <TableFilterBar />
           <AsTable :column-menu="{ sort: true, filters: true, hide: true }" @row-click="onRowClick">

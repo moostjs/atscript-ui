@@ -14,14 +14,23 @@ function onSubmit(data: unknown) {
 </script>
 
 <template>
-  <h2>Basic Fields</h2>
   <div class="view-layout">
     <div class="view-form">
-      <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" />
+      <div class="view-form-inner">
+        <div class="view-eyebrow">atscript-ui · Forms</div>
+        <h2>Basic Fields</h2>
+        <p class="view-intro">
+          Required, optional, disabled and read-only fields. Optional fields stay
+          <code>undefined</code> until the user fills them in.
+        </p>
+        <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" />
+      </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-label">Form Data</div>
-      {{ JSON.stringify(formData, null, 2) }}
+      <div class="form-debug-card">
+        <div class="form-debug-label">Form Data</div>
+        {{ JSON.stringify(formData, null, 2) }}
+      </div>
     </div>
   </div>
 </template>
