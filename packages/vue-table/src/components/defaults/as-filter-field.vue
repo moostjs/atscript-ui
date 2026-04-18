@@ -99,6 +99,12 @@ const dropdownQuerying = computed(() => {
   return false;
 });
 
+const seeAllCount = computed(() => {
+  if (innerState) return innerState.totalCount.value;
+  if (enumRows) return enumRows.value.length;
+  return 0;
+});
+
 // ── Chip model ───────────────────────────────────────────────
 // Chips always derive from state.filters — no branching between
 // dropdown and plain-input modes (matches not-sap pattern).
@@ -359,17 +365,10 @@ function onEnter() {
             />
           </ComboboxViewport>
 
-          <div
-            v-if="chips.length > 0 || (innerState && innerState.totalCount.value > 10)"
-            class="as-filter-field-dropdown-footer"
-          >
+          <div v-if="chips.length > 0 || seeAllCount > 10" class="as-filter-field-dropdown-footer">
             <button v-if="chips.length > 0" type="button" @click="clearAll">Reset</button>
-            <button
-              v-if="innerState && innerState.totalCount.value > 10"
-              type="button"
-              @click="openFilterDialog"
-            >
-              See All ({{ innerState.totalCount.value }})
+            <button v-if="seeAllCount > 10" type="button" @click="openFilterDialog">
+              See All ({{ seeAllCount }})
             </button>
           </div>
         </ComboboxContent>

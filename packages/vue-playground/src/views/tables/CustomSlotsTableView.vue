@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { AsTableRoot, AsTableView, createDefaultTableComponents } from "@atscript/vue-table";
+import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
@@ -34,10 +34,7 @@ function onRowClick(row: Record<string, unknown>) {
             @config="showConfigDialog()"
           />
           <TableFilterBar />
-          <AsTableView
-            :column-menu="{ sort: true, filters: true, hide: true }"
-            @row-click="onRowClick"
-          >
+          <AsTable :column-menu="{ sort: true, filters: true, hide: true }" @row-click="onRowClick">
             <!-- Custom header for name column -->
             <template #header-name="{ column }">
               <th style="min-width: 15em">
@@ -121,7 +118,7 @@ function onRowClick(row: Record<string, unknown>) {
                 Click a row to see details in the side panel
               </div>
             </template>
-          </AsTableView>
+          </AsTable>
           <TablePagination mode="pagination" />
         </AsTableRoot>
       </div>

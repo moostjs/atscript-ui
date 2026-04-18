@@ -27,7 +27,7 @@ export { useTableComponent } from "./composables/use-table-component";
 
 // ── Components ──────────────────────────────────────────────
 export { default as AsTableRoot } from "./components/as-table-root.vue";
-export { default as AsTableView } from "./components/as-table-view.vue";
+export { default as AsTable } from "./components/as-table.vue";
 export { default as AsTableBase } from "./components/as-table-base.vue";
 export { default as AsTableHeaderCell } from "./components/as-table-header-cell.vue";
 export { default as AsTableCellValue } from "./components/as-table-cell-value.vue";

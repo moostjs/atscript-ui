@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AsTableRoot, AsTableView, createDefaultTableComponents } from "@atscript/vue-table";
+import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
@@ -27,7 +27,7 @@ const components = createDefaultTableComponents();
           @config="showConfigDialog()"
         />
         <TableFilterBar />
-        <AsTableView sticky-header :virtual-row-height="36" :virtual-overscan="10" />
+        <AsTable sticky-header :virtual-row-height="36" :virtual-overscan="10" />
       </AsTableRoot>
     </div>
   </div>

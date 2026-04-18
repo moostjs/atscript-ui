@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { AsTableRoot, AsTableView, createDefaultTableComponents } from "@atscript/vue-table";
+import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
 import "@atscript/vue-table/styles";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
@@ -28,7 +28,7 @@ const components = createDefaultTableComponents();
         @config="showConfigDialog()"
       />
       <TableFilterBar />
-      <AsTableView :column-menu="{ sort: true, filters: true, hide: true }" />
+      <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
       <TablePagination mode="pagination" />
     </AsTableRoot>
   </div>

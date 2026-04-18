@@ -4,11 +4,11 @@ packages:
 
 catalog:
   "@atscript/core": ^0.1.48
-  "@atscript/db": ^0.1.51
-  "@atscript/db-client": ^0.1.51
-  "@atscript/db-sql-tools": ^0.1.51
-  "@atscript/db-sqlite": ^0.1.51
-  "@atscript/moost-db": ^0.1.51
+  "@atscript/db": ^0.1.52
+  "@atscript/db-client": ^0.1.52
+  "@atscript/db-sql-tools": ^0.1.52
+  "@atscript/db-sqlite": ^0.1.52
+  "@atscript/moost-db": ^0.1.52
   "@atscript/typescript": ^0.1.48
   "@moostjs/event-http": ^0.6.7
   "@moostjs/event-wf": ^0.6.7
@@ -19,7 +19,7 @@ catalog:
   "@tanstack/vue-virtual": ^3.13.23
   "@tsdown/css": ^0.21.4
   "@types/node": ^24
-  "@uniqu/core": ^0.1.4
+  "@uniqu/core": ^0.1.5
   "@vitejs/plugin-vue": ^6
   "@vue/test-utils": ^2
   "@vueuse/core": ^14.2.1
