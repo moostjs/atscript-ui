@@ -258,6 +258,11 @@ function filterFunction(val: unknown[]): unknown[] {
   });
 }
 
+const noEnumMatches = computed(() => {
+  if (!dropdownOpen.value || !enumRows) return false;
+  return filterFunction(enumRows.value).length === 0;
+});
+
 // ── Actions (unified — always operate on state.filters) ───
 function removeChip(chip: ChipItem) {
   const existing = state.filters.value[props.column.path] ?? [];
@@ -338,7 +343,6 @@ function onEnter() {
 
           <ComboboxInput
             class="as-filter-field-search"
-            :placeholder="chips.length > 0 ? '' : 'Search...'"
             @input="onSearchInput"
             @keydown.backspace="onBackspace"
             @focus="dropdownOpen = true"
@@ -363,7 +367,28 @@ function onEnter() {
               :querying="dropdownQuerying"
               :sticky-header="true"
               :column-menu="{ sort: false, filters: false, hide: false }"
-            />
+            >
+              <template #empty>
+                <div class="as-vh-empty">
+                  <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
+                  <p class="as-vh-empty-title">No matching values</p>
+                  <p v-if="searchTerm" class="as-vh-empty-body">
+                    No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try
+                    a different search.
+                  </p>
+                  <p v-else class="as-vh-empty-body">No entries available.</p>
+                </div>
+              </template>
+            </AsTableBase>
+            <div v-if="noEnumMatches" class="as-vh-empty">
+              <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
+              <p class="as-vh-empty-title">No matching values</p>
+              <p v-if="searchTerm" class="as-vh-empty-body">
+                No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
+                different search.
+              </p>
+              <p v-else class="as-vh-empty-body">No entries available.</p>
+            </div>
           </ComboboxViewport>
 
           <div v-if="chips.length > 0 || seeAllCount > 10" class="as-filter-field-dropdown-footer">
@@ -390,7 +415,6 @@ function onEnter() {
         </span>
         <input
           class="as-filter-field-search"
-          :placeholder="chips.length > 0 ? '' : 'Type value + Enter'"
           :value="searchTerm"
           @input="searchTerm = ($event.target as HTMLInputElement).value"
           @keydown.backspace="onBackspace"

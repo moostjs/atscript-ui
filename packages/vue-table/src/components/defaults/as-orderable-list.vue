@@ -245,20 +245,20 @@ function deselectAll() {
 
             <div class="as-orderable-list-item-actions">
               <button type="button" title="Move to top" @click.stop="moveExact(item.index, 0)">
-                &#x23EB;
+                <span class="i-as-chevron-double-up" aria-hidden="true" />
               </button>
               <button type="button" title="Move up" @click.stop="moveOneStep(item.index, -1)">
-                &#x25B2;
+                <span class="i-as-chevron-up" aria-hidden="true" />
               </button>
               <button type="button" title="Move down" @click.stop="moveOneStep(item.index, 1)">
-                &#x25BC;
+                <span class="i-as-chevron-down" aria-hidden="true" />
               </button>
               <button
                 type="button"
                 title="Move to bottom"
                 @click.stop="moveExact(item.index, orderedItems.length)"
               >
-                &#x23EC;
+                <span class="i-as-chevron-double-down" aria-hidden="true" />
               </button>
             </div>
           </div>

@@ -48,6 +48,7 @@ const innerState = info
       queryOnMount: true,
       provideContext: true,
       rowValueFn: (row) => row[info.targetField],
+      manageSelection: false,
     })
   : undefined;
 
@@ -180,7 +181,7 @@ const filteredEnumRows = computed(() => {
     : enumRows;
   if (!enumSort.value) return base;
   const dir = enumSort.value.direction === "desc" ? -1 : 1;
-  return [...base].sort((a, b) => {
+  return [...base].toSorted((a, b) => {
     const av = String(a.__label ?? "").toLowerCase();
     const bv = String(b.__label ?? "").toLowerCase();
     return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
@@ -221,10 +222,7 @@ function clearSearch() {
 
 function clearAllFilters() {
   if (!innerState) return;
-  const f = innerState.filters.value;
-  for (const key in f) {
-    innerState.removeFieldFilter(key);
-  }
+  innerState.resetFilters();
   innerState.query();
 }
 
@@ -232,10 +230,7 @@ function clearSearchAndFilters() {
   searchTerm.value = "";
   if (innerState) {
     innerState.searchTerm.value = "";
-    const f = innerState.filters.value;
-    for (const key in f) {
-      innerState.removeFieldFilter(key);
-    }
+    innerState.resetFilters();
     innerState.query();
   }
 }
@@ -263,23 +258,29 @@ function clearSearchAndFilters() {
           :title="showFilters ? 'Hide filters' : 'Show filters'"
           @click="showFilters = !showFilters"
         >
-          <span class="i-as-funnel" aria-hidden="true" />
+          <span class="i-as-filter" aria-hidden="true" />
         </button>
         {{ totalCount }} records
       </span>
     </div>
     <div v-if="info && showFilters" class="as-filter-value-help-filters">
       <AsFilters />
+      <div class="as-spacer" />
+      <button
+        v-if="hasActiveFilters"
+        type="button"
+        class="as-filter-dialog-clear-all"
+        @click="clearAllFilters"
+      >
+        Clear all
+      </button>
     </div>
 
     <!-- FK: full AsTable using provided innerState (sort/filter via state). Hiding disabled.
          Render the inner filter/config dialogs so the inner table is fully functional
          (clicking "Filter" in its column menu opens a nested filter dialog). -->
     <template v-if="info">
-      <AsTable
-        :column-menu="{ sort: true, filters: true, hide: false }"
-        :sticky-header="true"
-      >
+      <AsTable :column-menu="{ sort: true, filters: true, hide: false }" :sticky-header="true">
         <template #empty>
           <div class="as-vh-empty">
             <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
@@ -287,22 +288,19 @@ function clearSearchAndFilters() {
             <p v-if="hasActiveSearch && hasActiveFilters" class="as-vh-empty-body">
               No entries match
               <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
-              with the current filters. Try a different search, clear the filters, or
-              switch to the Conditions tab.
+              with the current filters. Try a different search, clear the filters, or switch to the
+              Conditions tab.
             </p>
             <p v-else-if="hasActiveSearch" class="as-vh-empty-body">
               No entries match
               <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
-              . Try a different search or switch to the Conditions tab to build a custom
-              filter.
+              . Try a different search or switch to the Conditions tab to build a custom filter.
             </p>
             <p v-else-if="hasActiveFilters" class="as-vh-empty-body">
-              No entries match the current filters. Try adjusting the filter values or
-              switch to the Conditions tab to build a custom filter.
+              No entries match the current filters. Try adjusting the filter values or switch to the
+              Conditions tab to build a custom filter.
             </p>
-            <p v-else class="as-vh-empty-body">
-              No entries available.
-            </p>
+            <p v-else class="as-vh-empty-body">No entries available.</p>
             <button
               v-if="hasActiveSearch && hasActiveFilters"
               type="button"
@@ -365,8 +363,7 @@ function clearSearchAndFilters() {
             <p v-if="hasActiveSearch" class="as-vh-empty-body">
               No entries match
               <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
-              . Try a different search or switch to the Conditions tab to build a custom
-              filter.
+              . Try a different search or switch to the Conditions tab to build a custom filter.
             </p>
             <p v-else class="as-vh-empty-body">No entries available.</p>
             <button

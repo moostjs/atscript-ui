@@ -46,6 +46,8 @@ export interface UseTableOptions extends UseTableQueryOptions {
   rowValueFn?: (row: Record<string, unknown>) => unknown;
   /** Preserve selection across data refreshes. */
   keepSelectedAfterRefresh?: boolean;
+  /** Disable auto-reset/trim of selection on refresh. Use when selection is externally owned (e.g. value-help filter chips). */
+  manageSelection?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
   /** Factory to create a client from a URL. Falls back to default factory. */
@@ -87,7 +89,9 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   });
 
   useTableQuery(client, state, internals, opts);
-  useTableSelection(state, { keepAfterRefresh: opts?.keepSelectedAfterRefresh });
+  if (opts?.manageSelection !== false) {
+    useTableSelection(state, { keepAfterRefresh: opts?.keepSelectedAfterRefresh });
+  }
   if (opts?.provideContext !== false) {
     provideTableContext({ state, client, components: opts?.components ?? {} });
   }

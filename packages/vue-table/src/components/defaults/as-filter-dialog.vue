@@ -75,6 +75,8 @@ interface ChipItem {
   index: number;
 }
 
+const CHIP_PREVIEW_LIMIT = 10;
+
 const chips = computed<ChipItem[]>(() => {
   const result: ChipItem[] = [];
   valueHelpConditions.value.forEach((c, i) => {
@@ -99,6 +101,9 @@ const chips = computed<ChipItem[]>(() => {
   });
   return result;
 });
+
+const visibleChips = computed(() => chips.value.slice(0, CHIP_PREVIEW_LIMIT));
+const hiddenChipCount = computed(() => Math.max(0, chips.value.length - CHIP_PREVIEW_LIMIT));
 
 function removeChip(chip: ChipItem) {
   if (chip.bucket === "value-help") {
@@ -152,7 +157,6 @@ function onCancel() {
         <TabsRoot v-if="column && hasValueHelp" v-model="activeTab" class="as-filter-dialog-tabs">
           <TabsList class="as-config-tabs-list">
             <TabsTrigger value="value-help" class="as-config-tab-trigger">
-              <span class="as-config-tab-icon i-as-list-checks" aria-hidden="true" />
               Values
               <span
                 v-if="valueHelpConditions.length > 0"
@@ -163,7 +167,6 @@ function onCancel() {
               </span>
             </TabsTrigger>
             <TabsTrigger value="conditions" class="as-config-tab-trigger">
-              <span class="as-config-tab-icon i-as-funnel" aria-hidden="true" />
               Conditions
               <span
                 v-if="freeConditions.filter((c) => isFilled(c)).length > 0"
@@ -202,7 +205,7 @@ function onCancel() {
             </button>
           </div>
           <div class="as-filter-dialog-chips">
-            <span v-for="chip in chips" :key="chip.key" class="as-filter-dialog-chip">
+            <span v-for="chip in visibleChips" :key="chip.key" class="as-filter-dialog-chip">
               {{ chip.label }}
               <button
                 type="button"
@@ -212,6 +215,9 @@ function onCancel() {
               >
                 <span class="i-as-close" aria-hidden="true" />
               </button>
+            </span>
+            <span v-if="hiddenChipCount > 0" class="as-filter-dialog-chips-more">
+              +{{ hiddenChipCount }} more
             </span>
           </div>
         </div>

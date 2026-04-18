@@ -4,6 +4,21 @@ body {
   padding: 0;
 }
 
+:root {
+  color-scheme: light;
+}
+
+:root.dark,
+:root[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+/* Keep the intersection between horizontal and vertical scrollbars blending
+   into the element's own background instead of flashing system-white. */
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 *,
 *::before,
 *::after {

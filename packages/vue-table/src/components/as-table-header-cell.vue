@@ -55,18 +55,24 @@ function onMenuFiltersOff() {
       @hide="onMenuHide"
       @filter="onMenuFilter"
       @filters-off="onMenuFiltersOff"
-      v-slot="{ open }"
+      v-slot="{ open, hasMenu }"
     >
       <button class="as-th-btn" type="button">
         <span class="as-th-label">{{ props.column.label }}</span>
         <span class="as-th-indicators">
           <span v-if="filledCount" class="as-th-filter-badge">{{ filledCount }}</span>
-          <span v-if="sortDirection" class="as-th-sort">{{
-            sortDirection === "asc" ? "\u25B2" : "\u25BC"
-          }}</span>
-          <span v-if="!sortDirection && !filledCount" class="as-th-chevron">{{
-            open ? "\u25B4" : "\u25BE"
-          }}</span>
+          <span
+            v-if="sortDirection"
+            class="as-th-sort"
+            :class="sortDirection === 'asc' ? 'i-as-arrow-up' : 'i-as-arrow-down'"
+            aria-hidden="true"
+          />
+          <span
+            v-if="hasMenu && !sortDirection && !filledCount"
+            class="as-th-chevron"
+            :class="open ? 'i-as-chevron-up' : 'i-as-chevron-down'"
+            aria-hidden="true"
+          />
         </span>
       </button>
     </AsColumnMenu>

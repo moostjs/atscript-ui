@@ -47,7 +47,7 @@ void props;
         <span>Columns</span>
       </button>
       <button type="button" class="as-page-toolbar-btn" @click="openConfig('filters')">
-        <span class="i-as-funnel" aria-hidden="true" />
+        <span class="i-as-filter" aria-hidden="true" />
         <span>Filters</span>
       </button>
       <button type="button" class="as-page-toolbar-btn" @click="openConfig('sorters')">

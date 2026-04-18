@@ -112,7 +112,7 @@ function onCancel() {
               </span>
             </TabsTrigger>
             <TabsTrigger value="filters" class="as-config-tab-trigger">
-              <span class="as-config-tab-icon i-as-sliders-horizontal" aria-hidden="true" />
+              <span class="as-config-tab-icon i-as-filter" aria-hidden="true" />
               Filters
               <span
                 class="as-config-tab-count"

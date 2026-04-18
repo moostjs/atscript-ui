@@ -78,7 +78,6 @@ function handleDeselectAll() {
     v-model="listboxModel"
     :multiple="isMulti"
     class="as-table-outer-wrap"
-    data-virtual-scroll
   >
     <AsTableBase
       :columns="effectiveColumns"

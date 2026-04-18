@@ -34,19 +34,19 @@ function onRowClick(row: Record<string, unknown>) {
           <AsTable :column-menu="{ sort: true, filters: true, hide: true }" @row-click="onRowClick">
             <!-- Custom header for name column -->
             <template #header-name="{ column }">
-              <th style="min-width: 15em">
-                <span style="font-weight: 700; color: #6366f1">{{ column.label }}</span>
+              <th class="min-w-[15em]">
+                <span class="scope-primary font-700 text-current-hl">{{ column.label }}</span>
               </th>
             </template>
 
             <!-- Custom cell: product name as bold -->
             <template #cell-name="{ value }">
-              <td style="font-weight: 600">{{ value }}</td>
+              <td class="font-600">{{ value }}</td>
             </template>
 
             <!-- Custom cell: price with currency formatting -->
             <template #cell-price="{ value }">
-              <td style="text-align: right; font-variant-numeric: tabular-nums">
+              <td class="text-right tabular-nums">
                 ${{ typeof value === "number" ? value.toFixed(2) : value }}
               </td>
             </template>
@@ -55,14 +55,10 @@ function onRowClick(row: Record<string, unknown>) {
             <template #cell-inStock="{ value }">
               <td>
                 <span
-                  :style="{
-                    padding: '2px 8px',
-                    borderRadius: '9999px',
-                    fontSize: '12px',
-                    fontWeight: 500,
-                    background: value ? '#dcfce7' : '#fee2e2',
-                    color: value ? '#166534' : '#991b1b',
-                  }"
+                  :class="[
+                    'inline-flex items-center px-[8px] py-[2px] rounded-full text-[length:var(--as-fs-sm)] font-500 bg-current-hl/15 text-current-hl',
+                    value ? 'scope-good' : 'scope-error',
+                  ]"
                 >
                   {{ value ? "In Stock" : "Out of Stock" }}
                 </span>
@@ -73,13 +69,7 @@ function onRowClick(row: Record<string, unknown>) {
             <template #cell-category="{ value }">
               <td>
                 <span
-                  style="
-                    padding: 2px 8px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    background: #eef2ff;
-                    color: #4338ca;
-                  "
+                  class="scope-primary inline-flex items-center px-[8px] py-[2px] rounded-[var(--as-radius-sm)] text-[length:var(--as-fs-sm)] bg-current-hl/10 text-current-hl"
                 >
                   {{ value }}
                 </span>
@@ -88,30 +78,32 @@ function onRowClick(row: Record<string, unknown>) {
 
             <!-- Custom empty state -->
             <template #empty>
-              <div style="padding: 48px; text-align: center; color: #9ca3af">
-                <p style="font-size: 18px; margin-bottom: 8px">No products found</p>
-                <p style="font-size: 13px">Try adjusting your filters</p>
+              <div class="p-[48px] text-center text-current/60">
+                <p class="text-[18px] mb-[8px]">No products found</p>
+                <p class="text-[length:var(--as-fs-base)]">Try adjusting your filters</p>
               </div>
             </template>
 
             <!-- Custom loading state -->
             <template #loading>
-              <div style="padding: 48px; text-align: center; color: #6366f1">
+              <div class="scope-primary p-[48px] text-center text-current-hl">
                 <p>Fetching products...</p>
               </div>
             </template>
 
             <!-- Custom error state -->
             <template #error="{ error }">
-              <div style="padding: 48px; text-align: center; color: #dc2626">
-                <p style="font-weight: 600">Something went wrong</p>
-                <p style="font-size: 13px; margin-top: 4px">{{ error.message }}</p>
+              <div class="scope-error p-[48px] text-center text-current-hl">
+                <p class="font-600">Something went wrong</p>
+                <p class="text-[length:var(--as-fs-base)] mt-[4px]">{{ error.message }}</p>
               </div>
             </template>
 
             <!-- Footer row -->
             <template #last-row>
-              <div style="padding: 8px 12px; font-size: 12px; color: #9ca3af; text-align: right">
+              <div
+                class="px-[12px] py-[8px] text-[length:var(--as-fs-sm)] text-current/50 text-right"
+              >
                 Click a row to see details in the side panel
               </div>
             </template>
@@ -121,20 +113,32 @@ function onRowClick(row: Record<string, unknown>) {
       </div>
 
       <!-- Side panel showing selected row details -->
-      <aside v-if="selectedProduct" class="detail-panel">
-        <h3>{{ selectedProduct.name }}</h3>
-        <p class="detail-desc">{{ selectedProduct.description }}</p>
-        <dl class="detail-list">
-          <dt>SKU</dt>
-          <dd>{{ selectedProduct.sku }}</dd>
-          <dt>Price</dt>
-          <dd>${{ (selectedProduct.price as number)?.toFixed(2) }}</dd>
-          <dt>Category</dt>
-          <dd>{{ selectedProduct.category }}</dd>
-          <dt>In Stock</dt>
-          <dd>{{ selectedProduct.inStock ? "Yes" : "No" }}</dd>
+      <aside
+        v-if="selectedProduct"
+        class="layer-1 w-[280px] flex-shrink-0 border-1 rounded-[var(--as-radius-lg)] p-[16px]"
+      >
+        <h3 class="m-0 mb-[8px] text-[16px]">{{ selectedProduct.name }}</h3>
+        <p class="text-[length:var(--as-fs-base)] text-current/60 mb-[12px]">
+          {{ selectedProduct.description }}
+        </p>
+        <dl
+          class="grid grid-cols-[auto_1fr] gap-y-[4px] gap-x-[12px] text-[length:var(--as-fs-base)] mb-[16px]"
+        >
+          <dt class="text-current/50 font-500">SKU</dt>
+          <dd class="m-0">{{ selectedProduct.sku }}</dd>
+          <dt class="text-current/50 font-500">Price</dt>
+          <dd class="m-0">${{ (selectedProduct.price as number)?.toFixed(2) }}</dd>
+          <dt class="text-current/50 font-500">Category</dt>
+          <dd class="m-0">{{ selectedProduct.category }}</dd>
+          <dt class="text-current/50 font-500">In Stock</dt>
+          <dd class="m-0">{{ selectedProduct.inStock ? "Yes" : "No" }}</dd>
         </dl>
-        <button class="detail-close" @click="selectedProduct = null">Close</button>
+        <button
+          class="scope-primary c8-outlined w-full h-fingertip-s rounded-[var(--as-radius)] text-[length:var(--as-fs-base)]"
+          @click="selectedProduct = null"
+        >
+          Close
+        </button>
       </aside>
     </div>
   </div>
@@ -144,14 +148,6 @@ function onRowClick(row: Record<string, unknown>) {
 .demo-page {
   max-width: 1400px;
 }
-.demo-page h2 {
-  margin-bottom: 8px;
-}
-.demo-page p {
-  color: #6b7280;
-  font-size: 14px;
-  margin-bottom: 16px;
-}
 .demo-layout {
   display: flex;
   gap: 16px;
@@ -160,53 +156,5 @@ function onRowClick(row: Record<string, unknown>) {
 .demo-layout > :first-child {
   flex: 1;
   min-width: 0;
-}
-.detail-panel {
-  width: 280px;
-  flex-shrink: 0;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  padding: 16px;
-  background: #f9fafb;
-}
-.detail-panel h3 {
-  margin: 0 0 8px;
-  font-size: 16px;
-  color: #111827;
-}
-.detail-desc {
-  font-size: 13px;
-  color: #6b7280;
-  margin-bottom: 12px;
-}
-.detail-list {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 4px 12px;
-  font-size: 13px;
-  margin-bottom: 16px;
-}
-.detail-list dt {
-  color: #9ca3af;
-  font-weight: 500;
-}
-.detail-list dd {
-  margin: 0;
-  color: #374151;
-}
-.detail-close {
-  width: 100%;
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  background: #fff;
-  color: #374151;
-  font-size: 13px;
-  cursor: pointer;
-}
-.detail-close:hover {
-  border-color: #6366f1;
-  background: #eef2ff;
-  color: #4338ca;
 }
 </style>

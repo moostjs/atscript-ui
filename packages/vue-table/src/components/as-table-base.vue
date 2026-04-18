@@ -108,7 +108,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
   <!-- Always render the table + header so filter/sort/hide menus stay reachable
        even when rows are empty or the last query errored. Empty/loading/error
        status rows render inside the table below the header. -->
-  <div class="as-table-scroll-container">
+  <div class="as-table-scroll-container" data-virtual-scroll>
     <table
       class="as-table"
       :class="{ 'as-table-sticky': stickyHeader, 'as-table-stretch': stretch }"
