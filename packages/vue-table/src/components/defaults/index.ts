@@ -1,5 +1,3 @@
-import "./as-table-defaults.css";
-
 import AsColumnMenu from "./as-column-menu.vue";
 import AsTableCellValue from "../as-table-cell-value.vue";
 import AsTableHeaderCell from "../as-table-header-cell.vue";

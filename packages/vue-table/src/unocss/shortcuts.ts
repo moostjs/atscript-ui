@@ -15,7 +15,7 @@ export const asTableShortcuts = defineShortcuts({
       "px-[12px] py-[8px] text-left font-600 text-[length:var(--as-fs-sm)] text-[var(--as-text-muted)] border-b border-solid border-[var(--as-border)] whitespace-nowrap overflow-hidden text-ellipsis select-none tracking-[0.01em]",
     "[&_td]:":
       "px-[12px] py-[8px] text-[var(--as-text)] border-b border-solid border-[var(--as-border-subtle)] whitespace-nowrap overflow-hidden text-ellipsis",
-    "[&_tbody_tr]:": "transition-[background] duration-100",
+    "[&_tbody_tr]:": "transition-colors duration-100",
     "[&_tbody_tr]:hover:": "bg-[var(--as-hover)]",
     "[&_tbody_tr[data-state=checked]]:": "bg-[var(--as-accent-soft)]",
   },
@@ -265,7 +265,7 @@ export const asTableShortcuts = defineShortcuts({
     "flex-1 overflow-y-auto flex flex-col",
   "as-orderable-list-item": {
     "":
-      "relative cursor-grab outline-none transition-[background] duration-120",
+      "relative cursor-grab outline-none transition-colors duration-120",
     "hover:": "bg-[var(--as-hover)]",
     "data-[highlighted]:": "bg-[var(--as-hover)]",
   },
