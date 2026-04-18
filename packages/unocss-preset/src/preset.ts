@@ -42,6 +42,12 @@ export const defaultAsIconAliases: Record<string, string> = {
   "value-help": "ph:stack",
   trash: "ph:trash",
   "x-circle": "ph:x-circle",
+  sun: "ph:sun",
+  moon: "ph:moon",
+  gear: "ph:gear",
+  table: "ph:table",
+  "list-bullets": "ph:list-bullets",
+  "squares-four": "ph:squares-four",
 };
 
 export interface AsPresetVunorOptions {
@@ -50,6 +56,12 @@ export interface AsPresetVunorOptions {
   iconCollection?: string;
 }
 
+/**
+ * The atscript-ui preset: vunor with a slate+blue palette tuned to match the
+ * design bundle, plus the `i-as-*` icons loader and a small preflight with
+ * design-specific tokens (shadows, radii, typography) that can't be expressed
+ * through vunor's scope/layer system.
+ */
 export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
   const {
     iconsDir = ".icons",
@@ -71,6 +83,20 @@ export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
         m: "32px",
         l: "36px",
         xl: "40px",
+      },
+      palette: {
+        colors: {
+          // Design accent — blue
+          primary: "#2563eb",
+          // Design neutrals — slate
+          grey: "#64748b",
+          neutral: "#475569",
+          // Design danger — red-600
+          error: "#dc2626",
+        },
+        lightest: 0.98,
+        darkest: 0.07,
+        layersDepth: 0.02,
       },
     }) as Preset,
     asTokensPreflight(),
