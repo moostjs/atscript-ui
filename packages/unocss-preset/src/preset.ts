@@ -2,7 +2,6 @@ import presetIcons from "@unocss/preset-icons";
 import type { Preset } from "unocss";
 import { presetVunor } from "vunor/theme";
 import { createIconsLoader, type IconsLoaderOptions } from "./icon-loader";
-import { asTokensPreflight } from "./tokens";
 
 export interface AsIconsPresetOptions extends IconsLoaderOptions {
   collection?: string;
@@ -38,6 +37,7 @@ export const defaultAsIconAliases: Record<string, string> = {
   "value-help": "ph:stack",
   sun: "ph:sun",
   moon: "ph:moon",
+  check: "ph:check-bold",
   "check-square": "ph:check-square",
   "arrows-down-up": "ph:arrows-down-up",
   refresh: "ph:arrows-clockwise",
@@ -50,16 +50,17 @@ export interface AsPresetVunorOptions {
   iconsDir?: string;
   iconAliases?: Record<string, string>;
   iconCollection?: string;
+  /** Forwarded to vunor's `baseRadius`; drives `rounded-base` and the `r0..r4` ladder. */
+  baseRadius?: string;
 }
 
-/**
- * The atscript-ui preset: vunor with a slate+blue palette tuned to match the
- * design bundle, plus the `i-as-*` icons loader and a small preflight with
- * design-specific tokens (shadows, radii, typography) that can't be expressed
- * through vunor's scope/layer system.
- */
 export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
-  const { iconsDir = ".icons", iconAliases = {}, iconCollection = "as" } = options;
+  const {
+    iconsDir = ".icons",
+    iconAliases = {},
+    iconCollection = "as",
+    baseRadius = "8px",
+  } = options;
 
   return [
     asIconsPreset({
@@ -68,7 +69,7 @@ export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
       aliases: { ...defaultAsIconAliases, ...iconAliases },
     }),
     presetVunor({
-      baseRadius: "7px",
+      baseRadius,
       fingertip: {
         xs: "20px",
         s: "28px",
@@ -91,6 +92,5 @@ export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
         layersDepth: 0.08,
       },
     }) as Preset,
-    asTokensPreflight(),
   ];
 }

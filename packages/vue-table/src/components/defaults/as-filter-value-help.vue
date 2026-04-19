@@ -239,16 +239,18 @@ function clearSearchAndFilters() {
 <template>
   <div class="as-filter-value-help">
     <div class="as-filter-value-help-toolbar">
-      <input
-        v-if="!info || searchable"
-        :value="searchTerm"
-        type="text"
-        class="as-filter-value-help-search"
-        placeholder="Search..."
-        autocomplete="off"
-        @input="onSearchInput"
-        @keydown.enter="onSearchEnter"
-      />
+      <div v-if="!info || searchable" class="as-filter-value-help-search-wrap">
+        <span class="as-filter-value-help-search-icon i-as-search" aria-hidden="true" />
+        <input
+          :value="searchTerm"
+          type="text"
+          class="as-filter-value-help-search"
+          placeholder="Search..."
+          autocomplete="off"
+          @input="onSearchInput"
+          @keydown.enter="onSearchEnter"
+        />
+      </div>
       <span class="as-filter-value-help-count">
         <button
           v-if="searchable && hasFilterableFields"

@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import { ref } from "vue";
 import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
 import TablePagination from "../../components/TablePagination.vue";
 
 const components = createDefaultTableComponents();
+const filterFields = ref<string[]>(["customerId", "productId", "status"]);
 </script>
 
 <template>
@@ -13,6 +15,7 @@ const components = createDefaultTableComponents();
       url="/db/tables/orders"
       :components="components"
       :limit="10"
+      v-model:filter-fields="filterFields"
       v-slot="{ tableDef, loadedCount, totalCount }"
     >
       <TableToolbar
@@ -32,4 +35,3 @@ const components = createDefaultTableComponents();
     </AsTableRoot>
   </div>
 </template>
-

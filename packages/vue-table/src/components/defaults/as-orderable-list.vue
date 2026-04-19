@@ -179,12 +179,15 @@ function deselectAll() {
   >
     <ListboxFilter as-child class="as-orderable-list-toolbar">
       <div>
-        <input
-          v-model="searchTerm"
-          type="text"
-          class="as-orderable-list-search"
-          placeholder="Search..."
-        />
+        <div class="as-orderable-list-search-wrap">
+          <span class="as-orderable-list-search-icon i-as-search" aria-hidden="true" />
+          <input
+            v-model="searchTerm"
+            type="text"
+            class="as-orderable-list-search"
+            placeholder="Search..."
+          />
+        </div>
         <div class="as-orderable-list-toolbar-actions">
           <button type="button" class="as-orderable-list-toolbar-btn" @click="selectAll">
             Select all
@@ -226,9 +229,7 @@ function deselectAll() {
             class="as-orderable-list-checkbox"
             :class="{ 'as-orderable-list-checkbox-disabled': disabledSet.has(item.value) }"
           >
-            <ListboxItemIndicator class="as-orderable-list-check-icon">
-              &#x2713;
-            </ListboxItemIndicator>
+            <ListboxItemIndicator class="as-orderable-list-check-icon" aria-hidden="true" />
           </div>
 
           <div class="as-orderable-list-item-body">

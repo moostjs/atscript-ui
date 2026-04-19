@@ -74,11 +74,7 @@ function handleDeselectAll() {
 </script>
 
 <template>
-  <ListboxRoot
-    v-model="listboxModel"
-    :multiple="isMulti"
-    class="as-table-outer-wrap"
-  >
+  <ListboxRoot v-model="listboxModel" :multiple="isMulti" class="as-table-outer-wrap">
     <AsTableBase
       :columns="effectiveColumns"
       :rows="effectiveRows"

@@ -132,64 +132,58 @@ const sections: Section[] = [
 
 <template>
   <div class="flex-1 min-h-0 overflow-y-auto">
-    <div class="max-w-[1100px] px-[40px] py-[28px]">
-    <div
-      class="font-mono text-[10px] font-600 tracking-[0.14em] uppercase text-grey-500 mb-[10px]"
-    >
-      atscript-ui · Playground
-    </div>
-    <h1
-      class="text-[32px] font-700 tracking-[-0.03em] m-0 mb-[10px] leading-[1.15] text-grey-900 dark:text-grey-50"
-    >
-      Auto-generated forms and smart tables from atscript types.
-    </h1>
-    <p class="text-[15px] text-grey-500 max-w-[72ch] leading-[1.55] m-0 mb-[32px]">
-      Forms are built directly from your atscript interface. Optional fields stay
-      <code
-        class="font-mono text-[12px] px-[6px] py-[1px] rounded-[4px] layer-2 text-grey-700 dark:text-grey-200"
-        >undefined</code
-      >
-      until the user fills them in — and can be cleared back to undefined. Nested structs
-      and arrays are rendered with rails so the shape of your data stays visible. Tables
-      come with column menus, filter pills, value-help for FK columns and virtual scroll.
-    </p>
-
-    <section v-for="sec in sections" :key="sec.title" class="mb-[28px]">
-      <header class="flex items-baseline gap-[10px] mb-[12px]">
-        <span
-          :class="`i-as-${sec.icon}`"
-          class="w-[14px] h-[14px] op-70 text-primary-600"
-          aria-hidden="true"
-        />
-        <h2
-          class="m-0 text-[18px] font-600 tracking-[-0.01em] text-grey-900 dark:text-grey-50"
-        >
-          {{ sec.title }}
-        </h2>
-        <span v-if="sec.lede" class="text-[length:var(--as-fs-sm)] text-grey-500">
-          — {{ sec.lede }}
-        </span>
-      </header>
-
-      <div class="grid grid-cols-2 gap-[12px] md:grid-cols-2 max-md:grid-cols-1">
-        <RouterLink
-          v-for="d in sec.items"
-          :key="d.path"
-          :to="d.path"
-          class="home-card card border surface-0 flex flex-col gap-[4px] px-[18px] py-[16px] rounded-[var(--as-radius-lg)] no-underline transition-all"
-        >
-          <div class="flex items-center gap-[8px] font-600 text-grey-900 dark:text-grey-100">
-            <span>{{ d.label }}</span>
-            <span class="scope-grey ml-auto font-mono text-[10px] font-500 text-current/60">{{
-              d.kind
-            }}</span>
-          </div>
-          <div class="text-[length:var(--as-fs-sm)] text-grey-500 leading-[1.5]">
-            {{ d.desc }}
-          </div>
-        </RouterLink>
+    <div class="max-w-[1100px] px-$xl py-$l">
+      <div class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-grey-500 mb-$s">
+        atscript-ui · Playground
       </div>
-    </section>
+      <h1
+        class="text-h1 tracking-[-0.03em] m-0 mb-$s leading-[1.15] text-grey-900 dark:text-grey-50"
+      >
+        Auto-generated forms and smart tables from atscript types.
+      </h1>
+      <p class="text-body-l text-grey-500 max-w-[72ch] leading-[1.55] m-0 mb-$xl">
+        Forms are built directly from your atscript interface. Optional fields stay
+        <code
+          class="font-mono text-callout px-$xs py-[0.08em] rounded-r0 layer-2 text-grey-700 dark:text-grey-200"
+          >undefined</code
+        >
+        until the user fills them in — and can be cleared back to undefined. Nested structs and
+        arrays are rendered with rails so the shape of your data stays visible. Tables come with
+        column menus, filter pills, value-help for FK columns and virtual scroll.
+      </p>
+
+      <section v-for="sec in sections" :key="sec.title" class="mb-$xl">
+        <header class="flex items-baseline gap-$s mb-$m">
+          <span
+            :class="`i-as-${sec.icon}`"
+            class="w-[1.1em] h-[1.1em] op-70 text-primary-600"
+            aria-hidden="true"
+          />
+          <h2 class="m-0 text-h3 font-600 tracking-[-0.01em] text-grey-900 dark:text-grey-50">
+            {{ sec.title }}
+          </h2>
+          <span v-if="sec.lede" class="text-callout text-grey-500"> — {{ sec.lede }} </span>
+        </header>
+
+        <div class="grid grid-cols-2 gap-$m md:grid-cols-2 max-md:grid-cols-1">
+          <RouterLink
+            v-for="d in sec.items"
+            :key="d.path"
+            :to="d.path"
+            class="home-card card border surface-0 flex flex-col gap-$xs px-$m py-$m rounded-r2 no-underline transition-all"
+          >
+            <div class="flex items-center gap-$s font-600 text-grey-900 dark:text-grey-100">
+              <span>{{ d.label }}</span>
+              <span class="scope-grey ml-auto font-mono text-callout font-500 text-current/60">{{
+                d.kind
+              }}</span>
+            </div>
+            <div class="text-callout text-grey-500 leading-[1.5]">
+              {{ d.desc }}
+            </div>
+          </RouterLink>
+        </div>
+      </section>
     </div>
   </div>
 </template>

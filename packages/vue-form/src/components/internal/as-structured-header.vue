@@ -53,4 +53,3 @@ const hasVariantPicker = props.unionContext !== undefined && props.unionContext.
     </button>
   </div>
 </template>
-

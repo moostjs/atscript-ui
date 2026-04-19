@@ -75,27 +75,22 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    class="h-100vh overflow-hidden flex font-[var(--as-font-ui)] text-[length:var(--as-fs-base)] layer-1"
-  >
+  <div class="h-100vh overflow-hidden flex layer-1">
     <aside
-      class="w-[232px] shrink-0 sticky top-0 h-100vh overflow-y-auto flex flex-col layer-0 border-r-1"
+      class="w-[15em] shrink-0 sticky top-0 h-100vh overflow-y-auto flex flex-col layer-0 border-r-1"
     >
-      <div class="flex items-center gap-2 px-4 pt-4 pb-[14px] border-b-1">
+      <div class="flex items-center gap-$s px-$m pt-$m pb-$m border-b-1">
         <span
-          class="w-[22px] h-[22px] rounded-[var(--as-radius-sm)] bg-primary-600 text-white grid place-items-center font-700 text-[11px] tracking-tight font-mono"
+          class="w-fingertip-xs h-fingertip-xs rounded-r0 bg-primary-600 text-white grid place-items-center font-700 text-callout tracking-tight font-mono"
           >AS</span
         >
+        <span class="font-600 tracking-tight text-grey-800 dark:text-grey-100">UI Playground</span>
         <span
-          class="font-600 text-[length:var(--as-fs-md)] tracking-tight text-grey-800 dark:text-grey-100"
-          >UI Playground</span
-        >
-        <span
-          class="scope-grey ml-auto font-mono text-[10px] text-current/60 px-[6px] py-[2px] rounded-[4px] layer-2"
+          class="scope-grey ml-auto font-mono text-callout text-current/60 px-$xs py-[0.15em] rounded-r0 layer-2"
           >{{ version }}</span
         >
       </div>
-      <nav class="flex flex-col px-[6px] pb-4 pt-0 flex-1">
+      <nav class="flex flex-col px-$xs pb-$m pt-0 flex-1">
         <span class="nav-section">Getting Started</span>
         <RouterLink
           v-for="r in getStartedRoutes"
@@ -104,7 +99,7 @@ onMounted(() => {
           class="nav-link"
           active-class="nav-link-active"
         >
-          <span class="i-as-sun w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="i-as-sun w-[1.1em] h-[1.1em] shrink-0 op-65" aria-hidden="true" />
           <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
         </RouterLink>
 
@@ -116,7 +111,7 @@ onMounted(() => {
           class="nav-link"
           active-class="nav-link-active"
         >
-          <span class="i-as-check-square w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="i-as-check-square w-[1.1em] h-[1.1em] shrink-0 op-65" aria-hidden="true" />
           <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
         </RouterLink>
 
@@ -128,7 +123,7 @@ onMounted(() => {
           class="nav-link"
           active-class="nav-link-active"
         >
-          <span class="i-as-refresh w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="i-as-refresh w-[1.1em] h-[1.1em] shrink-0 op-65" aria-hidden="true" />
           <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
         </RouterLink>
 
@@ -140,19 +135,19 @@ onMounted(() => {
           class="nav-link"
           active-class="nav-link-active"
         >
-          <span class="i-as-columns w-[14px] h-[14px] shrink-0 op-65" aria-hidden="true" />
+          <span class="i-as-columns w-[1.1em] h-[1.1em] shrink-0 op-65" aria-hidden="true" />
           <span class="flex-1 min-w-0 truncate">{{ r.label }}</span>
           <span
             v-if="r.count"
-            class="scope-grey font-mono text-[10px] text-current/60 px-[5px] py-[1px] rounded-[3px] layer-2"
+            class="scope-grey font-mono text-callout text-current/60 px-$xs py-[0.08em] rounded-r0 layer-2"
             >{{ r.count }}</span
           >
         </RouterLink>
       </nav>
-      <div class="p-[10px] border-t-1">
+      <div class="p-$s border-t-1">
         <button
           type="button"
-          class="c8-flat scope-grey inline-flex items-center gap-[6px] w-full px-[10px] py-[6px] border-1 rounded-[var(--as-radius-sm)] cursor-pointer text-[length:var(--as-fs-sm)] font-inherit"
+          class="c8-flat scope-grey inline-flex items-center gap-$xs w-full px-$s py-$xs border-1 rounded-base cursor-pointer text-callout font-inherit"
           :aria-label="dark ? 'Switch to light mode' : 'Switch to dark mode'"
           @click="toggleDark"
         >
@@ -167,7 +162,7 @@ onMounted(() => {
     <Transition name="toast">
       <div
         v-if="toastVisible"
-        class="fixed bottom-[24px] right-[24px] px-[20px] py-[12px] bg-primary-600 text-white rounded-[var(--as-radius)] text-[length:var(--as-fs-sm)] font-500 shadow-[var(--as-shadow-dialog)] z-100"
+        class="fixed bottom-$l right-$l px-$l py-$m bg-primary-600 text-white rounded-r2 text-callout font-500 shadow-popup z-100"
       >
         {{ toastMessage }}
       </div>

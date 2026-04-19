@@ -37,34 +37,34 @@ function onForm(_def: unknown, context?: Record<string, unknown>) {
           full validation and submit.
         </p>
         <WfForm
-        path="/wf/trigger"
-        name="profile/edit"
-        :types="types"
-        first-validation="on-submit"
-        @finished="onFinished"
-        @error="onError"
-        @form="onForm"
-      >
-        <template #wf.loading>
-          <div class="wf-loading">Loading form...</div>
-        </template>
-        <template #wf.error="{ error, retry }">
-          <div class="wf-error">
-            <p>{{ (error as any)?.message || error }}</p>
-            <button @click="retry">Retry</button>
-          </div>
-        </template>
-        <template #wf.finished="{ response }">
-          <div class="wf-finished">
-            <h3>Profile Saved!</h3>
-            <pre>{{ JSON.stringify(response, null, 2) }}</pre>
-          </div>
-        </template>
+          path="/wf/trigger"
+          name="profile/edit"
+          :types="types"
+          first-validation="on-submit"
+          @finished="onFinished"
+          @error="onError"
+          @form="onForm"
+        >
+          <template #wf.loading>
+            <div class="wf-loading">Loading form...</div>
+          </template>
+          <template #wf.error="{ error, retry }">
+            <div class="wf-error">
+              <p>{{ (error as any)?.message || error }}</p>
+              <button @click="retry">Retry</button>
+            </div>
+          </template>
+          <template #wf.finished="{ response }">
+            <div class="wf-finished">
+              <h3>Profile Saved!</h3>
+              <pre>{{ JSON.stringify(response, null, 2) }}</pre>
+            </div>
+          </template>
         </WfForm>
       </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-card">
+      <div class="form-debug-card rounded-base">
         <div class="form-debug-label">Workflow State</div>
         <template v-if="finishedData">
           Finished: {{ JSON.stringify(finishedData, null, 2) }}

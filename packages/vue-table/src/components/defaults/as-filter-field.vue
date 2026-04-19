@@ -20,6 +20,7 @@ import {
 } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTable, getDefaultClientFactory } from "../../composables/use-table";
+import { useDragScroll } from "../../composables/use-drag-scroll";
 import AsTableBase from "../as-table-base.vue";
 
 const props = defineProps<{
@@ -27,6 +28,9 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+
+const chipsScrollEl = ref<HTMLElement | null>(null);
+useDragScroll(chipsScrollEl);
 
 // ── Determine column mode ──────────────────────────────────
 const info = props.column.valueHelpInfo as ValueHelpInfo | undefined;
@@ -183,6 +187,20 @@ const chips = computed<ChipItem[]>(() => {
   }));
 });
 
+function scrollChipsToEnd() {
+  void nextTick(() => {
+    const el = chipsScrollEl.value;
+    if (el) el.scrollLeft = el.scrollWidth;
+  });
+}
+
+watch(
+  () => chips.value.length,
+  (len, prev) => {
+    if (len > prev) scrollChipsToEnd();
+  },
+);
+
 // ── Row value extraction ───────────────────────────────────
 function rowValueFn(row: Record<string, unknown>): unknown {
   if (hasValueHelp && info) return row[info.targetField];
@@ -327,27 +345,36 @@ function onEnter() {
         :filter-function="hasOptions ? filterFunction : (val: unknown[]) => val"
         :multiple="true"
         :reset-search-term-on-blur="false"
+        as-child
       >
-        <ComboboxAnchor class="as-filter-field-input">
-          <span v-for="chip in chips" :key="chip.key" class="as-filter-field-chip">
-            {{ chip.label }}
-            <span
-              class="as-filter-field-chip-remove"
-              role="button"
-              tabindex="-1"
-              @click.stop.prevent="removeChip(chip)"
-            >
-              <span class="i-as-close" aria-hidden="true" />
-            </span>
-          </span>
+        <ComboboxAnchor as-child>
+          <div class="as-filter-field-input" @click="dropdownOpen = true">
+            <div ref="chipsScrollEl" class="as-filter-field-chips">
+              <span v-for="chip in chips" :key="chip.key" class="as-filter-field-chip">
+                {{ chip.label }}
+                <span
+                  class="as-filter-field-chip-remove"
+                  role="button"
+                  tabindex="-1"
+                  @click.stop.prevent="removeChip(chip)"
+                >
+                  <span class="i-as-close" aria-hidden="true" />
+                </span>
+              </span>
+            </div>
 
-          <ComboboxInput
-            class="as-filter-field-search"
-            @input="onSearchInput"
-            @keydown.backspace="onBackspace"
-            @focus="dropdownOpen = true"
-            as="input"
-          />
+            <ComboboxInput as-child>
+              <input
+                class="as-filter-field-search"
+                @input="onSearchInput"
+                @keydown.backspace="onBackspace"
+                @focus="
+                  dropdownOpen = true;
+                  scrollChipsToEnd();
+                "
+              />
+            </ComboboxInput>
+          </div>
         </ComboboxAnchor>
 
         <ComboboxContent
@@ -373,8 +400,8 @@ function onEnter() {
                   <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
                   <p class="as-vh-empty-title">No matching values</p>
                   <p v-if="searchTerm" class="as-vh-empty-body">
-                    No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try
-                    a different search.
+                    No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
+                    different search.
                   </p>
                   <p v-else class="as-vh-empty-body">No entries available.</p>
                 </div>
@@ -402,23 +429,26 @@ function onEnter() {
 
       <!-- Plain input (no dropdown) -->
       <div v-else class="as-filter-field-input">
-        <span v-for="chip in chips" :key="chip.key" class="as-filter-field-chip">
-          {{ chip.label }}
-          <span
-            class="as-filter-field-chip-remove"
-            role="button"
-            tabindex="-1"
-            @click.stop.prevent="removeChip(chip)"
-          >
-            &times;
+        <div ref="chipsScrollEl" class="as-filter-field-chips">
+          <span v-for="chip in chips" :key="chip.key" class="as-filter-field-chip">
+            {{ chip.label }}
+            <span
+              class="as-filter-field-chip-remove"
+              role="button"
+              tabindex="-1"
+              @click.stop.prevent="removeChip(chip)"
+            >
+              &times;
+            </span>
           </span>
-        </span>
+        </div>
         <input
           class="as-filter-field-search"
           :value="searchTerm"
           @input="searchTerm = ($event.target as HTMLInputElement).value"
           @keydown.backspace="onBackspace"
           @keydown.enter.prevent="onEnter"
+          @focus="scrollChipsToEnd()"
         />
       </div>
 

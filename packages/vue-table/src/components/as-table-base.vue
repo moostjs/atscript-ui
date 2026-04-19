@@ -120,8 +120,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               v-if="!asCombobox && select === 'multi' && selectedRows"
               class="as-table-checkbox"
               :class="{
-                'as-table-checkbox-checked':
-                  selectedRows.length === rows.length && rows.length > 0,
+                'as-table-checkbox-checked': selectedRows.length === rows.length && rows.length > 0,
                 'as-table-checkbox-indeterminate':
                   selectedRows.length > 0 && selectedRows.length < rows.length,
               }"
@@ -141,13 +140,9 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               <span
                 v-if="selectedRows.length === rows.length && rows.length > 0"
                 class="as-table-checkbox-tick"
-              >
-                &#x2713;
-              </span>
-              <span
-                v-else-if="selectedRows.length > 0"
-                class="as-table-checkbox-dash"
+                aria-hidden="true"
               />
+              <span v-else-if="selectedRows.length > 0" class="as-table-checkbox-dash" />
             </span>
           </th>
           <template v-for="col in columns" :key="col.path">
@@ -199,9 +194,8 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
                     <component
                       :is="asCombobox ? ComboboxItemIndicator : ListboxItemIndicator"
                       class="as-table-checkbox-tick"
-                    >
-                      &#x2713;
-                    </component>
+                      aria-hidden="true"
+                    />
                   </span>
                 </td>
                 <template v-for="col in columns" :key="col.path">

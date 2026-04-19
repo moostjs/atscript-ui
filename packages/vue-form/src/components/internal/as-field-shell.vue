@@ -53,7 +53,6 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
         </template>
         <template v-else>
           <label v-if="displayLabel" :for="inputId">{{ displayLabel }}</label>
-          <span v-if="description" :id="descId">{{ description }}</span>
         </template>
 
         <!-- Union variant picker — inline next to label -->
@@ -80,6 +79,10 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
           {{ removeLabel || "Remove" }}
         </button>
       </div>
+    </div>
+
+    <div v-if="description && !$slots.header" :id="descId" class="as-field-description">
+      {{ description }}
     </div>
 
     <template v-if="optional && !optionalEnabled">

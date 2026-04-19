@@ -174,9 +174,7 @@ function onCancel() {
             <template v-else-if="activeTab === 'filters'">
               Checked columns appear in the filter bar for quick filtering.
             </template>
-            <template v-else>
-              Rows are ordered by these fields, top-to-bottom.
-            </template>
+            <template v-else> Rows are ordered by these fields, top-to-bottom. </template>
           </span>
         </div>
 

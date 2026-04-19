@@ -32,4 +32,3 @@ const components = createDefaultTableComponents();
     </AsTableRoot>
   </div>
 </template>
-

@@ -27,11 +27,17 @@ function onError(errors: unknown) {
           Required, format, range and collection rules — all driven from atscript
           <code>@expect.*</code> annotations.
         </p>
-        <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @error="onError" />
+        <AsForm
+          :def="def"
+          :form-data="formData"
+          :types="types"
+          @submit="onSubmit"
+          @error="onError"
+        />
       </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-card">
+      <div class="form-debug-card rounded-base">
         <div class="form-debug-label">Form Data</div>
         {{ JSON.stringify(formData, null, 2) }}
       </div>

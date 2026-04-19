@@ -26,7 +26,7 @@ function onSubmit(data: unknown) {
       </div>
     </div>
     <div class="form-debug">
-      <div class="form-debug-card">
+      <div class="form-debug-card rounded-base">
         <div class="form-debug-label">Form Data</div>
         {{ JSON.stringify(formData, null, 2) }}
       </div>

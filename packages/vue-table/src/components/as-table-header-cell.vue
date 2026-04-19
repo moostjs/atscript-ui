@@ -60,7 +60,7 @@ function onMenuFiltersOff() {
       <button class="as-th-btn" type="button">
         <span class="as-th-label">{{ props.column.label }}</span>
         <span class="as-th-indicators">
-          <span v-if="filledCount" class="as-th-filter-badge">{{ filledCount }}</span>
+          <span v-if="filledCount" class="as-th-filter-badge i-as-filter" aria-hidden="true" />
           <span
             v-if="sortDirection"
             class="as-th-sort"

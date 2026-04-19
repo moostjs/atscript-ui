@@ -81,6 +81,48 @@ pnpm build                                  # rebuild all packages
 - Test files: `*.spec.ts`, co-located in `src/` or under `src/__tests__/`
 - Test helpers (mock factories) live in `__tests__/helpers.ts`
 
+### Styling with vunor
+
+**Vunor is the customization middleware.** atscript-ui ships as a generic UI layer — vunor (published as the `vunor` npm package) is what makes it skinnable. End users override vunor's theme (palette, spacing, typography, fingertip, radius) and replace icon aliases to ship their own branding without ever touching our library's source or overriding individual classes.
+
+For this to work, we style **only through vunor primitives**. Every pixel literal, hand-rolled focus ring, or hardcoded color we leave in the code is a knob the consumer can't turn.
+
+**Shortcuts, not inline utilities.** Templates only use `as-*` class names. Raw UnoCSS utilities (`flex gap-$s px-$m ...`) belong in the `defineShortcuts({...})` map in `packages/vue-*/src/unocss/shortcuts.ts`, never in `.vue` templates. If a new composition is needed, add a new `as-*` shortcut.
+
+**Use vunor tokens, not pixel literals.**
+
+| Intent                                      | Use                                                                 | Not                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
+| Gap / padding / margin                      | spacing tokens `$xxs..$xxl`                                         | `gap-[8px]`, `px-[12px]`                               |
+| Control heights / touch targets             | `h-fingertip-xs/s/m/l/xl`                                           | `h-[32px]`                                             |
+| Body / secondary / title text               | `text-body`, `text-callout`, `text-body-l`                          | `text-[length:13px]`                                   |
+| Icon-glyph sizing                           | em-based `text-[1.25em]`, `w-[1em] h-[1em]`                         | `w-[16px] h-[16px]`                                    |
+| Elevated surfaces (popups, dialogs, toasts) | `shadow-popup`                                                      | hand-rolled box-shadow                                 |
+| Borders (default)                           | `border-1` alone — color comes from active surface/layer            | `border-grey-200 dark:border-grey-800`                 |
+| Focus rings                                 | `current-outline-hl outline i8-apply-outline`                       | `[box-shadow:0_0_0_3px_...]`                           |
+| Button / clickable surfaces                 | `c8-filled / c8-flat / c8-outlined / c8-light / c8-chrome`          | hand-rolled hover/active                               |
+| Inputs (bordered)                           | `border-1 layer-0 current-outline-hl` + `i8-apply-outline` on focus | `i8-input i8-apply-border` (leaks scope color as fill) |
+
+**Explicit text color on inputs** — inside a `layer-0` wrapper, `--current-text` resolves to `scope-dark-2` (muted). Use `text-scope-dark-0 dark:text-scope-light-0` on `<input>` so user input reads as primary text, not placeholder.
+
+**Fonts live in the consumer, not the preset.** The `unocss-preset` package ships only scope/layer/surface/c8/i8 + icons. Typography baseline (Inter family, 13px body, smoothing) lives in `vue-playground/src/styles/app.css`. Real consumers bring their own font stack.
+
+**Reka-ui state attributes** — menu items, listbox rows, and combobox items expose keyboard state as `data-highlighted=""`, selection as `data-state="checked"`. Style them via descendant attribute selectors in the `as-*` shortcut. Nested `[]` inside an arbitrary-variant bracket (`[&_tr[data-state=checked]]:`) silently fails to compile — wrap the inner attribute selector in `:is(...)`:
+
+```ts
+"[&_tbody_tr:is([data-highlighted=''])]:": "scope-primary bg-current-hl/10",
+"[&_tbody_tr:is([data-state=checked])]:": "scope-primary bg-current-hl/15",
+```
+
+**Composing Reka-ui primitives with vunor.** Prefer `as-child` on Root/Anchor/Trigger/Input wrappers with a plain HTML child — events and props merge onto the real element. Skip `ComboboxTrigger` when the input itself drives opening (`@focus="open = true"`); leaving it in toggles open/closed on the bubbled click and closes the dropdown immediately after focus opens it.
+
+**Checklist before hand-rolling a rule:**
+
+1. Is there a vunor primitive? (`scope-*`, `layer-*`, `surface-*`, `c8-*`, `i8-*`, spacing `$*`, typography, `fingertip-*`)
+2. If painting over an existing shortcut, add to the variant map (`hover:`, `focus-within:`, `[&_child]:`) — don't copy the whole shortcut.
+3. If introducing a new piece of UI, add a new `as-*` shortcut entry rather than inlining classes in the template.
+4. Build-verify: `pnpm --filter @atscript/vue-table run build` (or vue-form / unocss-preset). Confirm the generated selector appears in `dist/unocss.css` — UnoCSS silently drops malformed arbitrary variants.
+
 ### Commit style
 
 One-line commit messages, no co-author trailers.
