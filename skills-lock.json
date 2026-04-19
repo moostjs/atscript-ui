@@ -1,6 +1,11 @@
 {
   "version": 1,
   "skills": {
+    "moostjs": {
+      "source": "moostjs/moostjs",
+      "sourceType": "github",
+      "computedHash": "242d3fbe809115ac46a655649cfdf2fc23a592d901a05c5a55aa3f6f8f04f74b"
+    },
     "vunor": {
       "source": "mav-rik/vunor",
       "sourceType": "github",

@@ -10,6 +10,8 @@ import type { FilterCondition, FieldFilters } from "../filters/filter-types";
 export interface TableStateData {
   /** Resolved table definition (null until metadata loads). */
   tableDef: TableDef | null;
+  /** True while the table metadata (TableDef) is being loaded. */
+  loadingMetadata: boolean;
   /** Names of visible columns, in display order. */
   columnNames: string[];
   /** Current visible columns (derived from columnNames + allColumns). */

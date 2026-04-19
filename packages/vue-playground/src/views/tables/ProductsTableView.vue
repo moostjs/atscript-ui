@@ -13,7 +13,7 @@ const components = createDefaultTableComponents();
       url="/db/tables/products"
       :components="components"
       :limit="10"
-      v-slot="{ tableDef, loadedCount, totalCount }"
+      v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"
     >
       <TableToolbar
         title="Products"
@@ -27,6 +27,9 @@ const components = createDefaultTableComponents();
       </div>
       <div class="table-page-body">
         <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+        <div v-if="loadingMetadata" class="table-loading-overlay">
+          <span class="table-loading-overlay-icon" aria-hidden="true" />
+        </div>
       </div>
       <TablePagination mode="pagination" />
     </AsTableRoot>

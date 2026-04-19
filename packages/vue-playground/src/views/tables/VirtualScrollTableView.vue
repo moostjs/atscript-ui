@@ -12,7 +12,7 @@ const components = createDefaultTableComponents();
       url="/db/tables/products"
       :components="components"
       :limit="5000"
-      v-slot="{ tableDef, loadedCount, totalCount }"
+      v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"
     >
       <TableToolbar
         title="Virtual Scroll — 5,000 Products"
@@ -26,22 +26,10 @@ const components = createDefaultTableComponents();
       </div>
       <div class="table-page-body">
         <AsTable sticky-header :virtual-row-height="36" :virtual-overscan="10" />
+        <div v-if="loadingMetadata" class="table-loading-overlay">
+          <span class="table-loading-overlay-icon" aria-hidden="true" />
+        </div>
       </div>
     </AsTableRoot>
   </div>
 </template>
-
-<style scoped>
-/* Virtual-scroll needs an inner flex container so the scroll container
-   fills remaining height. Replaces the utility-class `overflow-auto` with
-   `overflow-hidden` + column flex on the body. */
-.table-page-body {
-  overflow: hidden !important;
-  display: flex;
-  flex-direction: column;
-}
-.table-page-body :deep(.as-table-scroll-container) {
-  flex: 1;
-  min-height: 0;
-}
-</style>

@@ -5,7 +5,7 @@ import { useTableContext } from "@atscript/vue-table";
 const props = defineProps<{
   title: string;
   subtitle?: string;
-  tableDef?: TableDef;
+  tableDef?: TableDef | null;
   loadedCount: number;
   totalCount: number;
 }>();

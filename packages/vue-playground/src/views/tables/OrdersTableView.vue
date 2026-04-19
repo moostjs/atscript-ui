@@ -16,7 +16,7 @@ const filterFields = ref<string[]>(["customerId", "productId", "status"]);
       :components="components"
       :limit="10"
       v-model:filter-fields="filterFields"
-      v-slot="{ tableDef, loadedCount, totalCount }"
+      v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"
     >
       <TableToolbar
         title="Orders (FK)"
@@ -30,6 +30,9 @@ const filterFields = ref<string[]>(["customerId", "productId", "status"]);
       </div>
       <div class="table-page-body">
         <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+        <div v-if="loadingMetadata" class="table-loading-overlay">
+          <span class="table-loading-overlay-icon" aria-hidden="true" />
+        </div>
       </div>
       <TablePagination mode="pagination" />
     </AsTableRoot>

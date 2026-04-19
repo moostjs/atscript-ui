@@ -14,7 +14,7 @@ const components = createDefaultTableComponents();
       :components="components"
       select="multi"
       :limit="10"
-      v-slot="{ tableDef, loadedCount, totalCount }"
+      v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"
     >
       <TableToolbar
         title="Customers"
@@ -41,6 +41,9 @@ const components = createDefaultTableComponents();
             </td>
           </template>
         </AsTable>
+        <div v-if="loadingMetadata" class="table-loading-overlay">
+          <span class="table-loading-overlay-icon" aria-hidden="true" />
+        </div>
       </div>
       <TablePagination mode="load-more" />
     </AsTableRoot>

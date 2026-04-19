@@ -52,7 +52,7 @@ if (hasValueHelp && info) {
 
   innerState = useTable(info.path, {
     select: "none",
-    queryOnMount: true,
+    queryOnMount: false,
     limit: 10,
     provideContext: false,
   });
@@ -103,6 +103,11 @@ const dropdownQuerying = computed(() => {
   return false;
 });
 
+const dropdownLoadingMetadata = computed(() => {
+  if (innerState) return innerState.loadingMetadata.value;
+  return false;
+});
+
 const seeAllCount = computed(() => {
   if (innerState) return innerState.totalCount.value;
   if (enumRows) return enumRows.value.length;
@@ -140,7 +145,7 @@ const selectedValues = ref<unknown[]>(
   hasDropdown ? extractEqValues(state.filters.value[props.column.path]) : [],
 );
 
-const debouncedQuery = debounce(() => state.query(), 150);
+const debouncedQuery = debounce(() => state.query(), 500);
 onBeforeUnmount(() => debouncedQuery.cancel());
 
 // Dropdown-only watchers: sync selectedValues ↔ eq conditions in state.filters
@@ -216,10 +221,21 @@ function displayValue(): string {
 const searchTerm = ref("");
 const dropdownOpen = ref(false);
 
+// Lazy first-fetch for FK value-help: only query when user opens the dropdown.
+if (innerState) {
+  watch(
+    dropdownOpen,
+    (open) => {
+      if (open) innerState!.query();
+    },
+    { once: true },
+  );
+}
+
 const debouncedSearch = hasValueHelp
   ? debounce(() => {
       void doSearch(searchTerm.value);
-    }, 300)
+    }, 500)
   : undefined;
 
 onBeforeUnmount(() => {
@@ -333,11 +349,14 @@ function onEnter() {
 </script>
 
 <template>
-  <div class="as-filter-field">
+  <div class="as-filter-field" :aria-disabled="dropdownLoadingMetadata ? true : undefined">
     <span class="as-filter-field-label">{{ column.label }}</span>
     <div class="as-filter-field-body">
+      <div v-if="dropdownLoadingMetadata" class="as-filter-field-loading">
+        <span class="as-filter-field-loading-icon" aria-hidden="true" />
+      </div>
       <ComboboxRoot
-        v-if="hasDropdown"
+        v-else-if="hasDropdown"
         v-model="selectedValues"
         v-model:open="dropdownOpen"
         v-model:search-term="searchTerm"
@@ -385,28 +404,33 @@ function onEnter() {
           @open-auto-focus.prevent
         >
           <ComboboxViewport>
-            <AsTableBase
-              as-combobox
-              :row-value-fn="rowValueFn"
-              :columns="dropdownColumns"
-              :rows="dropdownRows"
-              :sorters="[]"
-              :querying="dropdownQuerying"
-              :sticky-header="true"
-              :column-menu="{ sort: false, filters: false, hide: false }"
-            >
-              <template #empty>
-                <div class="as-vh-empty">
-                  <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-                  <p class="as-vh-empty-title">No matching values</p>
-                  <p v-if="searchTerm" class="as-vh-empty-body">
-                    No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
-                    different search.
-                  </p>
-                  <p v-else class="as-vh-empty-body">No entries available.</p>
-                </div>
-              </template>
-            </AsTableBase>
+            <div class="as-filter-field-dropdown-body">
+              <AsTableBase
+                as-combobox
+                :row-value-fn="rowValueFn"
+                :columns="dropdownColumns"
+                :rows="dropdownRows"
+                :sorters="[]"
+                :querying="dropdownQuerying"
+                :sticky-header="true"
+                :column-menu="{ sort: false, filters: false, hide: false }"
+              >
+                <template #empty>
+                  <div class="as-vh-empty">
+                    <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
+                    <p class="as-vh-empty-title">No matching values</p>
+                    <p v-if="searchTerm" class="as-vh-empty-body">
+                      No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try
+                      a different search.
+                    </p>
+                    <p v-else class="as-vh-empty-body">No entries available.</p>
+                  </div>
+                </template>
+              </AsTableBase>
+              <div v-if="dropdownQuerying" class="as-table-query-overlay">
+                <span class="as-table-query-overlay-icon" aria-hidden="true" />
+              </div>
+            </div>
             <div v-if="noEnumMatches" class="as-vh-empty">
               <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
               <p class="as-vh-empty-title">No matching values</p>

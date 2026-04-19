@@ -77,10 +77,10 @@ function onRowClick(row: Record<string, unknown>) {
               </div>
             </template>
 
-            <!-- Custom loading state -->
-            <template #loading>
-              <div class="scope-primary p-$xxl text-center text-current-hl">
-                <p>Fetching products...</p>
+            <!-- Custom loading overlay -->
+            <template #query-loading>
+              <div class="scope-primary text-current-hl">
+                <p class="text-body-l font-500">Fetching products…</p>
               </div>
             </template>
 

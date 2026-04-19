@@ -53,6 +53,8 @@ export interface TAsTableComponents {
  */
 export interface ReactiveTableState extends TableStateMethods {
   tableDef: ShallowRef<TableDef | null>;
+  /** True while the table metadata (TableDef) is being loaded. */
+  loadingMetadata: Ref<boolean>;
   columnNames: ShallowRef<string[]>;
   columns: ComputedRef<ColumnDef[]>;
   allColumns: ShallowRef<ColumnDef[]>;

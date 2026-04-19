@@ -66,6 +66,7 @@ const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConf
 <template>
   <slot
     :table-def="state.tableDef.value"
+    :loading-metadata="state.loadingMetadata.value"
     :all-columns="state.allColumns.value"
     :column-names="state.columnNames.value"
     :columns="state.columns.value"

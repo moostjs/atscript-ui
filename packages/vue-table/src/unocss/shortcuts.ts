@@ -86,8 +86,8 @@ export const asTableShortcuts = defineShortcuts({
   "as-fpill-label-active": "scope-primary bg-current-hl/10 text-current-hl",
   "as-fpill-body": "flex items-stretch flex-1 min-w-[8em] cursor-text",
   "as-fpill-chips":
-    "flex items-center gap-$xs px-$xs flex-1 min-w-0 h-full flex-nowrap overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
-  "as-fpill-input": `flex-shrink-0 w-[64px] border-0 bg-transparent outline-none ${strongText} p-0 h-full placeholder:text-current/50`,
+    "flex items-center gap-$xs px-$xs min-w-0 h-full flex-nowrap overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+  "as-fpill-input": `flex-1 min-w-[64px] border-0 bg-transparent outline-none ${strongText} p-0 h-full placeholder:text-current/50`,
   "as-fpill-chip":
     "scope-primary inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
   "as-fpill-chip-remove": {
@@ -120,7 +120,7 @@ export const asTableShortcuts = defineShortcuts({
   // but NO overflow — the inner as-table-scroll-container is the sole scroller,
   // so horizontal scrollbars stay at the bottom of the viewport rather than the
   // bottom of the full content height.
-  "as-table-outer-wrap": "flex flex-col flex-1 min-h-0",
+  "as-table-outer-wrap": "relative flex flex-col flex-1 min-h-0",
   "as-th-filler": "p-0 w-auto",
   "as-td-filler": "p-0 w-auto",
 
@@ -151,6 +151,9 @@ export const asTableShortcuts = defineShortcuts({
   "as-table-loading": "flex items-center justify-center p-$xl text-current/60 whitespace-normal",
   "as-table-error":
     "scope-error flex items-center justify-center p-$xl text-current-hl whitespace-normal",
+  "as-table-query-overlay":
+    "inner-loading scope-primary rounded-r2 text-current-hl pointer-events-none",
+  "as-table-query-overlay-icon": "i-as-loading text-[3em]",
 
   /* ────────── Column menu ────────── */
   "as-column-menu-content":
@@ -287,7 +290,11 @@ export const asTableShortcuts = defineShortcuts({
     "": "scope-primary inline-flex items-stretch h-fingertip-m border-1 rounded-base layer-0 current-outline-hl min-w-[12em] max-w-[24em] flex-shrink-0 overflow-hidden",
     "hover:": "border-scope-light-3 dark:border-scope-dark-3",
     "focus-within:": "current-border-hl outline i8-apply-outline",
+    "aria-disabled:": "pointer-events-none cursor-wait",
   },
+  "as-filter-field-loading":
+    "flex items-center justify-center flex-1 min-w-0 h-full text-current-hl text-[1.25em] opacity-70",
+  "as-filter-field-loading-icon": "i-as-loading",
   "as-filter-field-label": {
     "": "inline-flex items-center px-$s layer-2 text-current/80 text-callout font-500 border-r-1 whitespace-nowrap flex-shrink-0 transition-colors duration-120",
     "[.as-filter-field:focus-within_&]:": "bg-current-hl/10 text-current-hl font-600",
@@ -295,14 +302,14 @@ export const asTableShortcuts = defineShortcuts({
   "as-filter-field-body": "flex items-stretch flex-1 min-w-0",
   "as-filter-field-input": "flex items-stretch flex-1 min-w-0 h-full cursor-text",
   "as-filter-field-chips":
-    "flex items-center gap-$xs flex-1 min-w-0 h-full px-$xs flex-nowrap overflow-x-auto overflow-y-hidden select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+    "flex items-center gap-$xs min-w-0 h-full px-$xs flex-nowrap overflow-x-auto overflow-y-hidden select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
   "as-filter-field-chip":
     "scope-primary inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
   "as-filter-field-chip-remove": {
     "": "cursor-pointer opacity-70 w-[14px] h-[14px] inline-grid place-items-center text-callout leading-none",
     "hover:": "opacity-100",
   },
-  "as-filter-field-search": `border-0 outline-none flex-shrink-0 w-[64px] p-0 m-0 bg-transparent ${strongText} placeholder:text-current/50`,
+  "as-filter-field-search": `border-0 outline-none flex-1 min-w-[64px] p-0 m-0 bg-transparent ${strongText} placeholder:text-current/50`,
   "as-filter-field-f4": {
     "": "scope-primary inline-grid place-items-center w-fingertip-s border-0 border-l-1 bg-transparent text-current/70 cursor-pointer flex-shrink-0 transition-colors duration-120 text-[1.25em] leading-none",
     "hover:": "layer-2 text-current-hl",
@@ -310,6 +317,7 @@ export const asTableShortcuts = defineShortcuts({
   },
   "as-filter-field-dropdown":
     "layer-0 z-[200] border-1 rounded-r2 shadow-popup min-w-[20em] max-w-[36em] flex flex-col outline-none w-[max(var(--reka-popper-anchor-width,320px),320px)]",
+  "as-filter-field-dropdown-body": "relative flex flex-col min-w-0 min-h-[12em]",
   "as-filter-field-dropdown-footer": {
     "": "flex gap-$s px-$s py-$xs border-t-1 justify-end",
     "[&_button]:":

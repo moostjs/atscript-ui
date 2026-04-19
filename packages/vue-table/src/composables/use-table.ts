@@ -111,6 +111,9 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     })
     .catch((err) => {
       state.metadataError.value = err instanceof Error ? err : new Error(String(err));
+    })
+    .finally(() => {
+      state.loadingMetadata.value = false;
     });
 
   return state;

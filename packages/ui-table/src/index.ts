@@ -53,3 +53,4 @@ export type { TableStateData, TableStateMethods } from "./state/table-state-type
 
 // ── Utils ──────────────────────────────────────────────────
 export { debounce } from "./utils/debounce";
+export { sameColumnSet, sortersEqual } from "./utils/equality";

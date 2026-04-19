@@ -105,5 +105,10 @@ function handleDeselectAll() {
         <slot :name="name" v-bind="slotProps ?? {}" />
       </template>
     </AsTableBase>
+    <div v-if="state.querying.value" class="as-table-query-overlay">
+      <slot name="query-loading">
+        <span class="as-table-query-overlay-icon" aria-hidden="true" />
+      </slot>
+    </div>
   </ListboxRoot>
 </template>

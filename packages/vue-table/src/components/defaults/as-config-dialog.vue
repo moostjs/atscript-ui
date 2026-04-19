@@ -13,6 +13,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "reka-ui";
+import { sortersEqual } from "@atscript/ui-table";
 import type { ConfigTab } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import AsFieldsSelector from "./as-fields-selector.vue";
@@ -55,22 +56,16 @@ function arraysEqual(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((v, i) => v === b[i]);
 }
 
-function sortersEqual(a: SortControl[], b: SortControl[]): boolean {
-  return (
-    a.length === b.length &&
-    a.every((v, i) => v.field === b[i].field && v.direction === b[i].direction)
-  );
-}
-
 function onApply() {
   if (!arraysEqual(state.columnNames.value, columnsModel.value)) {
     state.setColumnNames(columnsModel.value);
   }
   if (!arraysEqual(state.filterFields.value, filtersModel.value)) {
-    // Remove filter conditions for fields no longer in the list
+    // Drop conditions for fields no longer displayed so the filters watcher
+    // sees the change and flags mustRefresh.
     const newSet = new Set(filtersModel.value);
     for (const field of state.filterFields.value) {
-      if (!newSet.has(field)) {
+      if (!newSet.has(field) && state.filters.value[field]) {
         state.removeFieldFilter(field);
       }
     }
@@ -80,7 +75,6 @@ function onApply() {
     state.setSorters(sortersModel.value);
   }
   state.configDialogOpen.value = false;
-  state.query();
 }
 
 function onCancel() {

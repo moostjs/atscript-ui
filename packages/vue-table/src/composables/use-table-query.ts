@@ -2,7 +2,7 @@ import { watch } from "vue";
 import type { Uniquery, FilterExpr } from "@uniqu/core";
 import type { SortControl } from "@atscript/ui";
 import type { Client, PageResult } from "@atscript/db-client";
-import { buildTableQuery } from "@atscript/ui-table";
+import { buildTableQuery, sameColumnSet, sortersEqual } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 import type { TableStateInternals } from "./use-table-state";
 
@@ -93,12 +93,16 @@ export function useTableQuery(
     void executeQuery(true);
   }
 
-  // After first query, auto re-query on column/sorter changes
-  watch([() => state.columnNames.value, () => state.sorters.value], () => {
-    if (queryDetected) {
+  // After first query, auto re-query when the column set or sort order changes.
+  // Column reordering alone doesn't affect $select — the set is what matters.
+  watch(
+    [() => state.columnNames.value, () => state.sorters.value],
+    ([newCols, newSorters], [oldCols, oldSorters]) => {
+      if (!queryDetected) return;
+      if (sameColumnSet(oldCols, newCols) && sortersEqual(oldSorters, newSorters)) return;
       queryImmediate();
-    }
-  });
+    },
+  );
 
   // Filter/search changes just flag for refresh
   watch([() => state.filters.value, () => state.searchTerm.value], () => {

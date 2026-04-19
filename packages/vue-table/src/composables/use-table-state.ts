@@ -57,6 +57,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
   internals: TableStateInternals;
 } {
   const tableDef = shallowRef<TableDef | null>(null);
+  const loadingMetadata = ref(true);
   const allColumns = shallowRef<ColumnDef[]>([]);
 
   // Model refs — use external if provided, otherwise create local
@@ -111,6 +112,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
 
   const state: ReactiveTableState = {
     tableDef,
+    loadingMetadata,
     columnNames,
     columns,
     allColumns,

@@ -248,17 +248,12 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
           </tr>
         </template>
       </AsTableVirtualizer>
-      <tbody v-if="queryError || rows.length === 0">
+      <tbody v-if="queryError || (rows.length === 0 && !querying && columns.length > 0)">
         <tr>
           <td :colspan="columns.length + (hasValue ? 1 : 0) + (stretch ? 1 : 0)">
             <div v-if="queryError" class="as-table-error">
               <slot name="error" :error="queryError" :retry="onRetry">
                 <p>Error: {{ queryError.message }}</p>
-              </slot>
-            </div>
-            <div v-else-if="querying" class="as-table-loading">
-              <slot name="loading">
-                <p>Loading...</p>
               </slot>
             </div>
             <div v-else class="as-table-empty">
