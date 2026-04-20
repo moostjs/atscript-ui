@@ -46,8 +46,6 @@ let dictColumns: ReturnType<typeof computed<ColumnDef[]>> | undefined;
 
 if (hasValueHelp && info) {
   const factory = getDefaultClientFactory();
-  if (!factory)
-    throw new Error("AsFilterField requires a client factory set via setDefaultClientFactory().");
   vhClient = new ValueHelpClient(factory(info.path));
 
   innerState = useTable(info.path, {

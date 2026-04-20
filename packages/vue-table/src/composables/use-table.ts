@@ -1,6 +1,6 @@
 import type { Ref } from "vue";
 import { createTableDef, getVisibleColumns, type SortControl, type TableDef } from "@atscript/ui";
-import type { Client } from "@atscript/db-client";
+import { Client } from "@atscript/db-client";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import { createTableState, provideTableContext } from "./use-table-state";
@@ -24,16 +24,19 @@ export function clearTableCache() {
   cache.clear();
 }
 
-/** Default factory — must be set via `setDefaultClientFactory` before using url-only mode. */
-let defaultFactory: TableClientFactory | undefined;
+/** Built-in fallback: instantiates `new Client(url)` with default options. */
+const builtinFactory: TableClientFactory = (url) => new Client(url);
 
-/** Set the default client factory for all tables. Call once at app startup. */
+/** Default factory — overridable via `setDefaultClientFactory`; defaults to the built-in `new Client(url)` factory. */
+let defaultFactory: TableClientFactory = builtinFactory;
+
+/** Override the default client factory for all tables. Call once at app startup. */
 export function setDefaultClientFactory(factory: TableClientFactory) {
   defaultFactory = factory;
 }
 
-/** Get the default client factory. Returns undefined if not yet set. */
-export function getDefaultClientFactory(): TableClientFactory | undefined {
+/** Get the currently-active default client factory. */
+export function getDefaultClientFactory(): TableClientFactory {
   return defaultFactory;
 }
 
@@ -71,12 +74,6 @@ export interface UseTableOptions extends UseTableQueryOptions {
  */
 export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
   const factory = opts?.clientFactory ?? defaultFactory;
-  if (!factory) {
-    throw new Error(
-      "useTable requires a clientFactory option or a default factory set via setDefaultClientFactory().",
-    );
-  }
-
   const { client, defPromise } = resolveClient(url, factory);
 
   const { state, internals } = createTableState({
