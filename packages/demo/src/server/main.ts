@@ -9,6 +9,7 @@ import { CategoriesController } from "./controllers/categories.controller";
 import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
+import { OrdersActionsController } from "./controllers/orders-actions.controller";
 import { AuditLogController } from "./controllers/audit-log.controller";
 import { WorkflowsController } from "./controllers/workflows.controller";
 import { LoginWorkflow } from "./workflows/auth/login.workflow";
@@ -47,6 +48,7 @@ app.registerControllers(
   ProductsController,
   CustomersController,
   OrdersController,
+  OrdersActionsController,
   AuditLogController,
 );
 void app.init();
