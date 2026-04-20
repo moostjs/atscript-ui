@@ -36,13 +36,22 @@ function onError(e: { status?: number; message?: string }) {
         @error="onError"
       >
         <template #wf.loading>
-          <div class="p-4 text-sm text-gray-500">Loading invite…</div>
+          <div class="p-4 text-sm opacity-60">Loading invite…</div>
         </template>
         <template #wf.error="{ error, retry }">
           <div class="p-4 text-red-600 text-sm">
             <p>{{ (error as any)?.message ?? "Error" }}</p>
-            <button class="mt-2 text-blue-600 underline" @click="retry">Retry</button>
+            <button class="mt-2 underline" @click="retry">Retry</button>
           </div>
+        </template>
+        <template #form.submit="{ disabled, loading, text }">
+          <button
+            type="submit"
+            :disabled="disabled || loading"
+            class="c8-filled scope-primary h-fingertip-m px-$m rounded-base font-600 disabled:opacity-50"
+          >
+            {{ loading ? "Accepting…" : (text ?? "Accept & sign in") }}
+          </button>
         </template>
       </WfForm>
     </div>
