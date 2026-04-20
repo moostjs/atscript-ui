@@ -227,6 +227,7 @@ export default defineConfig({
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
+  srcExclude: ["superpowers/**"],
 
   vite: {
     plugins: [

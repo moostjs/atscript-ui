@@ -20,8 +20,7 @@ const playgroundShortcuts = defineShortcuts({
   "table-page-filters": "px-$l pb-$s empty:hidden",
   "table-page-body":
     "relative flex flex-col flex-1 mx-$l last:mb-$l min-w-0 min-h-0 border-1 rounded-r2 layer-0 overflow-hidden",
-  "table-loading-overlay":
-    "inner-loading scope-primary rounded-r2 text-current-hl",
+  "table-loading-overlay": "inner-loading scope-primary rounded-r2 text-current-hl",
   "table-loading-overlay-icon": "i-as-loading text-[3em]",
   "table-pagination": "flex items-center justify-center gap-$m py-$s flex-shrink-0",
   "table-pagination-size": "w-[5.5em]",

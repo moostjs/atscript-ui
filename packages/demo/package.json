@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "start": "node dist/server/server.js",
-    "test": "vitest run",
+    "test": "vp test --config vite.setup.config.ts",
     "db:setup": "pnpm dlx vite-node --config vite.setup.config.ts src/server/setup.ts"
   },
   "dependencies": {
