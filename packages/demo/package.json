@@ -1,0 +1,47 @@
+{
+  "name": "@atscript/demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "node dist/server/server.js",
+    "test": "vitest run",
+    "db:setup": "pnpm dlx vite-node --config vite.setup.config.ts src/server/setup.ts"
+  },
+  "dependencies": {
+    "@atscript/db-client": "catalog:",
+    "@atscript/ui": "workspace:^",
+    "@atscript/ui-fns": "workspace:^",
+    "@atscript/unocss-preset": "workspace:^",
+    "@atscript/vue-form": "workspace:^",
+    "@atscript/vue-table": "workspace:^",
+    "@atscript/vue-wf": "workspace:^",
+    "@unocss/reset": "catalog:",
+    "reka-ui": "catalog:",
+    "sirv": "catalog:",
+    "unocss": "catalog:",
+    "vue": "catalog:",
+    "vue-router": "catalog:",
+    "vunor": "catalog:"
+  },
+  "devDependencies": {
+    "@atscript/db": "catalog:",
+    "@atscript/db-sql-tools": "catalog:",
+    "@atscript/db-sqlite": "catalog:",
+    "@atscript/moost-db": "catalog:",
+    "@atscript/moost-wf": "workspace:^",
+    "@atscript/typescript": "catalog:",
+    "@moostjs/event-http": "catalog:",
+    "@moostjs/event-wf": "catalog:",
+    "@moostjs/vite": "catalog:",
+    "@swc/core": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "better-sqlite3": "^11",
+    "moost": "catalog:",
+    "typescript": "catalog:",
+    "unplugin-atscript": "catalog:",
+    "unplugin-swc": "catalog:",
+    "vite": "catalog:"
+  }
+}
