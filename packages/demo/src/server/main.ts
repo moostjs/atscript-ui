@@ -15,6 +15,7 @@ import { LoginWorkflow } from "./workflows/auth/login.workflow";
 import { RegisterWorkflow } from "./workflows/auth/register.workflow";
 import { ChangePasswordWorkflow } from "./workflows/security/change-password.workflow";
 import { EditProfileWorkflow } from "./workflows/profile/edit.workflow";
+import { InviteWorkflow } from "./workflows/users/invite.workflow";
 import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import type { DemoScope, DemoUserAttrs } from "./auth/arbac-scope";
@@ -39,6 +40,7 @@ app.registerControllers(
   RegisterWorkflow,
   ChangePasswordWorkflow,
   EditProfileWorkflow,
+  InviteWorkflow,
   UsersController,
   RolesController,
   CategoriesController,

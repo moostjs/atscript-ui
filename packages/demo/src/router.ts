@@ -10,6 +10,16 @@ const routes = [
     component: () => import("./client/pages/change-password.vue"),
   },
   { path: "/", name: "dashboard", component: () => import("./client/pages/dashboard.vue") },
+  {
+    path: "/users/invite",
+    name: "users-invite",
+    component: () => import("./client/pages/invite-admin.vue"),
+  },
+  {
+    path: "/invite/:token",
+    name: "invite-accept",
+    component: () => import("./client/pages/invite-accept.vue"),
+  },
   { path: "/:table", name: "table", component: () => import("./client/pages/table-page-route.vue") },
   {
     path: "/:table/:id/edit",

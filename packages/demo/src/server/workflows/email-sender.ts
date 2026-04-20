@@ -9,7 +9,10 @@ export function consoleEmailSender(payload: {
   context: Record<string, unknown>;
   token: string;
 }): Promise<void> {
-  const link = `http://localhost:3200/wf/resume?wfs=${encodeURIComponent(payload.token)}`;
+  const link =
+    payload.template === "user-invite"
+      ? `http://localhost:3200/invite/${encodeURIComponent(payload.token)}`
+      : `http://localhost:3200/wf/resume?wfs=${encodeURIComponent(payload.token)}`;
   // eslint-disable-next-line no-console
   console.log(
     `\n📧 [${payload.template}] → ${payload.target}\n` +

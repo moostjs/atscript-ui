@@ -26,6 +26,7 @@ const ALLOWED_WORKFLOWS = [
   "api/auth/register",
   "api/security/change-password",
   "api/profile/edit",
+  "api/users/invite",
 ] as const;
 
 @Controller()

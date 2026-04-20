@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AsTable, AsTableRoot, createDefaultTableComponents } from "@atscript/vue-table";
 import { useRouter } from "vue-router";
+import InviteButton from "./InviteButton.vue";
 
 const props = defineProps<{ path: string; label: string }>();
 const router = useRouter();
@@ -16,7 +17,9 @@ function onRowClick(row: Record<string, unknown>) {
   <div class="flex flex-col h-full">
     <header class="flex items-center justify-between p-4 border-1 border-b">
       <h1 class="text-lg font-semibold">{{ label }}</h1>
-      <div class="demo-table-toolbar flex gap-2" />
+      <div class="demo-table-toolbar flex gap-2">
+        <InviteButton v-if="path === 'users'" />
+      </div>
     </header>
 
     <AsTableRoot
