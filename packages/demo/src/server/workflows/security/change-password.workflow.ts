@@ -35,9 +35,7 @@ export class ChangePasswordWorkflow {
     if (!input || !input.oldPassword) {
       return httpInputRequired(ChangePasswordForm, ctx);
     }
-    const user = (await usersTable.findOne({ filter: { id: session.userId } })) as
-      | { id: number; password?: string; salt?: string }
-      | null;
+    const user = await usersTable.findOne({ filter: { id: session.userId } });
     if (!user || !(await verifyPassword(input.oldPassword, user.password ?? "", user.salt ?? ""))) {
       return httpInputRequired(ChangePasswordForm, ctx, {
         oldPassword: "Current password is incorrect",

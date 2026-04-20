@@ -4,11 +4,11 @@ packages:
 
 catalog:
   "@atscript/core": ^0.1.48
-  "@atscript/db": ^0.1.52
-  "@atscript/db-client": ^0.1.52
-  "@atscript/db-sql-tools": ^0.1.52
-  "@atscript/db-sqlite": ^0.1.52
-  "@atscript/moost-db": ^0.1.52
+  "@atscript/db": ^0.1.53
+  "@atscript/db-client": ^0.1.53
+  "@atscript/db-sql-tools": ^0.1.53
+  "@atscript/db-sqlite": ^0.1.53
+  "@atscript/moost-db": ^0.1.53
   "@atscript/typescript": ^0.1.48
   "@iconify/utils": ^3.1.0
   '@moostjs/arbac': ^0.6.7

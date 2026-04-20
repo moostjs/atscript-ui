@@ -14,7 +14,7 @@ describe("p1 crud", () => {
     await roles.insertOne({ name: "admin", description: "Full access" });
     const role = await roles.findOne({ filter: { name: "admin" } });
     expect(role).toBeTruthy();
-    const roleId = (role as { id: number }).id;
+    const roleId = role!.id;
 
     await users.insertOne({
       username: "alice",
@@ -26,6 +26,6 @@ describe("p1 crud", () => {
       salt: "",
     });
     const fetched = await users.findOne({ filter: { username: "alice" } });
-    expect((fetched as { email: string } | null)?.email).toBe("alice@demo.test");
+    expect(fetched?.email).toBe("alice@demo.test");
   });
 });

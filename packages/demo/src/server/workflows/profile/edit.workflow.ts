@@ -32,9 +32,7 @@ export class EditProfileWorkflow {
     if (!session) throw new HttpError(401, "Not authenticated");
 
     if (!input) {
-      const user = (await usersTable.findOne({ filter: { id: session.userId } })) as
-        | { username: string; email: string }
-        | null;
+      const user = await usersTable.findOne({ filter: { id: session.userId } });
       ctx.currentUsername = user?.username;
       ctx.currentEmail = user?.email;
       return httpInputRequired(ProfileForm, ctx);

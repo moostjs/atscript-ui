@@ -10,8 +10,7 @@ export interface RegisterForm {
     @meta.label 'Email'
     @ui.placeholder 'you@example.com'
     @meta.required 'Email is required'
-    @expect.minLength 3, 'Email is required'
-    email: string
+    email: string.email
 
     @meta.label 'Password'
     @ui.type 'password'

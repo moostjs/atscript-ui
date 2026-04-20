@@ -73,9 +73,7 @@ export class LoginWorkflow {
       return httpInputRequired(LoginForm, ctx, { __form: "Account is suspended" });
     }
 
-    const role = (await rolesTable.findOne({ filter: { id: user.roleId } })) as
-      | { id: number; name: SessionPayload["roleName"] }
-      | null;
+    const role = await rolesTable.findOne({ filter: { id: user.roleId } });
     if (!role) {
       return httpInputRequired(LoginForm, ctx, { __form: "User role not found" });
     }
@@ -84,7 +82,7 @@ export class LoginWorkflow {
     ctx.username = user.username;
     ctx.email = user.email;
     ctx.roleId = role.id;
-    ctx.roleName = role.name;
+    ctx.roleName = role.name as SessionPayload["roleName"];
     ctx.mfaEnabled = !!user.mfaEnabled;
     if (ctx.mfaEnabled) {
       ctx.otpCode = String(Math.floor(100000 + Math.random() * 900000));

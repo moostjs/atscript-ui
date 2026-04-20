@@ -51,15 +51,15 @@ export class RegisterWorkflow {
       return httpInputRequired(RegisterForm, ctx);
     }
 
-    const existingUsername = (await usersTable.findOne({
+    const existingUsername = await usersTable.findOne({
       filter: { username: input.username },
-    })) as { id: number } | null;
+    });
     if (existingUsername) {
       return httpInputRequired(RegisterForm, ctx, { username: "Username already taken" });
     }
-    const existingEmail = (await usersTable.findOne({
+    const existingEmail = await usersTable.findOne({
       filter: { email: input.email },
-    })) as { id: number } | null;
+    });
     if (existingEmail) {
       return httpInputRequired(RegisterForm, ctx, { email: "Email already registered" });
     }
@@ -96,9 +96,7 @@ export class RegisterWorkflow {
   @Step("register-create-user")
   async createUser(@WorkflowParam("context") ctx: RegisterCtx) {
     // Self-registered users → role 'viewer', status 'active'.
-    const role = (await rolesTable.findOne({ filter: { name: "viewer" } })) as
-      | { id: number; name: SessionPayload["roleName"] }
-      | null;
+    const role = await rolesTable.findOne({ filter: { name: "viewer" } });
     if (!role) throw new Error("viewer role missing");
 
     await usersTable.insertOne({
@@ -111,12 +109,10 @@ export class RegisterWorkflow {
       salt: ctx.passwordSalt,
     });
 
-    const fresh = (await usersTable.findOne({ filter: { username: ctx.username! } })) as
-      | { id: number }
-      | null;
+    const fresh = await usersTable.findOne({ filter: { username: ctx.username! } });
     ctx.userId = fresh?.id ?? 0;
     ctx.roleId = role.id;
-    ctx.roleName = role.name;
+    ctx.roleName = role.name as SessionPayload["roleName"];
     return;
   }
 

@@ -130,8 +130,8 @@ export class AsArbacDbController<
     return data;
   }
 
-  override meta() {
-    const raw = super.meta();
+  override async meta() {
+    const raw = await super.meta();
     const allowed = this.allowedColumns();
     if (!allowed) return raw;
     const fields: Record<string, { sortable: boolean; filterable: boolean }> = {};
