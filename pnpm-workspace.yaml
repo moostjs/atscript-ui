@@ -11,6 +11,7 @@ catalog:
   "@atscript/moost-db": ^0.1.52
   "@atscript/typescript": ^0.1.48
   "@iconify/utils": ^3.1.0
+  '@moostjs/arbac': ^0.6.7
   "@moostjs/event-http": ^0.6.7
   "@moostjs/event-wf": ^0.6.7
   "@moostjs/vite": ^0.6.7
