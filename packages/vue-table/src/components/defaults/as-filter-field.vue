@@ -145,9 +145,6 @@ const selectedValues = ref<unknown[]>(
   hasDropdown ? extractEqValues(state.filters.value[props.column.path]) : [],
 );
 
-const debouncedQuery = debounce(() => state.query(), 500);
-onBeforeUnmount(() => debouncedQuery.cancel());
-
 // Dropdown-only watchers: sync selectedValues ↔ eq conditions in state.filters
 if (hasDropdown) {
   // Forward: selectedValues → state.filters (preserves non-eq conditions)
@@ -168,7 +165,6 @@ if (hasDropdown) {
     } else {
       state.removeFieldFilter(props.column.path);
     }
-    debouncedQuery();
   });
 
   // Reverse: state.filters → selectedValues (extract eq values only)
@@ -306,12 +302,10 @@ function removeChip(chip: ChipItem) {
   } else {
     state.removeFieldFilter(props.column.path);
   }
-  debouncedQuery();
 }
 
 function clearAll() {
   state.removeFieldFilter(props.column.path);
-  debouncedQuery();
 }
 
 function openFilterDialog() {
@@ -330,7 +324,6 @@ function onBackspace() {
   } else {
     state.removeFieldFilter(props.column.path);
   }
-  debouncedQuery();
 }
 
 function onEnter() {
@@ -344,7 +337,6 @@ function onEnter() {
   const filled = existing.filter(isFilled);
   state.setFieldFilter(props.column.path, [...filled, parsed]);
   searchTerm.value = "";
-  debouncedQuery();
 }
 </script>
 

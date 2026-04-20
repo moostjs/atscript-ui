@@ -1,10 +1,12 @@
-import { watch } from "vue";
+import { onScopeDispose, watch } from "vue";
 import type { Uniquery, FilterExpr } from "@uniqu/core";
 import type { SortControl } from "@atscript/ui";
 import type { Client, PageResult } from "@atscript/db-client";
-import { buildTableQuery, sameColumnSet, sortersEqual } from "@atscript/ui-table";
+import { buildTableQuery, debounce, sameColumnSet, sortersEqual } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 import type { TableStateInternals } from "./use-table-state";
+
+const FILTER_DEBOUNCE_MS = 500;
 
 export interface UseTableQueryOptions {
   /** Always-applied Uniquery filter expression (AND'd with user filters). */
@@ -24,9 +26,11 @@ export interface UseTableQueryOptions {
 /**
  * Wire up query execution on a table state.
  *
- * Queries are explicit via `state.query()` / `state.queryNext()`.
- * After the first query, watchers on columns/sorters/filters/search
- * automatically re-query on changes.
+ * The table is model-driven: any mutation to columnNames / sorters / filters /
+ * searchTerm auto-triggers a re-query via watchers. Call sites mutate state
+ * and never invoke `state.query()` to "apply" a change. The public
+ * `state.query()` / `state.queryNext()` remain for user-initiated refresh
+ * and pagination.
  */
 export function useTableQuery(
   client: Client,
@@ -104,9 +108,17 @@ export function useTableQuery(
     },
   );
 
-  // Filter/search changes just flag for refresh
+  const debouncedAutoQuery = debounce(() => {
+    if (queryDetected) queryImmediate();
+  }, FILTER_DEBOUNCE_MS);
+
+  onScopeDispose(() => debouncedAutoQuery.cancel());
+
+  // Filters/search are noisy — coalesce into one debounced query, but flag
+  // mustRefresh immediately so UI can show a "refresh pending" indicator.
   watch([() => state.filters.value, () => state.searchTerm.value], () => {
     state.mustRefresh.value = true;
+    debouncedAutoQuery();
   });
 
   internals.setQueryFns(queryImmediate, queryNext);

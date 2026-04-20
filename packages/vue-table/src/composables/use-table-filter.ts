@@ -52,13 +52,11 @@ export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
 
   function apply() {
     state.setFieldFilter(column.path, conditions.value);
-    state.query();
   }
 
   function clear() {
     state.removeFieldFilter(column.path);
     conditions.value = [{ type: defCondition, value: [] }];
-    state.query();
   }
 
   function reset() {

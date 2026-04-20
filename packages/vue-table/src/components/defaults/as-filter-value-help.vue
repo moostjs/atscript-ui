@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { valueHelpDictPaths } from "@atscript/ui";
-import { debounce, isSimpleEq, type FilterCondition } from "@atscript/ui-table";
+import { isSimpleEq, type FilterCondition } from "@atscript/ui-table";
 import { ListboxRoot } from "reka-ui";
 import { useTable } from "../../composables/use-table";
 import AsTable from "../as-table.vue";
@@ -148,26 +148,18 @@ function onEnumSort(column: ColumnDef, direction: "asc" | "desc" | null) {
 
 const searchTerm = ref("");
 
-const debouncedFkSearch = innerState
-  ? debounce(() => {
-      innerState.searchTerm.value = searchTerm.value;
-      innerState.query();
-    }, 300)
-  : undefined;
-
-onBeforeUnmount(() => {
-  debouncedFkSearch?.cancel();
+// searchTerm → innerState.searchTerm (triggers central debounced auto-query)
+watch(searchTerm, (value) => {
+  if (innerState) innerState.searchTerm.value = value;
 });
 
 function onSearchInput(event: Event) {
   searchTerm.value = (event.target as HTMLInputElement).value;
-  debouncedFkSearch?.();
 }
 
 function onSearchEnter() {
   if (!innerState) return;
   innerState.searchTerm.value = searchTerm.value;
-  innerState.query();
 }
 
 const filteredEnumRows = computed(() => {
@@ -214,16 +206,11 @@ const hasActiveFilters = computed(() => {
 
 function clearSearch() {
   searchTerm.value = "";
-  if (innerState) {
-    innerState.searchTerm.value = "";
-    innerState.query();
-  }
+  if (innerState) innerState.searchTerm.value = "";
 }
 
 function clearAllFilters() {
-  if (!innerState) return;
-  innerState.resetFilters();
-  innerState.query();
+  innerState?.resetFilters();
 }
 
 function clearSearchAndFilters() {
@@ -231,7 +218,6 @@ function clearSearchAndFilters() {
   if (innerState) {
     innerState.searchTerm.value = "";
     innerState.resetFilters();
-    innerState.query();
   }
 }
 </script>

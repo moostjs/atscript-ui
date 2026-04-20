@@ -61,7 +61,6 @@ function handleFilter(column: ColumnDef) {
 
 function handleFiltersOff(column: ColumnDef) {
   state.removeFilterField(column.path);
-  state.query();
 }
 
 function handleSelectAll() {

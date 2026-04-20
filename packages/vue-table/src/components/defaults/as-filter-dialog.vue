@@ -128,7 +128,6 @@ function onApply() {
     state.removeFieldFilter(column.value.path);
   }
   state.closeFilterDialog();
-  state.query();
 }
 
 function onCancel() {
