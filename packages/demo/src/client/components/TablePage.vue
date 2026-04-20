@@ -34,6 +34,7 @@ async function bulkCancelFirstFive() {
     </header>
 
     <AsTableRoot
+      :key="path"
       v-slot="{ loadingMetadata }"
       :url="`/api/db/tables/${path}`"
       :components="components"
