@@ -4,7 +4,7 @@ import { useRoute } from "vue-router";
 import AppShell from "./client/components/AppShell.vue";
 
 const route = useRoute();
-const isAnonymous = computed(() => route.path === "/login");
+const isAnonymous = computed(() => route.path === "/login" || route.path === "/register");
 </script>
 
 <template>

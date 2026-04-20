@@ -10,6 +10,11 @@ import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
 import { AuditLogController } from "./controllers/audit-log.controller";
+import { WorkflowsController } from "./controllers/workflows.controller";
+import { LoginWorkflow } from "./workflows/auth/login.workflow";
+import { RegisterWorkflow } from "./workflows/auth/register.workflow";
+import { ChangePasswordWorkflow } from "./workflows/security/change-password.workflow";
+import { EditProfileWorkflow } from "./workflows/profile/edit.workflow";
 import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import type { DemoScope, DemoUserAttrs } from "./auth/arbac-scope";
@@ -29,6 +34,11 @@ app.adapter(new MoostWf());
 app.registerControllers(
   AuthController,
   MeController,
+  WorkflowsController,
+  LoginWorkflow,
+  RegisterWorkflow,
+  ChangePasswordWorkflow,
+  EditProfileWorkflow,
   UsersController,
   RolesController,
   CategoriesController,

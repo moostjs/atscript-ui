@@ -1,56 +1,61 @@
+import { hashPassword } from "./auth/password";
+
 export const seedRoles = () => [
   { name: "admin", description: "Full access" },
   { name: "manager", description: "Operational access" },
   { name: "viewer", description: "Read-only" },
 ];
 
-export const seedUsers = () => [
-  {
-    username: "admin",
-    email: "admin@demo.test",
-    roleId: 1,
-    status: "active",
-    mfaEnabled: false,
-    password: "",
-    salt: "",
-  },
-  {
-    username: "manager",
-    email: "manager@demo.test",
-    roleId: 2,
-    status: "active",
-    mfaEnabled: false,
-    password: "",
-    salt: "",
-  },
-  {
-    username: "viewer",
-    email: "viewer@demo.test",
-    roleId: 3,
-    status: "active",
-    mfaEnabled: false,
-    password: "",
-    salt: "",
-  },
-  {
-    username: "alice",
-    email: "alice@demo.test",
-    roleId: 2,
-    status: "suspended",
-    mfaEnabled: true,
-    password: "",
-    salt: "",
-  },
-  {
-    username: "bob",
-    email: "bob@demo.test",
-    roleId: 3,
-    status: "pending",
-    mfaEnabled: false,
-    password: "",
-    salt: "",
-  },
-];
+export const seedUsers = async () => {
+  const pw = await hashPassword("demo-password");
+  return [
+    {
+      username: "admin",
+      email: "admin@demo.test",
+      roleId: 1,
+      status: "active",
+      mfaEnabled: false,
+      password: pw.hash,
+      salt: pw.salt,
+    },
+    {
+      username: "manager",
+      email: "manager@demo.test",
+      roleId: 2,
+      status: "active",
+      mfaEnabled: false,
+      password: pw.hash,
+      salt: pw.salt,
+    },
+    {
+      username: "viewer",
+      email: "viewer@demo.test",
+      roleId: 3,
+      status: "active",
+      mfaEnabled: false,
+      password: pw.hash,
+      salt: pw.salt,
+    },
+    {
+      username: "alice",
+      email: "alice@demo.test",
+      roleId: 2,
+      status: "active",
+      mfaEnabled: true,
+      password: pw.hash,
+      salt: pw.salt,
+    },
+    {
+      username: "bob",
+      email: "bob@demo.test",
+      roleId: 3,
+      status: "pending",
+      mfaEnabled: false,
+      password: pw.hash,
+      salt: pw.salt,
+    },
+  ];
+};
 
 export const seedCategories = () => [
   { name: "Electronics", parentId: null, slug: "electronics" },

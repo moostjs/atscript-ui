@@ -41,7 +41,7 @@ const customersT = db.getTable(CustomersTable);
 const ordersT = db.getTable(OrdersTable);
 
 await rolesT.insertMany(seedRoles() as Record<string, unknown>[]);
-await usersT.insertMany(seedUsers() as Record<string, unknown>[]);
+await usersT.insertMany((await seedUsers()) as Record<string, unknown>[]);
 await categoriesT.insertMany(seedCategories() as Record<string, unknown>[]);
 await productsT.insertMany(seedProducts() as Record<string, unknown>[]);
 await customersT.insertMany(seedCustomers() as Record<string, unknown>[]);

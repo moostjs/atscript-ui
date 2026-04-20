@@ -1,0 +1,43 @@
+<script setup lang="ts">
+import { useRouter } from "vue-router";
+import { WfForm } from "@atscript/vue-wf";
+import { createDemoTypes } from "../types/demo-types";
+import { useMe } from "../api/use-me";
+
+const router = useRouter();
+const { refresh } = useMe();
+const types = createDemoTypes();
+
+async function onFinished() {
+  await refresh();
+  void router.push("/");
+}
+</script>
+
+<template>
+  <div class="p-6 max-w-[520px]">
+    <h1 class="text-lg font-semibold mb-4">Edit Profile</h1>
+    <WfForm
+      path="/api/wf"
+      name="api/profile/edit"
+      :types="types"
+      first-validation="on-submit"
+      @finished="onFinished"
+    >
+      <template #wf.loading>
+        <div class="p-4 text-sm text-gray-500">Loading…</div>
+      </template>
+      <template #wf.error="{ error, retry }">
+        <div class="p-4 text-red-600 text-sm">
+          <p>{{ (error as any)?.message ?? "Error" }}</p>
+          <button class="mt-2 text-blue-600 underline" @click="retry">Retry</button>
+        </div>
+      </template>
+    </WfForm>
+    <p class="mt-4 text-sm">
+      <RouterLink to="/profile/change-password" class="text-blue-600 underline"
+        >Change password</RouterLink
+      >
+    </p>
+  </div>
+</template>

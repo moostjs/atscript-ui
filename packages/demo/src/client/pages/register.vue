@@ -17,10 +17,10 @@ async function onFinished() {
 <template>
   <div class="min-h-screen grid place-items-center">
     <div class="flex flex-col gap-3 min-w-[360px] p-6 border-1 rounded">
-      <h1 class="text-lg font-semibold">AtShop — Sign In</h1>
+      <h1 class="text-lg font-semibold">AtShop — Register</h1>
       <WfForm
         path="/api/wf"
-        name="api/auth/login"
+        name="api/auth/register"
         :types="types"
         first-validation="on-submit"
         @finished="onFinished"
@@ -36,7 +36,7 @@ async function onFinished() {
         </template>
       </WfForm>
       <p class="text-sm text-gray-500">
-        No account? <RouterLink to="/register" class="text-blue-600 underline">Register</RouterLink>
+        Already have an account? <RouterLink to="/login" class="text-blue-600 underline">Sign in</RouterLink>
       </p>
     </div>
   </div>
