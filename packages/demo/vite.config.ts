@@ -12,10 +12,10 @@ export default defineConfig({
     UnoCSS(),
     vue(),
     moostVite({
-      entry: "./src/server/main.ts",
+      entry: "/src/server/main.ts",
       middleware: true,
       prefix: "/api",
-      ssrEntry: "./src/entry-server.ts",
+      ssrEntry: "/src/entry-server.ts",
     }),
     swc.vite(),
   ],
@@ -26,6 +26,6 @@ export default defineConfig({
   },
   oxc: false,
   ssr: {
-    external: ["@atscript/db", "@atscript/db-sqlite", "better-sqlite3"],
+    noExternal: ["@moostjs/vite"],
   },
 });
