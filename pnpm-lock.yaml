@@ -87,6 +87,9 @@ catalogs:
     reka-ui:
       specifier: ^2.9.2
       version: 2.9.2
+    sirv:
+      specifier: ^3.0.2
+      version: 3.0.2
     typescript:
       specifier: ^5
       version: 5.9.3
@@ -147,6 +150,103 @@ importers:
       vue:
         specifier: 'catalog:'
         version: 3.5.30(typescript@5.9.3)
+
+  packages/demo:
+    dependencies:
+      '@atscript/db-client':
+        specifier: 'catalog:'
+        version: 0.1.52(@atscript/db@0.1.52)(@atscript/typescript@0.1.48)
+      '@atscript/ui':
+        specifier: workspace:^
+        version: link:../ui
+      '@atscript/ui-fns':
+        specifier: workspace:^
+        version: link:../ui-fns
+      '@atscript/unocss-preset':
+        specifier: workspace:^
+        version: link:../unocss-preset
+      '@atscript/vue-form':
+        specifier: workspace:^
+        version: link:../vue-form
+      '@atscript/vue-table':
+        specifier: workspace:^
+        version: link:../vue-table
+      '@atscript/vue-wf':
+        specifier: workspace:^
+        version: link:../vue-wf
+      '@unocss/reset':
+        specifier: 'catalog:'
+        version: 66.6.8
+      reka-ui:
+        specifier: 'catalog:'
+        version: 2.9.2(vue@3.5.30(typescript@5.9.3))
+      sirv:
+        specifier: 'catalog:'
+        version: 3.0.2
+      unocss:
+        specifier: 'catalog:'
+        version: 66.6.8(@emnapi/core@1.9.0)(@emnapi/runtime@1.9.0)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(jiti@2.6.1)(typescript@5.9.3))
+      vue:
+        specifier: 'catalog:'
+        version: 3.5.30(typescript@5.9.3)
+      vue-router:
+        specifier: 'catalog:'
+        version: 4.6.4(vue@3.5.30(typescript@5.9.3))
+      vunor:
+        specifier: 'catalog:'
+        version: 0.1.6(@emnapi/core@1.9.0)(@emnapi/runtime@1.9.0)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(jiti@2.6.1)(typescript@5.9.3))(typescript@5.9.3)
+    devDependencies:
+      '@atscript/db':
+        specifier: 'catalog:'
+        version: 0.1.52(@atscript/core@0.1.48)(@atscript/typescript@0.1.48)(@uniqu/core@0.1.5)
+      '@atscript/db-sql-tools':
+        specifier: 'catalog:'
+        version: 0.1.52(@atscript/db@0.1.52)(@uniqu/core@0.1.5)
+      '@atscript/db-sqlite':
+        specifier: 'catalog:'
+        version: 0.1.52(@atscript/core@0.1.48)(@atscript/db-sql-tools@0.1.52(@atscript/db@0.1.52)(@uniqu/core@0.1.5))(@atscript/db@0.1.52)(@atscript/typescript@0.1.48)(@uniqu/core@0.1.5)(better-sqlite3@11.10.0)
+      '@atscript/moost-db':
+        specifier: 'catalog:'
+        version: 0.1.52(@atscript/db@0.1.52)(@atscript/typescript@0.1.48)(@moostjs/event-http@0.6.7(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.9)(moost@0.6.7)(wooks@0.7.9))(@uniqu/core@0.1.5)(moost@0.6.7)
+      '@atscript/moost-wf':
+        specifier: workspace:^
+        version: link:../moost-wf
+      '@atscript/typescript':
+        specifier: 'catalog:'
+        version: 0.1.48(@atscript/core@0.1.48)(@atscript/db@0.1.52)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.9)(wooks@0.7.9)
+      '@moostjs/event-http':
+        specifier: 'catalog:'
+        version: 0.6.7(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.9)(moost@0.6.7)(wooks@0.7.9)
+      '@moostjs/event-wf':
+        specifier: 'catalog:'
+        version: 0.6.7(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/mate@0.4.0)(@wooksjs/event-core@0.7.9)(@wooksjs/event-http@0.7.9(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.9)(wooks@0.7.9))(@wooksjs/http-body@0.7.9(@wooksjs/event-core@0.7.9)(@wooksjs/event-http@0.7.9(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.9)(wooks@0.7.9)))(moost@0.6.7)(wooks@0.7.9)
+      '@moostjs/vite':
+        specifier: 'catalog:'
+        version: 0.6.7(@moostjs/event-http@0.6.7(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.9)(moost@0.6.7)(wooks@0.7.9))(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(jiti@2.6.1)(typescript@5.9.3))(moost@0.6.7)(sirv@3.0.2)
+      '@swc/core':
+        specifier: 'catalog:'
+        version: 1.15.18(@swc/helpers@0.5.19)
+      '@vitejs/plugin-vue':
+        specifier: 'catalog:'
+        version: 6.0.5(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(jiti@2.6.1)(typescript@5.9.3))(vue@3.5.30(typescript@5.9.3))
+      better-sqlite3:
+        specifier: ^11
+        version: 11.10.0
+      moost:
+        specifier: 'catalog:'
+        version: 0.6.7
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+      unplugin-atscript:
+        specifier: 'catalog:'
+        version: 0.1.48(@atscript/core@0.1.48)(@atscript/typescript@0.1.48)
+      unplugin-swc:
+        specifier: 'catalog:'
+        version: 1.5.9(@swc/core@1.15.18(@swc/helpers@0.5.19))
+      vite:
+        specifier: npm:@voidzero-dev/vite-plus-core@0.1.12
+        version: '@voidzero-dev/vite-plus-core@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(jiti@2.6.1)(typescript@5.9.3)'
 
   packages/moost-wf:
     devDependencies:
@@ -634,9 +734,6 @@ packages:
 
   '@iconify/utils@3.1.0':
     resolution: {integrity: sha512-Zlzem1ZXhI1iHeeERabLNzBHdOa4VhQbqAcOQaMKuTuyZCpwKbC2R4Dd0Zo3g9EAc+Y4fiarO8HIHRAth7+skw==}
-
-  '@internationalized/date@3.12.0':
-    resolution: {integrity: sha512-/PyIMzK29jtXaGU23qTvNZxvBXRtKbNnGDFD+PY6CZw/Y8Ex8pFUzkuCJCG9aOqmShjqhS9mPqP6Dk5onQY8rQ==}
 
   '@internationalized/date@3.12.1':
     resolution: {integrity: sha512-6IedsVWXyq4P9Tj+TxuU8WGWM70hYLl12nbYU8jkikVpa6WXapFazPUcHUMDMoWftIDE2ILDkFFte6W2nFCkRQ==}
@@ -3549,10 +3646,6 @@ snapshots:
       '@iconify/types': 2.0.0
       mlly: 1.8.2
 
-  '@internationalized/date@3.12.0':
-    dependencies:
-      '@swc/helpers': 0.5.19
-
   '@internationalized/date@3.12.1':
     dependencies:
       '@swc/helpers': 0.5.19
@@ -5496,13 +5589,13 @@ snapshots:
     dependencies:
       '@floating-ui/dom': 1.7.6
       '@floating-ui/vue': 1.1.11(vue@3.5.30(typescript@5.9.3))
-      '@internationalized/date': 3.12.0
+      '@internationalized/date': 3.12.1
       '@internationalized/number': 3.6.5
       '@tanstack/vue-virtual': 3.13.23(vue@3.5.30(typescript@5.9.3))
       '@vueuse/core': 14.2.1(vue@3.5.30(typescript@5.9.3))
       '@vueuse/shared': 14.2.1(vue@3.5.30(typescript@5.9.3))
       aria-hidden: 1.2.6
-      defu: 6.1.4
+      defu: 6.1.7
       ohash: 2.0.11
       vue: 3.5.30(typescript@5.9.3)
     transitivePeerDependencies:
