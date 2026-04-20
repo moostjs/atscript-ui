@@ -35,6 +35,8 @@
     "@moostjs/event-http": "catalog:",
     "@moostjs/event-wf": "catalog:",
     "@moostjs/vite": "catalog:",
+    "@wooksjs/event-core": "catalog:",
+    "@wooksjs/event-http": "catalog:",
     "@swc/core": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "better-sqlite3": "^11",
