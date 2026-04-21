@@ -2,9 +2,9 @@
 import { useFormState } from "../composables/use-form-state";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
-import type { FormDef } from "@atscript/ui";
+import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getFormValidator, resolveFormProp, getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
-import type { ValueHelpClientFactory } from "../composables/use-value-help";
+import { CLIENT_FACTORY_KEY } from "../composables/use-value-help";
 import type { TFnScope } from "@atscript/ui-fns";
 import { computed, provide, ref, toRaw, type Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
@@ -22,8 +22,13 @@ export interface Props<TF, TC> {
    */
   types: TAsTypeComponents;
   errors?: Record<string, string | undefined>;
-  /** Client factory for FK ref fields (value-help). Creates Client instances from URL paths. */
-  valueHelpClientFactory?: ValueHelpClientFactory;
+  /**
+   * Per-form client factory override. Creates `Client` instances from URL paths
+   * for FK value-help pickers inside this form. Falls back to the app-wide
+   * default (`setDefaultClientFactory`) and then to the built-in `new Client(url)`
+   * factory when unset.
+   */
+  clientFactory?: ClientFactory;
 }
 
 const props = defineProps<Props<TFormData, TFormContext>>();
@@ -76,8 +81,8 @@ provide(
   "__as_errors",
   computed(() => props.errors),
 );
-if (props.valueHelpClientFactory) {
-  provide("__as_vh_client_factory", props.valueHelpClientFactory);
+if (props.clientFactory) {
+  provide(CLIENT_FACTORY_KEY, props.clientFactory);
 }
 
 // ── Form-level resolved props ──────────────────────────────

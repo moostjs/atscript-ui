@@ -27,10 +27,10 @@ export interface UseTableQueryOptions {
  * Wire up query execution on a table state.
  *
  * The table is model-driven: any mutation to columnNames / sorters / filters /
- * searchTerm auto-triggers a re-query via watchers. Call sites mutate state
- * and never invoke `state.query()` to "apply" a change. The public
- * `state.query()` / `state.queryNext()` remain for user-initiated refresh
- * and pagination.
+ * searchTerm / pagination auto-triggers a re-query via watchers. Call sites
+ * mutate state and never invoke `state.query()` to "apply" a change. The
+ * public `state.query()` / `state.queryNext()` remain for user-initiated
+ * refresh and append-on-scroll.
  */
 export function useTableQuery(
   client: Client,
@@ -40,6 +40,10 @@ export function useTableQuery(
 ): void {
   let generation = 0;
   let queryDetected = false;
+  let skipPaginationWatch = 0;
+  internals.setSuppressPaginationWatch(() => {
+    skipPaginationWatch++;
+  });
 
   async function executeQuery(append: boolean) {
     state.mustRefresh.value = false;
@@ -93,9 +97,23 @@ export function useTableQuery(
 
   function queryNext() {
     const nextPage = state.pagination.value.page + 1;
+    skipPaginationWatch++;
     state.pagination.value = { ...state.pagination.value, page: nextPage };
     void executeQuery(true);
   }
+
+  watch(
+    () => state.pagination.value,
+    (next, prev) => {
+      if (skipPaginationWatch > 0) {
+        skipPaginationWatch--;
+        return;
+      }
+      if (!queryDetected) return;
+      if (next.page === prev.page && next.itemsPerPage === prev.itemsPerPage) return;
+      queryImmediate();
+    },
+  );
 
   // After first query, auto re-query when the column set or sort order changes.
   // Column reordering alone doesn't affect $select — the set is what matters.

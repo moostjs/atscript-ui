@@ -26,6 +26,14 @@ export interface UseWfFormOptions {
   fetchOptions?: RequestInit;
   /** Whether to auto-start the workflow on mount (default: true) */
   autoStart?: boolean;
+  /**
+   * Pre-existing workflow state token to resume from. Use when the token lives
+   * outside `window.location.search` — e.g. encoded in a Vue Router path param
+   * (`/invite/:token`) or pulled from app state. Included in the first request
+   * so the server resumes the paused workflow instead of starting a new one.
+   * Takes precedence over `tokenTransport: "query"` auto-detection.
+   */
+  initialToken?: string;
 }
 
 export interface UseWfFormReturn {
@@ -88,6 +96,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   };
 
   function readInitialToken(): string | undefined {
+    // Explicit prop wins — lets callers seed from path params / app state.
+    if (options.initialToken) return options.initialToken;
     if (transport === "query") {
       const params = new URLSearchParams(window.location.search);
       return params.get(tokenName) ?? undefined;
@@ -113,6 +123,21 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     extractToken(data);
 
     if (data.finished) {
+      finished.value = true;
+      response.value = data;
+      formDef.value = null;
+      formData.value = null;
+      lastPayloadJson = undefined;
+      return;
+    }
+
+    // Outlet-pause response (e.g. `outletEmail` from moost-wf): the workflow
+    // paused waiting for out-of-band resumption (magic link, webhook, etc.).
+    // From the current client's perspective their session is complete —
+    // someone else will resume via the token. Treat it as finished so
+    // consumers get a clean `@finished` signal instead of falling into the
+    // "Unexpected response format" branch and re-submitting.
+    if (data.sent === true || typeof data.outlet === "string") {
       finished.value = true;
       response.value = data;
       formDef.value = null;

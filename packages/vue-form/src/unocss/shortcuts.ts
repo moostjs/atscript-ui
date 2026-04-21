@@ -102,6 +102,9 @@ export const asFormShortcuts = defineShortcuts({
 
   "as-object-error": "scope-error text-callout text-current-hl mb-$xs",
 
+  /* ────────── Workflow form-level error banner ────────── */
+  "as-wf-form-error": "scope-error surface-600 border-1 rounded-base px-$m py-$s mb-$m text-body",
+
   "as-array": "flex flex-col gap-0 my-$m",
   "as-array--root": "",
   "as-array--nested":

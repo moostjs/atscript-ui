@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef, ValueHelpInfo } from "@atscript/ui";
-import { ValueHelpClient, valueHelpDictPaths } from "@atscript/ui";
+import { ValueHelpClient, valueHelpDictPaths, getDefaultClientFactory } from "@atscript/ui";
 import {
   debounce,
   isFilled,
@@ -19,7 +19,7 @@ import {
   ComboboxViewport,
 } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
-import { useTable, getDefaultClientFactory } from "../../composables/use-table";
+import { useTable } from "../../composables/use-table";
 import { useDragScroll } from "../../composables/use-drag-scroll";
 import AsTableBase from "../as-table-base.vue";
 

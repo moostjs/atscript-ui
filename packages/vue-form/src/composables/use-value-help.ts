@@ -1,10 +1,18 @@
-import { ValueHelpClient, str } from "@atscript/ui";
+import { ValueHelpClient, str, getDefaultClientFactory, type ClientFactory } from "@atscript/ui";
 import type { ValueHelpInfo } from "@atscript/ui";
-import type { Client } from "@atscript/db-client";
-import { type Ref, type ShallowRef, inject, onUnmounted, ref, shallowRef, watch } from "vue";
+import {
+  type InjectionKey,
+  type Ref,
+  type ShallowRef,
+  inject,
+  onUnmounted,
+  ref,
+  shallowRef,
+  watch,
+} from "vue";
 
-/** Factory that creates a Client from a URL path. Same type as vue-table's TableClientFactory. */
-export type ValueHelpClientFactory = (url: string) => Client;
+/** Vue inject key used by `AsForm` to publish a per-form `ClientFactory` override. */
+export const CLIENT_FACTORY_KEY: InjectionKey<ClientFactory> = Symbol("as-client-factory");
 
 export interface UseValueHelpOptions {
   info: ValueHelpInfo;
@@ -32,12 +40,8 @@ const DEBOUNCE_MS = 300;
 export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
   const { info, model, onBlur } = options;
 
-  const factory = inject<ValueHelpClientFactory>("__as_vh_client_factory");
-  if (!factory) {
-    throw new Error(
-      "useValueHelp requires a clientFactory. Provide it via the valueHelpClientFactory prop on AsForm.",
-    );
-  }
+  // Resolution order: nearest-ancestor prop override → app-wide default → built-in `new Client(url)`.
+  const factory = inject(CLIENT_FACTORY_KEY, null) ?? getDefaultClientFactory();
   const dbClient = factory(info.path);
   const vhClient = new ValueHelpClient(dbClient);
 

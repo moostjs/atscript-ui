@@ -2,14 +2,13 @@
 export type { TAsTableComponents, ReactiveTableState, ColumnMenuConfig, ConfigTab } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
+export { useTable, clearTableCache, type UseTableOptions } from "./composables/use-table";
 export {
-  useTable,
-  clearTableCache,
   setDefaultClientFactory,
   getDefaultClientFactory,
-  type UseTableOptions,
-  type TableClientFactory,
-} from "./composables/use-table";
+  resetDefaultClientFactory,
+  type ClientFactory,
+} from "@atscript/ui";
 export {
   useTableContext,
   createTableState,

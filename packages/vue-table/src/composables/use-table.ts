@@ -1,14 +1,18 @@
 import type { Ref } from "vue";
-import { createTableDef, getVisibleColumns, type SortControl, type TableDef } from "@atscript/ui";
-import { Client } from "@atscript/db-client";
+import {
+  createTableDef,
+  getVisibleColumns,
+  getDefaultClientFactory,
+  type ClientFactory,
+  type SortControl,
+  type TableDef,
+} from "@atscript/ui";
+import type { Client } from "@atscript/db-client";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import { createTableState, provideTableContext } from "./use-table-state";
 import { useTableQuery, type UseTableQueryOptions } from "./use-table-query";
 import { useTableSelection } from "./use-table-selection";
-
-/** Factory function that creates a client from a URL path. */
-export type TableClientFactory = (url: string) => Client;
 
 /** Cached entry: the client instance + parsed TableDef promise. */
 interface CacheEntry {
@@ -24,22 +28,6 @@ export function clearTableCache() {
   cache.clear();
 }
 
-/** Built-in fallback: instantiates `new Client(url)` with default options. */
-const builtinFactory: TableClientFactory = (url) => new Client(url);
-
-/** Default factory — overridable via `setDefaultClientFactory`; defaults to the built-in `new Client(url)` factory. */
-let defaultFactory: TableClientFactory = builtinFactory;
-
-/** Override the default client factory for all tables. Call once at app startup. */
-export function setDefaultClientFactory(factory: TableClientFactory) {
-  defaultFactory = factory;
-}
-
-/** Get the currently-active default client factory. */
-export function getDefaultClientFactory(): TableClientFactory {
-  return defaultFactory;
-}
-
 export interface UseTableOptions extends UseTableQueryOptions {
   /** Default page size (default: 50). */
   limit?: number;
@@ -53,8 +41,8 @@ export interface UseTableOptions extends UseTableQueryOptions {
   manageSelection?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
-  /** Factory to create a client from a URL. Falls back to default factory. */
-  clientFactory?: TableClientFactory;
+  /** Factory to create a client from a URL. Falls back to the app-wide default set via `setDefaultClientFactory` (or the built-in `new Client(url)` factory if unset). */
+  clientFactory?: ClientFactory;
   /** Component overrides for table rendering. */
   components?: TAsTableComponents;
   /** Whether to provide table context to the subtree (default: true). */
@@ -73,7 +61,7 @@ export interface UseTableOptions extends UseTableQueryOptions {
  * @param url — Table endpoint URL (e.g. "/db/tables/products")
  */
 export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
-  const factory = opts?.clientFactory ?? defaultFactory;
+  const factory = opts?.clientFactory ?? getDefaultClientFactory();
   const { client, defPromise } = resolveClient(url, factory);
 
   const { state, internals } = createTableState({
@@ -118,7 +106,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
 
 function resolveClient(
   url: string,
-  factory: TableClientFactory,
+  factory: ClientFactory,
 ): { client: Client; defPromise: Promise<TableDef> } {
   const cached = cache.get(url);
   if (cached) {

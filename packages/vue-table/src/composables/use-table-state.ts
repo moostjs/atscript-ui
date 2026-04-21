@@ -41,6 +41,8 @@ export interface TableStateInternals {
   init(def: TableDef): void;
   /** Wire up query/queryNext functions from useTableQuery. */
   setQueryFns(query: () => void, queryNext: () => void): void;
+  /** Wire up a callback that suppresses the next pagination watcher trigger. */
+  setSuppressPaginationWatch(fn: () => void): void;
 }
 
 /**
@@ -103,9 +105,11 @@ export function createTableState(opts?: CreateTableStateOptions): {
 
   let _queryFn: (() => void) | undefined;
   let _queryNextFn: (() => void) | undefined;
+  let _suppressPaginationWatch: (() => void) | undefined;
 
   function resetPagination() {
     if (pagination.value.page !== 1) {
+      _suppressPaginationWatch?.();
       pagination.value = { ...pagination.value, page: 1 };
     }
   }
@@ -202,6 +206,9 @@ export function createTableState(opts?: CreateTableStateOptions): {
     setQueryFns(q: () => void, qn: () => void) {
       _queryFn = q;
       _queryNextFn = qn;
+    },
+    setSuppressPaginationWatch(fn: () => void) {
+      _suppressPaginationWatch = fn;
     },
   };
 

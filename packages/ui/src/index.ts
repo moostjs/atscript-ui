@@ -118,6 +118,14 @@ export {
 } from "./value-help";
 export type { ValueHelpInfo, ValueHelpSearchOptions, ValueHelpResult } from "./value-help";
 
+// ── Client factory (shared by tables + value-help) ──────────
+export {
+  setDefaultClientFactory,
+  getDefaultClientFactory,
+  resetDefaultClientFactory,
+  type ClientFactory,
+} from "./client-factory";
+
 // ── Shared utilities ────────────────────────────────────────
 export { str } from "./shared/str";
 

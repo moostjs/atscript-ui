@@ -34,11 +34,13 @@ export { useFormUnion } from "./composables/use-form-union";
 export { useConsumeUnionContext, formatIndexedLabel } from "./composables/use-form-context";
 export { createDefaultTypes } from "./composables/create-default-types";
 export { useValueHelp } from "./composables/use-value-help";
-export type {
-  UseValueHelpOptions,
-  UseValueHelpReturn,
-  ValueHelpClientFactory,
-} from "./composables/use-value-help";
+export type { UseValueHelpOptions, UseValueHelpReturn } from "./composables/use-value-help";
+export {
+  setDefaultClientFactory,
+  getDefaultClientFactory,
+  resetDefaultClientFactory,
+  type ClientFactory,
+} from "@atscript/ui";
 
 // Composable types (for advanced use)
 export type {

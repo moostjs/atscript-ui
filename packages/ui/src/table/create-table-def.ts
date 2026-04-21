@@ -40,6 +40,9 @@ export function createTableDef(meta: MetaResponse): TableDef {
 
   for (const [path, prop] of flatMap.entries()) {
     if (path === "") continue;
+    // Sub-paths become columns only when the server lists them in meta.fields —
+    // keeps atomic JSON/document columns from leaking their internals as synthetic columns.
+    if (path.includes(".") && !(path in meta.fields)) continue;
 
     const fieldMeta = meta.fields[path];
     const options = extractLiteralOptions(prop);

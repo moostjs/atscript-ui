@@ -3,7 +3,7 @@ import { computed, toRaw, watch, type Component } from "vue";
 import { useWfForm } from "./use-wf-form";
 import type { UseWfFormOptions } from "./use-wf-form";
 import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
-import type { FormDef } from "@atscript/ui";
+import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
 import type { TFormState } from "@atscript/vue-form";
 
@@ -14,6 +14,8 @@ interface WfFormProps extends UseWfFormOptions {
   firstValidation?: TFormState["firstValidation"];
   /** Custom components map passed to AsForm */
   components?: Record<string, Component>;
+  /** Per-form client factory override (FK value-help). Forwarded to AsForm. */
+  clientFactory?: ClientFactory;
 }
 
 const props = withDefaults(defineProps<WfFormProps>(), {
@@ -113,20 +115,31 @@ function onAction(name: string, data: unknown) {
       <slot name="wf.finished" :response="wf.response.value" />
     </div>
 
-    <AsForm
-      v-else-if="wf.formDef.value && wf.formData.value"
-      :key="wf.formKey.value"
-      :def="wf.formDef.value"
-      :form-data="wf.formData.value"
-      :types="types"
-      :errors="wf.errors.value"
-      :form-context="wf.formContext.value"
-      :first-validation="firstValidation"
-      :components="components"
-      @submit="onSubmit"
-      @action="onAction"
-      @unsupported-action="onAction"
-    >
+    <div v-else-if="wf.formDef.value && wf.formData.value">
+      <slot
+        v-if="wf.error.value"
+        name="form.error"
+        :error="wf.error.value"
+        :retry="wf.retry"
+      >
+        <div role="alert" class="as-wf-form-error">
+          {{ (wf.error.value as { message?: string })?.message ?? "Error" }}
+        </div>
+      </slot>
+      <AsForm
+        :key="wf.formKey.value"
+        :def="wf.formDef.value"
+        :form-data="wf.formData.value"
+        :types="types"
+        :errors="wf.errors.value"
+        :form-context="wf.formContext.value"
+        :first-validation="firstValidation"
+        :components="components"
+        :client-factory="clientFactory"
+        @submit="onSubmit"
+        @action="onAction"
+        @unsupported-action="onAction"
+      >
       <template #form.header="slotProps">
         <slot name="form.header" v-bind="{ ...slotProps, loading: wf.loading.value }" />
       </template>
@@ -146,6 +159,7 @@ function onAction(name: string, data: unknown) {
       <template #form.footer="slotProps">
         <slot name="form.footer" v-bind="{ ...slotProps, loading: wf.loading.value }" />
       </template>
-    </AsForm>
+      </AsForm>
+    </div>
   </slot>
 </template>

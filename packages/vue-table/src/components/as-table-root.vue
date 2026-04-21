@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { SortControl } from "@atscript/ui";
+import type { SortControl, ClientFactory } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { TAsTableComponents } from "../types";
-import { useTable, type TableClientFactory } from "../composables/use-table";
+import { useTable } from "../composables/use-table";
 import type { PageResult } from "@atscript/db-client";
 import { AsFilterDialog, AsConfigDialog } from "./defaults";
 
@@ -12,8 +12,8 @@ const props = withDefaults(
   defineProps<{
     /** Table endpoint URL (e.g. "/db/tables/products"). */
     url: string;
-    /** Factory to create a client from a URL. Falls back to default factory. */
-    clientFactory?: TableClientFactory;
+    /** Factory to create a client from a URL. Falls back to the app-wide default set via `setDefaultClientFactory` (or the built-in `new Client(url)` factory if unset). */
+    clientFactory?: ClientFactory;
     components?: TAsTableComponents;
     limit?: number;
     forceFilters?: FilterExpr;
