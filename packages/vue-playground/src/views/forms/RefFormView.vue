@@ -1,13 +1,11 @@
 <script setup lang="ts">
 import { inject } from "vue";
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
-import { Client } from "@atscript/db-client";
 import { OrderForm } from "../../forms/ref-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();
 const { def, formData } = useForm(OrderForm);
-const clientFactory = (url: string) => new Client(url);
 
 function onSubmit(data: unknown) {
   console.log("OrderForm submitted:", data);
@@ -29,7 +27,6 @@ function onSubmit(data: unknown) {
           :def="def"
           :form-data="formData"
           :types="types"
-          :value-help-client-factory="clientFactory"
           @submit="onSubmit"
         />
       </div>

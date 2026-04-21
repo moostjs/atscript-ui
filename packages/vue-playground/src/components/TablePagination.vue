@@ -27,7 +27,6 @@ const currentPage = computed({
   get: () => state.pagination.value.page,
   set: (page) => {
     state.pagination.value = { ...state.pagination.value, page };
-    state.query();
   },
 });
 
@@ -35,7 +34,6 @@ const itemsPerPage = computed({
   get: () => String(state.pagination.value.itemsPerPage),
   set: (value) => {
     state.pagination.value = { page: 1, itemsPerPage: Number(value) };
-    state.query();
   },
 });
 
