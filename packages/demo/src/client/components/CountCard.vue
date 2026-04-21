@@ -3,7 +3,7 @@ import { onMounted, ref } from "vue";
 import { RouterLink } from "vue-router";
 import { clientForTable } from "../api/client-factory";
 
-const props = defineProps<{ path: string; label: string }>();
+const props = defineProps<{ path: string; label: string; icon?: string }>();
 const count = ref<number | null>(null);
 const err = ref<string | null>(null);
 
@@ -17,10 +17,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <RouterLink :to="`/${path}`" class="block p-4 border-1 rounded hover:bg-black/5">
-    <div class="text-sm opacity-70">{{ label }}</div>
-    <div v-if="count !== null" class="text-3xl font-semibold mt-1">{{ count }}</div>
-    <div v-else-if="err" class="text-3xl opacity-40 mt-1">—</div>
-    <div v-else class="text-3xl opacity-40 mt-1">…</div>
+  <RouterLink
+    :to="`/${path}`"
+    class="c8-flat scope-primary block p-$m layer-0 border-1 rounded-r2 no-underline text-current transition-colors duration-120"
+  >
+    <div class="flex items-center gap-$s text-callout text-current/60">
+      <span v-if="icon" :class="icon" aria-hidden="true" />
+      <span>{{ label }}</span>
+    </div>
+    <div
+      class="text-[1.75em] font-700 tracking-[-0.02em] mt-$xs"
+      :class="{ 'text-current/30': count === null }"
+    >
+      {{ count !== null ? count : err ? "—" : "…" }}
+    </div>
   </RouterLink>
 </template>

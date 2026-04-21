@@ -10,6 +10,11 @@
       "source": "mav-rik/vunor",
       "sourceType": "github",
       "computedHash": "10ae690b7d0e73036e63e464d1667d81d8d20555d0231913f8afa01380735643"
+    },
+    "wooksjs": {
+      "source": "wooksjs/wooksjs",
+      "sourceType": "github",
+      "computedHash": "9ebee5b2e1a22b62b28bf14f13ace3dba0c3cb21709093ba1cad995887a09fca"
     }
   }
 }

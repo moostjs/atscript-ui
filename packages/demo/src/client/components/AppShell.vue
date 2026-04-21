@@ -32,9 +32,9 @@ watch(
 </script>
 
 <template>
-  <div class="flex h-screen">
+  <div class="flex h-100vh overflow-hidden layer-1">
     <SidebarNav />
-    <main class="flex-1 overflow-auto"><slot /></main>
+    <main class="flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden"><slot /></main>
     <ToastStack />
     <WfExpiryBanner />
     <ServerErrorDialog />

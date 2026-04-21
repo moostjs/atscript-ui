@@ -32,6 +32,16 @@ async function load() {
   }
 }
 
+async function logout() {
+  try {
+    await sharedFetch("/api/auth/logout", { method: "POST" });
+  } finally {
+    _me.value = null;
+    _loaded.value = false;
+    _error.value = null;
+  }
+}
+
 export function useMe() {
   if (!_loaded.value && !_loading.value && typeof window !== "undefined") void load();
   return {
@@ -40,6 +50,7 @@ export function useMe() {
     error: readonly(_error),
     loaded: readonly(_loaded),
     refresh: load,
+    logout,
     reset: () => {
       _me.value = null;
       _loaded.value = false;

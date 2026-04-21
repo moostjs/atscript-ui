@@ -12,9 +12,10 @@ const canInvite = computed(() => !!me.value?.permissions?.users?.write);
   <button
     v-if="canInvite"
     type="button"
-    class="as-invite-btn"
+    class="c8-filled scope-primary inline-flex items-center gap-$s h-fingertip-m px-$m rounded-base font-600 cursor-pointer"
     @click="() => router.push('/users/invite')"
   >
-    Invite user
+    <span class="i-ph:user-plus" aria-hidden="true" />
+    <span>Invite user</span>
   </button>
 </template>

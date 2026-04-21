@@ -5,23 +5,36 @@ import { mount, flushPromises } from "@vue/test-utils";
 vi.mock("@atscript/vue-form", () => ({
   AsForm: defineComponent({
     name: "AsForm",
-    props: { def: null, formData: null, types: null, valueHelpClientFactory: null },
+    props: { def: null, formData: null, types: null, clientFactory: null },
     emits: ["submit"],
-    setup: (_p, { slots }) => () => h("form", { "data-test": "as-form-stub" }, slots.default?.()),
+    setup:
+      (_p, { slots }) =>
+      () =>
+        h("form", { "data-test": "as-form-stub" }, slots.default?.()),
   }),
   createDefaultTypes: () => ({}),
+}));
+
+vi.mock("@atscript/typescript/utils", () => ({
+  deserializeAnnotatedType: (x: unknown) => x,
+}));
+vi.mock("@atscript/ui", () => ({
+  createFormDef: () => ({ fields: [], rootField: { path: "", type: "object" } }),
 }));
 
 vi.mock("../api/client-factory", () => ({
   clientForTable: () => ({
     meta: vi.fn().mockResolvedValue({
       type: { kind: "interface", name: "Stub", properties: {} },
-      fields: { id: { sortable: true, filterable: true }, name: { sortable: true, filterable: true } },
+      fields: {
+        id: { sortable: true, filterable: true },
+        name: { sortable: true, filterable: true },
+      },
     }),
     one: vi.fn().mockResolvedValue({ id: 1, name: "Widget" }),
     update: vi.fn().mockResolvedValue({ matchedCount: 1, modifiedCount: 1 }),
   }),
-  valueHelpFactory: () => ({}),
+  clientFactory: () => ({}),
 }));
 
 import EditByPath from "../components/EditByPath.vue";

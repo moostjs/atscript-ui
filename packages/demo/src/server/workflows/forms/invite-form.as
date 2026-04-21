@@ -1,3 +1,5 @@
+import { RolesTable } from '../../schemas/roles'
+
 @meta.label 'Invite User'
 @ui.submit.text 'Send Invite'
 export interface InviteStartForm {
@@ -6,9 +8,9 @@ export interface InviteStartForm {
     @meta.required 'Email is required'
     email: string.email
 
-    @meta.label 'Role ID'
-    @ui.placeholder 'Role ID (e.g. 3 for viewer)'
-    roleId: number
+    @meta.label 'Role'
+    @ui.placeholder 'Pick a role'
+    roleId: RolesTable.id
 }
 
 @wf.context.pass 'email'

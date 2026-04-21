@@ -8,13 +8,8 @@ const router = useRouter();
 const types = createDemoTypes();
 const sent = ref(false);
 
-function onFinished(response: unknown) {
-  // When the `invite-send` step returns from `outletEmail`, the engine pauses
-  // and the HTTP response contains `{ sent: true, outlet: 'email', wfs: '<token>' }`.
-  // WfForm's `finished` event may not fire for this shape — we watch for it
-  // defensively via the raw response. For admin UX, we short-circuit to "sent".
+function onFinished() {
   sent.value = true;
-  void response; // response payload kept as-is for future surfacing
   setTimeout(() => {
     void router.push("/users");
   }, 1500);
@@ -22,19 +17,25 @@ function onFinished(response: unknown) {
 </script>
 
 <template>
-  <div class="p-6 max-w-[480px]">
-    <h1 class="text-lg font-semibold mb-3">Invite user</h1>
-    <div v-if="sent" class="p-4 border-1 rounded text-sm">
-      Invite sent — the invitee will receive a magic link. Redirecting…
-    </div>
-    <WfForm
-      v-else
-      path="/api/wf"
-      name="api/users/invite"
-      :types="types"
-      first-validation="on-submit"
-      @finished="onFinished"
-    >
+  <div class="flex-1 overflow-y-auto">
+    <div class="as-page-narrow">
+      <div class="as-page-eyebrow">atscript-ui demo · Users</div>
+      <h1 class="as-page-title">Invite user</h1>
+      <div
+        v-if="sent"
+        class="flex items-center gap-$s p-$m border-1 rounded-base scope-good layer-0 text-callout"
+      >
+        <span class="i-ph:check-circle text-[1.25em]" aria-hidden="true" />
+        <span>Invite sent — the invitee will receive a magic link. Redirecting…</span>
+      </div>
+      <WfForm
+        v-else
+        path="/api/wf"
+        name="api/users/invite"
+        :types="types"
+        first-validation="on-submit"
+        @finished="onFinished"
+      >
       <template #wf.loading>
         <div class="p-4 text-sm opacity-60">Loading…</div>
       </template>
@@ -53,6 +54,7 @@ function onFinished(response: unknown) {
           {{ loading ? "Sending…" : (text ?? "Send invite") }}
         </button>
       </template>
-    </WfForm>
+      </WfForm>
+    </div>
   </div>
 </template>

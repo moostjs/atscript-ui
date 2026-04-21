@@ -18,6 +18,7 @@
     "@atscript/vue-table": "workspace:^",
     "@atscript/vue-wf": "workspace:^",
     "@unocss/reset": "catalog:",
+    "@vueuse/core": "catalog:",
     "reka-ui": "catalog:",
     "sirv": "catalog:",
     "unocss": "catalog:",

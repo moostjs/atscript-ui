@@ -15,9 +15,15 @@ async function onFinished() {
 </script>
 
 <template>
-  <div class="min-h-screen grid place-items-center">
-    <div class="flex flex-col gap-3 min-w-[360px] p-6 border-1 rounded">
-      <h1 class="text-lg font-semibold">AtShop — Register</h1>
+  <div class="min-h-screen grid place-items-center layer-1">
+    <div class="flex flex-col gap-$s min-w-[360px] p-$l layer-0 border-1 rounded-r2 shadow-popup">
+      <div class="flex flex-col items-center gap-$xs mb-$s">
+        <img src="/logo.svg" alt="AtShop" class="w-12 h-12" />
+        <h1 class="text-lg font-700 m-0">AtShop — Register</h1>
+        <p class="scope-grey font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+          atscript-ui demo
+        </p>
+      </div>
       <WfForm
         path="/api/wf"
         name="api/auth/register"
@@ -44,8 +50,9 @@ async function onFinished() {
           </button>
         </template>
       </WfForm>
-      <p class="text-sm text-gray-500">
-        Already have an account? <RouterLink to="/login" class="text-blue-600 underline">Sign in</RouterLink>
+      <p class="text-callout text-current/60 m-0">
+        Already have an account?
+        <RouterLink to="/login" class="scope-primary text-current-hl underline">Sign in</RouterLink>
       </p>
     </div>
   </div>
