@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
+    "@atscript/db": "catalog:",
     "@atscript/typescript": "catalog:",
     "@atscript/ui": "workspace:^",
     "@moostjs/event-wf": "catalog:",
@@ -42,7 +43,7 @@
   },
   "peerDependencies": {
     "@atscript/core": "^0.1.45",
-    "@atscript/typescript": "^0.1.45",
+    "@atscript/typescript": "^0.1.50",
     "@moostjs/event-wf": "^0.6.4",
     "moost": "^0.6.4"
   }

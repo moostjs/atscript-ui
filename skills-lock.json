@@ -1,10 +1,20 @@
 {
   "version": 1,
   "skills": {
+    "atscript": {
+      "source": "moostjs/atscript",
+      "sourceType": "github",
+      "computedHash": "3db743dbbc67bf8189b9ad670c9543b03462c2480ba272d7644ad182156af839"
+    },
+    "atscript-db": {
+      "source": "moostjs/atscript-db",
+      "sourceType": "github",
+      "computedHash": "d31cfc2eb20d5729d2d64de07d07abf93c677cfeac591ff4a58d2432209fe932"
+    },
     "moostjs": {
       "source": "moostjs/moostjs",
       "sourceType": "github",
-      "computedHash": "242d3fbe809115ac46a655649cfdf2fc23a592d901a05c5a55aa3f6f8f04f74b"
+      "computedHash": "84ed7a346bd0b4cbc46b7253ba11b29d563f859f46d3020051cc8609d6a4f3b3"
     },
     "vunor": {
       "source": "mav-rik/vunor",
@@ -14,7 +24,7 @@
     "wooksjs": {
       "source": "wooksjs/wooksjs",
       "sourceType": "github",
-      "computedHash": "9ebee5b2e1a22b62b28bf14f13ace3dba0c3cb21709093ba1cad995887a09fca"
+      "computedHash": "d9f4a07d056338edea3aa20477f3775d9ed93555018280952dab085d1d82ceee"
     }
   }
 }
