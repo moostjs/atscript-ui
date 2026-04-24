@@ -1,11 +1,5 @@
 import { Controller } from "moost";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-} from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
 import { usersTable, rolesTable } from "../../db";
 import { hashPassword } from "../../auth/password";
 import { SessionService } from "../../auth/session.service";
@@ -73,9 +67,7 @@ export class RegisterWorkflow {
     // Dispatch OTP inline — using outletEmail would pause the workflow and the
     // client would receive `{sent:true}` instead of the next form.
     // eslint-disable-next-line no-console
-    console.log(
-      `\n📧 [register-otp] → ${ctx.email}\n    context: {"code":"${ctx.otpCode}"}\n`,
-    );
+    console.log(`\n📧 [register-otp] → ${ctx.email}\n    context: {"code":"${ctx.otpCode}"}\n`);
     return;
   }
 

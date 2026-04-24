@@ -19,6 +19,11 @@ export {
   UI_DICT_LABEL,
   UI_DICT_DESCR,
   UI_DICT_ATTR,
+  UI_DICT_FILTERABLE,
+  UI_DICT_SORTABLE,
+  UI_DICT_SEARCHABLE,
+  DB_REL_FK,
+  DB_HTTP_PATH,
   WF_ACTION_WITH_DATA,
   META_LABEL,
   META_ID,
@@ -115,8 +120,15 @@ export {
   extractValueHelp,
   valueHelpDictPaths,
   ValueHelpClient,
+  resolveValueHelp,
+  resetValueHelpCache,
 } from "./value-help";
-export type { ValueHelpInfo, ValueHelpSearchOptions, ValueHelpResult } from "./value-help";
+export type {
+  ValueHelpInfo,
+  ValueHelpSearchOptions,
+  ValueHelpResult,
+  ResolvedValueHelp,
+} from "./value-help";
 
 // ── Client factory (shared by tables + value-help) ──────────
 export {
@@ -125,6 +137,10 @@ export {
   resetDefaultClientFactory,
   type ClientFactory,
 } from "./client-factory";
+
+// ── Shared meta cache (single /meta fetch per URL across tables + value-help)
+export { getMetaEntry, resetMetaCache } from "./shared/meta-cache";
+export type { MetaCacheEntry } from "./shared/meta-cache";
 
 // ── Shared utilities ────────────────────────────────────────
 export { str } from "./shared/str";

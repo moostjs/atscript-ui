@@ -53,6 +53,9 @@ declare global {
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
+    "ui.dict.filterable": boolean
+    "ui.dict.sortable": boolean
+    "ui.dict.searchable": boolean
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "wf.context.pass": (string)[]

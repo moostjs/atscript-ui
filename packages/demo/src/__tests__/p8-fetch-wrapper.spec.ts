@@ -58,8 +58,7 @@ describe("sharedFetch error mapping", () => {
   it("500 emits on500 with retry closure", async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse(500, { message: "boom" }));
     globalThis.fetch = fetchMock;
-    let captured: { status: number; message: string; retry: () => Promise<Response> } | null =
-      null;
+    let captured: { status: number; message: string; retry: () => Promise<Response> } | null = null;
     const off = on500.on((e) => {
       captured = e;
     });

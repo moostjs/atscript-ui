@@ -116,12 +116,7 @@ function onAction(name: string, data: unknown) {
     </div>
 
     <div v-else-if="wf.formDef.value && wf.formData.value">
-      <slot
-        v-if="wf.error.value"
-        name="form.error"
-        :error="wf.error.value"
-        :retry="wf.retry"
-      >
+      <slot v-if="wf.error.value" name="form.error" :error="wf.error.value" :retry="wf.retry">
         <div role="alert" class="as-wf-form-error">
           {{ (wf.error.value as { message?: string })?.message ?? "Error" }}
         </div>
@@ -140,25 +135,25 @@ function onAction(name: string, data: unknown) {
         @action="onAction"
         @unsupported-action="onAction"
       >
-      <template #form.header="slotProps">
-        <slot name="form.header" v-bind="{ ...slotProps, loading: wf.loading.value }" />
-      </template>
-      <template #form.before="slotProps">
-        <slot name="form.before" v-bind="{ ...slotProps, loading: wf.loading.value }" />
-      </template>
-      <template #form.after="slotProps">
-        <slot name="form.after" v-bind="{ ...slotProps, loading: wf.loading.value }" />
-      </template>
-      <template #form.submit="slotProps">
-        <slot name="form.submit" v-bind="{ ...slotProps, loading: wf.loading.value }">
-          <button :disabled="slotProps.disabled || wf.loading.value">
-            {{ slotProps.text }}
-          </button>
-        </slot>
-      </template>
-      <template #form.footer="slotProps">
-        <slot name="form.footer" v-bind="{ ...slotProps, loading: wf.loading.value }" />
-      </template>
+        <template #form.header="slotProps">
+          <slot name="form.header" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        </template>
+        <template #form.before="slotProps">
+          <slot name="form.before" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        </template>
+        <template #form.after="slotProps">
+          <slot name="form.after" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        </template>
+        <template #form.submit="slotProps">
+          <slot name="form.submit" v-bind="{ ...slotProps, loading: wf.loading.value }">
+            <button :disabled="slotProps.disabled || wf.loading.value">
+              {{ slotProps.text }}
+            </button>
+          </slot>
+        </template>
+        <template #form.footer="slotProps">
+          <slot name="form.footer" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        </template>
       </AsForm>
     </div>
   </slot>

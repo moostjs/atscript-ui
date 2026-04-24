@@ -1,7 +1,12 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
-import type { ColumnDef, ValueHelpInfo } from "@atscript/ui";
-import { ValueHelpClient, valueHelpDictPaths, getDefaultClientFactory } from "@atscript/ui";
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
+import type { ColumnDef, ResolvedValueHelp, ValueHelpInfo } from "@atscript/ui";
+import {
+  ValueHelpClient,
+  getMetaEntry,
+  resolveValueHelp,
+  valueHelpDictPaths,
+} from "@atscript/ui";
 import {
   debounce,
   isFilled,
@@ -39,24 +44,40 @@ const hasOptions = !!(props.column.options && props.column.options.length > 0);
 const hasDropdown = hasValueHelp || hasOptions;
 const filterType = columnFilterType(props.column.type);
 
-// ── Value help (FK columns) ────────────────────────────────
 let vhClient: ValueHelpClient | undefined;
 let innerState: ReturnType<typeof useTable> | undefined;
-let dictColumns: ReturnType<typeof computed<ColumnDef[]>> | undefined;
+const resolved = shallowRef<ResolvedValueHelp | null>(null);
 
 if (hasValueHelp && info) {
-  const factory = getDefaultClientFactory();
-  vhClient = new ValueHelpClient(factory(info.path));
+  vhClient = new ValueHelpClient(getMetaEntry(info.url).client);
 
-  innerState = useTable(info.path, {
+  innerState = useTable(info.url, {
     select: "none",
     queryOnMount: false,
     limit: 10,
     provideContext: false,
   });
+}
 
-  const dictPaths = valueHelpDictPaths(info);
-  dictColumns = computed(() => innerState!.allColumns.value.filter((c) => dictPaths.has(c.path)));
+const dictColumns = computed<ColumnDef[]>(() => {
+  if (!resolved.value || !innerState) return [];
+  const paths = valueHelpDictPaths(resolved.value);
+  return innerState.allColumns.value.filter((c) => paths.has(c.path));
+});
+
+async function ensureResolved(): Promise<ResolvedValueHelp | null> {
+  if (resolved.value) return resolved.value;
+  if (!info) return null;
+  try {
+    resolved.value = await resolveValueHelp(info.url);
+    return resolved.value;
+  } catch {
+    return null;
+  }
+}
+
+function kickoffResolve() {
+  void ensureResolved();
 }
 
 // ── Enum options (static data for dropdown) ────────────────
@@ -91,7 +112,7 @@ const dropdownRows = computed(() => {
 });
 
 const dropdownColumns = computed(() => {
-  if (dictColumns) return dictColumns.value;
+  if (hasValueHelp) return dictColumns.value;
   if (enumColumns) return enumColumns;
   return [];
 });
@@ -113,9 +134,6 @@ const seeAllCount = computed(() => {
 });
 
 // ── Chip model ───────────────────────────────────────────────
-// Chips always derive from state.filters — no branching between
-// dropdown and plain-input modes (matches not-sap pattern).
-
 interface ChipItem {
   key: string;
   label: string;
@@ -143,9 +161,7 @@ const selectedValues = ref<unknown[]>(
   hasDropdown ? extractEqValues(state.filters.value[props.column.path]) : [],
 );
 
-// Dropdown-only watchers: sync selectedValues ↔ eq conditions in state.filters
 if (hasDropdown) {
-  // Forward: selectedValues → state.filters (preserves non-eq conditions)
   watch(selectedValues, (values) => {
     const current = extractEqValues(state.filters.value[props.column.path]);
     if (arraysEqual(values, current)) return;
@@ -165,7 +181,6 @@ if (hasDropdown) {
     }
   });
 
-  // Reverse: state.filters → selectedValues (extract eq values only)
   watch(
     () => state.filters.value[props.column.path],
     (conditions) => {
@@ -176,7 +191,6 @@ if (hasDropdown) {
   );
 }
 
-// ── Chips computed (unified — always from state.filters) ──────
 const chips = computed<ChipItem[]>(() => {
   const conditions = state.filters.value[props.column.path] ?? [];
   return conditions.filter(isFilled).map((cond, i) => ({
@@ -211,11 +225,9 @@ function displayValue(): string {
   return "";
 }
 
-// ── Search ─────────────────────────────────────────────────
 const searchTerm = ref("");
 const dropdownOpen = ref(false);
 
-// Lazy first-fetch for FK value-help: only query when user opens the dropdown.
 if (innerState) {
   watch(
     dropdownOpen,
@@ -244,10 +256,12 @@ function onSearchInput(event: Event) {
 }
 
 async function doSearch(text: string) {
-  if (!vhClient || !info || !innerState) return;
+  if (!vhClient || !innerState) return;
+  const r = await ensureResolved();
+  if (!r) return;
   innerState.querying.value = true;
   try {
-    const result = await vhClient.search(info, {
+    const result = await vhClient.search(r, {
       text: text || undefined,
       mode: "filter",
       limit: 10,
@@ -266,7 +280,6 @@ async function doSearch(text: string) {
   dropdownOpen.value = true;
 }
 
-// ── Enum client-side filter ────────────────────────────────
 function filterFunction(val: unknown[]): unknown[] {
   if (!hasOptions || !searchTerm.value) return val;
   const term = searchTerm.value.toLowerCase();
@@ -291,7 +304,6 @@ const noEnumMatches = computed(() => {
   return filterFunction(enumRows.value).length === 0;
 });
 
-// ── Actions (unified — always operate on state.filters) ───
 function removeChip(chip: ChipItem) {
   const existing = state.filters.value[props.column.path] ?? [];
   const remaining = existing.filter((c) => c !== chip.condition);
@@ -324,13 +336,23 @@ function onBackspace() {
   }
 }
 
+function onAnchorClick() {
+  dropdownOpen.value = true;
+  kickoffResolve();
+}
+
+function onInputFocus() {
+  dropdownOpen.value = true;
+  kickoffResolve();
+  scrollChipsToEnd();
+}
+
 function onEnter() {
   if (hasDropdown || !searchTerm.value.trim()) return;
 
   const parsed = parseFilterInput(searchTerm.value, filterType);
   if (!parsed) return;
 
-  // Append to existing filled conditions
   const existing = state.filters.value[props.column.path] ?? [];
   const filled = existing.filter(isFilled);
   state.setFieldFilter(props.column.path, [...filled, parsed]);
@@ -357,7 +379,7 @@ function onEnter() {
         as-child
       >
         <ComboboxAnchor as-child>
-          <div class="as-filter-field-input" @click="dropdownOpen = true">
+          <div class="as-filter-field-input" @click="onAnchorClick">
             <div ref="chipsScrollEl" class="as-filter-field-chips">
               <span v-for="chip in chips" :key="chip.key" class="as-filter-field-chip">
                 {{ chip.label }}
@@ -377,10 +399,7 @@ function onEnter() {
                 class="as-filter-field-search"
                 @input="onSearchInput"
                 @keydown.backspace="onBackspace"
-                @focus="
-                  dropdownOpen = true;
-                  scrollChipsToEnd();
-                "
+                @focus="onInputFocus"
               />
             </ComboboxInput>
           </div>

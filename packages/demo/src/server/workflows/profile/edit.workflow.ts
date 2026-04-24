@@ -1,12 +1,6 @@
 import { Controller } from "moost";
 import { HttpError } from "@moostjs/event-http";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-} from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
 import { usersTable } from "../../db";
 import { useSession } from "../../auth/use-session";
 import { ProfileForm } from "../forms/profile-form.as";
@@ -40,7 +34,11 @@ export class EditProfileWorkflow {
     if (!input.username || !input.email) {
       return httpInputRequired(ProfileForm, ctx, { __form: "Username and email are required" });
     }
-    await usersTable.updateOne({ id: session.userId, username: input.username, email: input.email });
+    await usersTable.updateOne({
+      id: session.userId,
+      username: input.username,
+      email: input.email,
+    });
     useWfFinished().set({
       type: "data",
       value: { finished: true, ok: true, user: { username: input.username, email: input.email } },

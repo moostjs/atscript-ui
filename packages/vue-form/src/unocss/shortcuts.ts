@@ -2,12 +2,17 @@ import { defineShortcuts } from "@atscript/unocss-preset";
 
 /*
  * Color model (vunor):
- * - Root stays scope-neutral (vunor default).
- * - Elements that paint with the primary palette declare `scope-primary`
- *   directly on themselves — inputs (for the blue focus ring), primary action
- *   buttons, hover accents, selected indicators.
- * - Elements that paint with the error palette declare `scope-error`.
- * - `current-hl`, `current-text` etc. resolve from the active scope.
+ * - Default: shortcuts inherit whichever scope the consuming app sets.
+ *   `current-hl`, `text-current`, `bg-current-hl/10` etc. resolve from that.
+ * - Exceptions that pin a scope:
+ *     - `scope-primary` on active interactive surfaces: inputs (incl. select,
+ *       textarea, checkbox, radio, combobox), tabs, and primary action buttons
+ *       (submit, apply). Dropdown rows, menu items, chips, and secondary
+ *       toolbar buttons stay inherited.
+ *     - `scope-error` on error / destructive UX (invalid-field borders,
+ *       required-star, error messages, remove/clear button hovers).
+ *     - `scope-neutral` paired with `c8-chrome` — chrome buttons are meant
+ *       to read as neutral regardless of the surrounding scope.
  * - `layer-*` handles bg+text+border auto-flipping for light/dark mode.
  * - `border-1` alone uses vunor's preflight neutral border color.
  * No `dark:` pairs on utility colors — dark mode is handled upstream.
@@ -112,14 +117,14 @@ export const asFormShortcuts = defineShortcuts({
   "as-array-error": "scope-error text-callout text-current-hl mt-$xs",
   "as-array-add": "mt-$xs",
   "as-array-add-btn": {
-    "": "scope-primary inline-flex items-center gap-$xs h-fingertip-m px-$m border-1 border-dashed rounded-base bg-transparent text-current/60 cursor-pointer transition-all duration-120",
+    "": "inline-flex items-center gap-$xs h-fingertip-m px-$m border-1 border-dashed rounded-base bg-transparent text-current/60 cursor-pointer transition-all duration-120",
     "hover:not-disabled:": "border-current-hl text-current-hl bg-current-hl/10",
     "disabled:": "opacity-40 cursor-not-allowed",
   },
 
   /* ────────── No data placeholder ────────── */
   "as-no-data": {
-    "": "scope-primary flex items-center justify-center gap-$s h-fingertip-l px-$m w-full border-1 border-dashed rounded-base bg-transparent text-current/60 text-callout cursor-pointer transition-all duration-140",
+    "": "flex items-center justify-center gap-$s h-fingertip-l px-$m w-full border-1 border-dashed rounded-base bg-transparent text-current/60 text-callout cursor-pointer transition-all duration-140",
     "hover:": "border-current-hl text-current-hl bg-current-hl/10",
   },
   "as-no-data-text": "font-mono text-callout tracking-wide",
@@ -130,20 +135,20 @@ export const asFormShortcuts = defineShortcuts({
   "as-dropdown": "relative inline-block",
   "as-dropdown-anchor": "relative",
   "as-dropdown-trigger": {
-    "": "scope-primary inline-flex items-center gap-$xs h-[1.5em] px-$s border-1 bg-transparent text-callout text-current/60 rounded-base cursor-pointer leading-none transition-all duration-120",
+    "": "inline-flex items-center gap-$xs h-[1.5em] px-$s border-1 bg-transparent text-callout text-current/60 rounded-base cursor-pointer leading-none transition-all duration-120",
     "hover:not-disabled:": "border-current-hl text-current-hl",
     "disabled:": "opacity-40 cursor-not-allowed",
   },
   "as-dropdown-menu":
-    "layer-1 absolute top-full left-0 z-[50] min-w-[10em] mt-$xs py-$xs border-1 rounded-r2 shadow-popup",
+    "scope-primary layer-1 absolute top-full left-0 z-[50] min-w-[10em] mt-$xs py-$xs border-1 rounded-r2 shadow-popup",
   "as-dropdown-item": {
-    "": "scope-primary block w-full px-$m py-$xs border-0 bg-transparent text-current text-left cursor-pointer",
+    "": "block w-full px-$m py-$xs border-0 bg-transparent text-current text-left cursor-pointer",
     "hover:": "layer-3 text-current-hl",
   },
-  "as-dropdown-item--active": "scope-primary bg-current-hl/10 text-current-hl font-500",
+  "as-dropdown-item--active": "bg-current-hl/10 text-current-hl font-500",
 
   "as-variant-trigger": {
-    "": "scope-primary inline-flex items-center justify-center w-[1.5em] h-[1.5em] p-0 border-1 rounded-base bg-transparent text-current/50 cursor-pointer flex-shrink-0 transition-all duration-120",
+    "": "inline-flex items-center justify-center w-[1.5em] h-[1.5em] p-0 border-1 rounded-base bg-transparent text-current/50 cursor-pointer flex-shrink-0 transition-all duration-120",
     "hover:not-disabled:": "border-current-hl text-current-hl",
     "disabled:": "opacity-40 cursor-not-allowed",
   },
@@ -156,17 +161,21 @@ export const asFormShortcuts = defineShortcuts({
     "": "absolute right-$s top-1/2 -translate-y-1/2 p-0 border-0 bg-transparent text-current/50 cursor-pointer leading-none",
     "hover:": "scope-error text-current-hl",
   },
+  "as-ref-loading":
+    "flex items-center justify-center h-fingertip-m w-full box-border border-1 layer-0 rounded-base",
+  "as-ref-spinner": "i-as-loading text-current-hl text-[1.25em] opacity-70",
   "as-ref-content":
-    "layer-1 z-[50] border-1 rounded-r2 shadow-popup w-[var(--reka-combobox-trigger-width)] overflow-hidden",
+    "scope-primary layer-1 z-[50] border-1 rounded-r2 shadow-popup w-[var(--reka-combobox-trigger-width)] overflow-hidden",
   "as-ref-viewport": "max-h-[15em] overflow-y-auto py-$xs",
   "as-ref-item": {
     "": "flex items-baseline gap-$m px-$m py-$s cursor-pointer",
     "data-[highlighted]:": "layer-3",
+    "data-[state=checked]:": "bg-current-hl/10 text-current-hl",
   },
   "as-ref-item-id": "font-mono text-callout text-current/50 flex-shrink-0 min-w-[2em] text-right",
   "as-ref-item-label": "text-current flex-1",
   "as-ref-item-descr": "text-callout text-current/60",
-  "as-ref-status": "px-$m py-$m text-center text-current/50",
+  "as-ref-status": "flex items-center justify-center px-$m py-$m text-current/50",
 
   /* ────────── Action field (form-level button) ────────── */
   "as-action-field": {

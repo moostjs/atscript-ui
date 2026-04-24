@@ -18,6 +18,13 @@ export const UI_FORM_ACTION = "ui.form.action" as const;
 export const UI_DICT_LABEL = "ui.dict.label" as const;
 export const UI_DICT_DESCR = "ui.dict.descr" as const;
 export const UI_DICT_ATTR = "ui.dict.attr" as const;
+export const UI_DICT_FILTERABLE = "ui.dict.filterable" as const;
+export const UI_DICT_SORTABLE = "ui.dict.sortable" as const;
+export const UI_DICT_SEARCHABLE = "ui.dict.searchable" as const;
+
+// ── DB annotation keys (registered by @atscript/db plugin) ──
+export const DB_REL_FK = "db.rel.FK" as const;
+export const DB_HTTP_PATH = "db.http.path" as const;
 
 // ── Workflow annotation keys (registered by @atscript/moost-wf plugin) ──
 export const WF_ACTION_WITH_DATA = "wf.action.withData" as const;

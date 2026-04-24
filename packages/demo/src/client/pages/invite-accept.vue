@@ -28,7 +28,9 @@ function onError(e: { status?: number; message?: string }) {
       <div class="flex flex-col items-center gap-$xs mb-$s">
         <img src="/logo.svg" alt="AtShop" class="w-12 h-12" />
         <h1 class="text-lg font-700 m-0">Accept invitation</h1>
-        <p class="scope-grey font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+        <p
+          class="scope-grey font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0"
+        >
           atscript-ui demo
         </p>
       </div>

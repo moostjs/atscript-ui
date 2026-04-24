@@ -47,13 +47,10 @@ export class WorkflowsController {
           eventContext: opts?.eventContext as never,
         }),
       resume: (state, opts) =>
-        wfApp.resume(
-          state as { schemaId: string; indexes: number[]; context: never },
-          {
-            input: opts?.input,
-            eventContext: opts?.eventContext as never,
-          },
-        ),
+        wfApp.resume(state as { schemaId: string; indexes: number[]; context: never }, {
+          input: opts?.input,
+          eventContext: opts?.eventContext as never,
+        }),
     };
     return handleWfOutletRequest(
       {

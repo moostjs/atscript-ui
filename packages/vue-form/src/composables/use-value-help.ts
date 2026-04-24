@@ -1,10 +1,17 @@
-import { ValueHelpClient, str, getDefaultClientFactory, type ClientFactory } from "@atscript/ui";
-import type { ValueHelpInfo } from "@atscript/ui";
+import {
+  ValueHelpClient,
+  getMetaEntry,
+  resolveValueHelp,
+  type ClientFactory,
+  type ResolvedValueHelp,
+  type ValueHelpInfo,
+} from "@atscript/ui";
 import {
   type InjectionKey,
-  type Ref,
   type ShallowRef,
+  computed,
   inject,
+  onMounted,
   onUnmounted,
   ref,
   shallowRef,
@@ -20,56 +27,52 @@ export interface UseValueHelpOptions {
   onBlur: () => void;
 }
 
-export interface UseValueHelpReturn {
-  searchText: Ref<string>;
-  results: ShallowRef<Record<string, unknown>[]>;
-  loading: Ref<boolean>;
-  displayLabel: Ref<string>;
-  accessible: Ref<boolean | undefined>;
-  labelIsFkValue: boolean;
-  selectFields: string[];
-  displayValue: (val: unknown) => string;
-  selectItem: (item: Record<string, unknown>) => void;
-  clear: () => void;
-  resolveLabel: (value: unknown) => Promise<void>;
-  init: () => Promise<void>;
-}
+export type UseValueHelpStatus = "loading" | "ready" | "error";
 
 const DEBOUNCE_MS = 300;
 
-export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
+export function useValueHelp(options: UseValueHelpOptions) {
   const { info, model, onBlur } = options;
 
   // Resolution order: nearest-ancestor prop override → app-wide default → built-in `new Client(url)`.
-  const factory = inject(CLIENT_FACTORY_KEY, null) ?? getDefaultClientFactory();
-  const dbClient = factory(info.path);
-  const vhClient = new ValueHelpClient(dbClient);
+  // Only applied when this is the first consumer for `info.url` — the shared
+  // meta cache reuses an existing Client if one was already created.
+  const injectedFactory = inject(CLIENT_FACTORY_KEY, null) ?? undefined;
+  const entry = getMetaEntry(info.url, injectedFactory);
+  const vhClient = new ValueHelpClient(entry.client);
 
-  const labelIsFkValue = info.targetField === info.labelField;
-
-  const selectFields = [
-    ...new Set(
-      [info.targetField, ...info.primaryKeys, info.labelField, info.descrField].filter(
-        Boolean,
-      ) as string[],
-    ),
-  ];
-
+  const resolved = shallowRef<ResolvedValueHelp | null>(null);
+  const status = ref<UseValueHelpStatus>("loading");
   const searchText = ref("");
   const results: ShallowRef<Record<string, unknown>[]> = shallowRef([]);
-  const loading = ref(false);
-  const displayLabel = ref("");
-  const accessible = ref<boolean | undefined>(undefined);
+  const searching = ref(false);
 
-  const labelCache = new Map<string, string>();
+  const labelIsFkValue = computed(
+    () => !!resolved.value && info.targetField === resolved.value.labelField,
+  );
+
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  let kickoffPromise: Promise<void> | undefined;
+  let lastSearchedText: string | undefined;
 
   onUnmounted(() => {
     if (debounceTimer !== undefined) clearTimeout(debounceTimer);
   });
 
-  // ── Debounced search ─────────────────────────────────────
-  function search(text: string) {
+  async function kickoff(): Promise<void> {
+    if (kickoffPromise) return kickoffPromise;
+    kickoffPromise = resolveValueHelp(info.url)
+      .then((r) => {
+        resolved.value = r;
+        status.value = "ready";
+      })
+      .catch(() => {
+        status.value = "error";
+      });
+    return kickoffPromise;
+  }
+
+  function scheduleSearch(text: string) {
     if (debounceTimer !== undefined) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
       void doSearch(text);
@@ -77,106 +80,59 @@ export function useValueHelp(options: UseValueHelpOptions): UseValueHelpReturn {
   }
 
   async function doSearch(text: string) {
-    loading.value = true;
+    const r = resolved.value;
+    if (!r) return;
+    if (text === lastSearchedText) return;
+    lastSearchedText = text;
+    searching.value = true;
     try {
-      const result = await vhClient.search(info, {
+      const result = await vhClient.search(r, {
         text: text || undefined,
         mode: "form",
         limit: 20,
       });
-      for (const item of result.items) {
-        const key = item[info.targetField];
-        if (key != null) labelCache.set(str(key), str(item[info.labelField] ?? key));
-      }
       results.value = result.items;
     } catch {
       results.value = [];
     } finally {
-      loading.value = false;
+      searching.value = false;
     }
   }
 
   watch(searchText, (text) => {
-    search(text);
+    if (resolved.value) scheduleSearch(text);
   });
 
-  // ── Selection ────────────────────────────────────────────
+  watch(resolved, (r) => {
+    if (r) void doSearch(searchText.value);
+  });
+
+  onMounted(() => {
+    void kickoff();
+  });
+
   function selectItem(item: Record<string, unknown>) {
     const val = item[info.targetField];
     model.value = val;
-    const label = str(item[info.labelField] ?? val ?? "");
-    displayLabel.value = label;
-    labelCache.set(str(val), label);
     onBlur();
   }
 
   function clear() {
     model.value = undefined;
-    displayLabel.value = "";
     searchText.value = "";
     results.value = [];
-  }
-
-  // ── Label resolution ─────────────────────────────────────
-  async function resolveLabel(value: unknown) {
-    if (value == null || value === "") {
-      displayLabel.value = "";
-      return;
-    }
-
-    const sval = str(value);
-    if (labelCache.has(sval)) {
-      displayLabel.value = labelCache.get(sval)!;
-      return;
-    }
-
-    if (labelIsFkValue) {
-      displayLabel.value = sval;
-      labelCache.set(sval, sval);
-      return;
-    }
-
-    try {
-      const labels = await vhClient.resolveLabels(info, [value]);
-      const label = labels.get(value) ?? sval;
-      displayLabel.value = label;
-      labelCache.set(sval, label);
-    } catch {
-      displayLabel.value = sval;
-    }
-  }
-
-  function displayValue(val: unknown): string {
-    if (val == null || val === "") return "";
-    const sval = str(val);
-    if (labelIsFkValue) return sval;
-    return labelCache.get(sval) ?? sval;
-  }
-
-  async function init() {
-    const labelPromise =
-      model.value != null && model.value !== "" ? resolveLabel(model.value) : undefined;
-    try {
-      await vhClient.getMeta();
-      accessible.value = true;
-    } catch {
-      accessible.value = false;
-    }
-    await labelPromise;
+    lastSearchedText = undefined;
   }
 
   return {
+    resolved,
+    status,
     searchText,
     results,
-    loading,
-    displayLabel,
-    accessible,
+    searching,
     labelIsFkValue,
-    selectFields,
-    displayValue,
+    kickoff,
     selectItem,
     clear,
-    resolveLabel,
-    init,
   };
 }

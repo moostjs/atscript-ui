@@ -23,12 +23,7 @@ function onSubmit(data: unknown) {
           Form with FK reference fields that query the Products and Customers tables via value-help
           combobox.
         </p>
-        <AsForm
-          :def="def"
-          :form-data="formData"
-          :types="types"
-          @submit="onSubmit"
-        />
+        <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" />
       </div>
     </div>
     <div class="form-debug">

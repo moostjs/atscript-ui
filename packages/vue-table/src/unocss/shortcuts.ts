@@ -1,12 +1,18 @@
 import { defineShortcuts } from "@atscript/unocss-preset";
 
 // Color model (vunor):
-// - Root stays scope-neutral (vunor default).
-// - Elements that paint with the primary palette (hover accent, focus ring,
-//   selected/active indicator, primary button, chip) declare `scope-primary`
-//   directly on themselves.
-// - Elements that paint with the error palette declare `scope-error`.
-// - `current-hl`, `current-text` etc. then resolve to the active scope's color.
+// - Default: shortcuts inherit whichever scope the consuming app sets.
+//   `current-hl`, `text-current`, `bg-current-hl/10` etc. resolve from that.
+// - Exceptions that pin a scope:
+//     - `scope-primary` on active interactive surfaces: inputs (incl. select,
+//       textarea, checkbox, radio, combobox, filter pill, filter field), tabs,
+//       and primary action buttons (Apply). Dropdown rows, menu items, chips,
+//       secondary toolbar buttons, and badges stay inherited.
+//     - `scope-error` on error / destructive UX (clear-all buttons, invalid
+//       states, remove-condition hovers, destructive menu items).
+//     - `scope-neutral` paired with `c8-chrome` — chrome buttons are meant
+//       to read as neutral next to a primary/accent action regardless of the
+//       surrounding scope.
 // - `layer-*` handles bg+text+border auto-flipping for light/dark mode.
 // - `border-1` alone reads vunor's preflight neutral border color.
 // No `dark:` pairs on utility colors — dark is handled upstream.
@@ -45,12 +51,12 @@ export const asTableShortcuts = defineShortcuts({
   "as-page-header": "flex items-start justify-between gap-$m px-$l pt-$l pb-$m",
   "as-page-header-titles": "flex flex-col gap-[0.15em] min-w-0",
   "as-page-header-eyebrow":
-    "scope-grey font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/70 mb-$xs",
+    "font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/70 mb-$xs",
   "as-page-header-title": `m-0 text-[1.54em] font-600 tracking-[-0.02em] ${strongText}`,
   "as-page-header-sub": "text-callout text-current/70 mt-[0.15em]",
   "as-page-header-actions": "flex items-center gap-$xs flex-shrink-0",
   "as-page-toolbar-btn": {
-    "": "scope-primary inline-flex items-center gap-$xs h-fingertip-m px-$m border-1 rounded-base layer-0 text-callout font-500 text-current cursor-pointer leading-none transition-all duration-120",
+    "": "inline-flex items-center gap-$xs h-fingertip-m px-$m border-1 rounded-base layer-0 text-callout font-500 text-current cursor-pointer leading-none transition-all duration-120",
     "hover:not-disabled:": "border-current-hl text-current-hl",
     "disabled:": "opacity-40 cursor-not-allowed",
   },
@@ -66,11 +72,11 @@ export const asTableShortcuts = defineShortcuts({
   },
   "as-page-toolbar-right": "flex items-center gap-$s flex-shrink-0 col-start-2",
   "as-page-pill":
-    "scope-grey inline-flex items-center gap-$xs px-$s py-$xs rounded-r0 layer-2 text-current/70 text-callout font-mono whitespace-nowrap",
+    "inline-flex items-center gap-$xs px-$s py-$xs rounded-r0 layer-2 text-current/70 text-callout font-mono whitespace-nowrap",
   "as-page-pill-strong": "text-current font-600",
   "as-page-filters": "flex items-center gap-$s min-w-0 flex-wrap col-span-2",
   "as-page-clear": {
-    "": "scope-primary inline-flex items-center gap-$xs h-fingertip-m px-$s border-0 bg-transparent text-current/70 text-callout cursor-pointer ml-auto transition-colors duration-120",
+    "": "inline-flex items-center gap-$xs h-fingertip-m px-$s border-0 bg-transparent text-current/70 text-callout cursor-pointer ml-auto transition-colors duration-120",
     "hover:": "text-current-hl",
   },
 
@@ -80,36 +86,36 @@ export const asTableShortcuts = defineShortcuts({
     "hover:": "border-scope-light-3 dark:border-scope-dark-3",
     "focus-within:": "current-border-hl outline i8-apply-outline",
   },
-  "as-fpill-active": "scope-primary border-current-hl",
+  "as-fpill-active": "border-current-hl",
   "as-fpill-label":
     "inline-flex items-center px-$s layer-2 text-current/80 text-callout font-500 border-r-1 whitespace-nowrap flex-shrink-0",
-  "as-fpill-label-active": "scope-primary bg-current-hl/10 text-current-hl",
+  "as-fpill-label-active": "bg-current-hl/10 text-current-hl",
   "as-fpill-body": "flex items-stretch flex-1 min-w-[8em] cursor-text",
   "as-fpill-chips":
     "flex items-center gap-$xs px-$xs min-w-0 h-full flex-nowrap overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
   "as-fpill-input": `flex-1 min-w-[64px] border-0 bg-transparent outline-none ${strongText} p-0 h-full placeholder:text-current/50`,
   "as-fpill-chip":
-    "scope-primary inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
+    "inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
   "as-fpill-chip-remove": {
     "": "cursor-pointer opacity-70 w-[14px] h-[14px] inline-flex items-center justify-center border-0 bg-transparent text-inherit",
     "hover:": "opacity-100",
   },
   "as-fpill-vh": {
-    "": "scope-primary inline-grid place-items-center w-fingertip-s border-0 border-l-1 bg-transparent text-current/60 cursor-pointer flex-shrink-0 transition-colors duration-120",
+    "": "inline-grid place-items-center w-fingertip-s border-0 border-l-1 bg-transparent text-current/60 cursor-pointer flex-shrink-0 transition-colors duration-120",
     "hover:": "layer-2 text-current-hl",
   },
 
   /* ────────── Table ────────── */
   "as-table": {
-    "": "w-max border-collapse",
+    "": "scope-primary w-max border-collapse",
     "[&_thead]:": "layer-1",
     "[&_th]:":
       "px-$m py-$s text-left font-600 text-current/80 border-b-1 whitespace-nowrap overflow-hidden text-ellipsis select-none tracking-[0.01em]",
     "[&_td]:": "px-$m py-$s border-b-1 whitespace-nowrap overflow-hidden text-ellipsis",
     "[&_tbody_tr]:": "transition-colors duration-100",
     "[&_tbody_tr:hover]:": "layer-1",
-    "[&_tbody_tr:is([data-highlighted=''])]:": "scope-primary bg-current-hl/10",
-    "[&_tbody_tr:is([data-state=checked])]:": "scope-primary bg-current-hl/15",
+    "[&_tbody_tr:is([data-highlighted=''])]:": "bg-current-hl/10",
+    "[&_tbody_tr:is([data-state=checked])]:": "bg-current-hl/15",
   },
   "as-table-stretch": "min-w-full",
   "as-table-sticky": {
@@ -125,13 +131,13 @@ export const asTableShortcuts = defineShortcuts({
   "as-td-filler": "p-0 w-auto",
 
   "as-th-btn": {
-    "": "scope-primary flex items-center justify-between gap-$xs w-full p-0 m-0 border-0 bg-transparent font-inherit font-600 text-current/80 text-left cursor-pointer outline-none whitespace-nowrap",
+    "": "flex items-center justify-between gap-$xs w-full p-0 m-0 border-0 bg-transparent font-inherit font-600 text-current/80 text-left cursor-pointer outline-none whitespace-nowrap",
     "hover:": "text-current-hl",
   },
   "as-th-label": "overflow-hidden text-ellipsis flex-shrink",
   "as-th-indicators": "inline-flex items-center gap-$xs flex-shrink-0",
-  "as-th-sort": "scope-primary inline-flex text-body text-current-hl",
-  "as-th-filter-badge": "scope-primary inline-flex text-body text-current-hl",
+  "as-th-sort": "inline-flex text-body text-current-hl",
+  "as-th-filter-badge": "inline-flex text-body text-current-hl",
   "as-th-chevron": "inline-flex text-body text-current/50",
   "as-cell-number": "text-right tabular-nums font-mono",
   "as-virtual-row": "absolute w-full",
@@ -142,8 +148,8 @@ export const asTableShortcuts = defineShortcuts({
     "[tr[data-state=checked]_&]:": "bg-current-hl border-current-hl",
     "[tr[aria-selected=true]_&]:": "bg-current-hl border-current-hl",
   },
-  "as-table-checkbox-checked": "scope-primary bg-current-hl border-current-hl",
-  "as-table-checkbox-indeterminate": "scope-primary bg-current-hl border-current-hl",
+  "as-table-checkbox-checked": "bg-current-hl border-current-hl",
+  "as-table-checkbox-indeterminate": "bg-current-hl border-current-hl",
   "as-table-checkbox-tick": "i-as-check w-[0.9em] h-[0.9em] text-white",
   "as-table-checkbox-dash": "w-[0.6em] h-[0.125em] bg-white block",
 
@@ -151,15 +157,14 @@ export const asTableShortcuts = defineShortcuts({
   "as-table-loading": "flex items-center justify-center p-$xl text-current/60 whitespace-normal",
   "as-table-error":
     "scope-error flex items-center justify-center p-$xl text-current-hl whitespace-normal",
-  "as-table-query-overlay":
-    "inner-loading scope-primary rounded-r2 text-current-hl pointer-events-none",
+  "as-table-query-overlay": "inner-loading rounded-r2 text-current-hl pointer-events-none",
   "as-table-query-overlay-icon": "i-as-loading text-[3em]",
 
   /* ────────── Column menu ────────── */
   "as-column-menu-content":
-    "layer-0 z-[200] whitespace-nowrap py-$xs border-1 rounded-r2 shadow-popup min-w-[14em]",
+    "scope-primary layer-0 z-[200] whitespace-nowrap py-$xs border-1 rounded-r2 shadow-popup min-w-[14em]",
   "as-column-menu-label":
-    "scope-grey px-$m pt-$s pb-$xs text-callout font-mono font-600 tracking-[0.14em] uppercase text-current/50",
+    "px-$m pt-$s pb-$xs text-callout font-mono font-600 tracking-[0.14em] uppercase text-current/50",
   "as-column-menu-item": {
     "": "flex items-center gap-$s w-full px-$m py-$xs border-0 bg-transparent text-current text-left cursor-pointer outline-none",
     "hover:": "layer-3",
@@ -168,10 +173,10 @@ export const asTableShortcuts = defineShortcuts({
   "as-column-menu-item-icon": "inline-flex text-[1.25em] text-current/60 shrink-0",
   "as-column-menu-item-label": "flex-1 min-w-0 overflow-hidden text-ellipsis",
   "as-column-menu-item-hint":
-    "scope-grey inline-flex items-center justify-center min-w-[1.5em] h-[1.5em] px-$xs rounded-r0 layer-2 text-callout font-mono font-600 text-current/70 leading-none shrink-0",
+    "inline-flex items-center justify-center min-w-[1.5em] h-[1.5em] px-$xs rounded-r0 layer-2 text-callout font-mono font-600 text-current/70 leading-none shrink-0",
   "as-column-menu-item-badge":
-    "scope-primary inline-flex items-center justify-center min-w-[1.5em] h-[1.5em] px-$xs rounded-r0 bg-current-hl/10 text-current-hl text-callout font-mono font-600 leading-none shrink-0",
-  "as-column-menu-item-active": `scope-primary bg-current-hl/10 text-current-hl font-500 ${menuItemIconHl}`,
+    "inline-flex items-center justify-center min-w-[1.5em] h-[1.5em] px-$xs rounded-r0 bg-current-hl/10 text-current-hl text-callout font-mono font-600 leading-none shrink-0",
+  "as-column-menu-item-active": `bg-current-hl/10 text-current-hl font-500 ${menuItemIconHl}`,
   "as-column-menu-item-danger": {
     "": `scope-error text-current-hl ${menuItemIconHl}`,
     "hover:": "bg-current-hl/10",
@@ -206,8 +211,8 @@ export const asTableShortcuts = defineShortcuts({
     "hover:": "underline text-current",
   },
   "as-filter-dialog-chips": "flex flex-wrap gap-$xs",
-  "as-filter-dialog-chip": `scope-primary ${chipBase} gap-$xs bg-current-hl/10 border-1 border-current-hl/40 text-current-hl`,
-  "as-filter-dialog-chips-more": `scope-grey ${chipBase} text-current/70 font-500 italic`,
+  "as-filter-dialog-chip": `${chipBase} gap-$xs bg-current-hl/10 border-1 border-current-hl/40 text-current-hl`,
+  "as-filter-dialog-chips-more": `${chipBase} text-current/70 font-500 italic`,
   "as-filter-dialog-chip-remove": {
     "": "inline-grid place-items-center w-[18px] h-[18px] cursor-pointer opacity-70 leading-none border-0 bg-transparent text-inherit text-body",
     "hover:": "opacity-100",
@@ -233,7 +238,7 @@ export const asTableShortcuts = defineShortcuts({
     "hover:": "layer-2 text-current",
   },
   "as-filter-value-help-filters-toggle-active":
-    "scope-primary bg-current-hl/10 border-current-hl text-current-hl",
+    "bg-current-hl/10 border-current-hl text-current-hl",
   "as-filter-value-help-table": "flex flex-col flex-1 min-h-0 overflow-hidden",
 
   /* ────────── Filter conditions ──────── */
@@ -248,7 +253,7 @@ export const asTableShortcuts = defineShortcuts({
     "hover:": "scope-error layer-2 text-current-hl",
   },
   "as-filter-add-condition": {
-    "": "scope-primary py-$xs px-0 border-0 bg-transparent text-current-hl cursor-pointer text-left",
+    "": "py-$xs px-0 border-0 bg-transparent text-current-hl cursor-pointer text-left",
     "hover:": "underline",
   },
 
@@ -265,7 +270,7 @@ export const asTableShortcuts = defineShortcuts({
   "as-filter-shortcuts": "flex flex-wrap items-center gap-$xs pt-$xs border-t-1",
   "as-filter-shortcuts-label": "text-callout text-current/50 flex-shrink-0",
   "as-filter-shortcut-btn": {
-    "": "scope-primary px-$s py-[0.15em] border-1 rounded-base layer-2 text-callout text-current/70 cursor-pointer whitespace-nowrap transition-all duration-120",
+    "": "px-$s py-[0.15em] border-1 rounded-base layer-2 text-callout text-current/70 cursor-pointer whitespace-nowrap transition-all duration-120",
     "hover:": "border-current-hl text-current-hl bg-current-hl/10",
   },
 
@@ -304,24 +309,24 @@ export const asTableShortcuts = defineShortcuts({
   "as-filter-field-chips":
     "flex items-center gap-$xs min-w-0 h-full px-$xs flex-nowrap overflow-x-auto overflow-y-hidden select-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
   "as-filter-field-chip":
-    "scope-primary inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
+    "inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
   "as-filter-field-chip-remove": {
     "": "cursor-pointer opacity-70 w-[14px] h-[14px] inline-grid place-items-center text-callout leading-none",
     "hover:": "opacity-100",
   },
   "as-filter-field-search": `border-0 outline-none flex-1 min-w-[64px] p-0 m-0 bg-transparent ${strongText} placeholder:text-current/50`,
   "as-filter-field-f4": {
-    "": "scope-primary inline-grid place-items-center w-fingertip-s border-0 border-l-1 bg-transparent text-current/70 cursor-pointer flex-shrink-0 transition-colors duration-120 text-[1.25em] leading-none",
+    "": "inline-grid place-items-center w-fingertip-s border-0 border-l-1 bg-transparent text-current/70 cursor-pointer flex-shrink-0 transition-colors duration-120 text-[1.25em] leading-none",
     "hover:": "layer-2 text-current-hl",
     "[.as-filter-field:focus-within_&]:": "text-current-hl",
   },
   "as-filter-field-dropdown":
-    "layer-0 z-[200] border-1 rounded-r2 shadow-popup min-w-[20em] max-w-[36em] flex flex-col outline-none w-[max(var(--reka-popper-anchor-width,320px),320px)]",
+    "scope-primary layer-0 z-[200] border-1 rounded-r2 shadow-popup min-w-[20em] max-w-[36em] flex flex-col outline-none w-[max(var(--reka-popper-anchor-width,320px),320px)]",
   "as-filter-field-dropdown-body": "relative flex flex-col min-w-0 min-h-[12em]",
   "as-filter-field-dropdown-footer": {
     "": "flex gap-$s px-$s py-$xs border-t-1 justify-end",
     "[&_button]:":
-      "scope-primary px-$s py-$xs border-0 bg-transparent text-callout text-current-hl cursor-pointer",
+      "px-$s py-$xs border-0 bg-transparent text-callout text-current-hl cursor-pointer",
     "[&_button:hover]:": "underline",
   },
 
@@ -352,11 +357,11 @@ export const asTableShortcuts = defineShortcuts({
   /* Value-help empty state (no search/filter match) */
   "as-vh-empty": "flex flex-col items-center justify-center gap-$m py-$l px-$m text-center min-w-0",
   "as-vh-empty-icon":
-    "scope-grey inline-grid place-items-center w-[48px] h-[48px] rounded-full layer-2 text-scope-dark-1 dark:text-scope-light-1 text-[1.54em] flex-shrink-0",
+    "inline-grid place-items-center w-[48px] h-[48px] rounded-full layer-2 text-scope-dark-1 dark:text-scope-light-1 text-[1.54em] flex-shrink-0",
   "as-vh-empty-title": "font-600 text-current m-0",
   "as-vh-empty-body":
     "text-callout text-current/60 max-w-[44ch] leading-[1.5] m-0 whitespace-normal break-words",
-  "as-vh-empty-code": "scope-grey font-mono text-current bg-current-hl/10 rounded-r0 px-$xs",
+  "as-vh-empty-code": "font-mono text-current bg-current-hl/10 rounded-r0 px-$xs",
   "as-vh-empty-clear":
     "scope-neutral c8-chrome inline-flex items-center gap-$xs h-fingertip-s px-$m text-callout font-600 cursor-pointer rounded-base",
   "as-config-tab-content": "flex flex-col flex-1 min-h-0 data-[state=inactive]:hidden",
@@ -400,7 +405,7 @@ export const asTableShortcuts = defineShortcuts({
   "as-orderable-list-item-body": "flex items-center gap-$s flex-1 min-w-0",
   "as-orderable-list-item-label": "flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
   "as-orderable-list-item-actions": {
-    "": "scope-primary inline-flex items-center gap-[0.15em] p-[0.15em] border-1 rounded-r2 layer-0 flex-shrink-0 opacity-0 pointer-events-none transition-opacity duration-120 group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto shadow-popup",
+    "": "inline-flex items-center gap-[0.15em] p-[0.15em] border-1 rounded-r2 layer-0 flex-shrink-0 opacity-0 pointer-events-none transition-opacity duration-120 group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto shadow-popup",
     "[&_button]:":
       "inline-grid place-items-center w-fingertip-xs h-fingertip-xs p-0 border-0 bg-transparent cursor-pointer text-current/60 leading-none rounded-base transition-colors duration-120 text-callout",
     "[&_button:hover:not(:disabled)]:": "bg-current-hl/10 text-current-hl",
@@ -408,20 +413,20 @@ export const asTableShortcuts = defineShortcuts({
   },
 
   "as-orderable-list-drop-indicator":
-    "scope-primary absolute left-0 right-0 -top-px h-[2px] bg-current-hl pointer-events-none z-[1] before:content-[''] before:absolute before:left-0 before:-top-[0.15em] before:w-[6px] before:h-[6px] before:bg-current-hl before:rounded-full",
+    "absolute left-0 right-0 -top-px h-[2px] bg-current-hl pointer-events-none z-[1] before:content-[''] before:absolute before:left-0 before:-top-[0.15em] before:w-[6px] before:h-[6px] before:bg-current-hl before:rounded-full",
 
   /* ────────── Sorter ──────── */
   "as-sorter-label": "flex items-center gap-$s flex-1 min-w-0",
   "as-sorter-index":
-    "scope-grey inline-grid place-items-center w-[1.5em] h-[1.5em] rounded-r0 layer-2 text-callout text-current/70 font-mono font-500 flex-shrink-0",
+    "inline-grid place-items-center w-[1.5em] h-[1.5em] rounded-r0 layer-2 text-callout text-current/70 font-mono font-500 flex-shrink-0",
   "as-sorter-segment": {
     "": "inline-flex items-stretch gap-0 p-[0.15em] border-1 rounded-base layer-0 flex-shrink-0",
   },
   "as-sorter-segment-btn": {
-    "": "scope-primary inline-flex items-center gap-$xs h-fingertip-xs px-$s border-0 bg-transparent text-callout text-current/60 font-500 leading-none cursor-pointer rounded-base transition-colors duration-120",
+    "": "inline-flex items-center gap-$xs h-fingertip-xs px-$s border-0 bg-transparent text-callout text-current/60 font-500 leading-none cursor-pointer rounded-base transition-colors duration-120",
     "hover:not-disabled:": "text-current",
   },
-  "as-sorter-segment-btn-active": "scope-primary layer-2 text-current",
+  "as-sorter-segment-btn-active": "layer-2 text-current",
   "as-sorter-direction-disabled": "opacity-50 cursor-not-allowed",
   "as-sorter-lock": "text-callout opacity-50 flex-shrink-0",
 
@@ -429,5 +434,5 @@ export const asTableShortcuts = defineShortcuts({
   "as-config-tab-count": {
     "": "inline-flex items-center justify-center min-w-[18px] h-[18px] px-$xs rounded-full layer-2 text-callout text-current/70 font-500 leading-none",
   },
-  "as-config-tab-count-active": "scope-primary bg-current-hl/10 text-current-hl",
+  "as-config-tab-count-active": "bg-current-hl/10 text-current-hl",
 });

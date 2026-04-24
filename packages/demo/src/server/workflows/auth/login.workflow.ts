@@ -1,11 +1,5 @@
 import { Controller } from "moost";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-} from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
 import { usersTable, rolesTable } from "../../db";
 import { verifyPassword } from "../../auth/password";
 import { SessionService } from "../../auth/session.service";
@@ -53,18 +47,16 @@ export class LoginWorkflow {
 
     const user = (await usersTable.findOne({
       filter: { username: input.username },
-    })) as
-      | {
-          id: number;
-          username: string;
-          email: string;
-          roleId: number;
-          password?: string;
-          salt?: string;
-          mfaEnabled?: boolean;
-          status?: string;
-        }
-      | null;
+    })) as {
+      id: number;
+      username: string;
+      email: string;
+      roleId: number;
+      password?: string;
+      salt?: string;
+      mfaEnabled?: boolean;
+      status?: string;
+    } | null;
 
     if (!user || !(await verifyPassword(input.password, user.password ?? "", user.salt ?? ""))) {
       return httpInputRequired(LoginForm, ctx, { password: "Invalid username or password" });
@@ -90,9 +82,7 @@ export class LoginWorkflow {
       // would pause the workflow (the client would see `{sent:true}` instead of the
       // next form). We only want the MFA step to pause for input.
       // eslint-disable-next-line no-console
-      console.log(
-        `\n📧 [auth-otp] → ${ctx.email}\n    context: {"code":"${ctx.otpCode}"}\n`,
-      );
+      console.log(`\n📧 [auth-otp] → ${ctx.email}\n    context: {"code":"${ctx.otpCode}"}\n`);
     }
     return;
   }

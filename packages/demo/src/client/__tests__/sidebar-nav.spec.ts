@@ -20,7 +20,7 @@ describe("filterNavByPermissions", () => {
 
   it("admin sees everything", () => {
     const perms = Object.fromEntries(
-      DEMO_TABLES.map((t) => [t.resource, { read: true, write: true }])
+      DEMO_TABLES.map((t) => [t.resource, { read: true, write: true }]),
     );
     expect(filterNavByPermissions(DEMO_TABLES, perms)).toHaveLength(7);
   });

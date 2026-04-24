@@ -10,6 +10,7 @@ export interface InviteStartForm {
 
     @meta.label 'Role'
     @ui.placeholder 'Pick a role'
+    @db.rel.FK
     roleId: RolesTable.id
 }
 

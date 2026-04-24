@@ -229,9 +229,8 @@ describe("createTableDef", () => {
     expect(authorCol).toBeDefined();
     expect(authorCol!.type).toBe("ref");
     expect(authorCol!.valueHelpInfo).toBeDefined();
-    expect(authorCol!.valueHelpInfo!.path).toBe("/authors");
+    expect(authorCol!.valueHelpInfo!.url).toBe("/authors");
     expect(authorCol!.valueHelpInfo!.targetField).toBe("id");
-    expect(authorCol!.valueHelpInfo!.labelField).toBe("name");
   });
 
   it("non-FK columns have undefined valueHelpInfo", () => {

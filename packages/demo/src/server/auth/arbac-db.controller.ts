@@ -103,13 +103,7 @@ export class AsArbacDbController<
   }
 
   protected override onWrite(
-    action:
-      | "insert"
-      | "insertMany"
-      | "replace"
-      | "replaceMany"
-      | "update"
-      | "updateMany",
+    action: "insert" | "insertMany" | "replace" | "replaceMany" | "update" | "updateMany",
     data: unknown,
   ): unknown {
     const allowed = this.allowedColumns();

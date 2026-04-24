@@ -21,8 +21,7 @@ const demoShortcuts = defineShortcuts({
   /* ────────── Sidebar nav (ported from playground) ────────── */
   "nav-section":
     "scope-grey px-$s pt-$m pb-$xs font-mono text-callout font-600 uppercase tracking-[0.1em] text-current/70",
-  "nav-link":
-    "c8-flat flex items-center gap-$s px-$s py-$xs rounded-base no-underline select-none",
+  "nav-link": "c8-flat flex items-center gap-$s px-$s py-$xs rounded-base no-underline select-none",
   "nav-link-active": "scope-primary c8-flat-selected font-500",
   "nav-brand":
     "flex items-center gap-$s px-$s pt-$s pb-$m mb-$s border-b-1 no-underline text-current",

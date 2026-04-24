@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import type { ColumnDef } from "@atscript/ui";
-import { valueHelpDictPaths } from "@atscript/ui";
+import { computed, onMounted, ref, shallowRef, watch } from "vue";
+import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
+import { resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
 import { isSimpleEq, type FilterCondition } from "@atscript/ui-table";
 import { ListboxRoot } from "reka-ui";
 import { useTable } from "../../composables/use-table";
@@ -37,12 +37,12 @@ const selectedValues = computed<unknown[]>({
   },
 });
 
-const dictPaths = info ? valueHelpDictPaths(info) : undefined;
+const resolved = shallowRef<ResolvedValueHelp | null>(null);
 
 // For FK: spin up our own table state and provide it to the subtree so
 // <AsTable> below uses it for columnNames, sorters, hide, etc.
 const innerState = info
-  ? useTable(info.path, {
+  ? useTable(info.url, {
       limit: 1000,
       select: "multi",
       queryOnMount: true,
@@ -52,18 +52,32 @@ const innerState = info
     })
   : undefined;
 
-// Clamp visible columns to the value-help whitelist once metadata loads,
-// then let the user hide further via the header menu.
-// Also seed filterFields with all filterable dict columns — filter pills
-// are the primary query UX when the target table isn't searchable, and
-// a useful companion when it is.
-if (innerState && dictPaths) {
+// The dialog only mounts when the user opens it, so resolve on mount.
+if (info) {
+  onMounted(() => {
+    void resolveValueHelp(info.url)
+      .then((r) => {
+        resolved.value = r;
+      })
+      .catch(() => {
+        // If meta fails, the inner table will still show whatever came through
+        // its own meta fetch; resolved stays null and dict clamping is skipped.
+      });
+  });
+}
+
+// Clamp visible columns to the value-help whitelist once BOTH:
+//   - the inner table has its TableDef loaded (so allColumns is populated)
+//   - resolveValueHelp has produced the dict field names
+// Then seed filterFields with all filterable dict columns.
+if (innerState) {
   let initialized = false;
   const stop = watch(
-    () => innerState.tableDef.value,
-    (def) => {
-      if (!def || initialized) return;
+    [() => innerState.tableDef.value, resolved],
+    ([def, r]) => {
+      if (!def || !r || initialized) return;
       initialized = true;
+      const dictPaths = valueHelpDictPaths(r);
       const dictCols = innerState.allColumns.value.filter((c) => dictPaths.has(c.path));
       innerState.setColumnNames(dictCols.map((c) => c.path));
       if (innerState.filterFields.value.length === 0) {
@@ -106,9 +120,6 @@ function arraysEq(a: unknown[], b: unknown[]): boolean {
 
 const searchable = computed(() => !!innerState?.tableDef.value?.searchable);
 
-// Filter bar visibility: default off when search is available (search is the
-// primary query UX), default on when not searchable. User can toggle via
-// the button in the toolbar.
 const showFilters = ref(false);
 watch(
   searchable,
@@ -148,7 +159,6 @@ function onEnumSort(column: ColumnDef, direction: "asc" | "desc" | null) {
 
 const searchTerm = ref("");
 
-// searchTerm → innerState.searchTerm (triggers central debounced auto-query)
 watch(searchTerm, (value) => {
   if (innerState) innerState.searchTerm.value = value;
 });

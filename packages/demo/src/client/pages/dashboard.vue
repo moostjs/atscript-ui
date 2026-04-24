@@ -15,7 +15,13 @@ const visible = computed(() => filterNavByPermissions(DEMO_TABLES, me.value?.per
       <div class="as-page-eyebrow">atscript-ui demo</div>
       <h1 class="as-page-title mb-$m">Dashboard</h1>
       <div class="grid gap-$m grid-cols-[repeat(auto-fill,minmax(180px,1fr))]">
-        <CountCard v-for="t in visible" :key="t.path" :path="t.path" :label="t.label" :icon="t.icon" />
+        <CountCard
+          v-for="t in visible"
+          :key="t.path"
+          :path="t.path"
+          :label="t.label"
+          :icon="t.icon"
+        />
       </div>
     </div>
   </div>

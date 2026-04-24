@@ -25,8 +25,11 @@ import type { ColumnDef, MetaResponse, TableDef } from "./types";
  * 3. Builds ColumnDef per field using annotations + meta.fields capabilities
  * 4. Sorts by @ui.order
  */
-export function createTableDef(meta: MetaResponse): TableDef {
-  const type = deserializeAnnotatedType(meta.type);
+export function createTableDef(
+  meta: MetaResponse,
+  preDeserializedType?: TAtscriptAnnotatedType,
+): TableDef {
+  const type = preDeserializedType ?? deserializeAnnotatedType(meta.type);
 
   // Only flatten if the root is an object type
   const flatMap =

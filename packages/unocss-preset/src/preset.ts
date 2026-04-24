@@ -44,6 +44,7 @@ export const defaultAsIconAliases: Record<string, string> = {
   columns: "si:table-columns-line",
   "eye-slash": "iconamoon:eye-off-light",
   ellipsis: "ph:dots-three",
+  loading: "svg-spinners:3-dots-bounce",
 };
 
 export interface AsPresetVunorOptions {

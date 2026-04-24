@@ -10,7 +10,7 @@ import {
   ComboboxRoot,
   ComboboxViewport,
 } from "reka-ui";
-import { onMounted } from "vue";
+import { ref } from "vue";
 import { useValueHelp } from "../../composables/use-value-help";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "../internal/as-field-shell.vue";
@@ -27,25 +27,24 @@ const vh = info
     })
   : undefined;
 
+const resolved = vh?.resolved;
 const results = vh?.results;
-const loading = vh?.loading;
-const accessible = vh?.accessible;
+const status = vh?.status;
+const searching = vh?.searching;
+
+const open = ref(false);
 
 function onSearchInput(e: Event) {
   if (vh) vh.searchText.value = (e.target as HTMLInputElement).value;
-}
-
-if (vh) {
-  onMounted(() => vh.init());
 }
 </script>
 
 <template>
   <AsFieldShell v-bind="$props" id-prefix="as-ref">
     <template #default="{ inputId, errorId, descId }">
-      <!-- Fallback: plain text input when no ValueHelpInfo -->
+      <!-- Fallback: plain text input when no ValueHelpInfo or target meta unreachable -->
       <input
-        v-if="!info || !vh"
+        v-if="!info || !vh || status === 'error'"
         :id="inputId"
         v-model="model.value"
         type="text"
@@ -60,10 +59,15 @@ if (vh) {
         @blur="onBlur"
       />
 
-      <!-- reka-ui Combobox for FK ref fields — value is the raw FK id -->
+      <div v-else-if="status === 'loading' || !resolved" class="as-ref-loading">
+        <span class="as-ref-spinner" aria-hidden="true" />
+      </div>
+
+      <!-- reka-ui Combobox for FK ref fields — value is the raw FK id. -->
       <ComboboxRoot
         v-else
         v-model="model.value"
+        v-model:open="open"
         :disabled="disabled"
         :name="name"
         ignore-filter
@@ -80,6 +84,7 @@ if (vh) {
             :aria-describedby="error || hint ? errorId : description ? descId : undefined"
             :aria-label="!label ? name : undefined"
             class="as-ref-input"
+            @focus="open = true"
             @input="onSearchInput"
             @blur="onBlur"
           />
@@ -93,8 +98,9 @@ if (vh) {
 
         <ComboboxContent position="popper" side="bottom" :side-offset="4" class="as-ref-content">
           <ComboboxViewport class="as-ref-viewport">
-            <div v-if="loading" class="as-ref-status">Loading...</div>
-            <div v-else-if="accessible === false" class="as-ref-status">No access</div>
+            <div v-if="searching" class="as-ref-status">
+              <span class="as-ref-spinner" aria-hidden="true" />
+            </div>
             <template v-else>
               <ComboboxItem
                 v-for="item in results"
@@ -104,9 +110,12 @@ if (vh) {
               >
                 <span class="as-ref-item-id">{{ item[info.targetField] }}</span>
                 <span class="as-ref-item-label">
-                  {{ item[info.labelField] }}
-                  <span v-if="info.descrField && item[info.descrField]" class="as-ref-item-descr">
-                    — {{ item[info.descrField] }}
+                  {{ item[resolved.labelField] }}
+                  <span
+                    v-if="resolved.descrField && item[resolved.descrField]"
+                    class="as-ref-item-descr"
+                  >
+                    — {{ item[resolved.descrField] }}
                   </span>
                 </span>
               </ComboboxItem>

@@ -1,8 +1,5 @@
 import { describe, it, expect } from "vite-plus/test";
-import {
-  narrowProjection,
-  unionAllowedColumns,
-} from "../server/auth/arbac-db.controller";
+import { narrowProjection, unionAllowedColumns } from "../server/auth/arbac-db.controller";
 
 describe("p3 arbac narrowProjection (transformProjection helper)", () => {
   it("admin-ish empty-columns scope → projection is untouched", () => {
@@ -11,16 +8,14 @@ describe("p3 arbac narrowProjection (transformProjection helper)", () => {
   });
 
   it("scope columns → narrows undefined projection to whitelist", () => {
-    expect(narrowProjection([{ columns: ["id", "name"] }], undefined)).toEqual([
-      "id",
-      "name",
-    ]);
+    expect(narrowProjection([{ columns: ["id", "name"] }], undefined)).toEqual(["id", "name"]);
   });
 
   it("scope columns → intersects explicit array projection", () => {
-    expect(
-      narrowProjection([{ columns: ["id", "name"] }], ["id", "secret", "name"]),
-    ).toEqual(["id", "name"]);
+    expect(narrowProjection([{ columns: ["id", "name"] }], ["id", "secret", "name"])).toEqual([
+      "id",
+      "name",
+    ]);
   });
 
   it("union across multiple scopes", () => {
@@ -29,21 +24,15 @@ describe("p3 arbac narrowProjection (transformProjection helper)", () => {
       undefined,
     );
     expect(Array.isArray(out)).toBe(true);
-    expect((out as string[]).slice().sort()).toEqual(["email", "id", "name"]);
+    expect((out as string[]).slice().toSorted()).toEqual(["email", "id", "name"]);
   });
 
   it("any unrestricted scope → admin-ish (projection passes through)", () => {
-    expect(narrowProjection([{ columns: ["id"] }, {}], ["id", "secret"])).toEqual([
-      "id",
-      "secret",
-    ]);
+    expect(narrowProjection([{ columns: ["id"] }, {}], ["id", "secret"])).toEqual(["id", "secret"]);
   });
 
   it("object-form projection → drops keys outside the whitelist", () => {
-    const result = narrowProjection(
-      [{ columns: ["id", "name"] }],
-      { id: 1, name: 1, secret: 1 },
-    );
+    const result = narrowProjection([{ columns: ["id", "name"] }], { id: 1, name: 1, secret: 1 });
     expect(result).toEqual({ id: 1, name: 1 });
   });
 
@@ -51,7 +40,7 @@ describe("p3 arbac narrowProjection (transformProjection helper)", () => {
     expect(unionAllowedColumns([])).toBeUndefined();
     expect(unionAllowedColumns([{}])).toBeUndefined();
     expect(unionAllowedColumns([{ columns: ["a"] }, {}])).toBeUndefined();
-    expect(unionAllowedColumns([{ columns: ["a"] }, { columns: ["b"] }])?.sort()).toEqual([
+    expect(unionAllowedColumns([{ columns: ["a"] }, { columns: ["b"] }])?.toSorted()).toEqual([
       "a",
       "b",
     ]);

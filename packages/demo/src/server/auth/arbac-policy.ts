@@ -63,11 +63,7 @@ function allowAll(resource: string, actions: readonly string[]): Rule[] {
   return actions.map((action) => ({ resource, action, scope: () => ({}) }));
 }
 
-function allowWithColumns(
-  resource: string,
-  actions: readonly string[],
-  columns: string[],
-): Rule[] {
+function allowWithColumns(resource: string, actions: readonly string[], columns: string[]): Rule[] {
   return actions.map((action) => ({ resource, action, scope: () => ({ columns }) }));
 }
 

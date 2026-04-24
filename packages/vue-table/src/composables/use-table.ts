@@ -1,31 +1,21 @@
 import type { Ref } from "vue";
 import {
   createTableDef,
+  getMetaEntry,
   getVisibleColumns,
-  getDefaultClientFactory,
+  resetMetaCache,
   type ClientFactory,
   type SortControl,
-  type TableDef,
 } from "@atscript/ui";
-import type { Client } from "@atscript/db-client";
 import type { SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import { createTableState, provideTableContext } from "./use-table-state";
 import { useTableQuery, type UseTableQueryOptions } from "./use-table-query";
 import { useTableSelection } from "./use-table-selection";
 
-/** Cached entry: the client instance + parsed TableDef promise. */
-interface CacheEntry {
-  client: Client;
-  def: Promise<TableDef>;
-}
-
-/** Global cache keyed by URL path. */
-const cache = new Map<string, CacheEntry>();
-
-/** Clear the global table cache (useful for testing). */
+/** Thin alias over `resetMetaCache` — retained so existing test code keeps working. */
 export function clearTableCache() {
-  cache.clear();
+  resetMetaCache();
 }
 
 export interface UseTableOptions extends UseTableQueryOptions {
@@ -41,7 +31,7 @@ export interface UseTableOptions extends UseTableQueryOptions {
   manageSelection?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
-  /** Factory to create a client from a URL. Falls back to the app-wide default set via `setDefaultClientFactory` (or the built-in `new Client(url)` factory if unset). */
+  /** Factory to create a client from a URL. Only honored on the first `useTable`/`resolveValueHelp` call per URL — subsequent callers reuse the cached client. */
   clientFactory?: ClientFactory;
   /** Component overrides for table rendering. */
   components?: TAsTableComponents;
@@ -61,8 +51,14 @@ export interface UseTableOptions extends UseTableQueryOptions {
  * @param url — Table endpoint URL (e.g. "/db/tables/products")
  */
 export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
-  const factory = opts?.clientFactory ?? getDefaultClientFactory();
-  const { client, defPromise } = resolveClient(url, factory);
+  const entry = getMetaEntry(url, opts?.clientFactory);
+  if (!entry.tableDef) {
+    entry.tableDef = Promise.all([entry.meta, entry.type]).then(([meta, type]) =>
+      createTableDef(meta, type),
+    );
+  }
+  const { client } = entry;
+  const defPromise = entry.tableDef;
 
   const { state, internals } = createTableState({
     limit: opts?.limit,
@@ -86,7 +82,6 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   defPromise
     .then((def) => {
       internals.init(def);
-      // Populate columnNames from metadata if not externally set
       if (state.columnNames.value.length === 0) {
         state.columnNames.value = getVisibleColumns(def).map((c) => c.path);
       }
@@ -102,21 +97,4 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     });
 
   return state;
-}
-
-function resolveClient(
-  url: string,
-  factory: ClientFactory,
-): { client: Client; defPromise: Promise<TableDef> } {
-  const cached = cache.get(url);
-  if (cached) {
-    return { client: cached.client, defPromise: cached.def };
-  }
-
-  const client = factory(url);
-  const def = client.meta().then((meta) => createTableDef(meta));
-  def.catch(() => cache.delete(url));
-  cache.set(url, { client, def });
-
-  return { client, defPromise: def };
 }

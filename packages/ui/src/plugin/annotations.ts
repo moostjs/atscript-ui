@@ -305,7 +305,7 @@ export const uiAnnotations: TAnnotationsTree = {
       }),
     },
 
-    // ── Dictionary annotations (value-help display) ────────────
+    // ── Dictionary annotations (value-help display + capabilities) ────
     dict: {
       label: new AnnotationSpec({
         description:
@@ -321,6 +321,21 @@ export const uiAnnotations: TAnnotationsTree = {
         nodeType: ["prop"],
         multiple: true,
         mergeStrategy: "append",
+      }),
+      filterable: new AnnotationSpec({
+        description:
+          "Marks this field as filterable in the value-help picker UI. Surfaced via `meta.fields[name].filterable` on value-help `/meta` responses.",
+        nodeType: ["prop"],
+      }),
+      sortable: new AnnotationSpec({
+        description:
+          "Marks this field as sortable in the value-help picker UI. Surfaced via `meta.fields[name].sortable` on value-help `/meta` responses.",
+        nodeType: ["prop"],
+      }),
+      searchable: new AnnotationSpec({
+        description:
+          "Marks a prop as participating in `$search`, or — on an interface — marks every `string` prop on the target as searchable. Surfaced via `meta.searchable` on value-help `/meta` responses.",
+        nodeType: ["prop", "interface"],
       }),
     },
 

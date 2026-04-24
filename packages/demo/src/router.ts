@@ -20,7 +20,11 @@ const routes = [
     name: "invite-accept",
     component: () => import("./client/pages/invite-accept.vue"),
   },
-  { path: "/:table", name: "table", component: () => import("./client/pages/table-page-route.vue") },
+  {
+    path: "/:table",
+    name: "table",
+    component: () => import("./client/pages/table-page-route.vue"),
+  },
   {
     path: "/:table/:id/edit",
     name: "edit-by-path",

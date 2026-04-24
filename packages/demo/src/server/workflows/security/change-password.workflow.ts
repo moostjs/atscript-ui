@@ -1,12 +1,6 @@
 import { Controller } from "moost";
 import { HttpError } from "@moostjs/event-http";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-} from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
 import { usersTable } from "../../db";
 import { hashPassword, verifyPassword } from "../../auth/password";
 import { useSession } from "../../auth/use-session";
