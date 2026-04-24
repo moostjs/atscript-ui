@@ -13,7 +13,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "reka-ui";
-import { sortersEqual } from "@atscript/ui-table";
+import { arraysEqual, sortersEqual } from "@atscript/ui-table";
 import type { ConfigTab } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import AsFieldsSelector from "./as-fields-selector.vue";
@@ -52,27 +52,19 @@ watch(isOpen, (open) => {
 const filterableColumns = computed(() => state.allColumns.value.filter((c) => c.filterable));
 const sortableColumns = computed(() => state.allColumns.value.filter((c) => c.sortable));
 
-function arraysEqual(a: string[], b: string[]): boolean {
-  return a.length === b.length && a.every((v, i) => v === b[i]);
+function filterCount(path: string): number {
+  return state.filters.value[path]?.length ?? 0;
 }
 
 function onApply() {
   if (!arraysEqual(state.columnNames.value, columnsModel.value)) {
-    state.setColumnNames(columnsModel.value);
+    state.columnNames.value = columnsModel.value;
   }
   if (!arraysEqual(state.filterFields.value, filtersModel.value)) {
-    // Drop conditions for fields no longer displayed so the filters watcher
-    // sees the change and flags mustRefresh.
-    const newSet = new Set(filtersModel.value);
-    for (const field of state.filterFields.value) {
-      if (!newSet.has(field) && state.filters.value[field]) {
-        state.removeFieldFilter(field);
-      }
-    }
     state.filterFields.value = filtersModel.value;
   }
   if (!sortersEqual(state.sorters.value, sortersModel.value)) {
-    state.setSorters(sortersModel.value);
+    state.sorters.value = sortersModel.value;
   }
   state.configDialogOpen.value = false;
 }
@@ -132,7 +124,16 @@ function onCancel() {
           </TabsContent>
 
           <TabsContent value="filters" class="as-config-tab-content">
-            <AsFieldsSelector :columns="filterableColumns" v-model="filtersModel" />
+            <AsFieldsSelector :columns="filterableColumns" v-model="filtersModel">
+              <template #label="{ label, value }">
+                <span class="as-config-field-label-wrap">
+                  <span class="as-config-field-label-text">{{ label }}</span>
+                  <span v-if="filterCount(value) > 0" class="as-config-field-count">
+                    {{ filterCount(value) }}
+                  </span>
+                </span>
+              </template>
+            </AsFieldsSelector>
           </TabsContent>
 
           <TabsContent value="sorters" class="as-config-tab-content">

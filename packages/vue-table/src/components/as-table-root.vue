@@ -95,7 +95,6 @@ const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConf
     :remove-field-filter="state.removeFieldFilter"
     :add-filter-field="state.addFilterField"
     :remove-filter-field="state.removeFilterField"
-    :set-column-names="state.setColumnNames"
   />
 
   <!-- Dialogs rendered outside user layout (like not-sap SmartTableRoot) -->

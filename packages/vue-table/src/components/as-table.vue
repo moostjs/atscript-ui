@@ -43,16 +43,12 @@ const listboxModel = computed({
 });
 
 function handleSort(column: ColumnDef, direction: "asc" | "desc" | null) {
-  if (direction === null) {
-    state.setSorters(state.sorters.value.filter((s) => s.field !== column.path));
-  } else {
-    const existing = state.sorters.value.filter((s) => s.field !== column.path);
-    state.setSorters([...existing, { field: column.path, direction }]);
-  }
+  const rest = state.sorters.value.filter((s) => s.field !== column.path);
+  state.sorters.value = direction === null ? rest : [...rest, { field: column.path, direction }];
 }
 
 function handleHide(column: ColumnDef) {
-  state.setColumnNames(state.columnNames.value.filter((name) => name !== column.path));
+  state.columnNames.value = state.columnNames.value.filter((name) => name !== column.path);
 }
 
 function handleFilter(column: ColumnDef) {
@@ -60,7 +56,7 @@ function handleFilter(column: ColumnDef) {
 }
 
 function handleFiltersOff(column: ColumnDef) {
-  state.removeFilterField(column.path);
+  state.removeFieldFilter(column.path);
 }
 
 function handleSelectAll() {
@@ -69,6 +65,11 @@ function handleSelectAll() {
 
 function handleDeselectAll() {
   state.selectedRows.value = [];
+}
+
+function handleClearFilters() {
+  state.resetFilters();
+  if (state.searchTerm.value) state.searchTerm.value = "";
 }
 </script>
 
@@ -88,6 +89,8 @@ function handleDeselectAll() {
       :virtual-row-height="virtualRowHeight"
       :virtual-overscan="virtualOverscan"
       :filters="state.filters.value"
+      :search-term="state.searchTerm.value"
+      :on-clear-filters="handleClearFilters"
       :column-menu="columnMenu"
       @sort="handleSort"
       @hide="handleHide"

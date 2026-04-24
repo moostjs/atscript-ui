@@ -45,6 +45,7 @@ export const defaultAsIconAliases: Record<string, string> = {
   "eye-slash": "iconamoon:eye-off-light",
   ellipsis: "ph:dots-three",
   loading: "svg-spinners:3-dots-bounce",
+  warning: "ph:warning-circle",
 };
 
 export interface AsPresetVunorOptions {

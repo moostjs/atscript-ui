@@ -108,4 +108,28 @@ describe("useTableQuery", () => {
 
     expect(state.mustRefresh.value).toBe(true);
   });
+
+  it("resets pagination to page 1 on any filter mutation", async () => {
+    const { state } = setupQuery();
+
+    state.pagination.value = { page: 3, itemsPerPage: 50 };
+    state.setFieldFilter("name", [{ type: "eq", value: ["test"] }]);
+    await nextTick();
+    expect(state.pagination.value.page).toBe(1);
+
+    state.pagination.value = { page: 4, itemsPerPage: 50 };
+    state.filters.value = {};
+    await nextTick();
+    expect(state.pagination.value.page).toBe(1);
+  });
+
+  it("resets pagination on searchTerm change", async () => {
+    const { state } = setupQuery();
+
+    state.pagination.value = { page: 5, itemsPerPage: 50 };
+    state.searchTerm.value = "hello";
+    await nextTick();
+
+    expect(state.pagination.value.page).toBe(1);
+  });
 });

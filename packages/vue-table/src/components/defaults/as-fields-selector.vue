@@ -21,6 +21,11 @@ const getValue = (col: ColumnDef) => col.path;
     :get-label="getLabel"
     :get-value="getValue"
   >
+    <template #label="slotProps">
+      <slot name="label" v-bind="slotProps">
+        <span class="as-orderable-list-item-label">{{ slotProps.label }}</span>
+      </slot>
+    </template>
     <template #item-extra="slotProps">
       <slot name="item-extra" v-bind="slotProps" />
     </template>

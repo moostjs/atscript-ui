@@ -43,6 +43,8 @@ export interface TableStateInternals {
   setQueryFns(query: () => void, queryNext: () => void): void;
   /** Wire up a callback that suppresses the next pagination watcher trigger. */
   setSuppressPaginationWatch(fn: () => void): void;
+  /** Reset pagination to page 1 (suppresses the pagination watcher). */
+  resetPagination(): void;
 }
 
 /**
@@ -149,20 +151,10 @@ export function createTableState(opts?: CreateTableStateOptions): {
     },
     resetFilters() {
       filters.value = {};
-      resetPagination();
     },
     showConfigDialog(tab?: ConfigTab) {
       configTab.value = tab ?? "columns";
       configDialogOpen.value = true;
-    },
-    setColumnNames(names: string[]) {
-      columnNames.value = names;
-    },
-    setColumns(cols: ColumnDef[]) {
-      columnNames.value = cols.map((c) => c.path);
-    },
-    setSorters(s: SortControl[]) {
-      sorters.value = s;
     },
     addFilterField(path: string) {
       if (!filterFields.value.includes(path)) {
@@ -170,25 +162,22 @@ export function createTableState(opts?: CreateTableStateOptions): {
       }
     },
     removeFilterField(path: string) {
+      if (!filterFields.value.includes(path)) return;
       filterFields.value = filterFields.value.filter((f) => f !== path);
-      const { [path]: _, ...rest } = filters.value;
-      filters.value = rest;
-      resetPagination();
     },
     setFieldFilter(path: string, conditions: FilterCondition[]) {
       const filled = conditions.filter((c) => isFilled(c));
       if (filled.length === 0) {
+        if (!(path in filters.value)) return;
         const { [path]: _, ...rest } = filters.value;
         filters.value = rest;
       } else {
         filters.value = { ...filters.value, [path]: conditions };
       }
-      resetPagination();
     },
     removeFieldFilter(path: string) {
       const { [path]: _, ...rest } = filters.value;
       filters.value = rest;
-      resetPagination();
     },
     openFilterDialog(column: ColumnDef) {
       filterDialogColumn.value = column;
@@ -210,6 +199,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
     setSuppressPaginationWatch(fn: () => void) {
       _suppressPaginationWatch = fn;
     },
+    resetPagination,
   };
 
   return { state, internals };

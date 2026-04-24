@@ -1,7 +1,11 @@
 import type { Client } from "@atscript/db-client";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { resetDefaultClientFactory, setDefaultClientFactory, type ClientFactory } from "../client-factory";
+import {
+  resetDefaultClientFactory,
+  setDefaultClientFactory,
+  type ClientFactory,
+} from "../client-factory";
 import { resolveValueHelp } from "../value-help/resolve";
 import { getMetaEntry, resetMetaCache } from "./meta-cache";
 

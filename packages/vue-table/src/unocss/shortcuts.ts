@@ -301,7 +301,7 @@ export const asTableShortcuts = defineShortcuts({
     "flex items-center justify-center flex-1 min-w-0 h-full text-current-hl text-[1.25em] opacity-70",
   "as-filter-field-loading-icon": "i-as-loading",
   "as-filter-field-label": {
-    "": "inline-flex items-center px-$s layer-2 text-current/80 text-callout font-500 border-r-1 whitespace-nowrap flex-shrink-0 transition-colors duration-120",
+    "": "inline-flex items-center px-$s layer-2 text-current/80 text-callout font-500 border-r-1 whitespace-nowrap flex-shrink-0 cursor-pointer transition-colors duration-120",
     "[.as-filter-field:focus-within_&]:": "bg-current-hl/10 text-current-hl font-600",
   },
   "as-filter-field-body": "flex items-stretch flex-1 min-w-0",
@@ -357,7 +357,8 @@ export const asTableShortcuts = defineShortcuts({
   /* Value-help empty state (no search/filter match) */
   "as-vh-empty": "flex flex-col items-center justify-center gap-$m py-$l px-$m text-center min-w-0",
   "as-vh-empty-icon":
-    "inline-grid place-items-center w-[48px] h-[48px] rounded-full layer-2 text-scope-dark-1 dark:text-scope-light-1 text-[1.54em] flex-shrink-0",
+    "inline-grid place-items-center w-[48px] h-[48px] rounded-full bg-current-hl/50 text-current-hl text-[1.54em] flex-shrink-0",
+  "as-vh-error-icon": "as-vh-empty-icon scope-error",
   "as-vh-empty-title": "font-600 text-current m-0",
   "as-vh-empty-body":
     "text-callout text-current/60 max-w-[44ch] leading-[1.5] m-0 whitespace-normal break-words",
@@ -393,7 +394,7 @@ export const asTableShortcuts = defineShortcuts({
   "as-orderable-list-item-disabled": "pointer-events-none cursor-default",
   "as-orderable-list-item-content": "flex items-center gap-$s px-$s py-[0.15em] min-h-fingertip-s",
   "as-orderable-list-grip":
-    "inline-grid place-items-center w-[1.5em] h-[1.5em] text-current/40 cursor-grab active:cursor-grabbing shrink-0 text-[1.25em] hover:text-current/70",
+    "inline-grid place-items-center w-[0.8em] h-[0.8em] text-current/40 cursor-grab active:cursor-grabbing shrink-0 text-[1.25em] hover:text-current/70",
   "as-orderable-list-grip-disabled": "opacity-40 cursor-default pointer-events-none",
   "as-orderable-list-checkbox": {
     "": "scope-primary text-body w-[1.25em] h-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] flex items-center justify-center flex-shrink-0 cursor-pointer layer-0 transition-all duration-120",
@@ -435,4 +436,15 @@ export const asTableShortcuts = defineShortcuts({
     "": "inline-flex items-center justify-center min-w-[18px] h-[18px] px-$xs rounded-full layer-2 text-callout text-current/70 font-500 leading-none",
   },
   "as-config-tab-count-active": "bg-current-hl/10 text-current-hl",
+  /* Per-field active-filter count badge (config dialog → Filters tab). */
+  "as-config-field-count": {
+    "": "scope-primary inline-flex items-center justify-center min-w-[18px] h-[18px] px-$xs rounded-full bg-current-hl/10 text-current-hl text-callout font-500 leading-none flex-shrink-0",
+  },
+  /*
+   * Config-dialog field-label wrapper: keeps label text and badge together
+   * tight on the left. The wrapper takes flex-1 so the row's action buttons
+   * still sit on the far right.
+   */
+  "as-config-field-label-wrap": "flex items-center gap-$xs flex-1 min-w-0",
+  "as-config-field-label-text": "overflow-hidden text-ellipsis whitespace-nowrap min-w-0",
 });

@@ -125,7 +125,7 @@ describe("createTableState", () => {
     expect(state.filterFields.value).toEqual(["name", "age"]);
   });
 
-  it("removeFilterField removes from filterFields AND clears conditions", () => {
+  it("removeFilterField removes from filterFields and preserves applied filter value", () => {
     let state!: ReactiveTableState;
     mount(
       defineComponent({
@@ -143,7 +143,7 @@ describe("createTableState", () => {
     state.removeFilterField("name");
 
     expect(state.filterFields.value).toEqual(["age"]);
-    expect(state.filters.value.name).toBeUndefined();
+    expect(state.filters.value.name).toEqual([{ type: "eq", value: ["test"] }]);
   });
 
   it("removeFieldFilter clears conditions but keeps filterFields", () => {
@@ -179,12 +179,10 @@ describe("createTableState", () => {
 
     state.addFilterField("name");
     state.setFieldFilter("name", [{ type: "eq", value: ["test"] }]);
-    state.pagination.value = { page: 3, itemsPerPage: 50 };
     state.resetFilters();
 
     expect(state.filters.value).toEqual({});
     expect(state.filterFields.value).toEqual(["name"]);
-    expect(state.pagination.value.page).toBe(1);
   });
 
   it("showConfigDialog opens dialog and sets tab", () => {

@@ -49,8 +49,8 @@ export type { SelectionMode, SelectionOptions } from "./selection/selection-stat
 export { SelectionState } from "./selection/selection-state";
 
 // ── State types ────────────────────────────────────────────
-export type { TableStateData, TableStateMethods } from "./state/table-state-types";
+export type { ConfigTab, TableStateData, TableStateMethods } from "./state/table-state-types";
 
 // ── Utils ──────────────────────────────────────────────────
 export { debounce } from "./utils/debounce";
-export { sameColumnSet, sortersEqual } from "./utils/equality";
+export { arraysEqual, sameColumnSet, sortersEqual } from "./utils/equality";

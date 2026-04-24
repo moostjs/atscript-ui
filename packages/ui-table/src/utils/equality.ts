@@ -1,5 +1,14 @@
 import type { SortControl } from "@atscript/ui";
 
+export function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 export function sameColumnSet(a: string[], b: string[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;

@@ -1,8 +1,8 @@
 import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
-import type { FieldFilters, SelectionMode, TableStateMethods } from "@atscript/ui-table";
+import type { ConfigTab, FieldFilters, SelectionMode, TableStateMethods } from "@atscript/ui-table";
 
-export type ConfigTab = "columns" | "filters" | "sorters";
+export type { ConfigTab };
 
 /** Controls which sections appear in the column header dropdown menu. */
 export interface ColumnMenuConfig {

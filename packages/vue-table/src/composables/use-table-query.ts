@@ -82,6 +82,13 @@ export function useTableQuery(
     } catch (err) {
       if (thisGen !== generation) return;
       state.queryError.value = err instanceof Error ? err : new Error(String(err));
+      // Clear prior results on a fresh fetch failure so the empty/error block
+      // isn't stacked on stale rows. queryNext (append) keeps existing rows —
+      // wiping mid-scroll would be jarring.
+      if (!append) {
+        state.results.value = [];
+        state.totalCount.value = 0;
+      }
     } finally {
       if (thisGen === generation) {
         queryingRef.value = false;
@@ -136,6 +143,7 @@ export function useTableQuery(
   // mustRefresh immediately so UI can show a "refresh pending" indicator.
   watch([() => state.filters.value, () => state.searchTerm.value], () => {
     state.mustRefresh.value = true;
+    internals.resetPagination();
     debouncedAutoQuery();
   });
 

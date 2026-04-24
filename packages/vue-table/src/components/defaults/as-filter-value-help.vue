@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
 import { resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
-import { isSimpleEq, type FilterCondition } from "@atscript/ui-table";
+import { filledFilterCount, isSimpleEq, type FilterCondition } from "@atscript/ui-table";
 import { ListboxRoot } from "reka-ui";
 import { useTable } from "../../composables/use-table";
 import AsTable from "../as-table.vue";
@@ -79,7 +79,7 @@ if (innerState) {
       initialized = true;
       const dictPaths = valueHelpDictPaths(r);
       const dictCols = innerState.allColumns.value.filter((c) => dictPaths.has(c.path));
-      innerState.setColumnNames(dictCols.map((c) => c.path));
+      innerState.columnNames.value = dictCols.map((c) => c.path);
       if (innerState.filterFields.value.length === 0) {
         innerState.filterFields.value = dictCols.filter((c) => c.filterable).map((c) => c.path);
       }
@@ -157,19 +157,21 @@ function onEnumSort(column: ColumnDef, direction: "asc" | "desc" | null) {
   enumSort.value = direction ? { field: column.path, direction } : null;
 }
 
-const searchTerm = ref("");
-
-watch(searchTerm, (value) => {
-  if (innerState) innerState.searchTerm.value = value;
+// Single source of truth: the FK (info) path reads/writes innerState.searchTerm
+// directly so AsTable's built-in "Clear filters" button propagates to the input
+// without a sync watch. The enum path has no innerState, so it falls back to a
+// local ref that drives filteredEnumRows.
+const localSearchTerm = ref("");
+const searchTerm = computed<string>({
+  get: () => (innerState ? innerState.searchTerm.value : localSearchTerm.value),
+  set: (value) => {
+    if (innerState) innerState.searchTerm.value = value;
+    else localSearchTerm.value = value;
+  },
 });
 
 function onSearchInput(event: Event) {
   searchTerm.value = (event.target as HTMLInputElement).value;
-}
-
-function onSearchEnter() {
-  if (!innerState) return;
-  innerState.searchTerm.value = searchTerm.value;
 }
 
 const filteredEnumRows = computed(() => {
@@ -204,31 +206,16 @@ function onDeselectAll() {
   selectedValues.value = [];
 }
 
-const hasActiveSearch = computed(() => searchTerm.value.trim().length > 0);
-const hasActiveFilters = computed(() => {
-  if (!innerState) return false;
-  const f = innerState.filters.value;
-  for (const key in f) {
-    if (f[key] && f[key].length > 0) return true;
-  }
-  return false;
-});
+const hasActiveFilters = computed(() =>
+  innerState ? filledFilterCount(innerState.filters.value) > 0 : false,
+);
 
 function clearSearch() {
   searchTerm.value = "";
-  if (innerState) innerState.searchTerm.value = "";
 }
 
 function clearAllFilters() {
   innerState?.resetFilters();
-}
-
-function clearSearchAndFilters() {
-  searchTerm.value = "";
-  if (innerState) {
-    innerState.searchTerm.value = "";
-    innerState.resetFilters();
-  }
 }
 </script>
 
@@ -244,7 +231,6 @@ function clearSearchAndFilters() {
           placeholder="Search..."
           autocomplete="off"
           @input="onSearchInput"
-          @keydown.enter="onSearchEnter"
         />
       </div>
       <span class="as-filter-value-help-count">
@@ -278,57 +264,7 @@ function clearSearchAndFilters() {
          Render the inner filter/config dialogs so the inner table is fully functional
          (clicking "Filter" in its column menu opens a nested filter dialog). -->
     <template v-if="info">
-      <AsTable :column-menu="{ sort: true, filters: true, hide: false }" :sticky-header="true">
-        <template #empty>
-          <div class="as-vh-empty">
-            <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-            <p class="as-vh-empty-title">No matching values</p>
-            <p v-if="hasActiveSearch && hasActiveFilters" class="as-vh-empty-body">
-              No entries match
-              <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
-              with the current filters. Try a different search, clear the filters, or switch to the
-              Conditions tab.
-            </p>
-            <p v-else-if="hasActiveSearch" class="as-vh-empty-body">
-              No entries match
-              <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
-              . Try a different search or switch to the Conditions tab to build a custom filter.
-            </p>
-            <p v-else-if="hasActiveFilters" class="as-vh-empty-body">
-              No entries match the current filters. Try adjusting the filter values or switch to the
-              Conditions tab to build a custom filter.
-            </p>
-            <p v-else class="as-vh-empty-body">No entries available.</p>
-            <button
-              v-if="hasActiveSearch && hasActiveFilters"
-              type="button"
-              class="as-vh-empty-clear"
-              @click="clearSearchAndFilters"
-            >
-              <span class="i-as-refresh" aria-hidden="true" />
-              Clear search &amp; filters
-            </button>
-            <button
-              v-else-if="hasActiveSearch"
-              type="button"
-              class="as-vh-empty-clear"
-              @click="clearSearch"
-            >
-              <span class="i-as-refresh" aria-hidden="true" />
-              Clear search
-            </button>
-            <button
-              v-else-if="hasActiveFilters"
-              type="button"
-              class="as-vh-empty-clear"
-              @click="clearAllFilters"
-            >
-              <span class="i-as-refresh" aria-hidden="true" />
-              Clear filters
-            </button>
-          </div>
-        </template>
-      </AsTable>
+      <AsTable :column-menu="{ sort: true, filters: true, hide: false }" :sticky-header="true" />
       <AsFilterDialog />
       <AsConfigDialog />
     </template>
@@ -349,33 +285,13 @@ function clearSearchAndFilters() {
         :row-value-fn="enumRowValueFn"
         :sticky-header="true"
         :stretch="true"
+        :search-term="searchTerm"
+        :on-clear-filters="clearSearch"
         :column-menu="{ sort: true, filters: false, hide: false }"
         @sort="onEnumSort"
         @select-all="onSelectAll"
         @deselect-all="onDeselectAll"
-      >
-        <template #empty>
-          <div class="as-vh-empty">
-            <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-            <p class="as-vh-empty-title">No matching values</p>
-            <p v-if="hasActiveSearch" class="as-vh-empty-body">
-              No entries match
-              <span class="as-vh-empty-code">"{{ searchTerm }}"</span>
-              . Try a different search or switch to the Conditions tab to build a custom filter.
-            </p>
-            <p v-else class="as-vh-empty-body">No entries available.</p>
-            <button
-              v-if="hasActiveSearch"
-              type="button"
-              class="as-vh-empty-clear"
-              @click="clearSearch"
-            >
-              <span class="i-as-refresh" aria-hidden="true" />
-              Clear search
-            </button>
-          </div>
-        </template>
-      </AsTableBase>
+      />
     </ListboxRoot>
   </div>
 </template>

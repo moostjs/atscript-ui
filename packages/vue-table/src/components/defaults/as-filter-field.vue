@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, ref, shallowRef, useId, watch } from "vue";
 import type { ColumnDef, ResolvedValueHelp, ValueHelpInfo } from "@atscript/ui";
+import { ValueHelpClient, getMetaEntry, resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
 import {
-  ValueHelpClient,
-  getMetaEntry,
-  resolveValueHelp,
-  valueHelpDictPaths,
-} from "@atscript/ui";
-import {
+  arraysEqual,
   debounce,
   isFilled,
   isSimpleEq,
@@ -122,6 +118,11 @@ const dropdownQuerying = computed(() => {
   return false;
 });
 
+const dropdownQueryError = computed<Error | null>(() => {
+  if (innerState) return innerState.queryError.value;
+  return null;
+});
+
 const dropdownLoadingMetadata = computed(() => {
   if (innerState) return innerState.loadingMetadata.value;
   return false;
@@ -147,14 +148,6 @@ function extractEqValues(conditions: FilterCondition[] | undefined): unknown[] {
     if (isSimpleEq(c)) values.push(c.value[0]);
   }
   return values;
-}
-
-function arraysEqual(a: unknown[], b: unknown[]): boolean {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
-  }
-  return true;
 }
 
 const selectedValues = ref<unknown[]>(
@@ -221,10 +214,7 @@ function rowValueFn(row: Record<string, unknown>): unknown {
   return undefined;
 }
 
-function displayValue(): string {
-  return "";
-}
-
+const inputId = useId();
 const searchTerm = ref("");
 const dropdownOpen = ref(false);
 
@@ -267,8 +257,10 @@ async function doSearch(text: string) {
       limit: 10,
     });
     innerState.results.value = result.items;
-  } catch {
+    innerState.queryError.value = null;
+  } catch (err) {
     innerState.results.value = [];
+    innerState.queryError.value = err instanceof Error ? err : new Error(String(err));
   } finally {
     innerState.querying.value = false;
   }
@@ -362,7 +354,7 @@ function onEnter() {
 
 <template>
   <div class="as-filter-field" :aria-disabled="dropdownLoadingMetadata ? true : undefined">
-    <span class="as-filter-field-label">{{ column.label }}</span>
+    <label :for="inputId" class="as-filter-field-label">{{ column.label }}</label>
     <div class="as-filter-field-body">
       <div v-if="dropdownLoadingMetadata" class="as-filter-field-loading">
         <span class="as-filter-field-loading-icon" aria-hidden="true" />
@@ -371,9 +363,6 @@ function onEnter() {
         v-else-if="hasDropdown"
         v-model="selectedValues"
         v-model:open="dropdownOpen"
-        v-model:search-term="searchTerm"
-        :display-value="displayValue"
-        :filter-function="hasOptions ? filterFunction : (val: unknown[]) => val"
         :multiple="true"
         :reset-search-term-on-blur="false"
         as-child
@@ -396,6 +385,7 @@ function onEnter() {
 
             <ComboboxInput as-child>
               <input
+                :id="inputId"
                 class="as-filter-field-search"
                 @input="onSearchInput"
                 @keydown.backspace="onBackspace"
@@ -421,21 +411,11 @@ function onEnter() {
                 :rows="dropdownRows"
                 :sorters="[]"
                 :querying="dropdownQuerying"
+                :query-error="dropdownQueryError"
+                :search-term="searchTerm"
                 :sticky-header="true"
                 :column-menu="{ sort: false, filters: false, hide: false }"
-              >
-                <template #empty>
-                  <div class="as-vh-empty">
-                    <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-                    <p class="as-vh-empty-title">No matching values</p>
-                    <p v-if="searchTerm" class="as-vh-empty-body">
-                      No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try
-                      a different search.
-                    </p>
-                    <p v-else class="as-vh-empty-body">No entries available.</p>
-                  </div>
-                </template>
-              </AsTableBase>
+              />
               <div v-if="dropdownQuerying" class="as-table-query-overlay">
                 <span class="as-table-query-overlay-icon" aria-hidden="true" />
               </div>
@@ -447,7 +427,7 @@ function onEnter() {
                 No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
                 different search.
               </p>
-              <p v-else class="as-vh-empty-body">No entries available.</p>
+              <p v-else class="as-vh-empty-body">No entries available</p>
             </div>
           </ComboboxViewport>
 
@@ -476,6 +456,7 @@ function onEnter() {
           </span>
         </div>
         <input
+          :id="inputId"
           class="as-filter-field-search"
           :value="searchTerm"
           @input="searchTerm = ($event.target as HTMLInputElement).value"

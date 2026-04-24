@@ -1,6 +1,8 @@
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type { FilterCondition, FieldFilters } from "../filters/filter-types";
 
+export type ConfigTab = "columns" | "filters" | "sorters";
+
 /**
  * Framework-agnostic table state data.
  *
@@ -46,29 +48,38 @@ export interface TableStateData {
   searchTerm: string;
 }
 
-/** Methods that any table state implementation must provide. */
+/**
+ * Methods that any table state implementation must provide.
+ *
+ * The table is model-driven: these mutators are thin wrappers that each touch
+ * exactly one entity (`filterFields` OR `filters`, never both). Side effects
+ * like pagination reset or re-query happen in watchers on the root state arrays,
+ * not inside the mutators — so any writer (dialog, external v-model, custom
+ * toolbar) gets identical behaviour.
+ */
 export interface TableStateMethods {
-  /** Trigger a fresh query (replace results). */
+  /** Trigger a fresh query (replace results). User-initiated refresh only. */
   query(): void;
   /** Load the next page (append results). */
   queryNext(): void;
-  /** Reset all filters to empty. */
+  /** Clear all applied filters. Does not touch `filterFields`. */
   resetFilters(): void;
   /** Open the config dialog (optionally to a specific tab). */
-  showConfigDialog(tab?: "columns" | "filters" | "sorters"): void;
-  /** Set visible column names in display order. */
-  setColumnNames(names: string[]): void;
-  /** Replace visible columns (extracts paths — backward compat). */
-  setColumns(columns: ColumnDef[]): void;
-  /** Replace active sorters. */
-  setSorters(sorters: SortControl[]): void;
-  /** Add a field to the displayed filter fields. */
+  showConfigDialog(tab?: ConfigTab): void;
+  /** Append a field to the displayed filter fields (deduped). */
   addFilterField(path: string): void;
-  /** Remove a field from displayed filter fields and clear its conditions. */
+  /**
+   * Remove a field from the displayed filter fields. Does NOT clear the
+   * applied filter value — display state and applied state are independent.
+   * Use `removeFieldFilter` to clear the value.
+   */
   removeFilterField(path: string): void;
-  /** Set filter conditions for a specific field (replaces existing). */
+  /** Set applied filter conditions for a field. Does not touch `filterFields`. */
   setFieldFilter(path: string, conditions: FilterCondition[]): void;
-  /** Remove all filter conditions for a specific field (keeps filterFields). */
+  /**
+   * Clear the applied filter for a field. Does NOT remove the field from
+   * `filterFields` — the input row stays visible.
+   */
   removeFieldFilter(path: string): void;
   /** Open filter dialog for a column. */
   openFilterDialog(column: ColumnDef): void;

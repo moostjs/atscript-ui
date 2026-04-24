@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
-import type { FieldFilters } from "@atscript/ui-table";
+import { filledFilterCount, type FieldFilters } from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../types";
 import {
   ComboboxItem,
@@ -36,6 +36,10 @@ const props = withDefaults(
     virtualRowHeight?: number;
     virtualOverscan?: number;
     filters?: FieldFilters;
+    /** Top-level search term (used by the default empty state body). */
+    searchTerm?: string;
+    /** Invoked by the default empty-state "Clear filters" shortcut. */
+    onClearFilters?: () => void;
     columnMenu?: ColumnMenuConfig;
     stretch?: boolean;
   }>(),
@@ -48,6 +52,10 @@ const props = withDefaults(
 );
 
 const hasValue = computed(() => props.asCombobox || props.select !== "none");
+
+const hasActiveFilters = computed(() =>
+  props.filters ? filledFilterCount(props.filters) > 0 : false,
+);
 
 const emit = defineEmits<{
   (e: "sort", column: ColumnDef, direction: "asc" | "desc" | null): void;
@@ -105,9 +113,12 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
 </script>
 
 <template>
-  <!-- Always render the table + header so filter/sort/hide menus stay reachable
-       even when rows are empty or the last query errored. Empty/loading/error
-       status rows render inside the table below the header. -->
+  <!--
+    Always render the table + header so filter/sort/hide menus stay reachable
+    even when rows are empty or the last query errored. The empty/error state
+    block renders AFTER the </table> (but inside the scroll container) so its
+    width is bound to the container, not the table's w-max intrinsic width.
+  -->
   <div class="as-table-scroll-container" data-virtual-scroll>
     <table
       class="as-table"
@@ -217,7 +228,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
       </template>
       <!-- No selection: plain rows -->
       <AsTableVirtualizer
-        v-else-if="!queryError"
+        v-else
         :options="rows"
         :estimate-size="virtualRowHeight"
         :overscan="virtualOverscan"
@@ -248,23 +259,50 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
           </tr>
         </template>
       </AsTableVirtualizer>
-      <tbody v-if="queryError || (rows.length === 0 && !querying && columns.length > 0)">
-        <tr>
-          <td :colspan="columns.length + (hasValue ? 1 : 0) + (stretch ? 1 : 0)">
-            <div v-if="queryError" class="as-table-error">
-              <slot name="error" :error="queryError" :retry="onRetry">
-                <p>Error: {{ queryError.message }}</p>
-              </slot>
-            </div>
-            <div v-else class="as-table-empty">
-              <slot name="empty">
-                <p>No data</p>
-              </slot>
-            </div>
-          </td>
-        </tr>
-      </tbody>
     </table>
+    <div v-if="queryError" class="as-table-error">
+      <slot name="error" :error="queryError" :retry="onRetry">
+        <div class="as-vh-empty">
+          <span class="as-vh-error-icon i-as-warning" aria-hidden="true" />
+          <p class="as-vh-empty-title">Failed to load values</p>
+          <p class="as-vh-empty-body">{{ queryError.message }}</p>
+          <button v-if="onRetry" type="button" class="as-vh-empty-clear" @click="onRetry">
+            <span class="i-as-refresh" aria-hidden="true" />
+            Retry
+          </button>
+        </div>
+      </slot>
+    </div>
+    <div v-else-if="rows.length === 0 && !querying && columns.length > 0" class="as-table-empty">
+      <slot
+        name="empty"
+        :search-term="searchTerm"
+        :has-active-filters="hasActiveFilters"
+        :on-clear-filters="onClearFilters"
+      >
+        <div class="as-vh-empty">
+          <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
+          <p class="as-vh-empty-title">No matching values</p>
+          <p v-if="searchTerm" class="as-vh-empty-body">
+            No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
+            different search.
+          </p>
+          <p v-else-if="hasActiveFilters" class="as-vh-empty-body">
+            No entries match the current filters.
+          </p>
+          <p v-else class="as-vh-empty-body">No entries available</p>
+          <button
+            v-if="(searchTerm || hasActiveFilters) && onClearFilters"
+            type="button"
+            class="as-vh-empty-clear"
+            @click="onClearFilters"
+          >
+            <span class="i-as-refresh" aria-hidden="true" />
+            Clear filters
+          </button>
+        </div>
+      </slot>
+    </div>
     <slot name="last-row" />
   </div>
 </template>
