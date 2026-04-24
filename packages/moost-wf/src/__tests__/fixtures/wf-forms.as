@@ -68,3 +68,24 @@ export interface ContextStripForm {
     @ui.placeholder 'Enter name'
     name: string
 }
+
+@db.table 'roles'
+@db.http.path '/api/db/tables/roles'
+export interface RolesTableFixture {
+    @meta.id
+    id: number
+
+    @meta.label 'Name'
+    name: string
+}
+
+@meta.label 'Invite User'
+export interface InviteStartFormFixture {
+    @meta.label 'Email'
+    @ui.placeholder 'newbie@example.com'
+    email: string.email
+
+    @meta.label 'Role'
+    @ui.placeholder 'Pick a role'
+    roleId: RolesTableFixture.id
+}
