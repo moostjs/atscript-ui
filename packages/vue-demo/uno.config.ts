@@ -5,7 +5,7 @@ import {
   defineShortcuts,
   mergeVunorShortcuts,
 } from "@atscript/ui-styles";
-import { defineConfig } from "unocss";
+import { defineConfig, presetIcons } from "unocss";
 import { vunorShortcuts } from "vunor/theme";
 
 const hereDir = fileURLToPath(new URL(".", import.meta.url));
@@ -48,6 +48,6 @@ export default defineConfig({
   content: {
     filesystem: [`${hereDir}src/**/*.{vue,ts,tsx}`],
   },
-  presets: asPresetVunor(),
+  presets: [...asPresetVunor(), presetIcons()],
   shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, demoShortcuts]))],
 });

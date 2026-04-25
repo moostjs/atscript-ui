@@ -1,5 +1,5 @@
 {
-  "name": "@atscript/demo",
+  "name": "@atscript/vue-demo",
   "private": true,
   "type": "module",
   "scripts": {
@@ -33,6 +33,7 @@
     "@atscript/moost-db": "catalog:",
     "@atscript/moost-wf": "workspace:^",
     "@atscript/typescript": "catalog:",
+    "@iconify-json/ph": "^1.2.2",
     "@moostjs/arbac": "catalog:",
     "@moostjs/event-http": "catalog:",
     "@moostjs/event-wf": "catalog:",

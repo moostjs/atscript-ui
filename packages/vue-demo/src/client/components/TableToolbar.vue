@@ -73,19 +73,19 @@ function clearSelection() {
       </template>
       <slot name="actions" />
       <button type="button" class="as-page-toolbar-btn" @click="refresh">
-        <span class="i-ph:arrows-clockwise" aria-hidden="true" />
+        <span class="i-as-refresh" aria-hidden="true" />
         <span>Refresh</span>
       </button>
       <button type="button" class="as-page-toolbar-btn" @click="openConfig('columns')">
-        <span class="i-si:table-columns-line" aria-hidden="true" />
+        <span class="i-as-columns" aria-hidden="true" />
         <span>Columns</span>
       </button>
       <button type="button" class="as-page-toolbar-btn" @click="openConfig('filters')">
-        <span class="i-ph:funnel" aria-hidden="true" />
+        <span class="i-as-filter" aria-hidden="true" />
         <span>Filters</span>
       </button>
       <button type="button" class="as-page-toolbar-btn" @click="openConfig('sorters')">
-        <span class="i-ph:arrows-down-up" aria-hidden="true" />
+        <span class="i-as-sorters" aria-hidden="true" />
         <span>Sorters</span>
       </button>
     </div>
