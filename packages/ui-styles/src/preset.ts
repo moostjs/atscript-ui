@@ -1,7 +1,8 @@
 import presetIcons from "@unocss/preset-icons";
 import type { Preset } from "unocss";
-import { presetVunor } from "vunor/theme";
+import { presetVunor, vunorShortcuts } from "vunor/theme";
 import { createIconsLoader, type IconsLoaderOptions } from "./icon-loader";
+import { allShortcuts } from "./shortcuts";
 
 export interface AsIconsPresetOptions extends IconsLoaderOptions {
   collection?: string;
@@ -95,4 +96,20 @@ export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
       },
     }) as Preset,
   ];
+}
+
+export type AsBaseUnoConfigOptions = AsPresetVunorOptions;
+
+/**
+ * Cycle-breaking factory used by the class-extraction script and the
+ * pre-built CSS pipeline. Returns the same presets + shortcuts that
+ * consumers receive via `asPresetVunor()`, but without the safelist
+ * extractor — so the extraction script can compute the safelist that
+ * the extractor later imports.
+ */
+export function createAsBaseUnoConfig(options: AsBaseUnoConfigOptions = {}) {
+  return {
+    presets: asPresetVunor(options),
+    shortcuts: [vunorShortcuts(allShortcuts)],
+  };
 }
