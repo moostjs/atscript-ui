@@ -2,23 +2,15 @@ import presetIcons from "@unocss/preset-icons";
 import type { Preset } from "unocss";
 import { presetVunor, vunorShortcuts } from "vunor/theme";
 import { createAsExtractor } from "./extractor";
-import { createIconsLoader, type IconsLoaderOptions } from "./icon-loader";
+import { bakedIcons } from "./generated/baked-icons";
 import { allShortcuts } from "./shortcuts";
 
-export interface AsIconsPresetOptions extends IconsLoaderOptions {
-  collection?: string;
-}
-
-export function asIconsPreset(options: AsIconsPresetOptions = {}) {
-  const { collection = "as", ...loaderOpts } = options;
-  const loader = createIconsLoader(loaderOpts);
-  return presetIcons({
-    collections: {
-      [collection]: loader,
-    },
-  });
-}
-
+/**
+ * Default semantic icon → Iconify-id (or local-token) mapping. Source of
+ * truth for which icons we bake into `dist/`. Internal — consumed only by
+ * `scripts/bake-icons.ts`. Consumers override individual entries via
+ * `asPresetVunor({ iconOverrides })`.
+ */
 export const defaultAsIconAliases: Record<string, string> = {
   search: "ph:magnifying-glass",
   close: "ph:x",
@@ -36,24 +28,35 @@ export const defaultAsIconAliases: Record<string, string> = {
   grip: "ph:dots-six-vertical",
   filter: "fluent:filter-16-regular",
   "sort-asc": "ph:sort-ascending-light",
-  "value-help": "ph:stack",
+  "value-help": "value-help",
   sun: "ph:sun",
   moon: "ph:moon",
   check: "ph:check-bold",
   "check-square": "ph:check-square",
-  "arrows-down-up": "ph:arrows-down-up",
+  sorters: "sorters",
   refresh: "ph:arrows-clockwise",
   columns: "si:table-columns-line",
   "eye-slash": "iconamoon:eye-off-light",
   ellipsis: "ph:dots-three",
-  loading: "svg-spinners:3-dots-bounce",
+  loading: "loading",
   warning: "ph:warning-circle",
 };
 
+/**
+ * Builds the `as` icon collection by merging the baked default map with any
+ * consumer-supplied overrides, then hands the resolver to UnoCSS's
+ * `presetIcons`. Sync, no filesystem, no network — works in every runtime.
+ */
+function bakedIconsPreset(overrides?: Record<string, string>) {
+  const collection = overrides ? { ...bakedIcons, ...overrides } : bakedIcons;
+  return presetIcons({
+    collections: {
+      as: (name: string) => collection[name],
+    },
+  });
+}
+
 export interface AsBaseUnoConfigOptions {
-  iconsDir?: string;
-  iconAliases?: Record<string, string>;
-  iconCollection?: string;
   /** Forwarded to vunor's `baseRadius`; drives `rounded-base` and the `r0..r4` ladder. */
   baseRadius?: string;
 }
@@ -66,22 +69,22 @@ export interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
    * See STYLES.md Decision 15.
    */
   excludeComponents?: string[];
+  /**
+   * Replace any of our built-in `i-as-<name>` icons with custom SVG strings.
+   * Keys are the semantic names listed in `bakedIcons` (e.g. `search`,
+   * `close`, `loading`). Values are full `<svg>...</svg>` strings — fetch
+   * them from anywhere, paste them inline, copy from another Iconify set,
+   * etc. Unknown keys are ignored. Built-in defaults remain untouched for
+   * any name not present in this map.
+   */
+  iconOverrides?: Record<string, string>;
 }
 
-function buildBasePresets(options: AsBaseUnoConfigOptions): Preset[] {
-  const {
-    iconsDir = ".icons",
-    iconAliases = {},
-    iconCollection = "as",
-    baseRadius = "8px",
-  } = options;
+function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
+  const { baseRadius = "8px", iconOverrides } = options;
 
   return [
-    asIconsPreset({
-      iconsDir,
-      collection: iconCollection,
-      aliases: { ...defaultAsIconAliases, ...iconAliases },
-    }),
+    bakedIconsPreset(iconOverrides),
     presetVunor({
       baseRadius,
       fingertip: {

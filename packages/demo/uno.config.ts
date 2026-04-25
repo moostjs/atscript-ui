@@ -48,8 +48,6 @@ export default defineConfig({
   content: {
     filesystem: [`${hereDir}src/**/*.{vue,ts,tsx}`],
   },
-  presets: asPresetVunor({
-    iconsDir: ".icons",
-  }),
+  presets: asPresetVunor(),
   shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, demoShortcuts]))],
 });

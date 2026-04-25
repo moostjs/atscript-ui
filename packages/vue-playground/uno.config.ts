@@ -43,12 +43,6 @@ export default defineConfig({
   content: {
     filesystem: [`${hereDir}src/**/*.{vue,ts,tsx}`],
   },
-  presets: asPresetVunor({
-    iconsDir: ".icons",
-    iconAliases: {
-      "value-help": "local:none",
-      "sort-asc": "local:none",
-    },
-  }),
+  presets: asPresetVunor(),
   shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, playgroundShortcuts]))],
 });

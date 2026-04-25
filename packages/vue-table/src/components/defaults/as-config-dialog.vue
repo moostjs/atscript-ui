@@ -108,7 +108,7 @@ function onCancel() {
               </span>
             </TabsTrigger>
             <TabsTrigger value="sorters" class="as-config-tab-trigger">
-              <span class="as-config-tab-icon i-as-arrows-down-up" aria-hidden="true" />
+              <span class="as-config-tab-icon i-as-sorters" aria-hidden="true" />
               Sorters
               <span
                 class="as-config-tab-count"

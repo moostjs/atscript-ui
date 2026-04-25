@@ -93,7 +93,12 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
         <slot :input-id="inputId" :error-id="errorId" :desc-id="descId" />
       </div>
       <slot name="after-input" :desc-id="descId" />
-      <div :id="errorId" class="as-error-slot" :role="error ? 'alert' : undefined">
+      <div
+        v-if="error || hint"
+        :id="errorId"
+        class="as-error-slot"
+        :role="error ? 'alert' : undefined"
+      >
         {{ error || hint }}
       </div>
     </template>

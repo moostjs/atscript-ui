@@ -28,9 +28,10 @@
     "./package.json": "./package.json"
   },
   "scripts": {
+    "bake-icons": "tsx scripts/bake-icons.ts",
     "extract-classes": "tsx scripts/extract-component-classes.ts",
     "build-css": "tsx scripts/build-css.ts",
-    "build": "pnpm extract-classes && vp pack && pnpm build-css",
+    "build": "pnpm bake-icons && pnpm extract-classes && vp pack && pnpm build-css",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check"

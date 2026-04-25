@@ -23,9 +23,11 @@ export const asFieldShortcuts = defineShortcuts({
       "pr-[1.75em] cursor-pointer appearance-none bg-[image:url('data:image/svg+xml;utf8,<svg_xmlns=%22http://www.w3.org/2000/svg%22_width=%2216%22_height=%2216%22_viewBox=%220_0_24_24%22_fill=%22none%22_stroke=%22currentColor%22_stroke-width=%222%22_stroke-linecap=%22round%22_stroke-linejoin=%22round%22><polyline_points=%226_9_12_15_18_9%22/></svg>')] bg-[length:1em_1em] bg-no-repeat bg-[position:right_0.5em_center] whitespace-nowrap",
 
     "[&.error_input:not([type=checkbox]):not([type=radio]),&.error_select,&.error_textarea]:":
-      "scope-error current-border-hl",
+      "scope-error current-border-hl border-current",
+    "[&.error_input:not([type=checkbox]):not([type=radio]):hover,&.error_select:hover,&.error_textarea:hover]:":
+      "scope-error current-border-hl border-current",
     "[&.error_input:not([type=checkbox]):not([type=radio]):focus,&.error_select:focus,&.error_textarea:focus]:":
-      "scope-error current-border-hl outline i8-apply-outline",
+      "scope-error current-border-hl border-current outline i8-apply-outline",
   },
 
   "as-field-label": `font-600 ${strongText}`,
@@ -35,7 +37,7 @@ export const asFieldShortcuts = defineShortcuts({
   "as-field-header-actions": "flex items-center gap-$xs flex-shrink-0",
   "as-field-input-row":
     "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1",
-  "as-error-slot": "min-h-[1em] leading-[1] text-callout text-current/60",
+  "as-error-slot": "leading-[1] text-callout text-current/60",
 
   "as-field-description": "text-callout text-current/70 -mt-[0.2em]",
 

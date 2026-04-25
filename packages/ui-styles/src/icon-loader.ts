@@ -21,10 +21,9 @@ const defaultOptions: Required<IconsLoaderOptions> = {
       return svg;
     }
     return svg
-      .replace(/#f{3,6}/u, "currentColor")
-      .replace(/#0{3,6}/u, "currentColor")
-      .replace(/white/u, "currentColor")
-      .replace(/black/u, "currentColor");
+      .replace(/#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b/giu, "currentColor")
+      .replace(/\b(?:hsla?|rgba?)\([^)]*\)/giu, "currentColor")
+      .replace(/\b(?:white|black)\b/giu, "currentColor");
   },
 };
 
@@ -102,13 +101,14 @@ export function createIconsLoader(options: IconsLoaderOptions = {}): CustomIconL
   }
 
   return async (name: string) => {
-    if (name in aliases) {
-      const svg = await fetchIconify(aliases[name]!);
+    const resolved = aliases[name] ?? name;
+    // Iconify IDs are always `prefix:name`. A bare token = local SVG in iconsDir.
+    if (resolved.includes(":")) {
+      const svg = await fetchIconify(resolved);
       if (svg) {
         return svg;
       }
     }
-
-    return fsIcons(name);
+    return (await fsIcons(resolved)) ?? fsIcons(name);
   };
 }

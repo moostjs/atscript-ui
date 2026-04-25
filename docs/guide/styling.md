@@ -1,6 +1,6 @@
 # Styling
 
-Styles for `@atscript/vue-form`, `@atscript/vue-table`, and `@atscript/vue-wf` ship in a single shared package: **`@atscript/ui-styles`**. It bundles the UnoCSS preset, the per-component class safelist, an `unplugin-vue-components` resolver, and pre-built CSS for non-UnoCSS apps.
+Styles for `@atscript/vue-form`, `@atscript/vue-table`, and `@atscript/vue-wf` ship in a single shared package: **`@atscript/ui-styles`**. It bundles the UnoCSS preset, the per-component class safelist, an `unplugin-vue-components` resolver, a baked-in default icon set, and pre-built CSS for non-UnoCSS apps.
 
 ## Install
 
@@ -62,11 +62,11 @@ The auto-resolver covers primary components only — the ones you naturally tag 
 
 There are three styling paths. They're orthogonal — pick what fits your stack:
 
-| Path              | When to use                                                                               | Theming | `excludeComponents` |
-| ----------------- | ----------------------------------------------------------------------------------------- | ------- | ------------------- |
-| **UnoCSS preset** | You already use UnoCSS, or you want to customize the theme. **Recommended.**              | Yes     | Yes                 |
-| **Pre-built CSS** | Drop-in for apps that don't run UnoCSS. Fastest to wire up.                               | No      | No                  |
-| **`AsResolver`**  | Auto-import `<AsForm />` etc. without writing `import` lines. Pairs with either CSS path. | n/a     | n/a                 |
+| Path              | When to use                                                                               | Theming | `excludeComponents` | `iconOverrides` |
+| ----------------- | ----------------------------------------------------------------------------------------- | ------- | ------------------- | --------------- |
+| **UnoCSS preset** | You already use UnoCSS, or you want to customize the theme. **Recommended.**              | Yes     | Yes                 | Yes             |
+| **Pre-built CSS** | Drop-in for apps that don't run UnoCSS. Fastest to wire up.                               | No      | No                  | No              |
+| **`AsResolver`**  | Auto-import `<AsForm />` etc. without writing `import` lines. Pairs with either CSS path. | n/a     | n/a                 | n/a             |
 
 ## UnoCSS path — recommended
 
@@ -83,10 +83,6 @@ export default defineConfig({
   presets: asPresetVunor({
     // Optional theme overrides:
     baseRadius: "8px",
-    iconAliases: {
-      // override built-in semantic icon names with your own iconify ids
-      search: "ph:magnifying-glass",
-    },
   }),
   shortcuts: [vunorShortcuts(allShortcuts)],
 });
@@ -102,11 +98,76 @@ The preset registers a custom **Extractor** that scans your own source files for
 `asPresetVunor()` forwards options to vunor's `presetVunor`. The most-used options:
 
 - `baseRadius` — default `8px`. Drives `rounded-base` and the `r0..r4` ladder.
-- `palette` — palette tuning (passed straight through to vunor): `{ colors: { primary, grey, neutral, error }, lightest, darkest, layersDepth, ... }`.
-- `fingertip` — fingertip control heights (`xs/s/m/l/xl`).
-- `iconAliases` — override the semantic icon ids (`search`, `close`, `filter`, …) — see the source's `defaultAsIconAliases` for the full list.
 
-For deeper theming see the [vunor skill](https://github.com/maxim-mazurok/vunor) or its README — atscript-ui re-uses vunor's primitives and palette generator.
+For deeper theming (palette, fingertip, custom presets) see the [vunor skill](https://github.com/maxim-mazurok/vunor) or its README — atscript-ui re-uses vunor's primitives and palette generator.
+
+### Customizing icons
+
+Atscript UI ships a sealed set of icons under the `as` collection — written as `i-as-search`, `i-as-close`, `i-as-loading`, etc. The icon set is **baked into the package at our publish time**: no Iconify API calls, no filesystem access, no `.icons/` folder spawned in your project at build time.
+
+You can introspect the shipped names by importing the read-only map:
+
+```ts
+import { bakedIcons } from "@atscript/ui-styles";
+console.log(Object.keys(bakedIcons)); // ['arrow-down', 'arrow-up', 'check', 'close', ...]
+```
+
+#### Override one of our built-in icons
+
+Pass `iconOverrides` to swap any baked SVG with your own. Keys are the semantic names; values are full `<svg>...</svg>` strings.
+
+```ts
+// uno.config.ts
+import { defineConfig } from "unocss";
+import { allShortcuts, asPresetVunor } from "@atscript/ui-styles";
+import { vunorShortcuts } from "vunor/theme";
+
+export default defineConfig({
+  presets: asPresetVunor({
+    iconOverrides: {
+      // Replace our default `i-as-search` with a hand-rolled SVG
+      search: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M..."/></svg>',
+    },
+  }),
+  shortcuts: [vunorShortcuts(allShortcuts)],
+});
+```
+
+You can copy SVGs from any source (Iconify, your own designer, etc.). Use `currentColor` for fills/strokes so the icon inherits the surrounding text color via vunor's scope/layer system.
+
+#### Add brand-new icons
+
+For completely new icons (your own brand glyphs, an additional Iconify collection, etc.), compose your own `presetIcons` next to ours under a different collection prefix:
+
+```ts
+import { defineConfig } from "unocss";
+import { allShortcuts, asPresetVunor } from "@atscript/ui-styles";
+import { vunorShortcuts } from "vunor/theme";
+import presetIcons from "@unocss/preset-icons";
+
+export default defineConfig({
+  presets: [
+    ...asPresetVunor(),
+    presetIcons({
+      collections: {
+        // From the official Iconify package — install with `pnpm add -D @iconify-json/lucide`
+        lucide: () => import("@iconify-json/lucide/icons.json").then((i) => i.default),
+        // Or your own custom collection
+        mybrand: {
+          logo: '<svg ...></svg>',
+        },
+      },
+    }),
+  ],
+  shortcuts: [vunorShortcuts(allShortcuts)],
+});
+```
+
+Now `i-lucide-search` and `i-mybrand-logo` work alongside our `i-as-*` set — no collisions, no coordination.
+
+::: tip Why doesn't `iconOverrides` accept Iconify ids?
+Our package can't fetch new icons at your build time (the loader is internal-only). To swap one of our icons for an Iconify icon, either copy the SVG inline into `iconOverrides`, or install your own `presetIcons` collection (as shown above) and use that prefix in your templates.
+:::
 
 ### Power-user opt-out: `excludeComponents`
 
@@ -150,11 +211,11 @@ import "@atscript/ui-styles/css/all";
 ```
 
 ::: warning
-The pre-built CSS uses the **default theme** and cannot be themed. `excludeComponents` is also not honored — these files are baked once at our publish time.
+The pre-built CSS uses the **default theme + default icon set** and is fully sealed. `excludeComponents` and `iconOverrides` are **not honored** — these files are baked once at our publish time.
 
 The per-package files (`form.css`, `table.css`, `wf.css`) are **independently complete**, which means they overlap on shared shortcuts. **Don't combine them.** Load `all.css` if you use components from more than one package.
 
-For theming or excluding components, switch to the UnoCSS path.
+For theming, custom icons, or excluding components, switch to the UnoCSS path.
 :::
 
 ## `AsResolver` — auto-import
@@ -221,8 +282,9 @@ import { vunorShortcuts } from "vunor/theme";
 
 export default defineConfig({
   presets: asPresetVunor({
-    baseRadius: "8px",
-    excludeComponents: ["as-filter-dialog"], // optional
+    baseRadius: "8px",                                  // optional
+    excludeComponents: ["as-filter-dialog"],            // optional — drop unused defaults
+    iconOverrides: { search: "<svg>...</svg>" },        // optional — swap built-in icons
   }),
   shortcuts: [vunorShortcuts(allShortcuts)],
 });
