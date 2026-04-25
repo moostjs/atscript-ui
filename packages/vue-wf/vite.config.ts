@@ -4,7 +4,7 @@ import { defineConfig } from "vite-plus";
 import { getEntries } from "../../scripts/gen-exports.mjs";
 
 export default defineConfig({
-  plugins: [vue(), atscript()],
+  plugins: [vue() as never, atscript() as never],
   test: {
     environment: "happy-dom",
     globalSetup: "src/__tests__/global-setup.ts",
@@ -13,7 +13,7 @@ export default defineConfig({
     entry: getEntries(),
     dts: { vue: true },
     format: ["esm"],
-    plugins: [vue()],
+    plugins: [vue() as never],
     deps: {
       neverBundle: ["vue", "@atscript/ui", "@atscript/vue-form", "@atscript/typescript"],
     },

@@ -63,8 +63,8 @@ describe("sharedFetch error mapping", () => {
       captured = e;
     });
     await sharedFetch("http://localhost/api/something");
-    expect(captured?.status).toBe(500);
-    expect(captured?.message).toBe("boom");
+    expect(captured!.status).toBe(500);
+    expect(captured!.message).toBe("boom");
     await captured!.retry();
     expect(fetchMock).toHaveBeenCalledTimes(2);
     off();

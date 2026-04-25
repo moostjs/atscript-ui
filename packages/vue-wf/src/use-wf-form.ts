@@ -83,7 +83,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   const mergedHeaders: Record<string, string> = {
     "Content-Type": "application/json",
     ...(extraHeaders instanceof Headers
-      ? Object.fromEntries(extraHeaders.entries())
+      ? Object.fromEntries(extraHeaders as unknown as Iterable<[string, string]>)
       : Array.isArray(extraHeaders)
         ? Object.fromEntries(extraHeaders)
         : (extraHeaders as Record<string, string> | undefined)),

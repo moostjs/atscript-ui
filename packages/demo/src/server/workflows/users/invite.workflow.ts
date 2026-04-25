@@ -8,6 +8,7 @@ import {
   WorkflowParam,
   outletEmail,
   useWfFinished,
+  type WfOutletRequest,
 } from "@moostjs/event-wf";
 import { usersTable, rolesTable } from "../../db";
 import { hashPassword } from "../../auth/password";
@@ -100,7 +101,7 @@ export class InviteWorkflow {
     return outletEmail(ctx.email!, "user-invite", {
       userId: ctx.userId,
       roleId: ctx.roleId,
-    });
+    }) as { inputRequired: WfOutletRequest };
   }
 
   @Step("invite-accept")

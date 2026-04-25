@@ -8,7 +8,7 @@ describe("p7 invite schema", () => {
   });
 
   it("defines the four step methods on the prototype", () => {
-    const proto = InviteWorkflow.prototype as Record<string, unknown>;
+    const proto = InviteWorkflow.prototype as unknown as Record<string, unknown>;
     // The @Step decorators attach metadata to these method names.
     expect(typeof proto.start).toBe("function");
     expect(typeof proto.sendInvite).toBe("function");
@@ -17,7 +17,7 @@ describe("p7 invite schema", () => {
   });
 
   it("defines the schema registration `flow` method", () => {
-    const proto = InviteWorkflow.prototype as Record<string, unknown>;
+    const proto = InviteWorkflow.prototype as unknown as Record<string, unknown>;
     expect(typeof proto.flow).toBe("function");
   });
 });

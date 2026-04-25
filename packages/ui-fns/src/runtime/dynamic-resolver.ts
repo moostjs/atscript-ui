@@ -84,7 +84,7 @@ export class DynamicFieldResolver implements FieldResolver {
     prop: TAtscriptAnnotatedType,
     scope: TFnScope,
   ): Record<string, unknown> | undefined {
-    const fnAttrs = prop.metadata.get(UI_FN_ATTR as keyof AtscriptMetadata);
+    const fnAttrs = prop.metadata.get(UI_FN_ATTR as keyof AtscriptMetadata) as unknown;
     if (!fnAttrs) return undefined;
 
     const result: Record<string, unknown> = {};
