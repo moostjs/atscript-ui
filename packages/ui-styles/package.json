@@ -15,11 +15,22 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./css": "./dist/css/all.css",
+    "./css/all": "./dist/css/all.css",
+    "./css/form": "./dist/css/form.css",
+    "./css/table": "./dist/css/table.css",
+    "./css/wf": "./dist/css/wf.css",
+    "./vite": {
+      "types": "./dist/vite.d.mts",
+      "import": "./dist/vite.mjs",
+      "require": "./dist/vite.cjs"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
     "extract-classes": "tsx scripts/extract-component-classes.ts",
-    "build": "pnpm extract-classes && vp pack",
+    "build-css": "tsx scripts/build-css.ts",
+    "build": "pnpm extract-classes && vp pack && pnpm build-css",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check"
@@ -37,12 +48,19 @@
     "tinyglobby": "^0.2.15",
     "tsx": "^4.21.0",
     "unocss": "catalog:",
+    "unplugin-vue-components": "^32.0.0",
     "vitest": "catalog:",
     "vunor": "catalog:"
   },
   "peerDependencies": {
     "@unocss/preset-icons": "catalog:",
     "unocss": "catalog:",
+    "unplugin-vue-components": "^32.0.0",
     "vunor": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "unplugin-vue-components": {
+      "optional": true
+    }
   }
 }

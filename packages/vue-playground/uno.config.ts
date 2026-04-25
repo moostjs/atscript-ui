@@ -41,12 +41,7 @@ const playgroundShortcuts = defineShortcuts({
 
 export default defineConfig({
   content: {
-    filesystem: [
-      `${hereDir}src/**/*.{vue,ts,tsx}`,
-      `${hereDir}../vue-form/src/**/*.{vue,ts}`,
-      `${hereDir}../vue-table/src/**/*.{vue,ts}`,
-      `${hereDir}../vue-wf/src/**/*.{vue,ts}`,
-    ],
+    filesystem: [`${hereDir}src/**/*.{vue,ts,tsx}`],
   },
   presets: asPresetVunor({
     iconsDir: ".icons",

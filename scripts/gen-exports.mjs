@@ -49,5 +49,7 @@ function updatePackageJson(pkgRoot) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const changed = updatePackageJson(process.cwd());
-  console.log(changed ? "package.json exports updated." : "package.json exports already up to date.");
+  console.log(
+    changed ? "package.json exports updated." : "package.json exports already up to date.",
+  );
 }

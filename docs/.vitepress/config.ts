@@ -184,6 +184,7 @@ const guideSidebar = [
     items: [
       { text: "Overview", link: "/guide/" },
       { text: "Quick Start", link: "/guide/quick-start" },
+      { text: "Styling", link: "/guide/styling" },
     ],
   },
 ];
