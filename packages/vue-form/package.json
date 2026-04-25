@@ -15,6 +15,76 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./as-action": {
+      "types": "./dist/as-action.d.mts",
+      "import": "./dist/as-action.mjs",
+      "require": "./dist/as-action.cjs"
+    },
+    "./as-array": {
+      "types": "./dist/as-array.d.mts",
+      "import": "./dist/as-array.mjs",
+      "require": "./dist/as-array.cjs"
+    },
+    "./as-checkbox": {
+      "types": "./dist/as-checkbox.d.mts",
+      "import": "./dist/as-checkbox.mjs",
+      "require": "./dist/as-checkbox.cjs"
+    },
+    "./as-field": {
+      "types": "./dist/as-field.d.mts",
+      "import": "./dist/as-field.mjs",
+      "require": "./dist/as-field.cjs"
+    },
+    "./as-form": {
+      "types": "./dist/as-form.d.mts",
+      "import": "./dist/as-form.mjs",
+      "require": "./dist/as-form.cjs"
+    },
+    "./as-input": {
+      "types": "./dist/as-input.d.mts",
+      "import": "./dist/as-input.mjs",
+      "require": "./dist/as-input.cjs"
+    },
+    "./as-iterator": {
+      "types": "./dist/as-iterator.d.mts",
+      "import": "./dist/as-iterator.mjs",
+      "require": "./dist/as-iterator.cjs"
+    },
+    "./as-object": {
+      "types": "./dist/as-object.d.mts",
+      "import": "./dist/as-object.mjs",
+      "require": "./dist/as-object.cjs"
+    },
+    "./as-paragraph": {
+      "types": "./dist/as-paragraph.d.mts",
+      "import": "./dist/as-paragraph.mjs",
+      "require": "./dist/as-paragraph.cjs"
+    },
+    "./as-radio": {
+      "types": "./dist/as-radio.d.mts",
+      "import": "./dist/as-radio.mjs",
+      "require": "./dist/as-radio.cjs"
+    },
+    "./as-ref": {
+      "types": "./dist/as-ref.d.mts",
+      "import": "./dist/as-ref.mjs",
+      "require": "./dist/as-ref.cjs"
+    },
+    "./as-select": {
+      "types": "./dist/as-select.d.mts",
+      "import": "./dist/as-select.mjs",
+      "require": "./dist/as-select.cjs"
+    },
+    "./as-tuple": {
+      "types": "./dist/as-tuple.d.mts",
+      "import": "./dist/as-tuple.mjs",
+      "require": "./dist/as-tuple.cjs"
+    },
+    "./as-union": {
+      "types": "./dist/as-union.d.mts",
+      "import": "./dist/as-union.mjs",
+      "require": "./dist/as-union.cjs"
+    },
     "./styles": {
       "types": "./styles.d.ts",
       "default": "./dist/style.css"
@@ -25,7 +95,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "vp pack",
+    "build": "node ../../scripts/gen-exports.mjs && vp pack",
     "dev": "vp pack --watch",
     "test": "vp test",
     "check": "vp check"

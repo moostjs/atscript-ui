@@ -1,6 +1,7 @@
 import vue from "@vitejs/plugin-vue";
 import atscript from "unplugin-atscript/vite";
 import { defineConfig } from "vite-plus";
+import { getEntries } from "../../scripts/gen-exports.mjs";
 
 export default defineConfig({
   plugins: [vue(), atscript()],
@@ -9,7 +10,7 @@ export default defineConfig({
     globalSetup: "src/__tests__/global-setup.ts",
   },
   pack: {
-    entry: ["src/index.ts"],
+    entry: getEntries(),
     dts: { vue: true },
     format: ["esm", "cjs"],
     plugins: [vue()],
