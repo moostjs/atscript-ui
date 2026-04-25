@@ -2,7 +2,7 @@
 import { computed, useSlots } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
 import { filledFilterCount, type FieldFilters } from "@atscript/ui-table";
-import type { ColumnMenuConfig } from "../types";
+import type { ColumnMenuConfig } from "../../types";
 import {
   ComboboxItem,
   ComboboxItemIndicator,
@@ -11,9 +11,9 @@ import {
   ListboxItemIndicator,
   Primitive,
 } from "reka-ui";
-import { getCellValue } from "../utils/get-cell-value";
-import AsTableHeaderCell from "./as-table-header-cell.vue";
-import AsTableCellValue from "./as-table-cell-value.vue";
+import { getCellValue } from "../../utils/get-cell-value";
+import AsTableHeaderCell from "../defaults/as-table-header-cell.vue";
+import AsTableCellValue from "../defaults/as-table-cell-value.vue";
 import AsTableVirtualizer from "./as-table-virtualizer.vue";
 
 const props = withDefaults(

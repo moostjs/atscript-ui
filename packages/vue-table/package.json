@@ -25,16 +25,6 @@
       "import": "./dist/as-config-dialog.mjs",
       "require": "./dist/as-config-dialog.cjs"
     },
-    "./as-fields-selector": {
-      "types": "./dist/as-fields-selector.d.mts",
-      "import": "./dist/as-fields-selector.mjs",
-      "require": "./dist/as-fields-selector.cjs"
-    },
-    "./as-filter-conditions": {
-      "types": "./dist/as-filter-conditions.d.mts",
-      "import": "./dist/as-filter-conditions.mjs",
-      "require": "./dist/as-filter-conditions.cjs"
-    },
     "./as-filter-dialog": {
       "types": "./dist/as-filter-dialog.d.mts",
       "import": "./dist/as-filter-dialog.mjs",
@@ -50,35 +40,15 @@
       "import": "./dist/as-filter-input.mjs",
       "require": "./dist/as-filter-input.cjs"
     },
-    "./as-filter-value-help": {
-      "types": "./dist/as-filter-value-help.d.mts",
-      "import": "./dist/as-filter-value-help.mjs",
-      "require": "./dist/as-filter-value-help.cjs"
-    },
     "./as-filters": {
       "types": "./dist/as-filters.d.mts",
       "import": "./dist/as-filters.mjs",
       "require": "./dist/as-filters.cjs"
     },
-    "./as-orderable-list": {
-      "types": "./dist/as-orderable-list.d.mts",
-      "import": "./dist/as-orderable-list.mjs",
-      "require": "./dist/as-orderable-list.cjs"
-    },
-    "./as-sorters-config": {
-      "types": "./dist/as-sorters-config.d.mts",
-      "import": "./dist/as-sorters-config.mjs",
-      "require": "./dist/as-sorters-config.cjs"
-    },
     "./as-table": {
       "types": "./dist/as-table.d.mts",
       "import": "./dist/as-table.mjs",
       "require": "./dist/as-table.cjs"
-    },
-    "./as-table-base": {
-      "types": "./dist/as-table-base.d.mts",
-      "import": "./dist/as-table-base.mjs",
-      "require": "./dist/as-table-base.cjs"
     },
     "./as-table-cell-value": {
       "types": "./dist/as-table-cell-value.d.mts",
@@ -94,11 +64,6 @@
       "types": "./dist/as-table-root.d.mts",
       "import": "./dist/as-table-root.mjs",
       "require": "./dist/as-table-root.cjs"
-    },
-    "./as-table-virtualizer": {
-      "types": "./dist/as-table-virtualizer.d.mts",
-      "import": "./dist/as-table-virtualizer.mjs",
-      "require": "./dist/as-table-virtualizer.cjs"
     },
     "./styles": {
       "types": "./styles.d.ts",

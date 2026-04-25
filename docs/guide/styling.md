@@ -14,9 +14,53 @@ pnpm add -D unplugin-vue-components
 
 You only need to install the `@atscript/vue-*` packages whose components you actually use.
 
-## Pick your path
+## What you can import
 
-There are three paths. They're orthogonal — pick what fits your stack:
+Every `@atscript/vue-*` package exposes two categories of components:
+
+| Category                | What it is                                                                                                                                                                                                         | Auto-import via `AsResolver` |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------: |
+| **Primary components**  | The ones you write as tags in templates: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsWfForm>`.                                                                       | ✓                            |
+| **Default components**  | Out-of-the-box implementations you can swap via `:types` / `:components` props: `AsInput`, `AsSelect`, `AsRadio`, `AsCheckbox`, `AsParagraph`, `AsAction`, `AsObject`, `AsArray`, `AsUnion`, `AsTuple`, `AsRef`, `AsTableHeaderCell`, `AsTableCellValue`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`, `AsFilterDialog`, `AsConfigDialog`. You usually consume them through `createDefaultTypes()` / `createDefaultTableComponents()`, but they're also importable on their own when you want to wrap or extend a default. | ✗ (explicit imports)         |
+
+Both categories support **two import patterns**:
+
+### Barrel import (recommended for most cases)
+
+Pull from the package root. Tree-shaking removes anything you don't reference.
+
+```ts
+// Primary components — write them as tags in templates
+import { AsForm, AsField, AsIterator } from "@atscript/vue-form";
+import { AsTable, AsTableRoot, AsFilters } from "@atscript/vue-table";
+import { AsWfForm } from "@atscript/vue-wf";
+
+// Default components — when you want to wrap or compose a built-in
+import { AsInput, AsSelect } from "@atscript/vue-form";
+import { AsFilterDialog, AsTableHeaderCell } from "@atscript/vue-table";
+
+// Helpers that wire up all the defaults at once
+import { createDefaultTypes } from "@atscript/vue-form";
+import { createDefaultTableComponents } from "@atscript/vue-table";
+```
+
+### Subpath import (for fine-grained code-splitting)
+
+Each component has its own per-component bundle. Useful when a route renders only one or two components and you want the smallest possible chunk.
+
+```ts
+import AsForm from "@atscript/vue-form/as-form";
+import AsTableRoot from "@atscript/vue-table/as-table-root";
+import AsInput from "@atscript/vue-form/as-input"; // default — same path style
+```
+
+::: tip Why aren't defaults auto-imported?
+The auto-resolver covers primary components only — the ones you naturally tag in templates. Defaults are usually wired up through prop maps (`:types`, `:components`) rather than tagged directly, so the resolver intentionally skips them. When you do want to use a default explicitly (to wrap or extend it), write the `import` yourself.
+:::
+
+## Pick your styling path
+
+There are three styling paths. They're orthogonal — pick what fits your stack:
 
 | Path              | When to use                                                                               | Theming | `excludeComponents` |
 | ----------------- | ----------------------------------------------------------------------------------------- | ------- | ------------------- |
@@ -133,8 +177,18 @@ export default {
 
 After that you can write `<AsForm />`, `<AsTable />`, `<AsWfForm />` etc. in templates with no manual `import` line — they're routed to the matching `@atscript/vue-{form,table,wf}/<as-name>` subpath.
 
-::: tip Tag-only
-The resolver only handles **components** (Vue tags). Composables — `useTable`, `useFormState`, … — must still be imported explicitly:
+::: tip Primary components only
+The resolver auto-imports the **primary user-tagged components** (`AsForm`, `AsField`, `AsIterator`, `AsTable`, `AsTableRoot`, `AsFilters`, `AsWfForm`).
+
+**Default components** (`AsInput`, `AsSelect`, `AsFilterDialog`, etc.) are **not** auto-imported by design — they're swap targets you compose via `:types` / `:components` props or wrap explicitly. When you do want one, write the import yourself:
+
+```ts
+import { AsInput } from "@atscript/vue-form";
+// or, equivalently:
+import AsInput from "@atscript/vue-form/as-input";
+```
+
+**Composables** (`useTable`, `useFormState`, …) aren't components and must always be imported explicitly:
 
 ```ts
 import { useTable } from "@atscript/vue-table";

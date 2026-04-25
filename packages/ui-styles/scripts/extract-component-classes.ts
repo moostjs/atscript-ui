@@ -32,9 +32,12 @@ import { createAsBaseUnoConfig } from "../src/preset";
 const PKG_KEYS = ["form", "table", "wf"] as const;
 type PkgKey = (typeof PKG_KEYS)[number];
 
+type Tier = "primary" | "default";
+
 interface ComponentEntry {
   file: string;
   pkg: PkgKey;
+  tier: Tier;
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -63,16 +66,21 @@ async function main() {
 
   for (const pkg of PKG_KEYS) {
     const root = PKG_DIRS[pkg];
-    const publicGlobs = ["src/components/*.vue", "src/components/defaults/*.vue"];
-    const files = globSync(publicGlobs, { cwd: root, absolute: true }).toSorted(cmpEn);
-    for (const file of files) {
-      const name = path.basename(file, ".vue");
-      if (entries[name]) {
-        throw new Error(
-          `[extract-classes] Naming collision for "${name}": ${entries[name].file} vs ${file}`,
-        );
+    const tieredGlobs: Array<{ glob: string; tier: Tier }> = [
+      { glob: "src/components/*.vue", tier: "primary" },
+      { glob: "src/components/defaults/*.vue", tier: "default" },
+    ];
+    for (const { glob, tier } of tieredGlobs) {
+      const files = globSync(glob, { cwd: root, absolute: true }).toSorted(cmpEn);
+      for (const file of files) {
+        const name = path.basename(file, ".vue");
+        if (entries[name]) {
+          throw new Error(
+            `[extract-classes] Naming collision for "${name}": ${entries[name].file} vs ${file}`,
+          );
+        }
+        entries[name] = { file, pkg, tier };
       }
-      entries[name] = { file, pkg };
     }
     internalCount += globSync("src/components/internal/*.vue", {
       cwd: root,
@@ -317,6 +325,18 @@ async function main() {
     lines.push(`  ${JSON.stringify(name)}: ${JSON.stringify(entries[name].pkg)},`);
   }
   lines.push("};", "");
+
+  // Tier 1 (user-tagged primaries) only — used by AsResolver to gate
+  // auto-imports. Tier 2 swap-target defaults stay out: users import them
+  // explicitly when composing custom defaults; the resolver doesn't
+  // auto-magic implementation details.
+  lines.push("export const primaryComponents: ReadonlySet<string> = new Set([");
+  for (const name of publicNames) {
+    if (entries[name].tier === "primary") {
+      lines.push(`  ${JSON.stringify(name)},`);
+    }
+  }
+  lines.push("]);", "");
 
   lines.push(
     "export function getComponentClasses(...names: string[]): string[] {",

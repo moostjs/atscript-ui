@@ -6,10 +6,10 @@ import { filledFilterCount, isSimpleEq, type FilterCondition } from "@atscript/u
 import { ListboxRoot } from "reka-ui";
 import { useTable } from "../../composables/use-table";
 import AsTable from "../as-table.vue";
-import AsTableBase from "../as-table-base.vue";
-import AsFilterDialog from "./as-filter-dialog.vue";
-import AsConfigDialog from "./as-config-dialog.vue";
-import AsFilters from "./as-filters.vue";
+import AsTableBase from "./as-table-base.vue";
+import AsFilterDialog from "../defaults/as-filter-dialog.vue";
+import AsConfigDialog from "../defaults/as-config-dialog.vue";
+import AsFilters from "../as-filters.vue";
 
 const props = defineProps<{
   column: ColumnDef;

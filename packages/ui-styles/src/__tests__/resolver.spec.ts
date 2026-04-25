@@ -34,11 +34,20 @@ describe("AsResolver", () => {
     });
   });
 
-  it("resolves a vue-table default component", () => {
-    expect(resolve("AsFilterDialog")).toEqual({
-      name: "default",
-      from: "@atscript/vue-table/as-filter-dialog",
-    });
+  it("does NOT auto-resolve Tier-2 swap-target defaults — those must be imported explicitly", () => {
+    // Defaults are public and importable, but the resolver only auto-imports
+    // primary user-tagged components (Tier 1). Users compose defaults via
+    // explicit imports when wrapping or replacing built-ins.
+    expect(resolve("AsFilterDialog")).toBeUndefined();
+    expect(resolve("AsConfigDialog")).toBeUndefined();
+    expect(resolve("AsInput")).toBeUndefined();
+    expect(resolve("AsTableHeaderCell")).toBeUndefined();
+  });
+
+  it("does NOT resolve Tier-3 internals (composition helpers)", () => {
+    expect(resolve("AsTableBase")).toBeUndefined();
+    expect(resolve("AsOrderableList")).toBeUndefined();
+    expect(resolve("AsFilterValueHelp")).toBeUndefined();
   });
 
   it("returns undefined for non-As prefixed identifiers", () => {

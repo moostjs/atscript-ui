@@ -10,7 +10,7 @@ import {
   type FilterCondition,
   type FilterConditionType,
 } from "@atscript/ui-table";
-import AsFilterInput from "./as-filter-input.vue";
+import AsFilterInput from "../defaults/as-filter-input.vue";
 
 const props = defineProps<{
   column: ColumnDef;

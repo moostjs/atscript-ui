@@ -22,7 +22,7 @@ import {
 import { useTableContext } from "../../composables/use-table-state";
 import { useTable } from "../../composables/use-table";
 import { useDragScroll } from "../../composables/use-drag-scroll";
-import AsTableBase from "../as-table-base.vue";
+import AsTableBase from "../internal/as-table-base.vue";
 
 const props = defineProps<{
   column: ColumnDef;

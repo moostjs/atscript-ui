@@ -129,28 +129,47 @@ For this to work, we style **only through vunor primitives**. Every pixel litera
 
 ### Component organization (vue-\* packages)
 
-Every `@atscript/vue-*` package follows a single canonical layout. The
-class-extractor and pre-built CSS pipelines depend on it — deviation
-silently breaks consumer styling.
+Every `@atscript/vue-*` package follows a three-tier canonical layout
+where the **directory dictates the public surface**. The class-extractor
+and pre-built CSS pipelines depend on it — deviation silently breaks
+consumer styling.
 
-- All `.vue` components live under `src/components/`.
-- **Public root components** at `src/components/*.vue` — exported by name
-  from `src/index.ts`, exposed via package subpath `@atscript/<pkg>/<as-name>`.
-- **Public default implementations** at `src/components/defaults/*.vue` —
-  same exposure as root, plus re-exported from
-  `src/components/defaults/index.ts` (a pure re-export barrel: no logic,
-  no helper functions).
-- **Private internals** at `src/components/internal/*.vue` — NOT exported
-  from `src/index.ts`, no subpath, no resolver entry. Their classes still
-  reach the safelist via the dependency walk from public entries.
+| Subdir | Tier | Subpath | Barrel | Auto-resolver |
+|--------|------|---------|--------|----------------|
+| `src/components/*.vue` | **1 — Primary** (user-tagged) | ✓ | ✓ | ✓ |
+| `src/components/defaults/*.vue` | **2 — Defaults** (swap targets) | ✓ | ✓ | ✗ |
+| `src/components/internal/*.vue` | **3 — Internals** | ✗ | ✗ | ✗ |
+
+- **Tier 1 — Primary:** components users tag in templates
+  (`<AsForm>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsField>`,
+  `<AsIterator>`, `<AsWfForm>`). Importable AND auto-resolved by
+  `unplugin-vue-components` via `AsResolver()`.
+- **Tier 2 — Defaults:** out-of-the-box swap targets users compose via
+  `:types` / `:components` prop maps and may also import explicitly
+  (`AsInput`, `AsSelect`, `AsFilterDialog`, `AsConfigDialog`, …). Public
+  and importable, but NOT auto-resolved — users compose them via
+  explicit imports. Re-exported from `src/components/defaults/index.ts`
+  (a pure re-export barrel: no logic, no helper functions).
+- **Tier 3 — Internals:** composition helpers nobody outside the package
+  should reference (`AsTableBase`, `AsTableVirtualizer`,
+  `AsOrderableList`, `AsFilterConditions`, `AsFilterValueHelp`,
+  `AsFieldsSelector`, `AsSortersConfig`, `AsFieldShell`, `AsNoData`, …).
+  Not exported from `src/index.ts`, no subpath in `package.json`
+  exports, no resolver entry. Their classes still reach the safelist
+  via the dependency walk from public entries.
 - **Helper functions** wiring up default components live at
-  `src/composables/create-*.ts`. They import their components via a single
-  `import { AsX, AsY, ... } from "../components/defaults"` line. They
-  MUST NOT import individual `.vue` files. If a public root component is
-  referenced by a helper, re-export it from the defaults barrel so the
-  single-import rule still holds.
+  `src/composables/create-*.ts`. They import their components via a
+  single `import { AsX, AsY, ... } from "../components/defaults"` line.
+  They MUST NOT import individual `.vue` files. If a Tier-2 component
+  physically lives outside `defaults/`, re-export it from the defaults
+  barrel so the single-import rule still holds.
 - Naming: `As<Name>` PascalCase identifier ↔ `as-<name>.vue` filename ↔
   `as-<name>-*` class names.
+
+**Picking a tier when adding a new component:** does a user write it as
+a tag in their template? → Tier 1 (root). Is it a default that users
+swap via a prop map? → Tier 2 (`defaults/`). Otherwise → Tier 3
+(`internal/`).
 
 Background: see STYLES.md Decision 17.
 

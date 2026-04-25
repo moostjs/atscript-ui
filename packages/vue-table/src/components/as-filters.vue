@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import { useTableContext } from "../../composables/use-table-state";
-import AsFilterField from "./as-filter-field.vue";
+import { useTableContext } from "../composables/use-table-state";
+import AsFilterField from "./defaults/as-filter-field.vue";
 
 const props = defineProps<{
   filterFields?: string[];

@@ -4,7 +4,7 @@ import type { ColumnDef } from "@atscript/ui";
 import { ListboxRoot } from "reka-ui";
 import type { ColumnMenuConfig } from "../types";
 import { useTableContext } from "../composables/use-table-state";
-import AsTableBase from "./as-table-base.vue";
+import AsTableBase from "./internal/as-table-base.vue";
 
 const props = withDefaults(
   defineProps<{

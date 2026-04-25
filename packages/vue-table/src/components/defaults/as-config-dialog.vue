@@ -16,8 +16,8 @@ import {
 import { arraysEqual, sortersEqual } from "@atscript/ui-table";
 import type { ConfigTab } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
-import AsFieldsSelector from "./as-fields-selector.vue";
-import AsSortersConfig from "./as-sorters-config.vue";
+import AsFieldsSelector from "../internal/as-fields-selector.vue";
+import AsSortersConfig from "../internal/as-sorters-config.vue";
 
 const { state } = useTableContext();
 

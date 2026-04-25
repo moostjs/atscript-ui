@@ -24,28 +24,21 @@ export { useTableSearch } from "./composables/use-table-search";
 // ── Component resolution ────────────────────────────────────
 export { useTableComponent } from "./composables/use-table-component";
 
-// ── Components ──────────────────────────────────────────────
+// ── Public components (Tier 1 — user-tagged) ────────────────
 export { default as AsTableRoot } from "./components/as-table-root.vue";
 export { default as AsTable } from "./components/as-table.vue";
-export { default as AsTableBase } from "./components/as-table-base.vue";
-export { default as AsTableHeaderCell } from "./components/as-table-header-cell.vue";
-export { default as AsTableCellValue } from "./components/as-table-cell-value.vue";
-export { default as AsTableVirtualizer } from "./components/as-table-virtualizer.vue";
+export { default as AsFilters } from "./components/as-filters.vue";
 
-// ── Default components ──────────────────────────────────────
+// ── Default implementations (Tier 2 — swap targets) ─────────
 export { createDefaultTableComponents } from "./composables/create-default-table-components";
 export {
-  AsFilters,
-  AsFilterField,
-  AsFilterDialog,
-  AsFilterInput,
-  AsFilterConditions,
-  AsFilterValueHelp,
   AsColumnMenu,
   AsConfigDialog,
-  AsFieldsSelector,
-  AsSortersConfig,
-  AsOrderableList,
+  AsFilterDialog,
+  AsFilterField,
+  AsFilterInput,
+  AsTableCellValue,
+  AsTableHeaderCell,
 } from "./components/defaults";
 
 // ── Utilities ───────────────────────────────────────────────

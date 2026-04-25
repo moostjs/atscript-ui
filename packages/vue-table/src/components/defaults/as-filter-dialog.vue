@@ -23,8 +23,8 @@ import {
   TabsContent,
 } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
-import AsFilterConditions from "./as-filter-conditions.vue";
-import AsFilterValueHelp from "./as-filter-value-help.vue";
+import AsFilterConditions from "../internal/as-filter-conditions.vue";
+import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
 const { state } = useTableContext();
 

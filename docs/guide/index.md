@@ -10,11 +10,17 @@ Atscript UI is a type-driven UI toolkit that generates forms and tables from [At
 
 ## Packages
 
-| Package              | Description                                                            |
-| -------------------- | ---------------------------------------------------------------------- |
-| `@atscript/ui`       | Framework-agnostic runtime + `@ui.*` annotation plugin + UI primitives |
-| `@atscript/ui-fns`   | Dynamic `@ui.fn.*` computed properties and `@ui.validate` (opt-in)     |
-| `@atscript/vue-form` | Vue 3 form components with `as-` prefix                                |
+| Package                | Description                                                                                                  |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `@atscript/ui`         | Framework-agnostic runtime + `@ui.*` annotation plugin + UI primitives                                       |
+| `@atscript/ui-fns`     | Dynamic `@ui.fn.*` computed properties and `@ui.validate` (opt-in)                                           |
+| `@atscript/ui-table`   | Framework-agnostic table logic (filters, presets, query model)                                               |
+| `@atscript/vue-form`   | Vue 3 form components with the `as-` prefix                                                                  |
+| `@atscript/vue-table`  | Vue 3 smart-table components with the `as-` prefix                                                           |
+| `@atscript/vue-wf`     | Vue 3 workflow-form wrapper (`<AsWfForm>`) — multi-step forms driven by `@atscript/moost-wf` workflows       |
+| `@atscript/ui-styles`  | Shared UnoCSS preset, per-component class safelist, `AsResolver`, and pre-built CSS for non-UnoCSS apps      |
+
+You only need the `@atscript/vue-*` packages whose components you actually use. See [Styling](./styling) for how `@atscript/ui-styles` ties them together.
 
 ## Requirements
 

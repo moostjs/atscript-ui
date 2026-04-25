@@ -3,8 +3,8 @@ import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import type { FilterCondition } from "@atscript/ui-table";
 import { isFilled } from "@atscript/ui-table";
-import type { ColumnMenuConfig } from "../types";
-import AsColumnMenu from "./defaults/as-column-menu.vue";
+import type { ColumnMenuConfig } from "../../types";
+import AsColumnMenu from "./as-column-menu.vue";
 
 const props = withDefaults(
   defineProps<{
