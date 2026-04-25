@@ -1,3 +1,5 @@
+export { createAsExtractor } from "./extractor";
+export type { AsExtractorOptions } from "./extractor";
 export { createIconsLoader } from "./icon-loader";
 export type { IconsLoaderOptions } from "./icon-loader";
 export {

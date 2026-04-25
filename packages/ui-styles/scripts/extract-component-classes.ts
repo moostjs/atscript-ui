@@ -26,6 +26,7 @@ import { scan } from "rolldown/experimental";
 import { globSync } from "tinyglobby";
 import { createGenerator } from "unocss";
 
+import { kebabize } from "../src/kebab";
 import { createAsBaseUnoConfig } from "../src/preset";
 
 const PKG_KEYS = ["form", "table", "wf"] as const;
@@ -53,13 +54,6 @@ const stripQueryParams = (id: string) => {
 };
 const ASSET_RE =
   /\.(css|scss|less|styl|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|mp[34]|webm|ogg|pdf)(\?.*)?$/;
-
-function kebabize(pascal: string): string {
-  return pascal
-    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
-    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1-$2")
-    .toLowerCase();
-}
 
 async function main() {
   // 1. Discover components --------------------------------------------------

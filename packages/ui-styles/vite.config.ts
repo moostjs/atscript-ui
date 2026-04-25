@@ -7,4 +7,7 @@ export default defineConfig({
       neverBundle: ["unocss", "vunor", "@iconify/utils"],
     },
   },
+  test: {
+    environment: "node",
+  },
 });

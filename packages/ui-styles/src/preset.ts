@@ -1,6 +1,7 @@
 import presetIcons from "@unocss/preset-icons";
 import type { Preset } from "unocss";
 import { presetVunor, vunorShortcuts } from "vunor/theme";
+import { createAsExtractor } from "./extractor";
 import { createIconsLoader, type IconsLoaderOptions } from "./icon-loader";
 import { allShortcuts } from "./shortcuts";
 
@@ -49,7 +50,7 @@ export const defaultAsIconAliases: Record<string, string> = {
   warning: "ph:warning-circle",
 };
 
-export interface AsPresetVunorOptions {
+export interface AsBaseUnoConfigOptions {
   iconsDir?: string;
   iconAliases?: Record<string, string>;
   iconCollection?: string;
@@ -57,7 +58,17 @@ export interface AsPresetVunorOptions {
   baseRadius?: string;
 }
 
-export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
+export interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
+  /**
+   * Kebab-case component names whose classes the extractor should drop from
+   * the safelist (post-match). Use when the consumer has replaced a built-in
+   * default with their own implementation and wants to shed the unused styles.
+   * See STYLES.md Decision 15.
+   */
+  excludeComponents?: string[];
+}
+
+function buildBasePresets(options: AsBaseUnoConfigOptions): Preset[] {
   const {
     iconsDir = ".icons",
     iconAliases = {},
@@ -98,7 +109,16 @@ export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
   ];
 }
 
-export type AsBaseUnoConfigOptions = AsPresetVunorOptions;
+export function asPresetVunor(options: AsPresetVunorOptions = {}): Preset[] {
+  const { excludeComponents, ...baseOpts } = options;
+  return [
+    ...buildBasePresets(baseOpts),
+    {
+      name: "atscript-ui-extractors",
+      extractors: [createAsExtractor({ excludeComponents })],
+    } as Preset,
+  ];
+}
 
 /**
  * Cycle-breaking factory used by the class-extraction script and the
@@ -109,7 +129,7 @@ export type AsBaseUnoConfigOptions = AsPresetVunorOptions;
  */
 export function createAsBaseUnoConfig(options: AsBaseUnoConfigOptions = {}) {
   return {
-    presets: asPresetVunor(options),
+    presets: buildBasePresets(options),
     shortcuts: [vunorShortcuts(allShortcuts)],
   };
 }

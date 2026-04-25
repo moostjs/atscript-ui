@@ -21,6 +21,7 @@
     "extract-classes": "tsx scripts/extract-component-classes.ts",
     "build": "pnpm extract-classes && vp pack",
     "dev": "vp pack --watch",
+    "test": "vp test",
     "check": "vp check"
   },
   "dependencies": {
@@ -36,6 +37,7 @@
     "tinyglobby": "^0.2.15",
     "tsx": "^4.21.0",
     "unocss": "catalog:",
+    "vitest": "catalog:",
     "vunor": "catalog:"
   },
   "peerDependencies": {
