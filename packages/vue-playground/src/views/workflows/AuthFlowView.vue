@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, ref } from "vue";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDefaultTypes } from "@atscript/vue-form";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
@@ -27,7 +27,7 @@ function onError(err: { message: string }) {
           Multi-step login flow: Login (admin/password) &rarr; MFA (123456) &rarr; Done. Try wrong
           credentials, alt actions (forgot password, resend, switch method).
         </p>
-        <WfForm
+        <AsWfForm
           path="/wf/trigger"
           name="auth/login"
           :types="types"
@@ -50,7 +50,7 @@ function onError(err: { message: string }) {
               <pre>{{ JSON.stringify(response, null, 2) }}</pre>
             </div>
           </template>
-        </WfForm>
+        </AsWfForm>
       </div>
     </div>
     <div class="form-debug">

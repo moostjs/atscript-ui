@@ -91,7 +91,7 @@ pnpm build                                  # rebuild all packages
 
 For this to work, we style **only through vunor primitives**. Every pixel literal, hand-rolled focus ring, or hardcoded color we leave in the code is a knob the consumer can't turn.
 
-**Shortcuts, not inline utilities.** Templates only use `as-*` class names. Raw UnoCSS utilities (`flex gap-$s px-$m ...`) belong in the `defineShortcuts({...})` map in `packages/vue-*/src/unocss/shortcuts.ts`, never in `.vue` templates. If a new composition is needed, add a new `as-*` shortcut.
+**Shortcuts, not inline utilities.** Templates only use `as-*` class names. Raw UnoCSS utilities (`flex gap-$s px-$m ...`) belong in the `defineShortcuts({...})` map in `packages/ui-styles/src/shortcuts/{form,table,wf,common}/<as-name>.ts`, never in `.vue` templates. If a new composition is needed, add a new `as-*` shortcut entry in the matching component file (or add a new file under the right subdir and wire it through the barrel).
 
 **Use vunor tokens, not pixel literals.**
 
@@ -109,7 +109,7 @@ For this to work, we style **only through vunor primitives**. Every pixel litera
 
 **Explicit text color on inputs** — inside a `layer-0` wrapper, `--current-text` resolves to `scope-dark-2` (muted). Use `text-scope-dark-0 dark:text-scope-light-0` on `<input>` so user input reads as primary text, not placeholder.
 
-**Fonts live in the consumer, not the preset.** The `unocss-preset` package ships only scope/layer/surface/c8/i8 + icons. Typography baseline (Inter family, 13px body, smoothing) lives in `vue-playground/src/styles/app.css`. Real consumers bring their own font stack.
+**Fonts live in the consumer, not the preset.** The `@atscript/ui-styles` package ships scope/layer/surface/c8/i8 + icons + the `as-*` shortcut tree. Typography baseline (Inter family, 13px body, smoothing) lives in `vue-playground/src/styles/app.css`. Real consumers bring their own font stack.
 
 **Reka-ui state attributes** — menu items, listbox rows, and combobox items expose keyboard state as `data-highlighted=""`, selection as `data-state="checked"`. Style them via descendant attribute selectors in the `as-*` shortcut. Nested `[]` inside an arbitrary-variant bracket (`[&_tr[data-state=checked]]:`) silently fails to compile — wrap the inner attribute selector in `:is(...)`:
 
@@ -125,7 +125,34 @@ For this to work, we style **only through vunor primitives**. Every pixel litera
 1. Is there a vunor primitive? (`scope-*`, `layer-*`, `surface-*`, `c8-*`, `i8-*`, spacing `$*`, typography, `fingertip-*`)
 2. If painting over an existing shortcut, add to the variant map (`hover:`, `focus-within:`, `[&_child]:`) — don't copy the whole shortcut.
 3. If introducing a new piece of UI, add a new `as-*` shortcut entry rather than inlining classes in the template.
-4. Build-verify: `pnpm --filter @atscript/vue-table run build` (or vue-form / unocss-preset). Confirm the generated selector appears in `dist/unocss.css` — UnoCSS silently drops malformed arbitrary variants.
+4. Build-verify: `pnpm --filter @atscript/ui-styles run build` and re-run the playground/demo dev server. Confirm the generated selector appears in the consumer app's UnoCSS output — UnoCSS silently drops malformed arbitrary variants.
+
+### Component organization (vue-\* packages)
+
+Every `@atscript/vue-*` package follows a single canonical layout. The
+class-extractor and pre-built CSS pipelines depend on it — deviation
+silently breaks consumer styling.
+
+- All `.vue` components live under `src/components/`.
+- **Public root components** at `src/components/*.vue` — exported by name
+  from `src/index.ts`, exposed via package subpath `@atscript/<pkg>/<as-name>`.
+- **Public default implementations** at `src/components/defaults/*.vue` —
+  same exposure as root, plus re-exported from
+  `src/components/defaults/index.ts` (a pure re-export barrel: no logic,
+  no helper functions).
+- **Private internals** at `src/components/internal/*.vue` — NOT exported
+  from `src/index.ts`, no subpath, no resolver entry. Their classes still
+  reach the safelist via the dependency walk from public entries.
+- **Helper functions** wiring up default components live at
+  `src/composables/create-*.ts`. They import their components via a single
+  `import { AsX, AsY, ... } from "../components/defaults"` line. They
+  MUST NOT import individual `.vue` files. If a public root component is
+  referenced by a helper, re-export it from the defaults barrel so the
+  single-import rule still holds.
+- Naming: `As<Name>` PascalCase identifier ↔ `as-<name>.vue` filename ↔
+  `as-<name>-*` class names.
+
+Background: see STYLES.md Decision 17.
 
 ### Commit style
 

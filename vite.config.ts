@@ -8,7 +8,7 @@ export default defineConfig({
     ignorePatterns: ["**/*.as.d.ts", "**/atscript.d.ts"],
   },
   lint: {
-    ignorePatterns: ["**/*.as"],
+    ignorePatterns: ["**/*.as", "**/*.as.d.ts", "**/atscript.d.ts"],
     categories: {
       correctness: "error",
       suspicious: "warn",

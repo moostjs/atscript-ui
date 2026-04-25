@@ -7,7 +7,7 @@ export default defineConfig({
     environment: "happy-dom",
   },
   pack: {
-    entry: ["src/index.ts", "src/unocss/index.ts"],
+    entry: ["src/index.ts"],
     dts: { vue: true },
     format: ["esm", "cjs"],
     plugins: [vue()],
@@ -18,7 +18,6 @@ export default defineConfig({
         "@atscript/ui-table",
         "@atscript/db-client",
         "@uniqu/core",
-        "@atscript/unocss-preset",
       ],
     },
   },

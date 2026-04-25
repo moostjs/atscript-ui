@@ -1,1 +1,0 @@
-export { asTableShortcuts } from "./shortcuts";

@@ -33,8 +33,8 @@ export { default as AsTableCellValue } from "./components/as-table-cell-value.vu
 export { default as AsTableVirtualizer } from "./components/as-table-virtualizer.vue";
 
 // ── Default components ──────────────────────────────────────
+export { createDefaultTableComponents } from "./composables/create-default-table-components";
 export {
-  createDefaultTableComponents,
   AsFilters,
   AsFilterField,
   AsFilterDialog,

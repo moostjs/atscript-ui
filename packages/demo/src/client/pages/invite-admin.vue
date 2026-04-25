@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
 
 const router = useRouter();
@@ -28,7 +28,7 @@ function onFinished() {
         <span class="i-ph:check-circle text-[1.25em]" aria-hidden="true" />
         <span>Invite sent — the invitee will receive a magic link. Redirecting…</span>
       </div>
-      <WfForm
+      <AsWfForm
         v-else
         path="/api/wf"
         name="api/users/invite"
@@ -54,7 +54,7 @@ function onFinished() {
             {{ loading ? "Sending…" : (text ?? "Send invite") }}
           </button>
         </template>
-      </WfForm>
+      </AsWfForm>
     </div>
   </div>
 </template>

@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, toRaw, watch, type Component } from "vue";
-import { useWfForm } from "./use-wf-form";
-import type { UseWfFormOptions } from "./use-wf-form";
+import { useWfForm } from "../use-wf-form";
+import type { UseWfFormOptions } from "../use-wf-form";
 import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
 import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
 import type { TFormState } from "@atscript/vue-form";
 
-interface WfFormProps extends UseWfFormOptions {
+interface AsWfFormProps extends UseWfFormOptions {
   /** Type-to-component map for AsForm rendering */
   types: TAsTypeComponents;
   /** First validation strategy passed to AsForm */
@@ -18,7 +18,7 @@ interface WfFormProps extends UseWfFormOptions {
   clientFactory?: ClientFactory;
 }
 
-const props = withDefaults(defineProps<WfFormProps>(), {
+const props = withDefaults(defineProps<AsWfFormProps>(), {
   autoStart: true,
   tokenTransport: "body",
   tokenName: "wfs",

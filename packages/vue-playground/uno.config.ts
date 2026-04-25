@@ -1,9 +1,12 @@
 import { fileURLToPath } from "node:url";
-import { asPresetVunor, defineShortcuts } from "@atscript/unocss-preset";
+import {
+  allShortcuts,
+  asPresetVunor,
+  defineShortcuts,
+  mergeVunorShortcuts,
+} from "@atscript/ui-styles";
 import { defineConfig } from "unocss";
-import { mergeVunorShortcuts, vunorShortcuts } from "vunor/theme";
-import { asFormShortcuts } from "../vue-form/src/unocss";
-import { asTableShortcuts } from "../vue-table/src/unocss";
+import { vunorShortcuts } from "vunor/theme";
 
 const hereDir = fileURLToPath(new URL(".", import.meta.url));
 
@@ -42,8 +45,7 @@ export default defineConfig({
       `${hereDir}src/**/*.{vue,ts,tsx}`,
       `${hereDir}../vue-form/src/**/*.{vue,ts}`,
       `${hereDir}../vue-table/src/**/*.{vue,ts}`,
-      `${hereDir}../vue-form/src/unocss/shortcuts.ts`,
-      `${hereDir}../vue-table/src/unocss/shortcuts.ts`,
+      `${hereDir}../vue-wf/src/**/*.{vue,ts}`,
     ],
   },
   presets: asPresetVunor({
@@ -53,7 +55,5 @@ export default defineConfig({
       "sort-asc": "local:none",
     },
   }),
-  shortcuts: [
-    vunorShortcuts(mergeVunorShortcuts([asTableShortcuts, asFormShortcuts, playgroundShortcuts])),
-  ],
+  shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, playgroundShortcuts]))],
 });

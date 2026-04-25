@@ -60,9 +60,6 @@ catalogs:
     '@uniqu/core':
       specifier: ^0.1.5
       version: 0.1.5
-    '@unocss/cli':
-      specifier: ^66.6.0
-      version: 66.6.8
     '@unocss/preset-icons':
       specifier: ^66.6.0
       version: 66.6.8
@@ -168,9 +165,9 @@ importers:
       '@atscript/ui-fns':
         specifier: workspace:^
         version: link:../ui-fns
-      '@atscript/unocss-preset':
+      '@atscript/ui-styles':
         specifier: workspace:^
-        version: link:../unocss-preset
+        version: link:../ui-styles
       '@atscript/vue-form':
         specifier: workspace:^
         version: link:../vue-form
@@ -343,20 +340,7 @@ importers:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))'
 
-  packages/ui-table:
-    dependencies:
-      '@atscript/ui':
-        specifier: workspace:*
-        version: link:../ui
-    devDependencies:
-      '@uniqu/core':
-        specifier: 'catalog:'
-        version: 0.1.5
-      vitest:
-        specifier: npm:@voidzero-dev/vite-plus-test@latest
-        version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))'
-
-  packages/unocss-preset:
+  packages/ui-styles:
     dependencies:
       '@iconify/utils':
         specifier: 'catalog:'
@@ -371,6 +355,19 @@ importers:
       vunor:
         specifier: 'catalog:'
         version: 0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))
+
+  packages/ui-table:
+    dependencies:
+      '@atscript/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@uniqu/core':
+        specifier: 'catalog:'
+        version: 0.1.5
+      vitest:
+        specifier: npm:@voidzero-dev/vite-plus-test@latest
+        version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))'
 
   packages/vue-form:
     dependencies:
@@ -390,15 +387,9 @@ importers:
       '@atscript/ui-fns':
         specifier: workspace:^
         version: link:../ui-fns
-      '@atscript/unocss-preset':
-        specifier: workspace:^
-        version: link:../unocss-preset
       '@tsdown/css':
         specifier: 'catalog:'
         version: 0.21.4(jiti@2.6.1)(postcss@8.5.10)(tsdown@0.21.4)
-      '@unocss/cli':
-        specifier: 'catalog:'
-        version: 66.6.8
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
         version: 6.0.5(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))(vue@3.5.30(typescript@5.9.3))
@@ -411,9 +402,6 @@ importers:
       reka-ui:
         specifier: 'catalog:'
         version: 2.9.2(vue@3.5.30(typescript@5.9.3))
-      unocss:
-        specifier: 'catalog:'
-        version: 66.6.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))
       unplugin-atscript:
         specifier: 'catalog:'
         version: 0.1.50(@atscript/core@0.1.50(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.50)
@@ -441,9 +429,9 @@ importers:
       '@atscript/ui-fns':
         specifier: workspace:^
         version: link:../ui-fns
-      '@atscript/unocss-preset':
+      '@atscript/ui-styles':
         specifier: workspace:^
-        version: link:../unocss-preset
+        version: link:../ui-styles
       '@atscript/vue-form':
         specifier: workspace:^
         version: link:../vue-form
@@ -542,18 +530,12 @@ importers:
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.1.50(@atscript/core@0.1.50(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.55)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.10)(wooks@0.7.10)
-      '@atscript/unocss-preset':
-        specifier: workspace:^
-        version: link:../unocss-preset
       '@tanstack/vue-virtual':
         specifier: 'catalog:'
         version: 3.13.23(vue@3.5.30(typescript@5.9.3))
       '@uniqu/core':
         specifier: 'catalog:'
         version: 0.1.5
-      '@unocss/cli':
-        specifier: 'catalog:'
-        version: 66.6.8
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
         version: 6.0.5(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))(vue@3.5.30(typescript@5.9.3))
@@ -569,9 +551,6 @@ importers:
       reka-ui:
         specifier: 'catalog:'
         version: 2.9.2(vue@3.5.30(typescript@5.9.3))
-      unocss:
-        specifier: 'catalog:'
-        version: 66.6.8(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(happy-dom@18.0.1)(jiti@2.6.1)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(jiti@2.6.1))'
@@ -3546,7 +3525,7 @@ snapshots:
   '@antfu/install-pkg@1.1.0':
     dependencies:
       package-manager-detector: 1.6.0
-      tinyexec: 1.0.4
+      tinyexec: 1.1.1
 
   '@atscript/core@0.1.50(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)':
     dependencies:

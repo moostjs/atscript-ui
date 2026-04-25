@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
 import { useMe } from "../api/use-me";
 
@@ -26,7 +26,7 @@ async function onFinished() {
           atscript-ui demo
         </p>
       </div>
-      <WfForm
+      <AsWfForm
         path="/api/wf"
         name="api/auth/login"
         :types="types"
@@ -51,7 +51,7 @@ async function onFinished() {
             {{ loading ? "Signing in…" : (text ?? "Sign In") }}
           </button>
         </template>
-      </WfForm>
+      </AsWfForm>
       <p class="text-callout text-current/60 m-0">
         No account?
         <RouterLink to="/register" class="scope-primary text-current-hl underline"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
 import { useMe } from "../api/use-me";
 
@@ -34,7 +34,7 @@ function onError(e: { status?: number; message?: string }) {
           atscript-ui demo
         </p>
       </div>
-      <WfForm
+      <AsWfForm
         path="/api/wf"
         name="api/users/invite"
         :initial-token="token"
@@ -61,7 +61,7 @@ function onError(e: { status?: number; message?: string }) {
             {{ loading ? "Accepting…" : (text ?? "Accept & sign in") }}
           </button>
         </template>
-      </WfForm>
+      </AsWfForm>
     </div>
   </div>
 </template>

@@ -13,7 +13,7 @@
     "@atscript/db-client": "catalog:",
     "@atscript/ui": "workspace:^",
     "@atscript/ui-fns": "workspace:^",
-    "@atscript/unocss-preset": "workspace:^",
+    "@atscript/ui-styles": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",
     "@atscript/vue-wf": "workspace:^",

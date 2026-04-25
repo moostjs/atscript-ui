@@ -9,18 +9,12 @@ export default defineConfig({
     globalSetup: "src/__tests__/global-setup.ts",
   },
   pack: {
-    entry: ["src/index.ts", "src/unocss/index.ts"],
+    entry: ["src/index.ts"],
     dts: { vue: true },
     format: ["esm", "cjs"],
     plugins: [vue()],
     deps: {
-      neverBundle: [
-        "vue",
-        "@atscript/ui",
-        "@atscript/ui-fns",
-        "@atscript/typescript",
-        "@atscript/unocss-preset",
-      ],
+      neverBundle: ["vue", "@atscript/ui", "@atscript/ui-fns", "@atscript/typescript"],
     },
   },
 });

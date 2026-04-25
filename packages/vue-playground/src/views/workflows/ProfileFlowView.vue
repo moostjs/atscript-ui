@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject, ref } from "vue";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDefaultTypes } from "@atscript/vue-form";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
@@ -36,7 +36,7 @@ function onForm(_def: unknown, context?: Record<string, unknown>) {
           deep-partial validation (tests <code>@wf.action.withData</code>). Click "Save Profile" for
           full validation and submit.
         </p>
-        <WfForm
+        <AsWfForm
           path="/wf/trigger"
           name="profile/edit"
           :types="types"
@@ -60,7 +60,7 @@ function onForm(_def: unknown, context?: Record<string, unknown>) {
               <pre>{{ JSON.stringify(response, null, 2) }}</pre>
             </div>
           </template>
-        </WfForm>
+        </AsWfForm>
       </div>
     </div>
     <div class="form-debug">

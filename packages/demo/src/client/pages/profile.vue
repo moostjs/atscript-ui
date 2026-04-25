@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
 import { useMe } from "../api/use-me";
 
@@ -17,7 +17,7 @@ async function onFinished() {
 <template>
   <div class="p-6 max-w-[520px]">
     <h1 class="text-lg font-semibold mb-4">Edit Profile</h1>
-    <WfForm
+    <AsWfForm
       path="/api/wf"
       name="api/profile/edit"
       :types="types"
@@ -42,7 +42,7 @@ async function onFinished() {
           {{ loading ? "Saving…" : (text ?? "Save") }}
         </button>
       </template>
-    </WfForm>
+    </AsWfForm>
     <p class="mt-4 text-sm">
       <RouterLink to="/profile/change-password" class="text-blue-600 underline"
         >Change password</RouterLink

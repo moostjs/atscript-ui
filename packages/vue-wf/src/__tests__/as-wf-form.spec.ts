@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
-import WfForm from "../wf-form.vue";
+import AsWfForm from "../components/as-wf-form.vue";
 import { createDefaultTypes } from "@atscript/vue-form";
 import { mockFetch, mockInputRequired, mockFinished } from "./helpers";
 
@@ -14,18 +14,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function mountWfForm(propsOverrides?: Record<string, unknown>) {
-  return mount(WfForm as any, {
+function mountAsWfForm(propsOverrides?: Record<string, unknown>) {
+  return mount(AsWfForm as any, {
     props: { path: "/api/wf", name: "auth/login", types, ...propsOverrides },
   });
 }
 
-describe("WfForm", () => {
+describe("AsWfForm", () => {
   it("renders AsForm when inputRequired received", async () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm)]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     expect(wrapper.find("form").exists()).toBe(true);
@@ -36,7 +36,7 @@ describe("WfForm", () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm, { errors: { username: "Required" } })]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     expect(wrapper.text()).toContain("Required");
@@ -46,7 +46,7 @@ describe("WfForm", () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm), mockFinished({ userId: 42 })]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     await wrapper.find("form").trigger("submit");
@@ -60,7 +60,7 @@ describe("WfForm", () => {
   it("emits error on server error", async () => {
     mockFetch([{ error: { message: "Not found", status: 404 } }]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     const emitted = wrapper.emitted("error");
@@ -72,7 +72,7 @@ describe("WfForm", () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm, { context: { hint: "test" } })]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     const emitted = wrapper.emitted("form");
@@ -85,7 +85,7 @@ describe("WfForm", () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm)]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     const emitted = wrapper.emitted("loading");
@@ -98,7 +98,7 @@ describe("WfForm", () => {
   it("renders default error slot for errors without form", async () => {
     mockFetch([{ error: { message: "Workflow broken" } }]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     expect(wrapper.text()).toContain("Workflow broken");
@@ -108,7 +108,7 @@ describe("WfForm", () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm), mockFinished()]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     await wrapper.find("form").trigger("submit");
@@ -135,7 +135,7 @@ describe("WfForm", () => {
       }),
     );
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     await wrapper.find("form").trigger("submit");
@@ -157,7 +157,7 @@ describe("WfForm", () => {
       mockInputRequired(ActionForm, { token: "tok2" }),
     ]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     const actionButtons = wrapper.findAll("button[type='button']");
@@ -178,7 +178,7 @@ describe("WfForm", () => {
       mockInputRequired(DataActionForm, { token: "tok2" }),
     ]);
 
-    const wrapper = mountWfForm();
+    const wrapper = mountAsWfForm();
     await flushPromises();
 
     const actionButtons = wrapper.findAll("button[type='button']");

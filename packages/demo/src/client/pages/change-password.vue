@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router";
-import { WfForm } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
 
 const router = useRouter();
@@ -14,7 +14,7 @@ function onFinished() {
 <template>
   <div class="p-6 max-w-[520px]">
     <h1 class="text-lg font-semibold mb-4">Change Password</h1>
-    <WfForm
+    <AsWfForm
       path="/api/wf"
       name="api/security/change-password"
       :types="types"
@@ -39,6 +39,6 @@ function onFinished() {
           {{ loading ? "Updating…" : (text ?? "Update password") }}
         </button>
       </template>
-    </WfForm>
+    </AsWfForm>
   </div>
 </template>
