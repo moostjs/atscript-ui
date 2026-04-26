@@ -134,11 +134,11 @@ where the **directory dictates the public surface**. The class-extractor
 and pre-built CSS pipelines depend on it — deviation silently breaks
 consumer styling.
 
-| Subdir | Tier | Subpath | Barrel | Auto-resolver |
-|--------|------|---------|--------|----------------|
-| `src/components/*.vue` | **1 — Primary** (user-tagged) | ✓ | ✓ | ✓ |
-| `src/components/defaults/*.vue` | **2 — Defaults** (swap targets) | ✓ | ✓ | ✗ |
-| `src/components/internal/*.vue` | **3 — Internals** | ✗ | ✗ | ✗ |
+| Subdir                          | Tier                            | Subpath | Barrel | Auto-resolver |
+| ------------------------------- | ------------------------------- | ------- | ------ | ------------- |
+| `src/components/*.vue`          | **1 — Primary** (user-tagged)   | ✓       | ✓      | ✓             |
+| `src/components/defaults/*.vue` | **2 — Defaults** (swap targets) | ✓       | ✓      | ✗             |
+| `src/components/internal/*.vue` | **3 — Internals**               | ✗       | ✗      | ✗             |
 
 - **Tier 1 — Primary:** components users tag in templates
   (`<AsForm>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsField>`,

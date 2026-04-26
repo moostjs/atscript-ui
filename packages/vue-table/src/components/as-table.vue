@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
+import { type ColumnReorderPosition, reorderColumnNames } from "@atscript/ui-table";
 import { ListboxRoot } from "reka-ui";
 import type { ColumnMenuConfig } from "../types";
 import { useTableContext } from "../composables/use-table-state";
@@ -14,10 +15,13 @@ const props = withDefaults(
     virtualRowHeight?: number;
     virtualOverscan?: number;
     columnMenu?: ColumnMenuConfig;
+    /** Allow header drag-and-drop column reorder. Default true. */
+    reorderable?: boolean;
   }>(),
   {
     stickyHeader: true,
     virtualOverscan: 5,
+    reorderable: true,
   },
 );
 
@@ -71,6 +75,10 @@ function handleClearFilters() {
   state.resetFilters();
   if (state.searchTerm.value) state.searchTerm.value = "";
 }
+
+function handleReorder(fromPath: string, toPath: string, position: ColumnReorderPosition) {
+  state.columnNames.value = reorderColumnNames(state.columnNames.value, fromPath, toPath, position);
+}
 </script>
 
 <template>
@@ -92,12 +100,14 @@ function handleClearFilters() {
       :search-term="state.searchTerm.value"
       :on-clear-filters="handleClearFilters"
       :column-menu="columnMenu"
+      :reorderable="reorderable"
       @sort="handleSort"
       @hide="handleHide"
       @filter="handleFilter"
       @filters-off="handleFiltersOff"
       @select-all="handleSelectAll"
       @deselect-all="handleDeselectAll"
+      @reorder="handleReorder"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)

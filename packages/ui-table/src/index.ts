@@ -54,3 +54,5 @@ export type { ConfigTab, TableStateData, TableStateMethods } from "./state/table
 // ── Utils ──────────────────────────────────────────────────
 export { debounce } from "./utils/debounce";
 export { arraysEqual, sameColumnSet, sortersEqual } from "./utils/equality";
+export type { ColumnReorderPosition } from "./utils/reorder-column-names";
+export { reorderColumnNames } from "./utils/reorder-column-names";

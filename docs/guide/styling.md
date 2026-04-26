@@ -18,10 +18,10 @@ You only need to install the `@atscript/vue-*` packages whose components you act
 
 Every `@atscript/vue-*` package exposes two categories of components:
 
-| Category                | What it is                                                                                                                                                                                                         | Auto-import via `AsResolver` |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :--------------------------: |
-| **Primary components**  | The ones you write as tags in templates: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsWfForm>`.                                                                       | ✓                            |
-| **Default components**  | Out-of-the-box implementations you can swap via `:types` / `:components` props: `AsInput`, `AsSelect`, `AsRadio`, `AsCheckbox`, `AsParagraph`, `AsAction`, `AsObject`, `AsArray`, `AsUnion`, `AsTuple`, `AsRef`, `AsTableHeaderCell`, `AsTableCellValue`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`, `AsFilterDialog`, `AsConfigDialog`. You usually consume them through `createDefaultTypes()` / `createDefaultTableComponents()`, but they're also importable on their own when you want to wrap or extend a default. | ✗ (explicit imports)         |
+| Category               | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Auto-import via `AsResolver` |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------: |
+| **Primary components** | The ones you write as tags in templates: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsWfForm>`.                                                                                                                                                                                                                                                                                                                                                                                    |              ✓               |
+| **Default components** | Out-of-the-box implementations you can swap via `:types` / `:components` props: `AsInput`, `AsSelect`, `AsRadio`, `AsCheckbox`, `AsParagraph`, `AsAction`, `AsObject`, `AsArray`, `AsUnion`, `AsTuple`, `AsRef`, `AsTableHeaderCell`, `AsTableCellValue`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`, `AsFilterDialog`, `AsConfigDialog`. You usually consume them through `createDefaultTypes()` / `createDefaultTableComponents()`, but they're also importable on their own when you want to wrap or extend a default. |     ✗ (explicit imports)     |
 
 Both categories support **two import patterns**:
 
@@ -126,7 +126,8 @@ export default defineConfig({
   presets: asPresetVunor({
     iconOverrides: {
       // Replace our default `i-as-search` with a hand-rolled SVG
-      search: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M..."/></svg>',
+      search:
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M..."/></svg>',
     },
   }),
   shortcuts: [vunorShortcuts(allShortcuts)],
@@ -154,7 +155,7 @@ export default defineConfig({
         lucide: () => import("@iconify-json/lucide/icons.json").then((i) => i.default),
         // Or your own custom collection
         mybrand: {
-          logo: '<svg ...></svg>',
+          logo: "<svg ...></svg>",
         },
       },
     }),
@@ -282,9 +283,9 @@ import { vunorShortcuts } from "vunor/theme";
 
 export default defineConfig({
   presets: asPresetVunor({
-    baseRadius: "8px",                                  // optional
-    excludeComponents: ["as-filter-dialog"],            // optional — drop unused defaults
-    iconOverrides: { search: "<svg>...</svg>" },        // optional — swap built-in icons
+    baseRadius: "8px", // optional
+    excludeComponents: ["as-filter-dialog"], // optional — drop unused defaults
+    iconOverrides: { search: "<svg>...</svg>" }, // optional — swap built-in icons
   }),
   shortcuts: [vunorShortcuts(allShortcuts)],
 });

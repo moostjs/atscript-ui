@@ -4,6 +4,51 @@ import type { Client } from "@atscript/db-client";
 import { vi } from "vitest";
 
 /**
+ * Override `getBoundingClientRect()` on a single element so happy-dom returns
+ * deterministic geometry for drag-position math.
+ */
+export function stubRect(el: Element, left: number, width: number) {
+  el.getBoundingClientRect = () =>
+    ({
+      left,
+      width,
+      top: 0,
+      right: left + width,
+      bottom: 24,
+      height: 24,
+      x: left,
+      y: 0,
+      toJSON: () => ({}),
+    }) as DOMRect;
+}
+
+/** Resolve the rendered `<th>` for a column path; throws if not found. */
+export function thByPath(root: ParentNode, path: string): HTMLElement {
+  const th = root.querySelector(`th[data-column-path="${path}"]`);
+  if (!th) throw new Error(`<th> for path "${path}" not found`);
+  return th as HTMLElement;
+}
+
+/**
+ * Build a synthetic native DragEvent with a stub DataTransfer. happy-dom does
+ * not implement DragEvent / DataTransfer; this fills the gap for unit tests.
+ */
+export function dragEvent(type: string, init: Partial<DragEvent> = {}) {
+  const ev = new Event(type, { bubbles: true, cancelable: true }) as DragEvent;
+  Object.defineProperty(ev, "dataTransfer", {
+    value: {
+      effectAllowed: "",
+      dropEffect: "",
+      setData: () => {},
+      getData: () => "",
+    },
+    writable: false,
+  });
+  Object.assign(ev, init);
+  return ev;
+}
+
+/**
  * Build a simple MetaResponse for testing.
  * Creates an object type with the given field names (all string, sortable, filterable).
  */

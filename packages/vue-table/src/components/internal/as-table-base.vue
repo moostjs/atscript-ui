@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { computed, useSlots } from "vue";
+import { computed, ref, useSlots } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
-import { filledFilterCount, type FieldFilters } from "@atscript/ui-table";
+import {
+  filledFilterCount,
+  type ColumnReorderPosition,
+  type FieldFilters,
+} from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../../types";
 import {
   ComboboxItem,
@@ -42,12 +46,15 @@ const props = withDefaults(
     onClearFilters?: () => void;
     columnMenu?: ColumnMenuConfig;
     stretch?: boolean;
+    /** Allow header drag-and-drop column reorder. Default true. */
+    reorderable?: boolean;
   }>(),
   {
     select: "none",
     stickyHeader: true,
     virtualOverscan: 5,
     stretch: true,
+    reorderable: true,
   },
 );
 
@@ -66,6 +73,7 @@ const emit = defineEmits<{
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "select-all"): void;
   (e: "deselect-all"): void;
+  (e: "reorder", fromPath: string, toPath: string, position: ColumnReorderPosition): void;
 }>();
 
 const slots = useSlots();
@@ -109,6 +117,70 @@ function onRowClick(row: Record<string, unknown>, event: MouseEvent) {
 
 function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
   emit("row-dblclick", row, event);
+}
+
+// ── Column drag-reorder state ────────────────────────────────────────────
+const dragSourcePath = ref<string | null>(null);
+const dropTarget = ref<{ path: string; position: ColumnReorderPosition } | null>(null);
+
+function pathOf(event: Event): string | null {
+  return (event.currentTarget as HTMLElement | null)?.dataset.columnPath ?? null;
+}
+
+function onHeaderDragStart(event: DragEvent) {
+  if (!props.reorderable) return;
+  const path = pathOf(event);
+  if (!path) return;
+  dragSourcePath.value = path;
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = "move";
+    // Firefox requires a non-empty payload to actually start a drag.
+    event.dataTransfer.setData("text/plain", path);
+  }
+}
+
+function onHeaderDragOver(event: DragEvent) {
+  if (!props.reorderable || dragSourcePath.value === null) return;
+  const path = pathOf(event);
+  if (!path) return;
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+  const position: ColumnReorderPosition =
+    event.clientX - rect.left < rect.width / 2 ? "before" : "after";
+  if (dropTarget.value?.path !== path || dropTarget.value?.position !== position) {
+    dropTarget.value = { path, position };
+  }
+}
+
+function onHeaderDrop(event: DragEvent) {
+  if (!props.reorderable) return;
+  event.preventDefault();
+  const path = pathOf(event);
+  const source = dragSourcePath.value;
+  const target = dropTarget.value;
+  if (path && source && target && target.path === path && source !== target.path) {
+    emit("reorder", source, target.path, target.position);
+  }
+  dragSourcePath.value = null;
+  dropTarget.value = null;
+}
+
+function onHeaderDragEnd() {
+  dragSourcePath.value = null;
+  dropTarget.value = null;
+}
+
+function thClasses(path: string): Record<string, boolean> {
+  if (!props.reorderable) return {};
+  return {
+    "as-th-reorderable": true,
+    "as-th-dragging": dragSourcePath.value === path,
+    "as-th-drop-indicator-before":
+      dropTarget.value?.path === path && dropTarget.value?.position === "before",
+    "as-th-drop-indicator-after":
+      dropTarget.value?.path === path && dropTarget.value?.position === "after",
+  };
 }
 </script>
 
@@ -156,13 +228,19 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               <span v-else-if="selectedRows.length > 0" class="as-table-checkbox-dash" />
             </span>
           </th>
-          <template v-for="col in columns" :key="col.path">
-            <th
-              v-if="hasHeaderSlot(col.path)"
-              :style="col.width ? { width: col.width } : undefined"
-            >
-              <slot :name="`header-${col.path}`" :column="col" />
-            </th>
+          <th
+            v-for="col in columns"
+            :key="col.path"
+            :data-column-path="col.path"
+            :draggable="reorderable || undefined"
+            :class="thClasses(col.path)"
+            :style="col.width ? { width: col.width } : undefined"
+            @dragstart="onHeaderDragStart"
+            @dragover="onHeaderDragOver"
+            @drop="onHeaderDrop"
+            @dragend="onHeaderDragEnd"
+          >
+            <slot v-if="hasHeaderSlot(col.path)" :name="`header-${col.path}`" :column="col" />
             <AsTableHeaderCell
               v-else
               :column="col"
@@ -174,7 +252,7 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
               @filter="onFilter"
               @filters-off="onFiltersOff"
             />
-          </template>
+          </th>
           <th v-if="stretch" class="as-th-filler" />
         </tr>
       </thead>

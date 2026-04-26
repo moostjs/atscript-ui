@@ -1,4 +1,10 @@
 <script setup lang="ts">
+// Renders inner content of a header cell — label, sort/filter indicators,
+// column-menu trigger. The surrounding `<th>` is owned by `<AsTableBase>`
+// so column drag-reorder handlers can attach there. Replacement headerCell
+// components supplied via the `:components` map MUST also render
+// inner-of-`<th>` content only; wrapping in a `<th>` produces nested cells
+// and breaks reorder.
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import type { FilterCondition } from "@atscript/ui-table";
@@ -45,36 +51,34 @@ function onMenuFiltersOff() {
 </script>
 
 <template>
-  <th :style="props.column.width ? { width: props.column.width } : undefined">
-    <AsColumnMenu
-      :column="props.column"
-      :order="sortDirection"
-      :filters="filters"
-      :config="columnMenu"
-      @sort="onMenuSort"
-      @hide="onMenuHide"
-      @filter="onMenuFilter"
-      @filters-off="onMenuFiltersOff"
-      v-slot="{ open, hasMenu }"
-    >
-      <button class="as-th-btn" type="button">
-        <span class="as-th-label">{{ props.column.label }}</span>
-        <span class="as-th-indicators">
-          <span v-if="filledCount" class="as-th-filter-badge i-as-filter" aria-hidden="true" />
-          <span
-            v-if="sortDirection"
-            class="as-th-sort"
-            :class="sortDirection === 'asc' ? 'i-as-arrow-up' : 'i-as-arrow-down'"
-            aria-hidden="true"
-          />
-          <span
-            v-if="hasMenu && !sortDirection && !filledCount"
-            class="as-th-chevron"
-            :class="open ? 'i-as-chevron-up' : 'i-as-chevron-down'"
-            aria-hidden="true"
-          />
-        </span>
-      </button>
-    </AsColumnMenu>
-  </th>
+  <AsColumnMenu
+    :column="props.column"
+    :order="sortDirection"
+    :filters="filters"
+    :config="columnMenu"
+    @sort="onMenuSort"
+    @hide="onMenuHide"
+    @filter="onMenuFilter"
+    @filters-off="onMenuFiltersOff"
+    v-slot="{ open, hasMenu }"
+  >
+    <button class="as-th-btn" type="button" @dragstart.stop>
+      <span class="as-th-label">{{ props.column.label }}</span>
+      <span class="as-th-indicators">
+        <span v-if="filledCount" class="as-th-filter-badge i-as-filter" aria-hidden="true" />
+        <span
+          v-if="sortDirection"
+          class="as-th-sort"
+          :class="sortDirection === 'asc' ? 'i-as-arrow-up' : 'i-as-arrow-down'"
+          aria-hidden="true"
+        />
+        <span
+          v-if="hasMenu && !sortDirection && !filledCount"
+          class="as-th-chevron"
+          :class="open ? 'i-as-chevron-up' : 'i-as-chevron-down'"
+          aria-hidden="true"
+        />
+      </span>
+    </button>
+  </AsColumnMenu>
 </template>

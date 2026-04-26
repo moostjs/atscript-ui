@@ -27,6 +27,13 @@ export const asTableShortcuts = defineShortcuts({
   "as-th-filler": "p-0 w-auto",
   "as-td-filler": "p-0 w-auto",
 
+  "as-th-reorderable": "cursor-grab",
+  "as-th-dragging": "opacity-50 cursor-grabbing",
+  "as-th-drop-indicator-before":
+    "relative before:content-[''] before:absolute before:left-0 before:inset-y-0 before:w-$xxs before:bg-current-hl before:pointer-events-none before:z-[1]",
+  "as-th-drop-indicator-after":
+    "relative before:content-[''] before:absolute before:right-0 before:inset-y-0 before:w-$xxs before:bg-current-hl before:pointer-events-none before:z-[1]",
+
   "as-th-btn": {
     "": "flex items-center justify-between gap-$xs w-full p-0 m-0 border-0 bg-transparent font-inherit font-600 text-current/80 text-left cursor-pointer outline-none whitespace-nowrap",
     "hover:": "text-current-hl",
