@@ -35,12 +35,12 @@ async function deleteSelected() {
   const ids = [...state.selectedRows.value];
   if (ids.length === 0) return;
   await props.onDeleteSelected(ids);
-  state.selectedRows.value = new Set();
+  state.selectedRows.value = [];
   state.query();
 }
 
 function clearSelection() {
-  state.selectedRows.value = new Set();
+  state.selectedRows.value = [];
 }
 </script>
 
