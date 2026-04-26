@@ -51,6 +51,14 @@ export { SelectionState } from "./selection/selection-state";
 // ── State types ────────────────────────────────────────────
 export type { ConfigTab, TableStateData, TableStateMethods } from "./state/table-state-types";
 
+// ── Column widths ──────────────────────────────────────────
+export type { ColumnWidthEntry, ColumnWidthsMap } from "./columns/column-widths";
+export {
+  MAX_DEFAULT_COLUMN_WIDTH_PX,
+  computeDefaultColumnWidth,
+  reconcileColumnWidthDefaults,
+} from "./columns/column-widths";
+
 // ── Utils ──────────────────────────────────────────────────
 export { debounce } from "./utils/debounce";
 export { arraysEqual, sameColumnSet, sortersEqual } from "./utils/equality";

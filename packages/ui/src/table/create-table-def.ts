@@ -6,12 +6,14 @@ import type {
 import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typescript/utils";
 import { getFieldMeta } from "../shared/field-resolver";
 import {
+  EXPECT_MAX_LENGTH,
   META_LABEL,
   UI_HIDDEN,
   UI_ICON,
   UI_ORDER,
+  UI_FIELD_WIDTH,
+  UI_TABLE_COLUMN_WIDTH,
   UI_TYPE,
-  UI_WIDTH,
 } from "../shared/annotation-keys";
 import { extractLiteralOptions } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
@@ -51,6 +53,10 @@ export function createTableDef(
     const options = extractLiteralOptions(prop);
     const valueHelpInfo = extractValueHelp(prop);
 
+    const maxLengthMeta = getFieldMeta(prop, EXPECT_MAX_LENGTH) as
+      | { length: number; message?: string }
+      | undefined;
+
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
@@ -60,7 +66,10 @@ export function createTableDef(
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
       visible: getFieldMeta(prop, UI_HIDDEN) === undefined,
-      width: getFieldMeta(prop, UI_WIDTH) as string | undefined,
+      width:
+        (getFieldMeta(prop, UI_TABLE_COLUMN_WIDTH) as string | undefined) ??
+        (getFieldMeta(prop, UI_FIELD_WIDTH) as string | undefined),
+      maxLen: maxLengthMeta?.length,
       order: (getFieldMeta(prop, UI_ORDER) as number | undefined) ?? Infinity,
       icon: getFieldMeta(prop, UI_ICON) as string | undefined,
       options,

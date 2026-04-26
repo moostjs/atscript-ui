@@ -63,8 +63,10 @@ export interface ColumnDef {
   filterable: boolean;
   /** Whether this column is visible by default. */
   visible: boolean;
-  /** Layout width hint from @ui.width. */
+  /** Default column width from @ui.table.column.width (preferred) or @ui.field.width (fallback). */
   width?: string;
+  /** Maximum length constraint from @expect.maxLen — used to derive default column width. */
+  maxLen?: number;
   /** Display order from @ui.order (lower = first). */
   order: number;
   /** Icon hint from @ui.icon. */

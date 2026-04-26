@@ -62,21 +62,46 @@ export const uiAnnotations: TAnnotationsTree = {
       },
     }),
 
-    width: new AnnotationSpec({
-      description:
-        "Provides a **layout width hint** for the field in auto-generated forms." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.width "half"\n' +
-        "firstName: string\n" +
-        "```\n",
-      nodeType: ["prop", "type"],
-      argument: {
-        name: "width",
-        type: "string",
-        description: 'Layout width hint (e.g., "half", "full", "third", "quarter").',
+    field: {
+      width: new AnnotationSpec({
+        description:
+          "Provides a **layout width hint** for the field in auto-generated forms." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.field.width "half"\n' +
+          "firstName: string\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "width",
+          type: "string",
+          description: 'Layout width hint (e.g., "half", "full", "third", "quarter").',
+        },
+      }),
+    },
+
+    table: {
+      column: {
+        width: new AnnotationSpec({
+          description:
+            "Sets the **default column width** for this field when rendered in a table. " +
+            "Accepts any CSS width string (e.g. `120px`, `12em`, `20ch`). The user can " +
+            "still resize the column manually; double-click on the resize handle " +
+            "auto-fits to content; the column-menu Reset entry returns to this value." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.table.column.width "240px"\n' +
+            "description: string\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "width",
+            type: "string",
+            description: "CSS width for the column (e.g. '120px', '15em', '20ch').",
+          },
+        }),
       },
-    }),
+    },
 
     icon: new AnnotationSpec({
       description:

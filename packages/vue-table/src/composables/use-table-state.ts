@@ -1,7 +1,9 @@
-import { shallowRef, ref, computed, provide, inject, type Ref } from "vue";
+import { shallowRef, ref, reactive, computed, provide, inject, type Ref } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import {
   isFilled,
+  reconcileColumnWidthDefaults,
+  type ColumnWidthsMap,
   type FieldFilters,
   type FilterCondition,
   type SelectionMode,
@@ -31,6 +33,8 @@ export interface CreateTableStateOptions {
   filterFields?: Ref<string[]>;
   /** External ref for visible column names (from defineModel). */
   columnNames?: Ref<string[]>;
+  /** External ref for per-column widths (from defineModel). */
+  columnWidths?: Ref<ColumnWidthsMap>;
   /** External ref for sorters (from defineModel). */
   sorters?: Ref<SortControl[]>;
 }
@@ -67,6 +71,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
   // Model refs — use external if provided, otherwise create local
   const filterFields = opts?.filterFields ?? shallowRef<string[]>([]);
   const columnNames = opts?.columnNames ?? shallowRef<string[]>([]);
+  const columnWidths = opts?.columnWidths ?? ref<ColumnWidthsMap>({});
   const sorters = opts?.sorters ?? shallowRef<SortControl[]>([]);
 
   // columns is DERIVED from columnNames + allColumns
@@ -122,6 +127,7 @@ export function createTableState(opts?: CreateTableStateOptions): {
     columnNames,
     columns,
     allColumns,
+    columnWidths,
     filterFields,
     filters,
     sorters,
@@ -191,6 +197,12 @@ export function createTableState(opts?: CreateTableStateOptions): {
     init(def: TableDef) {
       tableDef.value = def;
       allColumns.value = def.columns;
+      const reconciled = reconcileColumnWidthDefaults(def.columns, columnWidths.value);
+      // Wrap with reactive() so nested-property mutations (`entry.w = px`
+      // during drag-resize) trigger re-renders. defineModel's customRef
+      // stores the .value as-is — it does NOT auto-deep-reactify like a
+      // plain ref(), so the wrap has to happen here in the framework layer.
+      if (reconciled !== columnWidths.value) columnWidths.value = reactive(reconciled);
     },
     setQueryFns(q: () => void, qn: () => void) {
       _queryFn = q;

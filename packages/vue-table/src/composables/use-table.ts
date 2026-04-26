@@ -7,7 +7,7 @@ import {
   type ClientFactory,
   type SortControl,
 } from "@atscript/ui";
-import type { SelectionMode } from "@atscript/ui-table";
+import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import { createTableState, provideTableContext } from "./use-table-state";
 import { useTableQuery, type UseTableQueryOptions } from "./use-table-query";
@@ -41,6 +41,8 @@ export interface UseTableOptions extends UseTableQueryOptions {
   filterFields?: Ref<string[]>;
   /** External model ref for visible column names. */
   columnNames?: Ref<string[]>;
+  /** External model ref for per-column widths (each entry: `{ w, d }`). */
+  columnWidths?: Ref<ColumnWidthsMap>;
   /** External model ref for sorters. */
   sorters?: Ref<SortControl[]>;
 }
@@ -66,6 +68,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     rowValueFn: opts?.rowValueFn,
     filterFields: opts?.filterFields,
     columnNames: opts?.columnNames,
+    columnWidths: opts?.columnWidths,
     sorters: opts?.sorters,
   });
 

@@ -29,6 +29,23 @@ export function thByPath(root: ParentNode, path: string): HTMLElement {
   return th as HTMLElement;
 }
 
+/** Stubs `setPointerCapture` since happy-dom doesn't implement pointer capture. */
+export function handleOf(th: HTMLElement): HTMLElement {
+  const handle = th.querySelector(".as-th-resize-handle") as HTMLElement | null;
+  if (!handle) throw new Error("resize handle not found in th");
+  if (!(handle as HTMLElement & { setPointerCapture?: unknown }).setPointerCapture) {
+    (handle as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+  }
+  return handle;
+}
+
+/** happy-dom doesn't implement PointerEvent — fill the gap with property injection. */
+export function pointerEvent(type: string, init: Partial<PointerEvent> = {}) {
+  const ev = new Event(type, { bubbles: true, cancelable: true }) as PointerEvent;
+  Object.assign(ev, { pointerId: 1, pointerType: "mouse", isPrimary: true }, init);
+  return ev;
+}
+
 /**
  * Build a synthetic native DragEvent with a stub DataTransfer. happy-dom does
  * not implement DragEvent / DataTransfer; this fills the gap for unit tests.

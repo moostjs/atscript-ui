@@ -32,7 +32,8 @@ declare global {
     "emit.jsonSchema": boolean
     "ui.placeholder": string
     "ui.group": string
-    "ui.width": string
+    "ui.field.width": string
+    "ui.table.column.width": string
     "ui.icon": string
     "ui.hint": string
     "ui.class": (string)[]

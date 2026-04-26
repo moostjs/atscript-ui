@@ -7,11 +7,15 @@ export const asTableShortcuts = defineShortcuts({
     "inline-flex items-center px-$s py-[0.15em] rounded-full text-callout font-500 bg-current-hl/15 text-current-hl",
   "as-tag-chip": `${chipBase} bg-current-hl/10 text-current-hl`,
 
+  // Always table-layout: fixed. Every column has an explicit width all the
+  // time (seeded from @ui.field.width annotation or computed defaults). The filler
+  // <th> (no width) absorbs leftover space; `min-w-full` (`as-table-stretch`)
+  // forces the table to span its container.
   "as-table": {
-    "": "scope-primary w-max border-collapse",
+    "": "scope-primary table-fixed w-fit border-collapse",
     "[&_thead]:": "layer-1",
     "[&_th]:":
-      "px-$m py-$s text-left font-600 text-current/80 border-b-1 whitespace-nowrap overflow-hidden text-ellipsis select-none tracking-[0.01em]",
+      "relative px-$m py-$s text-left font-600 text-current/80 border-b-1 whitespace-nowrap overflow-hidden text-ellipsis select-none tracking-[0.01em]",
     "[&_td]:": "px-$m py-$s border-b-1 whitespace-nowrap overflow-hidden text-ellipsis",
     "[&_tbody_tr]:": "transition-colors duration-100",
     "[&_tbody_tr:hover]:": "layer-1",
@@ -29,6 +33,9 @@ export const asTableShortcuts = defineShortcuts({
 
   "as-th-reorderable": "cursor-grab",
   "as-th-dragging": "opacity-50 cursor-grabbing",
+  "as-th-resizing": "bg-current-hl/10",
+  "as-th-resize-handle":
+    "absolute right-0 top-0 bottom-0 w-$xs cursor-col-resize select-none z-[1] bg-current-hl/0 hover:bg-current-hl/40 active:bg-current-hl",
   "as-th-drop-indicator-before":
     "relative before:content-[''] before:absolute before:left-0 before:inset-y-0 before:w-$xxs before:bg-current-hl before:pointer-events-none before:z-[1]",
   "as-th-drop-indicator-after":
@@ -45,8 +52,11 @@ export const asTableShortcuts = defineShortcuts({
   "as-th-chevron": "inline-flex text-body text-current/50",
   "as-cell-number": "text-right tabular-nums font-mono",
   "as-virtual-row": "absolute w-full",
-  "as-th-select": "w-[3em] text-center",
-  "as-td-select": "w-[3em] text-center",
+  // `!text-center` overrides the descendant `.as-table th { text-align: left }`
+  // rule (specificity 0,1,1). Without `!`, the header checkbox shifts left
+  // while body checkboxes stay centered, breaking column alignment.
+  "as-th-select": "w-[4em] !text-center",
+  "as-td-select": "w-[4em] text-center",
   "as-table-checkbox": {
     "": "scope-primary inline-flex align-middle text-body w-[1.25em] h-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] items-center justify-center layer-0 cursor-pointer transition-all duration-120",
     "[tr[data-state=checked]_&]:": "bg-current-hl border-current-hl",

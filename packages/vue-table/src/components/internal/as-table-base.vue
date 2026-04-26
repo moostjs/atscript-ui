@@ -4,6 +4,7 @@ import type { ColumnDef, SortControl } from "@atscript/ui";
 import {
   filledFilterCount,
   type ColumnReorderPosition,
+  type ColumnWidthsMap,
   type FieldFilters,
 } from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../../types";
@@ -48,6 +49,15 @@ const props = withDefaults(
     stretch?: boolean;
     /** Allow header drag-and-drop column reorder. Default true. */
     reorderable?: boolean;
+    /** Allow header drag-resize. Default true. */
+    resizable?: boolean;
+    /** Pixel floor for the resize clamp. Default 48. */
+    columnMinWidth?: number;
+    /**
+     * Per-column widths keyed by column path. Each entry: `{ w, d }`. Always
+     * fully populated for every column once the parent has seeded defaults.
+     */
+    columnWidths?: ColumnWidthsMap;
   }>(),
   {
     select: "none",
@@ -55,6 +65,9 @@ const props = withDefaults(
     virtualOverscan: 5,
     stretch: true,
     reorderable: true,
+    resizable: true,
+    columnMinWidth: 48,
+    columnWidths: () => ({}),
   },
 );
 
@@ -74,6 +87,9 @@ const emit = defineEmits<{
   (e: "select-all"): void;
   (e: "deselect-all"): void;
   (e: "reorder", fromPath: string, toPath: string, position: ColumnReorderPosition): void;
+  (e: "resize", path: string, width: string): void;
+  /** Reset this column's width back to its default (`d`). */
+  (e: "reset-width", column: ColumnDef): void;
 }>();
 
 const slots = useSlots();
@@ -111,6 +127,10 @@ function onFiltersOff(column: ColumnDef) {
   emit("filters-off", column);
 }
 
+function onResetWidth(column: ColumnDef) {
+  emit("reset-width", column);
+}
+
 function onRowClick(row: Record<string, unknown>, event: MouseEvent) {
   emit("row-click", row, event);
 }
@@ -129,6 +149,15 @@ function pathOf(event: Event): string | null {
 
 function onHeaderDragStart(event: DragEvent) {
   if (!props.reorderable) return;
+  // Suppress native drag-reorder when a pointer-driven resize is in flight.
+  // `pointerdown` on the handle fires before `dragstart`, so this catches
+  // the real-browser case where `<th draggable=true>` initiates drag even
+  // though the gesture started inside `<div class="as-th-resize-handle"
+  // draggable=false>`.
+  if (resizingPath.value !== null) {
+    event.preventDefault();
+    return;
+  }
   const path = pathOf(event);
   if (!path) return;
   dragSourcePath.value = path;
@@ -171,15 +200,76 @@ function onHeaderDragEnd() {
   dropTarget.value = null;
 }
 
+const resizingPath = ref<string | null>(null);
+let resizeStartX = 0;
+let resizeStartWidth = 0;
+
+function thFromHandleEvent(event: Event): { th: HTMLTableCellElement; path: string } | null {
+  const target = event.currentTarget as HTMLElement | null;
+  const th = target?.closest("th") as HTMLTableCellElement | null;
+  const path = th?.dataset.columnPath;
+  if (!th || !path) return null;
+  return { th, path };
+}
+
+function onResizeHandlePointerDown(event: PointerEvent) {
+  if (!props.resizable) return;
+  const found = thFromHandleEvent(event);
+  if (!found) return;
+  resizingPath.value = found.path;
+  resizeStartX = event.clientX;
+  resizeStartWidth = found.th.getBoundingClientRect().width;
+  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+}
+
+function onResizeHandlePointerMove(event: PointerEvent) {
+  if (!resizingPath.value) return;
+  const next = Math.round(
+    Math.max(resizeStartWidth + (event.clientX - resizeStartX), props.columnMinWidth),
+  );
+  emit("resize", resizingPath.value, `${next}px`);
+}
+
+function onResizeHandleEnd() {
+  resizingPath.value = null;
+}
+
+function onResizeHandleDoubleClick(event: MouseEvent) {
+  if (!props.resizable) return;
+  const found = thFromHandleEvent(event);
+  if (!found) return;
+  const { th, path } = found;
+  const table = th.closest("table");
+  if (!table) return;
+  // `scrollWidth` reports the unclipped content extent even when the cell
+  // currently truncates via `text-overflow: ellipsis`.
+  let maxScroll = th.scrollWidth;
+  const colIndex = th.cellIndex;
+  for (const tr of table.querySelectorAll("tbody tr")) {
+    const cell = tr.children[colIndex] as HTMLElement | undefined;
+    if (cell) maxScroll = Math.max(maxScroll, cell.scrollWidth);
+  }
+  emit("resize", path, `${Math.max(maxScroll, props.columnMinWidth)}px`);
+}
+
+function widthStyle(col: ColumnDef): { width: string } | undefined {
+  // Optional chain covers the brief render before the parent has seeded defaults.
+  const entry = props.columnWidths[col.path];
+  return entry ? { width: entry.w } : undefined;
+}
+
 function thClasses(path: string): Record<string, boolean> {
-  if (!props.reorderable) return {};
+  const reorder = props.reorderable;
+  const resize = props.resizable;
+  if (!reorder && !resize) return {};
   return {
-    "as-th-reorderable": true,
-    "as-th-dragging": dragSourcePath.value === path,
+    "as-th-reorderable": reorder,
+    "as-th-dragging": reorder && dragSourcePath.value === path,
     "as-th-drop-indicator-before":
-      dropTarget.value?.path === path && dropTarget.value?.position === "before",
+      reorder && dropTarget.value?.path === path && dropTarget.value?.position === "before",
     "as-th-drop-indicator-after":
-      dropTarget.value?.path === path && dropTarget.value?.position === "after",
+      reorder && dropTarget.value?.path === path && dropTarget.value?.position === "after",
+    "as-th-resizing": resize && resizingPath.value === path,
   };
 }
 </script>
@@ -187,18 +277,21 @@ function thClasses(path: string): Record<string, boolean> {
 <template>
   <!--
     Always render the table + header so filter/sort/hide menus stay reachable
-    even when rows are empty or the last query errored. The empty/error state
-    block renders AFTER the </table> (but inside the scroll container) so its
-    width is bound to the container, not the table's w-max intrinsic width.
+    even when rows are empty or the last query errored. The empty/error block
+    renders AFTER </table> (but inside the scroll container) so its width is
+    bound to the container, not the table's intrinsic fit-content width.
   -->
   <div class="as-table-scroll-container" data-virtual-scroll>
     <table
       class="as-table"
-      :class="{ 'as-table-sticky': stickyHeader, 'as-table-stretch': stretch }"
+      :class="{
+        'as-table-sticky': stickyHeader,
+        'as-table-stretch': stretch,
+      }"
     >
       <thead>
         <tr>
-          <th v-if="hasValue" class="as-th-select" style="width: 3em">
+          <th v-if="hasValue" class="as-th-select">
             <span
               v-if="!asCombobox && select === 'multi' && selectedRows"
               class="as-table-checkbox"
@@ -234,7 +327,7 @@ function thClasses(path: string): Record<string, boolean> {
             :data-column-path="col.path"
             :draggable="reorderable || undefined"
             :class="thClasses(col.path)"
-            :style="col.width ? { width: col.width } : undefined"
+            :style="widthStyle(col)"
             @dragstart="onHeaderDragStart"
             @dragover="onHeaderDragOver"
             @drop="onHeaderDrop"
@@ -247,10 +340,23 @@ function thClasses(path: string): Record<string, boolean> {
               :sort-direction="sortMap[col.path] ?? null"
               :filters="filters?.[col.path]"
               :column-menu="columnMenu"
+              :width-entry="columnWidths[col.path]"
               @sort="onSort"
               @hide="onHide"
               @filter="onFilter"
               @filters-off="onFiltersOff"
+              @reset-width="onResetWidth"
+            />
+            <div
+              v-if="resizable"
+              class="as-th-resize-handle"
+              draggable="false"
+              @dragstart.prevent.stop
+              @pointerdown.stop="onResizeHandlePointerDown"
+              @pointermove="onResizeHandlePointerMove"
+              @pointerup="onResizeHandleEnd"
+              @pointercancel="onResizeHandleEnd"
+              @dblclick.stop="onResizeHandleDoubleClick"
             />
           </th>
           <th v-if="stretch" class="as-th-filler" />

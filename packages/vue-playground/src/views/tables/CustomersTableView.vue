@@ -27,7 +27,7 @@ const components = createDefaultTableComponents();
         <TableFilterBar />
       </div>
       <div class="table-page-body">
-        <AsTable :column-menu="{ sort: true, filters: true, hide: true }">
+        <AsTable :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }">
           <template #cell-email="{ value }">
             <td>
               <a :href="`mailto:${value}`" style="color: rgb(37 99 235)">{{ value }}</a>

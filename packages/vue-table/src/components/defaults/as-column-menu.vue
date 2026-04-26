@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import type { FilterCondition } from "@atscript/ui-table";
+import type { ColumnWidthEntry, FilterCondition } from "@atscript/ui-table";
 import { isFilled } from "@atscript/ui-table";
 import {
   DropdownMenuRoot,
@@ -18,6 +18,7 @@ const props = defineProps<{
   order?: "asc" | "desc" | null;
   filters?: FilterCondition[];
   config: ColumnMenuConfig;
+  widthEntry?: ColumnWidthEntry;
 }>();
 
 const open = ref(false);
@@ -27,6 +28,7 @@ const emit = defineEmits<{
   (e: "hide"): void;
   (e: "filter"): void;
   (e: "filters-off"): void;
+  (e: "reset-width"): void;
 }>();
 
 function emitSort(direction: "asc" | "desc") {
@@ -40,8 +42,13 @@ function emitSort(direction: "asc" | "desc") {
 const showSort = computed(() => props.config.sort && props.column.sortable);
 const showFilters = computed(() => props.config.filters && props.column.filterable);
 const showHide = computed(() => props.config.hide);
+const showResetWidth = computed(
+  () => props.config.resetWidth && !!props.widthEntry && props.widthEntry.w !== props.widthEntry.d,
+);
 const filledCount = computed(() => props.filters?.filter(isFilled).length ?? 0);
-const hasAnyItem = computed(() => showSort.value || showFilters.value || showHide.value);
+const hasAnyItem = computed(
+  () => showSort.value || showFilters.value || showResetWidth.value || showHide.value,
+);
 
 function onKeydown(e: KeyboardEvent) {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -54,6 +61,8 @@ function onKeydown(e: KeyboardEvent) {
     emit("filter");
   } else if (key === "c" && showFilters.value && filledCount.value > 0) {
     emit("filters-off");
+  } else if (key === "w" && showResetWidth.value) {
+    emit("reset-width");
   } else if (key === "h" && showHide.value) {
     emit("hide");
   } else {
@@ -129,7 +138,20 @@ onBeforeUnmount(() => {
           <span class="as-column-menu-item-label">Clear filters</span>
           <span class="as-column-menu-item-hint">C</span>
         </DropdownMenuItem>
-        <DropdownMenuSeparator v-if="showFilters && showHide" class="as-column-menu-separator" />
+        <DropdownMenuSeparator
+          v-if="showFilters && (showResetWidth || showHide)"
+          class="as-column-menu-separator"
+        />
+        <DropdownMenuItem
+          v-if="showResetWidth"
+          class="as-column-menu-item"
+          @select="emit('reset-width')"
+        >
+          <span class="as-column-menu-item-icon i-as-refresh" aria-hidden="true" />
+          <span class="as-column-menu-item-label">Reset width</span>
+          <span class="as-column-menu-item-hint">W</span>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator v-if="showResetWidth && showHide" class="as-column-menu-separator" />
         <DropdownMenuItem
           v-if="showHide"
           class="as-column-menu-item as-column-menu-item-danger"

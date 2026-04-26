@@ -4,7 +4,8 @@ export const UI_COMPONENT = "ui.component" as const;
 export const UI_HIDDEN = "ui.hidden" as const;
 export const UI_GROUP = "ui.group" as const;
 export const UI_ORDER = "ui.order" as const;
-export const UI_WIDTH = "ui.width" as const;
+export const UI_FIELD_WIDTH = "ui.field.width" as const;
+export const UI_TABLE_COLUMN_WIDTH = "ui.table.column.width" as const;
 export const UI_ICON = "ui.icon" as const;
 export const UI_HINT = "ui.hint" as const;
 export const UI_DISABLED = "ui.disabled" as const;
@@ -37,6 +38,9 @@ export const META_READONLY = "meta.readonly" as const;
 export const META_REQUIRED = "meta.required" as const;
 export const META_DEFAULT = "meta.default" as const;
 export const META_SENSITIVE = "meta.sensitive" as const;
+
+// ── Expect annotation keys (exist in @atscript/core) ────────
+export const EXPECT_MAX_LENGTH = "expect.maxLength" as const;
 
 // ── Dynamic fn prefix (annotations registered by @atscript/ui-fns) ──
 export const UI_FN_PREFIX = "ui.fn." as const;

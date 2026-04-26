@@ -32,6 +32,8 @@ declare global {
     "emit.jsonSchema": boolean
     "db.patch.strategy": string
     "db.table": string | true
+    "db.table.filterable": string | true
+    "db.table.sortable": string | true
     "db.table.renamed": string
     "db.schema": string
     "db.index.plain": ({ name?: string, sort?: string })[]
@@ -43,6 +45,8 @@ declare global {
     "db.column.precision": { precision: number, scale: number }
     "db.column.dimension": boolean
     "db.column.measure": boolean
+    "db.column.filterable": boolean
+    "db.column.sortable": boolean
     "db.default": string
     "db.default.increment": number | true
     "db.default.uuid": boolean
@@ -51,6 +55,7 @@ declare global {
     "db.ignore": boolean
     "db.http.path": string
     "db.sync.method": string
+    "db.depth.limit": number
     "db.rel.FK": string | true
     "db.rel.to": string | true
     "db.rel.from": string | true
@@ -75,7 +80,8 @@ declare global {
     "db.search.filter": (string)[]
     "ui.placeholder": string
     "ui.group": string
-    "ui.width": string
+    "ui.field.width": string
+    "ui.table.column.width": string
     "ui.icon": string
     "ui.hint": string
     "ui.class": (string)[]
@@ -96,6 +102,9 @@ declare global {
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
+    "ui.dict.filterable": boolean
+    "ui.dict.sortable": boolean
+    "ui.dict.searchable": boolean
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "ui.validate": (string)[]

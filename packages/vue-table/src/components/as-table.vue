@@ -17,11 +17,17 @@ const props = withDefaults(
     columnMenu?: ColumnMenuConfig;
     /** Allow header drag-and-drop column reorder. Default true. */
     reorderable?: boolean;
+    /** Allow header drag-resize. Default true. */
+    resizable?: boolean;
+    /** Pixel floor for the resize clamp. Default 48. */
+    columnMinWidth?: number;
   }>(),
   {
     stickyHeader: true,
     virtualOverscan: 5,
     reorderable: true,
+    resizable: true,
+    columnMinWidth: 48,
   },
 );
 
@@ -79,6 +85,18 @@ function handleClearFilters() {
 function handleReorder(fromPath: string, toPath: string, position: ColumnReorderPosition) {
   state.columnNames.value = reorderColumnNames(state.columnNames.value, fromPath, toPath, position);
 }
+
+// Skip identical writes — sub-pixel pointermove can round to the same px string.
+function setColumnWidth(path: string, width: string) {
+  const entry = state.columnWidths.value[path];
+  if (!entry || entry.w === width) return;
+  entry.w = width;
+}
+
+function handleResetWidth(column: ColumnDef) {
+  const entry = state.columnWidths.value[column.path];
+  if (entry) setColumnWidth(column.path, entry.d);
+}
 </script>
 
 <template>
@@ -101,6 +119,9 @@ function handleReorder(fromPath: string, toPath: string, position: ColumnReorder
       :on-clear-filters="handleClearFilters"
       :column-menu="columnMenu"
       :reorderable="reorderable"
+      :resizable="resizable"
+      :column-min-width="columnMinWidth"
+      :column-widths="state.columnWidths.value"
       @sort="handleSort"
       @hide="handleHide"
       @filter="handleFilter"
@@ -108,6 +129,8 @@ function handleReorder(fromPath: string, toPath: string, position: ColumnReorder
       @select-all="handleSelectAll"
       @deselect-all="handleDeselectAll"
       @reorder="handleReorder"
+      @resize="setColumnWidth"
+      @reset-width="handleResetWidth"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)

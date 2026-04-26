@@ -1,6 +1,12 @@
 import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
-import type { ConfigTab, FieldFilters, SelectionMode, TableStateMethods } from "@atscript/ui-table";
+import type {
+  ColumnWidthsMap,
+  ConfigTab,
+  FieldFilters,
+  SelectionMode,
+  TableStateMethods,
+} from "@atscript/ui-table";
 
 export type { ConfigTab };
 
@@ -9,6 +15,8 @@ export interface ColumnMenuConfig {
   sort?: boolean;
   filters?: boolean;
   hide?: boolean;
+  /** Show "Reset width" entry. Renders only when the column's `w !== d`. */
+  resetWidth?: boolean;
 }
 
 /**
@@ -58,6 +66,13 @@ export interface ReactiveTableState extends TableStateMethods {
   columnNames: ShallowRef<string[]>;
   columns: ComputedRef<ColumnDef[]>;
   allColumns: ShallowRef<ColumnDef[]>;
+  /**
+   * Per-column widths keyed by column path; always populated for every column.
+   * Each entry: `{ w: currentRenderedWidth, d: defaultWidth }`. Deep-reactive —
+   * writers mutate `entry.w` directly. Default is the @ui.field.width annotation
+   * when present, otherwise type+@expect.maxLen-derived (see `computeDefaultColumnWidth`).
+   */
+  columnWidths: Ref<ColumnWidthsMap>;
   filterFields: ShallowRef<string[]>;
   filters: ShallowRef<FieldFilters>;
   sorters: ShallowRef<SortControl[]>;

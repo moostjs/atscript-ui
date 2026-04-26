@@ -113,7 +113,7 @@ async function onDeleteSelected(ids: unknown[]) {
         class="relative flex flex-col flex-1 mx-$l mb-$l min-h-0 min-w-0 border-1 rounded-r2 layer-0 overflow-hidden"
       >
         <AsTable
-          :column-menu="{ sort: true, filters: true, hide: true }"
+          :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
           sticky-header
           :virtual-row-height="36"
           :virtual-overscan="10"

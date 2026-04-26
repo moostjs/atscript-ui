@@ -31,7 +31,10 @@ function onRowClick(row: Record<string, unknown>) {
             :total-count="totalCount"
           />
           <TableFilterBar />
-          <AsTable :column-menu="{ sort: true, filters: true, hide: true }" @row-click="onRowClick">
+          <AsTable
+            :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
+            @row-click="onRowClick"
+          >
             <!-- Custom header for name column -->
             <template #header-name="{ column }">
               <th class="min-w-[15em]">

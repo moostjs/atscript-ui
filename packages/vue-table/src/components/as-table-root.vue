@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import type { SortControl, ClientFactory } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
-import type { SelectionMode } from "@atscript/ui-table";
+import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
 import type { TAsTableComponents } from "../types";
 import { useTable } from "../composables/use-table";
 import type { PageResult } from "@atscript/db-client";
@@ -38,6 +38,9 @@ const props = withDefaults(
 
 const filterFields = defineModel<string[]>("filterFields", { default: () => [] });
 const columnNames = defineModel<string[]>("columnNames", { default: () => [] });
+const columnWidths = defineModel<ColumnWidthsMap>("columnWidths", {
+  default: () => ({}),
+});
 const sorters = defineModel<SortControl[]>("sorters", { default: () => [] });
 
 const state = useTable(props.url, {
@@ -54,6 +57,7 @@ const state = useTable(props.url, {
   components: props.components,
   filterFields,
   columnNames,
+  columnWidths,
   sorters,
 });
 
@@ -69,6 +73,7 @@ const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConf
     :loading-metadata="state.loadingMetadata.value"
     :all-columns="state.allColumns.value"
     :column-names="state.columnNames.value"
+    :column-widths="state.columnWidths.value"
     :columns="state.columns.value"
     :filter-fields="state.filterFields.value"
     :filters="state.filters.value"

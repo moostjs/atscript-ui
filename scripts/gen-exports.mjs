@@ -7,7 +7,7 @@ function scan(pkgRoot) {
   const defaults = globSync("src/components/defaults/*.vue", { cwd: pkgRoot });
   const entries = {};
   const seen = new Map();
-  for (const p of [...root, ...defaults].sort()) {
+  for (const p of [...root, ...defaults].toSorted()) {
     const name = basename(p, ".vue");
     if (seen.has(name)) {
       throw new Error(`Naming collision for '${name}': ${seen.get(name)} vs ${p}`);
@@ -29,7 +29,7 @@ function updatePackageJson(pkgRoot) {
   const barrel = pkg.exports["."];
   const hasCjs = typeof barrel === "object" && barrel !== null && "require" in barrel;
   const next = { ".": barrel };
-  for (const name of Object.keys(components).sort()) {
+  for (const name of Object.keys(components).toSorted()) {
     const entry = {
       types: `./dist/${name}.d.mts`,
       import: `./dist/${name}.mjs`,

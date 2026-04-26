@@ -2,11 +2,11 @@ import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescrip
 import { describe, expect, it } from "vitest";
 import {
   META_LABEL,
+  UI_FIELD_WIDTH,
   UI_HIDDEN,
   UI_ICON,
   UI_ORDER,
   UI_TYPE,
-  UI_WIDTH,
 } from "../shared/annotation-keys";
 import {
   getColumn,
@@ -142,9 +142,9 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "visible")!.visible).toBe(true);
   });
 
-  it("reads @ui.width and @ui.icon", () => {
+  it("reads @ui.field.width and @ui.icon", () => {
     const meta = buildMeta({
-      name: stringProp({ [UI_WIDTH]: "half", [UI_ICON]: "user" }),
+      name: stringProp({ [UI_FIELD_WIDTH]: "half", [UI_ICON]: "user" }),
     });
     const def = createTableDef(meta);
 

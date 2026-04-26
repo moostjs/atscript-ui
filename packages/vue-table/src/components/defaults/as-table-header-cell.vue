@@ -7,7 +7,7 @@
 // and breaks reorder.
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import type { FilterCondition } from "@atscript/ui-table";
+import type { ColumnWidthEntry, FilterCondition } from "@atscript/ui-table";
 import { isFilled } from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../../types";
 import AsColumnMenu from "./as-column-menu.vue";
@@ -18,9 +18,11 @@ const props = withDefaults(
     sortDirection?: "asc" | "desc" | null;
     filters?: FilterCondition[];
     columnMenu?: ColumnMenuConfig;
+    /** Current column width entry (`{ w, d }`) — used to gate Reset Width. */
+    widthEntry?: ColumnWidthEntry;
   }>(),
   {
-    columnMenu: () => ({ sort: true, filters: true, hide: true }),
+    columnMenu: () => ({ sort: true, filters: true, hide: true, resetWidth: true }),
   },
 );
 
@@ -29,6 +31,7 @@ const emit = defineEmits<{
   (e: "hide", column: ColumnDef): void;
   (e: "filter", column: ColumnDef): void;
   (e: "filters-off", column: ColumnDef): void;
+  (e: "reset-width", column: ColumnDef): void;
 }>();
 
 const filledCount = computed(() => props.filters?.filter(isFilled).length ?? 0);
@@ -48,6 +51,10 @@ function onMenuFilter() {
 function onMenuFiltersOff() {
   emit("filters-off", props.column);
 }
+
+function onMenuResetWidth() {
+  emit("reset-width", props.column);
+}
 </script>
 
 <template>
@@ -56,10 +63,12 @@ function onMenuFiltersOff() {
     :order="sortDirection"
     :filters="filters"
     :config="columnMenu"
+    :width-entry="widthEntry"
     @sort="onMenuSort"
     @hide="onMenuHide"
     @filter="onMenuFilter"
     @filters-off="onMenuFiltersOff"
+    @reset-width="onMenuResetWidth"
     v-slot="{ open, hasMenu }"
   >
     <button class="as-th-btn" type="button" @dragstart.stop>

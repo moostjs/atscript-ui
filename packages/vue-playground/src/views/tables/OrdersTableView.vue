@@ -29,7 +29,7 @@ const filterFields = ref<string[]>(["customerId", "productId", "status"]);
         <TableFilterBar />
       </div>
       <div class="table-page-body">
-        <AsTable :column-menu="{ sort: true, filters: true, hide: true }" />
+        <AsTable :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }" />
         <div v-if="loadingMetadata" class="table-loading-overlay">
           <span class="table-loading-overlay-icon" aria-hidden="true" />
         </div>
