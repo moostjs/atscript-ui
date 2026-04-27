@@ -2,11 +2,11 @@ import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick } from "vue";
 import { createTableState } from "../composables/use-table-state";
-import { useTableSelection } from "../composables/use-table-selection";
+import { useTableSelection, type SelectionPersistence } from "../composables/use-table-selection";
 import type { ReactiveTableState } from "../types";
 import { stubClient } from "./helpers";
 
-function setup(mode: "none" | "single" | "multi", keepAfterRefresh = false) {
+function setup(mode: "none" | "single" | "multi", persistence: SelectionPersistence = "trim") {
   let state!: ReactiveTableState;
 
   mount(
@@ -17,7 +17,7 @@ function setup(mode: "none" | "single" | "multi", keepAfterRefresh = false) {
           query: { queryOnMount: false },
           selection: { mode, rowValueFn: (r) => r.id },
         }));
-        useTableSelection(state, { keepAfterRefresh });
+        useTableSelection(state, { mode: persistence });
         return () => h("div");
       },
     }),
@@ -39,34 +39,40 @@ describe("useTableSelection", () => {
     expect(state.selectedCount.value).toBe(3);
   });
 
-  it("clears selection on results change (keepAfterRefresh=false)", async () => {
-    const state = setup("multi", false);
+  it("trim default keeps surviving PKs", async () => {
+    const state = setup("multi", "trim");
 
     state.selectedRows.value = [1, 2];
     expect(state.selectedCount.value).toBe(2);
 
-    // Simulate results refresh
-    state.results.value = [{ id: 1 }, { id: 3 }];
-    await nextTick();
-
-    expect(state.selectedRows.value).toEqual([]);
-  });
-
-  it("keeps matching selection on results change (keepAfterRefresh=true)", async () => {
-    const state = setup("multi", true);
-
-    state.selectedRows.value = [1, 2];
-    expect(state.selectedCount.value).toBe(2);
-
-    // Simulate results refresh — id=2 is gone
     state.results.value = [{ id: 1 }, { id: 3 }];
     await nextTick();
 
     expect(state.selectedRows.value).toEqual([1]);
   });
 
-  it("rowValueFn extracts value for reconciliation", async () => {
-    const state = setup("multi", true);
+  it("clear mode drops everything on results replacement", async () => {
+    const state = setup("multi", "clear");
+
+    state.selectedRows.value = [1, 2];
+    state.results.value = [{ id: 1 }, { id: 3 }];
+    await nextTick();
+
+    expect(state.selectedRows.value).toEqual([]);
+  });
+
+  it("persist mode never writes to selectedRows on replacement", async () => {
+    const state = setup("multi", "persist");
+
+    state.selectedRows.value = [1, 2];
+    state.results.value = [{ id: 100 }, { id: 200 }];
+    await nextTick();
+
+    expect(state.selectedRows.value).toEqual([1, 2]);
+  });
+
+  it("rowValueFn extracts value for trim reconciliation", async () => {
+    const state = setup("multi", "trim");
 
     state.selectedRows.value = [10, 20, 30];
     state.results.value = [{ id: 20 }, { id: 30 }, { id: 40 }];
@@ -76,8 +82,8 @@ describe("useTableSelection", () => {
   });
 
   describe("results-replacement vs results-extension", () => {
-    it("forward extension does NOT trim selection", async () => {
-      const state = setup("multi", false);
+    it("forward extension does NOT trim selection (clear mode)", async () => {
+      const state = setup("multi", "clear");
       const original = [{ id: 1 }, { id: 2 }];
       state.results.value = original;
       state.resultsStart.value = 0;
@@ -91,31 +97,27 @@ describe("useTableSelection", () => {
     });
 
     it("backward extension does NOT trim selection (regression)", async () => {
-      const state = setup("multi", false);
+      const state = setup("multi", "clear");
       const original = [{ id: 200 }, { id: 201 }];
       state.results.value = original;
       state.resultsStart.value = 200;
       await nextTick();
       state.selectedRows.value = [200, 201];
 
-      // Backward extension: prepend rows AND decrement resultsStart by delta.
-      // Last-row reference stays identical; resultsStart shifts by -delta.
       const prepended = [{ id: 198 }, { id: 199 }, ...original];
       state.results.value = prepended;
       state.resultsStart.value = 198;
       await nextTick();
-      // Selection must be untouched.
       expect(state.selectedRows.value).toEqual([200, 201]);
     });
 
-    it("replacement DOES clear selection (default keepAfterRefresh=false)", async () => {
-      const state = setup("multi", false);
+    it("clear mode DOES drop selection on replacement", async () => {
+      const state = setup("multi", "clear");
       state.results.value = [{ id: 1 }, { id: 2 }];
       state.resultsStart.value = 0;
       await nextTick();
       state.selectedRows.value = [1, 2];
 
-      // Replacement: first-row reference changes (and resultsStart same).
       state.results.value = [{ id: 100 }, { id: 101 }];
       await nextTick();
       expect(state.selectedRows.value).toEqual([]);

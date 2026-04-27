@@ -1,5 +1,14 @@
 // ── Types ───────────────────────────────────────────────────
-export type { TAsTableComponents, ReactiveTableState, ColumnMenuConfig, ConfigTab } from "./types";
+export type {
+  TAsTableComponents,
+  ReactiveTableState,
+  ColumnMenuConfig,
+  ConfigTab,
+  NavKeyOptions,
+  TableNavBridge,
+  MainActionRequest,
+  QueryErrorKind,
+} from "./types";
 
 // ── Composables ─────────────────────────────────────────────
 export { useTable, clearTableCache, type UseTableOptions } from "./composables/use-table";
@@ -11,12 +20,16 @@ export {
 } from "@atscript/ui";
 export {
   useTableContext,
+  useTableContextOptional,
   createTableState,
+  createStaticTableState,
   type TableContext,
   type CreateTableStateOptions,
+  type CreateStaticTableStateOptions,
   type TableStateInternals,
 } from "./composables/use-table-state";
-export { useTableSelection } from "./composables/use-table-selection";
+export { useTableSelection, type SelectionPersistence } from "./composables/use-table-selection";
+export { useTableNavBridge } from "./composables/use-table-nav-bridge";
 export { useTableFilter } from "./composables/use-table-filter";
 export { useTableSearch } from "./composables/use-table-search";
 

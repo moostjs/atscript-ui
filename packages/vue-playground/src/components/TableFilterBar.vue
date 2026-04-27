@@ -7,8 +7,11 @@ const { state } = useTableContext();
 const hasFilters = computed(() => state.filterFields.value.length > 0);
 
 function clearAll() {
+  // Just clear filters — the framework's filters watcher picks up the
+  // change and re-queries (debounced). Calling `state.query()` here would
+  // fire an extra fetch on top of that, AND would still query when
+  // filters were already empty (since `resetFilters` is a no-op then).
   state.resetFilters();
-  state.query();
 }
 </script>
 

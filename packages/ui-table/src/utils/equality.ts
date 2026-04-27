@@ -9,10 +9,10 @@ export function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean {
   return true;
 }
 
-export function sameColumnSet(a: string[], b: string[]): boolean {
+export function sameColumnSet<T>(a: readonly T[], b: readonly T[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;
-  const set = new Set(a);
+  const set = new Set<T>(a);
   for (const c of b) if (!set.has(c)) return false;
   return true;
 }

@@ -5,6 +5,10 @@ import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
 import type { TAsTableComponents } from "../types";
 import { useTable } from "../composables/use-table";
+import { useRegisterMainActionListener } from "../composables/use-table-state";
+import { useHasEmitListener } from "../composables/use-has-emit-listener";
+import { useTableNavBridge } from "../composables/use-table-nav-bridge";
+import type { SelectionPersistence } from "../composables/use-table-selection";
 import type { PageResult } from "@atscript/db-client";
 import { AsFilterDialog, AsConfigDialog } from "./defaults";
 
@@ -27,7 +31,13 @@ const props = withDefaults(
     blockQuery?: boolean;
     select?: SelectionMode;
     rowValueFn?: (row: Record<string, unknown>) => unknown;
-    keepSelectedAfterRefresh?: boolean;
+    /**
+     * Selection write policy applied on every results-replacement.
+     * - `"clear"` — drop everything.
+     * - `"trim"` (default) — keep PKs that survive the new result set.
+     * - `"persist"` — never write to `selectedRows`; full consumer ownership.
+     */
+    selectionPersistence?: SelectionPersistence;
     /** Page-alignment unit for `loadRange` and `queryNext` extension. */
     blockSize?: number;
     /** Debounce window for the topIndex/viewportRowCount watcher. */
@@ -36,9 +46,18 @@ const props = withDefaults(
   {
     queryOnMount: true,
     select: "none",
-    keepSelectedAfterRefresh: false,
+    selectionPersistence: "trim",
   },
 );
+
+const emit = defineEmits<{
+  (
+    e: "main-action",
+    row: Record<string, unknown>,
+    absIndex: number,
+    event: KeyboardEvent | MouseEvent,
+  ): void;
+}>();
 
 const filterFields = defineModel<string[]>("filterFields", { default: () => [] });
 const columnNames = defineModel<string[]>("columnNames", { default: () => [] });
@@ -46,12 +65,13 @@ const columnWidths = defineModel<ColumnWidthsMap>("columnWidths", {
   default: () => ({}),
 });
 const sorters = defineModel<SortControl[]>("sorters", { default: () => [] });
+const selectedRows = defineModel<unknown[]>("selectedRows", { default: () => [] });
 
 const state = useTable(props.url, {
   limit: props.limit,
   select: props.select,
   rowValueFn: props.rowValueFn,
-  keepSelectedAfterRefresh: props.keepSelectedAfterRefresh,
+  selectionPersistence: props.selectionPersistence,
   forceFilters: props.forceFilters,
   forceSorters: props.forceSorters,
   queryFn: props.queryFn,
@@ -65,7 +85,17 @@ const state = useTable(props.url, {
   columnNames,
   columnWidths,
   sorters,
+  selectedRows,
 });
+
+useRegisterMainActionListener(
+  state,
+  (req) => emit("main-action", req.row, req.absIndex, req.event),
+  useHasEmitListener("onMainAction"),
+);
+
+const navBridge = useTableNavBridge(state);
+defineExpose({ state, navBridge });
 
 // Resolve the filter dialog component (cannot use useTableComponent here
 // because provideTableContext is called in the same setup by useTable).
@@ -96,6 +126,7 @@ const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConf
     :search-term="state.searchTerm.value"
     :selected-rows="state.selectedRows.value"
     :selected-count="state.selectedCount.value"
+    :nav-bridge="navBridge"
     :query="state.query"
     :query-next="state.queryNext"
     :reset-filters="state.resetFilters"

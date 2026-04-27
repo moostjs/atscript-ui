@@ -37,7 +37,7 @@ export const asFilterFieldShortcuts = defineShortcuts({
   "as-filter-field-dropdown-footer": {
     "": "flex gap-$s px-$s py-$xs border-t-1 justify-end",
     "[&_button]:":
-      "px-$s py-$xs border-0 bg-transparent text-callout text-current-hl cursor-pointer",
-    "[&_button:hover]:": "underline",
+      "inline-flex items-center gap-$xs px-$s py-$xs border-0 bg-transparent text-callout text-current-hl cursor-pointer",
+    "[&_button:hover]:": "[&_:not(.as-kbd)]:underline",
   },
 });

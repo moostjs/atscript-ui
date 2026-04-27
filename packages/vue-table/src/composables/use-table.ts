@@ -11,7 +11,7 @@ import type { FilterExpr } from "@uniqu/core";
 import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
 import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
-import { useTableSelection } from "./use-table-selection";
+import { useTableSelection, type SelectionPersistence } from "./use-table-selection";
 
 /** Thin alias over `resetMetaCache` — retained so existing test code keeps working. */
 export function clearTableCache() {
@@ -33,10 +33,13 @@ export interface UseTableOptions {
   select?: SelectionMode;
   /** Extract unique value from a row for selection tracking. */
   rowValueFn?: (row: Record<string, unknown>) => unknown;
-  /** Preserve selection across data refreshes. */
-  keepSelectedAfterRefresh?: boolean;
-  /** Disable auto-reset/trim of selection on refresh. Use when selection is externally owned (e.g. value-help filter chips). */
-  manageSelection?: boolean;
+  /**
+   * Selection write policy applied on every results-replacement.
+   * - `"clear"` — drop everything on refresh.
+   * - `"trim"` (default) — keep the subset of PKs that still exist in the new results.
+   * - `"persist"` — never write to `selectedRows`; full consumer ownership.
+   */
+  selectionPersistence?: SelectionPersistence;
   /** External ref for filter field names (from defineModel). */
   filterFields?: Ref<string[]>;
   /** External ref for visible column names (from defineModel). */
@@ -45,6 +48,12 @@ export interface UseTableOptions {
   columnWidths?: Ref<ColumnWidthsMap>;
   /** External ref for sorters (from defineModel). */
   sorters?: Ref<SortControl[]>;
+  /**
+   * External ref for selected rows (from `defineModel`/v-model or any external
+   * source). Identity is preserved — the framework reads from and writes to
+   * this ref directly.
+   */
+  selectedRows?: Ref<unknown[]>;
   /** Always-applied Uniquery filter expression (AND'd with user filters). */
   forceFilters?: FilterExpr;
   /** Always-applied sorters (prepended before user sorters). */
@@ -88,7 +97,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     selection: {
       mode: opts?.select,
       rowValueFn: opts?.rowValueFn,
-      keepAfterRefresh: opts?.keepSelectedAfterRefresh,
+      selectedRows: opts?.selectedRows,
     },
     model: {
       filterFields: opts?.filterFields,
@@ -109,9 +118,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     },
   });
 
-  if (opts?.manageSelection !== false) {
-    useTableSelection(state, { keepAfterRefresh: opts?.keepSelectedAfterRefresh });
-  }
+  useTableSelection(state, { mode: opts?.selectionPersistence ?? "trim" });
   if (opts?.provideContext !== false) {
     provideTableContext({ state, client: client as Client, components: opts?.components ?? {} });
   }

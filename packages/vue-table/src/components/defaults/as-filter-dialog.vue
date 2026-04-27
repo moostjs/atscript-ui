@@ -23,6 +23,7 @@ import {
   TabsContent,
 } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
+import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
 import AsFilterConditions from "../internal/as-filter-conditions.vue";
 import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
@@ -104,6 +105,11 @@ const chips = computed<ChipItem[]>(() => {
 
 const visibleChips = computed(() => chips.value.slice(0, CHIP_PREVIEW_LIMIT));
 const hiddenChipCount = computed(() => Math.max(0, chips.value.length - CHIP_PREVIEW_LIMIT));
+const filledFreeCount = computed(() => {
+  let n = 0;
+  for (const c of freeConditions.value) if (isFilled(c)) n++;
+  return n;
+});
 
 function removeChip(chip: ChipItem) {
   if (chip.bucket === "value-help") {
@@ -133,6 +139,45 @@ function onApply() {
 function onCancel() {
   state.closeFilterDialog();
 }
+
+// Focus the active tab's preferred element: value-help search input when
+// search is supported, otherwise the inner table's focusable
+// `<tbody tabindex="0">`. Conditions tab falls through to the first
+// focusable input. The composable wraps this in `nextTick` + `rAF` so
+// Reka's `<Presence>` has a frame to mount the new TabsContent.
+function focusActiveTabContent() {
+  const root = document.querySelector<HTMLElement>(
+    ".as-filter-dialog-content [role='tabpanel'][data-state='active']",
+  );
+  const scope = root ?? document.querySelector<HTMLElement>(".as-filter-dialog-content");
+  if (!scope) return;
+  const search = scope.querySelector<HTMLElement>(".as-filter-value-help-search");
+  if (search) {
+    search.focus();
+    return;
+  }
+  const tbody = scope.querySelector<HTMLElement>("tbody[tabindex='0']");
+  if (tbody) {
+    tbody.focus();
+    return;
+  }
+  const focusable = scope.querySelector<HTMLElement>(
+    "input, select, textarea, [tabindex]:not([tabindex='-1'])",
+  );
+  focusable?.focus();
+}
+
+const { onDialogKeydown, focusActiveTabAfterMount } = useDialogTabKeyboard({
+  activeTab,
+  tabOrder: ["value-help", "conditions"] as const,
+  isAvailable: (t) => (t === "value-help" ? hasValueHelp.value : true),
+  focusActiveTab: focusActiveTabContent,
+});
+
+function onOpenAutoFocus(event: Event) {
+  event.preventDefault();
+  focusActiveTabAfterMount();
+}
 </script>
 
 <template>
@@ -142,6 +187,8 @@ function onCancel() {
       <DialogContent
         class="as-filter-dialog-content"
         :class="{ 'as-filter-dialog-has-value-help': hasValueHelp }"
+        @open-auto-focus="onOpenAutoFocus"
+        @keydown="onDialogKeydown"
       >
         <div class="as-filter-dialog-header">
           <DialogTitle class="as-filter-dialog-title">
@@ -168,11 +215,11 @@ function onCancel() {
             <TabsTrigger value="conditions" class="as-config-tab-trigger">
               Conditions
               <span
-                v-if="freeConditions.filter((c) => isFilled(c)).length > 0"
+                v-if="filledFreeCount > 0"
                 class="as-config-tab-count"
                 :class="{ 'as-config-tab-count-active': activeTab === 'conditions' }"
               >
-                {{ freeConditions.filter((c) => isFilled(c)).length }}
+                {{ filledFreeCount }}
               </span>
             </TabsTrigger>
           </TabsList>

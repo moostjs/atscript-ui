@@ -1,7 +1,10 @@
 import { watch } from "vue";
+import { trimSelection } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 
 type Row = Record<string, unknown>;
+
+export type SelectionPersistence = "clear" | "trim" | "persist";
 
 /**
  * Wire up selection reconciliation on results change.
@@ -9,20 +12,29 @@ type Row = Record<string, unknown>;
  * The watcher distinguishes results-replacement (query / invalidate /
  * pagination jump) from results-extension in EITHER direction (queryNext /
  * forward-merging loadRange / backward-merging loadRange) and only runs the
- * trim logic on replacement. Backward extension prepends rows AND decrements
- * `resultsStart` — caught via the last-row reference identity check, so
- * scrolling upward doesn't silently clear selection under the default
- * `keepAfterRefresh: false`.
+ * reconciliation logic on replacement. Backward extension prepends rows AND
+ * decrements `resultsStart` — caught via the last-row reference identity
+ * check, so scrolling upward doesn't silently mutate selection.
+ *
+ * Mode semantics on results-replacement:
+ * - `"persist"` — no-op; the consumer's ref is untouched.
+ * - `"trim"` (default) — keep the subset of selected PKs still present in the new results.
+ * - `"clear"` — drop everything.
  */
 export function useTableSelection(
   state: ReactiveTableState,
-  opts?: { keepAfterRefresh?: boolean },
+  opts?: { mode?: SelectionPersistence },
 ): void {
-  const keepAfterRefresh = opts?.keepAfterRefresh ?? false;
+  const mode: SelectionPersistence = opts?.mode ?? "trim";
 
   watch(
     [() => state.results.value, () => state.resultsStart.value] as const,
     ([newResults, newResultsStart], [oldResults, oldResultsStart]) => {
+      if (mode === "persist") return;
+      // Empty selection: extension detection AND trim/clear are all no-ops.
+      // Bail before walking arrays.
+      if (state.selectedRows.value.length === 0) return;
+
       const oldArr = (oldResults ?? []) as Row[];
       const newArr = newResults as Row[];
       const oldStart = oldResultsStart ?? 0;
@@ -40,16 +52,15 @@ export function useTableSelection(
         }
       }
 
-      if (!keepAfterRefresh) {
-        if (state.selectedRows.value.length > 0) state.selectedRows.value = [];
+      if (mode === "clear") {
+        state.selectedRows.value = [];
         return;
       }
-      if (state.selectedRows.value.length === 0) return;
-      const newValues = new Set(newArr.map((r) => state.rowValueFn(r)));
-      const kept = state.selectedRows.value.filter((v) => newValues.has(v));
-      if (kept.length !== state.selectedRows.value.length) {
-        state.selectedRows.value = kept;
-      }
+      // mode === "trim" — trimSelection returns the same reference when nothing
+      // was dropped, so a no-op assignment is harmless (Vue dedupes on identity).
+      const presentPks = new Set<unknown>();
+      for (const r of newArr) presentPks.add(state.rowValueFn(r));
+      state.selectedRows.value = trimSelection(state.selectedRows.value, presentPks);
     },
   );
 }

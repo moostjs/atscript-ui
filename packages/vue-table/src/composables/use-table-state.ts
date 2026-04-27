@@ -1,4 +1,16 @@
-import { computed, inject, onScopeDispose, provide, ref, shallowRef, watch, type Ref } from "vue";
+import {
+  computed,
+  inject,
+  onBeforeUnmount,
+  onScopeDispose,
+  provide,
+  ref,
+  shallowRef,
+  toValue,
+  watch,
+  type MaybeRefOrGetter,
+  type Ref,
+} from "vue";
 import {
   getVisibleColumns,
   type ColumnDef,
@@ -7,31 +19,49 @@ import {
   type TableDef,
 } from "@atscript/ui";
 import {
-  blockStartFor,
   buildTableQuery,
   debounce,
   isFilled,
-  pageAlignedBlocksFor,
-  planFetch,
   reconcileColumnWidthDefaults,
   sameColumnSet,
   sortersEqual,
-  walkBackwardAbsorb,
-  walkForwardAbsorb,
   type ColumnWidthsMap,
-  type FetchPlan,
   type FieldFilters,
   type FilterCondition,
-  type SelectionMode,
 } from "@atscript/ui-table";
 import type { Client, PageResult } from "@atscript/db-client";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
-import type { ConfigTab, ReactiveTableState, TAsTableComponents } from "../types";
+import type {
+  ConfigTab,
+  MainActionRequest,
+  QueryErrorKind,
+  ReactiveTableState,
+  TAsTableComponents,
+} from "../types";
+import { createSelectionApi, type SelectionApiOptions } from "./state/create-selection";
+import { createMainActionRegistry } from "./state/create-main-action-registry";
+import { createNavController } from "./state/create-nav-controller";
+import { createWindowFetcher } from "./state/create-window-fetcher";
 
 const TABLE_KEY = "__as_table";
 const FILTER_DEBOUNCE_MS = 500;
 const DEFAULT_BLOCK_SIZE = 100;
 const DEFAULT_DRAG_RELEASE_DEBOUNCE_MS = 300;
+
+let _tblUid = 0;
+
+/**
+ * Coerce a primitive cell value to a string for the static-mode query
+ * function's substring search and locale-aware sort. Objects fall back to
+ * `""` so `'[object Object]'` never leaks into the search index. Module
+ * scope so it's not recreated on every fetch.
+ */
+function cellAsString(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number" || typeof v === "boolean") return v.toString();
+  return "";
+}
 
 /** Everything provided by as-table-root to its subtree. */
 export interface TableContext {
@@ -54,13 +84,7 @@ export interface TableModelRefs {
   sorters?: Ref<SortControl[]>;
 }
 
-export interface TableSelectionOptions {
-  mode?: SelectionMode;
-  /** Extract unique value from a row for selection tracking. */
-  rowValueFn?: (row: Record<string, unknown>) => unknown;
-  /** Preserve selection across data refreshes. */
-  keepAfterRefresh?: boolean;
-}
+export type TableSelectionOptions = SelectionApiOptions;
 
 export interface TableQueryOptions {
   /** Override the default query function. */
@@ -83,7 +107,7 @@ export interface TableWindowOptions {
 }
 
 export interface CreateTableStateOptions {
-  /** Data-layer client used for `client.pages` calls. Required. */
+  /** Data-layer client used for `client.pages` calls. */
   client: Client;
   /** Default page size (`pagination.itemsPerPage`). */
   limit?: number;
@@ -107,25 +131,20 @@ export interface TableStateInternals {
 
 type Row = Record<string, unknown>;
 
-export type QueryErrorKind = "initial" | "query" | "queryNext" | "loadRange";
-
-type Settlement =
-  | { kind: "ok"; gen: number; firstIndex: number; rows: Row[]; count: number }
-  | { kind: "err"; gen: number; firstIndex: number; error: Error; sourceKind: QueryErrorKind };
-
 export function createTableState(opts: CreateTableStateOptions): {
   state: ReactiveTableState;
   internals: TableStateInternals;
 } {
   const client = opts.client;
-  const queryOpts = opts.query;
   const modelOpts = opts.model;
   const selectionOpts = opts.selection;
   const windowOpts = opts.window;
+  const queryOpts = opts.query;
   const blockSize = windowOpts?.blockSize ?? DEFAULT_BLOCK_SIZE;
   const dragReleaseDebounceMs =
     windowOpts?.dragReleaseDebounceMs ?? DEFAULT_DRAG_RELEASE_DEBOUNCE_MS;
 
+  // ── Reactive state owned by the orchestrator ────────────────────────────
   const tableDef = shallowRef<TableDef | null>(null);
   const loadingMetadata = ref(true);
   const allColumns = shallowRef<ColumnDef[]>([]);
@@ -151,12 +170,6 @@ export function createTableState(opts: CreateTableStateOptions): {
   const filters = shallowRef<FieldFilters>({});
   const results = shallowRef<Row[]>([]);
   const resultsStart = ref(0);
-  const windowCache = shallowRef<Map<number, Row>>(new Map());
-  /** Per-block firstIndex values currently in flight. `loadingAt(absIdx)`
-   * derives membership via `blockStartFor(absIdx, blockSize)`. */
-  const windowLoading = shallowRef<Set<number>>(new Set());
-  const topIndex = ref(0);
-  const viewportRowCount = ref(0);
   const querying = ref(false);
   const queryingNext = ref(false);
   const totalCount = ref(0);
@@ -176,35 +189,22 @@ export function createTableState(opts: CreateTableStateOptions): {
   }
   const mustRefresh = ref(false);
   const searchTerm = ref("");
+
   const configDialogOpen = ref(false);
   const configTab = ref<ConfigTab>("columns");
   const filterDialogColumn = ref<ColumnDef | null>(null);
 
-  const selectedRows = shallowRef<unknown[]>([]);
-  const selectedCount = computed(() => selectedRows.value.length);
-  const selectionMode: SelectionMode = selectionOpts?.mode ?? "none";
-  const rowValueFn = selectionOpts?.rowValueFn ?? ((row: Row) => row);
+  // Stable per-state UID so deterministic row IDs survive remount of consuming
+  // components without colliding across multi-table pages.
+  const stateUid = `tbl-${++_tblUid}`;
+  function rowId(absIndex: number): string {
+    return `${stateUid}-row-${absIndex}`;
+  }
 
+  // ── Query lifecycle (orchestrator-owned) ───────────────────────────────
   let generation = 0;
   let queryDetected = false;
   let skipPaginationWatch = 0;
-  // Per-block errors keyed by `block.firstIndex`. shallowRef so reactive readers
-  // (`errorAt` inside computeds) re-run on retry success / new failure.
-  const errors = shallowRef<Map<number, Error>>(new Map());
-
-  // Coalesce per-block settlements: with M parallel blocks landing in the
-  // same microtask, one Map/Set clone replaces M independent clones.
-  const settlements: Settlement[] = [];
-  let flushScheduled = false;
-
-  function writeColumnWidth(path: string, width: string) {
-    const entry = columnWidths.value[path];
-    if (!entry || entry.w === width) return;
-    columnWidths.value = {
-      ...columnWidths.value,
-      [path]: { ...entry, w: width },
-    };
-  }
 
   function buildCurrentQuery(): Uniquery {
     return buildTableQuery({
@@ -232,6 +232,81 @@ export function createTableState(opts: CreateTableStateOptions): {
     }
   }
 
+  // ── Shared cursor: orchestrator owns activeIndex so all four factories
+  // read/write the same ref ───────────────────────────────────────────────
+  /** -1 == nothing active. */
+  const activeIndex = ref(-1);
+
+  // ── Sub-factories (constructed in dependency order) ─────────────────────
+  // 1. Window fetcher: independent of selection/nav/main-action.
+  const windowFetcher = createWindowFetcher({
+    blockSize,
+    dragReleaseDebounceMs,
+    tableDef,
+    totalCount,
+    results,
+    resultsStart,
+    queryingNext,
+    getGeneration: () => generation,
+    isQueryBlocked: () => !!queryOpts?.blockQuery,
+    buildCurrentQuery,
+    dispatchPages,
+    reportError,
+  });
+  const {
+    windowCache,
+    windowLoading,
+    errors,
+    topIndex,
+    viewportRowCount,
+    dataAt,
+    loadingAt,
+    errorAt,
+    loadRange,
+    queryNext,
+    clearSettlements,
+    resetWindow,
+    disposeDebounces,
+  } = windowFetcher;
+
+  // 2. Shared accessor used by selection + main-action.
+  function getActiveRow(): Row | undefined {
+    const abs = activeIndex.value;
+    if (abs < 0) return undefined;
+    return dataAt(abs);
+  }
+
+  // 3. Selection.
+  const selection = createSelectionApi(selectionOpts, getActiveRow);
+  const {
+    selectedRows,
+    selectedCount,
+    selectionMode,
+    rowValueFn,
+    isPkSelected,
+    ariaSelectedFor,
+    toggleActiveSelection,
+  } = selection;
+
+  // 4. Main-action registry.
+  const mainAction = createMainActionRegistry(() => activeIndex.value, getActiveRow);
+  const { hasMainActionListener, registerMainActionListener, requestMainAction } = mainAction;
+
+  // 5. Nav controller.
+  const nav = createNavController({
+    activeIndex,
+    totalCount,
+    results,
+    viewportRowCount,
+    topIndex,
+    selectionMode,
+    hasMainActionListener,
+    requestMainAction,
+    toggleActiveSelection,
+  });
+  const { navMode, navViewportRowCount, setActive, clearActive, handleNavKey } = nav;
+
+  // ── Query engine ────────────────────────────────────────────────────────
   async function runQuery(kind: QueryErrorKind) {
     if (queryOpts?.blockQuery) return;
     mustRefresh.value = false;
@@ -241,7 +316,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       topIndex.value = 0;
     }
     const thisGen = ++generation;
-    settlements.length = 0;
+    clearSettlements();
     querying.value = true;
     queryDetected = true;
 
@@ -317,159 +392,25 @@ export function createTableState(opts: CreateTableStateOptions): {
     await runQuery("query");
   }
 
-  // Drain the settlements queue into a single Map/Set/Map clone trio. Without
-  // this batching, M parallel blocks → M independent O(cacheSize) clones; with
-  // it, one set of clones absorbs every settlement that landed in the same
-  // microtask. Stale-generation entries are filtered here.
-  function flushSettlements() {
-    flushScheduled = false;
-    if (settlements.length === 0) return;
-    const currentGen = generation;
-    const nextCache = new Map(windowCache.value);
-    const nextLoading = new Set(windowLoading.value);
-    const nextErrors = new Map(errors.value);
-    let totalCountChanged = false;
-    let nextTotal = totalCount.value;
-
-    for (const s of settlements) {
-      if (s.gen !== currentGen) continue;
-      nextLoading.delete(s.firstIndex);
-      if (s.kind === "ok") {
-        for (let i = 0; i < s.rows.length; i++) nextCache.set(s.firstIndex + i, s.rows[i]);
-        nextErrors.delete(s.firstIndex);
-        nextTotal = s.count;
-        totalCountChanged = true;
-      } else {
-        nextErrors.set(s.firstIndex, s.error);
-        reportError(s.error, s.sourceKind);
-      }
-    }
-    settlements.length = 0;
-
-    windowCache.value = nextCache;
-    windowLoading.value = nextLoading;
-    errors.value = nextErrors;
-    if (totalCountChanged && nextTotal !== totalCount.value) totalCount.value = nextTotal;
-
-    // Walk-and-absorb with the freshly populated cache extends the results
-    // island in either direction by any contiguous newly-arrived rows.
-    const fwd = walkForwardAbsorb(results.value, resultsStart.value, nextCache);
-    const bwd = walkBackwardAbsorb(fwd.newResults, fwd.newResultsStart, nextCache);
-    if (bwd.newResults !== results.value) {
-      results.value = bwd.newResults;
-      resultsStart.value = bwd.newResultsStart;
-    }
-  }
-
-  function scheduleFlush() {
-    if (flushScheduled) return;
-    flushScheduled = true;
-    queueMicrotask(flushSettlements);
-  }
-
-  function loadRangeInternal(skip: number, limit: number, kind: QueryErrorKind): Promise<void> {
-    if (queryOpts?.blockQuery) return Promise.resolve();
-
-    const blocks = pageAlignedBlocksFor(skip, limit, blockSize);
-    if (blocks.length === 0) return Promise.resolve();
-
-    const cache = windowCache.value;
-    const loading = windowLoading.value;
-    const missing: typeof blocks = [];
-    for (const b of blocks) {
-      if (loading.has(b.firstIndex)) continue;
-      const end = b.firstIndex + blockSize;
-      for (let idx = b.firstIndex; idx < end; idx++) {
-        if (!cache.has(idx)) {
-          missing.push(b);
-          break;
-        }
-      }
-    }
-    if (missing.length === 0) return Promise.resolve();
-
-    const thisGen = generation;
-    const baseQuery = buildCurrentQuery();
-
-    // Mark blocks as in-flight and clear any prior error so the cell renders
-    // as a fresh skeleton instead of a permanent "errored" tile on retry.
-    const nextLoading = new Set(windowLoading.value);
-    const nextErrors = new Map(errors.value);
-    for (const b of missing) {
-      nextLoading.add(b.firstIndex);
-      nextErrors.delete(b.firstIndex);
-    }
-    windowLoading.value = nextLoading;
-    errors.value = nextErrors;
-
-    const promises = missing.map(async (b) => {
-      try {
-        const { data, count } = await dispatchPages(baseQuery, b.page, blockSize);
-        if (thisGen !== generation) return;
-        settlements.push({
-          kind: "ok",
-          gen: thisGen,
-          firstIndex: b.firstIndex,
-          rows: data as Row[],
-          count,
-        });
-        scheduleFlush();
-      } catch (err) {
-        if (thisGen !== generation) return;
-        const error = err instanceof Error ? err : new Error(String(err));
-        settlements.push({
-          kind: "err",
-          gen: thisGen,
-          firstIndex: b.firstIndex,
-          error,
-          sourceKind: kind,
-        });
-        scheduleFlush();
-      }
-    });
-
-    // Never reject — allSettled guarantees the aggregate promise resolves
-    // regardless of individual outcomes (errors are surfaced via errorAt).
-    return Promise.allSettled(promises).then(() => undefined);
-  }
-
-  function loadRange(skip: number, limit: number): Promise<void> {
-    return loadRangeInternal(skip, limit, "loadRange");
-  }
-
-  function queryNext(): void {
-    if (queryingNext.value) return;
-    if (queryOpts?.blockQuery) return;
-    queryingNext.value = true;
-    const skip = resultsStart.value + results.value.length;
-    void loadRangeInternal(skip, blockSize, "queryNext").finally(() => {
-      queryingNext.value = false;
-    });
-  }
-
   function invalidate(): void {
     generation++;
-    settlements.length = 0;
     results.value = [];
-    windowCache.value = new Map();
-    windowLoading.value = new Set();
-    errors.value = new Map();
+    resetWindow();
     resultsStart.value = (pagination.value.page - 1) * pagination.value.itemsPerPage;
     totalCount.value = 0;
   }
 
-  function dataAt(absIdx: number): Row | undefined {
-    return windowCache.value.get(absIdx);
-  }
-  function loadingAt(absIdx: number): boolean {
-    if (blockSize <= 0) return false;
-    return windowLoading.value.has(blockStartFor(absIdx, blockSize));
-  }
-  function errorAt(absIdx: number): Error | null {
-    if (blockSize <= 0) return null;
-    return errors.value.get(blockStartFor(absIdx, blockSize)) ?? null;
+  // ── Mutators ────────────────────────────────────────────────────────────
+  function writeColumnWidth(path: string, width: string) {
+    const entry = columnWidths.value[path];
+    if (!entry || entry.w === width) return;
+    columnWidths.value = {
+      ...columnWidths.value,
+      [path]: { ...entry, w: width },
+    };
   }
 
+  // ── Public state object ─────────────────────────────────────────────────
   const state: ReactiveTableState = {
     tableDef,
     loadingMetadata,
@@ -486,6 +427,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     windowLoading,
     topIndex,
     viewportRowCount,
+    navViewportRowCount,
     querying,
     queryingNext,
     totalCount,
@@ -503,6 +445,19 @@ export function createTableState(opts: CreateTableStateOptions): {
     selectedCount,
     selectionMode,
     rowValueFn,
+    isPkSelected,
+    ariaSelectedFor,
+    activeIndex,
+    navMode,
+    hasMainActionListener,
+    rowId,
+
+    setActive,
+    clearActive,
+    toggleActiveSelection,
+    requestMainAction,
+    handleNavKey,
+    registerMainActionListener,
 
     query,
     queryImmediate,
@@ -513,6 +468,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     loadingAt,
     errorAt,
     resetFilters() {
+      if (Object.keys(filters.value).length === 0) return;
       filters.value = {};
     },
     showConfigDialog(tab?: ConfigTab) {
@@ -529,8 +485,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       filterFields.value = filterFields.value.filter((f) => f !== path);
     },
     setFieldFilter(path: string, conditions: FilterCondition[]) {
-      const filled = conditions.filter((c) => isFilled(c));
-      if (filled.length === 0) {
+      if (!conditions.some(isFilled)) {
         if (!(path in filters.value)) return;
         const { [path]: _, ...rest } = filters.value;
         filters.value = rest;
@@ -557,6 +512,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     },
   };
 
+  // ── Watchers that schedule queries ──────────────────────────────────────
   // Filter / search are noisy — debounce the actual query but flag mustRefresh
   // + reset pagination synchronously so the pagination watcher doesn't double-fire.
   const debouncedFilterQuery = debounce(() => {
@@ -605,41 +561,6 @@ export function createTableState(opts: CreateTableStateOptions): {
     },
   );
 
-  // Viewport watcher gates on tableDef (not queryDetected) because a window-mode
-  // renderer's mount-time ResizeObserver may write `viewportRowCount` before
-  // auto-bootstrap fires. `jump` plans debounce on the user's drag-release settle
-  // position; `steady` plans dispatch immediately and rely on cache+in-flight dedupe.
-  let pendingJumpPlan: FetchPlan | null = null;
-  const debouncedJumpDispatch = debounce(() => {
-    const plan = pendingJumpPlan;
-    pendingJumpPlan = null;
-    if (plan) void loadRange(plan.skip, plan.limit);
-  }, dragReleaseDebounceMs);
-  const prefetchBuffer = Math.max(1, Math.floor(blockSize / 4));
-
-  watch([() => topIndex.value, () => viewportRowCount.value], () => {
-    if (tableDef.value === null) return;
-    if (viewportRowCount.value <= 0) return;
-    const plan = planFetch({
-      top: topIndex.value,
-      viewport: viewportRowCount.value,
-      totalCount: totalCount.value,
-      cache: windowCache.value,
-      blockSize,
-      buffer: prefetchBuffer,
-    });
-    if (plan === null) return;
-    if (plan.mode === "jump") {
-      pendingJumpPlan = plan;
-      debouncedJumpDispatch();
-    } else {
-      // The block-keyed loading set already dedupes in `loadRangeInternal`,
-      // but bailing here also avoids rebuilding `baseQuery` on every tick.
-      if (windowLoading.value.has(blockStartFor(plan.skip, blockSize))) return;
-      void loadRange(plan.skip, plan.limit);
-    }
-  });
-
   watch(
     () => tableDef.value,
     (def) => {
@@ -657,7 +578,7 @@ export function createTableState(opts: CreateTableStateOptions): {
 
   onScopeDispose(() => {
     debouncedFilterQuery.cancel();
-    debouncedJumpDispatch.cancel();
+    disposeDebounces();
   });
 
   const internals: TableStateInternals = {
@@ -679,6 +600,99 @@ export function createTableState(opts: CreateTableStateOptions): {
   return { state, internals };
 }
 
+export interface CreateStaticTableStateOptions {
+  /** All rows in the dataset. Sorting/searching is applied locally. */
+  rows: Record<string, unknown>[];
+  /** Columns to render. Used to synthesize a minimal `TableDef`. */
+  columns: ColumnDef[];
+  /** Field paths matched (substring, case-insensitive) by `searchTerm`. */
+  searchPaths?: string[];
+  /** Selection settings. */
+  selection?: TableSelectionOptions;
+  /** Default page size (`pagination.itemsPerPage`). */
+  limit?: number;
+}
+
+/**
+ * Build a `ReactiveTableState` backed by an in-memory row list. Used by the
+ * enum value-help branch (`column.options`) where there's no client and no
+ * metadata fetch — sorting/searching/pagination run locally against `rows`.
+ */
+export function createStaticTableState(opts: CreateStaticTableStateOptions): {
+  state: ReactiveTableState;
+  internals: TableStateInternals;
+} {
+  // queryFn captures `_state` by closure before `createTableState` returns.
+  let _state: ReactiveTableState | null = null;
+  const queryFn: QueryFn = (q, page, size) => {
+    if (!_state) {
+      return Promise.resolve({ data: [], count: 0, page, itemsPerPage: size, pages: 1 });
+    }
+    return buildStaticQueryFn(opts, _state)(q, page, size);
+  };
+  const result = createTableState({
+    client: {} as Client,
+    selection: opts.selection,
+    limit: opts.limit,
+    query: { fn: queryFn },
+  });
+  _state = result.state;
+  result.state.loadingMetadata.value = false;
+  result.internals.init({
+    type: undefined as unknown as TableDef["type"],
+    columns: opts.columns,
+    primaryKeys: [],
+    readOnly: false,
+    searchable: (opts.searchPaths?.length ?? 0) > 0,
+    vectorSearchable: false,
+    searchIndexes: [],
+    relations: [],
+  });
+  return result;
+}
+
+function buildStaticQueryFn(
+  opts: CreateStaticTableStateOptions,
+  state: ReactiveTableState,
+): QueryFn {
+  const searchPaths = opts.searchPaths ?? [];
+  return (_query, page, size) => {
+    let filtered: Row[] = opts.rows;
+    const term = state.searchTerm.value.trim().toLowerCase();
+    if (term && searchPaths.length > 0) {
+      filtered = filtered.filter((row) =>
+        searchPaths.some((p) => cellAsString(row[p]).toLowerCase().includes(term)),
+      );
+    }
+    const active = state.sorters.value;
+    if (active.length > 0) {
+      filtered = filtered.toSorted((a, b) => {
+        for (const s of active) {
+          const dir = s.direction === "desc" ? -1 : 1;
+          const av = a[s.field];
+          const bv = b[s.field];
+          if (typeof av === "number" && typeof bv === "number") {
+            if (av < bv) return -dir;
+            if (av > bv) return dir;
+          } else {
+            const cmp = cellAsString(av).localeCompare(cellAsString(bv));
+            if (cmp !== 0) return cmp * dir;
+          }
+        }
+        return 0;
+      });
+    }
+    const start = (page - 1) * size;
+    return Promise.resolve({
+      data: filtered.slice(start, start + size),
+      count: filtered.length,
+      page,
+      itemsPerPage: size,
+      pages: Math.max(1, Math.ceil(filtered.length / size)),
+    });
+  };
+}
+
 /** Provide the full table context to the component subtree. */
 export function provideTableContext(ctx: TableContext): void {
   provide(TABLE_KEY, ctx);
@@ -691,4 +705,46 @@ export function useTableContext(): TableContext {
     throw new Error("[vue-table] useTableContext() called outside of <as-table-root>.");
   }
   return ctx;
+}
+
+/**
+ * Inject the table context if present; return undefined when no
+ * `<as-table-root>` ancestor provided one. Use from components that may mount
+ * inside or outside a table subtree (`<AsTableBase>` in combobox/listbox modes,
+ * external composables that probe for context).
+ */
+export function useTableContextOptional(): TableContext | undefined {
+  return inject<TableContext>(TABLE_KEY);
+}
+
+/**
+ * Register `listener` as a main-action handler whenever `enabled` is truthy.
+ * Reactive — toggling `enabled` registers / disposes live. Skipping
+ * registration when `enabled` is false is what lets `handleNavKey` fall
+ * back to `toggle-select` semantics; see `requestMainAction` early-return
+ * gate. Callers detect "did the parent bind `@main-action`?" via
+ * `useHasEmitListener("onMainAction")`.
+ */
+export function useRegisterMainActionListener(
+  state: ReactiveTableState,
+  listener: (req: MainActionRequest) => void,
+  enabled: MaybeRefOrGetter<boolean>,
+): void {
+  let dispose: (() => void) | null = null;
+  const stop = watch(
+    () => toValue(enabled),
+    (on) => {
+      if (on && !dispose) dispose = state.registerMainActionListener(listener);
+      else if (!on && dispose) {
+        dispose();
+        dispose = null;
+      }
+    },
+    { immediate: true },
+  );
+  onBeforeUnmount(() => {
+    stop();
+    dispose?.();
+    dispose = null;
+  });
 }

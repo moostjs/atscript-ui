@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { DEFAULT_ROW_HEIGHT_PX, clampTopIndex } from "@atscript/ui-table";
-import type { QueryErrorKind } from "../composables/use-table-state";
-import type { ColumnMenuConfig } from "../types";
-import { useTableContext } from "../composables/use-table-state";
+import type { ColumnMenuConfig, EnterAction, QueryErrorKind } from "../types";
+import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
+import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import AsWindowTableBase from "./internal/as-window-table-base.vue";
 
 type Row = Record<string, unknown>;
@@ -37,6 +37,13 @@ const props = withDefaults(
     resizable?: boolean;
     /** Pixel floor for the resize clamp. Default 48. */
     columnMinWidth?: number;
+    /**
+     * Override Enter-key semantics. Default `"main-action"`. Pass
+     * `"toggle-select"` to make Enter mirror Space (pick/unpick the active
+     * row) — used by value-help dialog tables where Enter shouldn't fire a
+     * main action.
+     */
+    enterAction?: EnterAction;
   }>(),
   {
     rowHeight: DEFAULT_ROW_HEIGHT_PX,
@@ -52,6 +59,7 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: "row-click", row: Row, event: MouseEvent): void;
   (e: "row-dblclick", row: Row, event: MouseEvent): void;
+  (e: "main-action", row: Row, absIndex: number, event: KeyboardEvent | MouseEvent): void;
   /**
    * Fired whenever ANY fetch fails — initial load, refresh, load-more, or
    * a per-block scroll fetch. The `kind` arg disambiguates so consumers
@@ -62,6 +70,12 @@ const emit = defineEmits<{
 }>();
 
 const { state } = useTableContext();
+
+useRegisterMainActionListener(
+  state,
+  (req) => emit("main-action", req.row, req.absIndex, req.event),
+  useHasEmitListener("onMainAction"),
+);
 
 const containerRef = ref<HTMLElement | null>(null);
 
@@ -113,6 +127,7 @@ watch(
       :reorderable="reorderable"
       :resizable="resizable"
       :column-min-width="columnMinWidth"
+      :enter-action="enterAction"
       @row-click="(row: Row, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="(row: Row, ev: MouseEvent) => emit('row-dblclick', row, ev)"
       @viewport-metrics-change="onMetrics"

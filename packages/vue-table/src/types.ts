@@ -1,4 +1,32 @@
 import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
+
+/** What Enter does when the keyboard-nav handler sees it. */
+export type EnterAction = "main-action" | "toggle-select" | "passthrough";
+
+/** Per-call options for the keyboard-nav handler / bridge. */
+export interface NavKeyOptions {
+  enterAction?: EnterAction;
+}
+
+/** Pending request to emit `main-action`, written by handleNavKey and click handlers. */
+export interface MainActionRequest {
+  row: Record<string, unknown>;
+  absIndex: number;
+  event: KeyboardEvent | MouseEvent;
+}
+
+/**
+ * Public bridge object exposed by `state.navBridge` (and by the slot prop
+ * on `<AsTableRoot>`). Lets external `<input>`s drive table nav without
+ * losing focus. Space, unmodified Home/End, and printable keys pass
+ * through; modifier-arrow combinations are consumed.
+ */
+export interface TableNavBridge {
+  onKeydown: (event: KeyboardEvent, opts?: NavKeyOptions) => void;
+  activeIndex: Ref<number>;
+  setActive: (absIndex: number) => void;
+  clearActive: () => void;
+}
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type {
   ColumnWidthsMap,
@@ -7,10 +35,9 @@ import type {
   SelectionMode,
   TableStateMethods,
 } from "@atscript/ui-table";
-import type { QueryErrorKind } from "./composables/use-table-state";
-
 export type { ConfigTab };
-export type { QueryErrorKind };
+
+export type QueryErrorKind = "initial" | "query" | "queryNext" | "loadRange";
 
 /** Tri-state for the multi-select header checkbox. Window mode never reaches "all". */
 export type SelectAllState = "none" | "some" | "all";
@@ -92,6 +119,13 @@ export interface ReactiveTableState extends TableStateMethods {
   topIndex: Ref<number>;
   /** Number of fixed-pool rows a windowed renderer is displaying. */
   viewportRowCount: Ref<number>;
+  /**
+   * Nav-only viewport row count (standalone `<AsTable>` writes this so
+   * PageUp/PageDown step by the visible row count). Window mode keeps
+   * writing `viewportRowCount`; `pageStep()` reads `max(viewportRowCount,
+   * navViewportRowCount, 10) - 1`.
+   */
+  navViewportRowCount: Ref<number>;
   querying: Ref<boolean>;
   queryingNext: Ref<boolean>;
   totalCount: Ref<number>;
@@ -111,13 +145,44 @@ export interface ReactiveTableState extends TableStateMethods {
   searchTerm: Ref<string>;
   configDialogOpen: Ref<boolean>;
   configTab: Ref<ConfigTab>;
-  /** Selected row values (same values as ListboxItem :value). */
+  /** Selected row values (PKs extracted via `rowValueFn`). */
   selectedRows: ShallowRef<unknown[]>;
   selectedCount: ComputedRef<number>;
   /** Selection mode. */
   selectionMode: SelectionMode;
-  /** Extract unique value from a row for selection tracking + ListboxItem :value. */
+  /** Extract unique value from a row for selection tracking. */
   rowValueFn: (row: Record<string, unknown>) => unknown;
+  /** True when `pk` is selected. Always false in `selectionMode: "none"`. */
+  isPkSelected: (pk: unknown) => boolean;
+  /** ARIA `aria-selected` value for a PK. `undefined` in `selectionMode: "none"`. */
+  ariaSelectedFor: (pk: unknown) => "true" | "false" | undefined;
   /** Column currently open in the filter dialog (null when closed). */
   filterDialogColumn: Ref<ColumnDef | null>;
+
+  /** Absolute index of the keyboard-active row. -1 = nothing active. */
+  activeIndex: Ref<number>;
+  /**
+   * Whether the active renderer caps `activeIndex` by the loaded row count
+   * (`"pagination"`, default — only DOM-rendered rows are navigable) or by
+   * the backend total (`"window"`, set by `<AsWindowTableBase>` on mount —
+   * unloaded rows still navigable, the windowed renderer fetches them in).
+   */
+  navMode: Ref<"pagination" | "window">;
+  /** True when at least one of `<AsTableRoot>` / `<AsTable>` / `<AsWindowTable>` has a `main-action` listener bound. */
+  hasMainActionListener: Ref<boolean>;
+  /** Build a deterministic DOM `id` for the row at `absIndex` (per-state UID). */
+  rowId: (absIndex: number) => string;
+
+  /** Set the active-row index (clamped to `[-1, totalCount - 1]`). */
+  setActive: (absIndex: number) => void;
+  /** Reset the active-row index to `-1`. */
+  clearActive: () => void;
+  /** Toggle selection of the active row's PK in `selectedRows`. */
+  toggleActiveSelection: () => void;
+  /** Ask the rendering component to emit `main-action` for the active row. */
+  requestMainAction: (event: KeyboardEvent | MouseEvent) => void;
+  /** Translate a keyboard event into the appropriate downstream mutations. */
+  handleNavKey: (event: KeyboardEvent, opts?: NavKeyOptions) => void;
+  /** Register a main-action callback; returns a one-shot disposer. */
+  registerMainActionListener: (cb: (req: MainActionRequest) => void) => () => void;
 }

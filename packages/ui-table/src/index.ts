@@ -45,8 +45,8 @@ export { mergeSorters } from "./query/merge-sorters";
 export { mergeFilters } from "./query/merge-filters";
 
 // ── Selection ──────────────────────────────────────────────
-export type { SelectionMode, SelectionOptions } from "./selection/selection-state";
-export { SelectionState } from "./selection/selection-state";
+export type { SelectionMode } from "./selection/selection-fns";
+export { togglePk, trimSelection, rowsToPks } from "./selection/selection-fns";
 
 // ── State types ────────────────────────────────────────────
 export type { ConfigTab, TableStateData, TableStateMethods } from "./state/table-state-types";

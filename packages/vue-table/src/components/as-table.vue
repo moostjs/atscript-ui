@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import { type ColumnReorderPosition, reorderColumnNames } from "@atscript/ui-table";
-import { ListboxRoot } from "reka-ui";
+import { rowsToPks } from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../types";
-import { useTableContext } from "../composables/use-table-state";
+import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
+import { useHasEmitListener } from "../composables/use-has-emit-listener";
+import { useTableColumnHandlers } from "../composables/use-table-column-handlers";
 import AsTableBase from "./internal/as-table-base.vue";
 
 const props = withDefaults(
@@ -34,6 +35,12 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: "row-click", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
+  (
+    e: "main-action",
+    row: Record<string, unknown>,
+    absIndex: number,
+    event: KeyboardEvent | MouseEvent,
+  ): void;
 }>();
 
 const { state } = useTableContext();
@@ -41,55 +48,28 @@ const { state } = useTableContext();
 const effectiveRows = computed(() => props.rows ?? state.results.value);
 const effectiveColumns = computed(() => props.columns ?? state.columns.value);
 
-const isMulti = state.selectionMode === "multi";
+useRegisterMainActionListener(
+  state,
+  (req) => emit("main-action", req.row, req.absIndex, req.event),
+  useHasEmitListener("onMainAction"),
+);
 
-// ListboxRoot v-model: for single-select, convert between single value and array.
-// For multi-select, bind selectedRows directly.
-const listboxModel = computed({
-  get: () => (isMulti ? state.selectedRows.value : (state.selectedRows.value[0] ?? undefined)),
-  set: (v) => {
-    state.selectedRows.value = Array.isArray(v) ? v : v != null ? [v] : [];
-  },
-});
-
-function handleSort(column: ColumnDef, direction: "asc" | "desc" | null) {
-  const rest = state.sorters.value.filter((s) => s.field !== column.path);
-  state.sorters.value = direction === null ? rest : [...rest, { field: column.path, direction }];
-}
-
-function handleHide(column: ColumnDef) {
-  state.columnNames.value = state.columnNames.value.filter((name) => name !== column.path);
-}
-
-function handleFilter(column: ColumnDef) {
-  state.openFilterDialog(column);
-}
-
-function handleFiltersOff(column: ColumnDef) {
-  state.removeFieldFilter(column.path);
-}
+const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClearFilters } =
+  useTableColumnHandlers(state);
 
 function handleSelectAll() {
-  state.selectedRows.value = effectiveRows.value.map((r) => state.rowValueFn(r));
+  state.selectedRows.value = rowsToPks(effectiveRows.value, state.rowValueFn);
 }
 
 function handleDeselectAll() {
   state.selectedRows.value = [];
 }
-
-function handleClearFilters() {
-  state.resetFilters();
-  if (state.searchTerm.value) state.searchTerm.value = "";
-}
-
-function handleReorder(fromPath: string, toPath: string, position: ColumnReorderPosition) {
-  state.columnNames.value = reorderColumnNames(state.columnNames.value, fromPath, toPath, position);
-}
 </script>
 
 <template>
-  <ListboxRoot v-model="listboxModel" :multiple="isMulti" class="as-table-outer-wrap">
+  <div class="as-table-outer-wrap">
     <AsTableBase
+      render-mode="standalone"
       :columns="effectiveColumns"
       :rows="effectiveRows"
       :sorters="state.sorters.value"
@@ -104,21 +84,21 @@ function handleReorder(fromPath: string, toPath: string, position: ColumnReorder
       :virtual-overscan="virtualOverscan"
       :filters="state.filters.value"
       :search-term="state.searchTerm.value"
-      :on-clear-filters="handleClearFilters"
+      :on-clear-filters="onClearFilters"
       :column-menu="columnMenu"
       :reorderable="reorderable"
       :resizable="resizable"
       :column-min-width="columnMinWidth"
       :column-widths="state.columnWidths.value"
-      @sort="handleSort"
-      @hide="handleHide"
-      @filter="handleFilter"
-      @filters-off="handleFiltersOff"
+      @sort="onSort"
+      @hide="onHide"
+      @filter="onFilter"
+      @filters-off="onFiltersOff"
       @select-all="handleSelectAll"
       @deselect-all="handleDeselectAll"
-      @reorder="handleReorder"
+      @reorder="onReorder"
       @resize="state.setColumnWidth"
-      @reset-width="(c: ColumnDef) => state.resetColumnWidth(c.path)"
+      @reset-width="onResetWidth"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)
@@ -133,5 +113,5 @@ function handleReorder(fromPath: string, toPath: string, position: ColumnReorder
         <span class="as-table-query-overlay-icon" aria-hidden="true" />
       </slot>
     </div>
-  </ListboxRoot>
+  </div>
 </template>

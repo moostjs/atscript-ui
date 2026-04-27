@@ -111,7 +111,7 @@ const sections: Section[] = [
         path: "/single-select-table",
         label: "Single-Select",
         kind: "SingleSelect",
-        desc: "select=\"single\" with side-panel showing the picked row",
+        desc: 'select="single" with side-panel showing the picked row',
       },
       {
         path: "/custom-slots-table",

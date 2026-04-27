@@ -19,8 +19,19 @@ export const asTableShortcuts = defineShortcuts({
     "[&_td]:": "px-$m py-$s border-b-1 whitespace-nowrap overflow-hidden text-ellipsis",
     "[&_tbody_tr]:": "transition-colors duration-100",
     "[&_tbody_tr:hover]:": "layer-1",
-    "[&_tbody_tr:is([data-highlighted=''])]:": "bg-current-hl/10",
+    // Active cursor (combobox `data-highlighted`, standalone `as-table-row-active`)
+    // uses `layer-1` — same opaque depth highlight as the orderable-list items
+    // in the table-config dialog. Selected state (combobox `data-state=checked`,
+    // standalone `aria-selected`) uses a translucent scope tint. The compound
+    // rule (both active AND selected) bumps to /30 so a selected row stays
+    // distinguishable when the keyboard cursor lands on it — without that the
+    // two states overlap and the active row vanishes into the selected tint.
+    "[&_tbody_tr:is([data-highlighted=''])]:": "layer-1",
+    "[&_tbody_tr:is(.as-table-row-active)]:": "layer-1",
     "[&_tbody_tr:is([data-state=checked])]:": "bg-current-hl/15",
+    "[&_tbody_tr:is([aria-selected=true])]:": "bg-current-hl/15",
+    "[&_tbody_tr:is([data-highlighted='']):is([data-state=checked])]:": "bg-current-hl/30",
+    "[&_tbody_tr:is(.as-table-row-active):is([aria-selected=true])]:": "bg-current-hl/30",
   },
   "as-table-stretch": "min-w-full",
   "as-table-sticky": {
@@ -62,6 +73,11 @@ export const asTableShortcuts = defineShortcuts({
     "[tr[data-state=checked]_&]:": "bg-current-hl border-current-hl",
     "[tr[aria-selected=true]_&]:": "bg-current-hl border-current-hl",
   },
+  // Active-row highlight class — applied to data rows in standalone /
+  // window-mode rendering. Mirrors the orderable-list `data-[highlighted]` style
+  // (opaque `layer-1`). The descendant rule on `.as-table` covers plain tables;
+  // this base shortcut covers any row that wears the class outside that wrapper.
+  "as-table-row-active": "layer-1",
   "as-table-checkbox-checked": "bg-current-hl border-current-hl",
   "as-table-checkbox-indeterminate": "bg-current-hl border-current-hl",
   "as-table-checkbox-tick": "i-as-check w-[0.9em] h-[0.9em] text-white",

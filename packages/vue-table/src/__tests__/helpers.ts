@@ -5,7 +5,7 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import { vi } from "vitest";
 import { createTableState, type QueryFn } from "../composables/use-table-state";
-import type { ReactiveTableState } from "../types";
+import type { MainActionRequest, ReactiveTableState } from "../types";
 import type { FilterExpr } from "@uniqu/core";
 import type { SortControl } from "@atscript/ui";
 
@@ -270,4 +270,51 @@ export function mountTableStateDeferred(opts: MountTableStateOptions = {}): {
     client,
     init: (def) => initRef(def ?? mockTableDef(columns)),
   };
+}
+
+/** Mount a stub component executing `fn()` in setup. */
+export function mountSetup<T>(fn: () => T): T {
+  let captured!: T;
+  mount(
+    defineComponent({
+      setup() {
+        captured = fn();
+        return () => h("div");
+      },
+    }),
+  );
+  return captured;
+}
+
+/** Build a `KeyboardEvent("keydown")` with sensible defaults. */
+export function kbd(opts: Partial<KeyboardEventInit> & { key: string }): KeyboardEvent {
+  return new KeyboardEvent("keydown", { cancelable: true, ...opts });
+}
+
+/** Capture all `requestMainAction` payloads against `state`; returns the captured array + a dispose. */
+export function captureMainActions(state: ReactiveTableState): {
+  captured: MainActionRequest[];
+  dispose: () => void;
+} {
+  const captured: MainActionRequest[] = [];
+  const dispose = state.registerMainActionListener((req) => captured.push(req));
+  return { captured, dispose };
+}
+
+/**
+ * Seed `windowCache`/`results`/`totalCount` from an in-memory rows array so
+ * tests can exercise active-row + selection behaviour without a real fetch.
+ */
+export function seedWindowCache(
+  state: ReactiveTableState,
+  rows: Record<string, unknown>[],
+  totalCount = rows.length,
+) {
+  if (rows.length > 0) {
+    const cache = new Map<number, Record<string, unknown>>();
+    rows.forEach((r, i) => cache.set(i, r));
+    state.windowCache.value = cache;
+    state.results.value = rows;
+  }
+  state.totalCount.value = totalCount;
 }

@@ -16,6 +16,7 @@ import {
 import { arraysEqual, sortersEqual } from "@atscript/ui-table";
 import type { ConfigTab } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
+import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
 import AsFieldsSelector from "../internal/as-fields-selector.vue";
 import AsSortersConfig from "../internal/as-sorters-config.vue";
 
@@ -72,13 +73,38 @@ function onApply() {
 function onCancel() {
   state.configDialogOpen.value = false;
 }
+
+// Focus the active tab's orderable-list search input. The composable wraps
+// this in `nextTick` + `requestAnimationFrame` so Reka's `<Presence>` has a
+// frame to mount the new TabsContent before we query.
+function focusActiveTabSearch() {
+  const search = document.querySelector<HTMLElement>(
+    ".as-config-dialog-content [role='tabpanel'][data-state='active'] .as-orderable-list-search",
+  );
+  search?.focus();
+}
+
+const { onDialogKeydown, focusActiveTabAfterMount } = useDialogTabKeyboard<ConfigTab>({
+  activeTab,
+  tabOrder: ["columns", "filters", "sorters"],
+  focusActiveTab: focusActiveTabSearch,
+});
+
+function onOpenAutoFocus(event: Event) {
+  event.preventDefault();
+  focusActiveTabAfterMount();
+}
 </script>
 
 <template>
   <DialogRoot v-model:open="isOpen">
     <DialogPortal>
       <DialogOverlay class="as-config-dialog-overlay" />
-      <DialogContent class="as-config-dialog-content">
+      <DialogContent
+        class="as-config-dialog-content"
+        @open-auto-focus="onOpenAutoFocus"
+        @keydown="onDialogKeydown"
+      >
         <div class="as-config-dialog-header">
           <DialogTitle class="as-config-dialog-title">Table Settings</DialogTitle>
           <DialogClose class="as-config-dialog-close" aria-label="Close">

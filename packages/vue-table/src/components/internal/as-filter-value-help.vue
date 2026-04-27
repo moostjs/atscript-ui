@@ -2,11 +2,18 @@
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
 import { resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
-import { filledFilterCount, isSimpleEq, type FilterCondition } from "@atscript/ui-table";
-import { ListboxRoot } from "reka-ui";
+import {
+  filledFilterCount,
+  isSimpleEq,
+  sameColumnSet,
+  type FilterCondition,
+} from "@atscript/ui-table";
+import type { Client } from "@atscript/db-client";
+import type { ReactiveTableState } from "../../types";
 import { useTable } from "../../composables/use-table";
+import { createStaticTableState, provideTableContext } from "../../composables/use-table-state";
+import { useTableNavBridge } from "../../composables/use-table-nav-bridge";
 import AsWindowTable from "../as-window-table.vue";
-import AsTableBase from "./as-table-base.vue";
 import AsFilterDialog from "../defaults/as-filter-dialog.vue";
 import AsConfigDialog from "../defaults/as-config-dialog.vue";
 import AsFilters from "../as-filters.vue";
@@ -20,43 +27,74 @@ const model = defineModel<FilterCondition[]>({ default: () => [] });
 const info = props.column.valueHelpInfo;
 const options = props.column.options;
 
-const selectedValues = computed<unknown[]>({
-  get: () => {
-    const values: unknown[] = [];
-    for (const c of model.value) {
-      if (isSimpleEq(c)) values.push(c.value[0]);
-    }
-    return values;
-  },
-  set: (values) => {
-    const next: FilterCondition[] = [];
-    for (const v of values) {
-      next.push({ type: "eq", value: [v as string | number | boolean] });
-    }
-    model.value = next;
-  },
-});
+function modelToValues(conds: FilterCondition[]): unknown[] {
+  const values: unknown[] = [];
+  for (const c of conds) if (isSimpleEq(c)) values.push(c.value[0]);
+  return values;
+}
+function valuesToModel(values: unknown[]): FilterCondition[] {
+  const next: FilterCondition[] = [];
+  for (const v of values) next.push({ type: "eq", value: [v as string | number | boolean] });
+  return next;
+}
+
+// Single backing ref. Initialized from `model` once, then handed to the
+// table state — `state.selectedRows === selectionRef` for the dialog's
+// lifetime, so user toggles flow into this ref directly. The reverse
+// direction (parent mutating `model` while the dialog is open) is not
+// honoured: the dialog is the only writer for this column's filter.
+const selectionRef = ref<unknown[]>(modelToValues(model.value));
 
 const resolved = shallowRef<ResolvedValueHelp | null>(null);
 
-// For FK: spin up our own table state and provide it to the subtree so
-// <AsTable> below uses it for columnNames, sorters, hide, etc.
-const innerState = info
-  ? useTable(info.url, {
-      limit: 100,
-      select: "multi",
-      // queryOnMount stays false: we trigger query() manually after clamping
-      // columnNames to dict paths so the bootstrap query doesn't go out with
-      // every table column, and so we don't fire two queries (auto-bootstrap
-      // + columnNames-watcher re-fire).
-      queryOnMount: false,
-      provideContext: true,
-      rowValueFn: (row) => row[info.targetField],
-      manageSelection: false,
-    })
-  : undefined;
+let innerState: ReactiveTableState | undefined;
 
-// The dialog only mounts when the user opens it, so resolve on mount.
+if (info) {
+  innerState = useTable(info.url, {
+    limit: 100,
+    select: "multi",
+    // queryOnMount stays false: we trigger query() manually after clamping
+    // columnNames to dict paths so the bootstrap query doesn't go out with
+    // every table column, and so we don't fire two queries (auto-bootstrap
+    // + columnNames-watcher re-fire).
+    queryOnMount: false,
+    provideContext: true,
+    rowValueFn: (row) => row[info.targetField],
+    selectionPersistence: "persist",
+    selectedRows: selectionRef,
+  });
+} else if (options) {
+  const enumRows: Record<string, unknown>[] = options.map((o) => ({
+    __value: o.key,
+    __label: o.label,
+  }));
+  const enumColumns: ColumnDef[] = [
+    {
+      path: "__label",
+      label: "Value",
+      type: "text",
+      sortable: true,
+      filterable: false,
+      visible: true,
+      order: 0,
+    },
+  ];
+  const { state } = createStaticTableState({
+    rows: enumRows,
+    columns: enumColumns,
+    searchPaths: ["__label"],
+    selection: {
+      mode: "multi",
+      rowValueFn: (row) => row.__value,
+      selectedRows: selectionRef,
+    },
+  });
+  innerState = state;
+  provideTableContext({ state, client: {} as Client, components: {} });
+}
+
+// FK only: resolve value-help meta on mount so column-clamp watcher knows
+// which fields to keep.
 if (info) {
   onMounted(() => {
     void resolveValueHelp(info.url)
@@ -70,62 +108,52 @@ if (info) {
   });
 }
 
-// Clamp visible columns to the value-help whitelist once BOTH:
+// FK: clamp visible columns to the value-help whitelist once BOTH:
 //   - the inner table has its TableDef loaded (so allColumns is populated)
 //   - resolveValueHelp has produced the dict field names
 // Then seed filterFields with all filterable dict columns. The columnNames
 // mutation, filterFields seeding, and explicit query() all coalesce into
 // one microtask-scheduled fetch (see use-table-state.ts scheduleQuery).
-if (innerState) {
+if (info && innerState) {
+  const fkState = innerState;
   let initialized = false;
   const stop = watch(
-    [() => innerState.tableDef.value, resolved],
+    [() => fkState.tableDef.value, resolved],
     ([def, r]) => {
       if (!def || !r || initialized) return;
       initialized = true;
       stop();
       const dictPaths = valueHelpDictPaths(r);
-      const dictCols = innerState.allColumns.value.filter((c) => dictPaths.has(c.path));
-      innerState.columnNames.value = dictCols.map((c) => c.path);
-      if (innerState.filterFields.value.length === 0) {
-        innerState.filterFields.value = dictCols.filter((c) => c.filterable).map((c) => c.path);
+      const dictCols = fkState.allColumns.value.filter((c) => dictPaths.has(c.path));
+      fkState.columnNames.value = dictCols.map((c) => c.path);
+      if (fkState.filterFields.value.length === 0) {
+        fkState.filterFields.value = dictCols.filter((c) => c.filterable).map((c) => c.path);
       }
-      innerState.query();
+      fkState.query();
     },
     { immediate: true },
   );
 }
 
-// Two-way sync between our model (FilterCondition[]) and state.selectedRows.
+// No `enterAction` override — the listener-driven fallback in
+// `state.handleNavKey` does the right thing: nobody registers `@main-action`
+// on `<AsWindowTable>` inside the dialog, so Enter falls through to
+// `toggleActiveSelection()` (mirroring Space).
+const navBridge = innerState ? useTableNavBridge(innerState) : undefined;
+
 if (innerState) {
-  watch(
-    selectedValues,
-    (v) => {
-      if (!arraysEq(v, innerState.selectedRows.value)) {
-        innerState.selectedRows.value = v;
-      }
-    },
-    { immediate: true, deep: true },
-  );
-  watch(
-    () => innerState.selectedRows.value,
-    (v) => {
-      if (!arraysEq(v, selectedValues.value)) {
-        selectedValues.value = v;
-      }
-    },
-    { deep: true },
-  );
+  watch(selectionRef, (v) => {
+    if (sameColumnSet(modelToValues(model.value), v)) return;
+    model.value = valuesToModel(v);
+  });
 }
 
-function arraysEq(a: unknown[], b: unknown[]): boolean {
-  if (a.length !== b.length) return false;
-  const sa = new Set(a);
-  for (const v of b) if (!sa.has(v)) return false;
-  return true;
-}
-
-const searchable = computed(() => !!innerState?.tableDef.value?.searchable);
+const searchable = computed(() => {
+  if (!innerState) return false;
+  // FK reads `searchable` off the loaded TableDef; enum's static TableDef
+  // sets `searchable: true` whenever `searchPaths` were provided.
+  return !!innerState.tableDef.value?.searchable;
+});
 
 const showFilters = ref(false);
 watch(
@@ -140,86 +168,11 @@ const hasFilterableFields = computed(
   () => !!innerState && innerState.filterFields.value.length > 0,
 );
 
-// Enum path: static rows, single synthetic column, no innerState.
-const enumRows: Record<string, unknown>[] = options
-  ? options.map((o) => ({ __value: o.key, __label: o.label }))
-  : [];
-
-const enumColumns: ColumnDef[] = [
-  {
-    path: "__label",
-    label: "Value",
-    type: "text",
-    sortable: true,
-    filterable: false,
-    visible: true,
-    order: 0,
-  },
-];
-
-const enumSort = ref<{ field: string; direction: "asc" | "desc" } | null>(null);
-const enumSorters = computed(() => (enumSort.value ? [enumSort.value] : []));
-
-function onEnumSort(column: ColumnDef, direction: "asc" | "desc" | null) {
-  enumSort.value = direction ? { field: column.path, direction } : null;
-}
-
-// Single source of truth: the FK (info) path reads/writes innerState.searchTerm
-// directly so AsTable's built-in "Clear filters" button propagates to the input
-// without a sync watch. The enum path has no innerState, so it falls back to a
-// local ref that drives filteredEnumRows.
-const localSearchTerm = ref("");
-const searchTerm = computed<string>({
-  get: () => (innerState ? innerState.searchTerm.value : localSearchTerm.value),
-  set: (value) => {
-    if (innerState) innerState.searchTerm.value = value;
-    else localSearchTerm.value = value;
-  },
-});
-
-function onSearchInput(event: Event) {
-  searchTerm.value = (event.target as HTMLInputElement).value;
-}
-
-const filteredEnumRows = computed(() => {
-  const term = searchTerm.value.trim().toLowerCase();
-  const base = term
-    ? enumRows.filter((r) =>
-        String(r.__label ?? "")
-          .toLowerCase()
-          .includes(term),
-      )
-    : enumRows;
-  if (!enumSort.value) return base;
-  const dir = enumSort.value.direction === "desc" ? -1 : 1;
-  return [...base].toSorted((a, b) => {
-    const av = String(a.__label ?? "").toLowerCase();
-    const bv = String(b.__label ?? "").toLowerCase();
-    return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
-  });
-});
-
-function enumRowValueFn(row: Record<string, unknown>): unknown {
-  return row.__value;
-}
-
-const totalCount = computed(() => (info ? (innerState?.totalCount.value ?? 0) : enumRows.length));
-
-function onSelectAll() {
-  selectedValues.value = filteredEnumRows.value.map(enumRowValueFn);
-}
-
-function onDeselectAll() {
-  selectedValues.value = [];
-}
+const totalCount = computed(() => innerState?.totalCount.value ?? 0);
 
 const hasActiveFilters = computed(() =>
   innerState ? filledFilterCount(innerState.filters.value) > 0 : false,
 );
-
-function clearSearch() {
-  searchTerm.value = "";
-}
 
 function clearAllFilters() {
   innerState?.resetFilters();
@@ -229,20 +182,25 @@ function clearAllFilters() {
 <template>
   <div class="as-filter-value-help">
     <div class="as-filter-value-help-toolbar">
-      <div v-if="!info || searchable" class="as-filter-value-help-search-wrap">
+      <div v-if="searchable" class="as-filter-value-help-search-wrap">
         <span class="as-filter-value-help-search-icon i-as-search" aria-hidden="true" />
         <input
-          :value="searchTerm"
+          :value="innerState?.searchTerm.value ?? ''"
           type="text"
           class="as-filter-value-help-search"
           placeholder="Search..."
           autocomplete="off"
-          @input="onSearchInput"
+          @input="
+            (e: Event) => {
+              if (innerState) innerState.searchTerm.value = (e.target as HTMLInputElement).value;
+            }
+          "
+          @keydown="(e: KeyboardEvent) => navBridge?.onKeydown(e)"
         />
       </div>
       <span class="as-filter-value-help-count">
         <button
-          v-if="searchable && hasFilterableFields"
+          v-if="info && searchable && hasFilterableFields"
           type="button"
           class="as-filter-value-help-filters-toggle"
           :class="{ 'as-filter-value-help-filters-toggle-active': showFilters }"
@@ -266,43 +224,25 @@ function clearAllFilters() {
         Clear all
       </button>
     </div>
-
-    <!-- FK: window-mode table for value-help dialogs — random-access scroll
-         on million-row dictionaries. The dialog body propagates a fixed
-         height down through TabsContent → as-filter-value-help → AsWindowTable's
-         outer-wrap, so the ResizeObserver inside <AsWindowTable> measures a
-         non-zero viewport height. Render the inner filter/config dialogs so
-         the inner table is fully functional (clicking "Filter" in its column
-         menu opens a nested filter dialog). -->
+    <!-- Same window-table chrome for both branches. The enum branch's
+         in-memory state was provided into context above via
+         `provideTableContext`, so `<AsWindowTable>`'s `useTableContext()`
+         resolves identically to the FK branch's `useTable(...)`-provided
+         state. -->
+    <AsWindowTable
+      v-if="innerState"
+      :column-menu="{
+        sort: true,
+        filters: !!info,
+        hide: false,
+      }"
+    />
+    <!-- FK only: nested filter / config dialogs for the inner table's
+         column menu. Enum's column menu has filters/hide disabled, so
+         the dialogs would never open. -->
     <template v-if="info">
-      <AsWindowTable :column-menu="{ sort: true, filters: true, hide: false }" />
       <AsFilterDialog />
       <AsConfigDialog />
     </template>
-
-    <!-- Enum: fixed single-column list. Sort enabled, hide disabled. -->
-    <ListboxRoot
-      v-else
-      v-model="selectedValues"
-      :multiple="true"
-      class="as-filter-value-help-table"
-    >
-      <AsTableBase
-        :columns="enumColumns"
-        :rows="filteredEnumRows"
-        :sorters="enumSorters"
-        :selected-rows="selectedValues"
-        select="multi"
-        :row-value-fn="enumRowValueFn"
-        :sticky-header="true"
-        :stretch="true"
-        :search-term="searchTerm"
-        :on-clear-filters="clearSearch"
-        :column-menu="{ sort: true, filters: false, hide: false }"
-        @sort="onEnumSort"
-        @select-all="onSelectAll"
-        @deselect-all="onDeselectAll"
-      />
-    </ListboxRoot>
   </div>
 </template>

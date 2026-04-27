@@ -1,16 +1,11 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
-import type { ColumnDef } from "@atscript/ui";
-import {
-  clampTopIndex,
-  filledFilterCount,
-  reorderColumnNames,
-  type ColumnReorderPosition,
-} from "@atscript/ui-table";
-import type { ColumnMenuConfig, SelectAllState } from "../../types";
+import { clampTopIndex, filledFilterCount } from "@atscript/ui-table";
+import type { ColumnMenuConfig, EnterAction, SelectAllState } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import { useRafBatch } from "../../composables/use-raf-batch";
+import { useTableColumnHandlers } from "../../composables/use-table-column-handlers";
 import { getCellValue } from "../../utils/get-cell-value";
 import AsTableCellValue from "../defaults/as-table-cell-value.vue";
 import AsTableHeader from "./as-table-header.vue";
@@ -30,6 +25,14 @@ const props = withDefaults(
     reorderable?: boolean;
     resizable?: boolean;
     columnMinWidth?: number;
+    /**
+     * Override Enter-key semantics inside the table. Default `"main-action"`
+     * (raises `@main-action` if the parent listens, otherwise toggles
+     * selection). Value-help dialogs pass `"toggle-select"` so Enter mirrors
+     * Space — pick/unpick the active row into the chip model — regardless of
+     * whether anyone listens for `main-action`.
+     */
+    enterAction?: EnterAction;
   }>(),
   {
     reorderable: true,
@@ -65,8 +68,6 @@ const selectAllState = computed<SelectAllState | undefined>(() => {
   return state.selectedRows.value.length === 0 ? "none" : "some";
 });
 
-// Precomputed once per (columns, slots) change to avoid `slots[\`cell-${path}\`]`
-// allocation per row × per render.
 const cellSlotFlags = computed(() => {
   const out: Record<string, boolean> = {};
   for (const c of state.columns.value) out[c.path] = !!slots[`cell-${c.path}`];
@@ -82,15 +83,28 @@ const visibleSlots = computed(() => {
   const count = Math.min(viewport, Math.max(total, 0));
   const top = state.topIndex.value;
   const rowValueFn = state.rowValueFn;
-  const out: { s: number; row: Row | undefined; pk: unknown; errored: boolean }[] = [];
+  const hasSelection = state.selectionMode !== "none";
+  const selectedSet = hasSelection ? new Set(state.selectedRows.value) : null;
+  const out: {
+    s: number;
+    row: Row | undefined;
+    pk: unknown;
+    errored: boolean;
+    selected: boolean;
+    ariaSelected: "true" | "false" | undefined;
+  }[] = [];
   for (let s = 0; s < count; s++) {
     const abs = top + s;
     const row = state.dataAt(abs);
+    const pk = row === undefined ? undefined : rowValueFn(row);
+    const selected = selectedSet !== null && row !== undefined && selectedSet.has(pk);
     out.push({
       s,
       row,
-      pk: row === undefined ? undefined : rowValueFn(row),
+      pk,
       errored: row === undefined && state.errorAt(abs) !== null,
+      selected,
+      ariaSelected: hasSelection ? (selected ? "true" : "false") : undefined,
     });
   }
   return out;
@@ -108,12 +122,19 @@ const topIndexBatch = useRafBatch<number>((next) => {
 });
 
 function scheduleTopIndex(next: number) {
+  if (next === (pendingTopIndex ?? state.topIndex.value)) return;
   pendingTopIndex = next;
   topIndexBatch.schedule(next);
 }
 
+// Window mode: `clampActive` caps by `totalCount` (rows load on demand)
+// instead of `results.length` (which only reflects the materialized island).
+const prevNavMode = state.navMode.value;
+state.navMode.value = "window";
+
 onBeforeUnmount(() => {
   state.viewportRowCount.value = 0;
+  state.navMode.value = prevNavMode;
 });
 
 function onWheel(event: WheelEvent) {
@@ -124,31 +145,26 @@ function onWheel(event: WheelEvent) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  let next: number | null = null;
-  switch (event.key) {
-    case "ArrowDown":
-      next = state.topIndex.value + 1;
-      break;
-    case "ArrowUp":
-      next = state.topIndex.value - 1;
-      break;
-    case "PageDown":
-      next = state.topIndex.value + state.viewportRowCount.value;
-      break;
-    case "PageUp":
-      next = state.topIndex.value - state.viewportRowCount.value;
-      break;
-    case "Home":
-      next = 0;
-      break;
-    case "End":
-      next = state.totalCount.value;
-      break;
-  }
-  if (next === null) return;
-  event.preventDefault();
-  scheduleTopIndex(clamp(next));
+  state.handleNavKey(event, { enterAction: props.enterAction });
 }
+
+// Keep the active row inside `[topIndex, topIndex + viewportRowCount)` so it
+// stays in the DOM — `aria-activedescendant` requires the target to be
+// rendered.
+watch(
+  () => state.activeIndex.value,
+  (idx) => {
+    if (idx < 0) return;
+    const top = pendingTopIndex ?? state.topIndex.value;
+    const viewport = state.viewportRowCount.value;
+    if (viewport <= 0) return;
+    if (idx < top) {
+      scheduleTopIndex(clamp(idx));
+    } else if (idx >= top + viewport) {
+      scheduleTopIndex(clamp(idx - viewport + 1));
+    }
+  },
+);
 
 let touchStartY: number | null = null;
 let touchStartTopIndex = 0;
@@ -173,26 +189,22 @@ function onTouchEnd() {
   touchStartY = null;
 }
 
-const selectedSet = computed(() => new Set(state.selectedRows.value));
-function isPkSelected(pk: unknown): boolean {
-  return selectedSet.value.has(pk);
-}
-
-function onRowClick(row: Row, event: MouseEvent) {
+function onRowClick(row: Row, event: MouseEvent, absIdx: number) {
   emit("row-click", row, event);
-  if (state.selectionMode === "none") return;
-  const pk = state.rowValueFn(row);
-  if (state.selectionMode === "single") {
-    state.selectedRows.value = [pk];
+  state.setActive(absIdx);
+  if (state.selectionMode === "none") {
+    state.requestMainAction(event);
     return;
   }
-  const idx = state.selectedRows.value.indexOf(pk);
-  if (idx === -1) state.selectedRows.value = [...state.selectedRows.value, pk];
-  else state.selectedRows.value = state.selectedRows.value.filter((v) => v !== pk);
+  state.toggleActiveSelection();
 }
 
-function onRowDblClick(row: Row, event: MouseEvent) {
+function onRowDblClick(row: Row, event: MouseEvent, absIdx: number) {
   emit("row-dblclick", row, event);
+  if (state.selectionMode === "single" || state.selectionMode === "multi") {
+    state.setActive(absIdx);
+    state.requestMainAction(event);
+  }
 }
 
 // 'some' deselects, 'none' selects what's currently in windowCache. 'all' is
@@ -207,35 +219,8 @@ function onSelectAllToggle(headerState: SelectAllState) {
   }
 }
 
-function onSort(column: ColumnDef, direction: "asc" | "desc" | null) {
-  const rest = state.sorters.value.filter((s) => s.field !== column.path);
-  state.sorters.value = direction === null ? rest : [...rest, { field: column.path, direction }];
-}
-
-function onHide(column: ColumnDef) {
-  state.columnNames.value = state.columnNames.value.filter((n) => n !== column.path);
-}
-
-function onFilter(column: ColumnDef) {
-  state.openFilterDialog(column);
-}
-
-function onFiltersOff(column: ColumnDef) {
-  state.removeFieldFilter(column.path);
-}
-
-function onResetWidth(column: ColumnDef) {
-  state.resetColumnWidth(column.path);
-}
-
-function onReorder(fromPath: string, toPath: string, position: ColumnReorderPosition) {
-  state.columnNames.value = reorderColumnNames(state.columnNames.value, fromPath, toPath, position);
-}
-
-function onClearFilters() {
-  state.resetFilters();
-  if (state.searchTerm.value) state.searchTerm.value = "";
-}
+const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClearFilters } =
+  useTableColumnHandlers(state);
 
 // ── Viewport measurement ───────────────────────────────────────────────────
 //
@@ -303,18 +288,25 @@ onMounted(() => {
   void nextTick(() => recompute());
 });
 
-// Recompute on signals that can change row count or chrome height without
-// changing the wrapper's own size — row-height prop, column visibility
-// (thead height), and total count (max scroll). The two ResizeObservers
-// above already cover layout-driven causes (column widths changing
-// scrollbar visibility, pool reflow on first paint).
-watch(() => [props.rowHeight, state.columns.value, state.totalCount.value], scheduleRecompute);
+// Row-height prop and column visibility change chrome height without
+// resizing the wrapper itself — measure those explicitly. ResizeObservers
+// already cover layout-driven causes (column widths flipping scrollbar
+// visibility, pool reflow on first paint). `totalCount` is intentionally
+// NOT a trigger: it fires on every block settlement during scroll, and
+// each fire forces layout reads (offsetHeight/clientHeight) without
+// affecting any geometry that recompute depends on.
+watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
 </script>
 
 <template>
   <div class="as-window-table-scroll-area">
     <div ref="wrapperRef" class="as-window-table-wrapper">
-      <table class="as-table as-table-stretch">
+      <table
+        class="as-table as-table-stretch"
+        role="grid"
+        :aria-rowcount="state.totalCount.value + 1"
+        :aria-multiselectable="state.selectionMode === 'multi' ? 'true' : undefined"
+      >
         <AsTableHeader
           :columns="state.columns.value"
           :sorters="state.sorters.value"
@@ -328,6 +320,7 @@ watch(() => [props.rowHeight, state.columns.value, state.totalCount.value], sche
           :select-all-state="selectAllState"
           :with-filler="true"
           :enable-auto-fit="true"
+          :aria-rowindex="1"
           @sort="onSort"
           @hide="onHide"
           @filter="onFilter"
@@ -345,6 +338,9 @@ watch(() => [props.rowHeight, state.columns.value, state.totalCount.value], sche
           ref="poolRef"
           class="as-window-row-pool"
           tabindex="0"
+          :aria-activedescendant="
+            state.activeIndex.value >= 0 ? state.rowId(state.activeIndex.value) : ''
+          "
           @wheel="onWheel"
           @keydown="onKeydown"
           @touchstart="onTouchStart"
@@ -354,29 +350,31 @@ watch(() => [props.rowHeight, state.columns.value, state.totalCount.value], sche
           <template v-for="slot in visibleSlots" :key="`slot-${slot.s}`">
             <tr
               v-if="slot.row !== undefined"
+              :id="state.rowId(state.topIndex.value + slot.s)"
               class="as-window-data-row"
+              :class="{
+                'as-table-row-active': state.activeIndex.value === state.topIndex.value + slot.s,
+              }"
+              role="row"
+              :aria-rowindex="state.topIndex.value + slot.s + 2"
+              :aria-selected="slot.ariaSelected"
               :style="rowStyle"
-              @click="onRowClick(slot.row as Row, $event)"
-              @dblclick="onRowDblClick(slot.row as Row, $event)"
+              @click="onRowClick(slot.row as Row, $event, state.topIndex.value + slot.s)"
+              @dblclick="onRowDblClick(slot.row as Row, $event, state.topIndex.value + slot.s)"
             >
-              <td v-if="hasValue" class="as-td-select">
+              <td v-if="hasValue" class="as-td-select" role="gridcell">
                 <span
-                  v-if="state.selectionMode === 'multi'"
                   class="as-table-checkbox"
                   role="checkbox"
                   tabindex="0"
-                  :class="{ 'as-table-checkbox-checked': isPkSelected(slot.pk) }"
-                  :aria-checked="isPkSelected(slot.pk) ? 'true' : 'false'"
+                  :class="{ 'as-table-checkbox-checked': slot.selected }"
+                  :aria-checked="slot.selected ? 'true' : 'false'"
                 >
-                  <span
-                    v-if="isPkSelected(slot.pk)"
-                    class="as-table-checkbox-tick"
-                    aria-hidden="true"
-                  />
+                  <span v-if="slot.selected" class="as-table-checkbox-tick" aria-hidden="true" />
                 </span>
               </td>
               <template v-for="col in state.columns.value" :key="col.path">
-                <td v-if="cellSlotFlags[col.path]">
+                <td v-if="cellSlotFlags[col.path]" role="gridcell">
                   <slot
                     :name="`cell-${col.path}`"
                     :row="slot.row"
@@ -386,7 +384,7 @@ watch(() => [props.rowHeight, state.columns.value, state.totalCount.value], sche
                 </td>
                 <AsTableCellValue v-else :row="slot.row" :column="col" />
               </template>
-              <td class="as-td-filler" />
+              <td class="as-td-filler" role="gridcell" />
             </tr>
             <AsWindowSkeletonRow
               v-else

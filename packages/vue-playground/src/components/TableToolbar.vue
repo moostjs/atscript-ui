@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableDef } from "@atscript/ui";
-import { useTableContext } from "@atscript/vue-table";
+import { useTableContext, useTableNavBridge } from "@atscript/vue-table";
 
 const props = defineProps<{
   title: string;
@@ -11,6 +11,7 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+const navBridge = useTableNavBridge();
 
 function onSearchInput(e: Event) {
   const value = (e.target as HTMLInputElement).value;
@@ -66,6 +67,7 @@ void props;
         placeholder="Search across all columns…"
         :value="state.searchTerm.value"
         @input="onSearchInput"
+        @keydown="navBridge.onKeydown"
       />
     </div>
     <div v-else class="as-page-search" />

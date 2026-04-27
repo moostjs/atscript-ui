@@ -366,6 +366,14 @@ function onEnter() {
   state.setFieldFilter(props.column.path, [...filled, parsed]);
   searchTerm.value = "";
 }
+
+// F4 on the search input opens the same filter dialog the value-help
+// button does. The button itself is `tabindex="-1"` so Tab moves cleanly
+// from one filter input to the next (same pattern as SAP UI5 ValueHelp).
+function onF4(event: KeyboardEvent) {
+  event.preventDefault();
+  openFilterDialog();
+}
 </script>
 
 <template>
@@ -405,6 +413,7 @@ function onEnter() {
                 class="as-filter-field-search"
                 @input="onSearchInput"
                 @keydown.backspace="onBackspace"
+                @keydown.f4="onF4"
                 @focus="onInputFocus"
               />
             </ComboboxInput>
@@ -421,7 +430,7 @@ function onEnter() {
           <ComboboxViewport>
             <div class="as-filter-field-dropdown-body">
               <AsTableBase
-                as-combobox
+                render-mode="combobox"
                 :row-value-fn="rowValueFn"
                 :columns="dropdownColumns"
                 :rows="dropdownRows"
@@ -451,6 +460,7 @@ function onEnter() {
             <button v-if="chips.length > 0" type="button" @click="clearAll">Reset</button>
             <button v-if="seeAllCount > 10" type="button" @click="openFilterDialog">
               See All ({{ seeAllCount }})
+              <span class="as-kbd">F4</span>
             </button>
           </div>
         </ComboboxContent>
@@ -478,14 +488,20 @@ function onEnter() {
           @input="searchTerm = ($event.target as HTMLInputElement).value"
           @keydown.backspace="onBackspace"
           @keydown.enter.prevent="onEnter"
+          @keydown.f4="onF4"
           @focus="scrollChipsToEnd()"
         />
       </div>
 
+      <!-- `tabindex="-1"`: don't compete with the field's own input for tab
+           order — Tab moves cleanly between filter fields, F4 on the input
+           opens this dialog. Button stays click-target for mouse users. -->
       <button
         type="button"
         class="as-filter-field-f4"
-        aria-label="Open filter dialog"
+        tabindex="-1"
+        aria-label="Open filter dialog (F4)"
+        title="Open filter dialog (F4)"
         @click="openFilterDialog"
       >
         <span class="i-as-value-help" aria-hidden="true" />
