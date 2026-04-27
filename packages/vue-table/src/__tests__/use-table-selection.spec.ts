@@ -4,6 +4,7 @@ import { defineComponent, h, nextTick } from "vue";
 import { createTableState } from "../composables/use-table-state";
 import { useTableSelection } from "../composables/use-table-selection";
 import type { ReactiveTableState } from "../types";
+import { stubClient } from "./helpers";
 
 function setup(mode: "none" | "single" | "multi", keepAfterRefresh = false) {
   let state!: ReactiveTableState;
@@ -12,8 +13,9 @@ function setup(mode: "none" | "single" | "multi", keepAfterRefresh = false) {
     defineComponent({
       setup() {
         ({ state } = createTableState({
-          select: mode,
-          rowValueFn: (r) => r.id,
+          client: stubClient(),
+          query: { queryOnMount: false },
+          selection: { mode, rowValueFn: (r) => r.id },
         }));
         useTableSelection(state, { keepAfterRefresh });
         return () => h("div");
@@ -71,5 +73,52 @@ describe("useTableSelection", () => {
     await nextTick();
 
     expect(state.selectedRows.value).toEqual([20, 30]);
+  });
+
+  describe("results-replacement vs results-extension", () => {
+    it("forward extension does NOT trim selection", async () => {
+      const state = setup("multi", false);
+      const original = [{ id: 1 }, { id: 2 }];
+      state.results.value = original;
+      state.resultsStart.value = 0;
+      await nextTick();
+      state.selectedRows.value = [1, 2];
+
+      // Forward extension: same first-row reference, same resultsStart, length grows.
+      state.results.value = [...original, { id: 3 }];
+      await nextTick();
+      expect(state.selectedRows.value).toEqual([1, 2]);
+    });
+
+    it("backward extension does NOT trim selection (regression)", async () => {
+      const state = setup("multi", false);
+      const original = [{ id: 200 }, { id: 201 }];
+      state.results.value = original;
+      state.resultsStart.value = 200;
+      await nextTick();
+      state.selectedRows.value = [200, 201];
+
+      // Backward extension: prepend rows AND decrement resultsStart by delta.
+      // Last-row reference stays identical; resultsStart shifts by -delta.
+      const prepended = [{ id: 198 }, { id: 199 }, ...original];
+      state.results.value = prepended;
+      state.resultsStart.value = 198;
+      await nextTick();
+      // Selection must be untouched.
+      expect(state.selectedRows.value).toEqual([200, 201]);
+    });
+
+    it("replacement DOES clear selection (default keepAfterRefresh=false)", async () => {
+      const state = setup("multi", false);
+      state.results.value = [{ id: 1 }, { id: 2 }];
+      state.resultsStart.value = 0;
+      await nextTick();
+      state.selectedRows.value = [1, 2];
+
+      // Replacement: first-row reference changes (and resultsStart same).
+      state.results.value = [{ id: 100 }, { id: 101 }];
+      await nextTick();
+      expect(state.selectedRows.value).toEqual([]);
+    });
   });
 });

@@ -1,21 +1,27 @@
 import type { ColumnDef, MetaResponse, TableDef } from "@atscript/ui";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import type { Client } from "@atscript/db-client";
+import { mount } from "@vue/test-utils";
+import { defineComponent, h } from "vue";
 import { vi } from "vitest";
+import { createTableState, type QueryFn } from "../composables/use-table-state";
+import type { ReactiveTableState } from "../types";
+import type { FilterExpr } from "@uniqu/core";
+import type { SortControl } from "@atscript/ui";
 
 /**
  * Override `getBoundingClientRect()` on a single element so happy-dom returns
  * deterministic geometry for drag-position math.
  */
-export function stubRect(el: Element, left: number, width: number) {
+export function stubRect(el: Element, left: number, width: number, height = 24) {
   el.getBoundingClientRect = () =>
     ({
       left,
       width,
       top: 0,
       right: left + width,
-      bottom: 24,
-      height: 24,
+      bottom: height,
+      height,
       x: left,
       y: 0,
       toJSON: () => ({}),
@@ -121,6 +127,18 @@ export function createMockClient(opts: {
   };
 }
 
+/**
+ * Minimal stub Client for tests that don't exercise fetch behaviour. Calling
+ * `pages` returns an empty page; tests that need real fetch behaviour should
+ * use `createMockClient` instead.
+ */
+export function stubClient(): Client {
+  return {
+    meta: () => Promise.resolve({} as never),
+    pages: () => Promise.resolve({ data: [], count: 0, page: 1, itemsPerPage: 50, pages: 1 }),
+  } as unknown as Client;
+}
+
 /** Create a minimal ColumnDef for testing. */
 export function mockColumn(path: string, overrides?: Partial<ColumnDef>): ColumnDef {
   return {
@@ -135,6 +153,11 @@ export function mockColumn(path: string, overrides?: Partial<ColumnDef>): Column
   };
 }
 
+/** Generate `count` consecutive `{ id }` rows starting at `start`. */
+export function rows(start: number, count: number): Record<string, unknown>[] {
+  return Array.from({ length: count }, (_, i) => ({ id: start + i }));
+}
+
 /** Create a minimal TableDef for testing. */
 export function mockTableDef(columns: ColumnDef[]): TableDef {
   return {
@@ -146,5 +169,105 @@ export function mockTableDef(columns: ColumnDef[]): TableDef {
     vectorSearchable: false,
     searchIndexes: [],
     relations: [],
+  };
+}
+
+type MountTableStateOptions = {
+  data?: Record<string, unknown>[];
+  count?: number;
+  pages?: ReturnType<typeof vi.fn>;
+  client?: Client;
+  columns?: ColumnDef[];
+  queryOnMount?: boolean;
+  blockSize?: number;
+  blockQuery?: boolean;
+  forceFilters?: FilterExpr;
+  forceSorters?: SortControl[];
+  queryFn?: QueryFn;
+};
+
+function buildClient(
+  opts: MountTableStateOptions = {},
+  defaults: { data: Record<string, unknown>[]; count: number },
+) {
+  const cols = opts.columns ?? [mockColumn("name")];
+  const fields = cols.map((c) => c.path);
+  const mock = createMockClient({
+    meta: createMockMeta(fields),
+    data: opts.data ?? defaults.data,
+    count: opts.count ?? defaults.count,
+  });
+  if (opts.pages) mock.client.pages = opts.pages as never;
+  return { ...mock, columns: cols };
+}
+
+function mountWith(
+  opts: MountTableStateOptions,
+  client: Client,
+  initFn: (internals: { init: (def: TableDef) => void }) => void,
+): ReactiveTableState {
+  let state!: ReactiveTableState;
+  mount(
+    defineComponent({
+      setup() {
+        const { state: s, internals } = createTableState({
+          client: opts.client ?? client,
+          query: {
+            queryOnMount: opts.queryOnMount,
+            blockQuery: opts.blockQuery,
+            forceFilters: opts.forceFilters,
+            forceSorters: opts.forceSorters,
+            fn: opts.queryFn,
+          },
+          window: { blockSize: opts.blockSize },
+        });
+        state = s;
+        initFn(internals);
+        return () => h("div");
+      },
+    }),
+  );
+  return state;
+}
+
+/**
+ * Mount `createTableState()` inside a stub component, auto-init with
+ * `mockTableDef(columns)`. Default `queryOnMount: false` so the test can call
+ * triggers explicitly without racing the bootstrap watcher.
+ */
+export function mountTableState(opts: MountTableStateOptions = {}): {
+  state: ReactiveTableState;
+  pagesFn: ReturnType<typeof vi.fn>;
+  client: Client;
+} {
+  const { client, pagesFn, columns } = buildClient(opts, {
+    data: [{ id: 1 }, { id: 2 }],
+    count: 10,
+  });
+  const effective = { ...opts, queryOnMount: opts.queryOnMount ?? false };
+  const state = mountWith(effective, client, ({ init }) => init(mockTableDef(columns)));
+  return { state, pagesFn, client };
+}
+
+/**
+ * Like `mountTableState` but does NOT call `internals.init()`. Returns an
+ * `init()` callback so the test can assert pre-init state, then trigger init.
+ */
+export function mountTableStateDeferred(opts: MountTableStateOptions = {}): {
+  state: ReactiveTableState;
+  pagesFn: ReturnType<typeof vi.fn>;
+  client: Client;
+  init: (def?: TableDef) => void;
+} {
+  const { client, pagesFn, columns } = buildClient(opts, { data: [], count: 0 });
+  let initRef!: (def: TableDef) => void;
+  const state = mountWith(opts, client, ({ init }) => {
+    initRef = init;
+  });
+  return {
+    state,
+    pagesFn,
+    client,
+    init: (def) => initRef(def ?? mockTableDef(columns)),
   };
 }

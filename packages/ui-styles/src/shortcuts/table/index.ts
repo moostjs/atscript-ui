@@ -9,6 +9,9 @@ import { asOrderableListShortcuts } from "./as-orderable-list";
 import { asPageShortcuts } from "./as-page";
 import { asSorterShortcuts } from "./as-sorter";
 import { asTableShortcuts } from "./as-table";
+import { asWindowScrollbarShortcuts } from "./as-window-scrollbar";
+import { asWindowSkeletonShortcuts } from "./as-window-skeleton";
+import { asWindowTableShortcuts } from "./as-window-table";
 
 export {
   asColumnMenuShortcuts,
@@ -21,6 +24,9 @@ export {
   asPageShortcuts,
   asSorterShortcuts,
   asTableShortcuts,
+  asWindowScrollbarShortcuts,
+  asWindowSkeletonShortcuts,
+  asWindowTableShortcuts,
 };
 
 export const tableShortcuts = mergeVunorShortcuts([
@@ -34,4 +40,7 @@ export const tableShortcuts = mergeVunorShortcuts([
   asConfigTabShortcuts,
   asOrderableListShortcuts,
   asSorterShortcuts,
+  asWindowTableShortcuts,
+  asWindowSkeletonShortcuts,
+  asWindowScrollbarShortcuts,
 ]);

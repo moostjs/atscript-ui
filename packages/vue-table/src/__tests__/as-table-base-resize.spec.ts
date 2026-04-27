@@ -45,7 +45,7 @@ describe("<AsTableBase> column drag-resize", () => {
     expect(thB.style.width).toBe("240px");
   });
 
-  it("emits live resize widths during pointermove with px shape", () => {
+  it("emits the final resize width with px shape after pointerup", () => {
     const wrapper = mount(AsTableBase, {
       props: { columns: cols, rows, sorters: [], stretch: false },
     });
@@ -53,6 +53,7 @@ describe("<AsTableBase> column drag-resize", () => {
     stubRect(th, 100, 200);
     const handle = handleOf(th);
 
+    // Intermediate pointermoves are rAF-coalesced; pointerup flushes the latest.
     handle.dispatchEvent(pointerEvent("pointerdown", { clientX: 300 }));
     handle.dispatchEvent(pointerEvent("pointermove", { clientX: 350 }));
     handle.dispatchEvent(pointerEvent("pointermove", { clientX: 380 }));
@@ -60,9 +61,8 @@ describe("<AsTableBase> column drag-resize", () => {
 
     const emits = wrapper.emitted("resize");
     expect(emits).toBeDefined();
-    expect(emits!.length).toBe(2);
-    expect(emits![0]).toEqual(["b", "250px"]);
-    expect(emits![1]).toEqual(["b", "280px"]);
+    expect(emits!.length).toBe(1);
+    expect(emits![0]).toEqual(["b", "280px"]);
   });
 
   it("clamps the emitted width at columnMinWidth (default 48)", () => {

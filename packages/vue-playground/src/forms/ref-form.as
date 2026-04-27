@@ -13,11 +13,13 @@ export interface OrderForm {
     @meta.label 'Customer'
     @ui.placeholder 'Search customers...'
     @ui.order 2
+    @db.rel.FK
     customerId?: Customer.id
 
     @meta.label 'Product'
     @ui.placeholder 'Search products...'
     @ui.order 3
+    @db.rel.FK
     productId?: Product.id
 
     @meta.label 'Quantity'

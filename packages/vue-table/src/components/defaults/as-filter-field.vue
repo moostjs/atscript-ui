@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, useId, watch } from "vue";
+import { until } from "@vueuse/core";
 import type { ColumnDef, ResolvedValueHelp, ValueHelpInfo } from "@atscript/ui";
 import { ValueHelpClient, getMetaEntry, resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
 import {
@@ -221,8 +222,23 @@ const dropdownOpen = ref(false);
 if (innerState) {
   watch(
     dropdownOpen,
-    (open) => {
-      if (open) innerState!.query();
+    async (open) => {
+      if (!open) return;
+      const r = await ensureResolved();
+      // Wait for tableDef so allColumns is populated before we clamp columnNames.
+      await until(() => innerState!.tableDef.value).toBeTruthy();
+      // Clamp $select to the value-help dict paths — same shape the dialog
+      // uses. Without this the dropdown's query carries every table column.
+      // The columnNames watcher and the explicit query() coalesce into one
+      // microtask-scheduled fetch (see use-table-state.ts scheduleQuery).
+      if (r) {
+        const dictPaths = valueHelpDictPaths(r);
+        const dictCols = innerState!.allColumns.value.filter((c) => dictPaths.has(c.path));
+        if (dictCols.length > 0) {
+          innerState!.columnNames.value = dictCols.map((c) => c.path);
+        }
+      }
+      innerState!.query();
     },
     { once: true },
   );

@@ -65,6 +65,11 @@
       "import": "./dist/as-table-root.mjs",
       "require": "./dist/as-table-root.cjs"
     },
+    "./as-window-table": {
+      "types": "./dist/as-window-table.d.mts",
+      "import": "./dist/as-window-table.mjs",
+      "require": "./dist/as-window-table.cjs"
+    },
     "./styles": {
       "types": "./styles.d.ts",
       "default": "./dist/style.css"

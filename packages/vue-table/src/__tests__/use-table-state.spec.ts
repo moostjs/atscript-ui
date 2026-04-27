@@ -8,7 +8,7 @@ import {
   type TableStateInternals,
 } from "../composables/use-table-state";
 import type { ReactiveTableState } from "../types";
-import { createMockMeta, createMockClient, mockColumn, mockTableDef } from "./helpers";
+import { createMockMeta, createMockClient, mockColumn, mockTableDef, stubClient } from "./helpers";
 
 describe("createTableState", () => {
   it("creates state with default values", () => {
@@ -16,7 +16,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -45,7 +45,11 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState({ limit: 25 }));
+          ({ state } = createTableState({
+            client: stubClient(),
+            query: { queryOnMount: false },
+            limit: 25,
+          }));
           return () => h("div");
         },
       }),
@@ -59,7 +63,10 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state, internals } = createTableState());
+          ({ state, internals } = createTableState({
+            client: stubClient(),
+            query: { queryOnMount: false },
+          }));
           return () => h("div");
         },
       }),
@@ -72,8 +79,9 @@ describe("createTableState", () => {
 
     expect(state.tableDef.value).toBe(def);
     expect(state.allColumns.value).toEqual(cols);
-    // columns is empty until columnNames is set (done by useTable)
-    expect(state.columns.value).toEqual([]);
+    // init() seeds columnNames from getVisibleColumns(def) — visible cols only.
+    expect(state.columnNames.value).toEqual(["name", "age"]);
+    expect(state.columns.value).toEqual([cols[0], cols[1]]);
   });
 
   it("columns computed resolves from columnNames + allColumns", () => {
@@ -82,7 +90,10 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state, internals } = createTableState());
+          ({ state, internals } = createTableState({
+            client: stubClient(),
+            query: { queryOnMount: false },
+          }));
           return () => h("div");
         },
       }),
@@ -108,7 +119,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -130,7 +141,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -151,7 +162,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -171,7 +182,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -190,7 +201,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -209,7 +220,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -224,7 +235,7 @@ describe("createTableState", () => {
     mount(
       defineComponent({
         setup() {
-          ({ state } = createTableState());
+          ({ state } = createTableState({ client: stubClient(), query: { queryOnMount: false } }));
           return () => h("div");
         },
       }),
@@ -250,7 +261,10 @@ describe("provideTableContext / useTableContext", () => {
     mount(
       defineComponent({
         setup() {
-          const { state } = createTableState();
+          const { state } = createTableState({
+            client: stubClient(),
+            query: { queryOnMount: false },
+          });
           const { client } = createMockClient({ meta: createMockMeta([]) });
           provideTableContext({ state, client, components: {} });
           return () => h(Child);

@@ -28,6 +28,10 @@ const props = withDefaults(
     select?: SelectionMode;
     rowValueFn?: (row: Record<string, unknown>) => unknown;
     keepSelectedAfterRefresh?: boolean;
+    /** Page-alignment unit for `loadRange` and `queryNext` extension. */
+    blockSize?: number;
+    /** Debounce window for the topIndex/viewportRowCount watcher. */
+    dragReleaseDebounceMs?: number;
   }>(),
   {
     queryOnMount: true,
@@ -53,6 +57,8 @@ const state = useTable(props.url, {
   queryFn: props.queryFn,
   queryOnMount: props.queryOnMount,
   blockQuery: props.blockQuery,
+  blockSize: props.blockSize,
+  dragReleaseDebounceMs: props.dragReleaseDebounceMs,
   clientFactory: props.clientFactory,
   components: props.components,
   filterFields,
@@ -102,7 +108,6 @@ const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConf
     :remove-filter-field="state.removeFilterField"
   />
 
-  <!-- Dialogs rendered outside user layout (like not-sap SmartTableRoot) -->
   <component :is="FilterDialogComp" />
   <component :is="ConfigDialogComp" />
 </template>

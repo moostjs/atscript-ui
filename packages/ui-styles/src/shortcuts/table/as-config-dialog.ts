@@ -3,7 +3,9 @@ import { dialogBase, dialogOverlay } from "./_shared";
 
 export const asConfigDialogShortcuts = defineShortcuts({
   "as-config-dialog-overlay": dialogOverlay,
-  "as-config-dialog-content": `${dialogBase} w-[640px] max-w-[92vw] min-h-[480px] max-h-[85vh]`,
+  // Desktop: fixed height so tab switches don't resize. Mobile: full-screen
+  // via `dialogBase`.
+  "as-config-dialog-content": `${dialogBase} sm:w-[640px] sm:max-w-[92vw] sm:h-[clamp(500px,70vh,600px)]`,
   "as-config-dialog-header": "flex items-center gap-$m px-$l py-$m border-b-1 flex-shrink-0",
   "as-config-dialog-title": "m-0 text-body-l font-600 whitespace-nowrap tracking-[-0.01em]",
   "as-config-dialog-close": {

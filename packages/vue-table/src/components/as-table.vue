@@ -85,18 +85,6 @@ function handleClearFilters() {
 function handleReorder(fromPath: string, toPath: string, position: ColumnReorderPosition) {
   state.columnNames.value = reorderColumnNames(state.columnNames.value, fromPath, toPath, position);
 }
-
-// Skip identical writes — sub-pixel pointermove can round to the same px string.
-function setColumnWidth(path: string, width: string) {
-  const entry = state.columnWidths.value[path];
-  if (!entry || entry.w === width) return;
-  entry.w = width;
-}
-
-function handleResetWidth(column: ColumnDef) {
-  const entry = state.columnWidths.value[column.path];
-  if (entry) setColumnWidth(column.path, entry.d);
-}
 </script>
 
 <template>
@@ -129,8 +117,8 @@ function handleResetWidth(column: ColumnDef) {
       @select-all="handleSelectAll"
       @deselect-all="handleDeselectAll"
       @reorder="handleReorder"
-      @resize="setColumnWidth"
-      @reset-width="handleResetWidth"
+      @resize="state.setColumnWidth"
+      @reset-width="(c: ColumnDef) => state.resetColumnWidth(c.path)"
       @row-click="(row: Record<string, unknown>, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="
         (row: Record<string, unknown>, ev: MouseEvent) => emit('row-dblclick', row, ev)

@@ -51,6 +51,19 @@ export { SelectionState } from "./selection/selection-state";
 // ── State types ────────────────────────────────────────────
 export type { ConfigTab, TableStateData, TableStateMethods } from "./state/table-state-types";
 
+// ── Window-mode helpers ────────────────────────────────────
+export { DEFAULT_ROW_HEIGHT_PX } from "./state/tokens";
+export type { PageAlignedBlock } from "./state/window/page-aligned-blocks";
+export {
+  blockStartFor,
+  clampTopIndex,
+  pageAlignedBlocksFor,
+} from "./state/window/page-aligned-blocks";
+export type { MergeResult } from "./state/window/results-merge";
+export { walkForwardAbsorb, walkBackwardAbsorb } from "./state/window/results-merge";
+export type { FetchPlan, FetchPlanMode, PlanFetchArgs } from "./state/window/plan-fetch";
+export { planFetch } from "./state/window/plan-fetch";
+
 // ── Column widths ──────────────────────────────────────────
 export type { ColumnWidthEntry, ColumnWidthsMap } from "./columns/column-widths";
 export {

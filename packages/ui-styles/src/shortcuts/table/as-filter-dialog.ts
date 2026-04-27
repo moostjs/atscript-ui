@@ -11,8 +11,11 @@ import {
 
 export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-dialog-overlay": dialogOverlay,
-  "as-filter-dialog-content": `${dialogBase} w-[560px] max-w-[92vw] min-h-[480px] max-h-[92vh]`,
-  "as-filter-dialog-has-value-help": "w-[640px]",
+  // Desktop: fixed height (clamp keeps it readable on 720p and bounded on
+  // 4K) so switching tabs or applying chips doesn't resize the popup.
+  // Mobile: inherits full-screen from `dialogBase`.
+  "as-filter-dialog-content": `${dialogBase} sm:w-[560px] sm:max-w-[92vw] sm:h-[clamp(500px,70vh,600px)]`,
+  "as-filter-dialog-has-value-help": "sm:w-[640px]",
   "as-filter-dialog-header": "flex items-center justify-between gap-$m px-$l py-$m border-b-1",
   "as-filter-dialog-title": "m-0 text-body-l font-600 tracking-[-0.01em] flex items-center gap-$s",
   "as-filter-dialog-title-label": "text-current/60 font-500",

@@ -34,8 +34,36 @@ export interface TableStateData {
   filters: FieldFilters;
   /** Active sorters. */
   sorters: SortControl[];
-  /** Current result rows. */
+  /**
+   * Rows of the contiguous "results island" anchored at `resultsStart`. This
+   * is a real array (not a computed view) — same row references also live in
+   * `windowCache` at their absolute indices. Writes flow through both, so
+   * extending `results` automatically updates the cache.
+   */
   results: Record<string, unknown>[];
+  /**
+   * Absolute row index where `results[0]` sits. Reset by `query()` and
+   * `invalidate()` from `pagination.page`; shifted by backward merges in
+   * `loadRange`'s digest.
+   */
+  resultsStart: number;
+  /**
+   * Universal storage for every loaded row keyed by absolute index. Includes
+   * the rows in `results` (same row references, two indexings).
+   */
+  windowCache: Map<number, Record<string, unknown>>;
+  /**
+   * Block firstIndex values currently being fetched by `loadRange`. A row at
+   * `absIdx` is in flight when its block (`floor(absIdx / blockSize) * blockSize`)
+   * is in this set. Drives the per-row skeleton placeholder in window-mode
+   * rendering. NOT set by `query()` (uses `querying`) or `queryNext()` (uses
+   * `queryingNext`).
+   */
+  windowLoading: Set<number>;
+  /** Absolute row index at the top of a windowed renderer's visible viewport. */
+  topIndex: number;
+  /** Number of fixed-pool rows a windowed renderer is currently displaying. */
+  viewportRowCount: number;
   /** Whether a query is currently in flight. */
   querying: boolean;
   /** Whether a "load more" query is in flight. */
@@ -66,10 +94,46 @@ export interface TableStateData {
  * toolbar) gets identical behaviour.
  */
 export interface TableStateMethods {
-  /** Trigger a fresh query (replace results). User-initiated refresh only. */
+  /**
+   * Microtask-coalesced refresh. Synchronously sets `querying = true` so
+   * consumers see the loading state immediately, then schedules the actual
+   * fetch on the next microtask. Multiple `query()` calls and watcher-driven
+   * scheduleQuery calls in the same synchronous block coalesce into one
+   * fetch. Use this from dialogs / mutators where you don't need to await.
+   */
   query(): void;
-  /** Load the next page (append results). */
+  /**
+   * Synchronous refresh — fires the fetch now and returns a Promise that
+   * settles when the response (or error) has been processed. Cancels any
+   * pending coalesced query so we don't double-fire. Honours `blockQuery`,
+   * `forceFilters`, `forceSorters`, `queryFn`. Use this from refresh
+   * buttons / programmatic flows that need the result.
+   */
+  queryImmediate(): Promise<void>;
+  /**
+   * Append-style extension. Does NOT mutate `pagination.page` (extension
+   * runs parallel to pagination). Re-entry guarded via `queryingNext`.
+   */
   queryNext(): void;
+  /**
+   * Page-aligned slice fetch into `windowCache` with merge-on-contiguous.
+   * Returns a Promise that settles when ALL dispatched blocks have settled
+   * (success, error, OR generation-discarded); never rejects. Resolves on
+   * the next microtask when zero blocks need dispatching.
+   */
+  loadRange(skip: number, limit: number): Promise<void>;
+  /**
+   * Explicit immediate wipe — clears results / cache / loading, resets
+   * `resultsStart` from `pagination.page`, sets `totalCount = 0`. Does NOT
+   * auto-refetch.
+   */
+  invalidate(): void;
+  /** O(1) read of `windowCache.get(absIdx)`. */
+  dataAt(absIdx: number): Record<string, unknown> | undefined;
+  /** True if the block covering `absIdx` is currently being fetched. */
+  loadingAt(absIdx: number): boolean;
+  /** Returns the last error attached to the block covering `absIdx`, or null. */
+  errorAt(absIdx: number): Error | null;
   /** Clear all applied filters. Does not touch `filterFields`. */
   resetFilters(): void;
   /** Open the config dialog (optionally to a specific tab). */
@@ -84,6 +148,16 @@ export interface TableStateMethods {
   removeFilterField(path: string): void;
   /** Set applied filter conditions for a field. Does not touch `filterFields`. */
   setFieldFilter(path: string, conditions: FilterCondition[]): void;
+  /**
+   * Set the rendered width for a column. No-op if the column is unknown or
+   * the value is unchanged. Does not modify the column's default (`d`).
+   */
+  setColumnWidth(path: string, width: string): void;
+  /**
+   * Reset the rendered width back to the column's default (`d`). No-op if
+   * the column is unknown or already at default.
+   */
+  resetColumnWidth(path: string): void;
   /**
    * Clear the applied filter for a field. Does NOT remove the field from
    * `filterFields` — the input row stays visible.

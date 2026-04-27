@@ -16,7 +16,6 @@ export {
   type CreateTableStateOptions,
   type TableStateInternals,
 } from "./composables/use-table-state";
-export { useTableQuery, type UseTableQueryOptions } from "./composables/use-table-query";
 export { useTableSelection } from "./composables/use-table-selection";
 export { useTableFilter } from "./composables/use-table-filter";
 export { useTableSearch } from "./composables/use-table-search";
@@ -27,6 +26,7 @@ export { useTableComponent } from "./composables/use-table-component";
 // ── Public components (Tier 1 — user-tagged) ────────────────
 export { default as AsTableRoot } from "./components/as-table-root.vue";
 export { default as AsTable } from "./components/as-table.vue";
+export { default as AsWindowTable } from "./components/as-window-table.vue";
 export { default as AsFilters } from "./components/as-filters.vue";
 
 // ── Default implementations (Tier 2 — swap targets) ─────────

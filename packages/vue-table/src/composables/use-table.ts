@@ -1,16 +1,16 @@
-import type { Ref } from "vue";
 import {
   createTableDef,
   getMetaEntry,
-  getVisibleColumns,
   resetMetaCache,
   type ClientFactory,
   type SortControl,
 } from "@atscript/ui";
+import type { Client } from "@atscript/db-client";
+import type { Ref } from "vue";
+import type { FilterExpr } from "@uniqu/core";
 import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState, TAsTableComponents } from "../types";
-import { createTableState, provideTableContext } from "./use-table-state";
-import { useTableQuery, type UseTableQueryOptions } from "./use-table-query";
+import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
 import { useTableSelection } from "./use-table-selection";
 
 /** Thin alias over `resetMetaCache` — retained so existing test code keeps working. */
@@ -18,8 +18,16 @@ export function clearTableCache() {
   resetMetaCache();
 }
 
-export interface UseTableOptions extends UseTableQueryOptions {
-  /** Default page size (default: 50). */
+/**
+ * Public composable options. Flat shape for Vue-template ergonomics
+ * (`<AsTableRoot :limit="50" :select="multi">`). Internally translated into
+ * the grouped `CreateTableStateOptions` before reaching `createTableState`.
+ *
+ * The data-engine `client` is resolved internally from the URL via
+ * `getMetaEntry`; callers don't and can't pass it.
+ */
+export interface UseTableOptions {
+  /** Default page size. */
   limit?: number;
   /** Selection mode (default: 'none'). */
   select?: SelectionMode;
@@ -29,22 +37,34 @@ export interface UseTableOptions extends UseTableQueryOptions {
   keepSelectedAfterRefresh?: boolean;
   /** Disable auto-reset/trim of selection on refresh. Use when selection is externally owned (e.g. value-help filter chips). */
   manageSelection?: boolean;
+  /** External ref for filter field names (from defineModel). */
+  filterFields?: Ref<string[]>;
+  /** External ref for visible column names (from defineModel). */
+  columnNames?: Ref<string[]>;
+  /** External ref for per-column widths (from defineModel). */
+  columnWidths?: Ref<ColumnWidthsMap>;
+  /** External ref for sorters (from defineModel). */
+  sorters?: Ref<SortControl[]>;
+  /** Always-applied Uniquery filter expression (AND'd with user filters). */
+  forceFilters?: FilterExpr;
+  /** Always-applied sorters (prepended before user sorters). */
+  forceSorters?: SortControl[];
+  /** Override the default query function. */
+  queryFn?: QueryFn;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
+  /** When true, all triggers (query/queryNext/loadRange) early-return. */
+  blockQuery?: boolean;
+  /** Page-alignment unit for `loadRange` and the `queryNext` extension. */
+  blockSize?: number;
+  /** Debounce window for the topIndex/viewportRowCount watcher. */
+  dragReleaseDebounceMs?: number;
   /** Factory to create a client from a URL. Only honored on the first `useTable`/`resolveValueHelp` call per URL — subsequent callers reuse the cached client. */
   clientFactory?: ClientFactory;
   /** Component overrides for table rendering. */
   components?: TAsTableComponents;
   /** Whether to provide table context to the subtree (default: true). */
   provideContext?: boolean;
-  /** External model ref for filter field names. */
-  filterFields?: Ref<string[]>;
-  /** External model ref for visible column names. */
-  columnNames?: Ref<string[]>;
-  /** External model ref for per-column widths (each entry: `{ w, d }`). */
-  columnWidths?: Ref<ColumnWidthsMap>;
-  /** External model ref for sorters. */
-  sorters?: Ref<SortControl[]>;
 }
 
 /**
@@ -63,34 +83,42 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   const defPromise = entry.tableDef;
 
   const { state, internals } = createTableState({
+    client: client as Client,
     limit: opts?.limit,
-    select: opts?.select ?? "none",
-    rowValueFn: opts?.rowValueFn,
-    filterFields: opts?.filterFields,
-    columnNames: opts?.columnNames,
-    columnWidths: opts?.columnWidths,
-    sorters: opts?.sorters,
+    selection: {
+      mode: opts?.select,
+      rowValueFn: opts?.rowValueFn,
+      keepAfterRefresh: opts?.keepSelectedAfterRefresh,
+    },
+    model: {
+      filterFields: opts?.filterFields,
+      columnNames: opts?.columnNames,
+      columnWidths: opts?.columnWidths,
+      sorters: opts?.sorters,
+    },
+    query: {
+      fn: opts?.queryFn,
+      forceFilters: opts?.forceFilters,
+      forceSorters: opts?.forceSorters,
+      blockQuery: opts?.blockQuery,
+      queryOnMount: opts?.queryOnMount,
+    },
+    window: {
+      blockSize: opts?.blockSize,
+      dragReleaseDebounceMs: opts?.dragReleaseDebounceMs,
+    },
   });
 
-  useTableQuery(client, state, internals, opts);
   if (opts?.manageSelection !== false) {
     useTableSelection(state, { keepAfterRefresh: opts?.keepSelectedAfterRefresh });
   }
   if (opts?.provideContext !== false) {
-    provideTableContext({ state, client, components: opts?.components ?? {} });
+    provideTableContext({ state, client: client as Client, components: opts?.components ?? {} });
   }
-
-  const queryOnMount = opts?.queryOnMount ?? true;
 
   defPromise
     .then((def) => {
       internals.init(def);
-      if (state.columnNames.value.length === 0) {
-        state.columnNames.value = getVisibleColumns(def).map((c) => c.path);
-      }
-      if (queryOnMount) {
-        state.query();
-      }
     })
     .catch((err) => {
       state.metadataError.value = err instanceof Error ? err : new Error(String(err));

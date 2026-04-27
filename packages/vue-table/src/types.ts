@@ -7,8 +7,13 @@ import type {
   SelectionMode,
   TableStateMethods,
 } from "@atscript/ui-table";
+import type { QueryErrorKind } from "./composables/use-table-state";
 
 export type { ConfigTab };
+export type { QueryErrorKind };
+
+/** Tri-state for the multi-select header checkbox. Window mode never reaches "all". */
+export type SelectAllState = "none" | "some" | "all";
 
 /** Controls which sections appear in the column header dropdown menu. */
 export interface ColumnMenuConfig {
@@ -77,13 +82,31 @@ export interface ReactiveTableState extends TableStateMethods {
   filters: ShallowRef<FieldFilters>;
   sorters: ShallowRef<SortControl[]>;
   results: ShallowRef<Record<string, unknown>[]>;
+  /** Absolute index where `results[0]` sits. */
+  resultsStart: Ref<number>;
+  /** Universal cache of every loaded row keyed by absolute index. */
+  windowCache: ShallowRef<Map<number, Record<string, unknown>>>;
+  /** Block firstIndex values currently being fetched by `loadRange`. */
+  windowLoading: ShallowRef<Set<number>>;
+  /** Absolute index at the top of a windowed renderer's viewport. */
+  topIndex: Ref<number>;
+  /** Number of fixed-pool rows a windowed renderer is displaying. */
+  viewportRowCount: Ref<number>;
   querying: Ref<boolean>;
   queryingNext: Ref<boolean>;
   totalCount: Ref<number>;
   loadedCount: ComputedRef<number>;
-  pagination: ShallowRef<PaginationControl>;
-  queryError: ShallowRef<Error | null>;
-  metadataError: ShallowRef<Error | null>;
+  pagination: Ref<PaginationControl>;
+  queryError: Ref<Error | null>;
+  metadataError: Ref<Error | null>;
+  /**
+   * Most recent fetch error of any kind, tagged with `kind` so consumers
+   * can format toasts differently per source. Wrapped in a fresh
+   * `{ error, kind }` object on every assignment so watchers fire even
+   * when consecutive failures share an Error reference. Fire-and-forget:
+   * a successful retry does NOT clear this; it just stops re-firing.
+   */
+  lastError: Ref<{ error: Error; kind: QueryErrorKind } | null>;
   mustRefresh: Ref<boolean>;
   searchTerm: Ref<string>;
   configDialogOpen: Ref<boolean>;
@@ -96,5 +119,5 @@ export interface ReactiveTableState extends TableStateMethods {
   /** Extract unique value from a row for selection tracking + ListboxItem :value. */
   rowValueFn: (row: Record<string, unknown>) => unknown;
   /** Column currently open in the filter dialog (null when closed). */
-  filterDialogColumn: ShallowRef<ColumnDef | null>;
+  filterDialogColumn: Ref<ColumnDef | null>;
 }

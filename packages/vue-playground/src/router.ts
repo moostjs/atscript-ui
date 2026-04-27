@@ -71,6 +71,11 @@ const router = createRouter({
       component: () => import("./views/tables/VirtualScrollTableView.vue"),
     },
     {
+      path: "/window-table",
+      name: "window-table",
+      component: () => import("./views/tables/WindowTableView.vue"),
+    },
+    {
       path: "/orders-table",
       name: "orders-table",
       component: () => import("./views/tables/OrdersTableView.vue"),

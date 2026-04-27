@@ -28,6 +28,7 @@ const tableRoutes = [
   { path: "/customers-table", label: "Customers" },
   { path: "/custom-slots-table", label: "Custom Slots" },
   { path: "/virtual-scroll-table", label: "Virtual Scroll (5k)", count: "5k" },
+  { path: "/window-table", label: "Window Table" },
   { path: "/orders-table", label: "Orders (FK)" },
 ];
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useSlots } from "vue";
+import { computed, useSlots } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
 import {
   filledFilterCount,
@@ -7,7 +7,7 @@ import {
   type ColumnWidthsMap,
   type FieldFilters,
 } from "@atscript/ui-table";
-import type { ColumnMenuConfig } from "../../types";
+import type { ColumnMenuConfig, SelectAllState } from "../../types";
 import {
   ComboboxItem,
   ComboboxItemIndicator,
@@ -17,8 +17,9 @@ import {
   Primitive,
 } from "reka-ui";
 import { getCellValue } from "../../utils/get-cell-value";
-import AsTableHeaderCell from "../defaults/as-table-header-cell.vue";
 import AsTableCellValue from "../defaults/as-table-cell-value.vue";
+import AsTableHeader from "./as-table-header.vue";
+import AsTableStatus from "./as-table-status.vue";
 import AsTableVirtualizer from "./as-table-virtualizer.vue";
 
 const props = withDefaults(
@@ -77,6 +78,18 @@ const hasActiveFilters = computed(() =>
   props.filters ? filledFilterCount(props.filters) > 0 : false,
 );
 
+const showSelectAllCheckbox = computed(
+  () => !props.asCombobox && props.select === "multi" && !!props.selectedRows,
+);
+
+const selectAllState = computed<SelectAllState | undefined>(() => {
+  if (!showSelectAllCheckbox.value) return undefined;
+  const sel = props.selectedRows!;
+  if (sel.length === 0) return "none";
+  if (sel.length === props.rows.length && props.rows.length > 0) return "all";
+  return "some";
+});
+
 const emit = defineEmits<{
   (e: "sort", column: ColumnDef, direction: "asc" | "desc" | null): void;
   (e: "hide", column: ColumnDef): void;
@@ -94,41 +107,8 @@ const emit = defineEmits<{
 
 const slots = useSlots();
 
-/** Map of column path → current sort direction for fast lookup in header cells. */
-const sortMap = computed(() => {
-  const map: Record<string, "asc" | "desc"> = {};
-  for (const s of props.sorters) {
-    map[s.field] = s.direction;
-  }
-  return map;
-});
-
 function hasCellSlot(path: string): boolean {
   return !!slots[`cell-${path}`];
-}
-
-function hasHeaderSlot(path: string): boolean {
-  return !!slots[`header-${path}`];
-}
-
-function onSort(column: ColumnDef, direction: "asc" | "desc" | null) {
-  emit("sort", column, direction);
-}
-
-function onHide(column: ColumnDef) {
-  emit("hide", column);
-}
-
-function onFilter(column: ColumnDef) {
-  emit("filter", column);
-}
-
-function onFiltersOff(column: ColumnDef) {
-  emit("filters-off", column);
-}
-
-function onResetWidth(column: ColumnDef) {
-  emit("reset-width", column);
 }
 
 function onRowClick(row: Record<string, unknown>, event: MouseEvent) {
@@ -139,138 +119,10 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent) {
   emit("row-dblclick", row, event);
 }
 
-// ── Column drag-reorder state ────────────────────────────────────────────
-const dragSourcePath = ref<string | null>(null);
-const dropTarget = ref<{ path: string; position: ColumnReorderPosition } | null>(null);
-
-function pathOf(event: Event): string | null {
-  return (event.currentTarget as HTMLElement | null)?.dataset.columnPath ?? null;
-}
-
-function onHeaderDragStart(event: DragEvent) {
-  if (!props.reorderable) return;
-  // Suppress native drag-reorder when a pointer-driven resize is in flight.
-  // `pointerdown` on the handle fires before `dragstart`, so this catches
-  // the real-browser case where `<th draggable=true>` initiates drag even
-  // though the gesture started inside `<div class="as-th-resize-handle"
-  // draggable=false>`.
-  if (resizingPath.value !== null) {
-    event.preventDefault();
-    return;
-  }
-  const path = pathOf(event);
-  if (!path) return;
-  dragSourcePath.value = path;
-  if (event.dataTransfer) {
-    event.dataTransfer.effectAllowed = "move";
-    // Firefox requires a non-empty payload to actually start a drag.
-    event.dataTransfer.setData("text/plain", path);
-  }
-}
-
-function onHeaderDragOver(event: DragEvent) {
-  if (!props.reorderable || dragSourcePath.value === null) return;
-  const path = pathOf(event);
-  if (!path) return;
-  event.preventDefault();
-  if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-  const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-  const position: ColumnReorderPosition =
-    event.clientX - rect.left < rect.width / 2 ? "before" : "after";
-  if (dropTarget.value?.path !== path || dropTarget.value?.position !== position) {
-    dropTarget.value = { path, position };
-  }
-}
-
-function onHeaderDrop(event: DragEvent) {
-  if (!props.reorderable) return;
-  event.preventDefault();
-  const path = pathOf(event);
-  const source = dragSourcePath.value;
-  const target = dropTarget.value;
-  if (path && source && target && target.path === path && source !== target.path) {
-    emit("reorder", source, target.path, target.position);
-  }
-  dragSourcePath.value = null;
-  dropTarget.value = null;
-}
-
-function onHeaderDragEnd() {
-  dragSourcePath.value = null;
-  dropTarget.value = null;
-}
-
-const resizingPath = ref<string | null>(null);
-let resizeStartX = 0;
-let resizeStartWidth = 0;
-
-function thFromHandleEvent(event: Event): { th: HTMLTableCellElement; path: string } | null {
-  const target = event.currentTarget as HTMLElement | null;
-  const th = target?.closest("th") as HTMLTableCellElement | null;
-  const path = th?.dataset.columnPath;
-  if (!th || !path) return null;
-  return { th, path };
-}
-
-function onResizeHandlePointerDown(event: PointerEvent) {
-  if (!props.resizable) return;
-  const found = thFromHandleEvent(event);
-  if (!found) return;
-  resizingPath.value = found.path;
-  resizeStartX = event.clientX;
-  resizeStartWidth = found.th.getBoundingClientRect().width;
-  (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
-}
-
-function onResizeHandlePointerMove(event: PointerEvent) {
-  if (!resizingPath.value) return;
-  const next = Math.round(
-    Math.max(resizeStartWidth + (event.clientX - resizeStartX), props.columnMinWidth),
-  );
-  emit("resize", resizingPath.value, `${next}px`);
-}
-
-function onResizeHandleEnd() {
-  resizingPath.value = null;
-}
-
-function onResizeHandleDoubleClick(event: MouseEvent) {
-  if (!props.resizable) return;
-  const found = thFromHandleEvent(event);
-  if (!found) return;
-  const { th, path } = found;
-  const table = th.closest("table");
-  if (!table) return;
-  // `scrollWidth` reports the unclipped content extent even when the cell
-  // currently truncates via `text-overflow: ellipsis`.
-  let maxScroll = th.scrollWidth;
-  const colIndex = th.cellIndex;
-  for (const tr of table.querySelectorAll("tbody tr")) {
-    const cell = tr.children[colIndex] as HTMLElement | undefined;
-    if (cell) maxScroll = Math.max(maxScroll, cell.scrollWidth);
-  }
-  emit("resize", path, `${Math.max(maxScroll, props.columnMinWidth)}px`);
-}
-
-function widthStyle(col: ColumnDef): { width: string } | undefined {
-  // Optional chain covers the brief render before the parent has seeded defaults.
-  const entry = props.columnWidths[col.path];
-  return entry ? { width: entry.w } : undefined;
-}
-
-function thClasses(path: string): Record<string, boolean> {
-  const reorder = props.reorderable;
-  const resize = props.resizable;
-  if (!reorder && !resize) return {};
-  return {
-    "as-th-reorderable": reorder,
-    "as-th-dragging": reorder && dragSourcePath.value === path,
-    "as-th-drop-indicator-before":
-      reorder && dropTarget.value?.path === path && dropTarget.value?.position === "before",
-    "as-th-drop-indicator-after":
-      reorder && dropTarget.value?.path === path && dropTarget.value?.position === "after",
-    "as-th-resizing": resize && resizingPath.value === path,
-  };
+function onSelectAllToggle(state: SelectAllState) {
+  // Tri-state semantics: only fully-checked deselects; partial/empty selects all.
+  if (state === "all") emit("deselect-all");
+  else emit("select-all");
 }
 </script>
 
@@ -289,79 +141,32 @@ function thClasses(path: string): Record<string, boolean> {
         'as-table-stretch': stretch,
       }"
     >
-      <thead>
-        <tr>
-          <th v-if="hasValue" class="as-th-select">
-            <span
-              v-if="!asCombobox && select === 'multi' && selectedRows"
-              class="as-table-checkbox"
-              :class="{
-                'as-table-checkbox-checked': selectedRows.length === rows.length && rows.length > 0,
-                'as-table-checkbox-indeterminate':
-                  selectedRows.length > 0 && selectedRows.length < rows.length,
-              }"
-              role="checkbox"
-              tabindex="0"
-              :aria-checked="
-                selectedRows.length === 0
-                  ? 'false'
-                  : selectedRows.length === rows.length
-                    ? 'true'
-                    : 'mixed'
-              "
-              @click="
-                selectedRows!.length === rows.length ? emit('deselect-all') : emit('select-all')
-              "
-            >
-              <span
-                v-if="selectedRows.length === rows.length && rows.length > 0"
-                class="as-table-checkbox-tick"
-                aria-hidden="true"
-              />
-              <span v-else-if="selectedRows.length > 0" class="as-table-checkbox-dash" />
-            </span>
-          </th>
-          <th
-            v-for="col in columns"
-            :key="col.path"
-            :data-column-path="col.path"
-            :draggable="reorderable || undefined"
-            :class="thClasses(col.path)"
-            :style="widthStyle(col)"
-            @dragstart="onHeaderDragStart"
-            @dragover="onHeaderDragOver"
-            @drop="onHeaderDrop"
-            @dragend="onHeaderDragEnd"
-          >
-            <slot v-if="hasHeaderSlot(col.path)" :name="`header-${col.path}`" :column="col" />
-            <AsTableHeaderCell
-              v-else
-              :column="col"
-              :sort-direction="sortMap[col.path] ?? null"
-              :filters="filters?.[col.path]"
-              :column-menu="columnMenu"
-              :width-entry="columnWidths[col.path]"
-              @sort="onSort"
-              @hide="onHide"
-              @filter="onFilter"
-              @filters-off="onFiltersOff"
-              @reset-width="onResetWidth"
-            />
-            <div
-              v-if="resizable"
-              class="as-th-resize-handle"
-              draggable="false"
-              @dragstart.prevent.stop
-              @pointerdown.stop="onResizeHandlePointerDown"
-              @pointermove="onResizeHandlePointerMove"
-              @pointerup="onResizeHandleEnd"
-              @pointercancel="onResizeHandleEnd"
-              @dblclick.stop="onResizeHandleDoubleClick"
-            />
-          </th>
-          <th v-if="stretch" class="as-th-filler" />
-        </tr>
-      </thead>
+      <AsTableHeader
+        :columns="columns"
+        :sorters="sorters"
+        :filters="filters"
+        :column-menu="columnMenu"
+        :column-widths="columnWidths"
+        :reorderable="reorderable"
+        :resizable="resizable"
+        :column-min-width="columnMinWidth"
+        :has-select-column="hasValue"
+        :select-all-state="selectAllState"
+        :with-filler="stretch"
+        :enable-auto-fit="true"
+        @sort="(c, d) => emit('sort', c, d)"
+        @hide="(c) => emit('hide', c)"
+        @filter="(c) => emit('filter', c)"
+        @filters-off="(c) => emit('filters-off', c)"
+        @reset-width="(c) => emit('reset-width', c)"
+        @reorder="(f, t, p) => emit('reorder', f, t, p)"
+        @resize="(p, w) => emit('resize', p, w)"
+        @select-all-toggle="onSelectAllToggle"
+      >
+        <template v-for="col in columns" #[`header-${col.path}`]="scope">
+          <slot :name="`header-${col.path}`" v-bind="scope" />
+        </template>
+      </AsTableHeader>
       <!-- With selection/combobox: wrap in ListboxContent/Primitive -->
       <template v-if="hasValue && !queryError">
         <component :is="asCombobox ? Primitive : ListboxContent" as-child>
@@ -444,49 +249,19 @@ function thClasses(path: string): Record<string, boolean> {
         </template>
       </AsTableVirtualizer>
     </table>
-    <div v-if="queryError" class="as-table-error">
-      <slot name="error" :error="queryError" :retry="onRetry">
-        <div class="as-vh-empty">
-          <span class="as-vh-error-icon i-as-warning" aria-hidden="true" />
-          <p class="as-vh-empty-title">Failed to load values</p>
-          <p class="as-vh-empty-body">{{ queryError.message }}</p>
-          <button v-if="onRetry" type="button" class="as-vh-empty-clear" @click="onRetry">
-            <span class="i-as-refresh" aria-hidden="true" />
-            Retry
-          </button>
-        </div>
-      </slot>
-    </div>
-    <div v-else-if="rows.length === 0 && !querying && columns.length > 0" class="as-table-empty">
-      <slot
-        name="empty"
-        :search-term="searchTerm"
-        :has-active-filters="hasActiveFilters"
-        :on-clear-filters="onClearFilters"
-      >
-        <div class="as-vh-empty">
-          <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-          <p class="as-vh-empty-title">No matching values</p>
-          <p v-if="searchTerm" class="as-vh-empty-body">
-            No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
-            different search.
-          </p>
-          <p v-else-if="hasActiveFilters" class="as-vh-empty-body">
-            No entries match the current filters.
-          </p>
-          <p v-else class="as-vh-empty-body">No entries available</p>
-          <button
-            v-if="(searchTerm || hasActiveFilters) && onClearFilters"
-            type="button"
-            class="as-vh-empty-clear"
-            @click="onClearFilters"
-          >
-            <span class="i-as-refresh" aria-hidden="true" />
-            Clear filters
-          </button>
-        </div>
-      </slot>
-    </div>
+    <AsTableStatus
+      :query-error="queryError"
+      :is-empty="rows.length === 0"
+      :querying="!!querying"
+      :columns="columns"
+      :search-term="searchTerm"
+      :has-active-filters="hasActiveFilters"
+      :on-clear-filters="onClearFilters"
+      :on-retry="onRetry"
+    >
+      <template #error="scope"><slot name="error" v-bind="scope" /></template>
+      <template #empty="scope"><slot name="empty" v-bind="scope" /></template>
+    </AsTableStatus>
     <slot name="last-row" />
   </div>
 </template>

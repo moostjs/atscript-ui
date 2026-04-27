@@ -7,9 +7,11 @@ export interface OrdersTable {
     id: number
 
     @meta.label 'Customer'
+    @db.rel.FK
     customerId: Customer.id
 
     @meta.label 'Product'
+    @db.rel.FK
     productId: Product.id
 
     @meta.label 'Quantity'

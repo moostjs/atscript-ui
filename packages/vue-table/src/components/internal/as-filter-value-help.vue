@@ -5,7 +5,7 @@ import { resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
 import { filledFilterCount, isSimpleEq, type FilterCondition } from "@atscript/ui-table";
 import { ListboxRoot } from "reka-ui";
 import { useTable } from "../../composables/use-table";
-import AsTable from "../as-table.vue";
+import AsWindowTable from "../as-window-table.vue";
 import AsTableBase from "./as-table-base.vue";
 import AsFilterDialog from "../defaults/as-filter-dialog.vue";
 import AsConfigDialog from "../defaults/as-config-dialog.vue";
@@ -43,9 +43,13 @@ const resolved = shallowRef<ResolvedValueHelp | null>(null);
 // <AsTable> below uses it for columnNames, sorters, hide, etc.
 const innerState = info
   ? useTable(info.url, {
-      limit: 1000,
+      limit: 100,
       select: "multi",
-      queryOnMount: true,
+      // queryOnMount stays false: we trigger query() manually after clamping
+      // columnNames to dict paths so the bootstrap query doesn't go out with
+      // every table column, and so we don't fire two queries (auto-bootstrap
+      // + columnNames-watcher re-fire).
+      queryOnMount: false,
       provideContext: true,
       rowValueFn: (row) => row[info.targetField],
       manageSelection: false,
@@ -69,7 +73,9 @@ if (info) {
 // Clamp visible columns to the value-help whitelist once BOTH:
 //   - the inner table has its TableDef loaded (so allColumns is populated)
 //   - resolveValueHelp has produced the dict field names
-// Then seed filterFields with all filterable dict columns.
+// Then seed filterFields with all filterable dict columns. The columnNames
+// mutation, filterFields seeding, and explicit query() all coalesce into
+// one microtask-scheduled fetch (see use-table-state.ts scheduleQuery).
 if (innerState) {
   let initialized = false;
   const stop = watch(
@@ -77,13 +83,14 @@ if (innerState) {
     ([def, r]) => {
       if (!def || !r || initialized) return;
       initialized = true;
+      stop();
       const dictPaths = valueHelpDictPaths(r);
       const dictCols = innerState.allColumns.value.filter((c) => dictPaths.has(c.path));
       innerState.columnNames.value = dictCols.map((c) => c.path);
       if (innerState.filterFields.value.length === 0) {
         innerState.filterFields.value = dictCols.filter((c) => c.filterable).map((c) => c.path);
       }
-      stop();
+      innerState.query();
     },
     { immediate: true },
   );
@@ -260,11 +267,15 @@ function clearAllFilters() {
       </button>
     </div>
 
-    <!-- FK: full AsTable using provided innerState (sort/filter via state). Hiding disabled.
-         Render the inner filter/config dialogs so the inner table is fully functional
-         (clicking "Filter" in its column menu opens a nested filter dialog). -->
+    <!-- FK: window-mode table for value-help dialogs — random-access scroll
+         on million-row dictionaries. The dialog body propagates a fixed
+         height down through TabsContent → as-filter-value-help → AsWindowTable's
+         outer-wrap, so the ResizeObserver inside <AsWindowTable> measures a
+         non-zero viewport height. Render the inner filter/config dialogs so
+         the inner table is fully functional (clicking "Filter" in its column
+         menu opens a nested filter dialog). -->
     <template v-if="info">
-      <AsTable :column-menu="{ sort: true, filters: true, hide: false }" :sticky-header="true" />
+      <AsWindowTable :column-menu="{ sort: true, filters: true, hide: false }" />
       <AsFilterDialog />
       <AsConfigDialog />
     </template>

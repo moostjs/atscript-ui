@@ -120,6 +120,12 @@ const sections: Section[] = [
         desc: "5,000 rows full-page, only visible rows rendered",
       },
       {
+        path: "/window-table",
+        label: "Window Table",
+        kind: "WindowTable",
+        desc: "Pool-based rendering, synthesized scrollbar, random-access on million-row sets",
+      },
+      {
         path: "/orders-table",
         label: "Orders (FK)",
         kind: "OrdersFk",

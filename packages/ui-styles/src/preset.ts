@@ -80,11 +80,28 @@ export interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
   iconOverrides?: Record<string, string>;
 }
 
+/**
+ * Preset entry that injects the `@keyframes as-shimmer` definition used by
+ * `<AsWindowSkeletonRow>`'s gradient animation. Lives at preset level so the
+ * keyframes are emitted exactly once into the consumer's UnoCSS output (not
+ * duplicated per shortcut).
+ */
+const shimmerKeyframesPreset: Preset = {
+  name: "atscript-ui-shimmer-keyframes",
+  preflights: [
+    {
+      getCSS: () =>
+        "@keyframes as-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }",
+    },
+  ],
+};
+
 function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
   const { baseRadius = "8px", iconOverrides } = options;
 
   return [
     bakedIconsPreset(iconOverrides),
+    shimmerKeyframesPreset,
     presetVunor({
       baseRadius,
       fingertip: {

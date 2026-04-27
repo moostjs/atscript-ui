@@ -4,10 +4,15 @@ export { strongText };
 
 export const dialogOverlay = "fixed inset-0 bg-black/30 z-[100]";
 
+// Mobile-first: edge-to-edge full-screen (no rounded corners / shadow / border).
+// At `sm` and above: centered, with chrome restored. Consumers add explicit
+// width / height utilities behind `sm:` so the desktop size is stable; the
+// mobile path uses the default `inset-0 w-full h-full`.
 export const dialogBase =
-  "layer-0 fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[101] " +
-  "rounded-r3 shadow-popup " +
-  "flex flex-col outline-none border-1";
+  "layer-0 fixed z-[101] flex flex-col outline-none " +
+  "inset-0 w-full h-full " +
+  "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 " +
+  "sm:rounded-r3 sm:shadow-popup sm:border-1";
 
 export const smallInputBase =
   "scope-primary flex-1 h-fingertip-s px-$s min-w-[8em] outline-none " +
