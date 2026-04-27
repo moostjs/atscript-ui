@@ -26,6 +26,7 @@ const wfRoutes = [
 const tableRoutes = [
   { path: "/products-table", label: "Products" },
   { path: "/customers-table", label: "Customers" },
+  { path: "/single-select-table", label: "Single-Select" },
   { path: "/custom-slots-table", label: "Custom Slots" },
   { path: "/virtual-scroll-table", label: "Virtual Scroll (5k)", count: "5k" },
   { path: "/window-table", label: "Window Table" },

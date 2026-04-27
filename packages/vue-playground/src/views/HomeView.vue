@@ -108,6 +108,12 @@ const sections: Section[] = [
         desc: "Custom cell slots, multi-select, load-more pagination",
       },
       {
+        path: "/single-select-table",
+        label: "Single-Select",
+        kind: "SingleSelect",
+        desc: "select=\"single\" with side-panel showing the picked row",
+      },
+      {
         path: "/custom-slots-table",
         label: "Custom Slots",
         kind: "CustomSlots",

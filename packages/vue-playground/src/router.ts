@@ -61,6 +61,11 @@ const router = createRouter({
       component: () => import("./views/tables/CustomersTableView.vue"),
     },
     {
+      path: "/single-select-table",
+      name: "single-select-table",
+      component: () => import("./views/tables/SingleSelectTableView.vue"),
+    },
+    {
       path: "/custom-slots-table",
       name: "custom-slots-table",
       component: () => import("./views/tables/CustomSlotsTableView.vue"),
