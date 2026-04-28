@@ -151,16 +151,18 @@ function onKeydown(event: KeyboardEvent) {
   state.handleNavKey(event, { enterAction: props.enterAction });
 }
 
-// Keep the active row inside `[topIndex, topIndex + viewportRowCount)` so it
-// stays in the DOM — `aria-activedescendant` requires the target to be
-// rendered.
+// Keep the active row inside `[topIndex, topIndex + viewportRowCount)` so
+// it stays in the DOM (aria-activedescendant requires the target to be
+// rendered). `viewportRowCount` is required as a dep — when real rows
+// replace skeletons they may measure taller, shrinking the viewport, and
+// `topIndex` chosen against the old viewport drops the active row out of
+// range.
 watch(
-  () => state.activeIndex.value,
-  (idx) => {
+  [() => state.activeIndex.value, () => state.viewportRowCount.value],
+  ([idx, viewport]) => {
     if (idx < 0) return;
-    const top = pendingTopIndex ?? state.topIndex.value;
-    const viewport = state.viewportRowCount.value;
     if (viewport <= 0) return;
+    const top = pendingTopIndex ?? state.topIndex.value;
     if (idx < top) {
       scheduleTopIndex(clamp(idx));
     } else if (idx >= top + viewport) {

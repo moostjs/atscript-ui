@@ -164,11 +164,19 @@ async function main() {
     }
   }
 
-  // 3. Walk per entry to find reachable .vue files -------------------------
+  // 3. Walk per entry to find reachable source files -----------------------
+  //
+  // Walk `.ts` as well as `.vue` — DO NOT narrow to .vue. Composables
+  // (e.g. `use-column-header-drag-resize.ts`) return class-name strings
+  // from helper functions, so the literal never appears in the .vue file
+  // and would be missed by a .vue-only walk.
 
-  function collectVueFiles(entryId: string): Set<string> {
+  const SOURCE_EXT_RE = /\.(vue|ts|tsx|mts|cts)$/;
+  const TEST_SUFFIX_RE = /\.(spec|test|d)\.(ts|tsx|mts|cts)$/;
+
+  function collectSourceFiles(entryId: string): Set<string> {
     const visited = new Set<string>();
-    const vueFiles = new Set<string>();
+    const sourceFiles = new Set<string>();
     const stack = [entryId];
 
     while (stack.length > 0) {
@@ -177,8 +185,12 @@ async function main() {
       visited.add(id);
 
       const cleanId = stripQueryParams(id);
-      if (cleanId.endsWith(".vue") && !cleanId.includes("\0")) {
-        vueFiles.add(cleanId);
+      if (
+        SOURCE_EXT_RE.test(cleanId) &&
+        !TEST_SUFFIX_RE.test(cleanId) &&
+        !cleanId.includes("\0")
+      ) {
+        sourceFiles.add(cleanId);
       }
 
       const importedIds = moduleGraph.get(id);
@@ -189,7 +201,7 @@ async function main() {
       }
     }
 
-    return vueFiles;
+    return sourceFiles;
   }
 
   // 4. Run UnoCSS generator → componentClasses -----------------------------
@@ -200,7 +212,7 @@ async function main() {
   // Internals are typically shared across many entries; cache to avoid
   // re-reading the same file from disk per entry.
   const fileCache = new Map<string, string>();
-  const readVue = (f: string) => {
+  const readSourceFile = (f: string) => {
     let s = fileCache.get(f);
     if (s === undefined) {
       s = fs.readFileSync(f, "utf8");
@@ -219,8 +231,8 @@ async function main() {
       componentClasses[name] = [];
       continue;
     }
-    const vueFiles = [...collectVueFiles(entryId)].toSorted(cmpEn);
-    const code = vueFiles.map(readVue).join("\n");
+    const sourceFiles = [...collectSourceFiles(entryId)].toSorted(cmpEn);
+    const code = sourceFiles.map(readSourceFile).join("\n");
     const { matched } = await uno.generate(code, { preflights: false });
     componentClasses[name] = [...matched].toSorted(cmpEn);
   }

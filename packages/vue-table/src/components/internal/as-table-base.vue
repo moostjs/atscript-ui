@@ -177,43 +177,53 @@ function onTbodyKeydown(event: KeyboardEvent) {
 
 const scrollContainerRef = ref<HTMLElement | null>(null);
 
-// Sticky-thead-aware scroll-into-view. Native `scrollIntoView({ block:
-// "nearest" })` ignores `position: sticky` siblings — the row sits behind the
-// sticky `<thead>` while its bbox overlaps the container, so the browser
-// refuses to scroll. Virtualized path uses direct scrollTop math (analytical
-// row position from `idx * rowHeight`); non-virtualized path uses bbox since
-// every row is already in DOM.
-//
-// `SCROLL_TOL` is load-bearing for the boundary case (active row at the
-// very first or last index). Hi-DPI hosts store `scrollTop` with sub-pixel
-// rounding, so the value the browser reports back the frame after a
-// successful integer write can be < 1 px below the target. Without slack,
-// the visibility check the next time the watcher runs sees "row bottom >
-// visible bottom" by that fractional pixel, we write the same integer
-// again, the browser rounds the same way, and the active row oscillates
-// ±1 row every frame. With 1.5 px of slack any genuine half-row scroll
-// still registers as out-of-view, but a freshly-aligned row reads as
-// visible and the chain terminates.
+// Sub-pixel slack: scrollTop reads back fractionally off our integer
+// write on hi-DPI hosts; without slack the visibility check re-arms and
+// oscillates by ±1 row.
 const SCROLL_TOL = 1.5;
 
+// Hand-rolled scrollTop math because `scrollIntoView` ignores sticky
+// `<thead>` (row bbox overlaps container while row hides behind thead)
+// and `virtualizer.scrollToIndex` uses a coord system that ignores the
+// thead, landing ~1 row short of `maxScrollTop` for the last row.
+//
+// Boundary rows pin to live `0` / `maxScrollTop`; middle rows go through
+// `Math.round(clamp(...))` and skip writes <1px to avoid browser round-
+// trip oscillation. Pairs with `[overflow-anchor:none]` on the scroll
+// container — without that CSS rule, browsers still re-adjust scrollTop
+// on virtualizer re-renders and the jitter comes back.
 function alignActiveRow(idx: number) {
   if (!ctx) return;
   const container = scrollContainerRef.value;
   if (!container) return;
+  const rowHeight = props.virtualRowHeight;
   const thead = container.querySelector("thead") as HTMLElement | null;
   const theadHeight = thead?.offsetHeight ?? 0;
-  const rowHeight = props.virtualRowHeight;
 
   if (rowHeight) {
-    const rowTop = theadHeight + idx * rowHeight;
-    const rowBottom = rowTop + rowHeight;
-    const visibleTop = container.scrollTop + theadHeight;
-    const visibleBottom = container.scrollTop + container.clientHeight;
-    if (rowTop < visibleTop - SCROLL_TOL) {
-      container.scrollTop = rowTop - theadHeight;
-    } else if (rowBottom > visibleBottom + SCROLL_TOL) {
-      container.scrollTop = rowBottom - container.clientHeight;
+    const total = props.rows.length;
+    const maxScrollTop = Math.max(0, container.scrollHeight - container.clientHeight);
+    let target = container.scrollTop;
+    if (idx >= total - 1) {
+      target = maxScrollTop;
+    } else if (idx <= 0) {
+      target = 0;
+    } else {
+      const rowTop = theadHeight + idx * rowHeight;
+      const rowBottom = rowTop + rowHeight;
+      const visibleTop = container.scrollTop + theadHeight;
+      const visibleBottom = container.scrollTop + container.clientHeight;
+      if (rowTop < visibleTop - SCROLL_TOL) {
+        target = rowTop - theadHeight;
+      } else if (rowBottom > visibleBottom + SCROLL_TOL) {
+        target = rowBottom - container.clientHeight;
+      } else {
+        return;
+      }
     }
+    target = Math.round(Math.max(0, Math.min(maxScrollTop, target)));
+    if (Math.abs(target - container.scrollTop) < 1) return;
+    container.scrollTop = target;
     return;
   }
 
@@ -344,7 +354,7 @@ function isActiveRow(index: number): boolean {
           :bypass="!virtualRowHeight"
           as="tbody"
         >
-          <template #default="{ item, spaceBefore }">
+          <template #default="{ item, index, spaceBefore }">
             <component
               :is="isCombobox ? ComboboxItem : ListboxItem"
               as="tr"

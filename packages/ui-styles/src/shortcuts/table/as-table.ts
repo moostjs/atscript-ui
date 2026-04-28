@@ -37,7 +37,11 @@ export const asTableShortcuts = defineShortcuts({
   "as-table-sticky": {
     "[&_thead]:": "sticky top-0 z-[1]",
   },
-  "as-table-scroll-container": "flex-1 min-h-0 overflow-auto",
+  // `[overflow-anchor:none]` is LOAD-BEARING — do not remove. CSS scroll
+  // anchoring fights virtualizer row-mount churn above the viewport and
+  // produces ±1-row jitter at scroll boundaries. Pairs with the manual
+  // scrollTop math in `alignActiveRow` (as-table-base.vue).
+  "as-table-scroll-container": "flex-1 min-h-0 overflow-auto [overflow-anchor:none]",
   "as-table-outer-wrap": "relative flex flex-col flex-1 min-h-0",
   "as-th-filler": "p-0 w-auto",
   "as-td-filler": "p-0 w-auto",

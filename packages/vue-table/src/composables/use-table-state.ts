@@ -313,6 +313,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   });
   const { navMode, navViewportRowCount, setActive, clearActive, handleNavKey } = nav;
 
+
   // ── Query engine ────────────────────────────────────────────────────────
   async function runQuery(kind: QueryErrorKind) {
     if (queryOpts?.blockQuery) return;

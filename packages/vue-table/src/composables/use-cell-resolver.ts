@@ -64,7 +64,14 @@ interface ColumnMeta {
  */
 const metaCache = new WeakMap<TAtscriptAnnotatedType, Map<string, ColumnMeta>>();
 
+const EMPTY_META_MAP: Map<string, ColumnMeta> = new Map();
+
 function getColumnMetaMap(def: TableDef): Map<string, ColumnMeta> {
+  // `createStaticTableState` (enum value-help dialog) synthesizes a
+  // TableDef with `type: undefined`. WeakMap rejects non-object keys, so
+  // skip the cache and return a frozen empty map — flatMap is empty too.
+  if (def.type === null || typeof def.type !== "object") return EMPTY_META_MAP;
+
   let map = metaCache.get(def.type);
   if (map) return map;
 
