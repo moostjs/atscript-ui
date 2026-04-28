@@ -13,6 +13,7 @@ import type { ColumnMenuConfig, SelectAllState } from "../../types";
 import { ComboboxItem, ComboboxItemIndicator, ListboxItem, ListboxItemIndicator } from "reka-ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import { useTableContextOptional } from "../../composables/use-table-state";
+import { useCellResolver } from "../../composables/use-cell-resolver";
 import AsTableCellValue from "../defaults/as-table-cell-value.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
@@ -80,6 +81,9 @@ const props = withDefaults(
 );
 
 const ctx = useTableContextOptional();
+const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(
+  () => ctx?.state.tableDef.value ?? null,
+);
 
 const isStandalone = computed(() => props.renderMode === "standalone");
 const isCombobox = computed(() => props.renderMode === "combobox");
@@ -365,16 +369,33 @@ function isActiveRow(index: number): boolean {
                   />
                 </span>
               </td>
-              <template v-for="col in columns" :key="col.path">
-                <td v-if="cellSlotFlags[col.path]">
-                  <slot
-                    :name="`cell-${col.path}`"
-                    :row="item"
-                    :value="getCellValue(item, col.path)"
-                    :column="col"
-                  />
-                </td>
-                <AsTableCellValue v-else :row="item" :column="col" />
+              <template v-if="hasAnyCellBindings">
+                <template v-for="col in columns" :key="col.path">
+                  <template v-for="bindings in [cellResolver(col, item, index)]" :key="0">
+                    <td v-if="cellSlotFlags[col.path]" v-bind="bindings">
+                      <slot
+                        :name="`cell-${col.path}`"
+                        :row="item"
+                        :value="getCellValue(item, col.path)"
+                        :column="col"
+                      />
+                    </td>
+                    <AsTableCellValue v-else :row="item" :column="col" v-bind="bindings" />
+                  </template>
+                </template>
+              </template>
+              <template v-else>
+                <template v-for="col in columns" :key="col.path">
+                  <td v-if="cellSlotFlags[col.path]">
+                    <slot
+                      :name="`cell-${col.path}`"
+                      :row="item"
+                      :value="getCellValue(item, col.path)"
+                      :column="col"
+                    />
+                  </td>
+                  <AsTableCellValue v-else :row="item" :column="col" />
+                </template>
               </template>
               <td v-if="stretch" class="as-td-filler" />
             </component>
@@ -416,16 +437,39 @@ function isActiveRow(index: number): boolean {
                 <span v-if="isPkSelected(item)" class="as-table-checkbox-tick" aria-hidden="true" />
               </span>
             </td>
-            <template v-for="col in columns" :key="col.path">
-              <td v-if="cellSlotFlags[col.path]" role="gridcell">
-                <slot
-                  :name="`cell-${col.path}`"
-                  :row="item"
-                  :value="getCellValue(item, col.path)"
-                  :column="col"
-                />
-              </td>
-              <AsTableCellValue v-else :row="item" :column="col" />
+            <template v-if="hasAnyCellBindings">
+              <template v-for="col in columns" :key="col.path">
+                <template v-for="bindings in [cellResolver(col, item, index)]" :key="0">
+                  <td v-if="cellSlotFlags[col.path]" role="gridcell" v-bind="bindings">
+                    <slot
+                      :name="`cell-${col.path}`"
+                      :row="item"
+                      :value="getCellValue(item, col.path)"
+                      :column="col"
+                    />
+                  </td>
+                  <AsTableCellValue
+                    v-else
+                    :row="item"
+                    :column="col"
+                    role="gridcell"
+                    v-bind="bindings"
+                  />
+                </template>
+              </template>
+            </template>
+            <template v-else>
+              <template v-for="col in columns" :key="col.path">
+                <td v-if="cellSlotFlags[col.path]" role="gridcell">
+                  <slot
+                    :name="`cell-${col.path}`"
+                    :row="item"
+                    :value="getCellValue(item, col.path)"
+                    :column="col"
+                  />
+                </td>
+                <AsTableCellValue v-else :row="item" :column="col" role="gridcell" />
+              </template>
             </template>
             <td v-if="stretch" class="as-td-filler" role="gridcell" />
           </tr>

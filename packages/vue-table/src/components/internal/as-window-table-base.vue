@@ -4,6 +4,7 @@ import { useResizeObserver } from "@vueuse/core";
 import { clampTopIndex, filledFilterCount } from "@atscript/ui-table";
 import type { ColumnMenuConfig, EnterAction, SelectAllState } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
+import { useCellResolver } from "../../composables/use-cell-resolver";
 import { useRafBatch } from "../../composables/use-raf-batch";
 import { useTableColumnHandlers } from "../../composables/use-table-column-handlers";
 import { getCellValue } from "../../utils/get-cell-value";
@@ -58,6 +59,7 @@ const emit = defineEmits<{
 
 const slots = useSlots();
 const { state } = useTableContext();
+const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(() => state.tableDef.value);
 
 const hasValue = computed(() => state.selectionMode !== "none");
 const hasActiveFilters = computed(() => filledFilterCount(state.filters.value) > 0);
@@ -373,16 +375,44 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
                   <span v-if="slot.selected" class="as-table-checkbox-tick" aria-hidden="true" />
                 </span>
               </td>
-              <template v-for="col in state.columns.value" :key="col.path">
-                <td v-if="cellSlotFlags[col.path]" role="gridcell">
-                  <slot
-                    :name="`cell-${col.path}`"
-                    :row="slot.row"
-                    :value="getCellValue(slot.row, col.path)"
-                    :column="col"
-                  />
-                </td>
-                <AsTableCellValue v-else :row="slot.row" :column="col" />
+              <template v-if="hasAnyCellBindings">
+                <template v-for="col in state.columns.value" :key="col.path">
+                  <template
+                    v-for="bindings in [
+                      cellResolver(col, slot.row as Row, state.topIndex.value + slot.s),
+                    ]"
+                    :key="0"
+                  >
+                    <td v-if="cellSlotFlags[col.path]" role="gridcell" v-bind="bindings">
+                      <slot
+                        :name="`cell-${col.path}`"
+                        :row="slot.row"
+                        :value="getCellValue(slot.row, col.path)"
+                        :column="col"
+                      />
+                    </td>
+                    <AsTableCellValue
+                      v-else
+                      :row="slot.row"
+                      :column="col"
+                      role="gridcell"
+                      v-bind="bindings"
+                    />
+                  </template>
+                </template>
+              </template>
+              <template v-else>
+                <template v-for="col in state.columns.value" :key="col.path">
+                  <td v-if="cellSlotFlags[col.path]" role="gridcell">
+                    <slot
+                      :name="`cell-${col.path}`"
+                      :row="slot.row"
+                      :value="getCellValue(slot.row, col.path)"
+                      :column="col"
+                    />
+                  </td>
+                  <AsTableCellValue v-else :row="slot.row" :column="col" role="gridcell" />
+                </template>
               </template>
               <td class="as-td-filler" role="gridcell" />
             </tr>

@@ -30,27 +30,34 @@ declare global {
     "expect.array.uniqueItems": { message?: string }
     "expect.array.key": { message?: string }
     "emit.jsonSchema": boolean
-    "ui.placeholder": string
-    "ui.group": string
-    "ui.field.width": string
-    "ui.table.column.width": string
-    "ui.icon": string
-    "ui.hint": string
-    "ui.class": (string)[]
-    "ui.style": (string)[]
-    "ui.autocomplete": string
     "ui.type": string
-    "ui.component": string
-    "ui.order": number
-    "ui.hidden": boolean
-    "ui.disabled": boolean
-    "ui.readonly": boolean
-    "ui.options": ({ label: string, value?: string })[]
-    "ui.attr": ({ name: string, value: string })[]
-    "ui.title": string
-    "ui.submit.text": string
-    "ui.submit.disabled": boolean
+    "ui.form.placeholder": string
+    "ui.form.hint": string
+    "ui.form.classes": (string)[]
+    "ui.form.styles": (string)[]
+    "ui.form.autocomplete": string
+    "ui.form.disabled": boolean
+    "ui.form.readonly": boolean
+    "ui.form.options": ({ label: string, value?: string })[]
+    "ui.form.order": number
+    "ui.form.type": string
+    "ui.form.component": string
+    "ui.form.hidden": boolean
+    "ui.form.attr": ({ name: string, value: string })[]
+    "ui.form.title": string
+    "ui.form.width": string
+    "ui.form.icon": string
+    "ui.form.submit.text": string
+    "ui.form.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }
+    "ui.table.width": string
+    "ui.table.component": string
+    "ui.table.hidden": boolean
+    "ui.table.attr": ({ name: string, value: string })[]
+    "ui.table.classes": (string)[]
+    "ui.table.styles": (string)[]
+    "ui.table.type": string
+    "ui.table.order": number
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]

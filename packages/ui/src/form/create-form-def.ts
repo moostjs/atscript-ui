@@ -15,7 +15,13 @@ import type {
   FormUnionVariant,
 } from "./types";
 import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
-import { META_LABEL, UI_COMPONENT, UI_ORDER, UI_TYPE } from "../shared/annotation-keys";
+import {
+  META_LABEL,
+  UI_FORM_COMPONENT,
+  UI_FORM_ORDER,
+  UI_FORM_TYPE,
+  UI_TYPE,
+} from "../shared/annotation-keys";
 import { isPureLiteralUnion } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
 
@@ -53,14 +59,15 @@ export function createFormDef(type: TAtscriptAnnotatedType): FormDef {
     // Flat objects (no label/component): skip, children render inline
     if (kind === "object") {
       const hasLabel = getFieldMeta(originalProp, META_LABEL) !== undefined;
-      const hasComponent = getFieldMeta(originalProp, UI_COMPONENT) !== undefined;
+      const hasComponent = getFieldMeta(originalProp, UI_FORM_COMPONENT) !== undefined;
       if (!hasLabel && !hasComponent) continue;
     }
 
     // Nested arrays without component: unsupported
     if (kind === "array") {
       const arrayType = originalProp.type as TAtscriptTypeArray;
-      if (arrayType.of.type.kind === "array" && !getFieldMeta(originalProp, UI_COMPONENT)) continue;
+      if (arrayType.of.type.kind === "array" && !getFieldMeta(originalProp, UI_FORM_COMPONENT))
+        continue;
     }
 
     // Mark structured prefixes (pre-suffixed with "." for efficient child checks)
@@ -71,9 +78,9 @@ export function createFormDef(type: TAtscriptAnnotatedType): FormDef {
     fields.push(createFieldDef(path, originalProp));
   }
 
-  // Sort by ui.order (cache order values to avoid repeated metadata lookups during sort)
+  // Sort by ui.form.order (cache order values to avoid repeated metadata lookups during sort)
   const orderMap = new Map(
-    fields.map((f) => [f, (getFieldMeta(f.prop, UI_ORDER) as number | undefined) ?? Infinity]),
+    fields.map((f) => [f, (getFieldMeta(f.prop, UI_FORM_ORDER) as number | undefined) ?? Infinity]),
   );
   fields.sort((a, b) => orderMap.get(a)! - orderMap.get(b)!);
 
@@ -97,7 +104,9 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
   const kind = prop.type.kind;
   const name = path.slice(path.lastIndexOf(".") + 1);
   const allStatic = !hasComputedAnnotations(prop);
-  const uiType = getFieldMeta(prop, UI_TYPE) as string | undefined;
+  const uiType =
+    (getFieldMeta(prop, UI_FORM_TYPE) as string | undefined) ??
+    (getFieldMeta(prop, UI_TYPE) as string | undefined);
   const base = { path, prop, phantom: false, name, allStatic };
 
   // Array
@@ -122,7 +131,6 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
 
   // Union → select (pure literals) or union (multi) or unwrap (single)
   if (kind === "union") {
-    // Pure literal union → select (or @ui.type override like 'radio')
     if (isPureLiteralUnion(prop)) {
       return { ...base, type: uiType ?? "select" };
     }
@@ -226,7 +234,7 @@ function createVariant(def: TAtscriptAnnotatedType): FormUnionVariant {
 
   if (kind === "object") {
     const label = (getFieldMeta(def, META_LABEL) as string | undefined) ?? "Object";
-    const hasComponent = getFieldMeta(def, UI_COMPONENT) !== undefined;
+    const hasComponent = getFieldMeta(def, UI_FORM_COMPONENT) !== undefined;
     return {
       label,
       type: def,

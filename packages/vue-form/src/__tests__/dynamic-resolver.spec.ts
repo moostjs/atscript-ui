@@ -2,11 +2,11 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { nextTick } from "vue";
 import { installDynamicResolver } from "@atscript/ui-fns";
 import {
-  UI_FN_LABEL,
-  UI_FN_HIDDEN,
-  UI_FN_DISABLED,
-  UI_FN_VALUE,
-  UI_FN_OPTIONS,
+  UI_FORM_FN_LABEL,
+  UI_FORM_FN_HIDDEN,
+  UI_FORM_FN_DISABLED,
+  UI_FORM_FN_VALUE,
+  UI_FORM_FN_OPTIONS,
 } from "@atscript/ui";
 import { mountForm, objectType, stringProp, phantomProp } from "./helpers";
 
@@ -14,11 +14,11 @@ beforeAll(() => {
   installDynamicResolver();
 });
 
-describe("dynamic resolver – ui.fn.label", () => {
+describe("dynamic resolver – ui.form.fn.label", () => {
   it("resolves initial label", async () => {
     const type = objectType({
       name: stringProp({
-        [UI_FN_LABEL]: '(v) => v ? "Editing: " + v : "New"',
+        [UI_FORM_FN_LABEL]: '(v) => v ? "Editing: " + v : "New"',
       }),
     });
     const { wrapper } = mountForm(type);
@@ -29,7 +29,7 @@ describe("dynamic resolver – ui.fn.label", () => {
   it("updates reactively when data changes", async () => {
     const type = objectType({
       name: stringProp({
-        [UI_FN_LABEL]: '(v) => v ? "Editing: " + v : "New"',
+        [UI_FORM_FN_LABEL]: '(v) => v ? "Editing: " + v : "New"',
       }),
     });
     const { wrapper, formData } = mountForm(type);
@@ -42,12 +42,12 @@ describe("dynamic resolver – ui.fn.label", () => {
   });
 });
 
-describe("dynamic resolver – ui.fn.hidden", () => {
+describe("dynamic resolver – ui.form.fn.hidden", () => {
   it("hides field based on data condition", async () => {
     const type = objectType({
       toggle: stringProp(),
       secret: stringProp({
-        [UI_FN_HIDDEN]: '(v, data) => data.toggle === "hide"',
+        [UI_FORM_FN_HIDDEN]: '(v, data) => data.toggle === "hide"',
       }),
     });
     const { wrapper, formData } = mountForm(type);
@@ -64,7 +64,7 @@ describe("dynamic resolver – ui.fn.hidden", () => {
     const type = objectType({
       toggle: stringProp(),
       secret: stringProp({
-        [UI_FN_HIDDEN]: '(v, data) => data.toggle === "hide"',
+        [UI_FORM_FN_HIDDEN]: '(v, data) => data.toggle === "hide"',
       }),
     });
     const { wrapper, formData } = mountForm(type);
@@ -81,12 +81,12 @@ describe("dynamic resolver – ui.fn.hidden", () => {
   });
 });
 
-describe("dynamic resolver – ui.fn.disabled", () => {
+describe("dynamic resolver – ui.form.fn.disabled", () => {
   it("disables field based on data condition", async () => {
     const type = objectType({
       locked: stringProp(),
       target: stringProp({
-        [UI_FN_DISABLED]: '(v, data) => data.locked === "yes"',
+        [UI_FORM_FN_DISABLED]: '(v, data) => data.locked === "yes"',
       }),
     });
     const { wrapper, formData } = mountForm(type);
@@ -102,7 +102,7 @@ describe("dynamic resolver – ui.fn.disabled", () => {
     const type = objectType({
       locked: stringProp(),
       target: stringProp({
-        [UI_FN_DISABLED]: '(v, data) => data.locked === "yes"',
+        [UI_FORM_FN_DISABLED]: '(v, data) => data.locked === "yes"',
       }),
     });
     const { wrapper, formData } = mountForm(type);
@@ -118,13 +118,13 @@ describe("dynamic resolver – ui.fn.disabled", () => {
   });
 });
 
-describe("dynamic resolver – ui.fn.value (phantom)", () => {
+describe("dynamic resolver – ui.form.fn.value (phantom)", () => {
   it("resolves phantom paragraph value", async () => {
     const type = objectType({
       name: stringProp(),
       greeting: phantomProp({
         "ui.type": "paragraph",
-        [UI_FN_VALUE]: '(v, data) => data.name ? "Hello, " + data.name : "Enter your name"',
+        [UI_FORM_FN_VALUE]: '(v, data) => data.name ? "Hello, " + data.name : "Enter your name"',
       }),
     });
     const { wrapper } = mountForm(type);
@@ -137,7 +137,7 @@ describe("dynamic resolver – ui.fn.value (phantom)", () => {
       name: stringProp(),
       greeting: phantomProp({
         "ui.type": "paragraph",
-        [UI_FN_VALUE]: '(v, data) => data.name ? "Hello, " + data.name : "Enter your name"',
+        [UI_FORM_FN_VALUE]: '(v, data) => data.name ? "Hello, " + data.name : "Enter your name"',
       }),
     });
     const { wrapper, formData } = mountForm(type);
@@ -150,11 +150,11 @@ describe("dynamic resolver – ui.fn.value (phantom)", () => {
   });
 });
 
-describe("dynamic resolver – ui.fn.submit.text", () => {
+describe("dynamic resolver – ui.form.fn.submit.text", () => {
   it("resolves form button text", async () => {
     const type = objectType(
       { name: stringProp() },
-      { "ui.fn.submit.text": '(data) => data.name ? "Update " + data.name : "Create"' },
+      { "ui.form.fn.submit.text": '(data) => data.name ? "Update " + data.name : "Create"' },
     );
     const { wrapper } = mountForm(type);
     await nextTick();
@@ -166,7 +166,7 @@ describe("dynamic resolver – ui.fn.submit.text", () => {
   it("updates reactively", async () => {
     const type = objectType(
       { name: stringProp() },
-      { "ui.fn.submit.text": '(data) => data.name ? "Update " + data.name : "Create"' },
+      { "ui.form.fn.submit.text": '(data) => data.name ? "Update " + data.name : "Create"' },
     );
     const { wrapper, formData } = mountForm(type);
     await nextTick();
@@ -178,12 +178,12 @@ describe("dynamic resolver – ui.fn.submit.text", () => {
   });
 });
 
-describe("dynamic resolver – ui.fn.options", () => {
+describe("dynamic resolver – ui.form.fn.options", () => {
   it("resolves options from context", async () => {
     const type = objectType({
       color: stringProp({
         "ui.type": "select",
-        [UI_FN_OPTIONS]: "(v, data, context) => context.colors",
+        [UI_FORM_FN_OPTIONS]: "(v, data, context) => context.colors",
       }),
     });
     const { wrapper } = mountForm(type, {
@@ -209,7 +209,7 @@ describe("dynamic resolver – scope context", () => {
     const type = objectType({
       greeting: phantomProp({
         "ui.type": "paragraph",
-        [UI_FN_VALUE]: '(v, data, context) => "Welcome, " + context.user',
+        [UI_FORM_FN_VALUE]: '(v, data, context) => "Welcome, " + context.user',
       }),
     });
     const { wrapper } = mountForm(type, {

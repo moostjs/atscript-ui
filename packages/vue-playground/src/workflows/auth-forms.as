@@ -1,15 +1,15 @@
 @meta.label 'Sign In'
-@ui.submit.text 'Sign In'
+@ui.form.submit.text 'Sign In'
 export interface LoginForm {
     @meta.label 'Username'
-    @ui.placeholder 'Enter your username'
+    @ui.form.placeholder 'Enter your username'
     @meta.required 'Username is required'
     @expect.minLength 3, 'At least 3 characters'
     username: string
 
     @meta.label 'Password'
     @ui.type 'password'
-    @ui.placeholder 'Enter your password'
+    @ui.form.placeholder 'Enter your password'
     @meta.required 'Password is required'
     password: string
 
@@ -21,11 +21,11 @@ export interface LoginForm {
 @wf.context.pass 'email'
 @wf.context.pass 'pinTimeout'
 @meta.label 'Verify Identity'
-@ui.submit.text 'Verify Code'
-@ui.fn.title '(data, ctx) => `Enter the code sent to ${ctx.email || "your email"}`'
+@ui.form.submit.text 'Verify Code'
+@ui.form.fn.title '(data, ctx) => `Enter the code sent to ${ctx.email || "your email"}`'
 export interface MfaPincodeForm {
     @meta.label 'Verification Code'
-    @ui.placeholder '000000'
+    @ui.form.placeholder '000000'
     @meta.required 'Code is required'
     @expect.pattern '^\d{6}$'
     code: string
@@ -40,10 +40,10 @@ export interface MfaPincodeForm {
 }
 
 @meta.label 'Reset Password'
-@ui.submit.text 'Send Reset Link'
+@ui.form.submit.text 'Send Reset Link'
 export interface ForgotPasswordForm {
     @meta.label 'Email Address'
-    @ui.placeholder 'you@example.com'
+    @ui.form.placeholder 'you@example.com'
     @meta.required 'Email is required'
     email: string.email
 }

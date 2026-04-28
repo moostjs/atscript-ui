@@ -24,6 +24,36 @@ import {
   createFormData,
   createFormValueResolver,
   createFieldValidator,
+  EXPECT_MAX_LENGTH,
+  META_DEFAULT,
+  META_DESCRIPTION,
+  META_LABEL,
+  META_READONLY,
+  META_REQUIRED,
+  UI_FORM_ACTION,
+  UI_FORM_ATTR,
+  UI_FORM_AUTOCOMPLETE,
+  UI_FORM_CLASSES,
+  UI_FORM_COMPONENT,
+  UI_FORM_DISABLED,
+  UI_FORM_FN_CLASSES,
+  UI_FORM_FN_DESCRIPTION,
+  UI_FORM_FN_DISABLED,
+  UI_FORM_FN_HIDDEN,
+  UI_FORM_FN_HINT,
+  UI_FORM_FN_LABEL,
+  UI_FORM_FN_PLACEHOLDER,
+  UI_FORM_FN_PREFIX,
+  UI_FORM_FN_READONLY,
+  UI_FORM_FN_STYLES,
+  UI_FORM_FN_TITLE,
+  UI_FORM_FN_VALUE,
+  UI_FORM_HIDDEN,
+  UI_FORM_HINT,
+  UI_FORM_ICON,
+  UI_FORM_PLACEHOLDER,
+  UI_FORM_STYLES,
+  UI_VALIDATE,
   WF_ACTION_WITH_DATA,
   type FormFieldDef,
   type TFormAction,
@@ -115,18 +145,19 @@ function buildFieldClasses(
 const prop = props.field.prop;
 
 // ── Static reads (always) ──────────────────────────────────
-const autocomplete = getFieldMeta(prop, "ui.autocomplete");
-const maxLength = getFieldMeta(prop, "expect.maxLength")?.length;
-const componentName = getFieldMeta(prop, "ui.component");
-const formActionMeta = getFieldMeta(prop, "ui.form.action");
+const autocomplete = getFieldMeta(prop, UI_FORM_AUTOCOMPLETE);
+const maxLength = getFieldMeta(prop, EXPECT_MAX_LENGTH)?.length;
+const componentName = getFieldMeta(prop, UI_FORM_COMPONENT);
+const icon = getFieldMeta(prop, UI_FORM_ICON);
+const formActionMeta = getFieldMeta(prop, UI_FORM_ACTION);
 const wfActionWithData = getFieldMeta(prop, WF_ACTION_WITH_DATA) as string | undefined;
 const formAction: TFormAction | undefined = formActionMeta
   ? {
       id: formActionMeta.id,
-      label: formActionMeta.label ?? getFieldMeta(prop, "meta.label") ?? props.field.name,
+      label: formActionMeta.label ?? getFieldMeta(prop, META_LABEL) ?? props.field.name,
     }
   : wfActionWithData
-    ? { id: wfActionWithData, label: getFieldMeta(prop, "meta.label") ?? props.field.name }
+    ? { id: wfActionWithData, label: getFieldMeta(prop, META_LABEL) ?? props.field.name }
     : undefined;
 
 // ── Cached validator (created once per field) ────────────────
@@ -183,54 +214,52 @@ let phantomValue: unknown;
 let hasCustomValidators: boolean;
 
 // Whether @meta.required is present (static — shared by both paths)
-const hasMetaRequired = getFieldMeta(prop, "meta.required") !== undefined;
+const hasMetaRequired = getFieldMeta(prop, META_REQUIRED) !== undefined;
 
 if (props.field.allStatic) {
-  // ══════════════════════════════════════════════════════════
-  // FAST PATH: all properties are static — no scope, no computeds
-  // ══════════════════════════════════════════════════════════
+  // Fast path: no fn keys → no scope, no computeds.
   hasCustomValidators = false;
 
   // Constraints: static booleans
-  disabled = getFieldMeta(prop, "ui.disabled") !== undefined;
-  hidden = getFieldMeta(prop, "ui.hidden") !== undefined;
+  disabled = getFieldMeta(prop, UI_FORM_DISABLED) !== undefined;
+  hidden = getFieldMeta(prop, UI_FORM_HIDDEN) !== undefined;
   optional = props.field.prop.optional ?? false;
-  readonly = getFieldMeta(prop, "meta.readonly") !== undefined;
+  readonly = getFieldMeta(prop, META_READONLY) !== undefined;
 
   // Required: based on @meta.required (skip for phantom)
   required = props.field.phantom ? undefined : hasMetaRequired;
 
   // Display: static reads
-  label = getFieldMeta(prop, "meta.label") ?? props.field.name;
-  description = getFieldMeta(prop, "meta.description");
-  hint = getFieldMeta(prop, "ui.hint");
-  placeholder = getFieldMeta(prop, "ui.placeholder");
-  styles = getFieldMeta(prop, "ui.style");
+  label = getFieldMeta(prop, META_LABEL) ?? props.field.name;
+  description = getFieldMeta(prop, META_DESCRIPTION);
+  hint = getFieldMeta(prop, UI_FORM_HINT);
+  placeholder = getFieldMeta(prop, UI_FORM_PLACEHOLDER);
+  styles = getFieldMeta(prop, UI_FORM_STYLES);
   options = resolveOptions(prop, emptyScope);
-  attrs = getFieldMeta(prop, "ui.attr") !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
+  attrs =
+    getFieldMeta(prop, UI_FORM_ATTR) !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
 
   // Title: static (for structure/array fields)
-  title = isStructured ? (getFieldMeta(prop, "meta.label") ?? props.field.name) : undefined;
+  title = isStructured ? (getFieldMeta(prop, META_LABEL) ?? props.field.name) : undefined;
 
   // Classes: plain object (no computed)
   classesBase = buildFieldClasses(
-    getFieldMeta(prop, "ui.class"),
+    getFieldMeta(prop, UI_FORM_CLASSES),
     disabled as boolean,
     hasMetaRequired,
   );
 
   // Phantom value: static
-  phantomValue = props.field.phantom ? getFieldMeta(prop, "meta.default") : undefined;
+  phantomValue = props.field.phantom ? getFieldMeta(prop, META_DEFAULT) : undefined;
 } else {
-  // ══════════════════════════════════════════════════════════
-  // DYNAMIC PATH: per-property static/dynamic detection
-  // ══════════════════════════════════════════════════════════
-  // Single scan of metadata keys to detect all ui.fn.* annotations
+  // Dynamic path. One pass over metadata keys so per-property static-vs-dynamic
+  // branching costs O(N), not O(N × per-key getFieldMeta calls).
   const hasFn = new Set<string>();
-  for (const key of (prop.metadata as unknown as { keys(): Iterable<string> }).keys()) {
-    if (key.startsWith("ui.fn.")) hasFn.add(key.slice(6));
+  for (const key of prop.metadata.keys()) {
+    const k = key as string;
+    if (k.startsWith(UI_FORM_FN_PREFIX)) hasFn.add(k.slice(UI_FORM_FN_PREFIX.length));
   }
-  hasCustomValidators = getFieldMeta(prop, "ui.validate") !== undefined;
+  hasCustomValidators = getFieldMeta(prop, UI_VALIDATE) !== undefined;
 
   // ── Lazy scope construction ────────────────────────────────
   const needsBaseScope = hasFn.has("disabled") || hasFn.has("hidden") || hasFn.has("readonly");
@@ -260,14 +289,17 @@ if (props.field.allStatic) {
   disabled = maybeComputed(
     hasFn.has("disabled"),
     () =>
-      resolveFieldProp<boolean>(prop, "ui.fn.disabled", "ui.disabled", bs.value, boolOpts) ?? false,
-    getFieldMeta(prop, "ui.disabled") !== undefined,
+      resolveFieldProp<boolean>(prop, UI_FORM_FN_DISABLED, UI_FORM_DISABLED, bs.value, boolOpts) ??
+      false,
+    getFieldMeta(prop, UI_FORM_DISABLED) !== undefined,
   );
 
   hidden = maybeComputed(
     hasFn.has("hidden"),
-    () => resolveFieldProp<boolean>(prop, "ui.fn.hidden", "ui.hidden", bs.value, boolOpts) ?? false,
-    getFieldMeta(prop, "ui.hidden") !== undefined,
+    () =>
+      resolveFieldProp<boolean>(prop, UI_FORM_FN_HIDDEN, UI_FORM_HIDDEN, bs.value, boolOpts) ??
+      false,
+    getFieldMeta(prop, UI_FORM_HIDDEN) !== undefined,
   );
 
   optional = props.field.prop.optional ?? false;
@@ -275,9 +307,9 @@ if (props.field.allStatic) {
   readonly = maybeComputed(
     hasFn.has("readonly"),
     () =>
-      resolveFieldProp<boolean>(prop, "ui.fn.readonly", "meta.readonly", bs.value, boolOpts) ??
+      resolveFieldProp<boolean>(prop, UI_FORM_FN_READONLY, META_READONLY, bs.value, boolOpts) ??
       false,
-    getFieldMeta(prop, "meta.readonly") !== undefined,
+    getFieldMeta(prop, META_READONLY) !== undefined,
   );
 
   // Derived: required based on @meta.required (skip for phantom)
@@ -304,32 +336,33 @@ if (props.field.allStatic) {
   // ── Display props (full scope phase) ───────────────────────
   label = maybeComputed(
     hasFn.has("label"),
-    () => resolveFieldProp<string>(prop, "ui.fn.label", "meta.label", fs.value) ?? props.field.name,
-    getFieldMeta(prop, "meta.label") ?? props.field.name,
+    () =>
+      resolveFieldProp<string>(prop, UI_FORM_FN_LABEL, META_LABEL, fs.value) ?? props.field.name,
+    getFieldMeta(prop, META_LABEL) ?? props.field.name,
   );
 
   description = maybeComputed(
     hasFn.has("description"),
-    () => resolveFieldProp<string>(prop, "ui.fn.description", "meta.description", fs.value),
-    getFieldMeta(prop, "meta.description"),
+    () => resolveFieldProp<string>(prop, UI_FORM_FN_DESCRIPTION, META_DESCRIPTION, fs.value),
+    getFieldMeta(prop, META_DESCRIPTION),
   );
 
   hint = maybeComputed(
     hasFn.has("hint"),
-    () => resolveFieldProp<string>(prop, "ui.fn.hint", "ui.hint", fs.value),
-    getFieldMeta(prop, "ui.hint"),
+    () => resolveFieldProp<string>(prop, UI_FORM_FN_HINT, UI_FORM_HINT, fs.value),
+    getFieldMeta(prop, UI_FORM_HINT),
   );
 
   placeholder = maybeComputed(
     hasFn.has("placeholder"),
-    () => resolveFieldProp<string>(prop, "ui.fn.placeholder", "ui.placeholder", fs.value),
-    getFieldMeta(prop, "ui.placeholder"),
+    () => resolveFieldProp<string>(prop, UI_FORM_FN_PLACEHOLDER, UI_FORM_PLACEHOLDER, fs.value),
+    getFieldMeta(prop, UI_FORM_PLACEHOLDER),
   );
 
   styles = maybeComputed(
     hasFn.has("styles"),
-    () => resolveFieldProp(prop, "ui.fn.styles", "ui.style", fs.value),
-    getFieldMeta(prop, "ui.style"),
+    () => resolveFieldProp(prop, UI_FORM_FN_STYLES, UI_FORM_STYLES, fs.value),
+    getFieldMeta(prop, UI_FORM_STYLES),
   );
 
   options = maybeComputed(
@@ -338,11 +371,11 @@ if (props.field.allStatic) {
     resolveOptions(prop, emptyScope),
   );
 
-  attrs =
-    hasFn.has("attr") || getFieldMeta(prop, "ui.attr") !== undefined
-      ? hasFn.has("attr")
-        ? computed(() => resolveAttrs(prop, fs.value))
-        : resolveAttrs(prop, emptyScope)
+  const hasFnAttr = hasFn.has("attr");
+  attrs = hasFnAttr
+    ? computed(() => resolveAttrs(prop, fs.value))
+    : getFieldMeta(prop, UI_FORM_ATTR) !== undefined
+      ? resolveAttrs(prop, emptyScope)
       : undefined;
 
   // ── Title (for structure/array fields) ─────────────────────
@@ -350,38 +383,44 @@ if (props.field.allStatic) {
     ? maybeComputed(
         hasFn.has("title"),
         () =>
-          resolveFieldProp<string>(prop, "ui.fn.title", "meta.label", fs.value) ?? props.field.name,
-        getFieldMeta(prop, "meta.label") ?? props.field.name,
+          resolveFieldProp<string>(prop, UI_FORM_FN_TITLE, META_LABEL, fs.value) ??
+          props.field.name,
+        getFieldMeta(prop, META_LABEL) ?? props.field.name,
       )
     : undefined;
 
   // ── Classes — conditional computed ─────────────────────────
+  const hasFnClasses = hasFn.has("classes");
   classesBase =
-    hasFn.has("classes") || typeof disabled !== "boolean"
+    hasFnClasses || typeof disabled !== "boolean"
       ? computed(() =>
           buildFieldClasses(
-            hasFn.has("classes")
-              ? resolveFieldProp(prop, "ui.fn.classes", undefined, fs.value)
-              : getFieldMeta(prop, "ui.class"),
+            hasFnClasses
+              ? resolveFieldProp(prop, UI_FORM_FN_CLASSES, undefined, fs.value)
+              : getFieldMeta(prop, UI_FORM_CLASSES),
             unwrap(disabled),
             hasMetaRequired,
           ),
         )
-      : buildFieldClasses(getFieldMeta(prop, "ui.class"), disabled as boolean, hasMetaRequired);
+      : buildFieldClasses(
+          getFieldMeta(prop, UI_FORM_CLASSES),
+          disabled as boolean,
+          hasMetaRequired,
+        );
 
   // ── Phantom value (paragraph, action display) ──────────────
   phantomValue = props.field.phantom
     ? maybeComputed(
         hasFn.has("value"),
-        () => resolveFieldProp(prop, "ui.fn.value", "meta.default", fs.value),
-        getFieldMeta(prop, "meta.default"),
+        () => resolveFieldProp(prop, UI_FORM_FN_VALUE, META_DEFAULT, fs.value),
+        getFieldMeta(prop, META_DEFAULT),
       )
     : undefined;
 
   // ── Readonly watcher (computed derived fields) ─────────────
   if (hasFn.has("value") && !props.field.phantom) {
     const computedValue = computed(() => {
-      if (unwrap(readonly)) return resolveFieldProp(prop, "ui.fn.value", "meta.default", fs.value);
+      if (unwrap(readonly)) return resolveFieldProp(prop, UI_FORM_FN_VALUE, META_DEFAULT, fs.value);
       return undefined;
     });
 
@@ -464,6 +503,7 @@ const invariantProps = {
   field: props.field,
   maxLength,
   autocomplete,
+  icon,
   level: isStructured ? myLevel : undefined,
 };
 

@@ -1,5 +1,5 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import { UI_ATTR, UI_FN_ATTR } from "./annotation-keys";
+import { UI_FORM_ATTR, UI_FORM_FN_ATTR } from "./annotation-keys";
 
 // ── Resolve options ──────────────────────────────────────────
 
@@ -172,16 +172,27 @@ export function parseStaticAttrs(staticAttrs: unknown): Record<string, unknown> 
   return hasAttrs ? result : undefined;
 }
 
+/** Per-surface attr key pair — defaults to the form-side keys. */
+export interface TResolveAttrsKeys {
+  staticKey?: string;
+  fnKey?: string;
+}
+
 /**
- * Resolves `ui.attr` + `ui.fn.attr` from metadata on demand.
- * Static attrs come from `ui.attr`. Dynamic fn attrs delegate through the active resolver.
+ * Resolves `<staticKey>` + `<fnKey>` attr metadata on demand.
+ * Defaults read `ui.form.attr` + `ui.form.fn.attr`; pass `{ staticKey, fnKey }` to read
+ * the table-side pair (`ui.table.attr` + `ui.table.fn.attr`) or any other surface.
  */
 export function resolveAttrs(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
+  keys: TResolveAttrsKeys = {},
 ): Record<string, unknown> | undefined {
-  const staticAttrs = getFieldMeta(prop, UI_ATTR);
-  const fnAttrs = getFieldMeta(prop, UI_FN_ATTR);
+  const staticKey = keys.staticKey ?? UI_FORM_ATTR;
+  const fnKey = keys.fnKey ?? UI_FORM_FN_ATTR;
+
+  const staticAttrs = getFieldMeta(prop, staticKey);
+  const fnAttrs = getFieldMeta(prop, fnKey);
 
   if (!staticAttrs && !fnAttrs) return undefined;
 
@@ -196,7 +207,7 @@ export function resolveAttrs(
 
   // Delegate fn attrs through the active resolver (static resolver returns undefined; dynamic compiles)
   if (fnAttrs) {
-    const resolved = resolveFieldProp<Record<string, unknown>>(prop, UI_FN_ATTR, undefined, scope);
+    const resolved = resolveFieldProp<Record<string, unknown>>(prop, fnKey, undefined, scope);
     if (resolved) {
       Object.assign(result, resolved);
       hasAttrs = true;

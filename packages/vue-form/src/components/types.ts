@@ -28,19 +28,21 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   error?: string;
   /** Reactive model wrapping the field value. Bind with `v-model="model.value"`. */
   model: { value: V };
-  /** Phantom field display value from `@ui.value` / `@ui.fn.value` (paragraphs, actions). `undefined` for data fields. */
+  /** Phantom field display value from `@meta.default` / `@ui.form.fn.value` (paragraphs, actions). `undefined` for data fields. */
   value?: unknown;
-  /** Resolved field label from `@label` or `@ui.fn.label`. */
+  /** Resolved field label from `@meta.label` or `@ui.form.fn.label`. */
   label?: string;
-  /** Resolved field description from `@description` or `@ui.fn.description`. */
+  /** Resolved field description from `@meta.description` or `@ui.form.fn.description`. */
   description?: string;
-  /** Resolved hint text from `@ui.hint` or `@ui.fn.hint`. */
+  /** Resolved hint text from `@ui.form.hint` or `@ui.form.fn.hint`. */
   hint?: string;
-  /** Resolved placeholder from `@ui.placeholder` or `@ui.fn.placeholder`. */
+  /** Resolved placeholder from `@ui.form.placeholder` or `@ui.form.fn.placeholder`. */
   placeholder?: string;
-  /** CSS class(es) from `@ui.class` or `@ui.fn.class`. */
+  /** Resolved prepend-icon name from `@ui.form.icon`. */
+  icon?: string;
+  /** CSS class(es) from `@ui.form.classes` or `@ui.form.fn.classes`. */
   class?: Record<string, boolean> | string;
-  /** Inline styles from `@ui.style` or `@ui.fn.style`. */
+  /** Inline styles from `@ui.form.styles` or `@ui.form.fn.styles`. */
   style?: Record<string, string> | string;
   /** Whether the field is optional (not required). */
   optional?: boolean | undefined;
@@ -62,9 +64,9 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   options?: TFormEntryOptions[];
   /** Max length constraint from `@expect.maxLength`. */
   maxLength?: number;
-  /** Autocomplete hint from `@ui.autocomplete`. */
+  /** Autocomplete hint from `@ui.form.autocomplete`. */
   autocomplete?: string;
-  /** Resolved title from `@ui.title` / `@ui.fn.title` / `@meta.label` for structure/array fields. */
+  /** Resolved title from `@ui.form.fn.title` / `@meta.label` for structure/array fields. */
   title?: string;
   /** Nesting level for structure/array fields. Root structure is 0, each nested structure/array increments by 1. */
   level?: number;

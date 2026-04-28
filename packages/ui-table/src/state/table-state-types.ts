@@ -25,7 +25,7 @@ export interface TableStateData {
    * Per-column widths keyed by column path. Always fully populated for every
    * column in `allColumns` once the TableDef has loaded. Each entry carries
    * the current rendered width (`w`) and the default (`d`) it would reset to.
-   * Default sourcing: `@ui.field.width` annotation > type+@expect.maxLen-derived.
+   * Default sourcing: `@ui.table.width` annotation > type+@expect.maxLen-derived.
    */
   columnWidths: ColumnWidthsMap;
   /** Names of filter fields displayed in the filter bar. */

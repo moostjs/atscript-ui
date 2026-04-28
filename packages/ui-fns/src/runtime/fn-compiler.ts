@@ -4,7 +4,7 @@ import type { TFnScope } from "./types";
 const pool = new FNPool();
 
 /**
- * Compiles a field-level function string from a `@ui.fn.*` annotation
+ * Compiles a field-level function string from a `@ui.form.fn.*` / `@ui.table.fn.*` annotation
  * into a callable function. Uses FNPool for caching.
  *
  * The function string should be an arrow or regular function expression:
@@ -19,7 +19,7 @@ export function compileFieldFn<R = unknown>(fnStr: string): (scope: TFnScope) =>
 }
 
 /**
- * Compiles a form-level function string from a `@ui.fn.title` or similar annotation.
+ * Compiles a form-level function string from a `@ui.form.fn.title` or similar annotation.
  *
  * The function string should be:
  *   `"(data, ctx) => someExpression"`

@@ -8,7 +8,7 @@ export const asTableShortcuts = defineShortcuts({
   "as-tag-chip": `${chipBase} bg-current-hl/10 text-current-hl`,
 
   // Always table-layout: fixed. Every column has an explicit width all the
-  // time (seeded from @ui.field.width annotation or computed defaults). The filler
+  // time (seeded from @ui.table.width annotation or computed defaults). The filler
   // <th> (no width) absorbs leftover space; `min-w-full` (`as-table-stretch`)
   // forces the table to span its container.
   "as-table": {

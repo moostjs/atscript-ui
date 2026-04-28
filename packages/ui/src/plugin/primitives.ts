@@ -18,17 +18,17 @@ export const uiPrimitives: TAtscriptConfig["primitives"] = {
       },
       paragraph: {
         documentation:
-          "Read-only paragraph text — rendered as static content, not an input field. Use @meta.default for static text or @ui.fn.value for computed text.",
+          "Read-only paragraph text — rendered as static content, not an input field. Use @meta.default for static text or @ui.form.fn.value for computed text.",
       },
       select: {
         type: "string",
         documentation:
-          "Dropdown select field. Use @ui.options to define static choices or @ui.fn.options for computed choices.",
+          "Dropdown select field. Use @ui.form.options to define static choices or @ui.form.fn.options for computed choices.",
       },
       radio: {
         type: "string",
         documentation:
-          "Radio button group. Use @ui.options to define static choices or @ui.fn.options for computed choices.",
+          "Radio button group. Use @ui.form.options to define static choices or @ui.form.fn.options for computed choices.",
       },
       checkbox: {
         type: "boolean",

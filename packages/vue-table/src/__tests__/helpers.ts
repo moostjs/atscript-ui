@@ -163,6 +163,7 @@ export function mockTableDef(columns: ColumnDef[]): TableDef {
   return {
     type: defineAnnotatedType("object").$type,
     columns,
+    flatMap: new Map(),
     primaryKeys: ["id"],
     readOnly: false,
     searchable: false,

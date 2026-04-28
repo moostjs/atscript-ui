@@ -78,27 +78,52 @@ declare global {
     "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
     "db.search.vector.threshold": number
     "db.search.filter": (string)[]
-    "ui.placeholder": string
-    "ui.group": string
-    "ui.field.width": string
-    "ui.table.column.width": string
-    "ui.icon": string
-    "ui.hint": string
-    "ui.class": (string)[]
-    "ui.style": (string)[]
-    "ui.autocomplete": string
     "ui.type": string
-    "ui.component": string
-    "ui.order": number
-    "ui.hidden": boolean
-    "ui.disabled": boolean
-    "ui.readonly": boolean
-    "ui.options": ({ label: string, value?: string })[]
-    "ui.attr": ({ name: string, value: string })[]
-    "ui.title": string
-    "ui.submit.text": string
-    "ui.submit.disabled": boolean
+    "ui.form.placeholder": string
+    "ui.form.hint": string
+    "ui.form.classes": (string)[]
+    "ui.form.styles": (string)[]
+    "ui.form.autocomplete": string
+    "ui.form.disabled": boolean
+    "ui.form.readonly": boolean
+    "ui.form.options": ({ label: string, value?: string })[]
+    "ui.form.order": number
+    "ui.form.type": string
+    "ui.form.component": string
+    "ui.form.hidden": boolean
+    "ui.form.attr": ({ name: string, value: string })[]
+    "ui.form.title": string
+    "ui.form.width": string
+    "ui.form.icon": string
+    "ui.form.submit.text": string
+    "ui.form.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }
+    "ui.form.fn.title": string
+    "ui.form.fn.submit.text": string
+    "ui.form.fn.submit.disabled": string
+    "ui.form.fn.label": string
+    "ui.form.fn.description": string
+    "ui.form.fn.hint": string
+    "ui.form.fn.placeholder": string
+    "ui.form.fn.disabled": string
+    "ui.form.fn.hidden": string
+    "ui.form.fn.readonly": string
+    "ui.form.fn.value": string
+    "ui.form.fn.classes": string
+    "ui.form.fn.styles": string
+    "ui.form.fn.options": string
+    "ui.form.fn.attr": ({ name: string, fn: string })[]
+    "ui.table.width": string
+    "ui.table.component": string
+    "ui.table.hidden": boolean
+    "ui.table.attr": ({ name: string, value: string })[]
+    "ui.table.classes": (string)[]
+    "ui.table.styles": (string)[]
+    "ui.table.type": string
+    "ui.table.order": number
+    "ui.table.fn.attr": ({ name: string, fn: string })[]
+    "ui.table.fn.classes": string
+    "ui.table.fn.styles": string
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
@@ -108,21 +133,6 @@ declare global {
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "ui.validate": (string)[]
-    "ui.fn.title": string
-    "ui.fn.submit.text": string
-    "ui.fn.submit.disabled": string
-    "ui.fn.label": string
-    "ui.fn.description": string
-    "ui.fn.hint": string
-    "ui.fn.placeholder": string
-    "ui.fn.disabled": string
-    "ui.fn.hidden": string
-    "ui.fn.readonly": string
-    "ui.fn.value": string
-    "ui.fn.classes": string
-    "ui.fn.styles": string
-    "ui.fn.options": string
-    "ui.fn.attr": ({ name: string, fn: string })[]
     "wf.context.pass": (string)[]
     "wf.action.withData": string
   }

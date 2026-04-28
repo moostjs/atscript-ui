@@ -4,26 +4,31 @@ export interface LabeledField {
 }
 
 export interface HiddenField {
-    @ui.hidden
+    @ui.form.hidden
     secret: string
 }
 
 export interface DisabledField {
-    @ui.disabled
+    @ui.form.disabled
     locked: string
 }
 
 export interface PlaceholderField {
-    @ui.placeholder 'you@example.com'
+    @ui.form.placeholder 'you@example.com'
     email: string
 }
 
 export interface HintField {
-    @ui.hint 'At least 8 characters'
+    @ui.form.hint 'At least 8 characters'
     password: string
 }
 
 export interface DescriptionField {
     @meta.description 'Tell us about yourself'
     bio: string
+}
+
+export interface IconField {
+    @ui.form.icon 'mail'
+    email: string
 }

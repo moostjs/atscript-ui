@@ -1,7 +1,7 @@
 import type { TAtscriptAnnotatedType, TAtscriptDataType } from "@atscript/typescript/utils";
 import { createDataFromAnnotatedType } from "@atscript/typescript/utils";
 import type { FormUnionVariant } from "./types";
-import { META_DEFAULT } from "../shared/annotation-keys";
+import { META_DEFAULT, UI_FORM_FN_VALUE } from "../shared/annotation-keys";
 import { resolveFieldProp } from "../shared/field-resolver";
 
 // ── Path utilities ──────────────────────────────────────────
@@ -69,31 +69,19 @@ export type TFormValueResolver = (prop: TAtscriptAnnotatedType, path: string) =>
 /** Cached default resolver — reused when no resolver is provided. */
 const defaultValueResolver: TFormValueResolver = createFormValueResolver();
 
-/**
- * Creates a reusable value resolver for form data creation.
- *
- * Resolution cascade: `ui.fn.value` (via active resolver) → `meta.default` → structural default.
- *
- * The `data` and `context` params are forwarded to the active field resolver,
- * enabling ui-fns to compile `ui.fn.value` annotations when installed.
- * With the static resolver (no ui-fns), only `meta.default` is checked.
- */
 export function createFormValueResolver(
   data: Record<string, unknown> = {},
   context: Record<string, unknown> = {},
 ): TFormValueResolver {
   return (prop, _path) => {
-    // Try ui.fn.value → meta.default via the active resolver
     const result = resolveFieldProp(
       prop,
-      "ui.fn.value",
+      UI_FORM_FN_VALUE,
       META_DEFAULT,
       { v: undefined, data, context, entry: undefined },
       { transform: (raw) => parseStaticDefault(raw, prop) },
     );
     if (result !== undefined) return result;
-
-    // Fall through → createDataFromAnnotatedType applies structural default
     return undefined;
   };
 }

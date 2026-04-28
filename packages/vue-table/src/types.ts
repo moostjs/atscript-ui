@@ -101,8 +101,8 @@ export interface ReactiveTableState extends TableStateMethods {
   /**
    * Per-column widths keyed by column path; always populated for every column.
    * Each entry: `{ w: currentRenderedWidth, d: defaultWidth }`. Deep-reactive —
-   * writers mutate `entry.w` directly. Default is the @ui.field.width annotation
-   * when present, otherwise type+@expect.maxLen-derived (see `computeDefaultColumnWidth`).
+   * writers mutate `entry.w` directly. Default is the `@ui.table.width` annotation
+   * when present, otherwise type+`@expect.maxLen`-derived (see `computeDefaultColumnWidth`).
    */
   columnWidths: Ref<ColumnWidthsMap>;
   filterFields: ShallowRef<string[]>;

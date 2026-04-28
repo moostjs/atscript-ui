@@ -641,6 +641,7 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
   result.internals.init({
     type: undefined as unknown as TableDef["type"],
     columns: opts.columns,
+    flatMap: new Map(),
     primaryKeys: [],
     readOnly: false,
     searchable: (opts.searchPaths?.length ?? 0) > 0,

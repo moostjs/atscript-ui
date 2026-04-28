@@ -8,11 +8,10 @@ import { getFieldMeta } from "../shared/field-resolver";
 import {
   EXPECT_MAX_LENGTH,
   META_LABEL,
-  UI_HIDDEN,
-  UI_ICON,
-  UI_ORDER,
-  UI_FIELD_WIDTH,
-  UI_TABLE_COLUMN_WIDTH,
+  UI_TABLE_HIDDEN,
+  UI_TABLE_ORDER,
+  UI_TABLE_TYPE,
+  UI_TABLE_WIDTH,
   UI_TYPE,
 } from "../shared/annotation-keys";
 import { extractLiteralOptions } from "../value-help/extract-literals";
@@ -25,7 +24,7 @@ import type { ColumnDef, MetaResponse, TableDef } from "./types";
  * 1. Deserializes `meta.type` into a live TAtscriptAnnotatedType
  * 2. Flattens to discover all field paths
  * 3. Builds ColumnDef per field using annotations + meta.fields capabilities
- * 4. Sorts by @ui.order
+ * 4. Sorts by @ui.table.order
  */
 export function createTableDef(
   meta: MetaResponse,
@@ -57,21 +56,19 @@ export function createTableDef(
       | { length: number; message?: string }
       | undefined;
 
+    const tableType = getFieldMeta(prop, UI_TABLE_TYPE) as string | undefined;
+    const sharedType = getFieldMeta(prop, UI_TYPE) as string | undefined;
+
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
-      type:
-        (getFieldMeta(prop, UI_TYPE) as string | undefined) ??
-        (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
+      type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
-      visible: getFieldMeta(prop, UI_HIDDEN) === undefined,
-      width:
-        (getFieldMeta(prop, UI_TABLE_COLUMN_WIDTH) as string | undefined) ??
-        (getFieldMeta(prop, UI_FIELD_WIDTH) as string | undefined),
+      visible: getFieldMeta(prop, UI_TABLE_HIDDEN) === undefined,
+      width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
       maxLen: maxLengthMeta?.length,
-      order: (getFieldMeta(prop, UI_ORDER) as number | undefined) ?? Infinity,
-      icon: getFieldMeta(prop, UI_ICON) as string | undefined,
+      order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
       options,
       valueHelpInfo,
     });
@@ -82,6 +79,7 @@ export function createTableDef(
   return {
     type,
     columns,
+    flatMap,
     primaryKeys: meta.primaryKeys,
     readOnly: meta.readOnly,
     searchable: meta.searchable,

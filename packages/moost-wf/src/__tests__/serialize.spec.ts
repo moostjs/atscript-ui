@@ -78,7 +78,7 @@ describe("serializeFormSchema", () => {
       expect(email.ref).toBeUndefined();
       expect(email.metadata).toBeDefined();
       expect(email.metadata!["meta.label"]).toBe("Email");
-      expect(email.metadata!["ui.placeholder"]).toBe("newbie@example.com");
+      expect(email.metadata!["ui.form.placeholder"]).toBe("newbie@example.com");
     });
 
     it("continues to strip @wf.context.pass on forms containing FK refs", async () => {

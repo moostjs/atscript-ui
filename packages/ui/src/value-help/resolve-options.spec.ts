@@ -1,6 +1,6 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { UI_OPTIONS } from "../shared/annotation-keys";
+import { UI_FORM_OPTIONS } from "../shared/annotation-keys";
 import { optKey, optLabel, parseStaticOptions, resolveOptions } from "./resolve-options";
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -61,10 +61,10 @@ describe("parseStaticOptions", () => {
 });
 
 describe("resolveOptions", () => {
-  it("returns parsed @ui.options when annotation exists", () => {
+  it("returns parsed @ui.form.options when annotation exists", () => {
     const prop = defineAnnotatedType().designType("string").$type;
     prop.metadata.set(
-      UI_OPTIONS as keyof AtscriptMetadata,
+      UI_FORM_OPTIONS as keyof AtscriptMetadata,
       [
         { label: "Yes", value: "y" },
         { label: "No", value: "n" },
@@ -88,10 +88,10 @@ describe("resolveOptions", () => {
     ]);
   });
 
-  it("@ui.options wins over literal union extraction", () => {
+  it("@ui.form.options wins over literal union extraction", () => {
     const union = defineAnnotatedType("union").item(literal("a")).item(literal("b")).$type;
     union.metadata.set(
-      UI_OPTIONS as keyof AtscriptMetadata,
+      UI_FORM_OPTIONS as keyof AtscriptMetadata,
       [{ label: "Alpha", value: "a" }] as never,
     );
 

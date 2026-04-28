@@ -2,14 +2,17 @@ import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { FieldResolver, TResolveOptions } from "@atscript/ui";
 import {
   META_READONLY,
-  UI_COMPONENT,
-  UI_DISABLED,
-  UI_FN_ATTR,
-  UI_FN_DISABLED,
-  UI_FN_HIDDEN,
-  UI_FN_PREFIX,
-  UI_FN_READONLY,
-  UI_HIDDEN,
+  UI_FORM_COMPONENT,
+  UI_FORM_DISABLED,
+  UI_FORM_FN_ATTR,
+  UI_FORM_FN_DISABLED,
+  UI_FORM_FN_HIDDEN,
+  UI_FORM_FN_PREFIX,
+  UI_FORM_FN_READONLY,
+  UI_FORM_HIDDEN,
+  UI_FORM_TYPE,
+  UI_TABLE_FN_ATTR,
+  UI_TABLE_FN_PREFIX,
   UI_TYPE,
   asArray,
   getFieldMeta,
@@ -19,6 +22,9 @@ import {
 } from "@atscript/ui";
 import { compileFieldFn, compileTopFn } from "./fn-compiler";
 import type { TFieldEvaluated, TFnScope } from "./types";
+
+/** Fn keys that store `[{ name, fn }]` arrays rather than a single fn string. */
+const ATTR_FN_KEYS = new Set<string>([UI_FORM_FN_ATTR, UI_TABLE_FN_ATTR]);
 
 /** Options for buildFieldEntry — allows pre-resolved overrides. */
 export type TBuildFieldEntryOpts = Partial<
@@ -42,9 +48,8 @@ export class DynamicFieldResolver implements FieldResolver {
     scope: Record<string, unknown>,
     opts?: TResolveOptions<T>,
   ): T | undefined {
-    // Special case: ui.fn.attr stores array of {name, fn} objects, not a single fn string
-    if (fnKey === UI_FN_ATTR) {
-      return this.resolveAttrFns(prop, scope as unknown as TFnScope) as T | undefined;
+    if (ATTR_FN_KEYS.has(fnKey)) {
+      return this.resolveAttrFns(prop, fnKey, scope as unknown as TFnScope) as T | undefined;
     }
     return resolveAnnotatedProp(
       prop.metadata,
@@ -75,16 +80,18 @@ export class DynamicFieldResolver implements FieldResolver {
 
   hasComputedAnnotations(prop: TAtscriptAnnotatedType): boolean {
     for (const key of prop.metadata.keys()) {
-      if ((key as string).startsWith(UI_FN_PREFIX)) return true;
+      const k = key as string;
+      if (k.startsWith(UI_FORM_FN_PREFIX) || k.startsWith(UI_TABLE_FN_PREFIX)) return true;
     }
     return false;
   }
 
   private resolveAttrFns(
     prop: TAtscriptAnnotatedType,
+    fnKey: string,
     scope: TFnScope,
   ): Record<string, unknown> | undefined {
-    const fnAttrs = prop.metadata.get(UI_FN_ATTR as keyof AtscriptMetadata) as unknown;
+    const fnAttrs = prop.metadata.get(fnKey as keyof AtscriptMetadata) as unknown;
     if (!fnAttrs) return undefined;
 
     const result: Record<string, unknown> = {};
@@ -145,19 +152,23 @@ export function buildFieldEntry(
 
   const entry: TFieldEvaluated = {
     field: path,
-    type: opts?.type ?? (getFieldMeta(prop, UI_TYPE) as string | undefined) ?? "text",
-    component: opts?.component ?? (getFieldMeta(prop, UI_COMPONENT) as string | undefined),
+    type:
+      opts?.type ??
+      (getFieldMeta(prop, UI_FORM_TYPE) as string | undefined) ??
+      (getFieldMeta(prop, UI_TYPE) as string | undefined) ??
+      "text",
+    component: opts?.component ?? (getFieldMeta(prop, UI_FORM_COMPONENT) as string | undefined),
     name: opts?.name ?? path.slice(path.lastIndexOf(".") + 1),
     optional: opts?.optional ?? prop.optional,
     disabled:
       opts?.disabled ??
-      resolveFieldProp<boolean>(prop, UI_FN_DISABLED, UI_DISABLED, scopeAsRecord, boolOpts),
+      resolveFieldProp<boolean>(prop, UI_FORM_FN_DISABLED, UI_FORM_DISABLED, scopeAsRecord, boolOpts),
     hidden:
       opts?.hidden ??
-      resolveFieldProp<boolean>(prop, UI_FN_HIDDEN, UI_HIDDEN, scopeAsRecord, boolOpts),
+      resolveFieldProp<boolean>(prop, UI_FORM_FN_HIDDEN, UI_FORM_HIDDEN, scopeAsRecord, boolOpts),
     readonly:
       opts?.readonly ??
-      resolveFieldProp<boolean>(prop, UI_FN_READONLY, META_READONLY, scopeAsRecord, boolOpts),
+      resolveFieldProp<boolean>(prop, UI_FORM_FN_READONLY, META_READONLY, scopeAsRecord, boolOpts),
   };
 
   const scope: TFnScope = { ...baseScope, entry };

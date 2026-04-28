@@ -41,6 +41,12 @@ export interface MetaResponse {
 export interface TableDef {
   type: TAtscriptAnnotatedType;
   columns: ColumnDef[];
+  /**
+   * Flattened type tree (path → annotated prop). Empty Map for non-object roots.
+   * Excludes phantom types. Consumers (e.g. cell-resolver) read this instead
+   * of re-walking the type.
+   */
+  flatMap: Map<string, TAtscriptAnnotatedType>;
   primaryKeys: string[];
   readOnly: boolean;
   searchable: boolean;
@@ -55,7 +61,7 @@ export interface ColumnDef {
   path: string;
   /** Display label — from @meta.label or humanized path. */
   label: string;
-  /** Display type — from @ui.type or inferred from designType. */
+  /** Display type — from @ui.table.type, then @ui.type, then inferred from designType. */
   type: string;
   /** Whether this column supports sorting. */
   sortable: boolean;
@@ -63,14 +69,12 @@ export interface ColumnDef {
   filterable: boolean;
   /** Whether this column is visible by default. */
   visible: boolean;
-  /** Default column width from @ui.table.column.width (preferred) or @ui.field.width (fallback). */
+  /** Default column width from @ui.table.width. */
   width?: string;
   /** Maximum length constraint from @expect.maxLen — used to derive default column width. */
   maxLen?: number;
-  /** Display order from @ui.order (lower = first). */
+  /** Initial column ordering from @ui.table.order (lower = first). */
   order: number;
-  /** Icon hint from @ui.icon. */
-  icon?: string;
   /** Enumerated options for union literal types (e.g. 'a' | 'b' | 'c'). */
   options?: { key: string; label: string }[];
   /** Value-help info for FK columns (from extractValueHelp). */

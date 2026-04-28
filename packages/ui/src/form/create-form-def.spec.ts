@@ -1,6 +1,12 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { META_LABEL, UI_COMPONENT, UI_HIDDEN, UI_ORDER, UI_TYPE } from "../shared/annotation-keys";
+import {
+  META_LABEL,
+  UI_FORM_COMPONENT,
+  UI_FORM_HIDDEN,
+  UI_FORM_ORDER,
+  UI_TYPE,
+} from "../shared/annotation-keys";
 import { createFormDef, buildUnionVariants } from "./create-form-def";
 import { isArrayField, isObjectField, isTupleField, isUnionField } from "./types";
 import type {
@@ -91,21 +97,21 @@ describe("createFormDef", () => {
       expect(def.flatMap.has("email")).toBe(true);
     });
 
-    it("sorts fields by @ui.order", () => {
+    it("sorts fields by @ui.form.order", () => {
       const type = objectType({
-        email: stringProp({ [UI_ORDER]: 2 }),
-        name: stringProp({ [UI_ORDER]: 1 }),
-        bio: stringProp({ [UI_ORDER]: 3 }),
+        email: stringProp({ [UI_FORM_ORDER]: 2 }),
+        name: stringProp({ [UI_FORM_ORDER]: 1 }),
+        bio: stringProp({ [UI_FORM_ORDER]: 3 }),
       });
       const def = createFormDef(type);
 
       expect(def.fields.map((f) => f.path)).toEqual(["name", "email", "bio"]);
     });
 
-    it("fields without @ui.order come after ordered fields", () => {
+    it("fields without @ui.form.order come after ordered fields", () => {
       const type = objectType({
         unordered: stringProp(),
-        first: stringProp({ [UI_ORDER]: 1 }),
+        first: stringProp({ [UI_FORM_ORDER]: 1 }),
       });
       const def = createFormDef(type);
 
@@ -122,9 +128,9 @@ describe("createFormDef", () => {
       expect(def.fields[0]!.type).toBe("textarea");
     });
 
-    it("@ui.hidden field still appears in fields", () => {
+    it("@ui.form.hidden field still appears in fields", () => {
       const type = objectType({
-        secret: stringProp({ [UI_HIDDEN]: true }),
+        secret: stringProp({ [UI_FORM_HIDDEN]: true }),
         visible: stringProp(),
       });
       const def = createFormDef(type);
@@ -151,7 +157,7 @@ describe("createFormDef", () => {
   });
 
   describe("nested objects", () => {
-    it("inlines flat objects without @meta.label or @ui.component", () => {
+    it("inlines flat objects without @meta.label or @ui.form.component", () => {
       const inner = objectType({ street: stringProp(), city: stringProp() });
       const type = defineAnnotatedType("object").prop("address", inner).$type;
       const def = createFormDef(type);
@@ -174,8 +180,8 @@ describe("createFormDef", () => {
       expect(isObjectField(addressField!)).toBe(true);
     });
 
-    it("keeps object as structured field when @ui.component is present", () => {
-      const inner = objectType({ street: stringProp() }, { [UI_COMPONENT]: "custom-address" });
+    it("keeps object as structured field when @ui.form.component is present", () => {
+      const inner = objectType({ street: stringProp() }, { [UI_FORM_COMPONENT]: "custom-address" });
       const type = defineAnnotatedType("object").prop("address", inner).$type;
       const def = createFormDef(type);
 

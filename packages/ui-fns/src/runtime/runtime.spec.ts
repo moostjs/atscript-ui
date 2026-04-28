@@ -1,10 +1,12 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import {
-  UI_DISABLED,
-  UI_FN_DISABLED,
-  UI_FN_HIDDEN,
-  UI_FN_OPTIONS,
-  UI_HIDDEN,
+  META_LABEL,
+  UI_FORM_DISABLED,
+  UI_FORM_FN_DISABLED,
+  UI_FORM_FN_HIDDEN,
+  UI_FORM_FN_LABEL,
+  UI_FORM_FN_OPTIONS,
+  UI_FORM_HIDDEN,
   getResolver,
   resolveFieldProp,
   resolveFormProp,
@@ -76,12 +78,12 @@ describe("DynamicFieldResolver", () => {
 
   it("resolves static field props", () => {
     const prop = defineAnnotatedType().designType("string").$type;
-    prop.metadata.set(UI_DISABLED as keyof AtscriptMetadata, true as never);
+    prop.metadata.set(UI_FORM_DISABLED as keyof AtscriptMetadata, true as never);
 
     const result = resolveFieldProp<boolean>(
       prop,
-      UI_FN_DISABLED,
-      UI_DISABLED,
+      UI_FORM_FN_DISABLED,
+      UI_FORM_DISABLED,
       { v: undefined, data: {}, context: {}, entry: undefined },
       { staticAsBoolean: true },
     );
@@ -90,9 +92,12 @@ describe("DynamicFieldResolver", () => {
 
   it("resolves dynamic field props via fn compilation", () => {
     const prop = defineAnnotatedType().designType("string").$type;
-    prop.metadata.set(UI_FN_HIDDEN as keyof AtscriptMetadata, "(v, data) => data.hideAll" as never);
+    prop.metadata.set(
+      UI_FORM_FN_HIDDEN as keyof AtscriptMetadata,
+      "(v, data) => data.hideAll" as never,
+    );
 
-    const result = resolveFieldProp<boolean>(prop, UI_FN_HIDDEN, UI_HIDDEN, {
+    const result = resolveFieldProp<boolean>(prop, UI_FORM_FN_HIDDEN, UI_FORM_HIDDEN, {
       v: undefined,
       data: { hideAll: true },
       context: {},
@@ -103,10 +108,10 @@ describe("DynamicFieldResolver", () => {
 
   it("fn key takes priority over static key", () => {
     const prop = defineAnnotatedType().designType("string").$type;
-    prop.metadata.set(UI_DISABLED as keyof AtscriptMetadata, true as never);
-    prop.metadata.set(UI_FN_DISABLED as keyof AtscriptMetadata, "(v, data) => false" as never);
+    prop.metadata.set(UI_FORM_DISABLED as keyof AtscriptMetadata, true as never);
+    prop.metadata.set(UI_FORM_FN_DISABLED as keyof AtscriptMetadata, "(v, data) => false" as never);
 
-    const result = resolveFieldProp<boolean>(prop, UI_FN_DISABLED, UI_DISABLED, {
+    const result = resolveFieldProp<boolean>(prop, UI_FORM_FN_DISABLED, UI_FORM_DISABLED, {
       v: undefined,
       data: {},
       context: {},
@@ -121,11 +126,11 @@ describe("DynamicFieldResolver", () => {
       defineAnnotatedType().designType("string").$type,
     ).$type;
     type.metadata.set(
-      "ui.fn.label" as keyof AtscriptMetadata,
+      UI_FORM_FN_LABEL as keyof AtscriptMetadata,
       "(data) => 'Edit ' + data.name" as never,
     );
 
-    const result = resolveFormProp<string>(type, "ui.fn.label", "meta.label", {
+    const result = resolveFormProp<string>(type, UI_FORM_FN_LABEL, META_LABEL, {
       data: { name: "User" },
       context: {},
       entry: undefined,
@@ -133,11 +138,11 @@ describe("DynamicFieldResolver", () => {
     expect(result).toBe("Edit User");
   });
 
-  it("hasComputedAnnotations detects ui.fn.* keys", () => {
+  it("hasComputedAnnotations detects ui.form.fn.* keys", () => {
     const prop = defineAnnotatedType().designType("string").$type;
     expect(getResolver().hasComputedAnnotations(prop)).toBe(false);
 
-    prop.metadata.set(UI_FN_HIDDEN as keyof AtscriptMetadata, "(v) => false" as never);
+    prop.metadata.set(UI_FORM_FN_HIDDEN as keyof AtscriptMetadata, "(v) => false" as never);
     expect(getResolver().hasComputedAnnotations(prop)).toBe(true);
   });
 });
@@ -151,7 +156,7 @@ describe("buildFieldEntry", () => {
 
   it("builds entry with static constraints", () => {
     const prop = defineAnnotatedType().designType("string").$type;
-    prop.metadata.set(UI_DISABLED as keyof AtscriptMetadata, true as never);
+    prop.metadata.set(UI_FORM_DISABLED as keyof AtscriptMetadata, true as never);
 
     const baseScope: TFnScope = { v: "test", data: {}, context: {}, entry: undefined };
     const scope = buildFieldEntry(prop, baseScope, "name");
@@ -166,7 +171,7 @@ describe("buildFieldEntry", () => {
   it("builds entry with dynamic constraints", () => {
     const prop = defineAnnotatedType().designType("string").$type;
     prop.metadata.set(
-      UI_FN_DISABLED as keyof AtscriptMetadata,
+      UI_FORM_FN_DISABLED as keyof AtscriptMetadata,
       "(v, data) => data.lockAll" as never,
     );
 
@@ -201,7 +206,7 @@ describe("buildFieldEntry", () => {
   it("resolves options into entry via full scope", () => {
     const prop = defineAnnotatedType().designType("string").$type;
     prop.metadata.set(
-      UI_FN_OPTIONS as keyof AtscriptMetadata,
+      UI_FORM_FN_OPTIONS as keyof AtscriptMetadata,
       "(v, data, ctx, entry) => ['a', 'b', 'c']" as never,
     );
 

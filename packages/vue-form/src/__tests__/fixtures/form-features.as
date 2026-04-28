@@ -11,7 +11,7 @@ export interface RequiredForm {
     name: string
 }
 
-@ui.submit.text 'Save'
+@ui.form.submit.text 'Save'
 export interface SubmitTextForm {
     name: string
 }

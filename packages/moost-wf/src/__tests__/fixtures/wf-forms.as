@@ -65,7 +65,7 @@ export interface LoginForm {
 @wf.context.pass 'token'
 export interface ContextStripForm {
     @meta.label 'Name'
-    @ui.placeholder 'Enter name'
+    @ui.form.placeholder 'Enter name'
     name: string
 }
 
@@ -82,10 +82,10 @@ export interface RolesTableFixture {
 @meta.label 'Invite User'
 export interface InviteStartFormFixture {
     @meta.label 'Email'
-    @ui.placeholder 'newbie@example.com'
+    @ui.form.placeholder 'newbie@example.com'
     email: string.email
 
     @meta.label 'Role'
-    @ui.placeholder 'Pick a role'
+    @ui.form.placeholder 'Pick a role'
     roleId: RolesTableFixture.id
 }

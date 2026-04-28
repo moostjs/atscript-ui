@@ -2,10 +2,12 @@ import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescrip
 import { describe, expect, it } from "vitest";
 import {
   META_LABEL,
-  UI_FIELD_WIDTH,
-  UI_HIDDEN,
-  UI_ICON,
-  UI_ORDER,
+  UI_FORM_HIDDEN,
+  UI_FORM_ORDER,
+  UI_TABLE_HIDDEN,
+  UI_TABLE_ORDER,
+  UI_TABLE_TYPE,
+  UI_TABLE_WIDTH,
   UI_TYPE,
 } from "../shared/annotation-keys";
 import {
@@ -111,7 +113,7 @@ describe("createTableDef", () => {
     expect(def.columns[0]!.label).toBe("First Name");
   });
 
-  it("uses @ui.type override", () => {
+  it("uses bare @ui.type as the cell renderer when no @ui.table.type override exists", () => {
     const meta = buildMeta({
       bio: stringProp({ [UI_TYPE]: "textarea" }),
     });
@@ -120,20 +122,40 @@ describe("createTableDef", () => {
     expect(def.columns[0]!.type).toBe("textarea");
   });
 
-  it("sorts columns by @ui.order", () => {
+  it("@ui.table.type wins over @ui.type for the cell renderer", () => {
     const meta = buildMeta({
-      email: stringProp({ [UI_ORDER]: 2 }),
-      name: stringProp({ [UI_ORDER]: 1 }),
-      bio: stringProp({ [UI_ORDER]: 3 }),
+      bio: stringProp({ [UI_TYPE]: "textarea", [UI_TABLE_TYPE]: "rich-text" }),
+    });
+    const def = createTableDef(meta);
+
+    expect(def.columns[0]!.type).toBe("rich-text");
+  });
+
+  it("sorts columns by @ui.table.order", () => {
+    const meta = buildMeta({
+      email: stringProp({ [UI_TABLE_ORDER]: 2 }),
+      name: stringProp({ [UI_TABLE_ORDER]: 1 }),
+      bio: stringProp({ [UI_TABLE_ORDER]: 3 }),
     });
     const def = createTableDef(meta);
 
     expect(def.columns.map((c) => c.path)).toEqual(["name", "email", "bio"]);
   });
 
-  it("@ui.hidden sets visible: false", () => {
+  it("@ui.form.order does NOT influence column order", () => {
     const meta = buildMeta({
-      secret: stringProp({ [UI_HIDDEN]: true }),
+      email: stringProp({ [UI_FORM_ORDER]: 1 }),
+      name: stringProp({ [UI_FORM_ORDER]: 2 }),
+    });
+    const def = createTableDef(meta);
+
+    // No @ui.table.order → both sort to Infinity → natural insertion order preserved.
+    expect(def.columns.map((c) => c.path)).toEqual(["email", "name"]);
+  });
+
+  it("@ui.table.hidden sets visible: false", () => {
+    const meta = buildMeta({
+      secret: stringProp({ [UI_TABLE_HIDDEN]: true }),
       visible: stringProp(),
     });
     const def = createTableDef(meta);
@@ -142,14 +164,22 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "visible")!.visible).toBe(true);
   });
 
-  it("reads @ui.field.width and @ui.icon", () => {
+  it("@ui.form.hidden does NOT hide the table column", () => {
     const meta = buildMeta({
-      name: stringProp({ [UI_FIELD_WIDTH]: "half", [UI_ICON]: "user" }),
+      internal: stringProp({ [UI_FORM_HIDDEN]: true }),
     });
     const def = createTableDef(meta);
 
-    expect(def.columns[0]!.width).toBe("half");
-    expect(def.columns[0]!.icon).toBe("user");
+    expect(def.columns[0]!.visible).toBe(true);
+  });
+
+  it("reads @ui.table.width", () => {
+    const meta = buildMeta({
+      name: stringProp({ [UI_TABLE_WIDTH]: "240px" }),
+    });
+    const def = createTableDef(meta);
+
+    expect(def.columns[0]!.width).toBe("240px");
   });
 
   it("reads sortable/filterable from meta.fields", () => {
@@ -248,9 +278,9 @@ describe("createTableDef", () => {
 describe("column-resolver", () => {
   const meta = buildMeta(
     {
-      id: stringProp({ [UI_ORDER]: 1 }),
-      name: stringProp({ [UI_ORDER]: 2 }),
-      secret: stringProp({ [UI_HIDDEN]: true, [UI_ORDER]: 3 }),
+      id: stringProp({ [UI_TABLE_ORDER]: 1 }),
+      name: stringProp({ [UI_TABLE_ORDER]: 2 }),
+      secret: stringProp({ [UI_TABLE_HIDDEN]: true, [UI_TABLE_ORDER]: 3 }),
     },
     {
       id: { sortable: true, filterable: true },

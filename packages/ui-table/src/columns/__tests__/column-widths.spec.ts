@@ -18,7 +18,7 @@ function col(overrides: Partial<ColumnDef> & { path: string; type: string }): Co
 }
 
 describe("computeDefaultColumnWidth", () => {
-  it("honours @ui.field.width annotation as-is (uncapped)", () => {
+  it("honours @ui.table.width annotation as-is (uncapped)", () => {
     expect(computeDefaultColumnWidth(col({ path: "a", type: "text", width: "500px" }))).toBe(
       "500px",
     );

@@ -3,7 +3,17 @@ import { useFormState } from "../composables/use-form-state";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import type { FormDef, ClientFactory } from "@atscript/ui";
-import { getFormValidator, resolveFormProp, getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
+import {
+  getFormValidator,
+  resolveFormProp,
+  getFieldMeta,
+  WF_ACTION_WITH_DATA,
+  UI_FORM_ACTION,
+  UI_FORM_FN_SUBMIT_DISABLED,
+  UI_FORM_FN_SUBMIT_TEXT,
+  UI_FORM_SUBMIT_DISABLED,
+  UI_FORM_SUBMIT_TEXT,
+} from "@atscript/ui";
 import { CLIENT_FACTORY_KEY } from "../composables/use-value-help";
 import type { TFnScope } from "@atscript/ui-fns";
 import { computed, provide, ref, toRaw, type Component } from "vue";
@@ -95,15 +105,19 @@ const ctx = computed<TFnScope>(() => ({
 
 const _submitText = computed(
   () =>
-    resolveFormProp<string>(props.def.type, "ui.fn.submit.text", "ui.submit.text", ctx.value) ??
-    "Submit",
+    resolveFormProp<string>(
+      props.def.type,
+      UI_FORM_FN_SUBMIT_TEXT,
+      UI_FORM_SUBMIT_TEXT,
+      ctx.value,
+    ) ?? "Submit",
 );
 const _submitDisabled = computed(
   () =>
     resolveFormProp<boolean>(
       props.def.type,
-      "ui.fn.submit.disabled",
-      "ui.submit.disabled",
+      UI_FORM_FN_SUBMIT_DISABLED,
+      UI_FORM_SUBMIT_DISABLED,
       ctx.value,
     ) ?? false,
 );
@@ -121,7 +135,7 @@ const domainData = () => toRaw(getDomainData()) as TFormData;
 
 function supportsAction(def: FormDef, actionId: string): boolean {
   return def.fields.some((f) => {
-    const a = getFieldMeta(f.prop, "ui.form.action");
+    const a = getFieldMeta(f.prop, UI_FORM_ACTION);
     if (a?.id === actionId) return true;
     return getFieldMeta(f.prop, WF_ACTION_WITH_DATA) === actionId;
   });

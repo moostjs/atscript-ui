@@ -16,7 +16,7 @@ export const MAX_DEFAULT_COLUMN_WIDTH_PX = 320;
  * Computes a sane default width for a column from its type + length annotation.
  *
  * Resolution order:
- *   1. col.width (@ui.field.width or @ui.table.column.width annotation) wins outright.
+ *   1. col.width (`@ui.table.width` annotation) wins outright.
  *   2. Otherwise pick from a type-based table; for `text` columns with `maxLen`,
  *      derive from char-count using an 8px-per-char heuristic.
  *   3. Cap the result at MAX_DEFAULT_COLUMN_WIDTH_PX (does not apply to step 1).

@@ -15,60 +15,235 @@ const BUILTIN_TYPES = [
 ] as const;
 
 /**
- * Static `@ui.*` annotation specs registered by `@atscript/ui` plugin.
+ * Static `@ui.*` annotation specs registered by the `@atscript/ui` plugin.
  *
- * Merged from `@atscript/core` defaults and `@atscript/ui-fns` static annotations.
- * Where both defined the same key, the ui-fns version is used (more complete).
+ * Namespace contract (see Decision 1 in design.md):
+ * - `ui.<key>`        — explicit cross-surface shared (`type`)
+ * - `ui.form.<key>`   — form-only static
+ * - `ui.table.<key>`  — table-only static
+ * - `ui.dict.<key>`   — value-help annotations
+ * - `ui.array.<key>`  — array control annotations
+ *
+ * The dynamic `ui.form.fn.*` / `ui.table.fn.*` and `ui.validate` specs are
+ * declared by `@atscript/ui-fns`.
  */
 export const uiAnnotations: TAnnotationsTree = {
   ui: {
-    // ── Field-level annotations (from core, unique to core) ──────────
+    // ── Cross-surface shared root ─────────────────────────────────
 
-    placeholder: new AnnotationSpec({
+    type: new AnnotationSpec({
       description:
-        "Defines **placeholder text** for UI input fields." +
+        "Cell + input renderer type override applied to whichever surface lacks its own override " +
+        "(`ui.form.type` / `ui.table.type`)." +
         "\n\n**Example:**\n" +
         "```atscript\n" +
-        '@ui.placeholder "Enter your name"\n' +
-        "name: string\n" +
+        '@ui.type "currency"\n' +
+        "amount: number\n" +
         "```\n",
       nodeType: ["prop", "type"],
       argument: {
-        name: "text",
+        name: "type",
         type: "string",
-        description: "The placeholder text to display in UI input fields.",
+        values: [...BUILTIN_TYPES],
+        description: "The renderer type used by both form input and table cell unless overridden.",
       },
     }),
 
-    group: new AnnotationSpec({
-      description:
-        "Groups fields into **form sections**. Fields sharing the same group name are rendered together." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.group "personal"\n' +
-        "firstName: string\n" +
-        "\n" +
-        '@ui.group "personal"\n' +
-        "lastName: string\n" +
-        "\n" +
-        '@ui.group "contact"\n' +
-        "email: string.email\n" +
-        "```\n",
-      nodeType: ["prop"],
-      argument: {
-        name: "name",
-        type: "string",
-        description: "The section/group name to place this field in.",
-      },
-    }),
+    // ── Form-side static annotations ──────────────────────────────
 
-    field: {
+    form: {
+      placeholder: new AnnotationSpec({
+        description:
+          "Defines **placeholder text** for UI input fields." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.form.placeholder "Enter your name"\n' +
+          "name: string\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "text",
+          type: "string",
+          description: "The placeholder text to display in UI input fields.",
+        },
+      }),
+
+      hint: new AnnotationSpec({
+        description:
+          "Provides **help text or tooltip** displayed near the field in UI forms." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.form.hint "Must be a valid business email"\n' +
+          "email: string.email\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "text",
+          type: "string",
+          description: "Help text or tooltip content.",
+        },
+      }),
+
+      classes: new AnnotationSpec({
+        description:
+          "Adds **CSS class names** to the rendered field. " +
+          "Multiple `@ui.form.classes` annotations are appended." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.form.classes "text-bold"\n' +
+          '@ui.form.classes "mt-4"\n' +
+          "title: string\n" +
+          "```\n",
+        nodeType: ["prop", "type", "interface"],
+        multiple: true,
+        mergeStrategy: "append",
+        argument: {
+          name: "names",
+          type: "string",
+          description: "One or more CSS class names (space-separated).",
+        },
+      }),
+
+      styles: new AnnotationSpec({
+        description:
+          "Adds **inline CSS styles** to the rendered field. " +
+          "Multiple `@ui.form.styles` annotations are appended." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.form.styles "color: red"\n' +
+          '@ui.form.styles "font-weight: bold"\n' +
+          "warning: string\n" +
+          "```\n",
+        nodeType: ["prop", "type", "interface"],
+        multiple: true,
+        mergeStrategy: "append",
+        argument: {
+          name: "css",
+          type: "string",
+          description: "CSS style declarations (semicolon-separated).",
+        },
+      }),
+
+      autocomplete: new AnnotationSpec({
+        description:
+          "Provides an **autocomplete hint** for the rendered input field." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.form.autocomplete "email"\n' +
+          "email: string.email\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "value",
+          type: "string",
+          description: "HTML autocomplete attribute value.",
+        },
+      }),
+
+      disabled: new AnnotationSpec({
+        description: "Statically mark this field as disabled in the form.",
+        nodeType: ["prop", "type"],
+      }),
+
+      readonly: new AnnotationSpec({
+        description: "Statically mark this field as readonly in the form.",
+        nodeType: ["prop", "type"],
+      }),
+
+      options: new AnnotationSpec({
+        description:
+          "Static option for select/radio fields. Repeat for each option. Label is the display text, value is the key (defaults to label).",
+        nodeType: ["prop", "type"],
+        multiple: true,
+        mergeStrategy: "replace",
+        argument: [
+          {
+            name: "label",
+            type: "string",
+            description: "Display label for the option",
+          },
+          {
+            name: "value",
+            type: "string",
+            optional: true,
+            description: "Value/key for the option (defaults to label if omitted)",
+          },
+        ],
+      }),
+
+      order: new AnnotationSpec({
+        description: "Explicit form-field ordering (lower values render first).",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "order",
+          type: "number",
+          description: "Numeric order (lower = earlier)",
+        },
+      }),
+
+      type: new AnnotationSpec({
+        description:
+          "Form input type override. Wins over the shared `@ui.type` for this prop's form input.",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "type",
+          type: "string",
+          values: [...BUILTIN_TYPES],
+          description: "The input type used by `<as-field>` for this prop.",
+        },
+      }),
+
+      component: new AnnotationSpec({
+        description: "Named component override for the form-side renderer.",
+        nodeType: ["prop", "interface", "type"],
+        argument: {
+          name: "name",
+          type: "string",
+          description: "Component name from the form components registry",
+        },
+      }),
+
+      hidden: new AnnotationSpec({
+        description: "Statically hide this field in the form.",
+        nodeType: ["prop", "type"],
+      }),
+
+      attr: new AnnotationSpec({
+        description:
+          "Custom attribute or component prop applied to the form input. Repeat for each attr. Passed via v-bind.",
+        nodeType: ["prop", "type"],
+        multiple: true,
+        mergeStrategy: "replace",
+        argument: [
+          {
+            name: "name",
+            type: "string",
+            description: 'Attribute/prop name (e.g., "data-testid", "variant", "size")',
+          },
+          {
+            name: "value",
+            type: "string",
+            description: "Static value (string, number, boolean, or undefined)",
+          },
+        ],
+      }),
+
+      title: new AnnotationSpec({
+        description: "Static title for the form or a nested group/array section.",
+        nodeType: ["interface", "type", "prop"],
+        argument: {
+          name: "title",
+          type: "string",
+          description: "The title text",
+        },
+      }),
+
       width: new AnnotationSpec({
         description:
           "Provides a **layout width hint** for the field in auto-generated forms." +
           "\n\n**Example:**\n" +
           "```atscript\n" +
-          '@ui.field.width "half"\n' +
+          '@ui.form.width "half"\n' +
           "firstName: string\n" +
           "```\n",
         nodeType: ["prop", "type"],
@@ -78,241 +253,41 @@ export const uiAnnotations: TAnnotationsTree = {
           description: 'Layout width hint (e.g., "half", "full", "third", "quarter").',
         },
       }),
-    },
 
-    table: {
-      column: {
-        width: new AnnotationSpec({
-          description:
-            "Sets the **default column width** for this field when rendered in a table. " +
-            "Accepts any CSS width string (e.g. `120px`, `12em`, `20ch`). The user can " +
-            "still resize the column manually; double-click on the resize handle " +
-            "auto-fits to content; the column-menu Reset entry returns to this value." +
-            "\n\n**Example:**\n" +
-            "```atscript\n" +
-            '@ui.table.column.width "240px"\n' +
-            "description: string\n" +
-            "```\n",
-          nodeType: ["prop", "type"],
-          argument: {
-            name: "width",
-            type: "string",
-            description: "CSS width for the column (e.g. '120px', '15em', '20ch').",
-          },
-        }),
-      },
-    },
-
-    icon: new AnnotationSpec({
-      description:
-        "Provides an **icon hint** for the field or entity." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.icon "mail"\n' +
-        "email: string.email\n" +
-        "```\n",
-      nodeType: ["prop", "type", "interface"],
-      argument: {
-        name: "name",
-        type: "string",
-        description: "Icon name or identifier.",
-      },
-    }),
-
-    hint: new AnnotationSpec({
-      description:
-        "Provides **help text or tooltip** displayed near the field in UI forms." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.hint "Must be a valid business email"\n' +
-        "email: string.email\n" +
-        "```\n",
-      nodeType: ["prop", "type"],
-      argument: {
-        name: "text",
-        type: "string",
-        description: "Help text or tooltip content.",
-      },
-    }),
-
-    class: new AnnotationSpec({
-      description:
-        "Adds **CSS class names** to the rendered field or entity. " +
-        "Multiple `@ui.class` annotations are appended." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.class "text-bold"\n' +
-        '@ui.class "mt-4"\n' +
-        "title: string\n" +
-        "```\n",
-      nodeType: ["prop", "type", "interface"],
-      multiple: true,
-      mergeStrategy: "append",
-      argument: {
-        name: "names",
-        type: "string",
-        description: "One or more CSS class names (space-separated).",
-      },
-    }),
-
-    style: new AnnotationSpec({
-      description:
-        "Adds **inline CSS styles** to the rendered field or entity. " +
-        "Multiple `@ui.style` annotations are appended." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.style "color: red"\n' +
-        '@ui.style "font-weight: bold"\n' +
-        "warning: string\n" +
-        "```\n",
-      nodeType: ["prop", "type", "interface"],
-      multiple: true,
-      mergeStrategy: "append",
-      argument: {
-        name: "css",
-        type: "string",
-        description: "CSS style declarations (semicolon-separated).",
-      },
-    }),
-
-    autocomplete: new AnnotationSpec({
-      description:
-        "Provides an **autocomplete hint** for the rendered input field." +
-        "\n\n**Example:**\n" +
-        "```atscript\n" +
-        '@ui.autocomplete "email"\n' +
-        "email: string.email\n" +
-        "```\n",
-      nodeType: ["prop", "type"],
-      argument: {
-        name: "value",
-        type: "string",
-        description: "HTML autocomplete attribute value.",
-      },
-    }),
-
-    // ── Field-level annotations (from ui-fns, more complete) ─────────
-
-    type: new AnnotationSpec({
-      description: "Field input type",
-      nodeType: ["prop", "type"],
-      argument: {
-        name: "type",
-        type: "string",
-        values: [...BUILTIN_TYPES],
-        description: "The input type for this field",
-      },
-    }),
-
-    component: new AnnotationSpec({
-      description: "Named component override for rendering this field or type",
-      nodeType: ["prop", "interface", "type"],
-      argument: {
-        name: "name",
-        type: "string",
-        description: "Component name from the components registry",
-      },
-    }),
-
-    order: new AnnotationSpec({
-      description: "Explicit rendering order for this field",
-      nodeType: ["prop", "type"],
-      argument: {
-        name: "order",
-        type: "number",
-        description: "Numeric order (lower = earlier)",
-      },
-    }),
-
-    hidden: new AnnotationSpec({
-      description: "Statically mark this field as hidden",
-      nodeType: ["prop", "type"],
-    }),
-
-    disabled: new AnnotationSpec({
-      description: "Statically mark this field as disabled",
-      nodeType: ["prop", "type"],
-    }),
-
-    readonly: new AnnotationSpec({
-      description: "Statically mark this field as readonly",
-      nodeType: ["prop", "type"],
-    }),
-
-    options: new AnnotationSpec({
-      description:
-        "Static option for select/radio fields. Repeat for each option. Label is the display text, value is the key (defaults to label).",
-      nodeType: ["prop", "type"],
-      multiple: true,
-      mergeStrategy: "replace",
-      argument: [
-        {
-          name: "label",
-          type: "string",
-          description: "Display label for the option",
-        },
-        {
-          name: "value",
-          type: "string",
-          optional: true,
-          description: "Value/key for the option (defaults to label if omitted)",
-        },
-      ],
-    }),
-
-    attr: new AnnotationSpec({
-      description:
-        "Custom attribute or component prop. Repeat for each attr. Passed to rendered component via v-bind.",
-      nodeType: ["prop", "type"],
-      multiple: true,
-      mergeStrategy: "replace",
-      argument: [
-        {
+      icon: new AnnotationSpec({
+        description:
+          "Prepended input icon for `<as-field>`. Resolved through the ui-styles icon registry." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.form.icon "mail"\n' +
+          "email: string.email\n" +
+          "```\n",
+        nodeType: ["prop", "type", "interface"],
+        argument: {
           name: "name",
           type: "string",
-          description: 'Attribute/prop name (e.g., "data-testid", "variant", "size")',
+          description: "Icon name registered with the ui-styles icon registry.",
         },
-        {
-          name: "value",
-          type: "string",
-          description: "Static value (string, number, boolean, or undefined)",
-        },
-      ],
-    }),
+      }),
 
-    // ── Form-level annotations ───────────────────────────────────
-
-    title: new AnnotationSpec({
-      description: "Static title for the form or a nested group/array section",
-      nodeType: ["interface", "type", "prop"],
-      argument: {
-        name: "title",
-        type: "string",
-        description: "The title text",
+      submit: {
+        text: new AnnotationSpec({
+          description: "Static submit button text.",
+          nodeType: ["interface", "type"],
+          argument: {
+            name: "text",
+            type: "string",
+            description: "Submit button label",
+          },
+        }),
+        disabled: new AnnotationSpec({
+          description: "Statically disable the submit button.",
+          nodeType: ["interface", "type"],
+        }),
       },
-    }),
 
-    submit: {
-      text: new AnnotationSpec({
-        description: "Static submit button text",
-        nodeType: ["interface", "type"],
-        argument: {
-          name: "text",
-          type: "string",
-          description: "Submit button label",
-        },
-      }),
-      disabled: new AnnotationSpec({
-        description: "Statically disable the submit button",
-        nodeType: ["interface", "type"],
-      }),
-    },
-
-    // ── Action annotation ────────────────────────────────────────
-
-    form: {
       action: new AnnotationSpec({
-        description: "Form action button for this field",
+        description: "Form action button for this field.",
         nodeType: ["prop", "type"],
         argument: [
           {
@@ -330,7 +305,127 @@ export const uiAnnotations: TAnnotationsTree = {
       }),
     },
 
-    // ── Dictionary annotations (value-help display + capabilities) ────
+    // ── Table-side static annotations ─────────────────────────────
+
+    table: {
+      width: new AnnotationSpec({
+        description:
+          "Sets the **default column width** for this field when rendered in a table. " +
+          "Accepts any CSS width string (e.g. `120px`, `12em`, `20ch`). The user can " +
+          "still resize the column manually; double-click on the resize handle " +
+          "auto-fits to content; the column-menu Reset entry returns to this value." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.table.width "240px"\n' +
+          "description: string\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "width",
+          type: "string",
+          description: "CSS width for the column (e.g. '120px', '15em', '20ch').",
+        },
+      }),
+
+      component: new AnnotationSpec({
+        description: "Named component override for the table-cell renderer.",
+        nodeType: ["prop", "interface", "type"],
+        argument: {
+          name: "name",
+          type: "string",
+          description: "Component name from the table components registry",
+        },
+      }),
+
+      hidden: new AnnotationSpec({
+        description: "Hide this column by default in the table.",
+        nodeType: ["prop", "type"],
+      }),
+
+      attr: new AnnotationSpec({
+        description:
+          "Custom attribute or component prop applied to the rendered `<td>`. Repeat for each attr. Passed via v-bind.",
+        nodeType: ["prop", "type"],
+        multiple: true,
+        mergeStrategy: "replace",
+        argument: [
+          {
+            name: "name",
+            type: "string",
+            description: 'Attribute/prop name (e.g., "title", "data-row", "aria-label")',
+          },
+          {
+            name: "value",
+            type: "string",
+            description: "Static value applied to the cell.",
+          },
+        ],
+      }),
+
+      classes: new AnnotationSpec({
+        description:
+          "CSS classes applied to the rendered `<td>` for this column's cells. " +
+          "Multiple `@ui.table.classes` annotations are appended." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.table.classes "font-bold"\n' +
+          '@ui.table.classes "text-right"\n' +
+          "amount: number\n" +
+          "```\n",
+        nodeType: ["prop", "type", "interface"],
+        multiple: true,
+        mergeStrategy: "append",
+        argument: {
+          name: "names",
+          type: "string",
+          description: "One or more CSS class names (space-separated).",
+        },
+      }),
+
+      styles: new AnnotationSpec({
+        description:
+          "Inline CSS styles applied to the rendered `<td>` for this column's cells. " +
+          "Multiple `@ui.table.styles` annotations are appended." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.table.styles "padding-left: 12px"\n' +
+          "description: string\n" +
+          "```\n",
+        nodeType: ["prop", "type", "interface"],
+        multiple: true,
+        mergeStrategy: "append",
+        argument: {
+          name: "css",
+          type: "string",
+          description: "CSS style declarations (semicolon-separated).",
+        },
+      }),
+
+      type: new AnnotationSpec({
+        description:
+          "Cell renderer type override. Wins over the shared `@ui.type` for this prop's table cell.",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "type",
+          type: "string",
+          values: [...BUILTIN_TYPES],
+          description: "The cell renderer type dispatched via the table types map.",
+        },
+      }),
+
+      order: new AnnotationSpec({
+        description:
+          "Initial column ordering — lower values appear first; user-driven runtime reorder still mutates table state's `columnNames`.",
+        nodeType: ["prop", "type"],
+        argument: {
+          name: "order",
+          type: "number",
+          description: "Numeric order (lower = earlier)",
+        },
+      }),
+    },
+
+    // ── Dictionary annotations (value-help display + capabilities) ──
     dict: {
       label: new AnnotationSpec({
         description:
@@ -364,7 +459,7 @@ export const uiAnnotations: TAnnotationsTree = {
       }),
     },
 
-    // ── Array annotations ────────────────────────────────────────
+    // ── Array annotations ─────────────────────────────────────────
 
     array: {
       add: {
