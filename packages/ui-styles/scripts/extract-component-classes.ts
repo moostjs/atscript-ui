@@ -223,6 +223,16 @@ async function main() {
 
   const componentClasses: Record<string, string[]> = {};
 
+  // Keep only `as-*` and `i-as-*` matches. UnoCSS's default extractor
+  // tokenizes the entire source — including JS identifiers and JSDoc
+  // comments — and any token that happens to be a valid utility (e.g.
+  // `static`, `tab`, `block`, `filter`) gets matched. We don't need raw
+  // utilities in the safelist anyway: the consumer's UnoCSS expands
+  // shortcuts at generation time, so safelisting `as-foo` automatically
+  // pulls in whatever utilities `as-foo` resolves to. Same for `i-as-*`
+  // icon classes.
+  const KEEP_RE = /^(as-|i-as-)/;
+
   // UnoCSS's generator is stateful; concurrent generate() calls on the
   // same instance are not documented as safe. Keep sequential.
   for (const name of publicNames) {
@@ -234,7 +244,7 @@ async function main() {
     const sourceFiles = [...collectSourceFiles(entryId)].toSorted(cmpEn);
     const code = sourceFiles.map(readSourceFile).join("\n");
     const { matched } = await uno.generate(code, { preflights: false });
-    componentClasses[name] = [...matched].toSorted(cmpEn);
+    componentClasses[name] = [...matched].filter((c) => KEEP_RE.test(c)).toSorted(cmpEn);
   }
 
   // 5. Helper-alias parsing (Decision 17) ----------------------------------
