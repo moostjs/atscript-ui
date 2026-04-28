@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
+import {
+  AsTableRoot,
+  AsTable,
+  createDefaultControls,
+  createDefaultCellTypes,
+} from "@atscript/vue-table";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
 import TablePagination from "../../components/TablePagination.vue";
 
-const components = createDefaultTableComponents();
+const controls = createDefaultControls();
+const types = createDefaultCellTypes();
 </script>
 
 <template>
   <div class="table-page">
     <AsTableRoot
       url="/db/tables/customers"
-      :components="components"
+      :controls="controls"
+      :types="types"
       select="multi"
       :limit="10"
       v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"

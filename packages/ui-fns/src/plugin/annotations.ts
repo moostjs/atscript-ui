@@ -3,7 +3,7 @@ import { AnnotationSpec } from "@atscript/core";
 
 /**
  * Validates a function string by attempting to compile it with `new Function`.
- * Used by `ui.form.fn.*` / `ui.table.fn.*` and `ui.validate` annotation validate hooks.
+ * Used by `ui.form.fn.*` / `ui.table.fn.*` and `ui.form.validate` annotation validate hooks.
  */
 function validateFnString(
   fnStr: string,
@@ -126,30 +126,29 @@ const tableFnAttrSpec = new AnnotationSpec({
 });
 
 /**
- * Annotation specs for dynamic computed annotations and `ui.validate`.
+ * Annotation specs for dynamic computed annotations and `ui.form.validate`.
  *
  * Registered as atscript annotations via the `uiFnsPlugin()`.
  * Static `@ui.*` annotations and primitives are provided by `@atscript/ui/plugin`.
  */
 export const uiFnsAnnotations: TAnnotationsTree = {
   ui: {
-    // ── Custom validation (dynamic fn) ────────────────────────
-    validate: new AnnotationSpec({
-      description:
-        "Custom JS validator function string. Returns true for pass, or an error message string.",
-      nodeType: ["prop", "type"],
-      multiple: true,
-      mergeStrategy: "append",
-      argument: {
-        name: "fn",
-        type: "string",
-        description: "JS function string: (value, data, context, entry) => boolean | string",
-      },
-      validate: validateFirstArg,
-    }),
-
-    // ── Form-side computed (fn) annotations ───────────────────
+    // ── Form-side computed (fn) + custom validation ───────────
     form: {
+      validate: new AnnotationSpec({
+        description:
+          "Custom JS validator function string. Returns true for pass, or an error message string.",
+        nodeType: ["prop", "type"],
+        multiple: true,
+        mergeStrategy: "append",
+        argument: {
+          name: "fn",
+          type: "string",
+          description: "JS function string: (value, data, context, entry) => boolean | string",
+        },
+        validate: validateFirstArg,
+      }),
+
       fn: {
         // Form-level computed
         title: fnTopAnnotation("Computed form title: (data, context) => string"),

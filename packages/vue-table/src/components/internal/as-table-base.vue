@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onScopeDispose, ref, useSlots, watch } from "vue";
+import { computed, nextTick, onMounted, ref, useSlots, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 import type { ColumnDef, SortControl } from "@atscript/ui";
 import {
@@ -14,7 +14,7 @@ import { ComboboxItem, ComboboxItemIndicator, ListboxItem, ListboxItemIndicator 
 import { getCellValue } from "../../utils/get-cell-value";
 import { useTableContextOptional } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
-import AsTableCellValue from "../defaults/as-table-cell-value.vue";
+import { useCellComponents } from "../../composables/use-cell-components";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
 import AsTableVirtualizer from "./as-table-virtualizer.vue";
@@ -84,6 +84,7 @@ const ctx = useTableContextOptional();
 const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(
   () => ctx?.state.tableDef.value ?? null,
 );
+const cellComponents = useCellComponents(() => props.columns);
 
 const isStandalone = computed(() => props.renderMode === "standalone");
 const isCombobox = computed(() => props.renderMode === "combobox");
@@ -176,13 +177,25 @@ function onTbodyKeydown(event: KeyboardEvent) {
 
 const scrollContainerRef = ref<HTMLElement | null>(null);
 
-// Sticky-thead-aware scroll-into-view. Native `scrollIntoView({block:
-// "nearest"})` ignores `position: sticky` siblings — the row sits behind the
+// Sticky-thead-aware scroll-into-view. Native `scrollIntoView({ block:
+// "nearest" })` ignores `position: sticky` siblings — the row sits behind the
 // sticky `<thead>` while its bbox overlaps the container, so the browser
-// refuses to scroll. Virtualized path uses direct scrollTop math to avoid the
-// scrollToIndex→bbox-align feedback loop that flickers when tanstack re-mounts
-// rows mid-scroll. Non-virtualized path can rely on bbox since every row is
-// already in DOM.
+// refuses to scroll. Virtualized path uses direct scrollTop math (analytical
+// row position from `idx * rowHeight`); non-virtualized path uses bbox since
+// every row is already in DOM.
+//
+// `SCROLL_TOL` is load-bearing for the boundary case (active row at the
+// very first or last index). Hi-DPI hosts store `scrollTop` with sub-pixel
+// rounding, so the value the browser reports back the frame after a
+// successful integer write can be < 1 px below the target. Without slack,
+// the visibility check the next time the watcher runs sees "row bottom >
+// visible bottom" by that fractional pixel, we write the same integer
+// again, the browser rounds the same way, and the active row oscillates
+// ±1 row every frame. With 1.5 px of slack any genuine half-row scroll
+// still registers as out-of-view, but a freshly-aligned row reads as
+// visible and the chain terminates.
+const SCROLL_TOL = 1.5;
+
 function alignActiveRow(idx: number) {
   if (!ctx) return;
   const container = scrollContainerRef.value;
@@ -196,9 +209,9 @@ function alignActiveRow(idx: number) {
     const rowBottom = rowTop + rowHeight;
     const visibleTop = container.scrollTop + theadHeight;
     const visibleBottom = container.scrollTop + container.clientHeight;
-    if (rowTop < visibleTop) {
+    if (rowTop < visibleTop - SCROLL_TOL) {
       container.scrollTop = rowTop - theadHeight;
-    } else if (rowBottom > visibleBottom) {
+    } else if (rowBottom > visibleBottom + SCROLL_TOL) {
       container.scrollTop = rowBottom - container.clientHeight;
     }
     return;
@@ -209,9 +222,9 @@ function alignActiveRow(idx: number) {
   const containerRect = container.getBoundingClientRect();
   const rowRect = el.getBoundingClientRect();
   const stickyTop = containerRect.top + theadHeight;
-  if (rowRect.top < stickyTop) {
+  if (rowRect.top < stickyTop - SCROLL_TOL) {
     container.scrollTop -= stickyTop - rowRect.top;
-  } else if (rowRect.bottom > containerRect.bottom) {
+  } else if (rowRect.bottom > containerRect.bottom + SCROLL_TOL) {
     container.scrollTop += rowRect.bottom - containerRect.bottom;
   }
 }
@@ -231,26 +244,15 @@ function recomputeViewportRows() {
 }
 
 if (ctx) {
-  // rAF-defer the scrollTop write so virtualizer re-mount + sticky thead
-  // re-paint settle first, otherwise sub-pixel bbox drift triggers
-  // a re-measure→re-scroll loop.
-  let scrollFrame = 0;
-  let pendingActiveIdx = -1;
-  function scheduleAlign(idx: number) {
-    pendingActiveIdx = idx;
-    if (scrollFrame !== 0) return;
-    scrollFrame = requestAnimationFrame(() => {
-      scrollFrame = 0;
-      const i = pendingActiveIdx;
-      pendingActiveIdx = -1;
-      if (i >= 0) alignActiveRow(i);
-    });
-  }
+  // `flush: "post"` so DOM is up-to-date when `alignActiveRow` measures —
+  // a sync watcher would read stale geometry. `setActive` already diffs
+  // before writing `activeIndex`, so this fires at most once per genuine
+  // change; key auto-repeat at the boundary is a no-op.
   watch(
     () => ctx.state.activeIndex.value,
     (idx) => {
       if (!isStandalone.value || idx < 0) return;
-      scheduleAlign(idx);
+      alignActiveRow(idx);
     },
     { flush: "post" },
   );
@@ -262,12 +264,6 @@ if (ctx) {
     () => props.columns,
     () => void nextTick(recomputeViewportRows),
   );
-  onScopeDispose(() => {
-    if (scrollFrame !== 0) {
-      cancelAnimationFrame(scrollFrame);
-      scrollFrame = 0;
-    }
-  });
 }
 
 const ariaRowCount = computed(() => {
@@ -380,7 +376,13 @@ function isActiveRow(index: number): boolean {
                         :column="col"
                       />
                     </td>
-                    <AsTableCellValue v-else :row="item" :column="col" v-bind="bindings" />
+                    <component
+                      v-else
+                      :is="cellComponents[col.path]"
+                      :row="item"
+                      :column="col"
+                      v-bind="bindings"
+                    />
                   </template>
                 </template>
               </template>
@@ -394,7 +396,7 @@ function isActiveRow(index: number): boolean {
                       :column="col"
                     />
                   </td>
-                  <AsTableCellValue v-else :row="item" :column="col" />
+                  <component v-else :is="cellComponents[col.path]" :row="item" :column="col" />
                 </template>
               </template>
               <td v-if="stretch" class="as-td-filler" />
@@ -448,8 +450,9 @@ function isActiveRow(index: number): boolean {
                       :column="col"
                     />
                   </td>
-                  <AsTableCellValue
+                  <component
                     v-else
+                    :is="cellComponents[col.path]"
                     :row="item"
                     :column="col"
                     role="gridcell"
@@ -468,7 +471,13 @@ function isActiveRow(index: number): boolean {
                     :column="col"
                   />
                 </td>
-                <AsTableCellValue v-else :row="item" :column="col" role="gridcell" />
+                <component
+                  v-else
+                  :is="cellComponents[col.path]"
+                  :row="item"
+                  :column="col"
+                  role="gridcell"
+                />
               </template>
             </template>
             <td v-if="stretch" class="as-td-filler" role="gridcell" />

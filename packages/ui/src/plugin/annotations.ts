@@ -24,8 +24,8 @@ const BUILTIN_TYPES = [
  * - `ui.dict.<key>`   — value-help annotations
  * - `ui.array.<key>`  — array control annotations
  *
- * The dynamic `ui.form.fn.*` / `ui.table.fn.*` and `ui.validate` specs are
- * declared by `@atscript/ui-fns`.
+ * The dynamic `ui.form.fn.*` / `ui.table.fn.*` and `ui.form.validate` specs
+ * are declared by `@atscript/ui-fns`.
  */
 export const uiAnnotations: TAnnotationsTree = {
   ui: {
@@ -145,11 +145,6 @@ export const uiAnnotations: TAnnotationsTree = {
         nodeType: ["prop", "type"],
       }),
 
-      readonly: new AnnotationSpec({
-        description: "Statically mark this field as readonly in the form.",
-        nodeType: ["prop", "type"],
-      }),
-
       options: new AnnotationSpec({
         description:
           "Static option for select/radio fields. Repeat for each option. Label is the display text, value is the key (defaults to label).",
@@ -228,16 +223,6 @@ export const uiAnnotations: TAnnotationsTree = {
         ],
       }),
 
-      title: new AnnotationSpec({
-        description: "Static title for the form or a nested group/array section.",
-        nodeType: ["interface", "type", "prop"],
-        argument: {
-          name: "title",
-          type: "string",
-          description: "The title text",
-        },
-      }),
-
       width: new AnnotationSpec({
         description:
           "Provides a **layout width hint** for the field in auto-generated forms." +
@@ -279,10 +264,6 @@ export const uiAnnotations: TAnnotationsTree = {
             type: "string",
             description: "Submit button label",
           },
-        }),
-        disabled: new AnnotationSpec({
-          description: "Statically disable the submit button.",
-          nodeType: ["interface", "type"],
         }),
       },
 
@@ -426,6 +407,15 @@ export const uiAnnotations: TAnnotationsTree = {
     },
 
     // ── Dictionary annotations (value-help display + capabilities) ──
+    //
+    // `ui.dict.filterable` / `ui.dict.sortable` / `ui.dict.searchable` are
+    // read **server-side** by moost-db's `AsValueHelpController` and emitted
+    // into the `/meta` payload as `meta.fields[name].filterable/sortable` and
+    // `meta.searchable` (+ the `searchable` field list). The picker UI gates
+    // on those flags via the resolved TableDef — no additional client-side
+    // wiring of these annotations is required for server-backed dicts.
+    // (Same pattern: `AsDbReadableController` emits `meta.fields[*]` from
+    // `db.table.filterable/sortable` + `db.column.filterable/sortable`.)
     dict: {
       label: new AnnotationSpec({
         description:

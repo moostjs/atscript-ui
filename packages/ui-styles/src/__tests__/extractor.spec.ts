@@ -140,11 +140,9 @@ describe("createAsExtractor", () => {
       expectAllOf(out, expected);
     });
 
-    it("expands createDefaultTableComponents() to all 7 table components", () => {
-      const out = run(`const components = createDefaultTableComponents();`);
-      const expected = helperAliases.createDefaultTableComponents.flatMap(
-        (n) => componentClasses[n],
-      );
+    it("expands createDefaultControls() to all 7 table components", () => {
+      const out = run(`const controls = createDefaultControls();`);
+      const expected = helperAliases.createDefaultControls.flatMap((n) => componentClasses[n]);
       expectAllOf(out, expected);
     });
 
@@ -159,7 +157,7 @@ describe("createAsExtractor", () => {
 
   describe("excludeComponents opt-out", () => {
     it("drops a single excluded component's classes from a helper call", () => {
-      const out = run(`createDefaultTableComponents();`, {
+      const out = run(`createDefaultControls();`, {
         excludeComponents: ["as-filter-dialog"],
       });
       // Other components still present
@@ -169,7 +167,7 @@ describe("createAsExtractor", () => {
       // appears in as-filter-dialog and only as-filter-dialog must be absent).
       const excluded = componentClasses["as-filter-dialog"];
       const otherHelperClasses = new Set(
-        helperAliases.createDefaultTableComponents
+        helperAliases.createDefaultControls
           .filter((n) => n !== "as-filter-dialog")
           .flatMap((n) => componentClasses[n]),
       );

@@ -52,20 +52,17 @@ export interface ColumnMenuConfig {
 }
 
 /**
- * Component override map for table UI.
+ * Skin-slot override map for table chrome (header cells, column menu, filter
+ * dialog, etc.). Unstyled defaults ship out of the box; users replace any
+ * piece by passing a partial map via `<AsTableRoot :controls="...">`.
  *
- * Same pattern as vue-form's TAsTypeComponents: unstyled defaults
- * ship out of the box, user overrides any piece via this map.
- *
- * Only contains deep sub-components that are rendered inside other
- * components and cannot be composed directly by the user.
- * Layout components (toolbar, pagination, filter bar) are standalone
- * — users import and place them in their template.
+ * For per-cell rendering, use `types` (cell-type dispatch) and `components`
+ * (named overrides via `@ui.table.component "name"`) instead — this map
+ * intentionally holds only the chrome, not the cell renderer.
  */
-export interface TAsTableComponents {
+export interface TAsTableControls {
   // Cells & headers
   headerCell?: Component;
-  cellValue?: Component;
   columnMenu?: Component;
 
   // Filters
@@ -83,6 +80,25 @@ export interface TAsTableComponents {
   createPreset?: Component;
   managePresets?: Component;
 }
+
+/**
+ * Cell-type → component dispatch map. Mirrors vue-form's `TAsTypeComponents`:
+ * a typed map keyed by built-in cell types, with `Record<string, Component>`
+ * to permit user-defined types.
+ *
+ * Use {@link createDefaultCellTypes} to get a pre-built map seeded with the
+ * default `AsTableCellValue` for every built-in type.
+ */
+export type TAsCellTypeComponents = {
+  text: Component;
+  number: Component;
+  boolean: Component;
+  date: Component;
+  array: Component;
+  object: Component;
+  enum: Component;
+  ref: Component;
+} & Record<string, Component>;
 
 /**
  * Reactive table state — Vue implementation of the framework-agnostic

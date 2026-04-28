@@ -11,7 +11,6 @@ import {
   UI_FORM_ACTION,
   UI_FORM_FN_SUBMIT_DISABLED,
   UI_FORM_FN_SUBMIT_TEXT,
-  UI_FORM_SUBMIT_DISABLED,
   UI_FORM_SUBMIT_TEXT,
 } from "@atscript/ui";
 import { CLIENT_FACTORY_KEY } from "../composables/use-value-help";
@@ -114,12 +113,8 @@ const _submitText = computed(
 );
 const _submitDisabled = computed(
   () =>
-    resolveFormProp<boolean>(
-      props.def.type,
-      UI_FORM_FN_SUBMIT_DISABLED,
-      UI_FORM_SUBMIT_DISABLED,
-      ctx.value,
-    ) ?? false,
+    resolveFormProp<boolean>(props.def.type, UI_FORM_FN_SUBMIT_DISABLED, undefined, ctx.value) ??
+    false,
 );
 
 const emit = defineEmits<{

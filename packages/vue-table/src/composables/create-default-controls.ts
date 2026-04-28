@@ -1,17 +1,24 @@
+import type { TAsTableControls } from "../types";
 import {
   AsColumnMenu,
   AsConfigDialog,
   AsFilterDialog,
   AsFilterField,
   AsFilterInput,
-  AsTableCellValue,
   AsTableHeaderCell,
 } from "../components/defaults";
 
-export function createDefaultTableComponents() {
+/**
+ * Returns a fresh skin-slot map pre-filled with all built-in defaults.
+ *
+ * Spread or assign additional entries to override specific pieces:
+ * ```ts
+ * const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog }
+ * ```
+ */
+export function createDefaultControls(): TAsTableControls {
   return {
     headerCell: AsTableHeaderCell,
-    cellValue: AsTableCellValue,
     columnMenu: AsColumnMenu,
     filterDialog: AsFilterDialog,
     filterInput: AsFilterInput,

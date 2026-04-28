@@ -5,10 +5,10 @@ import { clampTopIndex, filledFilterCount } from "@atscript/ui-table";
 import type { ColumnMenuConfig, EnterAction, SelectAllState } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
+import { useCellComponents } from "../../composables/use-cell-components";
 import { useRafBatch } from "../../composables/use-raf-batch";
 import { useTableColumnHandlers } from "../../composables/use-table-column-handlers";
 import { getCellValue } from "../../utils/get-cell-value";
-import AsTableCellValue from "../defaults/as-table-cell-value.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
 import AsWindowSkeletonRow from "./as-window-skeleton-row.vue";
@@ -60,6 +60,7 @@ const emit = defineEmits<{
 const slots = useSlots();
 const { state } = useTableContext();
 const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(() => state.tableDef.value);
+const cellComponents = useCellComponents(() => state.columns.value);
 
 const hasValue = computed(() => state.selectionMode !== "none");
 const hasActiveFilters = computed(() => filledFilterCount(state.filters.value) > 0);
@@ -391,8 +392,9 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
                         :column="col"
                       />
                     </td>
-                    <AsTableCellValue
+                    <component
                       v-else
+                      :is="cellComponents[col.path]"
                       :row="slot.row"
                       :column="col"
                       role="gridcell"
@@ -411,7 +413,13 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
                       :column="col"
                     />
                   </td>
-                  <AsTableCellValue v-else :row="slot.row" :column="col" role="gridcell" />
+                  <component
+                    v-else
+                    :is="cellComponents[col.path]"
+                    :row="slot.row"
+                    :column="col"
+                    role="gridcell"
+                  />
                 </template>
               </template>
               <td class="as-td-filler" role="gridcell" />

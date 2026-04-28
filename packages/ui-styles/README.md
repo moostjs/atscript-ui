@@ -30,13 +30,13 @@ The full design rationale lives in [`STYLES.md`](../../STYLES.md). Quick contrib
 2. Barrel named imports — `import { AsForm, AsField } from '@atscript/vue-form'`
 3. PascalCase tags — `<AsForm`, `<AsTableRoot` (the dominant pattern in real consumer code)
 4. Kebab-case tags — `<as-form`
-5. Helper-function calls — `createDefaultTypes(`, `createDefaultTableComponents(`
+5. Helper-function calls — `createDefaultTypes(`, `createDefaultControls(`, `createDefaultCellTypes(`
 
 The unknown-name guard is `componentClasses[kebab]` — anything not in the dict is a no-op. PascalCase / kebab equivalence is handled by [`src/kebab.ts`](src/kebab.ts).
 
 ### Decision 11 — Helper-call detection (mandatory for default components)
 
-`createDefaultTypes()` and `createDefaultTableComponents()` ship default field/cell components consumers never tag directly. A tag-only extractor would silently drop their classes. The extraction script (`scripts/extract-component-classes.ts`) walks each helper file, parses the single import from `../components/defaults`, kebab-cases the named identifiers, and emits `helperAliases`. The extractor unions a helper's class set into the result whenever it sees the helper name as a function call (member calls like `obj.createDefaultTypes()` are excluded by a leading `(?:^|[^.\w])` guard).
+`createDefaultTypes()`, `createDefaultControls()`, and `createDefaultCellTypes()` ship default field/cell components consumers never tag directly. A tag-only extractor would silently drop their classes. The extraction script (`scripts/extract-component-classes.ts`) walks each helper file, parses the single import from `../components/defaults`, kebab-cases the named identifiers, and emits `helperAliases`. The extractor unions a helper's class set into the result whenever it sees the helper name as a function call (member calls like `obj.createDefaultTypes()` are excluded by a leading `(?:^|[^.\w])` guard).
 
 When new helpers are added, they must conform to **Decision 17**'s layout (`src/composables/create-*.ts`, single import from `../components/defaults`) or the parser will hard-fail on regenerate.
 

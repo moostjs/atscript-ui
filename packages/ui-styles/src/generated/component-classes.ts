@@ -541,6 +541,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-field-header-row",
     "as-field-input-row",
     "as-field-remove-btn",
+    "as-input-with-icon",
     "as-no-data",
     "as-no-data-plus",
     "as-no-data-text",
@@ -1024,6 +1025,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-field-label",
     "as-field-remove-btn",
     "as-form-title",
+    "as-input-with-icon",
     "as-no-data",
     "as-no-data-plus",
     "as-no-data-text",
@@ -1140,13 +1142,13 @@ export const componentClasses: Record<string, readonly string[]> = {
 };
 
 export const helperAliases: Record<string, readonly string[]> = {
-  createDefaultTableComponents: [
+  createDefaultCellTypes: ["as-table-cell-value"],
+  createDefaultControls: [
     "as-column-menu",
     "as-config-dialog",
     "as-filter-dialog",
     "as-filter-field",
     "as-filter-input",
-    "as-table-cell-value",
     "as-table-header-cell",
   ],
   createDefaultTypes: [

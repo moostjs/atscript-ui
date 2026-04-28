@@ -1,6 +1,7 @@
 // ── Types ───────────────────────────────────────────────────
 export type {
-  TAsTableComponents,
+  TAsTableControls,
+  TAsCellTypeComponents,
   ReactiveTableState,
   ColumnMenuConfig,
   ConfigTab,
@@ -43,7 +44,8 @@ export { default as AsWindowTable } from "./components/as-window-table.vue";
 export { default as AsFilters } from "./components/as-filters.vue";
 
 // ── Default implementations (Tier 2 — swap targets) ─────────
-export { createDefaultTableComponents } from "./composables/create-default-table-components";
+export { createDefaultControls } from "./composables/create-default-controls";
+export { createDefaultCellTypes } from "./composables/create-default-cell-types";
 export {
   AsColumnMenu,
   AsConfigDialog,

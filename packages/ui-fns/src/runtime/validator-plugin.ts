@@ -1,5 +1,5 @@
 import type { TValidatorPlugin } from "@atscript/typescript/utils";
-import { UI_VALIDATE, asArray, getFieldMeta } from "@atscript/ui";
+import { UI_FORM_VALIDATE, asArray, getFieldMeta } from "@atscript/ui";
 import { buildFieldEntry } from "./dynamic-resolver";
 import { compileValidatorFn } from "./fn-compiler";
 
@@ -10,7 +10,7 @@ export interface TValidatorContext {
 }
 
 /**
- * Creates an ATScript validator plugin that processes `@ui.validate` annotations
+ * Creates an ATScript validator plugin that processes `@ui.form.validate` annotations
  * using compiled function strings.
  *
  * Usage:
@@ -20,7 +20,7 @@ export interface TValidatorContext {
  */
 export function uiFnsValidatorPlugin(): TValidatorPlugin {
   return (ctx, def, value) => {
-    const hasValidators = getFieldMeta(def, UI_VALIDATE);
+    const hasValidators = getFieldMeta(def, UI_FORM_VALIDATE);
     if (!hasValidators) return undefined;
 
     const fnsCtx = ctx.context as TValidatorContext | undefined;

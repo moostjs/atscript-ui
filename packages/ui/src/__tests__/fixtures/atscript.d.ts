@@ -85,18 +85,15 @@ declare global {
     "ui.form.styles": (string)[]
     "ui.form.autocomplete": string
     "ui.form.disabled": boolean
-    "ui.form.readonly": boolean
     "ui.form.options": ({ label: string, value?: string })[]
     "ui.form.order": number
     "ui.form.type": string
     "ui.form.component": string
     "ui.form.hidden": boolean
     "ui.form.attr": ({ name: string, value: string })[]
-    "ui.form.title": string
     "ui.form.width": string
     "ui.form.icon": string
     "ui.form.submit.text": string
-    "ui.form.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }
     "ui.table.width": string
     "ui.table.component": string

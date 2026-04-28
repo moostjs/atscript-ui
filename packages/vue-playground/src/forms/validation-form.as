@@ -19,7 +19,7 @@ export interface ValidationForm {
 
     @meta.label 'Age'
     @ui.type 'number'
-    @ui.validate '(v) => !!v || "Age is required"'
+    @ui.form.validate '(v) => !!v || "Age is required"'
     @expect.min 18, 'Must be 18 or older'
     @expect.max 120, 'Must be 120 or younger'
     @ui.form.order 3
@@ -42,13 +42,13 @@ export interface ValidationForm {
     @ui.type 'password'
     @meta.required 'Password is required'
     @expect.minLength 8, 'Password must be at least 8 characters'
-    @ui.validate '(v) => /[A-Z]/.test(v) || "Must contain an uppercase letter"'
+    @ui.form.validate '(v) => /[A-Z]/.test(v) || "Must contain an uppercase letter"'
     @ui.form.order 6
     password: string
 
     @meta.label 'I agree to terms'
     @ui.form.order 7
-    @ui.validate '(v) => !!v || "You must agree to terms"'
+    @ui.form.validate '(v) => !!v || "You must agree to terms"'
     agreeToTerms: ui.checkbox
 
     @meta.label 'Tags'

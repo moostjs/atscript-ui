@@ -63,6 +63,8 @@ export interface ColumnDef {
   label: string;
   /** Display type — from @ui.table.type, then @ui.type, then inferred from designType. */
   type: string;
+  /** Named component override from @ui.table.component — looked up in the table components map. */
+  component?: string;
   /** Whether this column supports sorting. */
   sortable: boolean;
   /** Whether this column supports filtering. */

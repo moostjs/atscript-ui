@@ -53,7 +53,7 @@ import {
   UI_FORM_ICON,
   UI_FORM_PLACEHOLDER,
   UI_FORM_STYLES,
-  UI_VALIDATE,
+  UI_FORM_VALIDATE,
   WF_ACTION_WITH_DATA,
   type FormFieldDef,
   type TFormAction,
@@ -259,7 +259,7 @@ if (props.field.allStatic) {
     const k = key as string;
     if (k.startsWith(UI_FORM_FN_PREFIX)) hasFn.add(k.slice(UI_FORM_FN_PREFIX.length));
   }
-  hasCustomValidators = getFieldMeta(prop, UI_VALIDATE) !== undefined;
+  hasCustomValidators = getFieldMeta(prop, UI_FORM_VALIDATE) !== undefined;
 
   // ── Lazy scope construction ────────────────────────────────
   const needsBaseScope = hasFn.has("disabled") || hasFn.has("hidden") || hasFn.has("readonly");

@@ -8,6 +8,7 @@ import {
   shallowRef,
   toValue,
   watch,
+  type Component,
   type MaybeRefOrGetter,
   type Ref,
 } from "vue";
@@ -36,7 +37,8 @@ import type {
   MainActionRequest,
   QueryErrorKind,
   ReactiveTableState,
-  TAsTableComponents,
+  TAsCellTypeComponents,
+  TAsTableControls,
 } from "../types";
 import { createSelectionApi, type SelectionApiOptions } from "./state/create-selection";
 import { createMainActionRegistry } from "./state/create-main-action-registry";
@@ -67,7 +69,12 @@ function cellAsString(v: unknown): string {
 export interface TableContext {
   state: ReactiveTableState;
   client: Client;
-  components: TAsTableComponents;
+  /** Skin-slot overrides for table chrome (header cells, filter dialog, etc.). */
+  controls: TAsTableControls;
+  /** Cell-type → component dispatch map. */
+  types?: TAsCellTypeComponents;
+  /** Named cell-component overrides — looked up by `@ui.table.component "name"`. */
+  components?: Record<string, Component>;
 }
 
 export type QueryFn = (

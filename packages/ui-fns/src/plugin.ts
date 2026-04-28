@@ -2,7 +2,7 @@ import type { TAtscriptPlugin } from "@atscript/core";
 import { uiFnsAnnotations } from "./plugin/annotations";
 
 /**
- * ATScript plugin that registers `ui.fn.*` computed annotations and `ui.validate`.
+ * ATScript plugin that registers `ui.form.fn.*` / `ui.table.fn.*` computed annotations and `ui.form.validate`.
  *
  * Static `@ui.*` annotations and UI primitives are provided by `@atscript/ui/plugin`.
  *

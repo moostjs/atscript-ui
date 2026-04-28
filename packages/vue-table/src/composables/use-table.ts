@@ -6,10 +6,10 @@ import {
   type SortControl,
 } from "@atscript/ui";
 import type { Client } from "@atscript/db-client";
-import type { Ref } from "vue";
+import type { Component, Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
 import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
-import type { ReactiveTableState, TAsTableComponents } from "../types";
+import type { ReactiveTableState, TAsCellTypeComponents, TAsTableControls } from "../types";
 import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
 import { useTableSelection, type SelectionPersistence } from "./use-table-selection";
 
@@ -70,8 +70,12 @@ export interface UseTableOptions {
   dragReleaseDebounceMs?: number;
   /** Factory to create a client from a URL. Only honored on the first `useTable`/`resolveValueHelp` call per URL — subsequent callers reuse the cached client. */
   clientFactory?: ClientFactory;
-  /** Component overrides for table rendering. */
-  components?: TAsTableComponents;
+  /** Skin-slot overrides for table chrome (header cells, filter dialog, column menu, etc.). */
+  controls?: TAsTableControls;
+  /** Cell-type → component dispatch map. Use {@link createDefaultCellTypes} to seed defaults. */
+  types?: TAsCellTypeComponents;
+  /** Named cell-component overrides — looked up by `@ui.table.component "name"`. */
+  components?: Record<string, Component>;
   /** Whether to provide table context to the subtree (default: true). */
   provideContext?: boolean;
 }
@@ -120,7 +124,13 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
 
   useTableSelection(state, { mode: opts?.selectionPersistence ?? "trim" });
   if (opts?.provideContext !== false) {
-    provideTableContext({ state, client: client as Client, components: opts?.components ?? {} });
+    provideTableContext({
+      state,
+      client: client as Client,
+      controls: opts?.controls ?? {},
+      types: opts?.types,
+      components: opts?.components,
+    });
   }
 
   defPromise

@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
+import {
+  AsTableRoot,
+  AsTable,
+  createDefaultControls,
+  createDefaultCellTypes,
+} from "@atscript/vue-table";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
 import TablePagination from "../../components/TablePagination.vue";
 
-const components = createDefaultTableComponents();
+const controls = createDefaultControls();
+const types = createDefaultCellTypes();
 
 const selected = ref<unknown[]>([]);
 
@@ -26,7 +32,8 @@ function onMainAction(row: Record<string, unknown>) {
     <AsTableRoot
       v-model:selected-rows="selected"
       url="/db/tables/products"
-      :components="components"
+      :controls="controls"
+      :types="types"
       select="single"
       :limit="10"
       v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata, results }"

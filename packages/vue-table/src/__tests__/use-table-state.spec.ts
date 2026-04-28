@@ -266,7 +266,7 @@ describe("provideTableContext / useTableContext", () => {
             query: { queryOnMount: false },
           });
           const { client } = createMockClient({ meta: createMockMeta([]) });
-          provideTableContext({ state, client, components: {} });
+          provideTableContext({ state, client, controls: {} });
           return () => h(Child);
         },
       }),

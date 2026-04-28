@@ -22,7 +22,7 @@ Atscript UI forms are driven entirely by annotated type schemas. Define your for
 | `@ui.order`         | Field display order                                 |
 | `@ui.hidden`        | Hide the field                                      |
 | `@ui.disabled`      | Disable the field                                   |
-| `@ui.validate`      | Custom validation function                          |
+| `@ui.form.validate` | Custom validation function                          |
 | `@expect.min`       | Minimum numeric value                               |
 | `@expect.max`       | Maximum numeric value                               |
 | `@expect.minLength` | Minimum string length                               |

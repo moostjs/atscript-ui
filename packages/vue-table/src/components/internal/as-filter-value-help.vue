@@ -90,7 +90,7 @@ if (info) {
     },
   });
   innerState = state;
-  provideTableContext({ state, client: {} as Client, components: {} });
+  provideTableContext({ state, client: {} as Client, controls: {} });
 }
 
 // FK only: resolve value-help meta on mount so column-clamp watcher knows

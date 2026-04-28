@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { AsTableRoot, AsTable, createDefaultTableComponents } from "@atscript/vue-table";
+import {
+  AsTableRoot,
+  AsTable,
+  createDefaultControls,
+  createDefaultCellTypes,
+} from "@atscript/vue-table";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
 import TablePagination from "../../components/TablePagination.vue";
 
-const components = createDefaultTableComponents();
+const controls = createDefaultControls();
+const types = createDefaultCellTypes();
 const filterFields = ref<string[]>(["customerId", "productId", "status"]);
 </script>
 
@@ -13,7 +19,8 @@ const filterFields = ref<string[]>(["customerId", "productId", "status"]);
   <div class="table-page">
     <AsTableRoot
       url="/db/tables/orders"
-      :components="components"
+      :controls="controls"
+      :types="types"
       :limit="10"
       v-model:filter-fields="filterFields"
       v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"

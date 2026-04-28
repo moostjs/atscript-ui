@@ -21,7 +21,7 @@ Every `@atscript/vue-*` package exposes two categories of components:
 | Category               | What it is                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Auto-import via `AsResolver` |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------: |
 | **Primary components** | The ones you write as tags in templates: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsWfForm>`.                                                                                                                                                                                                                                                                                                                                                                                    |              ✓               |
-| **Default components** | Out-of-the-box implementations you can swap via `:types` / `:components` props: `AsInput`, `AsSelect`, `AsRadio`, `AsCheckbox`, `AsParagraph`, `AsAction`, `AsObject`, `AsArray`, `AsUnion`, `AsTuple`, `AsRef`, `AsTableHeaderCell`, `AsTableCellValue`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`, `AsFilterDialog`, `AsConfigDialog`. You usually consume them through `createDefaultTypes()` / `createDefaultTableComponents()`, but they're also importable on their own when you want to wrap or extend a default. |     ✗ (explicit imports)     |
+| **Default components** | Out-of-the-box implementations you can swap via `:types` / `:controls` / `:components` props: `AsInput`, `AsSelect`, `AsRadio`, `AsCheckbox`, `AsParagraph`, `AsAction`, `AsObject`, `AsArray`, `AsUnion`, `AsTuple`, `AsRef`, `AsTableHeaderCell`, `AsTableCellValue`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`, `AsFilterDialog`, `AsConfigDialog`. You usually consume them through `createDefaultTypes()` / `createDefaultControls()` / `createDefaultCellTypes()`, but they're also importable on their own when you want to wrap or extend a default. |     ✗ (explicit imports)     |
 
 Both categories support **two import patterns**:
 
@@ -41,7 +41,7 @@ import { AsFilterDialog, AsTableHeaderCell } from "@atscript/vue-table";
 
 // Helpers that wire up all the defaults at once
 import { createDefaultTypes } from "@atscript/vue-form";
-import { createDefaultTableComponents } from "@atscript/vue-table";
+import { createDefaultControls, createDefaultCellTypes } from "@atscript/vue-table";
 ```
 
 ### Subpath import (for fine-grained code-splitting)
@@ -186,13 +186,13 @@ Names are kebab-case (`as-form`, `as-filter-dialog`, …). The exclusion is **po
 The most common customization pattern is "spread the defaults, override one":
 
 ```ts
-const types = {
-  ...createDefaultTableComponents(),
+const controls = {
+  ...createDefaultControls(),
   filterDialog: MyFilterDialog, // override at runtime
 };
 ```
 
-This is fine at runtime — your `MyFilterDialog` renders. **But the extractor still pulls in classes for `as-filter-dialog`** because the literal string `createDefaultTableComponents(` is in your source. To actually drop those styles from the bundle, add `excludeComponents: ["as-filter-dialog"]` to your `asPresetVunor` config.
+This is fine at runtime — your `MyFilterDialog` renders. **But the extractor still pulls in classes for `as-filter-dialog`** because the literal string `createDefaultControls(` is in your source. To actually drop those styles from the bundle, add `excludeComponents: ["as-filter-dialog"]` to your `asPresetVunor` config.
 
 The runtime override and the build-time class extraction operate independently.
 :::
@@ -271,7 +271,7 @@ export default defineConfig({
 });
 ```
 
-`getComponentClasses(...kebabNames)` returns the deduped class list. `getHelperClasses(...helperNames)` does the same for helper aliases (`createDefaultTypes`, `createDefaultTableComponents`).
+`getComponentClasses(...kebabNames)` returns the deduped class list. `getHelperClasses(...helperNames)` does the same for helper aliases (`createDefaultTypes`, `createDefaultControls`, `createDefaultCellTypes`).
 
 ## Cheat sheet
 

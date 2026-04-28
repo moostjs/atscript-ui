@@ -1,12 +1,12 @@
 import type { Component } from "vue";
-import type { TAsTableComponents } from "../types";
+import type { TAsTableControls } from "../types";
 import { useTableContext } from "./use-table-state";
 
-/** Resolve a single component from the injected types map, falling back to the default. */
-export function useTableComponent<K extends keyof TAsTableComponents>(
+/** Resolve a single skin-slot component from the injected `controls` map, falling back to the default. */
+export function useTableComponent<K extends keyof TAsTableControls>(
   key: K,
   fallback: Component,
 ): Component {
-  const { components } = useTableContext();
-  return components[key] ?? fallback;
+  const { controls } = useTableContext();
+  return controls[key] ?? fallback;
 }

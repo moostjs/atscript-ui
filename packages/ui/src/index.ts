@@ -9,18 +9,15 @@ export {
   UI_FORM_STYLES,
   UI_FORM_AUTOCOMPLETE,
   UI_FORM_DISABLED,
-  UI_FORM_READONLY,
   UI_FORM_OPTIONS,
   UI_FORM_ORDER,
   UI_FORM_TYPE,
   UI_FORM_COMPONENT,
   UI_FORM_HIDDEN,
   UI_FORM_ATTR,
-  UI_FORM_TITLE,
   UI_FORM_WIDTH,
   UI_FORM_ICON,
   UI_FORM_SUBMIT_TEXT,
-  UI_FORM_SUBMIT_DISABLED,
   UI_FORM_ACTION,
   // Table static
   UI_TABLE_WIDTH,
@@ -75,7 +72,7 @@ export {
   UI_TABLE_FN_CLASSES,
   UI_TABLE_FN_STYLES,
   // Validation
-  UI_VALIDATE,
+  UI_FORM_VALIDATE,
 } from "./shared/annotation-keys";
 
 // ── Form types ──────────────────────────────────────────────

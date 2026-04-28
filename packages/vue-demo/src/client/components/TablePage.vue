@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { AsTable, AsTableRoot, createDefaultTableComponents } from "@atscript/vue-table";
+import {
+  AsTable,
+  AsTableRoot,
+  createDefaultControls,
+  createDefaultCellTypes,
+} from "@atscript/vue-table";
 import { useRouter } from "vue-router";
 import InviteButton from "./InviteButton.vue";
 import TableToolbar from "./TableToolbar.vue";
@@ -11,7 +16,8 @@ import { getDemoTable, type TableMode } from "../domain/tables";
 import { useMe } from "../api/use-me";
 import { clientForTable } from "../api/client-factory";
 
-const components = createDefaultTableComponents();
+const controls = createDefaultControls();
+const types = createDefaultCellTypes();
 const rowValueFn = (row: Record<string, unknown>) => row.id;
 
 const props = defineProps<{ path: string; label: string }>();
@@ -84,7 +90,8 @@ async function onDeleteSelected(ids: unknown[]) {
       v-slot="{ loadingMetadata, tableDef }"
       v-model:filter-fields="filterFields"
       :url="`/api/db/tables/${path}`"
-      :components="components"
+      :controls="controls"
+      :types="types"
       :limit="limit"
       :select="select"
       :row-value-fn="rowValueFn"

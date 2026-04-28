@@ -35,7 +35,7 @@ function mountTable(opts?: { viewportRowCount?: number; totalCount?: number; row
         });
         state = s;
         internals.init(mockTableDef([mockColumn("name")]));
-        provideTableContext({ state, client: mock.client, components: {} });
+        provideTableContext({ state, client: mock.client, controls: {} });
         // Pre-populate cache + results for an immediate render (no fetch needed).
         const cache = new Map<number, Record<string, unknown>>();
         for (let i = 0; i < totalCount; i++) cache.set(i, { id: i, name: `r${i}` });
@@ -93,7 +93,7 @@ describe("<AsWindowTable> skeleton rendering", () => {
           });
           state = s;
           internals.init(mockTableDef([mockColumn("name")]));
-          provideTableContext({ state, client: mock.client, components: {} });
+          provideTableContext({ state, client: mock.client, controls: {} });
           // Cache empty, totalCount populated, viewport set.
           state.totalCount.value = 100;
           state.viewportRowCount.value = 5;
@@ -119,7 +119,7 @@ describe("<AsWindowTable> overlay", () => {
           });
           state = s;
           internals.init(mockTableDef([mockColumn("name")]));
-          provideTableContext({ state, client: mock.client, components: {} });
+          provideTableContext({ state, client: mock.client, controls: {} });
           state.querying.value = true;
           return () => h(AsWindowTable);
         },

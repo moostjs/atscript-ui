@@ -8,18 +8,15 @@ export const UI_FORM_CLASSES = "ui.form.classes" as const;
 export const UI_FORM_STYLES = "ui.form.styles" as const;
 export const UI_FORM_AUTOCOMPLETE = "ui.form.autocomplete" as const;
 export const UI_FORM_DISABLED = "ui.form.disabled" as const;
-export const UI_FORM_READONLY = "ui.form.readonly" as const;
 export const UI_FORM_OPTIONS = "ui.form.options" as const;
 export const UI_FORM_ORDER = "ui.form.order" as const;
 export const UI_FORM_TYPE = "ui.form.type" as const;
 export const UI_FORM_COMPONENT = "ui.form.component" as const;
 export const UI_FORM_HIDDEN = "ui.form.hidden" as const;
 export const UI_FORM_ATTR = "ui.form.attr" as const;
-export const UI_FORM_TITLE = "ui.form.title" as const;
 export const UI_FORM_WIDTH = "ui.form.width" as const;
 export const UI_FORM_ICON = "ui.form.icon" as const;
 export const UI_FORM_SUBMIT_TEXT = "ui.form.submit.text" as const;
-export const UI_FORM_SUBMIT_DISABLED = "ui.form.submit.disabled" as const;
 export const UI_FORM_ACTION = "ui.form.action" as const;
 
 // ── Table static (registered by @atscript/ui plugin) ─────────
@@ -84,4 +81,4 @@ export const UI_TABLE_FN_CLASSES = "ui.table.fn.classes" as const;
 export const UI_TABLE_FN_STYLES = "ui.table.fn.styles" as const;
 
 // ── Validation key (registered by @atscript/ui-fns) ──────────
-export const UI_VALIDATE = "ui.validate" as const;
+export const UI_FORM_VALIDATE = "ui.form.validate" as const;

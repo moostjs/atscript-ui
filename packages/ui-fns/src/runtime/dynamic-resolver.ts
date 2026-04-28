@@ -162,7 +162,13 @@ export function buildFieldEntry(
     optional: opts?.optional ?? prop.optional,
     disabled:
       opts?.disabled ??
-      resolveFieldProp<boolean>(prop, UI_FORM_FN_DISABLED, UI_FORM_DISABLED, scopeAsRecord, boolOpts),
+      resolveFieldProp<boolean>(
+        prop,
+        UI_FORM_FN_DISABLED,
+        UI_FORM_DISABLED,
+        scopeAsRecord,
+        boolOpts,
+      ),
     hidden:
       opts?.hidden ??
       resolveFieldProp<boolean>(prop, UI_FORM_FN_HIDDEN, UI_FORM_HIDDEN, scopeAsRecord, boolOpts),

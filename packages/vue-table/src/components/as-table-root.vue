@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import type { Component } from "vue";
 import type { SortControl, ClientFactory } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
-import type { TAsTableComponents } from "../types";
+import type { TAsCellTypeComponents, TAsTableControls } from "../types";
 import { useTable } from "../composables/use-table";
 import { useRegisterMainActionListener } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
@@ -18,7 +18,12 @@ const props = withDefaults(
     url: string;
     /** Factory to create a client from a URL. Falls back to the app-wide default set via `setDefaultClientFactory` (or the built-in `new Client(url)` factory if unset). */
     clientFactory?: ClientFactory;
-    components?: TAsTableComponents;
+    /** Skin-slot overrides for table chrome — header cells, filter dialog, column menu, etc. Use {@link createDefaultControls} to seed defaults. */
+    controls?: TAsTableControls;
+    /** Cell-type → component dispatch map. Use {@link createDefaultCellTypes} to seed defaults. */
+    types?: TAsCellTypeComponents;
+    /** Named cell-component overrides — looked up by `@ui.table.component "name"`. */
+    components?: Record<string, Component>;
     limit?: number;
     forceFilters?: FilterExpr;
     forceSorters?: SortControl[];
@@ -80,6 +85,8 @@ const state = useTable(props.url, {
   blockSize: props.blockSize,
   dragReleaseDebounceMs: props.dragReleaseDebounceMs,
   clientFactory: props.clientFactory,
+  controls: props.controls,
+  types: props.types,
   components: props.components,
   filterFields,
   columnNames,
@@ -96,11 +103,6 @@ useRegisterMainActionListener(
 
 const navBridge = useTableNavBridge(state);
 defineExpose({ state, navBridge });
-
-// Resolve the filter dialog component (cannot use useTableComponent here
-// because provideTableContext is called in the same setup by useTable).
-const FilterDialogComp = computed(() => props.components?.filterDialog ?? AsFilterDialog);
-const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConfigDialog);
 </script>
 
 <template>
@@ -139,6 +141,6 @@ const ConfigDialogComp = computed(() => props.components?.configDialog ?? AsConf
     :remove-filter-field="state.removeFilterField"
   />
 
-  <component :is="FilterDialogComp" />
-  <component :is="ConfigDialogComp" />
+  <component :is="props.controls?.filterDialog ?? AsFilterDialog" />
+  <component :is="props.controls?.configDialog ?? AsConfigDialog" />
 </template>

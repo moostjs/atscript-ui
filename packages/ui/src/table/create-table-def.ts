@@ -8,6 +8,7 @@ import { getFieldMeta } from "../shared/field-resolver";
 import {
   EXPECT_MAX_LENGTH,
   META_LABEL,
+  UI_TABLE_COMPONENT,
   UI_TABLE_HIDDEN,
   UI_TABLE_ORDER,
   UI_TABLE_TYPE,
@@ -58,11 +59,13 @@ export function createTableDef(
 
     const tableType = getFieldMeta(prop, UI_TABLE_TYPE) as string | undefined;
     const sharedType = getFieldMeta(prop, UI_TYPE) as string | undefined;
+    const tableComponent = getFieldMeta(prop, UI_TABLE_COMPONENT) as string | undefined;
 
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
       type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
+      component: tableComponent,
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
       visible: getFieldMeta(prop, UI_TABLE_HIDDEN) === undefined,
