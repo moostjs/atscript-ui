@@ -30,7 +30,8 @@ function buildAuthorMeta() {
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: ["id"],
-    readOnly: false,
+    crud: { query: [], pages: [], one: [] },
+    actions: [],
     relations: [],
     fields: {
       id: { sortable: true, filterable: true },

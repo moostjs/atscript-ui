@@ -12,6 +12,12 @@ interface Toast {
   message: string;
 }
 
+export interface ActionToast {
+  id: string;
+  ok: boolean;
+  message: string;
+}
+
 class VoidBus {
   private handlers = new Set<VoidHandler>();
   on(h: VoidHandler): () => void {
@@ -38,3 +44,4 @@ export const on401 = new VoidBus();
 export const on403 = new Bus<Toast>();
 export const on410 = new VoidBus();
 export const on500 = new Bus<ServerError>();
+export const onActionToast = new Bus<ActionToast>();

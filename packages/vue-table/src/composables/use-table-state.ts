@@ -33,17 +33,24 @@ import {
 import type { Client, PageResult } from "@atscript/db-client";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type {
+  ActionResult,
   ConfigTab,
+  ConfirmOptions,
+  ConfirmRequest,
   MainActionRequest,
   QueryErrorKind,
   ReactiveTableState,
+  RowDeleteOpt,
   TAsCellTypeComponents,
   TAsTableControls,
+  TVueTableActionInfo,
 } from "../types";
+import { createActions } from "./state/create-actions";
 import { createSelectionApi, type SelectionApiOptions } from "./state/create-selection";
 import { createMainActionRegistry } from "./state/create-main-action-registry";
 import { createNavController } from "./state/create-nav-controller";
 import { createWindowFetcher } from "./state/create-window-fetcher";
+import { extractPk } from "./state/intent-scope";
 
 const TABLE_KEY = "__as_table";
 const FILTER_DEBOUNCE_MS = 500;
@@ -113,6 +120,22 @@ export interface TableWindowOptions {
   dragReleaseDebounceMs?: number;
 }
 
+export interface TableActionsOptions {
+  /** Refetch policy: when `true` (default), successful backend / __remove invocations call `state.query()`. */
+  refreshOnAction?: () => boolean;
+  /**
+   * Bridge for `<AsTableRoot>`'s `@action` emit. Called once per settled
+   * `invoke` (success, error, custom). `ids` is the level-derived list:
+   * `'row'` → `[pk]`, `'rows'` → `pk` if array else `[pk]`, `'table'` → `[]`.
+   */
+  onResolved?: (
+    action: TVueTableActionInfo,
+    ids: unknown[],
+    result: ActionResult,
+    event?: KeyboardEvent | MouseEvent,
+  ) => void;
+}
+
 export interface CreateTableStateOptions {
   /** Data-layer client used for `client.pages` calls. */
   client: Client;
@@ -126,6 +149,8 @@ export interface CreateTableStateOptions {
   query?: TableQueryOptions;
   /** Windowed-mode (virtualized) settings. */
   window?: TableWindowOptions;
+  /** Action settings (built-in row delete + refetch policy). */
+  actions?: TableActionsOptions;
 }
 
 /** Internal handles returned alongside the public state. */
@@ -174,6 +199,11 @@ export function createTableState(opts: CreateTableStateOptions): {
     return result;
   });
 
+  // Renderer-owned. `<AsTable>` / `<AsWindowTable>` push `:row-delete` here
+  // via a watcher; `createActions` reads `.value` so the action set live-
+  // updates when the prop flips.
+  const rowDelete = ref<boolean | RowDeleteOpt>(false);
+
   const filters = shallowRef<FieldFilters>({});
   const results = shallowRef<Row[]>([]);
   const resultsStart = ref(0);
@@ -200,6 +230,32 @@ export function createTableState(opts: CreateTableStateOptions): {
   const configDialogOpen = ref(false);
   const configTab = ref<ConfigTab>("columns");
   const filterDialogColumn = ref<ColumnDef | null>(null);
+
+  // ── Prompt dialog ───────────────────────────────────────────────────────
+  // A concurrent `prompt()` auto-resolves the prior request as `false` —
+  // the user couldn't have answered both.
+  const confirmRequest = ref<ConfirmRequest | null>(null);
+  function promptFn(message: string, opts: ConfirmOptions = {}): Promise<boolean> {
+    if (confirmRequest.value) {
+      confirmRequest.value.resolve(false);
+      confirmRequest.value = null;
+    }
+    return new Promise<boolean>((resolve) => {
+      confirmRequest.value = { ...opts, message, resolve };
+    });
+  }
+  function acceptPrompt() {
+    const req = confirmRequest.value;
+    if (!req) return;
+    confirmRequest.value = null;
+    req.resolve(true);
+  }
+  function dismissPrompt() {
+    const req = confirmRequest.value;
+    if (!req) return;
+    confirmRequest.value = null;
+    req.resolve(false);
+  }
 
   // Stable per-state UID so deterministic row IDs survive remount of consuming
   // components without colliding across multi-table pages.
@@ -285,34 +341,51 @@ export function createTableState(opts: CreateTableStateOptions): {
 
   // 3. Selection.
   const selection = createSelectionApi(selectionOpts, getActiveRow);
+  const { selectedRows, selectedCount, rowValueFn, isPkSelected, toggleActiveSelection } =
+    selection;
+
+  // 4. Actions namespace. Built before `mainAction` so the registry's fallback
+  // path can resolve `actions.default.row` and call `actions.invoke`. Refetch
+  // policy is honored inline inside `invoke` — `createActions` calls
+  // `scheduleQuery` directly when the per-call + root-prop gates allow it.
+  const actionsNs = createActions({
+    tableDef,
+    client,
+    rowDelete: () => rowDelete.value,
+    scheduleQuery,
+    refreshOnAction: () => opts.actions?.refreshOnAction?.(),
+    onResolved: opts.actions?.onResolved,
+  });
+  const { actions } = actionsNs;
+
+  // 5. Main-action registry — falls back to `actions.default.row` when no
+  // listener is registered.
+  const mainAction = createMainActionRegistry({
+    getActiveIndex: () => activeIndex.value,
+    getActiveRow,
+    getDefaultRowAction: () => actions.default.row,
+    invokeFallback: (action, row, event) =>
+      void actions.invoke(action, extractPk(row, tableDef.value?.primaryKeys ?? []), { event }),
+  });
   const {
-    selectedRows,
-    selectedCount,
-    selectionMode,
-    rowValueFn,
-    isPkSelected,
-    ariaSelectedFor,
-    toggleActiveSelection,
-  } = selection;
+    hasMainActionListener,
+    hasMainActionAvailable,
+    registerMainActionListener,
+    requestMainAction,
+  } = mainAction;
 
-  // 4. Main-action registry.
-  const mainAction = createMainActionRegistry(() => activeIndex.value, getActiveRow);
-  const { hasMainActionListener, registerMainActionListener, requestMainAction } = mainAction;
-
-  // 5. Nav controller.
+  // 6. Nav controller.
   const nav = createNavController({
     activeIndex,
     totalCount,
     results,
     viewportRowCount,
     topIndex,
-    selectionMode,
-    hasMainActionListener,
+    hasMainActionAvailable,
     requestMainAction,
     toggleActiveSelection,
   });
   const { navMode, navViewportRowCount, setActive, clearActive, handleNavKey } = nav;
-
 
   // ── Query engine ────────────────────────────────────────────────────────
   async function runQuery(kind: QueryErrorKind) {
@@ -451,10 +524,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     filterDialogColumn,
     selectedRows,
     selectedCount,
-    selectionMode,
     rowValueFn,
     isPkSelected,
-    ariaSelectedFor,
+    rowDelete,
     activeIndex,
     navMode,
     hasMainActionListener,
@@ -466,6 +538,11 @@ export function createTableState(opts: CreateTableStateOptions): {
     requestMainAction,
     handleNavKey,
     registerMainActionListener,
+    actions,
+    confirmRequest,
+    prompt: promptFn,
+    acceptPrompt,
+    dismissPrompt,
 
     query,
     queryImmediate,
@@ -587,6 +664,13 @@ export function createTableState(opts: CreateTableStateOptions): {
   onScopeDispose(() => {
     debouncedFilterQuery.cancel();
     disposeDebounces();
+    // Resolve any pending prompt as `false` so awaiters of `state.prompt()`
+    // don't hang forever when the table state is torn down mid-dialog.
+    if (confirmRequest.value) {
+      const req = confirmRequest.value;
+      confirmRequest.value = null;
+      req.resolve(false);
+    }
   });
 
   const internals: TableStateInternals = {
@@ -651,7 +735,9 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
     columns: opts.columns,
     flatMap: new Map(),
     primaryKeys: [],
-    readOnly: false,
+    crud: { query: [], pages: [], one: [] },
+    canRemove: false,
+    actions: { table: [], row: [], rows: [], default: {} },
     searchable: (opts.searchPaths?.length ?? 0) > 0,
     vectorSearchable: false,
     searchIndexes: [],

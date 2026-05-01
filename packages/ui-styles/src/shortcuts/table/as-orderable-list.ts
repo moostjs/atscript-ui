@@ -27,21 +27,21 @@ export const asOrderableListShortcuts = defineShortcuts({
   "as-orderable-list-item-disabled": "pointer-events-none cursor-default",
   "as-orderable-list-item-content": "flex items-center gap-$s px-$s py-[0.15em] min-h-fingertip-s",
   "as-orderable-list-grip":
-    "inline-grid place-items-center w-[0.8em] h-[0.8em] text-current/40 cursor-grab active:cursor-grabbing shrink-0 text-[1.25em] hover:text-current/70",
+    "inline-grid place-items-center size-[0.8em] text-current/40 cursor-grab active:cursor-grabbing shrink-0 text-[1.25em] hover:text-current/70",
   "as-orderable-list-grip-disabled": "opacity-40 cursor-default pointer-events-none",
   "as-orderable-list-checkbox": {
-    "": "scope-primary text-body w-[1.25em] h-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] flex items-center justify-center flex-shrink-0 cursor-pointer layer-0 transition-all duration-120",
+    "": "scope-primary text-body size-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] flex items-center justify-center flex-shrink-0 cursor-pointer layer-0 transition-all duration-120",
     "group-data-[state=checked]:": "bg-current-hl border-current-hl text-white",
     "group-aria-selected:": "bg-current-hl border-current-hl text-white",
   },
   "as-orderable-list-checkbox-disabled": "opacity-50",
-  "as-orderable-list-check-icon": "i-as-check w-[0.9em] h-[0.9em] text-white",
+  "as-orderable-list-check-icon": "i-as-check size-[0.9em] text-white",
   "as-orderable-list-item-body": "flex items-center gap-$s flex-1 min-w-0",
   "as-orderable-list-item-label": "flex-1 overflow-hidden text-ellipsis whitespace-nowrap",
   "as-orderable-list-item-actions": {
     "": "inline-flex items-center gap-[0.15em] p-[0.15em] border-1 rounded-r2 layer-0 flex-shrink-0 opacity-0 pointer-events-none transition-opacity duration-120 group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto shadow-popup",
     "[&_button]:":
-      "inline-grid place-items-center w-fingertip-xs h-fingertip-xs p-0 border-0 bg-transparent cursor-pointer text-current/60 leading-none rounded-base transition-colors duration-120 text-callout",
+      "inline-grid place-items-center size-fingertip-xs p-0 border-0 bg-transparent cursor-pointer text-current/60 leading-none rounded-base transition-colors duration-120 text-callout",
     "[&_button:hover:not(:disabled)]:": "bg-current-hl/10 text-current-hl",
     "[&_button:disabled]:": "opacity-35 cursor-not-allowed",
   },

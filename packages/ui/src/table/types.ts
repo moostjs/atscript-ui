@@ -1,4 +1,5 @@
 import type { TAtscriptAnnotatedType, TSerializedAnnotatedType } from "@atscript/typescript/utils";
+import type { TCrudPermissions, TDbActionInfo } from "@atscript/db-client";
 import type { ValueHelpInfo } from "../value-help/types";
 
 // ── MetaResponse types (structurally compatible with @atscript/db-client) ────
@@ -29,10 +30,31 @@ export interface MetaResponse {
   vectorSearchable: boolean;
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
-  readOnly: boolean;
+  crud: TCrudPermissions;
+  actions: TDbActionInfo[];
   relations: RelationInfo[];
   fields: Record<string, FieldMeta>;
   type: TSerializedAnnotatedType;
+}
+
+// ── Table action model ──────────────────────────────────────
+
+/**
+ * Server-declared actions grouped by `level`. Built by `createTableDef` from
+ * `meta.actions[]` — sorted within each group by `(order ?? 0)` then
+ * declaration order. `default.{table,row,rows}` is the first `default: true`
+ * entry per level (or `undefined`). The synthesised `__remove` UI action is
+ * never selected as a default.
+ */
+export interface TableActionsModel {
+  table: TDbActionInfo[];
+  row: TDbActionInfo[];
+  rows: TDbActionInfo[];
+  default: {
+    table?: TDbActionInfo;
+    row?: TDbActionInfo;
+    rows?: TDbActionInfo;
+  };
 }
 
 // ── Table definition types ──────────────────────────────────
@@ -48,7 +70,11 @@ export interface TableDef {
    */
   flatMap: Map<string, TAtscriptAnnotatedType>;
   primaryKeys: string[];
-  readOnly: boolean;
+  /** Per-op CRUD permissions advertised in `/meta`. Key absent → denied. */
+  crud: TCrudPermissions;
+  canRemove: boolean;
+  /** Server-declared actions, grouped by level with defaults pre-resolved. */
+  actions: TableActionsModel;
   searchable: boolean;
   vectorSearchable: boolean;
   searchIndexes: SearchIndexInfo[];
@@ -81,6 +107,13 @@ export interface ColumnDef {
   options?: { key: string; label: string }[];
   /** Value-help info for FK columns (from extractValueHelp). */
   valueHelpInfo?: ValueHelpInfo;
+  /**
+   * Synthesised, locked-chrome column. When `true`: header-cell column-menu
+   * skipped, resize handle skipped, drag-reorder excluded, NOT in the
+   * `columnNames` v-model. Used for the row-actions pseudo-column
+   * (`path: '__actions'`).
+   */
+  fixed?: boolean;
 }
 
 // ── Query state types ───────────────────────────────────────

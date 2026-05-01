@@ -10,7 +10,7 @@ function setupStatic(rows: Record<string, unknown>[], searchPaths?: string[]): R
       rows,
       columns: [mockColumn("label", { sortable: true, filterable: false })],
       searchPaths,
-      selection: { mode: "multi", rowValueFn: (r) => r.id },
+      selection: { rowValueFn: (r) => r.id },
     });
     return state;
   });

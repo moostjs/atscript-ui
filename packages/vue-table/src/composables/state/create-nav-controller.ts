@@ -12,10 +12,26 @@ export interface NavControllerInputs {
   results: ShallowRef<Row[]>;
   viewportRowCount: Ref<number>;
   topIndex: Ref<number>;
-  selectionMode: SelectionMode;
-  hasMainActionListener: Ref<boolean>;
+  /**
+   * True when `requestMainAction` would fire (listener registered OR a
+   * default row action is available). Enter routes through `requestMainAction`
+   * only when this is true; otherwise it falls through to selection-toggle
+   * semantics in single/multi modes.
+   */
+  hasMainActionAvailable: Ref<boolean>;
   requestMainAction: (event: KeyboardEvent | MouseEvent) => void;
-  toggleActiveSelection: () => void;
+  toggleActiveSelection: (mode: SelectionMode) => void;
+}
+
+/**
+ * Per-call options for `handleNavKey`. `mode` is passed by the caller
+ * because selection mode lives on the renderer's `:select` prop, not on
+ * state — the renderer's keydown handler closes over `props.select`, the
+ * search-input bridge passes its consumer-supplied mode reader.
+ */
+export interface NavKeyCallOptions {
+  enterAction?: EnterAction;
+  mode?: SelectionMode;
 }
 
 export interface NavController {
@@ -23,7 +39,7 @@ export interface NavController {
   navViewportRowCount: Ref<number>;
   setActive: (absIndex: number) => void;
   clearActive: () => void;
-  handleNavKey: (event: KeyboardEvent, opts?: { enterAction?: EnterAction }) => void;
+  handleNavKey: (event: KeyboardEvent, opts?: NavKeyCallOptions) => void;
 }
 
 export function createNavController(inputs: NavControllerInputs): NavController {
@@ -33,8 +49,7 @@ export function createNavController(inputs: NavControllerInputs): NavController 
     results,
     viewportRowCount,
     topIndex,
-    selectionMode,
-    hasMainActionListener,
+    hasMainActionAvailable,
     requestMainAction,
     toggleActiveSelection,
   } = inputs;
@@ -101,10 +116,11 @@ export function createNavController(inputs: NavControllerInputs): NavController 
     setActive(activeBase() + delta);
   }
 
-  function handleNavKey(event: KeyboardEvent, opts?: { enterAction?: EnterAction }): void {
+  function handleNavKey(event: KeyboardEvent, opts?: NavKeyCallOptions): void {
     if (totalCount.value === 0) return;
 
     const enterAction: EnterAction = opts?.enterAction ?? "main-action";
+    const mode: SelectionMode = opts?.mode ?? "none";
     const key = event.key;
     const meta = event.metaKey;
     const ctrl = event.ctrlKey;
@@ -163,24 +179,30 @@ export function createNavController(inputs: NavControllerInputs): NavController 
         return;
       }
       case " ": {
-        if (selectionMode === "none") return;
+        if (mode === "none") return;
         event.preventDefault();
-        toggleActiveSelection();
+        toggleActiveSelection(mode);
         return;
       }
       case "Enter": {
         if (enterAction === "passthrough") return;
         event.preventDefault();
         if (enterAction === "toggle-select") {
-          toggleActiveSelection();
+          toggleActiveSelection(mode);
           return;
         }
-        if (hasMainActionListener.value) {
+        // In any select mode (`single` or `multi`), Enter mirrors Space —
+        // selectable rows have a visible toggle affordance, so keyboard
+        // Enter pairs with the spacebar/click toggle. Main-action is
+        // reserved for `select="none"` where the row has no toggle
+        // semantics — Enter then fires the default row action (and dblclick
+        // does the same via `<AsTableBase>` / `<AsWindowTableBase>`).
+        if (mode !== "none") {
+          toggleActiveSelection(mode);
+          return;
+        }
+        if (hasMainActionAvailable.value) {
           requestMainAction(event);
-          return;
-        }
-        if (selectionMode !== "none") {
-          toggleActiveSelection();
         }
         return;
       }

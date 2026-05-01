@@ -52,7 +52,6 @@ let innerState: ReactiveTableState | undefined;
 if (info) {
   innerState = useTable(info.url, {
     limit: 100,
-    select: "multi",
     // queryOnMount stays false: we trigger query() manually after clamping
     // columnNames to dict paths so the bootstrap query doesn't go out with
     // every table column, and so we don't fire two queries (auto-bootstrap
@@ -84,7 +83,6 @@ if (info) {
     columns: enumColumns,
     searchPaths: ["__label"],
     selection: {
-      mode: "multi",
       rowValueFn: (row) => row.__value,
       selectedRows: selectionRef,
     },
@@ -228,9 +226,12 @@ function clearAllFilters() {
          in-memory state was provided into context above via
          `provideTableContext`, so `<AsWindowTable>`'s `useTableContext()`
          resolves identically to the FK branch's `useTable(...)`-provided
-         state. -->
+         state. `select="multi"` is the rendering-side source of truth (the
+         `select` knob moved off the orchestrator/state during the actions
+         refactor), so the checkbox column renders for value picking. -->
     <AsWindowTable
       v-if="innerState"
+      select="multi"
       :column-menu="{
         sort: true,
         filters: !!info,

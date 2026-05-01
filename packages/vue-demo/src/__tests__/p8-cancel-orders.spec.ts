@@ -8,7 +8,7 @@ import { RolesTable } from "../server/schemas/roles.as";
 import { ProductsTable } from "../server/schemas/products.as";
 import { CategoriesTable } from "../server/schemas/categories.as";
 
-describe("bulk-cancel trigger", () => {
+describe("orders cancel rows-action filter logic", () => {
   async function prep() {
     const space = createAdapter(":memory:");
     await syncSchema(

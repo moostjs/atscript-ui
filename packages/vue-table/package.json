@@ -25,6 +25,11 @@
       "import": "./dist/as-config-dialog.mjs",
       "require": "./dist/as-config-dialog.cjs"
     },
+    "./as-confirm-dialog": {
+      "types": "./dist/as-confirm-dialog.d.mts",
+      "import": "./dist/as-confirm-dialog.mjs",
+      "require": "./dist/as-confirm-dialog.cjs"
+    },
     "./as-filter-dialog": {
       "types": "./dist/as-filter-dialog.d.mts",
       "import": "./dist/as-filter-dialog.mjs",
@@ -45,10 +50,20 @@
       "import": "./dist/as-filters.mjs",
       "require": "./dist/as-filters.cjs"
     },
+    "./as-row-actions": {
+      "types": "./dist/as-row-actions.d.mts",
+      "import": "./dist/as-row-actions.mjs",
+      "require": "./dist/as-row-actions.cjs"
+    },
     "./as-table": {
       "types": "./dist/as-table.d.mts",
       "import": "./dist/as-table.mjs",
       "require": "./dist/as-table.cjs"
+    },
+    "./as-table-actions": {
+      "types": "./dist/as-table-actions.d.mts",
+      "import": "./dist/as-table-actions.mjs",
+      "require": "./dist/as-table-actions.cjs"
     },
     "./as-table-cell-value": {
       "types": "./dist/as-table-cell-value.d.mts",
@@ -105,7 +120,7 @@
     "vunor": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/db-client": "^0.1.45",
+    "@atscript/db-client": "^0.1.57",
     "@tanstack/vue-virtual": "^3",
     "@vueuse/core": "^12",
     "reka-ui": "^2",

@@ -17,7 +17,7 @@ export const asDropdownShortcuts = defineShortcuts({
   "as-dropdown-item--active": "bg-current-hl/10 text-current-hl font-500",
 
   "as-variant-trigger": {
-    "": "inline-flex items-center justify-center w-[1.5em] h-[1.5em] p-0 border-1 rounded-base bg-transparent text-current/50 cursor-pointer flex-shrink-0 transition-all duration-120",
+    "": "inline-flex items-center justify-center size-[1.5em] p-0 border-1 rounded-base bg-transparent text-current/50 cursor-pointer flex-shrink-0 transition-all duration-120",
     "hover:not-disabled:": "border-current-hl text-current-hl",
     "disabled:": "opacity-40 cursor-not-allowed",
   },

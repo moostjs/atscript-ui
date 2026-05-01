@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
 import type { ColumnReorderPosition, ColumnWidthsMap, FieldFilters } from "@atscript/ui-table";
-import type { ColumnMenuConfig, SelectAllState } from "../../types";
+import { ROW_ACTIONS_PATH, type ColumnMenuConfig, type SelectAllState } from "../../types";
 import { useColumnHeaderDragResize } from "../../composables/use-column-header-drag-resize";
 import AsTableHeaderCell from "../defaults/as-table-header-cell.vue";
 
@@ -148,15 +148,16 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
         v-for="col in columns"
         :key="col.path"
         :data-column-path="col.path"
-        :draggable="reorderable || undefined"
-        :class="thClasses(col.path)"
+        :draggable="(reorderable && !col.fixed) || undefined"
+        :class="[thClasses(col.path), col.fixed ? 'as-th-fixed' : undefined]"
         :style="widthStyle(col)"
-        @dragstart="onHeaderDragStart"
-        @dragover="onHeaderDragOver"
-        @drop="onHeaderDrop"
-        @dragend="onHeaderDragEnd"
+        :aria-label="col.fixed && col.path === ROW_ACTIONS_PATH ? 'Actions' : undefined"
+        @dragstart="col.fixed ? undefined : onHeaderDragStart($event)"
+        @dragover="col.fixed ? undefined : onHeaderDragOver($event)"
+        @drop="col.fixed ? undefined : onHeaderDrop($event)"
+        @dragend="col.fixed ? undefined : onHeaderDragEnd()"
       >
-        <slot :name="`header-${col.path}`" :column="col">
+        <slot v-if="!col.fixed" :name="`header-${col.path}`" :column="col">
           <AsTableHeaderCell
             :column="col"
             :sort-direction="sortMap[col.path] ?? null"
@@ -171,7 +172,7 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
           />
         </slot>
         <div
-          v-if="resizable"
+          v-if="resizable && !col.fixed"
           class="as-th-resize-handle"
           draggable="false"
           @dragstart.prevent.stop

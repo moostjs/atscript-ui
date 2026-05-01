@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { DEFAULT_ROW_HEIGHT_PX, clampTopIndex } from "@atscript/ui-table";
-import type { ColumnMenuConfig, EnterAction, QueryErrorKind } from "../types";
+import { DEFAULT_ROW_HEIGHT_PX, clampTopIndex, type SelectionMode } from "@atscript/ui-table";
+import type { ColumnMenuConfig, EnterAction, QueryErrorKind, RowDeleteOpt } from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import AsWindowTableBase from "./internal/as-window-table-base.vue";
@@ -14,6 +14,15 @@ const props = withDefaults(
     rowHeight?: number;
     /** Number of rows the viewport advances per wheel-tick. */
     wheelRowsPerTick?: number;
+    /**
+     * Selection mode — rendering concern owned by the renderer. `"multi"`
+     * shows a leading checkbox column and turns row clicks into selection
+     * toggles; `"none"` (default) hides the column and routes clicks
+     * through the main-action path. Independent of `state.selectedRows` —
+     * flipping `select` to `"none"` hides the checkbox UI but leaves the
+     * user's selected pks in place, surviving a future re-enable.
+     */
+    select?: SelectionMode;
     /**
      * Force exactly N rows tall. Equivalent to setting both `min-rows` and
      * `max-rows` to N — overrides both when set. The table reserves N rows
@@ -44,6 +53,14 @@ const props = withDefaults(
      * main action.
      */
     enterAction?: EnterAction;
+    /**
+     * Built-in row-delete: `false` (off, default), `true` (on with defaults),
+     * or a `RowDeleteOpt` overriding label/icon/intent/promptText. The
+     * synthesised `__remove` action only appears when the consumer opts in
+     * AND `tableDef.canRemove === true`. Pushed into `state.rowDelete` via
+     * a watcher — the action set live-updates as the prop flips.
+     */
+    rowDelete?: boolean | RowDeleteOpt;
   }>(),
   {
     rowHeight: DEFAULT_ROW_HEIGHT_PX,
@@ -53,6 +70,8 @@ const props = withDefaults(
     reorderable: true,
     resizable: true,
     columnMinWidth: 48,
+    select: "none",
+    rowDelete: false,
   },
 );
 
@@ -70,6 +89,16 @@ const emit = defineEmits<{
 }>();
 
 const { state } = useTableContext();
+
+// Renderer owns row-delete opt-in. The synthetic `__remove` action in
+// `state.actions.row` derives from `state.rowDelete.value`.
+watch(
+  () => props.rowDelete,
+  (val) => {
+    state.rowDelete.value = val;
+  },
+  { immediate: true },
+);
 
 useRegisterMainActionListener(
   state,
@@ -127,6 +156,7 @@ watch(
       :reorderable="reorderable"
       :resizable="resizable"
       :column-min-width="columnMinWidth"
+      :select="select"
       :enter-action="enterAction"
       @row-click="(row: Row, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="(row: Row, ev: MouseEvent) => emit('row-dblclick', row, ev)"

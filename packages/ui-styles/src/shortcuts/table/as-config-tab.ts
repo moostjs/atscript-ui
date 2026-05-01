@@ -7,7 +7,7 @@ export const asConfigTabShortcuts = defineShortcuts({
     "hover:": "text-current",
     "data-[state=active]:": "text-current [border-bottom-color:rgb(var(--current-hl))] font-600",
   },
-  "as-config-tab-icon": "inline-block w-[1em] h-[1em] text-[1.25em] shrink-0",
+  "as-config-tab-icon": "inline-block size-[1em] text-[1.25em] shrink-0",
 
   "as-config-tab-summary": "flex flex-col gap-[0.15em] px-$l py-$s border-t-1 flex-shrink-0",
   "as-config-tab-summary-count": "text-callout text-current font-500",

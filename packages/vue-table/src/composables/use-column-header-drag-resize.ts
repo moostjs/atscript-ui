@@ -121,7 +121,15 @@ export function useColumnHeaderDragResize(opts: UseColumnHeaderDragResizeOptions
 
   function widthStyle(col: ColumnDef): { width: string } | undefined {
     const entry = opts.columnWidths()[col.path];
-    return entry ? { width: entry.w } : undefined;
+    if (entry) return { width: entry.w };
+    // Fall back to `col.width` for columns the table-state-side reconcile
+    // doesn't see — chiefly the synthesized `__actions` pseudo-column,
+    // which lives in `<AsTable>`'s `effectiveColumns` but never enters
+    // `state.columnWidths` (reconcile runs on `def.columns` only). Without
+    // this fallback the synthesized column collapses to 0 and its cells
+    // become invisible.
+    if (col.width) return { width: col.width };
+    return undefined;
   }
 
   function thClasses(path: string): Record<string, boolean> {

@@ -7,5 +7,5 @@ export const asNoDataShortcuts = defineShortcuts({
   },
   "as-no-data-text": "font-mono text-callout tracking-wide",
   "as-no-data-plus":
-    "inline-grid place-items-center w-[1em] h-[1em] rounded-full border-1 border-current opacity-70 leading-none flex-shrink-0 [&>span]:text-callout",
+    "inline-grid place-items-center size-[1em] rounded-full border-1 border-current opacity-70 leading-none flex-shrink-0 [&>span]:text-callout",
 });

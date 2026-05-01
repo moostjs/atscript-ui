@@ -38,6 +38,9 @@ export const defaultAsIconAliases: Record<string, string> = {
   columns: "si:table-columns-line",
   "eye-slash": "iconamoon:eye-off-light",
   ellipsis: "ph:dots-three",
+  "more-vertical": "ph:dots-three-vertical",
+  menu: "heroicons-outline:menu",
+  trash: "iconoir:trash",
   loading: "loading",
   warning: "ph:warning-circle",
 };
@@ -97,7 +100,7 @@ const shimmerKeyframesPreset: Preset = {
 };
 
 function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
-  const { baseRadius = "8px", iconOverrides } = options;
+  const { baseRadius = "4px", iconOverrides } = options;
 
   return [
     bakedIconsPreset(iconOverrides),

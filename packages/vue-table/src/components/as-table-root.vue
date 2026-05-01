@@ -2,15 +2,20 @@
 import type { Component } from "vue";
 import type { SortControl, ClientFactory } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
-import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
-import type { TAsCellTypeComponents, TAsTableControls } from "../types";
+import type { ColumnWidthsMap } from "@atscript/ui-table";
+import type {
+  ActionResult,
+  TAsCellTypeComponents,
+  TAsTableControls,
+  TVueTableActionInfo,
+} from "../types";
 import { useTable } from "../composables/use-table";
 import { useRegisterMainActionListener } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
 import type { PageResult } from "@atscript/db-client";
-import { AsFilterDialog, AsConfigDialog } from "./defaults";
+import { AsFilterDialog, AsConfigDialog, AsConfirmDialog } from "./defaults";
 
 const props = withDefaults(
   defineProps<{
@@ -34,7 +39,6 @@ const props = withDefaults(
       size: number,
     ) => Promise<PageResult<Record<string, unknown>>>;
     blockQuery?: boolean;
-    select?: SelectionMode;
     rowValueFn?: (row: Record<string, unknown>) => unknown;
     /**
      * Selection write policy applied on every results-replacement.
@@ -47,11 +51,17 @@ const props = withDefaults(
     blockSize?: number;
     /** Debounce window for the topIndex/viewportRowCount watcher. */
     dragReleaseDebounceMs?: number;
+    /**
+     * Refetch policy: when `true` (default), successful `'backend'` /
+     * `'__remove'` invocations call `state.query()` after settling. Per-call
+     * `state.actions.invoke(action, pk, { suppressRefresh: true })` overrides.
+     */
+    refreshOnAction?: boolean;
   }>(),
   {
     queryOnMount: true,
-    select: "none",
     selectionPersistence: "trim",
+    refreshOnAction: true,
   },
 );
 
@@ -61,6 +71,13 @@ const emit = defineEmits<{
     row: Record<string, unknown>,
     absIndex: number,
     event: KeyboardEvent | MouseEvent,
+  ): void;
+  (
+    e: "action",
+    action: TVueTableActionInfo,
+    ids: unknown[],
+    result: ActionResult,
+    event?: KeyboardEvent | MouseEvent,
   ): void;
 }>();
 
@@ -74,7 +91,7 @@ const selectedRows = defineModel<unknown[]>("selectedRows", { default: () => [] 
 
 const state = useTable(props.url, {
   limit: props.limit,
-  select: props.select,
+  // `select` is owned by `<AsTable>` / `<AsWindowTable>`, not the orchestrator.
   rowValueFn: props.rowValueFn,
   selectionPersistence: props.selectionPersistence,
   forceFilters: props.forceFilters,
@@ -88,6 +105,10 @@ const state = useTable(props.url, {
   controls: props.controls,
   types: props.types,
   components: props.components,
+  refreshOnAction: () => props.refreshOnAction,
+  onActionResolved: (action, ids, result, event) => {
+    emit("action", action, ids, result, event);
+  },
   filterFields,
   columnNames,
   columnWidths,
@@ -139,8 +160,11 @@ defineExpose({ state, navBridge });
     :remove-field-filter="state.removeFieldFilter"
     :add-filter-field="state.addFilterField"
     :remove-filter-field="state.removeFilterField"
+    :actions="state.actions"
+    :prompt="state.prompt"
   />
 
   <component :is="props.controls?.filterDialog ?? AsFilterDialog" />
   <component :is="props.controls?.configDialog ?? AsConfigDialog" />
+  <component :is="props.controls?.confirmDialog ?? AsConfirmDialog" />
 </template>

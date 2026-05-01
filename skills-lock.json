@@ -4,26 +4,31 @@
     "atscript": {
       "source": "moostjs/atscript",
       "sourceType": "github",
+      "skillPath": "skills/atscript/SKILL.md",
       "computedHash": "3db743dbbc67bf8189b9ad670c9543b03462c2480ba272d7644ad182156af839"
     },
     "atscript-db": {
       "source": "moostjs/atscript-db",
       "sourceType": "github",
-      "computedHash": "d31cfc2eb20d5729d2d64de07d07abf93c677cfeac591ff4a58d2432209fe932"
+      "skillPath": "skills/atscript-db/SKILL.md",
+      "computedHash": "074cf4f330f58cfbdd65ff9136461b01514e7a82de95d43da598038333e18c88"
     },
     "moostjs": {
       "source": "moostjs/moostjs",
       "sourceType": "github",
-      "computedHash": "84ed7a346bd0b4cbc46b7253ba11b29d563f859f46d3020051cc8609d6a4f3b3"
+      "skillPath": "skills/moostjs/SKILL.md",
+      "computedHash": "d44099a58057b224bafaaf690084f7de2746da3a93ad658d88a77f2c0fc30097"
     },
     "vunor": {
       "source": "mav-rik/vunor",
       "sourceType": "github",
-      "computedHash": "10ae690b7d0e73036e63e464d1667d81d8d20555d0231913f8afa01380735643"
+      "skillPath": "skills/vunor/SKILL.md",
+      "computedHash": "5aefca3cc4897d99326cbe4c7498c94525e3df040ab387435a831998cdbbd8e7"
     },
     "wooksjs": {
       "source": "wooksjs/wooksjs",
       "sourceType": "github",
+      "skillPath": "skills/wooksjs/SKILL.md",
       "computedHash": "d9f4a07d056338edea3aa20477f3775d9ed93555018280952dab085d1d82ceee"
     }
   }

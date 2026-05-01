@@ -1,3 +1,4 @@
+import type { SelectionMode } from "@atscript/ui-table";
 import type { NavKeyOptions, ReactiveTableState, TableNavBridge } from "../types";
 import { useTableContextOptional } from "./use-table-state";
 
@@ -15,6 +16,16 @@ function isPassthroughKey(event: KeyboardEvent): boolean {
   return false;
 }
 
+export interface UseTableNavBridgeOptions extends Omit<NavKeyOptions, "mode"> {
+  /**
+   * Selection mode source. Pass a function (`() => selectMode.value`) so
+   * the bridge re-reads on every dispatch — Enter semantics depend on mode,
+   * but selection mode lives on the renderer's `:select` prop, not state.
+   * Default `"none"` (Enter only fires main-action).
+   */
+  mode?: SelectionMode | (() => SelectionMode);
+}
+
 /**
  * Construct a keyboard-bridge for an external `<input>` to drive table nav
  * without losing focus. Without args, injects the nearest `<as-table-root>`
@@ -27,7 +38,7 @@ function isPassthroughKey(event: KeyboardEvent): boolean {
  */
 export function useTableNavBridge(
   state?: ReactiveTableState,
-  opts?: NavKeyOptions,
+  opts?: UseTableNavBridgeOptions,
 ): TableNavBridge {
   let target: ReactiveTableState | undefined = state;
   if (!target) {
@@ -39,11 +50,17 @@ export function useTableNavBridge(
   }
   const bound = target;
   const defaultEnterAction = opts?.enterAction;
+  const modeOpt = opts?.mode;
+  const readMode = (): SelectionMode => {
+    if (typeof modeOpt === "function") return modeOpt();
+    return modeOpt ?? "none";
+  };
 
   function onKeydown(event: KeyboardEvent, callOpts?: NavKeyOptions): void {
     if (isPassthroughKey(event)) return;
     bound.handleNavKey(event, {
       enterAction: callOpts?.enterAction ?? defaultEnterAction,
+      mode: callOpts?.mode ?? readMode(),
     });
   }
 

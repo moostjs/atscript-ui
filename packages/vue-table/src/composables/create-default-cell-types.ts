@@ -1,5 +1,5 @@
-import type { TAsCellTypeComponents } from "../types";
-import { AsTableCellValue } from "../components/defaults";
+import { ROW_ACTIONS_TYPE, type TAsCellTypeComponents } from "../types";
+import { AsRowActions, AsTableCellValue } from "../components/defaults";
 
 /**
  * Returns a fresh cell-type-to-component map pre-filled with the built-in
@@ -22,5 +22,7 @@ export function createDefaultCellTypes(): TAsCellTypeComponents {
     object: AsTableCellValue,
     enum: AsTableCellValue,
     ref: AsTableCellValue,
+    /** Synthesised row-actions pseudo-column (`:rowActionsColumn` opt-in). */
+    [ROW_ACTIONS_TYPE]: AsRowActions,
   };
 }

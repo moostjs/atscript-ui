@@ -8,7 +8,7 @@ function setupState(rows: Record<string, unknown>[]) {
     const { state } = createTableState({
       client: stubClient(),
       query: { queryOnMount: false },
-      selection: { mode: "multi", rowValueFn: (r) => r.id },
+      selection: { rowValueFn: (r) => r.id },
     });
     seedWindowCache(state, rows);
     return state;
@@ -38,7 +38,9 @@ describe("useTableNavBridge", () => {
     const state = setupState([{ id: "x" }, { id: "y" }, { id: "z" }, { id: "w" }]);
     state.setActive(3);
     const { captured, dispose } = captureMainActions(state);
-    const bridge = mountSetup(() => useTableNavBridge(state, { enterAction: "toggle-select" }));
+    const bridge = mountSetup(() =>
+      useTableNavBridge(state, { enterAction: "toggle-select", mode: "multi" }),
+    );
 
     bridge.onKeydown(key({ key: "Enter" }));
     expect(state.selectedRows.value).toEqual(["w"]);

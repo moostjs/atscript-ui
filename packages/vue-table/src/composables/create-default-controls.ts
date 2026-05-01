@@ -2,9 +2,11 @@ import type { TAsTableControls } from "../types";
 import {
   AsColumnMenu,
   AsConfigDialog,
+  AsConfirmDialog,
   AsFilterDialog,
   AsFilterField,
   AsFilterInput,
+  AsRowActions,
   AsTableHeaderCell,
 } from "../components/defaults";
 
@@ -24,5 +26,7 @@ export function createDefaultControls(): TAsTableControls {
     filterInput: AsFilterInput,
     filterField: AsFilterField,
     configDialog: AsConfigDialog,
+    confirmDialog: AsConfirmDialog,
+    rowActions: AsRowActions,
   };
 }

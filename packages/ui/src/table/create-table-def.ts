@@ -4,6 +4,7 @@ import type {
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typescript/utils";
+import type { TDbActionInfo } from "@atscript/db-client";
 import { getFieldMeta } from "../shared/field-resolver";
 import {
   EXPECT_MAX_LENGTH,
@@ -17,7 +18,7 @@ import {
 } from "../shared/annotation-keys";
 import { extractLiteralOptions } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
-import type { ColumnDef, MetaResponse, TableDef } from "./types";
+import type { ColumnDef, MetaResponse, TableActionsModel, TableDef } from "./types";
 
 /**
  * Builds a TableDef from a moost-db MetaResponse.
@@ -79,16 +80,59 @@ export function createTableDef(
 
   columns.sort((a, b) => a.order - b.order);
 
+  const actions = groupActions(meta.actions ?? []);
+  const crud = meta.crud ?? {};
+
   return {
     type,
     columns,
     flatMap,
     primaryKeys: meta.primaryKeys,
-    readOnly: meta.readOnly,
+    crud,
+    canRemove: "remove" in crud,
+    actions,
     searchable: meta.searchable,
     vectorSearchable: meta.vectorSearchable,
     searchIndexes: meta.searchIndexes,
     relations: meta.relations,
+  };
+}
+
+/** Sort by (order ?? 0). `Array.prototype.sort` is stable per spec since ES2019, so ties preserve declaration order. */
+function byOrder(xs: TDbActionInfo[]): TDbActionInfo[] {
+  return xs.slice().sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+}
+
+/**
+ * Partition actions by `level`, sort each group by `(order ?? 0)` then
+ * declaration order, and pick the first `default: true` entry per level.
+ * The synthesised `__remove` UI action lives outside this set and is never
+ * a candidate for `default.row`.
+ */
+function groupActions(actions: TDbActionInfo[]): TableActionsModel {
+  const table: TDbActionInfo[] = [];
+  const row: TDbActionInfo[] = [];
+  const rows: TDbActionInfo[] = [];
+
+  for (const a of actions) {
+    if (a.level === "table") table.push(a);
+    else if (a.level === "row") row.push(a);
+    else if (a.level === "rows") rows.push(a);
+  }
+
+  const tableSorted = byOrder(table);
+  const rowSorted = byOrder(row);
+  const rowsSorted = byOrder(rows);
+
+  return {
+    table: tableSorted,
+    row: rowSorted,
+    rows: rowsSorted,
+    default: {
+      table: tableSorted.find((a) => a.default === true),
+      row: rowSorted.find((a) => a.default === true),
+      rows: rowsSorted.find((a) => a.default === true),
+    },
   };
 }
 

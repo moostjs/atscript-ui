@@ -21,7 +21,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-dialog-title-label": "text-current/60 font-500",
   "as-filter-dialog-title-value": "text-current font-600",
   "as-filter-dialog-close": {
-    "": "inline-grid place-items-center w-fingertip-s h-fingertip-s p-0 border-0 bg-transparent text-current/80 cursor-pointer leading-none rounded-base transition-colors duration-120 text-[1.25em]",
+    "": "inline-grid place-items-center size-fingertip-s p-0 border-0 bg-transparent text-current/80 cursor-pointer leading-none rounded-base transition-colors duration-120 text-[1.25em]",
     "hover:": "layer-2 text-current",
   },
   "as-filter-dialog-body": "px-$l py-$m overflow-y-auto flex-1 flex flex-col gap-$m",
@@ -42,7 +42,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-dialog-chip": `${chipBase} gap-$xs bg-current-hl/10 border-1 border-current-hl/40 text-current-hl`,
   "as-filter-dialog-chips-more": `${chipBase} text-current/70 font-500 italic`,
   "as-filter-dialog-chip-remove": {
-    "": "inline-grid place-items-center w-[18px] h-[18px] cursor-pointer opacity-70 leading-none border-0 bg-transparent text-inherit text-body",
+    "": "inline-grid place-items-center size-fingertip-xs cursor-pointer opacity-70 leading-none border-0 bg-transparent text-inherit text-body",
     "hover:": "opacity-100",
   },
 
@@ -61,7 +61,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-value-help-count":
     "inline-flex items-center gap-$s ml-auto text-callout text-current/50 whitespace-nowrap flex-shrink-0",
   "as-filter-value-help-filters-toggle": {
-    "": "inline-grid place-items-center w-fingertip-s h-fingertip-s border-1 rounded-base layer-0 text-current/70 cursor-pointer leading-none transition-colors duration-120",
+    "": "inline-grid place-items-center size-fingertip-s border-1 rounded-base layer-0 text-current/70 cursor-pointer leading-none transition-colors duration-120",
     "hover:": "layer-2 text-current",
   },
   "as-filter-value-help-filters-toggle-active":
@@ -75,7 +75,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
     "focus:": "current-border-hl outline i8-apply-outline",
   },
   "as-filter-condition-remove": {
-    "": "inline-grid place-items-center w-fingertip-xs h-fingertip-xs border-0 bg-transparent text-current/70 cursor-pointer rounded-base leading-none flex-shrink-0 transition-colors duration-120 text-[1em]",
+    "": "inline-grid place-items-center size-fingertip-xs border-0 bg-transparent text-current/70 cursor-pointer rounded-base leading-none flex-shrink-0 transition-colors duration-120 text-[1em]",
     "hover:": "scope-error layer-2 text-current-hl",
   },
   "as-filter-add-condition": {

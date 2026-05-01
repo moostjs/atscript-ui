@@ -31,10 +31,11 @@ describe("AsFilterValueHelp - enum mode", () => {
     const Wrapper = defineComponent({
       setup() {
         const conditions = ref([]);
-        return () => h(AsFilterValueHelp as any, {
-          column: enumColumn,
-          modelValue: conditions.value,
-        });
+        return () =>
+          h(AsFilterValueHelp as any, {
+            column: enumColumn,
+            modelValue: conditions.value,
+          });
       },
     });
 

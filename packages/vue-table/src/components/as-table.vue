@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import { rowsToPks } from "@atscript/ui-table";
-import type { ColumnMenuConfig } from "../types";
+import { rowsToPks, type SelectionMode } from "@atscript/ui-table";
+import {
+  ROW_ACTIONS_PATH,
+  ROW_ACTIONS_TYPE,
+  type ColumnMenuConfig,
+  type RowDeleteOpt,
+} from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useTableColumnHandlers } from "../composables/use-table-column-handlers";
@@ -22,6 +27,39 @@ const props = withDefaults(
     resizable?: boolean;
     /** Pixel floor for the resize clamp. Default 48. */
     columnMinWidth?: number;
+    /**
+     * Selection mode — rendering concern owned by the renderer. `"multi"`
+     * shows a leading checkbox column and turns row clicks into selection
+     * toggles; `"none"` (default) hides the column and routes clicks
+     * through the main-action path. Independent of `state.selectedRows` —
+     * flipping `select` to `"none"` hides the checkbox UI but leaves the
+     * user's selected pks in place, surviving a future re-enable.
+     */
+    select?: SelectionMode;
+    /**
+     * Built-in row-delete: `false` (off, default), `true` (on with defaults),
+     * or a `RowDeleteOpt` overriding label/icon/intent/promptText. The
+     * synthesised `__remove` action only appears when the consumer opts in
+     * AND `tableDef.canRemove === true`. Pushed into `state.rowDelete` via
+     * a watcher — the action set live-updates as the prop flips.
+     */
+    rowDelete?: boolean | RowDeleteOpt;
+    /**
+     * Synthesised row-actions pseudo-column. `'first'` / `'last'` prepend or
+     * append a fixed `__actions` column rendering `controls.rowActions`.
+     * `'merge-select'` only renders the column when `select === "none"` —
+     * sharing the leading gutter with the multi-select checkbox column so the
+     * row gutter shows a checkbox in `select="multi"` mode and an action
+     * trigger in `select="none"` mode (toggled at the consumer level).
+     *
+     * The column is locked: no header dropdown, no resize, no drag-reorder,
+     * NOT in the `columnNames` v-model. Hidden entirely when
+     * `state.actions.row` is empty.
+     *
+     * Wrapper-only prop — not forwarded by `<AsTableRoot>`. Raw consumers
+     * compose their own column layout.
+     */
+    rowActionsColumn?: "first" | "last" | "merge-select" | false;
   }>(),
   {
     stickyHeader: true,
@@ -29,6 +67,9 @@ const props = withDefaults(
     reorderable: true,
     resizable: true,
     columnMinWidth: 48,
+    select: "none",
+    rowDelete: false,
+    rowActionsColumn: false,
   },
 );
 
@@ -45,8 +86,59 @@ const emit = defineEmits<{
 
 const { state } = useTableContext();
 
+// Renderer owns the row-delete opt-in. The synthetic `__remove` action
+// in `state.actions.row` is computed from `state.rowDelete.value` —
+// pushing the prop through here keeps the action set in sync as the prop
+// flips at runtime.
+watch(
+  () => props.rowDelete,
+  (val) => {
+    state.rowDelete.value = val;
+  },
+  { immediate: true },
+);
+
 const effectiveRows = computed(() => props.rows ?? state.results.value);
-const effectiveColumns = computed(() => props.columns ?? state.columns.value);
+
+// Synthesized actions column. Width adapts to the row-action shape so it
+// hugs its content:
+//   - 0 or >1 actions OR single icon action → 4em (matches the multi-select
+//     checkbox column `as-th-select`/`as-td-select`, so square icon
+//     buttons line up with checkboxes visually).
+//   - single label-only action (e.g. customers' "View orders") → 8em
+//     (fits typical short labels with the chrome-button padding).
+// Setting `col.width` flows through `reconcileColumnWidthDefaults` →
+// `state.columnWidths` → `widthStyle` → inline `width` on the TH, which
+// `table-layout: fixed` then locks the column to.
+const actionsCol = computed<ColumnDef>(() => {
+  const acts = state.actions.row;
+  const isLabelOnly = acts.length === 1 && !acts[0]?.icon;
+  return {
+    path: ROW_ACTIONS_PATH,
+    label: "",
+    type: ROW_ACTIONS_TYPE,
+    sortable: false,
+    filterable: false,
+    visible: true,
+    order: 0,
+    fixed: true,
+    width: isLabelOnly ? "8em" : "4em",
+  };
+});
+
+const effectiveColumns = computed(() => {
+  const base = props.columns ?? state.columns.value;
+  const placement = props.rowActionsColumn;
+  if (placement === false || placement === undefined) return base;
+  if (state.actions.row.length === 0) return base;
+  if (placement === "first") return [actionsCol.value, ...base];
+  if (placement === "last") return [...base, actionsCol.value];
+  // 'merge-select': only in select="none". In select="multi" the checkbox
+  // column owns the leading gutter; the actions surface through the toolbar
+  // `<AsTableActions>` (selection-aware) instead.
+  if (props.select === "none") return [actionsCol.value, ...base];
+  return base;
+});
 
 useRegisterMainActionListener(
   state,
@@ -74,7 +166,7 @@ function handleDeselectAll() {
       :rows="effectiveRows"
       :sorters="state.sorters.value"
       :selected-rows="state.selectedRows.value"
-      :select="state.selectionMode"
+      :select="props.select"
       :row-value-fn="state.rowValueFn"
       :querying="state.querying.value"
       :query-error="state.queryError.value"

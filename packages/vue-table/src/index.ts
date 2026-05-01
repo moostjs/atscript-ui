@@ -9,6 +9,11 @@ export type {
   TableNavBridge,
   MainActionRequest,
   QueryErrorKind,
+  TVueTableActionInfo,
+  TableActionsState,
+  ActionResult,
+  InvokeOpts,
+  RowDeleteOpt,
 } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
@@ -33,6 +38,7 @@ export { useTableSelection, type SelectionPersistence } from "./composables/use-
 export { useTableNavBridge } from "./composables/use-table-nav-bridge";
 export { useTableFilter } from "./composables/use-table-filter";
 export { useTableSearch } from "./composables/use-table-search";
+export { useTableActions } from "./composables/use-table-actions";
 
 // ── Component resolution ────────────────────────────────────
 export { useTableComponent } from "./composables/use-table-component";
@@ -41,6 +47,7 @@ export { useTableComponent } from "./composables/use-table-component";
 export { default as AsTableRoot } from "./components/as-table-root.vue";
 export { default as AsTable } from "./components/as-table.vue";
 export { default as AsWindowTable } from "./components/as-window-table.vue";
+export { default as AsTableActions } from "./components/as-table-actions.vue";
 export { default as AsFilters } from "./components/as-filters.vue";
 
 // ── Default implementations (Tier 2 — swap targets) ─────────
@@ -52,6 +59,7 @@ export {
   AsFilterDialog,
   AsFilterField,
   AsFilterInput,
+  AsRowActions,
   AsTableCellValue,
   AsTableHeaderCell,
 } from "./components/defaults";

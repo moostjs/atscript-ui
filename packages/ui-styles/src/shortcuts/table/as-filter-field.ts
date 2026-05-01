@@ -22,7 +22,7 @@ export const asFilterFieldShortcuts = defineShortcuts({
   "as-filter-field-chip":
     "inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
   "as-filter-field-chip-remove": {
-    "": "cursor-pointer opacity-70 w-[14px] h-[14px] inline-grid place-items-center text-callout leading-none",
+    "": "cursor-pointer opacity-70 size-fingertip-xs inline-grid place-items-center text-callout leading-none",
     "hover:": "opacity-100",
   },
   "as-filter-field-search": `border-0 outline-none flex-1 min-w-[64px] p-0 m-0 bg-transparent ${strongText} placeholder:text-current/50`,

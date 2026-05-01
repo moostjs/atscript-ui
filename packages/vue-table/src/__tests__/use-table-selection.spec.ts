@@ -6,7 +6,7 @@ import { useTableSelection, type SelectionPersistence } from "../composables/use
 import type { ReactiveTableState } from "../types";
 import { stubClient } from "./helpers";
 
-function setup(mode: "none" | "single" | "multi", persistence: SelectionPersistence = "trim") {
+function setup(_mode: "none" | "single" | "multi", persistence: SelectionPersistence = "trim") {
   let state!: ReactiveTableState;
 
   mount(
@@ -15,7 +15,7 @@ function setup(mode: "none" | "single" | "multi", persistence: SelectionPersiste
         ({ state } = createTableState({
           client: stubClient(),
           query: { queryOnMount: false },
-          selection: { mode, rowValueFn: (r) => r.id },
+          selection: { rowValueFn: (r) => r.id },
         }));
         useTableSelection(state, { mode: persistence });
         return () => h("div");

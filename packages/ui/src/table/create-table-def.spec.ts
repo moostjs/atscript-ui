@@ -55,7 +55,8 @@ function buildMeta(
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: [],
-    readOnly: false,
+    crud: {},
+    actions: [],
     relations: [],
     fields:
       fields ??
@@ -206,17 +207,18 @@ describe("createTableDef", () => {
     expect(def.columns[0]!.filterable).toBe(false);
   });
 
-  it("passes through primaryKeys, readOnly, searchable flags", () => {
+  it("passes through primaryKeys, crud, searchable flags", () => {
     const meta = buildMeta({ id: stringProp() }, undefined, {
       primaryKeys: ["id"],
-      readOnly: true,
+      crud: { query: [], pages: [], one: [] },
       searchable: true,
       vectorSearchable: true,
     });
     const def = createTableDef(meta);
 
     expect(def.primaryKeys).toEqual(["id"]);
-    expect(def.readOnly).toBe(true);
+    expect(def.crud).toEqual({ query: [], pages: [], one: [] });
+    expect(def.canRemove).toBe(false);
     expect(def.searchable).toBe(true);
     expect(def.vectorSearchable).toBe(true);
   });
@@ -244,7 +246,8 @@ describe("createTableDef", () => {
       vectorSearchable: false,
       searchIndexes: [],
       primaryKeys: ["authorId"],
-      readOnly: false,
+      crud: { query: [], pages: [], one: [] },
+      actions: [],
       relations: [],
       fields: {
         title: { sortable: false, filterable: true },

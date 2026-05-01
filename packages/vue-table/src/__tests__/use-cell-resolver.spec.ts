@@ -27,7 +27,8 @@ function buildTableDef(props: Record<string, ReturnType<typeof stringProp>>) {
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: [],
-    readOnly: false,
+    crud: {},
+    actions: [],
     relations: [],
     fields: Object.fromEntries(
       Object.keys(props).map((k) => [k, { sortable: false, filterable: true }]),

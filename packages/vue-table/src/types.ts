@@ -1,11 +1,103 @@
 import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
+import type {
+  ClientError,
+  TDbActionInfo,
+  TDbActionProcessor,
+  TDbDeleteResult,
+} from "@atscript/db-client";
+
+/** UI-side sentinel for the synthesised row-delete processor. */
+export const REMOVE_PROCESSOR = "__remove";
+/** Column `path` and cell-type for the synthesised row-actions pseudo-column. */
+export const ROW_ACTIONS_PATH = "__actions";
+export const ROW_ACTIONS_TYPE = "__actions";
+
+/**
+ * Action descriptor used everywhere in vue-table. Widens `processor` to admit
+ * the UI-side `__remove` sentinel without leaking into db-client.
+ */
+export type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
+  processor: TDbActionProcessor | typeof REMOVE_PROCESSOR;
+};
+
+/** Per-call options for `state.actions.invoke`. */
+export interface InvokeOpts {
+  /**
+   * Skip the post-success `state.query()` refresh for this call. Default:
+   * respect the `:refreshOnAction` root prop.
+   */
+  suppressRefresh?: boolean;
+  /** Originating user event — bridged to the AsTableRoot @action emit. */
+  event?: KeyboardEvent | MouseEvent;
+}
+
+/** Discriminated result returned by `state.actions.invoke`. Never throws. */
+export type ActionResult =
+  | { ok: true; kind: "backend"; data: unknown; message?: string }
+  | { ok: true; kind: "navigate" }
+  | { ok: true; kind: "custom"; dispatched: true }
+  | { ok: true; kind: "remove"; data: TDbDeleteResult }
+  | { ok: false; kind: "error"; error: ClientError | Error };
+
+/** Reactive table-actions namespace exposed under `state.actions`. */
+export interface TableActionsState {
+  table: TVueTableActionInfo[];
+  /** Includes the synthesised `__remove` when `:rowDelete` is opted in. */
+  row: TVueTableActionInfo[];
+  rows: TVueTableActionInfo[];
+  default: {
+    table?: TVueTableActionInfo;
+    /** Never the synthesised `__remove`. */
+    row?: TVueTableActionInfo;
+    rows?: TVueTableActionInfo;
+  };
+  /**
+   * Per-level lists with the declared default removed. Pre-computed once per
+   * `tableDef`/`rowDelete` change so per-row / per-render consumers don't
+   * re-filter against the same default action on every read.
+   */
+  others: {
+    table: TVueTableActionInfo[];
+    row: TVueTableActionInfo[];
+    rows: TVueTableActionInfo[];
+  };
+  /**
+   * Flattened action list rendered by the per-row `<AsRowActions>` cell:
+   * `[default?, ...others.row, ...rows]`. Same for every row — pre-built on
+   * the state so per-row cells don't re-derive it.
+   */
+  cellRow: TVueTableActionInfo[];
+  invoke: (action: TVueTableActionInfo, pk?: unknown, opts?: InvokeOpts) => Promise<ActionResult>;
+  /** Set of action names with an in-flight invoke. */
+  invoking: ShallowRef<Set<string>>;
+  /** Latest result keyed by action name. */
+  lastResult: ShallowRef<Map<string, ActionResult>>;
+}
+
+/** Built-in row-delete configuration accepted by `<AsTableRoot :rowDelete>`. */
+export interface RowDeleteOpt {
+  label?: string;
+  icon?: string;
+  /**
+   * Confirmation prompt shown by the in-app `AsConfirmDialog` (driven by
+   * `state.prompt()`) before invoking. Pass `""` to skip the prompt.
+   */
+  confirm?: string;
+  intent?: TDbActionInfo["intent"];
+}
 
 /** What Enter does when the keyboard-nav handler sees it. */
 export type EnterAction = "main-action" | "toggle-select" | "passthrough";
 
-/** Per-call options for the keyboard-nav handler / bridge. */
+/**
+ * Per-call options for the keyboard-nav handler / bridge. `mode` is passed
+ * by the caller because selection mode lives on the renderer's `:select`
+ * prop, not on state — the renderer's keydown closes over `props.select`,
+ * the search-input bridge passes the mode reader its consumer supplied.
+ */
 export interface NavKeyOptions {
   enterAction?: EnterAction;
+  mode?: SelectionMode;
 }
 
 /** Pending request to emit `main-action`, written by handleNavKey and click handlers. */
@@ -13,6 +105,39 @@ export interface MainActionRequest {
   row: Record<string, unknown>;
   absIndex: number;
   event: KeyboardEvent | MouseEvent;
+}
+
+/**
+ * Vunor scope names accepted by `state.prompt()`. The confirm button maps
+ * `scope` → `scope-{name}` and the `c8-filled` chrome picks contrasting fg
+ * automatically. Mirrors action intent semantics — pass `"error"` for
+ * destructive ops, `"good"` for affirmations, etc.
+ */
+export type ConfirmScope = "primary" | "secondary" | "good" | "warn" | "error" | "neutral";
+
+/**
+ * Options for `state.prompt()`. Title is fixed (`"Confirmation"`); only the
+ * body text and the two button labels are tunable. `scope` styles the
+ * confirm button — destructive prompts pass `"error"`, etc.
+ */
+export interface ConfirmOptions {
+  /** Override the confirm button label. Default: `"Confirm"`. */
+  confirmButton?: string;
+  /** Override the cancel button label. Default: `"Cancel"`. */
+  cancelButton?: string;
+  /** Vunor scope applied to the confirm button. Default: `"primary"`. */
+  scope?: ConfirmScope;
+}
+
+/**
+ * Internal pending-request shape held in `state.confirmRequest`. The default
+ * `AsConfirmDialog` watches this ref; setting it opens the dialog,
+ * resolving (via `state.acceptPrompt` / `state.dismissPrompt`) clears it.
+ */
+export interface ConfirmRequest extends ConfirmOptions {
+  message: string;
+  /** Internal — the dialog never calls this directly; use accept/dismiss. */
+  resolve: (ok: boolean) => void;
 }
 
 /**
@@ -64,6 +189,8 @@ export interface TAsTableControls {
   // Cells & headers
   headerCell?: Component;
   columnMenu?: Component;
+  /** Per-row actions cell — single button (1 action) or `…` dropdown (≥2 actions). */
+  rowActions?: Component;
 
   // Filters
   filterInput?: Component;
@@ -75,6 +202,13 @@ export interface TAsTableControls {
   configDialog?: Component;
   fieldsSelector?: Component;
   sortersConfig?: Component;
+
+  /**
+   * Prompt dialog rendered in response to `state.prompt()`. Replaces
+   * `window.confirm()` for action prompts; the confirm button picks up the
+   * caller's `scope` so destructive ops show in the error scope, etc.
+   */
+  confirmDialog?: Component;
 
   // Presets
   createPreset?: Component;
@@ -98,6 +232,8 @@ export type TAsCellTypeComponents = {
   object: Component;
   enum: Component;
   ref: Component;
+  /** Synthesised row-actions pseudo-column (`:rowActionsColumn` opt-in). */
+  __actions?: Component;
 } & Record<string, Component>;
 
 /**
@@ -164,14 +300,23 @@ export interface ReactiveTableState extends TableStateMethods {
   /** Selected row values (PKs extracted via `rowValueFn`). */
   selectedRows: ShallowRef<unknown[]>;
   selectedCount: ComputedRef<number>;
-  /** Selection mode. */
-  selectionMode: SelectionMode;
   /** Extract unique value from a row for selection tracking. */
   rowValueFn: (row: Record<string, unknown>) => unknown;
-  /** True when `pk` is selected. Always false in `selectionMode: "none"`. */
+  /**
+   * Row-delete opt-in — writable ref owned by the renderer. `<AsTable>` and
+   * `<AsWindowTable>` push their `:row-delete` prop into this ref via a
+   * watcher; `createActions` reads `.value` inside its computed `groups`,
+   * so the synthesised `__remove` action appears/disappears live without
+   * remounting.
+   */
+  rowDelete: Ref<boolean | RowDeleteOpt>;
+  /**
+   * Whether `pk` is in the current selection set. Mode-independent — the
+   * renderer is expected to keep `selectedRows` empty in `select="none"`
+   * (its mode-transition watcher handles this), so this returns `false`
+   * naturally without consulting mode.
+   */
   isPkSelected: (pk: unknown) => boolean;
-  /** ARIA `aria-selected` value for a PK. `undefined` in `selectionMode: "none"`. */
-  ariaSelectedFor: (pk: unknown) => "true" | "false" | undefined;
   /** Column currently open in the filter dialog (null when closed). */
   filterDialogColumn: Ref<ColumnDef | null>;
 
@@ -194,11 +339,38 @@ export interface ReactiveTableState extends TableStateMethods {
   /** Reset the active-row index to `-1`. */
   clearActive: () => void;
   /** Toggle selection of the active row's PK in `selectedRows`. */
-  toggleActiveSelection: () => void;
+  toggleActiveSelection: (mode: SelectionMode) => void;
   /** Ask the rendering component to emit `main-action` for the active row. */
   requestMainAction: (event: KeyboardEvent | MouseEvent) => void;
   /** Translate a keyboard event into the appropriate downstream mutations. */
   handleNavKey: (event: KeyboardEvent, opts?: NavKeyOptions) => void;
   /** Register a main-action callback; returns a one-shot disposer. */
   registerMainActionListener: (cb: (req: MainActionRequest) => void) => () => void;
+
+  /** Server-declared actions + UI-side `__remove`, with `invoke`/`invoking`/`lastResult`. */
+  actions: TableActionsState;
+
+  /**
+   * Currently pending prompt request — `null` when no dialog is open. The
+   * default `<AsConfirmDialog>` v-binds its open state to this ref. Writes
+   * here are owned by `prompt()` / `acceptPrompt()` / `dismissPrompt()`;
+   * consumers should not mutate directly.
+   */
+  confirmRequest: Ref<ConfirmRequest | null>;
+  /**
+   * Open the in-app confirm dialog with `message` as the body. Resolves
+   * `true` on accept, `false` on cancel/dismiss. Public — consumers can
+   * reuse this for their own confirmation flows; the dialog is rendered
+   * once by `<AsTableRoot>` (or a swap-in via `controls.confirmDialog`).
+   *
+   * ```ts
+   * const ok = await state.prompt("Discard changes?", { scope: "error" });
+   * if (ok) discard();
+   * ```
+   */
+  prompt: (message: string, opts?: ConfirmOptions) => Promise<boolean>;
+  /** Resolve the active prompt with `true`. Internal — used by the dialog. */
+  acceptPrompt: () => void;
+  /** Resolve the active prompt with `false`. Internal — used by the dialog. */
+  dismissPrompt: () => void;
 }

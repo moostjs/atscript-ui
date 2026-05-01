@@ -72,8 +72,13 @@ export const asTableShortcuts = defineShortcuts({
   // while body checkboxes stay centered, breaking column alignment.
   "as-th-select": "w-[4em] !text-center",
   "as-td-select": "w-[4em] text-center",
+  // Fixed (non-data) columns: `__actions` synthesised pseudo-column. No
+  // hard-coded width here — the renderer (`<AsTable>`) sets `col.width`
+  // dynamically based on action shape (icon vs label) so the column fits
+  // its content without clipping labels or wasting space on icons.
+  "as-th-fixed": "!cursor-default !p-0 !text-center",
   "as-table-checkbox": {
-    "": "scope-primary inline-flex align-middle text-body w-[1.25em] h-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] items-center justify-center layer-0 cursor-pointer transition-all duration-120",
+    "": "scope-primary inline-flex align-middle text-body size-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] items-center justify-center layer-0 cursor-pointer transition-all duration-120",
     "[tr[data-state=checked]_&]:": "bg-current-hl border-current-hl",
     "[tr[aria-selected=true]_&]:": "bg-current-hl border-current-hl",
   },
@@ -84,7 +89,7 @@ export const asTableShortcuts = defineShortcuts({
   "as-table-row-active": "layer-1",
   "as-table-checkbox-checked": "bg-current-hl border-current-hl",
   "as-table-checkbox-indeterminate": "bg-current-hl border-current-hl",
-  "as-table-checkbox-tick": "i-as-check w-[0.9em] h-[0.9em] text-white",
+  "as-table-checkbox-tick": "i-as-check size-[0.9em] text-white",
   "as-table-checkbox-dash": "w-[0.6em] h-[0.125em] bg-white block",
 
   "as-table-empty": "flex items-center justify-center p-$xl text-current/60 whitespace-normal",
@@ -96,7 +101,7 @@ export const asTableShortcuts = defineShortcuts({
 
   "as-vh-empty": "flex flex-col items-center justify-center gap-$m py-$l px-$m text-center min-w-0",
   "as-vh-empty-icon":
-    "inline-grid place-items-center w-[48px] h-[48px] rounded-full bg-current-hl/50 text-current-hl text-[1.54em] flex-shrink-0",
+    "inline-grid place-items-center size-[48px] rounded-full bg-current-hl/50 text-current-hl text-[1.54em] flex-shrink-0",
   "as-vh-error-icon": "as-vh-empty-icon scope-error",
   "as-vh-empty-title": "font-600 text-current m-0",
   "as-vh-empty-body":

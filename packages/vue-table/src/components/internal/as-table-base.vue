@@ -146,22 +146,23 @@ function onRowClick(row: Record<string, unknown>, event: MouseEvent, index: numb
   emit("row-click", row, event);
   if (!isStandalone.value) return;
   if (ctx) ctx.state.setActive(index);
-  if (props.select === "none") {
-    if (ctx) ctx.state.requestMainAction(event);
-    return;
-  }
+  // Single-click never fires main-action — the default row action is
+  // reserved for double-click and Enter-key (per the keyboard contract).
+  // In select mode click toggles; in `select="none"` click is just an
+  // active-row pointer.
+  if (props.select === "none") return;
   if (!ctx) return;
-  ctx.state.toggleActiveSelection();
+  ctx.state.toggleActiveSelection(props.select);
 }
 
 function onRowDblClick(row: Record<string, unknown>, event: MouseEvent, index: number) {
   emit("row-dblclick", row, event);
-  if (!isStandalone.value) return;
-  if (props.select === "single" || props.select === "multi") {
-    if (!ctx) return;
-    ctx.state.setActive(index);
-    ctx.state.requestMainAction(event);
-  }
+  if (!isStandalone.value || !ctx) return;
+  // dblclick activates regardless of select mode; in select="none" the prior
+  // single-click already requested main-action — re-firing on dblclick keeps
+  // the gesture explicit and aligns Enter / dblclick / single-click semantics.
+  ctx.state.setActive(index);
+  ctx.state.requestMainAction(event);
 }
 
 function onSelectAllToggle(state: SelectAllState) {
@@ -172,7 +173,7 @@ function onSelectAllToggle(state: SelectAllState) {
 
 function onTbodyKeydown(event: KeyboardEvent) {
   if (!isStandalone.value || !ctx) return;
-  ctx.state.handleNavKey(event);
+  ctx.state.handleNavKey(event, { mode: props.select });
 }
 
 const scrollContainerRef = ref<HTMLElement | null>(null);

@@ -23,7 +23,13 @@ describe("window: ctrl+down activates last row", () => {
       const skip = (page - 1) * size;
       return new Promise<any>((resolve) => {
         const finish = (rows: any[]) =>
-          resolve({ data: rows, count: TOTAL, page, itemsPerPage: size, pages: Math.ceil(TOTAL / size) });
+          resolve({
+            data: rows,
+            count: TOTAL,
+            page,
+            itemsPerPage: size,
+            pages: Math.ceil(TOTAL / size),
+          });
         if (skip === 0) bootstrapResolver = finish;
         else blockResolver = finish;
       });
@@ -63,7 +69,9 @@ describe("window: ctrl+down activates last row", () => {
     await flushPromises();
 
     expect(blockResolver).not.toBeNull();
-    blockResolver?.(Array.from({ length: 100 }, (_, i) => ({ id: 900 + i, name: `Row ${900 + i}` })));
+    blockResolver?.(
+      Array.from({ length: 100 }, (_, i) => ({ id: 900 + i, name: `Row ${900 + i}` })),
+    );
     await flushPromises();
     await flushPromises();
 

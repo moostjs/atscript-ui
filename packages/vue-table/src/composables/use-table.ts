@@ -8,8 +8,14 @@ import {
 import type { Client } from "@atscript/db-client";
 import type { Component, Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
-import type { ColumnWidthsMap, SelectionMode } from "@atscript/ui-table";
-import type { ReactiveTableState, TAsCellTypeComponents, TAsTableControls } from "../types";
+import type { ColumnWidthsMap } from "@atscript/ui-table";
+import type {
+  ActionResult,
+  ReactiveTableState,
+  TAsCellTypeComponents,
+  TAsTableControls,
+  TVueTableActionInfo,
+} from "../types";
 import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
 import { useTableSelection, type SelectionPersistence } from "./use-table-selection";
 
@@ -20,8 +26,8 @@ export function clearTableCache() {
 
 /**
  * Public composable options. Flat shape for Vue-template ergonomics
- * (`<AsTableRoot :limit="50" :select="multi">`). Internally translated into
- * the grouped `CreateTableStateOptions` before reaching `createTableState`.
+ * (`<AsTableRoot :limit="50">`). Internally translated into the grouped
+ * `CreateTableStateOptions` before reaching `createTableState`.
  *
  * The data-engine `client` is resolved internally from the URL via
  * `getMetaEntry`; callers don't and can't pass it.
@@ -29,8 +35,6 @@ export function clearTableCache() {
 export interface UseTableOptions {
   /** Default page size. */
   limit?: number;
-  /** Selection mode (default: 'none'). */
-  select?: SelectionMode;
   /** Extract unique value from a row for selection tracking. */
   rowValueFn?: (row: Record<string, unknown>) => unknown;
   /**
@@ -78,6 +82,18 @@ export interface UseTableOptions {
   components?: Record<string, Component>;
   /** Whether to provide table context to the subtree (default: true). */
   provideContext?: boolean;
+  /**
+   * Refetch policy for `state.actions.invoke`. When `true` (default),
+   * successful `'backend'` / `'__remove'` invocations call `state.query()`.
+   */
+  refreshOnAction?: () => boolean;
+  /** Bridge for `<AsTableRoot>`'s `@action` emit; see `TableActionsOptions.onResolved`. */
+  onActionResolved?: (
+    action: TVueTableActionInfo,
+    ids: unknown[],
+    result: ActionResult,
+    event?: KeyboardEvent | MouseEvent,
+  ) => void;
 }
 
 /**
@@ -99,7 +115,6 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     client: client as Client,
     limit: opts?.limit,
     selection: {
-      mode: opts?.select,
       rowValueFn: opts?.rowValueFn,
       selectedRows: opts?.selectedRows,
     },
@@ -119,6 +134,10 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     window: {
       blockSize: opts?.blockSize,
       dragReleaseDebounceMs: opts?.dragReleaseDebounceMs,
+    },
+    actions: {
+      refreshOnAction: opts?.refreshOnAction,
+      onResolved: opts?.onActionResolved,
     },
   });
 

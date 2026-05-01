@@ -67,16 +67,24 @@ export const seedCategories = () => [
 
 export const seedProducts = () => {
   const rows: Record<string, unknown>[] = [];
-  for (let i = 1; i <= 20; i++) {
+  const TAG_POOL = [
+    ["new"],
+    ["new", "featured"],
+    ["sale"],
+    ["new", "sale"],
+    ["bestseller"],
+    ["bestseller", "featured"],
+  ];
+  for (let i = 1; i <= 2000; i++) {
     rows.push({
       name: `Product ${i}`,
       description: `Description for product ${i}`,
       categoryId: ((i - 1) % 5) + 1,
-      createdById: 1,
-      sku: `SKU-${String(i).padStart(4, "0")}`,
-      price: 10 + i * 3,
-      tags: i % 2 === 0 ? ["new", "featured"] : ["new"],
-      publishedAt: i % 3 === 0 ? null : Date.now() - i * 86_400_000,
+      createdById: ((i - 1) % 5) + 1,
+      sku: `SKU-${String(i).padStart(5, "0")}`,
+      price: 10 + ((i * 7) % 990) + (i % 17) / 10,
+      tags: TAG_POOL[i % TAG_POOL.length],
+      publishedAt: i % 4 === 0 ? undefined : Date.now() - i * 3_600_000,
     });
   }
   return rows;
@@ -125,4 +133,44 @@ export const seedOrders = () => {
   return rows;
 };
 
-// audit_log: leave empty — later phases will write entries
+/**
+ * Synthetic audit-log backfill so window mode has something to scrub through
+ * on first boot. Live entries (from action invocations through
+ * `auditInterceptor`) accumulate on top via the `desc createdAt` index.
+ */
+export const seedAuditLog = () => {
+  const rows: Record<string, unknown>[] = [];
+  const ENTITIES: Array<[string, number]> = [
+    // [entityType, id range upper bound — matches seeded counts]
+    ["orders", 15],
+    ["users", 5],
+    ["products", 2000],
+    ["customers", 10],
+  ];
+  const ACTIONS_BY_ENTITY: Record<string, string[]> = {
+    orders: ["process", "ship", "mark-delivered", "cancel", "process.rejected", "ship.rejected"],
+    users: ["activate", "suspend", "resend-invite", "activate.rejected"],
+    products: ["publish", "unpublish", "duplicate", "publish.rejected"],
+    customers: [],
+  };
+  const now = Date.now();
+  for (let i = 0; i < 5000; i++) {
+    const ent = ENTITIES[i % ENTITIES.length]!;
+    const [entityType, max] = ent;
+    const pool = ACTIONS_BY_ENTITY[entityType] ?? [];
+    if (pool.length === 0) continue;
+    const action = pool[i % pool.length]!;
+    const entityId = ((i * 31) % max) + 1;
+    const actorId = (i % 5) + 1;
+    rows.push({
+      actorId,
+      entityType,
+      entityId,
+      action,
+      changes: JSON.stringify({ seed: true, idx: i }),
+      // Spread the timestamps across the last ~30 days, descending with i.
+      createdAt: now - i * 60_000 - (i % 17) * 1_000,
+    });
+  }
+  return rows;
+};

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
-import { clampTopIndex, filledFilterCount } from "@atscript/ui-table";
+import { clampTopIndex, filledFilterCount, type SelectionMode } from "@atscript/ui-table";
 import type { ColumnMenuConfig, EnterAction, SelectAllState } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
@@ -27,6 +27,14 @@ const props = withDefaults(
     resizable?: boolean;
     columnMinWidth?: number;
     /**
+     * Selection mode — owned by the renderer wrapper (`<AsWindowTable>`)
+     * and forwarded down. Drives whether the leading checkbox column is
+     * visible, whether row clicks toggle selection, and the
+     * `aria-multiselectable` attribute. Passed at call time to state's
+     * mode-aware methods (`handleNavKey`, `toggleActiveSelection`).
+     */
+    select?: SelectionMode;
+    /**
      * Override Enter-key semantics inside the table. Default `"main-action"`
      * (raises `@main-action` if the parent listens, otherwise toggles
      * selection). Value-help dialogs pass `"toggle-select"` so Enter mirrors
@@ -40,6 +48,7 @@ const props = withDefaults(
     resizable: true,
     columnMinWidth: 48,
     wheelRowsPerTick: 3,
+    select: "none",
   },
 );
 
@@ -62,12 +71,12 @@ const { state } = useTableContext();
 const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(() => state.tableDef.value);
 const cellComponents = useCellComponents(() => state.columns.value);
 
-const hasValue = computed(() => state.selectionMode !== "none");
+const hasValue = computed(() => props.select !== "none");
 const hasActiveFilters = computed(() => filledFilterCount(state.filters.value) > 0);
 
 // Window mode never has a fully-known dataset, so "all" is never reachable.
 const selectAllState = computed<SelectAllState | undefined>(() => {
-  if (state.selectionMode !== "multi") return undefined;
+  if (props.select !== "multi") return undefined;
   return state.selectedRows.value.length === 0 ? "none" : "some";
 });
 
@@ -86,7 +95,7 @@ const visibleSlots = computed(() => {
   const count = Math.min(viewport, Math.max(total, 0));
   const top = state.topIndex.value;
   const rowValueFn = state.rowValueFn;
-  const hasSelection = state.selectionMode !== "none";
+  const hasSelection = props.select !== "none";
   const selectedSet = hasSelection ? new Set(state.selectedRows.value) : null;
   const out: {
     s: number;
@@ -148,7 +157,7 @@ function onWheel(event: WheelEvent) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  state.handleNavKey(event, { enterAction: props.enterAction });
+  state.handleNavKey(event, { enterAction: props.enterAction, mode: props.select });
 }
 
 // Keep the active row inside `[topIndex, topIndex + viewportRowCount)` so
@@ -157,19 +166,16 @@ function onKeydown(event: KeyboardEvent) {
 // replace skeletons they may measure taller, shrinking the viewport, and
 // `topIndex` chosen against the old viewport drops the active row out of
 // range.
-watch(
-  [() => state.activeIndex.value, () => state.viewportRowCount.value],
-  ([idx, viewport]) => {
-    if (idx < 0) return;
-    if (viewport <= 0) return;
-    const top = pendingTopIndex ?? state.topIndex.value;
-    if (idx < top) {
-      scheduleTopIndex(clamp(idx));
-    } else if (idx >= top + viewport) {
-      scheduleTopIndex(clamp(idx - viewport + 1));
-    }
-  },
-);
+watch([() => state.activeIndex.value, () => state.viewportRowCount.value], ([idx, viewport]) => {
+  if (idx < 0) return;
+  if (viewport <= 0) return;
+  const top = pendingTopIndex ?? state.topIndex.value;
+  if (idx < top) {
+    scheduleTopIndex(clamp(idx));
+  } else if (idx >= top + viewport) {
+    scheduleTopIndex(clamp(idx - viewport + 1));
+  }
+});
 
 let touchStartY: number | null = null;
 let touchStartTopIndex = 0;
@@ -197,19 +203,19 @@ function onTouchEnd() {
 function onRowClick(row: Row, event: MouseEvent, absIdx: number) {
   emit("row-click", row, event);
   state.setActive(absIdx);
-  if (state.selectionMode === "none") {
-    state.requestMainAction(event);
-    return;
-  }
-  state.toggleActiveSelection();
+  // Single-click never fires main-action — that's reserved for double-click
+  // and Enter (per the keyboard contract). In `select="none"` click just
+  // sets the active row; in select mode click toggles.
+  if (props.select === "none") return;
+  state.toggleActiveSelection(props.select);
 }
 
 function onRowDblClick(row: Row, event: MouseEvent, absIdx: number) {
   emit("row-dblclick", row, event);
-  if (state.selectionMode === "single" || state.selectionMode === "multi") {
-    state.setActive(absIdx);
-    state.requestMainAction(event);
-  }
+  // dblclick activates regardless of select mode; in select="none" the prior
+  // single-click already requested main-action.
+  state.setActive(absIdx);
+  state.requestMainAction(event);
 }
 
 // 'some' deselects, 'none' selects what's currently in windowCache. 'all' is
@@ -310,7 +316,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
         class="as-table as-table-stretch"
         role="grid"
         :aria-rowcount="state.totalCount.value + 1"
-        :aria-multiselectable="state.selectionMode === 'multi' ? 'true' : undefined"
+        :aria-multiselectable="select === 'multi' ? 'true' : undefined"
       >
         <AsTableHeader
           :columns="state.columns.value"

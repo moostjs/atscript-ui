@@ -18,7 +18,7 @@ export const asFpillShortcuts = defineShortcuts({
   "as-fpill-chip":
     "inline-flex items-center gap-[0.15em] h-[1.5em] px-[0.2em] pl-$xs bg-current-hl/10 border-1 border-current-hl/40 rounded-r0 text-callout text-current-hl whitespace-nowrap flex-shrink-0",
   "as-fpill-chip-remove": {
-    "": "cursor-pointer opacity-70 w-[14px] h-[14px] inline-flex items-center justify-center border-0 bg-transparent text-inherit",
+    "": "cursor-pointer opacity-70 size-fingertip-xs inline-flex items-center justify-center border-0 bg-transparent text-inherit",
     "hover:": "opacity-100",
   },
   "as-fpill-vh": {

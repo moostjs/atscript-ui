@@ -11,7 +11,6 @@ function setup(opts: { selectedRows?: Ref<unknown[]>; persistence?: SelectionPer
       client: stubClient(),
       query: { queryOnMount: false },
       selection: {
-        mode: "multi",
         rowValueFn: (r) => r.id,
         selectedRows: opts.selectedRows,
       },

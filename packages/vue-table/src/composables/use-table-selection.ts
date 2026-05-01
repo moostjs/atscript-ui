@@ -27,6 +27,11 @@ export function useTableSelection(
 ): void {
   const mode: SelectionPersistence = opts?.mode ?? "trim";
 
+  // Mode-transition cleanup (`multi → none` clears `selectedRows`) lives in
+  // the renderer's own `watch(() => props.select, ...)`. Selection mode is
+  // a renderer concern, not a state concern — the cleanup belongs where the
+  // mode prop lives, not here.
+
   watch(
     [() => state.results.value, () => state.resultsStart.value] as const,
     ([newResults, newResultsStart], [oldResults, oldResultsStart]) => {

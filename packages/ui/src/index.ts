@@ -127,6 +127,7 @@ export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/v
 // ── Table types ─────────────────────────────────────────────
 export type {
   TableDef,
+  TableActionsModel,
   ColumnDef,
   MetaResponse,
   FieldMeta,
@@ -136,6 +137,16 @@ export type {
   PaginationControl,
   TableQueryState,
 } from "./table/types";
+
+// ── Re-exports from @atscript/db-client (used in TableDef + MetaResponse) ──
+export type {
+  TCrudOp,
+  TCrudPermissions,
+  TDbActionInfo,
+  TDbActionIntent,
+  TDbActionLevel,
+  TDbActionProcessor,
+} from "@atscript/db-client";
 
 // ── Table definition builder ────────────────────────────────
 export { createTableDef } from "./table/create-table-def";

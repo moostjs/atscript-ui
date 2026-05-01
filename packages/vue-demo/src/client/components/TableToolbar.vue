@@ -1,25 +1,38 @@
 <script setup lang="ts">
 import type { TableDef } from "@atscript/ui";
-import { useTableContext, AsFilters, type ConfigTab } from "@atscript/vue-table";
+import {
+  useTableContext,
+  useTableNavBridge,
+  AsFilters,
+  AsTableActions,
+  type ConfigTab,
+} from "@atscript/vue-table";
 
 const props = defineProps<{
   title: string;
   subtitle?: string;
   tableDef?: TableDef | null;
-  /**
-   * Optional handler invoked when the user confirms "Delete selected" in the
-   * toolbar. Receives the selected row values (as configured by `rowValueFn`
-   * on `AsTableRoot`). After it resolves the toolbar re-queries the table and
-   * clears the selection.
-   */
-  onDeleteSelected?: (ids: unknown[]) => Promise<void> | void;
+  /** Current selection mode (from parent). Drives the toggle label/icon. */
+  selectMode?: "none" | "multi";
+  /** Hide the toggle entirely for read-only roles. */
+  canToggleSelect?: boolean;
 }>();
 
+defineEmits<{ (e: "toggle-select-mode"): void }>();
+
 const { state } = useTableContext();
+// Bridge needs the renderer's selection mode so Enter dispatches with the
+// right semantics (main-action vs toggle-select fallback). Reactive getter
+// re-reads on every dispatch.
+const navBridge = useTableNavBridge(undefined, {
+  mode: () => props.selectMode ?? "none",
+});
 
 function onSearchInput(e: Event) {
-  const value = (e.target as HTMLInputElement).value;
-  state.searchTerm.value = value;
+  // Model-driven: writing to state.searchTerm triggers the root watcher's
+  // re-query — never call state.query() here (CLAUDE.md: model-driven, no
+  // explicit triggers).
+  state.searchTerm.value = (e.target as HTMLInputElement).value;
 }
 
 function refresh() {
@@ -28,15 +41,6 @@ function refresh() {
 
 function openConfig(tab: ConfigTab) {
   state.showConfigDialog(tab);
-}
-
-async function deleteSelected() {
-  if (!props.onDeleteSelected) return;
-  const ids = [...state.selectedRows.value];
-  if (ids.length === 0) return;
-  await props.onDeleteSelected(ids);
-  state.selectedRows.value = [];
-  state.query();
 }
 
 function clearSelection() {
@@ -48,46 +52,58 @@ function clearSelection() {
   <header class="as-page-header">
     <div class="as-page-header-titles">
       <div class="as-page-header-eyebrow">atscript-ui demo · Tables</div>
-      <h1 class="as-page-header-title">{{ title }}</h1>
+      <div class="as-page-header-title-row">
+        <h1 class="as-page-header-title">{{ title }}</h1>
+        <button
+          v-if="canToggleSelect"
+          type="button"
+          class="as-page-title-toggle"
+          :aria-pressed="selectMode === 'multi' ? 'true' : 'false'"
+          :title="
+            selectMode === 'multi'
+              ? 'Hide checkboxes — show row actions inline'
+              : 'Show selection checkboxes'
+          "
+          @click="$emit('toggle-select-mode')"
+        >
+          <span class="i-as-check-square" aria-hidden="true" />
+        </button>
+      </div>
       <div v-if="subtitle" class="as-page-header-sub">{{ subtitle }}</div>
     </div>
     <div class="as-page-header-actions">
-      <template v-if="state.selectedCount.value > 0">
-        <span class="scope-primary font-mono text-callout text-current-hl">
-          {{ state.selectedCount.value }} selected
-        </span>
-        <button
-          v-if="onDeleteSelected"
-          type="button"
-          class="c8-flat scope-error as-page-toolbar-btn"
-          @click="deleteSelected"
-        >
-          <span class="i-ph:trash" aria-hidden="true" />
-          <span>Delete</span>
-        </button>
-        <button type="button" class="as-page-toolbar-btn" @click="clearSelection">
-          <span class="i-ph:x" aria-hidden="true" />
-          <span>Clear</span>
-        </button>
-        <span class="w-px h-fingertip-s bg-current/20 mx-$xs" aria-hidden="true" />
-      </template>
+      <AsTableActions />
       <slot name="actions" />
       <button type="button" class="as-page-toolbar-btn" @click="refresh">
         <span class="i-as-refresh" aria-hidden="true" />
         <span>Refresh</span>
       </button>
-      <button type="button" class="as-page-toolbar-btn" @click="openConfig('columns')">
-        <span class="i-as-columns" aria-hidden="true" />
-        <span>Columns</span>
-      </button>
-      <button type="button" class="as-page-toolbar-btn" @click="openConfig('filters')">
-        <span class="i-as-filter" aria-hidden="true" />
-        <span>Filters</span>
-      </button>
-      <button type="button" class="as-page-toolbar-btn" @click="openConfig('sorters')">
-        <span class="i-as-sorters" aria-hidden="true" />
-        <span>Sorters</span>
-      </button>
+      <div class="as-page-toolbar-island">
+        <button
+          type="button"
+          class="as-page-toolbar-island-btn"
+          title="Columns"
+          @click="openConfig('columns')"
+        >
+          <span class="i-as-columns" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          class="as-page-toolbar-island-btn"
+          title="Filters"
+          @click="openConfig('filters')"
+        >
+          <span class="i-as-filter" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          class="as-page-toolbar-island-btn"
+          title="Sorters"
+          @click="openConfig('sorters')"
+        >
+          <span class="i-as-sorters" aria-hidden="true" />
+        </button>
+      </div>
     </div>
   </header>
 
@@ -100,11 +116,19 @@ function clearSelection() {
         placeholder="Search across all columns…"
         :value="state.searchTerm.value"
         @input="onSearchInput"
+        @keydown="navBridge.onKeydown"
       />
     </div>
     <div v-else class="as-page-search" />
 
     <div class="as-page-toolbar-right">
+      <span v-if="state.selectedCount.value > 0" class="as-page-selection-summary">
+        <span class="as-page-selection-count">{{ state.selectedCount.value }} selected</span>
+        <button type="button" class="as-page-toolbar-btn" @click="clearSelection">
+          <span class="i-ph:x" aria-hidden="true" />
+          <span>Clear</span>
+        </button>
+      </span>
       <span class="as-page-pill">
         <strong class="as-page-pill-strong">{{ state.loadedCount.value }}</strong>
         of
@@ -112,6 +136,8 @@ function clearSelection() {
       </span>
     </div>
 
-    <AsFilters class="as-page-filters" />
+    <div class="as-page-filters-row">
+      <AsFilters />
+    </div>
   </div>
 </template>
