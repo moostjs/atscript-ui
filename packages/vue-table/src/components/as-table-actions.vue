@@ -2,6 +2,7 @@
 // Class extractor safelist — runtime-composed classes (template-literal
 // interpolation in <AsActionMenuItem> and <AsActionMenuContent> + dynamic
 // `${prefix}-intent-${intent}` variants the build-time tokenizer can't see):
+//   as-table-actions-menu
 //   as-table-actions-menu-item
 //   as-table-actions-menu-item-icon
 //   as-table-actions-menu-item-label
