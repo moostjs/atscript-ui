@@ -190,6 +190,14 @@ type MountTableStateOptions = {
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
   queryFn?: QueryFn;
+  /** URL bridge: gate first query until ref is `true`. */
+  urlQueryReady?: import("vue").Ref<boolean>;
+  /** URL bridge: fired with the serialized URL on every state-driven URL change. */
+  onUrlQueryChange?: (s: string) => void;
+  /** URL bridge: per-aspect opt-in/out. */
+  urlQuerySync?: import("@atscript/ui-table").UrlQuerySync;
+  /** Default page size — also used as the URL bridge's default items-per-page. */
+  limit?: number;
 };
 
 function buildClient(
@@ -218,12 +226,16 @@ function mountWith(
       setup() {
         const { state: s, internals } = createTableState({
           client: opts.client ?? client,
+          limit: opts.limit,
           query: {
             queryOnMount: opts.queryOnMount,
             blockQuery: opts.blockQuery,
             forceFilters: opts.forceFilters,
             forceSorters: opts.forceSorters,
             fn: opts.queryFn,
+            urlQueryReady: opts.urlQueryReady,
+            onUrlQueryChange: opts.onUrlQueryChange,
+            urlQuerySync: opts.urlQuerySync,
           },
           window: { blockSize: opts.blockSize },
         });

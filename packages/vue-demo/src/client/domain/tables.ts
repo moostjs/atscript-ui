@@ -1,3 +1,5 @@
+import type { UrlQuerySync } from "@atscript/vue-table";
+
 export type TableMode = "pagination" | "infinite";
 export type TableKind = "virtual" | "window";
 export type ActionsColumn = "first" | "last" | "merge-select";
@@ -35,6 +37,13 @@ export interface DemoTable {
    * Delete. Default: false (delete enabled when `canWrite`).
    */
   noRowDelete?: boolean;
+  /**
+   * Per-aspect URL bridge gating. Default (omitted): full sync. Useful for
+   * tables where pasting a deep link should restore filters/sort but not
+   * the recipient's page (`{ pagination: false }`), or where some private
+   * UI state shouldn't leak to the URL.
+   */
+  urlQuerySync?: UrlQuerySync;
 }
 
 export const DEMO_TABLES: DemoTable[] = [
@@ -45,6 +54,7 @@ export const DEMO_TABLES: DemoTable[] = [
     icon: "i-ph:users",
     actionsColumn: "last",
     defaultFilterFields: ["status", "roleId"],
+    urlQuerySync: { sorters: false },
   },
   { path: "roles", label: "Roles", resource: "roles", icon: "i-ph:shield-check" },
   { path: "categories", label: "Categories", resource: "categories", icon: "i-ph:folders" },
@@ -71,6 +81,9 @@ export const DEMO_TABLES: DemoTable[] = [
     mode: "pagination",
     actionsColumn: "merge-select",
     defaultFilterFields: ["customerId", "status"],
+    // Shareable filtered view: recipients see the same filter/sort but land
+    // on page 1 instead of being pinned to whatever page the linker was on.
+    urlQuerySync: { pagination: false },
   },
   {
     path: "audit_log",

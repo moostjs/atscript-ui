@@ -1,6 +1,7 @@
 import {
   computed,
   inject,
+  nextTick,
   onBeforeUnmount,
   onScopeDispose,
   provide,
@@ -24,11 +25,15 @@ import {
   debounce,
   isFilled,
   reconcileColumnWidthDefaults,
+  resolveAspectGate,
   sameColumnSet,
   sortersEqual,
+  stateToUrlQueryString,
+  urlQueryStringToState,
   type ColumnWidthsMap,
   type FieldFilters,
   type FilterCondition,
+  type UrlQuerySync,
 } from "@atscript/ui-table";
 import type { Client, PageResult } from "@atscript/db-client";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
@@ -56,6 +61,7 @@ const TABLE_KEY = "__as_table";
 const FILTER_DEBOUNCE_MS = 500;
 const DEFAULT_BLOCK_SIZE = 100;
 const DEFAULT_DRAG_RELEASE_DEBOUNCE_MS = 300;
+const DEFAULT_ITEMS_PER_PAGE = 50;
 
 let _tblUid = 0;
 
@@ -111,6 +117,25 @@ export interface TableQueryOptions {
   blockQuery?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
+  /**
+   * Gate the initial `scheduleQuery("initial")` until this ref flips to
+   * `true`. Used by `<AsTableRoot>` when `v-model:urlQuery` is bound, to
+   * defer the first fetch until URL hydration has run so the table fires one
+   * composed query on mount instead of two. Implicitly open when omitted.
+   */
+  urlQueryReady?: Ref<boolean>;
+  /**
+   * Called when a state mutation produces a new URL query string. Self-emits
+   * are echo-suppressed by `lastEmittedUrl` so `applyUrlQuery(s)` followed
+   * by mutations that re-encode to the same `s` will not re-fire this
+   * callback. Opt-in: omitting disables the URL emitter entirely.
+   */
+  onUrlQueryChange?: (urlString: string) => void;
+  /**
+   * Per-aspect opt-in/out for the URL bridge. Defaults to full sync (current
+   * behaviour). Static — captured at setup; to change sync, re-mount.
+   */
+  urlQuerySync?: UrlQuerySync;
 }
 
 export interface TableWindowOptions {
@@ -212,7 +237,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   const loadedCount = computed(() => results.value.length);
   const pagination = ref<PaginationControl>({
     page: 1,
-    itemsPerPage: opts.limit ?? 50,
+    itemsPerPage: opts.limit ?? DEFAULT_ITEMS_PER_PAGE,
   });
   const queryError = ref<Error | null>(null);
   const metadataError = ref<Error | null>(null);
@@ -603,7 +628,118 @@ export function createTableState(opts: CreateTableStateOptions): {
     closeFilterDialog() {
       filterDialogColumn.value = null;
     },
+    applyUrlQuery,
   };
+
+  // ── URL query bridge ────────────────────────────────────────────────────
+  // Echo guard for both directions — skip emit when state re-serializes to
+  // the same string, skip apply when called with our own echo.
+  let lastEmittedUrl: string = "";
+  let hydratingFromUrl = false;
+  const urlDefaultItemsPerPage = opts.limit ?? DEFAULT_ITEMS_PER_PAGE;
+  const urlQuerySync = queryOpts?.urlQuerySync;
+
+  function serializeStateForUrl(): string {
+    return stateToUrlQueryString(
+      {
+        filters: filters.value,
+        sorters: sorters.value,
+        page: pagination.value.page,
+        itemsPerPage: pagination.value.itemsPerPage,
+        searchTerm: searchTerm.value,
+      },
+      { defaultItemsPerPage: urlDefaultItemsPerPage, sync: urlQuerySync },
+    );
+  }
+
+  function emitUrlIfChanged(): void {
+    if (!queryOpts?.onUrlQueryChange) return;
+    if (hydratingFromUrl) return;
+    const next = serializeStateForUrl();
+    if (next === lastEmittedUrl) return;
+    lastEmittedUrl = next;
+    queryOpts.onUrlQueryChange(next);
+  }
+
+  function applyUrlQuery(urlString: string): void {
+    if (urlString === lastEmittedUrl) return;
+    const cols = allColumns.value;
+    const parsed = urlQueryStringToState(urlString, {
+      knownFields: cols.length > 0 ? cols.map((c) => c.path) : undefined,
+      sync: urlQuerySync,
+    });
+
+    // Round-trip stability when user changed page size locally: divide raw
+    // `$skip` by the consumer's CURRENT `itemsPerPage`, not the default.
+    const currentItemsPerPage = pagination.value.itemsPerPage;
+    const skip = parsed.skip ?? 0;
+    const nextPage =
+      skip > 0 && currentItemsPerPage > 0 ? Math.floor(skip / currentItemsPerPage) + 1 : 1;
+
+    const wasQueryDetected = queryDetected;
+    hydratingFromUrl = true;
+
+    const filtersGate = resolveAspectGate(urlQuerySync?.filters);
+    if (filtersGate === "all") {
+      filters.value = parsed.filters;
+    } else if (filtersGate !== "none") {
+      // Allowlist: replace allowlist entries (or delete if absent in parsed),
+      // preserve non-allowlist entries.
+      const next: FieldFilters = {};
+      for (const path in filters.value) {
+        if (!filtersGate.has(path)) next[path] = filters.value[path];
+      }
+      for (const path in parsed.filters) next[path] = parsed.filters[path];
+      filters.value = next;
+    }
+
+    const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
+    if (sortersGate === "all") {
+      if (!sortersEqual(sorters.value, parsed.sorters)) sorters.value = parsed.sorters;
+    } else if (sortersGate !== "none") {
+      // Allowlist: drop existing sorters whose field is in allowlist, then
+      // append parsed (decoder already filtered to allowlist).
+      const survivors = sorters.value.filter((s) => !sortersGate.has(s.field));
+      const merged = [...survivors, ...parsed.sorters];
+      if (!sortersEqual(sorters.value, merged)) sorters.value = merged;
+    }
+
+    if (urlQuerySync?.search !== false) {
+      if (searchTerm.value !== parsed.searchTerm) searchTerm.value = parsed.searchTerm;
+    }
+
+    if (urlQuerySync?.pagination !== false) {
+      // itemsPerPage is private (recipient's preference) and preserved here.
+      if (pagination.value.page !== nextPage) {
+        pagination.value = { ...pagination.value, page: nextPage };
+      }
+    }
+
+    // Display-state union — `filterFields` is per-user UI prefs and must not
+    // narrow on hydrate (a shared link reveals filters but never hides them).
+    // Skipped when filter sync is off — no parsed paths to reveal.
+    if (filtersGate !== "none") {
+      const present = new Set(filterFields.value);
+      let merged: string[] | null = null;
+      for (const f in parsed.filters) {
+        if (present.has(f)) continue;
+        (merged ??= filterFields.value.slice()).push(f);
+        present.add(f);
+      }
+      if (merged) filterFields.value = merged;
+    }
+
+    lastEmittedUrl = serializeStateForUrl();
+
+    // Release after flush so per-mutator watchers see the guard. Mount path
+    // doesn't schedule — the urlQueryReady-gate watcher owns the initial query.
+    void nextTick(() => {
+      hydratingFromUrl = false;
+      if (wasQueryDetected && !queryOpts?.blockQuery && tableDef.value !== null) {
+        scheduleQuery();
+      }
+    });
+  }
 
   // ── Watchers that schedule queries ──────────────────────────────────────
   // Filter / search are noisy — debounce the actual query but flag mustRefresh
@@ -613,6 +749,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   }, FILTER_DEBOUNCE_MS);
 
   watch([() => filters.value, () => searchTerm.value], () => {
+    if (hydratingFromUrl) return;
     if (!queryDetected) return;
     mustRefresh.value = true;
     resetPagination();
@@ -622,8 +759,9 @@ export function createTableState(opts: CreateTableStateOptions): {
   watch(
     () => sorters.value,
     (next, prev) => {
-      if (!queryDetected) return;
+      if (hydratingFromUrl) return;
       if (sortersEqual(prev, next)) return;
+      if (!queryDetected) return;
       requestRefresh();
     },
     { immediate: false },
@@ -646,10 +784,18 @@ export function createTableState(opts: CreateTableStateOptions): {
         skipPaginationWatch--;
         return;
       }
-      if (!queryDetected) return;
+      if (hydratingFromUrl) return;
       if (next.page === prev.page && next.itemsPerPage === prev.itemsPerPage) return;
+      if (!queryDetected) return;
       scheduleQuery();
     },
+  );
+
+  // URL emitter runs regardless of `queryDetected` so pre-query mutations
+  // (bootstrap / hydration) still reflect in the URL.
+  watch(
+    [() => filters.value, () => sorters.value, () => searchTerm.value, () => pagination.value],
+    () => emitUrlIfChanged(),
   );
 
   watch(
@@ -660,20 +806,19 @@ export function createTableState(opts: CreateTableStateOptions): {
     },
   );
 
-  watch(
-    () => tableDef.value,
-    (def) => {
-      if (def === null) return;
-      if (queryOpts?.queryOnMount === false) return;
-      if (allColumns.value.length === 0) return;
-      if (results.value.length !== 0) return;
-      // Flip the gate synchronously so any columnNames watcher queued during
-      // init() sees `queryDetected = true` and joins the same coalesce window
-      // — the microtask scheduled by scheduleQuery("initial") absorbs both.
-      queryDetected = true;
-      scheduleQuery("initial");
-    },
-  );
+  // Bootstrap the initial query once tableDef has loaded AND urlQueryReady
+  // (when bound) is true. `?? true` keeps the gate open when the URL bridge
+  // isn't wired. Sync flip so any columnNames watcher queued during `init()`
+  // coalesces into the same `scheduleQuery("initial")` microtask.
+  watch([() => tableDef.value, () => queryOpts?.urlQueryReady?.value ?? true], ([def, ready]) => {
+    if (queryDetected) return;
+    if (def === null || !ready) return;
+    if (queryOpts?.queryOnMount === false) return;
+    if (allColumns.value.length === 0) return;
+    if (results.value.length !== 0) return;
+    queryDetected = true;
+    scheduleQuery("initial");
+  });
 
   onScopeDispose(() => {
     debouncedFilterQuery.cancel();

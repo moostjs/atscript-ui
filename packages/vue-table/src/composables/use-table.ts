@@ -8,7 +8,7 @@ import {
 import type { Client } from "@atscript/db-client";
 import type { Component, Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
-import type { ColumnWidthsMap } from "@atscript/ui-table";
+import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
 import type {
   ActionResult,
   ReactiveTableState,
@@ -94,6 +94,24 @@ export interface UseTableOptions {
     result: ActionResult,
     event?: KeyboardEvent | MouseEvent,
   ) => void;
+  /**
+   * Gate the initial `scheduleQuery("initial")` until this ref is `true`.
+   * `<AsTableRoot>` sets it `false` while it hydrates from `v-model:urlQuery`
+   * so the first fetch composes URL + defaults into one request. Omit when
+   * not using the URL bridge — the gate stays implicitly open.
+   */
+  urlQueryReady?: Ref<boolean>;
+  /**
+   * Called whenever a state mutation produces a new URL query string.
+   * Omitting it disables the URL emitter — the feature is opt-in.
+   */
+  onUrlQueryChange?: (urlString: string) => void;
+  /**
+   * Per-aspect opt-in/out for the URL bridge — gate filters / sorters /
+   * search / pagination independently. Static; captured once at setup.
+   * Default (omitted): full sync.
+   */
+  urlQuerySync?: UrlQuerySync;
 }
 
 /**
@@ -130,6 +148,9 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       forceSorters: opts?.forceSorters,
       blockQuery: opts?.blockQuery,
       queryOnMount: opts?.queryOnMount,
+      urlQueryReady: opts?.urlQueryReady,
+      onUrlQueryChange: opts?.onUrlQueryChange,
+      urlQuerySync: opts?.urlQuerySync,
     },
     window: {
       blockSize: opts?.blockSize,

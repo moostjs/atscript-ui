@@ -391,4 +391,12 @@ export interface ReactiveTableState extends TableStateMethods {
   acceptPrompt: () => void;
   /** Resolve the active prompt with `false`. Internal — used by the dialog. */
   dismissPrompt: () => void;
+  /**
+   * Hydrate state from a URL query string produced by `stateToUrlQueryString`.
+   * Replaces filters / sorters / search / pagination with values decoded from
+   * the URL; unions decoded filter fields into `filterFields`. Echo-guarded
+   * against the bridge's own emissions. Does NOT call `query()` — root
+   * watchers refetch in reaction to the writes.
+   */
+  applyUrlQuery: (urlString: string) => void;
 }

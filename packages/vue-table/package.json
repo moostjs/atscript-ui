@@ -116,6 +116,7 @@
     "reka-ui": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
+    "vue-router": "catalog:",
     "vue-tsc": "catalog:",
     "vunor": "catalog:"
   },

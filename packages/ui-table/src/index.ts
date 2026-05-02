@@ -16,7 +16,7 @@ export type { ColumnFilterType } from "./filters/filter-conditions-map";
 export { conditionsForType, columnFilterType } from "./filters/filter-conditions-map";
 
 // ── Escape regex ────────────────────────────────────────────
-export { escapeRegex } from "./filters/escape-regex";
+export { escapeRegex, unescapeRegex } from "./filters/escape-regex";
 
 // ── Filter input format ─────────────────────────────────────
 export {
@@ -27,6 +27,7 @@ export {
 
 // ── Filters to Uniquery ─────────────────────────────────────
 export { filtersToUniqueryFilter } from "./filters/filters-to-uniquery";
+export { uniqueryFilterToFieldFilters } from "./filters/uniquery-to-filters";
 
 // ── Date shortcuts ──────────────────────────────────────────
 export type { DateShortcut } from "./filters/date-shortcuts";
@@ -43,6 +44,17 @@ export type { BuildTableQueryOptions } from "./query/build-table-query";
 export { buildTableQuery } from "./query/build-table-query";
 export { mergeSorters } from "./query/merge-sorters";
 export { mergeFilters } from "./query/merge-filters";
+
+// ── URL query bridge ───────────────────────────────────────
+export type {
+  AspectGate,
+  UrlQueryStateLike,
+  UrlQueryStateSnapshot,
+  UrlQueryDefaults,
+  UrlQueryParseOptions,
+  UrlQuerySync,
+} from "./query/url-query";
+export { resolveAspectGate, stateToUrlQueryString, urlQueryStringToState } from "./query/url-query";
 
 // ── Selection ──────────────────────────────────────────────
 export type { SelectionMode } from "./selection/selection-fns";

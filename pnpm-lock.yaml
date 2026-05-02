@@ -60,6 +60,9 @@ catalogs:
     '@uniqu/core':
       specifier: ^0.1.5
       version: 0.1.5
+    '@uniqu/url':
+      specifier: ^0.1.5
+      version: 0.1.5
     '@unocss/preset-icons':
       specifier: ^66.6.0
       version: 66.6.8
@@ -275,6 +278,9 @@ importers:
         version: link:../ui
     devDependencies:
       '@uniqu/core':
+        specifier: 'catalog:'
+        version: 0.1.5
+      '@uniqu/url':
         specifier: 'catalog:'
         version: 0.1.5
       vitest:
@@ -587,6 +593,9 @@ importers:
       vue:
         specifier: 'catalog:'
         version: 3.5.30(typescript@5.9.3)
+      vue-router:
+        specifier: 'catalog:'
+        version: 4.6.4(vue@3.5.30(typescript@5.9.3))
       vue-tsc:
         specifier: 'catalog:'
         version: 3.2.6(typescript@5.9.3)

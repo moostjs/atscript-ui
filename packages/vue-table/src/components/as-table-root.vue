@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import type { Component } from "vue";
+import { ref, watch, type Component } from "vue";
 import type { SortControl, ClientFactory } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
-import type { ColumnWidthsMap } from "@atscript/ui-table";
+import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
 import type {
   ActionResult,
   TAsCellTypeComponents,
@@ -57,6 +57,19 @@ const props = withDefaults(
      * `state.actions.invoke(action, pk, { suppressRefresh: true })` overrides.
      */
     refreshOnAction?: boolean;
+    /**
+     * Per-aspect opt-in/out for `v-model:url-query`. Default (omitted): full
+     * sync — filters, sorters, `searchTerm`, and pagination all round-trip.
+     * Set fields to `false`/`true`/`string[]` to gate. Has no effect unless
+     * `v-model:url-query` is bound.
+     *
+     * @example
+     * `:url-query-sync="{ pagination: false }"` — shareable filtered view,
+     *   recipients aren't pinned to your current page.
+     * `:url-query-sync="{ filters: ['status'], sorters: false }"` — only
+     *   `status` filter participates; sorters stay private.
+     */
+    urlQuerySync?: UrlQuerySync;
   }>(),
   {
     queryOnMount: true,
@@ -89,6 +102,17 @@ const columnWidths = defineModel<ColumnWidthsMap>("columnWidths", {
 const sorters = defineModel<SortControl[]>("sorters", { default: () => [] });
 const selectedRows = defineModel<unknown[]>("selectedRows", { default: () => [] });
 
+/**
+ * Bidirectional URL bridge bound via `v-model:url-query`. When unbound the
+ * feature is off (zero overhead); when bound the first query is gated on
+ * tableDef settle + URL hydration so the table fetches once.
+ */
+const urlQuery = defineModel<string | undefined>("urlQuery", {
+  default: () => undefined,
+});
+const urlQueryActive = useHasEmitListener("onUpdate:urlQuery").value;
+const urlQueryReady = ref(!urlQueryActive);
+
 const state = useTable(props.url, {
   limit: props.limit,
   // `select` is owned by `<AsTable>` / `<AsWindowTable>`, not the orchestrator.
@@ -114,7 +138,26 @@ const state = useTable(props.url, {
   columnWidths,
   sorters,
   selectedRows,
+  urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
+  onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
+  urlQuerySync: props.urlQuerySync,
 });
+
+if (urlQueryActive) {
+  // Apply URL once tableDef settles (schema must be known before parsing,
+  // unknown fields drop). Subsequent urlQuery changes reapply for browser
+  // back / deep-link paste / programmatic nav. `applyUrlQuery` is idempotent
+  // (echo-guarded), so reapplying when both deps fire is safe.
+  watch(
+    [() => state.tableDef.value, () => urlQuery.value],
+    ([def, q]) => {
+      if (def === null) return;
+      if (typeof q === "string" && q !== "") state.applyUrlQuery(q);
+      if (!urlQueryReady.value) urlQueryReady.value = true;
+    },
+    { immediate: true },
+  );
+}
 
 useRegisterMainActionListener(
   state,

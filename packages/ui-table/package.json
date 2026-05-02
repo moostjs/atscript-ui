@@ -30,9 +30,11 @@
   },
   "devDependencies": {
     "@uniqu/core": "catalog:",
+    "@uniqu/url": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@uniqu/core": "^0.1.2"
+    "@uniqu/core": "^0.1.2",
+    "@uniqu/url": "^0.1.5"
   }
 }

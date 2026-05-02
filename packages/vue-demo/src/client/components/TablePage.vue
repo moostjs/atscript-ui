@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import {
   AsTable,
   AsTableRoot,
   AsWindowTable,
   createDefaultControls,
   createDefaultCellTypes,
+  useTableUrlQuery,
   type ActionResult,
   type TVueTableActionInfo,
 } from "@atscript/vue-table";
@@ -15,6 +17,14 @@ import { getDemoTable, type ActionsColumn, type TableKind, type TableMode } from
 import { useMe } from "../api/use-me";
 import { onActionToast } from "../api/error-bus";
 import { clientForTable } from "../api/client-factory";
+
+// Shareable URLs: filters, sorters, pagination, and search are reflected in
+// the browser query string (e.g. `?status=active&$sort=-createdAt&$skip=50`).
+// Pasting a URL in another tab opens the same view in one fetch. Per-aspect
+// gating (`urlQuerySync` below) lets each table opt out of any of the four —
+// e.g. orders sets `{ pagination: false }` so a shared URL restores filters
+// but lands recipients on page 1 instead of pinning them to the linker's page.
+const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 
 const controls = createDefaultControls();
 const types = createDefaultCellTypes();
@@ -26,6 +36,7 @@ const kind = computed<TableKind>(() => tableMeta.value?.kind ?? "virtual");
 const mode = computed<TableMode>(() => tableMeta.value?.mode ?? "pagination");
 const limit = computed(() => tableMeta.value?.limit ?? 25);
 const actionsColumn = computed<ActionsColumn>(() => tableMeta.value?.actionsColumn ?? "last");
+const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
 
 const { me, loaded: meLoaded } = useMe();
 const canWrite = computed(() => !!me.value?.permissions?.[props.path]?.write);
@@ -161,6 +172,8 @@ function onAction(
       :key="path"
       v-slot="{ loadingMetadata, tableDef }"
       v-model:filter-fields="filterFields"
+      v-model:url-query="urlQuery"
+      :url-query-sync="urlQuerySync"
       :url="`/api/db/tables/${path}`"
       :controls="controls"
       :types="types"
