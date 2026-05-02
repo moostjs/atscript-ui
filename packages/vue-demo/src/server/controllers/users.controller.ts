@@ -1,10 +1,11 @@
 import {
   TableController,
   DbAction,
-  DbActionPK,
-  DbActionPKs,
+  DbActionRow,
+  DbActionRows,
   DbRowActions,
   DbTableActions,
+  perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
 import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
@@ -47,64 +48,61 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
 export class UsersController extends AsArbacDbController<typeof UsersTable> {
   /** `pending`/`suspended` → `active`. */
   @Post("actions/activate")
-  @DbAction("activate", {
+  @DbAction<typeof UsersTable, ["id", "username", "status"]>("activate", {
     label: "Activate",
     icon: "i-as-check",
     intent: "positive",
+    requiredFields: ["id", "username", "status"],
+    disabled: perRow((u) => u.status === "active"),
   })
   @ArbacAction("update")
-  async activate(@DbActionPK() id: number) {
-    const row = await usersTable.findById(id);
-    if (!row) return { ok: false, id, message: `User ${id} not found` };
-    if (row.status === "active") {
-      return { ok: false, id, message: `User ${id} is already active` };
-    }
-    await usersTable.updateOne({ id, status: "active" });
-    return { ok: true, id, message: `User ${id} activated` };
+  async activate(@DbActionRow() row: { id: number; username: string }) {
+    await usersTable.updateOne({ id: row.id, status: "active" });
+    return { ok: true, id: row.id, message: `User ${row.username} activated` };
   }
 
   @Post("actions/resend-invite")
-  @DbAction("resend-invite", {
+  @DbAction<typeof UsersTable, ["id", "username", "email", "status"]>("resend-invite", {
     label: "Resend invite",
     icon: "i-as-refresh",
     intent: "primary",
+    requiredFields: ["id", "username", "email", "status"],
+    disabled: perRow((u) => u.status !== "invited"),
   })
   @ArbacAction("update")
-  async resendInvite(@DbActionPK() id: number) {
-    const row = await usersTable.findById(id);
-    if (!row) return { ok: false, id, message: `User ${id} not found` };
-    if (row.status !== "invited") {
-      return { ok: false, id, message: `User ${id} is ${row.status}, not invited` };
-    }
-    // Demo: just bumps the createdAt as a stand-in for a real send.
-    return { ok: true, id, message: `Invite resent to ${row.email}` };
+  async resendInvite(
+    @DbActionRow() row: { id: number; username: string; email: string; status: string },
+  ) {
+    return { ok: true, id: row.id, message: `Invite resent to ${row.email}` };
   }
 
   /**
-   * Suspend one or more users. `@DbActionPKs` infers `level: 'rows'`; the
-   * cell dropdown wraps a single pk into `[pk]` so this same handler covers
-   * per-row and toolbar bulk paths. Already-suspended rows are silently
-   * skipped; zero survivors → friendly toast.
+   * Suspend one or more users. `@DbActionRows` infers `level: 'rows'`; the
+   * cell dropdown wraps a single row into `[{...}]` so this same handler
+   * covers per-row and toolbar bulk paths. Already-suspended rows are
+   * filtered out by the gate (they don't reach this handler).
    */
   @Post("actions/suspend")
-  @DbAction("suspend", {
+  @DbAction<typeof UsersTable, ["id", "username", "status"]>("suspend", {
     label: "Suspend",
     icon: "i-as-close",
     intent: "negative",
-    promptText: "Suspend the selected user(s)? They won't be able to sign in.",
+    requiredFields: ["id", "username", "status"],
+    disabled: perRow((u) => u.status === "suspended"),
+    onDisabledRows: "skip",
+    promptText: ["Suspend user $1?", "Suspend $N users? They won't be able to sign in."],
   })
   @ArbacAction("update")
-  async suspend(@DbActionPKs() ids: number[]) {
-    const selected = await usersTable.findMany({ filter: { id: { $in: ids } } });
-    const targets = selected.filter((u) => u.status !== "suspended");
-    if (targets.length === 0) {
-      return { ok: false, ids, message: "All selected users are already suspended." };
+  async suspend(@DbActionRows() rows: { id: number; username: string; status: string }[]) {
+    const targetIds = rows.map((r) => r.id);
+    if (targetIds.length === 0) {
+      return { ok: false, ids: [], message: "No users to suspend." };
     }
-    await usersTable.updateMany({ id: { $in: targets.map((u) => u.id) } }, { status: "suspended" });
+    await usersTable.updateMany({ id: { $in: targetIds } }, { status: "suspended" });
     return {
       ok: true,
-      ids: targets.map((u) => u.id),
-      message: `Suspended ${targets.length} user(s).`,
+      ids: targetIds,
+      message: `Suspended ${targetIds.length} user${targetIds.length === 1 ? "" : "s"}.`,
     };
   }
 }

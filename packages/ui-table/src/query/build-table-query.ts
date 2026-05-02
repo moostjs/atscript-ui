@@ -21,6 +21,13 @@ export interface BuildTableQueryOptions {
   search?: string;
   /** Search index name for `$search`. */
   searchIndex?: string;
+  /**
+   * Set `controls.$actions = true` so each returned row carries
+   * `$actions: string[]` — server-evaluated names of row/rows-level actions
+   * NOT disabled for that row. Off by default; renderers flip it on when a
+   * row-actions column will render gateable actions.
+   */
+  includeActions?: boolean;
 }
 
 /**
@@ -56,6 +63,10 @@ export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
   if (opts.search) {
     const searchKey: `$${string}` = opts.searchIndex ? `$search:${opts.searchIndex}` : "$search";
     controls[searchKey] = opts.search;
+  }
+
+  if (opts.includeActions) {
+    controls.$actions = true;
   }
 
   const query: Uniquery = { controls };

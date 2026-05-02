@@ -17,9 +17,7 @@ const REMOVE_DEFAULTS = {
   label: "Delete",
   icon: "i-as-trash",
   intent: "negative" as const,
-  // `{pk}` is substituted by `<AsRowActions>` at trigger time using the
-  // cell's resolved PK (formatted via `formatPk` for composite keys).
-  promptText: "Delete item ID {pk}?",
+  promptText: ["Delete item $1?", "Delete $N items?"] as [string, string],
 };
 
 interface CreateActionsOpts {
@@ -103,7 +101,7 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
 
   async function invoke(
     action: TVueTableActionInfo,
-    pk?: unknown,
+    pk?: Record<string, unknown> | Record<string, unknown>[],
     callOpts?: InvokeOpts,
   ): Promise<ActionResult> {
     const name = action.name;

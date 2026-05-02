@@ -94,8 +94,8 @@ describe("state.actions.invoke", () => {
   it("backend success → result + refresh by default", async () => {
     const { state, actionFn, pagesFn } = mountActionsState();
     pagesFn.mockClear();
-    const result = await state.actions.invoke(backendAction, "user-1");
-    expect(actionFn).toHaveBeenCalledWith("block", "user-1");
+    const result = await state.actions.invoke(backendAction, { id: "user-1" });
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" });
     expect(result.ok).toBe(true);
     expect(state.actions.lastResult.value.get("block")).toMatchObject({
       ok: true,
@@ -108,7 +108,7 @@ describe("state.actions.invoke", () => {
   it("refreshOnAction=false skips post-success refresh", async () => {
     const { state, pagesFn } = mountActionsState({ refreshOnAction: false });
     pagesFn.mockClear();
-    await state.actions.invoke(backendAction, "user-1");
+    await state.actions.invoke(backendAction, { id: "user-1" });
     await new Promise((r) => queueMicrotask(() => r(null)));
     expect(pagesFn).not.toHaveBeenCalled();
   });
@@ -116,16 +116,16 @@ describe("state.actions.invoke", () => {
   it("opts.suppressRefresh wins over refreshOnAction=true", async () => {
     const { state, pagesFn } = mountActionsState();
     pagesFn.mockClear();
-    await state.actions.invoke(backendAction, "user-1", { suppressRefresh: true });
+    await state.actions.invoke(backendAction, { id: "user-1" }, { suppressRefresh: true });
     await new Promise((r) => queueMicrotask(() => r(null)));
     expect(pagesFn).not.toHaveBeenCalled();
   });
 
   it("suppressRefresh is per-call, not sticky", async () => {
     const { state, pagesFn } = mountActionsState();
-    await state.actions.invoke(backendAction, "user-1", { suppressRefresh: true });
+    await state.actions.invoke(backendAction, { id: "user-1" }, { suppressRefresh: true });
     pagesFn.mockClear();
-    await state.actions.invoke(backendAction, "user-2");
+    await state.actions.invoke(backendAction, { id: "user-2" });
     await new Promise((r) => queueMicrotask(() => r(null)));
     expect(pagesFn).toHaveBeenCalledTimes(1);
   });
@@ -142,8 +142,8 @@ describe("state.actions.invoke", () => {
   it("navigate calls client.action but does not refresh", async () => {
     const { state, actionFn, pagesFn } = mountActionsState();
     pagesFn.mockClear();
-    const result = await state.actions.invoke(navigateAction, "user-1");
-    expect(actionFn).toHaveBeenCalledWith("edit", "user-1");
+    const result = await state.actions.invoke(navigateAction, { id: "user-1" });
+    expect(actionFn).toHaveBeenCalledWith("edit", { id: "user-1" });
     expect(result).toEqual({ ok: true, kind: "navigate" });
     await new Promise((r) => queueMicrotask(() => r(null)));
     expect(pagesFn).not.toHaveBeenCalled();
@@ -154,7 +154,7 @@ describe("state.actions.invoke", () => {
       actionImpl: () => Promise.reject(new Error("boom")),
     });
     pagesFn.mockClear();
-    const result = await state.actions.invoke(backendAction, "user-1");
+    const result = await state.actions.invoke(backendAction, { id: "user-1" });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.kind).toBe("error");
@@ -177,8 +177,8 @@ describe("state.actions.invoke", () => {
       } as unknown as () => Promise<unknown>,
     });
 
-    const a = state.actions.invoke({ ...backendAction, name: "a" }, 1);
-    const b = state.actions.invoke({ ...backendAction, name: "b" }, 2);
+    const a = state.actions.invoke({ ...backendAction, name: "a" }, { id: 1 });
+    const b = state.actions.invoke({ ...backendAction, name: "b" }, { id: 2 });
     await nextTick();
     expect(state.actions.invoking.value.has("a")).toBe(true);
     expect(state.actions.invoking.value.has("b")).toBe(true);
@@ -199,18 +199,18 @@ describe("state.actions.invoke", () => {
         seen.event = event;
       },
     });
-    await state.actions.invoke(backendAction, "user-1", { event: ev });
+    await state.actions.invoke(backendAction, { id: "user-1" }, { event: ev });
     expect(seen.event).toBe(ev);
   });
 
   it("lastResult populated for both success and error", async () => {
     const { state } = mountActionsState();
-    await state.actions.invoke(backendAction, "ok-pk");
+    await state.actions.invoke(backendAction, { id: "ok-pk" });
     expect(state.actions.lastResult.value.get("block")?.ok).toBe(true);
     const { state: errState } = mountActionsState({
       actionImpl: () => Promise.reject(new Error("nope")),
     });
-    await errState.actions.invoke(backendAction, "fail-pk");
+    await errState.actions.invoke(backendAction, { id: "fail-pk" });
     expect(errState.actions.lastResult.value.get("block")?.ok).toBe(false);
   });
 });

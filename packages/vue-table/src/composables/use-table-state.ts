@@ -50,7 +50,7 @@ import { createSelectionApi, type SelectionApiOptions } from "./state/create-sel
 import { createMainActionRegistry } from "./state/create-main-action-registry";
 import { createNavController } from "./state/create-nav-controller";
 import { createWindowFetcher } from "./state/create-window-fetcher";
-import { extractPk } from "./state/intent-scope";
+import { extractIdentifier } from "./state/intent-scope";
 
 const TABLE_KEY = "__as_table";
 const FILTER_DEBOUNCE_MS = 500;
@@ -199,10 +199,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     return result;
   });
 
-  // Renderer-owned. `<AsTable>` / `<AsWindowTable>` push `:row-delete` here
-  // via a watcher; `createActions` reads `.value` so the action set live-
-  // updates when the prop flips.
+  // Renderer-owned: pushed in by `<AsTable>` / `<AsWindowTable>` watchers.
   const rowDelete = ref<boolean | RowDeleteOpt>(false);
+  const includeActions = ref(false);
 
   const filters = shallowRef<FieldFilters>({});
   const results = shallowRef<Row[]>([]);
@@ -277,6 +276,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       filters: filters.value,
       forceFilters: queryOpts?.forceFilters,
       search: searchTerm.value || undefined,
+      includeActions: includeActions.value,
     });
   }
 
@@ -365,7 +365,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     getActiveRow,
     getDefaultRowAction: () => actions.default.row,
     invokeFallback: (action, row, event) =>
-      void actions.invoke(action, extractPk(row, tableDef.value?.primaryKeys ?? []), { event }),
+      void actions.invoke(action, extractIdentifier(row, tableDef.value?.preferredId ?? []), {
+        event,
+      }),
   });
   const {
     hasMainActionListener,
@@ -466,6 +468,11 @@ export function createTableState(opts: CreateTableStateOptions): {
     scheduleQuery("query");
   }
 
+  function requestRefresh(): void {
+    mustRefresh.value = true;
+    scheduleQuery();
+  }
+
   async function queryImmediate(): Promise<void> {
     pendingScheduledKind = null;
     if (queryOpts?.blockQuery) return;
@@ -527,6 +534,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     rowValueFn,
     isPkSelected,
     rowDelete,
+    includeActions,
     activeIndex,
     navMode,
     hasMainActionListener,
@@ -616,8 +624,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     (next, prev) => {
       if (!queryDetected) return;
       if (sortersEqual(prev, next)) return;
-      mustRefresh.value = true;
-      scheduleQuery();
+      requestRefresh();
     },
     { immediate: false },
   );
@@ -627,8 +634,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     (next, prev) => {
       if (!queryDetected) return;
       if (sameColumnSet(prev, next)) return;
-      mustRefresh.value = true;
-      scheduleQuery();
+      requestRefresh();
     },
     { immediate: false },
   );
@@ -643,6 +649,14 @@ export function createTableState(opts: CreateTableStateOptions): {
       if (!queryDetected) return;
       if (next.page === prev.page && next.itemsPerPage === prev.itemsPerPage) return;
       scheduleQuery();
+    },
+  );
+
+  watch(
+    () => includeActions.value,
+    () => {
+      if (!queryDetected) return;
+      requestRefresh();
     },
   );
 
@@ -735,6 +749,7 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
     columns: opts.columns,
     flatMap: new Map(),
     primaryKeys: [],
+    preferredId: [],
     crud: { query: [], pages: [], one: [] },
     canRemove: false,
     actions: { table: [], row: [], rows: [], default: {} },

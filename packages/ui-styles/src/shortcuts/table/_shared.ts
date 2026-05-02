@@ -47,7 +47,9 @@ export const menuItemIconHl = "[&_.as-column-menu-item-icon]:text-current-hl";
  * `TDbActionIntent` in `@atscript/db`. Wired now so the moment db-client
  * ships it, controllers can opt in without UI changes.
  */
-export function buildActionsIntentVariants(prefix: string): Record<string, string | Record<string, string>> {
+export function buildActionsIntentVariants(
+  prefix: string,
+): Record<string, string | Record<string, string>> {
   const btn = `[&.${prefix}-btn]:`;
   const item = `.${prefix}-menu-item`;
   const itemIcon = `${item}-icon`;

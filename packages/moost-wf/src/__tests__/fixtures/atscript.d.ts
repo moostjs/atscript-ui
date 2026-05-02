@@ -35,6 +35,7 @@ declare global {
     "db.table.filterable": string | true
     "db.table.sortable": string | true
     "db.table.renamed": string
+    "db.table.preferredId.uniqueIndex": string | true
     "db.schema": string
     "db.index.plain": ({ name?: string, sort?: string })[]
     "db.index.unique": (string | true)[]

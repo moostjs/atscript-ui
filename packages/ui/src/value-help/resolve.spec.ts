@@ -19,6 +19,7 @@ function buildMetaResponse(serialized: unknown) {
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: ["id"],
+    preferredId: ["id"],
     crud: { query: [], pages: [], one: [] },
     actions: [],
     relations: [],

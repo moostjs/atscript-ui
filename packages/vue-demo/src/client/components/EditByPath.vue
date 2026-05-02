@@ -20,20 +20,37 @@ const error = ref<string | null>(null);
 const savedAt = ref<number | null>(null);
 const formDef = ref<FormDef | null>(null);
 const record = ref<Record<string, unknown> | null>(null);
+const primaryKeys = ref<readonly string[]>([]);
 const types = createDemoTypes();
 
 const client = computed(() => clientForTable(props.tablePath));
 const canWrite = computed(() => !!me.value?.permissions?.[props.tablePath]?.write);
 
+function pickIdentifier(
+  source: Record<string, unknown> | string | number,
+  fields: readonly string[],
+): Record<string, unknown> | undefined {
+  if (fields.length === 0) return undefined;
+  if (typeof source === "object") {
+    const out: Record<string, unknown> = {};
+    for (const k of fields) out[k] = source[k];
+    return out;
+  }
+  return fields.length === 1 ? { [fields[0]!]: source } : undefined;
+}
+
 async function load() {
   loading.value = true;
   error.value = null;
   try {
-    const [meta, row] = await Promise.all([
-      client.value.meta(),
-      client.value.one(props.id as never),
-    ]);
+    const meta = await client.value.meta();
     formDef.value = createFormDef(deserializeAnnotatedType(meta.type));
+    primaryKeys.value = meta.primaryKeys ?? [];
+    // Route param `:id` carries the preferredId value (e.g. `username`,
+    // `sku`) — wrap it as `{ [field]: id }` so `client.one` hits the right
+    // unique index even when preferredId differs from PK.
+    const lookup = pickIdentifier(props.id, meta.preferredId ?? meta.primaryKeys ?? []);
+    const row = await client.value.one(lookup ?? (props.id as never));
     if (!row) throw new Error("Record not found");
     record.value = row as Record<string, unknown>;
   } catch (e) {
@@ -60,13 +77,17 @@ async function onSubmit(data: unknown) {
 }
 
 async function onDelete() {
+  if (!record.value) return;
+  // Always delete by primary key — preferredId is for URL/lookup only.
+  const pk = pickIdentifier(record.value, primaryKeys.value);
+  if (!pk) return;
   if (!window.confirm(`Delete ${props.tablePath} #${props.id}? This cannot be undone.`)) {
     return;
   }
   deleting.value = true;
   error.value = null;
   try {
-    await client.value.remove(props.id as never);
+    await client.value.remove(pk);
     void router.push(`/${props.tablePath}`);
   } catch (e) {
     error.value = (e as Error).message;

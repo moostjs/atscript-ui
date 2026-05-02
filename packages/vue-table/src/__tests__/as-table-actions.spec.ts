@@ -131,30 +131,32 @@ describe("<AsTableActions>", () => {
     expect(wrapper.find("button").text()).toContain("Export");
   });
 
-  it("forced level=rows passes selectedRows array as pk", async () => {
+  it("forced level=rows passes selectedRows as identifier-object array", async () => {
     const def: TDbActionInfo = { ...rowsBulk, default: true };
     const { wrapper, actionFn } = setup({
       level: "rows",
       rows: [def],
       defaultRows: def,
-      selectedRows: ["a", "b", "c"],
+      // Whole-row objects (default `rowValueFn = (row) => row`) carry the
+      // preferredId field — `extractIdentifier` picks `id` from each.
+      selectedRows: [{ id: "a", name: "A" }, { id: "b" }, { id: "c" }],
     });
     await wrapper.find("button").trigger("click");
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("bulk-lock", ["a", "b", "c"]);
+    expect(actionFn).toHaveBeenCalledWith("bulk-lock", [{ id: "a" }, { id: "b" }, { id: "c" }]);
   });
 
-  it("default button click invokes default with the resolved ids", async () => {
+  it("default button click invokes default with the resolved identifier objects", async () => {
     const def: TDbActionInfo = { ...rowsBulk, default: true };
     const { wrapper, actionFn } = setup({
       level: "rows",
       rows: [def],
       defaultRows: def,
-      selectedRows: ["a", "b"],
+      selectedRows: [{ id: "a" }, { id: "b" }],
     });
     await wrapper.find("button").trigger("click");
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("bulk-lock", ["a", "b"]);
+    expect(actionFn).toHaveBeenCalledWith("bulk-lock", [{ id: "a" }, { id: "b" }]);
   });
 
   it("scoped slot replaces built-in chrome", () => {

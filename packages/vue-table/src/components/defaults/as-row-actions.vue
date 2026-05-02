@@ -17,10 +17,10 @@ import { computed } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
 import {
+  applyRowGate,
   ariaLabelFor,
   confirmAction,
-  extractPk,
-  formatPk,
+  extractIdentifier,
   intentClass,
   pkForLevel,
 } from "../../composables/state/intent-scope";
@@ -28,70 +28,71 @@ import AsActionMenuContent from "../internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../../types";
 
 const props = defineProps<{
-  /** Row data — used when rendered as a cell via the cell-type dispatch. */
   row?: Record<string, unknown>;
-  /** Direct primary-key override. Wins over `row` when provided. */
-  pk?: unknown;
+  pk?: Record<string, unknown>;
 }>();
 
 const { state } = useTableContext();
 
-const resolvedPk = computed(() =>
-  props.pk !== undefined
-    ? props.pk
-    : extractPk(props.row, state.tableDef.value?.primaryKeys ?? []),
-);
+const view = computed(() => {
+  const sourceDefault = state.actions.default.row;
+  const filtered = applyRowGate(
+    {
+      default: sourceDefault,
+      others: state.actions.others.row,
+      rows: state.actions.rows,
+    },
+    props.row,
+  );
+  const total = (filtered.default ? 1 : 0) + filtered.others.length + filtered.rows.length;
+  const single =
+    total === 1 ? (filtered.default ?? filtered.others[0] ?? filtered.rows[0]) : undefined;
 
-const single = computed<TVueTableActionInfo | undefined>(() => {
-  const list = state.actions.cellRow;
-  return list.length === 1 ? list[0] : undefined;
+  return {
+    total,
+    default: filtered.default,
+    single,
+    singleLabelOnly: !!single && !single.icon,
+    singleIntentClass: single ? intentClass("as-row-actions", single) : undefined,
+    singleIsDefault: !!single && single === sourceDefault,
+    menuGroups: [filtered.default ? [filtered.default] : [], filtered.others, filtered.rows],
+  };
 });
-const singleIsLabelOnly = computed(() => !!single.value && !single.value.icon);
-const singleIntentClass = computed(() =>
-  single.value ? intentClass("as-row-actions", single.value) : undefined,
-);
-const singleIsDefault = computed(
-  () => !!single.value && single.value === state.actions.default.row,
-);
-
-const menuGroups = computed(() => [
-  state.actions.default.row ? [state.actions.default.row] : [],
-  state.actions.others.row,
-  state.actions.rows,
-]);
 
 async function trigger(action: TVueTableActionInfo, event?: MouseEvent | KeyboardEvent) {
-  const ok = await confirmAction(state, action, (text) =>
-    text.replace(/\{pk\}/g, () => formatPk(resolvedPk.value)),
-  );
+  const preferredId = state.tableDef.value?.preferredId ?? [];
+  const id = props.pk !== undefined ? props.pk : extractIdentifier(props.row, preferredId);
+  const identifiers = id === undefined ? [] : [id];
+  const ok = await confirmAction(state, action, { identifiers, preferredId });
   if (!ok) return;
-  const ids = resolvedPk.value === undefined ? [] : [resolvedPk.value];
-  void state.actions.invoke(action, pkForLevel(action.level, ids), { event });
+  void state.actions.invoke(action, pkForLevel(action.level, identifiers), { event });
 }
 </script>
 
 <template>
   <!-- table-layout: fixed needs a placeholder cell so column widths line up. -->
-  <td v-if="state.actions.cellRow.length === 0" class="as-row-actions" />
-  <td v-else-if="single" class="as-row-actions">
+  <td v-if="view.total === 0" class="as-row-actions" />
+  <td v-else-if="view.single" class="as-row-actions">
     <button
       type="button"
       class="as-row-actions-btn"
       :class="[
-        singleIsLabelOnly ? 'as-row-actions-btn-labelled' : undefined,
-        singleIntentClass,
+        view.singleLabelOnly ? 'as-row-actions-btn-labelled' : undefined,
+        view.singleIntentClass,
       ]"
-      :data-default="singleIsDefault || undefined"
-      :aria-label="ariaLabelFor(single)"
-      :title="ariaLabelFor(single)"
-      @click.stop="trigger(single, $event)"
+      :data-default="view.singleIsDefault || undefined"
+      :aria-label="ariaLabelFor(view.single)"
+      :title="ariaLabelFor(view.single)"
+      @click.stop="trigger(view.single, $event)"
     >
       <span
-        v-if="single.icon"
-        :class="['as-row-actions-btn-icon', single.icon]"
+        v-if="view.single.icon"
+        :class="['as-row-actions-btn-icon', view.single.icon]"
         aria-hidden="true"
       />
-      <span v-else class="as-row-actions-btn-label">{{ single.label || single.name }}</span>
+      <span v-else class="as-row-actions-btn-label">{{
+        view.single.label || view.single.name
+      }}</span>
     </button>
   </td>
   <td v-else class="as-row-actions">
@@ -109,8 +110,8 @@ async function trigger(action: TVueTableActionInfo, event?: MouseEvent | Keyboar
       </DropdownMenuTrigger>
       <DropdownMenuPortal>
         <AsActionMenuContent
-          :groups="menuGroups"
-          :default-marker="state.actions.default.row"
+          :groups="view.menuGroups"
+          :default-marker="view.default"
           prefix="as-row-actions"
           @select="trigger"
         />

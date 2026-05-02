@@ -10,10 +10,14 @@ import { mockColumn, mockTableDef } from "./helpers";
 
 interface MountOpts {
   rowActions?: TDbActionInfo[];
+  rowsActions?: TDbActionInfo[];
   defaultRow?: TDbActionInfo;
   rowDelete?: boolean;
   canRemove?: boolean;
-  pk?: unknown;
+  /** Identifier override forwarded to `<AsRowActions>` directly. */
+  pk?: Record<string, unknown>;
+  /** Row data forwarded to `<AsRowActions>` (used for `$actions` filtering). */
+  row?: Record<string, unknown>;
 }
 
 const block: TDbActionInfo = {
@@ -52,16 +56,21 @@ function setup(opts: MountOpts = {}) {
       state.rowDelete.value = opts.rowDelete ?? false;
       const def = mockTableDef([mockColumn("id"), mockColumn("name")]);
       if (opts.canRemove !== undefined) def.canRemove = opts.canRemove;
-      if (opts.rowActions) {
+      if (opts.rowActions || opts.rowsActions) {
         def.actions = {
           ...def.actions,
-          row: opts.rowActions,
+          row: opts.rowActions ?? def.actions.row,
+          rows: opts.rowsActions ?? def.actions.rows,
           default: { ...def.actions.default, row: opts.defaultRow },
         };
       }
       internals.init(def);
       provideTableContext({ state, client, controls: {} });
-      return () => h(AsRowActions, { pk: opts.pk ?? "user-1" });
+      return () =>
+        h(AsRowActions, {
+          pk: opts.pk ?? { id: "user-1" },
+          row: opts.row,
+        });
     },
   });
   const wrapper = mount(Host);
@@ -114,11 +123,11 @@ describe("<AsRowActions>", () => {
     expect(buttons[0]!.attributes("aria-label")).toBe("Row actions");
   });
 
-  it("click invokes state.actions.invoke with row PK", async () => {
-    const { wrapper, actionFn } = setup({ rowActions: [block], pk: "user-42" });
+  it("click invokes state.actions.invoke with the identifier object", async () => {
+    const { wrapper, actionFn } = setup({ rowActions: [block], pk: { id: "user-42" } });
     await wrapper.find("button").trigger("click");
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("block", "user-42");
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-42" });
   });
 
   it("with promptText, prompt-cancel skips invoke", async () => {
@@ -140,12 +149,15 @@ describe("<AsRowActions>", () => {
       ...block,
       promptText: "Really?",
     };
-    const { wrapper, state, actionFn } = setup({ rowActions: [promptAction], pk: "x" });
+    const { wrapper, state, actionFn } = setup({
+      rowActions: [promptAction],
+      pk: { id: "x" },
+    });
     await wrapper.find("button").trigger("click");
     expect(state.confirmRequest.value?.message).toBe("Really?");
     state.acceptPrompt();
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("block", "x");
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "x" });
   });
 
   it("prompt request maps action intent → scope for the styled button", async () => {
@@ -190,5 +202,125 @@ describe("<AsRowActions>", () => {
   it("__remove never auto-defaults", () => {
     const { state } = setup({ rowDelete: true, canRemove: true });
     expect(state.actions.default.row?.name).not.toBe("__remove");
+  });
+
+  // ── per-row server-evaluated availability ───────────────────────────────
+
+  describe("server-evaluated $actions filtering", () => {
+    const ship: TDbActionInfo = {
+      name: "ship",
+      label: "Ship",
+      level: "row",
+      processor: "backend",
+      value: "/orders/actions/ship",
+    };
+    const cancel: TDbActionInfo = {
+      name: "cancel",
+      label: "Cancel",
+      level: "rows",
+      processor: "backend",
+      value: "/orders/actions/cancel",
+    };
+    const editNav: TDbActionInfo = {
+      name: "edit",
+      label: "Edit",
+      level: "row",
+      processor: "navigate",
+      value: "/orders/$1/edit",
+    };
+
+    it("hides backend actions absent from row.$actions", () => {
+      const { wrapper } = setup({
+        rowActions: [ship],
+        rowsActions: [cancel],
+        row: { id: "ord-1", $actions: ["ship"] },
+      });
+      // ship is allowed (in $actions), cancel is not — only one action
+      // remains, so it collapses to the single labelled button.
+      const btn = wrapper.find("button");
+      expect(btn.attributes("aria-label")).toBe("Ship");
+    });
+
+    it("collapses to empty placeholder cell when all actions are filtered out", () => {
+      const { wrapper } = setup({
+        rowActions: [ship],
+        rowsActions: [cancel],
+        row: { id: "ord-1", $actions: [] },
+      });
+      expect(wrapper.findAll("button")).toHaveLength(0);
+    });
+
+    it("shows all actions when row.$actions is absent (legacy server / opt-out)", () => {
+      const { wrapper } = setup({
+        rowActions: [ship],
+        rowsActions: [cancel],
+        row: { id: "ord-1" },
+      });
+      expect(wrapper.find(".as-row-actions-more").exists()).toBe(true);
+    });
+
+    it("navigate-processor actions are exempt from $actions gating", () => {
+      // editNav (navigate) + ship (backend, not in $actions) → only edit
+      // survives the filter, which collapses to a single labelled button.
+      const { wrapper } = setup({
+        rowActions: [editNav, ship],
+        row: { id: "ord-1", $actions: [] }, // server says nothing allowed
+      });
+      const btn = wrapper.find("button");
+      expect(btn.attributes("aria-label")).toBe("Edit");
+    });
+
+    it("__remove (synthetic) is exempt from $actions gating", () => {
+      const { state } = setup({
+        rowDelete: true,
+        canRemove: true,
+        row: { id: "ord-1", $actions: [] },
+      });
+      // Server doesn't know about __remove — UI keeps it regardless.
+      expect(state.actions.row.find((a) => a.name === "__remove")).toBeDefined();
+    });
+  });
+
+  // ── promptText tuple + $1 / $N substitution ─────────────────────────────
+
+  describe("promptText tuple + $1/$N substitution", () => {
+    it("substitutes $1 with preferredId values from the row", async () => {
+      const promptAction: TDbActionInfo = {
+        ...block,
+        promptText: "Block $1?",
+      };
+      const { wrapper, state } = setup({
+        rowActions: [promptAction],
+        pk: { id: "alice" },
+      });
+      await wrapper.find("button").trigger("click");
+      expect(state.confirmRequest.value?.message).toBe("Block alice?");
+      state.dismissPrompt();
+    });
+
+    it("picks the singular tuple form for a single-row context", async () => {
+      const promptAction: TDbActionInfo = {
+        ...block,
+        promptText: ["Block user $1?", "Block $N users?"],
+      };
+      const { wrapper, state } = setup({
+        rowActions: [promptAction],
+        pk: { id: "alice" },
+      });
+      await wrapper.find("button").trigger("click");
+      expect(state.confirmRequest.value?.message).toBe("Block user alice?");
+      state.dismissPrompt();
+    });
+
+    it("synthesised __remove default uses the tuple-form prompt", async () => {
+      const { wrapper, state } = setup({
+        rowDelete: true,
+        canRemove: true,
+        pk: { id: "ord-7" },
+      });
+      await wrapper.find("button").trigger("click");
+      expect(state.confirmRequest.value?.message).toBe("Delete item ord-7?");
+      state.dismissPrompt();
+    });
   });
 });

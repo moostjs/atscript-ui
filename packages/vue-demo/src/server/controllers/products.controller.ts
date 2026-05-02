@@ -1,9 +1,11 @@
 import {
   TableController,
   DbAction,
-  DbActionPK,
+  DbActionID,
+  DbActionRow,
   DbRowActions,
   DbTableActions,
+  perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
 import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
@@ -38,37 +40,31 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
 export class ProductsController extends AsArbacDbController<typeof ProductsTable> {
   /** Sets `publishedAt = now` if currently null. */
   @Post("actions/publish")
-  @DbAction("publish", {
+  @DbAction<typeof ProductsTable, ["id", "sku", "publishedAt"]>("publish", {
     label: "Publish",
     icon: "i-as-check",
     intent: "positive",
+    requiredFields: ["id", "sku", "publishedAt"],
+    disabled: perRow((p) => p.publishedAt != null),
   })
   @ArbacAction("update")
-  async publish(@DbActionPK() id: number) {
-    const row = await productsTable.findById(id);
-    if (!row) return { ok: false, id, message: `Product ${id} not found` };
-    if (row.publishedAt) {
-      return { ok: false, id, message: `Product ${id} is already published` };
-    }
-    await productsTable.updateOne({ id, publishedAt: Date.now() });
-    return { ok: true, id, message: `Product ${id} published` };
+  async publish(@DbActionRow() row: { id: number; sku: string; publishedAt?: number }) {
+    await productsTable.updateOne({ id: row.id, publishedAt: Date.now() });
+    return { ok: true, id: row.id, message: `Product ${row.sku} published` };
   }
 
   @Post("actions/unpublish")
-  @DbAction("unpublish", {
+  @DbAction<typeof ProductsTable, ["id", "sku", "publishedAt"]>("unpublish", {
     label: "Unpublish",
     icon: "i-as-close",
     intent: "secondary",
+    requiredFields: ["id", "sku", "publishedAt"],
+    disabled: perRow((p) => p.publishedAt == null),
   })
   @ArbacAction("update")
-  async unpublish(@DbActionPK() id: number) {
-    const row = await productsTable.findById(id);
-    if (!row) return { ok: false, id, message: `Product ${id} not found` };
-    if (!row.publishedAt) {
-      return { ok: false, id, message: `Product ${id} is not published` };
-    }
-    await productsTable.updateOne({ id, publishedAt: undefined });
-    return { ok: true, id, message: `Product ${id} unpublished` };
+  async unpublish(@DbActionRow() row: { id: number; sku: string; publishedAt?: number }) {
+    await productsTable.updateOne({ id: row.id, publishedAt: undefined });
+    return { ok: true, id: row.id, message: `Product ${row.sku} unpublished` };
   }
 
   @Post("actions/duplicate")
@@ -78,9 +74,12 @@ export class ProductsController extends AsArbacDbController<typeof ProductsTable
     intent: "primary",
   })
   @ArbacAction("update")
-  async duplicate(@DbActionPK() id: number) {
-    const row = await productsTable.findById(id);
-    if (!row) return { ok: false, id, message: `Product ${id} not found` };
+  async duplicate(@DbActionID() id: Record<string, unknown>) {
+    // `duplicate` needs the FULL row (every column for the clone), so the
+    // gate-loaded projection isn't enough — fetch directly. Identifier shape
+    // varies with `meta.preferredId` (PK vs SKU); findOne handles both.
+    const row = await productsTable.findOne({ filter: id as never });
+    if (!row) return { ok: false, message: `Product not found` };
     const { id: _omitId, sku, name, ...rest } = row;
     await productsTable.insertOne({
       ...rest,
@@ -88,6 +87,6 @@ export class ProductsController extends AsArbacDbController<typeof ProductsTable
       sku: `${sku}-COPY-${Date.now().toString(36)}`,
       publishedAt: undefined,
     });
-    return { ok: true, id, message: `Duplicated product ${id}` };
+    return { ok: true, id: row.id, message: `Duplicated product ${row.sku}` };
   }
 }

@@ -88,6 +88,9 @@ export function createTableDef(
     columns,
     flatMap,
     primaryKeys: meta.primaryKeys,
+    // Older servers / stub fixtures may omit `preferredId` — fall back to PK
+    // so identifier extraction and `$1` substitution stay defined.
+    preferredId: meta.preferredId ?? meta.primaryKeys,
     crud,
     canRemove: "remove" in crud,
     actions,
@@ -98,9 +101,9 @@ export function createTableDef(
   };
 }
 
-/** Sort by (order ?? 0). `Array.prototype.sort` is stable per spec since ES2019, so ties preserve declaration order. */
+/** Sort by (order ?? 0). `toSorted` is stable per spec, so ties preserve declaration order. */
 function byOrder(xs: TDbActionInfo[]): TDbActionInfo[] {
-  return xs.slice().sort((x, y) => (x.order ?? 0) - (y.order ?? 0));
+  return xs.toSorted((x, y) => (x.order ?? 0) - (y.order ?? 0));
 }
 
 /**

@@ -1,6 +1,7 @@
 import { RolesTable } from './roles'
 
 @db.table 'users'
+@db.table.preferredId.uniqueIndex 'users_username_idx'
 export interface UsersTable {
     @meta.id
     @db.default.increment

@@ -68,3 +68,4 @@ export {
 export { getColumnWidth } from "./utils/column-width";
 export { getCellValue } from "./utils/get-cell-value";
 export { formatCellValue } from "./utils/format-cell";
+export { extractIdentifier } from "./composables/state/intent-scope";

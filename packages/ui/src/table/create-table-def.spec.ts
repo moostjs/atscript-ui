@@ -55,6 +55,7 @@ function buildMeta(
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: [],
+    preferredId: [],
     crud: {},
     actions: [],
     relations: [],
@@ -210,6 +211,7 @@ describe("createTableDef", () => {
   it("passes through primaryKeys, crud, searchable flags", () => {
     const meta = buildMeta({ id: stringProp() }, undefined, {
       primaryKeys: ["id"],
+      preferredId: ["id"],
       crud: { query: [], pages: [], one: [] },
       searchable: true,
       vectorSearchable: true,
@@ -217,10 +219,32 @@ describe("createTableDef", () => {
     const def = createTableDef(meta);
 
     expect(def.primaryKeys).toEqual(["id"]);
+    expect(def.preferredId).toEqual(["id"]);
     expect(def.crud).toEqual({ query: [], pages: [], one: [] });
     expect(def.canRemove).toBe(false);
     expect(def.searchable).toBe(true);
     expect(def.vectorSearchable).toBe(true);
+  });
+
+  it("preferredId comes from meta when distinct from primaryKeys", () => {
+    const meta = buildMeta({ id: stringProp(), slug: stringProp() }, undefined, {
+      primaryKeys: ["id"],
+      preferredId: ["slug"],
+    });
+    const def = createTableDef(meta);
+
+    expect(def.primaryKeys).toEqual(["id"]);
+    expect(def.preferredId).toEqual(["slug"]);
+  });
+
+  it("preferredId falls back to primaryKeys when meta omits it (legacy server)", () => {
+    const meta = buildMeta({ id: stringProp() }, undefined, {
+      primaryKeys: ["id"],
+    });
+    delete (meta as { preferredId?: unknown }).preferredId;
+    const def = createTableDef(meta);
+
+    expect(def.preferredId).toEqual(["id"]);
   });
 
   it("passes through relations and searchIndexes", () => {
@@ -246,6 +270,7 @@ describe("createTableDef", () => {
       vectorSearchable: false,
       searchIndexes: [],
       primaryKeys: ["authorId"],
+      preferredId: ["authorId"],
       crud: { query: [], pages: [], one: [] },
       actions: [],
       relations: [],

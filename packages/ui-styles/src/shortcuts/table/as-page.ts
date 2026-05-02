@@ -56,8 +56,7 @@ export const asPageShortcuts = defineShortcuts({
   // Pinned to `min-h-fingertip-m` so the row keeps a stable height when the
   // selection summary (Clear button) appears/disappears — without this, the
   // pill-only state collapses to text height and the row jumps.
-  "as-page-toolbar-right":
-    "flex items-center gap-$s flex-shrink-0 col-start-2 min-h-fingertip-m",
+  "as-page-toolbar-right": "flex items-center gap-$s flex-shrink-0 col-start-2 min-h-fingertip-m",
   "as-page-pill":
     "inline-flex items-center gap-$xs px-$s py-$xs rounded-r0 layer-2 text-current/70 text-callout font-mono whitespace-nowrap",
   "as-page-pill-strong": "text-current font-600",
@@ -71,8 +70,7 @@ export const asPageShortcuts = defineShortcuts({
   // pushes to the row's right end so it visually pairs with the count
   // pill above.
   "as-page-selection-summary": "ml-auto flex items-center gap-$s",
-  "as-page-selection-count":
-    "scope-primary font-mono text-callout font-600 text-current-hl",
+  "as-page-selection-count": "scope-primary font-mono text-callout font-600 text-current-hl",
   "as-page-clear": {
     "": "inline-flex items-center gap-$xs h-fingertip-m px-$s border-0 bg-transparent text-current/70 text-callout cursor-pointer ml-auto transition-colors duration-120",
     "hover:": "text-current-hl",

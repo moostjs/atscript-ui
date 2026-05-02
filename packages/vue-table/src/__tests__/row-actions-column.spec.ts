@@ -32,6 +32,7 @@ function buildMeta(actions: TDbActionInfo[]): MetaResponse {
       name: { sortable: true, filterable: true },
     },
     primaryKeys: ["id"],
+    preferredId: ["id"],
     crud: { query: [], pages: [], one: [] },
     actions,
     searchable: false,

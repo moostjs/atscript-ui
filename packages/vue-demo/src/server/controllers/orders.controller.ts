@@ -1,10 +1,11 @@
 import {
   TableController,
   DbAction,
-  DbActionPK,
-  DbActionPKs,
+  DbActionID,
+  DbActionIDs,
   DbRowActions,
   DbTableActions,
+  perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
 import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
@@ -49,92 +50,76 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
 export class OrdersController extends AsArbacDbController<typeof OrdersTable> {
   /** `pending` → `processing`. */
   @Post("actions/process")
-  @DbAction("process", {
+  @DbAction<typeof OrdersTable, ["status"]>("process", {
     label: "Process",
     icon: "i-as-refresh",
     intent: "primary",
+    requiredFields: ["status"],
+    disabled: perRow((o) => o.status !== "pending"),
   })
   @ArbacAction("update")
-  async processOrder(@DbActionPK() id: number) {
-    const row = await ordersTable.findById(id);
-    if (!row) return { ok: false, id, message: `Order ${id} not found` };
-    if (row.status !== "pending") {
-      return { ok: false, id, message: `Order ${id} is ${row.status}, not pending` };
-    }
-    await ordersTable.updateOne({ id, status: "processing" });
-    return { ok: true, id, message: `Order ${id} → processing` };
+  async processOrder(@DbActionID() id: { id: number }) {
+    await ordersTable.updateOne({ id: id.id, status: "processing" });
+    return { ok: true, id: id.id, message: `Order ${id.id} → processing` };
   }
 
   /** `processing` → `shipped`. Sets `shippedAt`. */
   @Post("actions/ship")
-  @DbAction("ship", {
+  @DbAction<typeof OrdersTable, ["status"]>("ship", {
     label: "Ship",
     icon: "i-as-arrow-up",
     intent: "primary",
+    requiredFields: ["status"],
+    disabled: perRow((o) => o.status !== "processing"),
   })
   @ArbacAction("update")
-  async shipOrder(@DbActionPK() id: number) {
-    const row = await ordersTable.findById(id);
-    if (!row) return { ok: false, id, message: `Order ${id} not found` };
-    if (row.status !== "processing") {
-      return { ok: false, id, message: `Order ${id} is ${row.status}, not processing` };
-    }
-    await ordersTable.updateOne({ id, status: "shipped", shippedAt: Date.now() });
-    return { ok: true, id, message: `Order ${id} shipped` };
+  async shipOrder(@DbActionID() id: { id: number }) {
+    await ordersTable.updateOne({ id: id.id, status: "shipped", shippedAt: Date.now() });
+    return { ok: true, id: id.id, message: `Order ${id.id} shipped` };
   }
 
   /** `shipped` → `delivered`. */
   @Post("actions/mark-delivered")
-  @DbAction("mark-delivered", {
+  @DbAction<typeof OrdersTable, ["status"]>("mark-delivered", {
     label: "Mark delivered",
     icon: "i-as-check",
     intent: "positive",
+    requiredFields: ["status"],
+    disabled: perRow((o) => o.status !== "shipped"),
   })
   @ArbacAction("update")
-  async markDelivered(@DbActionPK() id: number) {
-    const row = await ordersTable.findById(id);
-    if (!row) return { ok: false, id, message: `Order ${id} not found` };
-    if (row.status !== "shipped") {
-      return { ok: false, id, message: `Order ${id} is ${row.status}, not shipped` };
-    }
-    await ordersTable.updateOne({ id, status: "delivered" });
-    return { ok: true, id, message: `Order ${id} → delivered` };
+  async markDelivered(@DbActionID() id: { id: number }) {
+    await ordersTable.updateOne({ id: id.id, status: "delivered" });
+    return { ok: true, id: id.id, message: `Order ${id.id} → delivered` };
   }
 
   /**
-   * Cancel one or more orders. `@DbActionPKs` infers `level: 'rows'`; the
-   * cell dropdown wraps a single pk into `[pk]` so this same handler covers
-   * per-row and toolbar bulk paths. Delivered/cancelled rows are silently
-   * filtered; zero survivors → friendly toast.
+   * Cancel one or more orders. `@DbActionIDs` infers `level: 'rows'`; the
+   * cell dropdown wraps a single id into `[{id}]` so this same handler
+   * covers per-row and toolbar bulk paths. The gate filters out
+   * delivered/cancelled rows; zero survivors → friendly toast.
    */
   @Post("actions/cancel")
-  @DbAction("cancel", {
+  @DbAction<typeof OrdersTable, ["status"]>("cancel", {
     label: "Cancel",
     icon: "i-as-close",
     intent: "negative",
-    promptText: "Cancel the selected order(s)? Delivered orders will be skipped.",
+    requiredFields: ["status"],
+    disabled: perRow((o) => o.status === "delivered" || o.status === "cancelled"),
+    onDisabledRows: "skip",
+    promptText: ["Cancel order $1?", "Cancel $N orders? Delivered/cancelled rows are skipped."],
   })
   @ArbacAction("update")
-  async cancel(@DbActionPKs() ids: number[]) {
-    const selected = await ordersTable.findMany({ filter: { id: { $in: ids } } });
-    const cancellableIds: number[] = [];
-    let skippedCount = 0;
-    for (const o of selected) {
-      if (o.status === "delivered" || o.status === "cancelled") skippedCount++;
-      else cancellableIds.push(o.id);
+  async cancel(@DbActionIDs() ids: { id: number }[]) {
+    const targetIds = ids.map((o) => o.id);
+    if (targetIds.length === 0) {
+      return { ok: false, ids: [], message: "No cancellable orders selected." };
     }
-    if (cancellableIds.length === 0) {
-      return {
-        ok: false,
-        ids,
-        message: `Nothing to cancel — ${skippedCount} order(s) already delivered or cancelled.`,
-      };
-    }
-    await ordersTable.updateMany({ id: { $in: cancellableIds } }, { status: "cancelled" });
+    await ordersTable.updateMany({ id: { $in: targetIds } }, { status: "cancelled" });
     return {
       ok: true,
-      ids: cancellableIds,
-      message: `Cancelled ${cancellableIds.length} order(s)${skippedCount ? `, skipped ${skippedCount}` : ""}.`,
+      ids: targetIds,
+      message: `Cancelled ${targetIds.length} order${targetIds.length === 1 ? "" : "s"}.`,
     };
   }
 }

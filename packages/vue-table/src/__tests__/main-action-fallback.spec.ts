@@ -69,7 +69,7 @@ describe("main-action fallback", () => {
     state.requestMainAction(new KeyboardEvent("keydown"));
     await Promise.resolve();
     await Promise.resolve();
-    expect(actionFn).toHaveBeenCalledWith("block", "user-1");
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" });
   });
 
   it("registered listener wins over fallback", async () => {
@@ -105,7 +105,7 @@ describe("main-action fallback", () => {
     state.handleNavKey(ev);
     await Promise.resolve();
     await Promise.resolve();
-    expect(actionFn).toHaveBeenCalledWith("block", "user-1");
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" });
   });
 
   it("requestMainAction with no active row is a no-op even with default", async () => {
@@ -137,9 +137,12 @@ describe("main-action fallback", () => {
       rowActions: [{ ...block, default: true }],
       defaultRow: { ...block, default: true },
     });
-    // Replace tableDef so primaryKeys is empty.
+    // Replace tableDef so primaryKeys + preferredId are empty (simulating
+    // a no-identifier table — both clear, since `preferredId` defaults to
+    // `primaryKeys` only when undefined on the wire, not when explicitly
+    // emptied).
     const def = state.tableDef.value!;
-    state.tableDef.value = { ...def, primaryKeys: [] };
+    state.tableDef.value = { ...def, primaryKeys: [], preferredId: [] };
     state.setActive(0);
     state.requestMainAction(new KeyboardEvent("keydown"));
     await Promise.resolve();

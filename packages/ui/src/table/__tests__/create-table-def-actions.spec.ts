@@ -13,6 +13,7 @@ function buildMeta(actions: TDbActionInfo[], crud: TCrudPermissions = {}): MetaR
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: ["id"],
+    preferredId: ["id"],
     crud,
     actions,
     relations: [],
@@ -81,10 +82,7 @@ describe("createTableDef — actions grouping", () => {
 
   it("multiple defaults at same level — first wins, second still listed", () => {
     const def = createTableDef(
-      buildMeta([
-        A("a", "row", { default: true }),
-        A("b", "row", { default: true }),
-      ]),
+      buildMeta([A("a", "row", { default: true }), A("b", "row", { default: true })]),
     );
     expect(def.actions.default.row?.name).toBe("a");
     expect(def.actions.row.map((a) => a.name)).toEqual(["a", "b"]);

@@ -86,14 +86,25 @@ const emit = defineEmits<{
 
 const { state } = useTableContext();
 
-// Renderer owns the row-delete opt-in. The synthetic `__remove` action
-// in `state.actions.row` is computed from `state.rowDelete.value` —
-// pushing the prop through here keeps the action set in sync as the prop
-// flips at runtime.
 watch(
   () => props.rowDelete,
   (val) => {
     state.rowDelete.value = val;
+  },
+  { immediate: true },
+);
+
+// `?$actions=true` is gated on this watcher so tables without a row-actions
+// column don't pay the per-row payload cost.
+watch(
+  () => {
+    const placement = props.rowActionsColumn;
+    if (!placement) return false;
+    if (placement === "merge-select" && props.select !== "none") return false;
+    return state.actions.cellRow.length > 0;
+  },
+  (on) => {
+    state.includeActions.value = on;
   },
   { immediate: true },
 );

@@ -67,7 +67,17 @@ export interface TableActionsState {
    * the state so per-row cells don't re-derive it.
    */
   cellRow: TVueTableActionInfo[];
-  invoke: (action: TVueTableActionInfo, pk?: unknown, opts?: InvokeOpts) => Promise<ActionResult>;
+  /**
+   * Invoke an action. `pk` is an identifier object (or array for `'rows'`)
+   * built from `preferredId`. Per `@atscript/db-client` invariant #11 the
+   * server rejects bare scalars — even single-field PK tables send
+   * `{ id: '...' }`.
+   */
+  invoke: (
+    action: TVueTableActionInfo,
+    pk?: Record<string, unknown> | Record<string, unknown>[],
+    opts?: InvokeOpts,
+  ) => Promise<ActionResult>;
   /** Set of action names with an in-flight invoke. */
   invoking: ShallowRef<Set<string>>;
   /** Latest result keyed by action name. */
@@ -310,6 +320,14 @@ export interface ReactiveTableState extends TableStateMethods {
    * remounting.
    */
   rowDelete: Ref<boolean | RowDeleteOpt>;
+  /**
+   * `?$actions=true` opt-in — writable ref owned by the renderer.
+   * `<AsTable>` / `<AsWindowTable>` flip this on whenever their
+   * `:row-actions-column` prop is non-`false` AND the table has at least one
+   * row/rows-level action. When on, `buildTableQuery` requests per-row
+   * `$actions: string[]` so the dropdown can hide server-disabled actions.
+   */
+  includeActions: Ref<boolean>;
   /**
    * Whether `pk` is in the current selection set. Mode-independent — the
    * renderer is expected to keep `selectedRows` empty in `select="none"`

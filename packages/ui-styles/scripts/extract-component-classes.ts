@@ -185,11 +185,7 @@ async function main() {
       visited.add(id);
 
       const cleanId = stripQueryParams(id);
-      if (
-        SOURCE_EXT_RE.test(cleanId) &&
-        !TEST_SUFFIX_RE.test(cleanId) &&
-        !cleanId.includes("\0")
-      ) {
+      if (SOURCE_EXT_RE.test(cleanId) && !TEST_SUFFIX_RE.test(cleanId) && !cleanId.includes("\0")) {
         sourceFiles.add(cleanId);
       }
 

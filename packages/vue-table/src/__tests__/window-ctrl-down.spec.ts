@@ -16,8 +16,8 @@ import type { Client } from "@atscript/db-client";
 describe("window: ctrl+down activates last row", () => {
   it("active class applies after block load", async () => {
     const TOTAL = 1000;
-    let blockResolver: ((rows: any[]) => void) | null = null;
-    let bootstrapResolver: ((rows: any[]) => void) | null = null;
+    let blockResolver = null as ((rows: any[]) => void) | null;
+    let bootstrapResolver = null as ((rows: any[]) => void) | null;
 
     const pagesFn = (q: any, page: number, size: number) => {
       const skip = (page - 1) * size;

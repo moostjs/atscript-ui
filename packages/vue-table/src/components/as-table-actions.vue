@@ -16,9 +16,10 @@ import { computed } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
 import {
+  applyRowGate,
   ariaLabelFor,
+  collectIdentifiers,
   confirmAction,
-  extractPk,
   intentClass,
   pkForLevel,
 } from "../composables/state/intent-scope";
@@ -53,8 +54,10 @@ interface Resolved {
    */
   trailingRowActions: TVueTableActionInfo[];
   level: "table" | "rows" | "row";
-  ids: unknown[];
+  ids: Record<string, unknown>[];
 }
+
+const EMPTY_IDS: Record<string, unknown>[] = [];
 
 // Promote a sole non-default entry into `defaultAction` so it renders as a
 // labelled button rather than hiding alone behind a `…` dropdown.
@@ -76,10 +79,13 @@ function resolveLevel(
   return "rows";
 }
 
+const preferredId = computed(() => state.tableDef.value?.preferredId ?? []);
+
 const resolved = computed<Resolved>(() => {
   const selectedCount = state.selectedCount.value;
   const explicit = props.level;
   const effectiveLevel = resolveLevel(explicit, selectedCount);
+  const pid = preferredId.value;
 
   if (effectiveLevel === "table") {
     return collapseSingle({
@@ -87,34 +93,39 @@ const resolved = computed<Resolved>(() => {
       otherActions: state.actions.others.table,
       trailingRowActions: [],
       level: "table",
-      ids: [],
+      ids: EMPTY_IDS,
     });
   }
   if (effectiveLevel === "row") {
-    const ids: unknown[] = [];
-    if (explicit === "auto" && selectedCount === 1) {
-      // Auto + 1 selected: drive the toolbar from the user's selection, not
-      // the active (highlighted) row. selectedRows already carries the pk
-      // shape produced by the consumer's `rowValueFn`.
-      const sel = state.selectedRows.value[0];
-      if (sel !== undefined) ids.push(sel);
-    } else {
-      const activeIdx = state.activeIndex.value;
-      if (activeIdx >= 0) {
-        const row = state.results.value[activeIdx - state.resultsStart.value];
-        const pk = extractPk(row, state.tableDef.value?.primaryKeys ?? []);
-        if (pk !== undefined) ids.push(pk);
-      }
-    }
-    // Auto + 1: surface bulk actions in the trailing menu so e.g. "Suspend
-    // selected" stays reachable while the row default renders as the CTA.
-    const trailing = explicit === "auto" && selectedCount === 1 ? state.actions.rows : [];
+    // Auto + 1 selected: drive the toolbar from the user's selection (which
+    // holds whatever `rowValueFn` returns — collectIdentifiers normalises
+    // both row-shaped and scalar values, per db-client invariant #11).
+    // Otherwise: derive from the active (highlighted) row.
+    const source =
+      explicit === "auto" && selectedCount === 1
+        ? state.selectedRows.value[0]
+        : state.activeIndex.value >= 0
+          ? state.results.value[state.activeIndex.value - state.resultsStart.value]
+          : undefined;
+    // Same `$actions` gate as the per-row dropdown — without it, the toolbar
+    // would surface row actions the server has just disabled for that row.
+    // Auto + 1 also surfaces bulk actions in the trailing menu so e.g.
+    // "Suspend selected" stays reachable while the row default renders as
+    // the CTA.
+    const filtered = applyRowGate(
+      {
+        default: state.actions.default.row,
+        others: state.actions.others.row,
+        rows: explicit === "auto" && selectedCount === 1 ? state.actions.rows : [],
+      },
+      source,
+    );
     return collapseSingle({
-      defaultAction: state.actions.default.row,
-      otherActions: state.actions.others.row,
-      trailingRowActions: trailing,
+      defaultAction: filtered.default,
+      otherActions: filtered.others,
+      trailingRowActions: filtered.rows,
       level: "row",
-      ids,
+      ids: collectIdentifiers([source], pid),
     });
   }
   return collapseSingle({
@@ -122,7 +133,7 @@ const resolved = computed<Resolved>(() => {
     otherActions: state.actions.others.rows,
     trailingRowActions: [],
     level: "rows",
-    ids: state.selectedRows.value.slice(),
+    ids: collectIdentifiers(state.selectedRows.value, pid),
   });
 });
 
@@ -134,11 +145,15 @@ const hasAny = computed(
 );
 
 async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | KeyboardEvent) {
-  const ok = await confirmAction(state, action);
+  const identifiers = resolved.value.ids;
+  const ok = await confirmAction(state, action, {
+    identifiers,
+    preferredId: preferredId.value,
+  });
   if (!ok) return;
   // pk shape follows the action's own level, not the resolved bucket — auto+1
   // mixes row-level and rows-level actions in the same dropdown.
-  void state.actions.invoke(action, pkForLevel(action.level, resolved.value.ids), { event });
+  void state.actions.invoke(action, pkForLevel(action.level, identifiers), { event });
 }
 </script>
 

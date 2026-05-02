@@ -2,6 +2,7 @@ import { CategoriesTable } from './categories'
 import { UsersTable } from './users'
 
 @db.table 'products'
+@db.table.preferredId.uniqueIndex 'products_sku_idx'
 export interface ProductsTable {
     @meta.id
     @db.default.increment

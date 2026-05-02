@@ -158,4 +158,35 @@ describe("buildTableQuery", () => {
       $search: "test",
     });
   });
+
+  // ── $actions URL control ───────────────────────────────────────────────
+
+  it("does not set controls.$actions by default", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: emptyFilters,
+    });
+    expect(q.controls!.$actions).toBeUndefined();
+  });
+
+  it("sets controls.$actions = true when includeActions is on", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: emptyFilters,
+      includeActions: true,
+    });
+    expect(q.controls!.$actions).toBe(true);
+  });
+
+  it("does not set controls.$actions when includeActions is explicitly false", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: emptyFilters,
+      includeActions: false,
+    });
+    expect(q.controls!.$actions).toBeUndefined();
+  });
 });

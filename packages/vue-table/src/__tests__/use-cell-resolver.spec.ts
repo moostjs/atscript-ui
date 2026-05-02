@@ -27,6 +27,7 @@ function buildTableDef(props: Record<string, ReturnType<typeof stringProp>>) {
     vectorSearchable: false,
     searchIndexes: [],
     primaryKeys: [],
+    preferredId: [],
     crud: {},
     actions: [],
     relations: [],

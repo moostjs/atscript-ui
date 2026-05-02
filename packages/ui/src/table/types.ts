@@ -30,6 +30,13 @@ export interface MetaResponse {
   vectorSearchable: boolean;
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
+  /**
+   * Preferred row identifier (UI/wire addressing). From
+   * `@db.table.preferredId.uniqueIndex` — defaults to `primaryKeys` when the
+   * server omits it (older servers / stub fixtures). Drives identifier object
+   * construction for action POSTs and `'navigate'` URL `$1` substitution.
+   */
+  preferredId: string[];
   crud: TCrudPermissions;
   actions: TDbActionInfo[];
   relations: RelationInfo[];
@@ -70,6 +77,8 @@ export interface TableDef {
    */
   flatMap: Map<string, TAtscriptAnnotatedType>;
   primaryKeys: string[];
+  /** Preferred row identifier — see `MetaResponse.preferredId`. */
+  preferredId: string[];
   /** Per-op CRUD permissions advertised in `/meta`. Key absent → denied. */
   crud: TCrudPermissions;
   canRemove: boolean;

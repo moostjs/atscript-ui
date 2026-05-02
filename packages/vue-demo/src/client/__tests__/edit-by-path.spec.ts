@@ -26,6 +26,8 @@ vi.mock("../api/client-factory", () => ({
   clientForTable: () => ({
     meta: vi.fn().mockResolvedValue({
       type: { kind: "interface", name: "Stub", properties: {} },
+      primaryKeys: ["id"],
+      preferredId: ["id"],
       fields: {
         id: { sortable: true, filterable: true },
         name: { sortable: true, filterable: true },
