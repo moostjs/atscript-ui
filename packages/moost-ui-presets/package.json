@@ -1,0 +1,52 @@
+{
+  "name": "@atscript/moost-ui-presets",
+  "version": "0.0.1",
+  "description": "Moost controller and atscript schema for table-preset persistence — server-side persistence layer for atscript-ui table presets",
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "devDependencies": {
+    "@atscript/core": "catalog:",
+    "@atscript/db": "catalog:",
+    "@atscript/db-sqlite": "catalog:",
+    "@atscript/moost-db": "catalog:",
+    "@atscript/typescript": "catalog:",
+    "@atscript/ui-table": "workspace:*",
+    "@moostjs/event-http": "catalog:",
+    "@swc/core": "catalog:",
+    "@uniqu/core": "catalog:",
+    "@wooksjs/event-http": "catalog:",
+    "moost": "catalog:",
+    "unplugin-atscript": "catalog:",
+    "unplugin-swc": "catalog:",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@atscript/core": "^0.1.50",
+    "@atscript/db": "^0.1.60",
+    "@atscript/moost-db": "^0.1.60",
+    "@atscript/typescript": "^0.1.50",
+    "@atscript/ui-table": "workspace:*",
+    "@moostjs/event-http": "^0.6.8",
+    "moost": "^0.6.8"
+  }
+}

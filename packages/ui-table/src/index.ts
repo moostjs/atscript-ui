@@ -34,10 +34,13 @@ export type { DateShortcut } from "./filters/date-shortcuts";
 export { dateShortcuts } from "./filters/date-shortcuts";
 
 // ── Preset types ────────────────────────────────────────────
-export type { PresetSnapshot, Preset } from "./presets/preset-types";
+export type { PresetSnapshot } from "./presets/preset-types";
+export type { PresetSnapshotWire } from "./presets/preset-wire-types";
+export type { PresetAspect } from "./presets/preset-aspects";
+export { PRESET_ASPECTS, derivePresetAspects } from "./presets/preset-aspects";
 
-// ── Preset serializer ───────────────────────────────────────
-export { serializePreset, deserializePreset } from "./presets/preset-serializer";
+// ── Preset wire converter ───────────────────────────────────
+export { toWireSnapshot, fromWireSnapshot } from "./presets/preset-wire";
 
 // ── Query builder ──────────────────────────────────────────
 export type { BuildTableQueryOptions } from "./query/build-table-query";
