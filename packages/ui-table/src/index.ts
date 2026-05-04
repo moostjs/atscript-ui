@@ -35,12 +35,72 @@ export { dateShortcuts } from "./filters/date-shortcuts";
 
 // ── Preset types ────────────────────────────────────────────
 export type { PresetSnapshot } from "./presets/preset-types";
-export type { PresetSnapshotWire } from "./presets/preset-wire-types";
-export type { PresetAspect } from "./presets/preset-aspects";
+export type {
+  PresetSnapshotWire,
+  PresetColumnWidthEntry,
+  PresetFilterOpEntry,
+  PresetSorterEntry,
+} from "./presets/preset-wire-types";
+export type { PresetAspect, AspectMask } from "./presets/preset-aspects";
 export { PRESET_ASPECTS, derivePresetAspects } from "./presets/preset-aspects";
 
 // ── Preset wire converter ───────────────────────────────────
 export { toWireSnapshot, fromWireSnapshot } from "./presets/preset-wire";
+
+// ── Preset application-layer types ──────────────────────────
+export type {
+  AppConfData,
+  AsPresetEntryData,
+  AsPresetEntryRow,
+  AsPresetsErrorCode,
+  PresetCapabilities,
+  PresetData,
+  PresetLimitReachedBody,
+  UserConfData,
+} from "./presets/preset-data-types";
+
+// ── Preset id helpers + reserved namespaces ─────────────────
+export {
+  SYSTEM_PRESET_PREFIX,
+  USER_CONF_PREFIX,
+  APP_CONF_PREFIX,
+  RESERVED_ID_PREFIXES,
+  STANDARD_PRESET_ID,
+  userConfId,
+  appConfId,
+  isSystemPresetId,
+  normaliseSystemPresetId,
+} from "./presets/preset-id";
+
+// ── System presets ──────────────────────────────────────────
+export type { SystemPreset, SystemPresetInput } from "./presets/system-presets";
+export { resolveSystemPresets } from "./presets/system-presets";
+
+// ── Dirty detection ─────────────────────────────────────────
+export { stableStringify, isDirtyAgainst } from "./presets/preset-dirty";
+
+// ── Local draft (localStorage overlay) ──────────────────────
+export type { PresetDraft, DraftPersistedAspect } from "./presets/preset-draft";
+export {
+  DRAFT_PERSISTED_ASPECTS,
+  serializeDraft,
+  deserializeDraft,
+  isEmptyDraft,
+  draftMatchesPreset,
+} from "./presets/preset-draft";
+
+// ── PresetsClient (preset + userConf rows) ──────────────────
+export type {
+  PresetsClientConfig,
+  PresetsListResult,
+  PresetsSaveAsOptions,
+  PresetsSaveResult,
+} from "./presets/presets-client";
+export { PresetsClient, PresetsHttpError, isAuthError } from "./presets/presets-client";
+
+// ── AppPrefsClient (app-wide user prefs) ────────────────────
+export type { AppPrefsClientConfig, AppPrefsLoadResult } from "./presets/app-prefs-client";
+export { AppPrefsClient } from "./presets/app-prefs-client";
 
 // ── Query builder ──────────────────────────────────────────
 export type { BuildTableQueryOptions } from "./query/build-table-query";
@@ -89,6 +149,6 @@ export {
 
 // ── Utils ──────────────────────────────────────────────────
 export { debounce } from "./utils/debounce";
-export { arraysEqual, sameColumnSet, sortersEqual } from "./utils/equality";
+export { arraysEqual, sameColumnSet, setsEqual, sortersEqual } from "./utils/equality";
 export type { ColumnReorderPosition } from "./utils/reorder-column-names";
 export { reorderColumnNames } from "./utils/reorder-column-names";

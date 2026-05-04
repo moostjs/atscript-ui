@@ -13,12 +13,11 @@ import { dialogBase, dialogOverlay } from "./_shared";
  */
 export const asConfirmDialogShortcuts = defineShortcuts({
   "as-confirm-dialog-overlay": dialogOverlay,
-  // Compact size: confirm prompts are short. Override the mobile full-screen
-  // path from `dialogBase` with explicit width/auto-height at every breakpoint
-  // — mirroring how popovers use `dialogBase` but with their own sizing.
-  // `min-w` keeps short prompts from collapsing too tight; `max-w` caps long
-  // prompts at a comfortable reading width.
-  "as-confirm-dialog-content": `${dialogBase} !inset-auto !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !size-auto !rounded-r3 !shadow-popup !border-1 min-w-[320px] max-w-[min(520px,92vw)]`,
+  // Centred compact card at every breakpoint — overrides the mobile
+  // full-screen path from `dialogBase`. `min-w-0` lets it fit narrow
+  // viewports (capped by 92vw); `sm:min-w-[320px]` restores comfortable
+  // width above 640px so short prompts don't collapse.
+  "as-confirm-dialog-content": `${dialogBase} !inset-auto !top-1/2 !left-1/2 !-translate-x-1/2 !-translate-y-1/2 !size-auto !rounded-r3 !shadow-popup !border-1 min-w-0 sm:min-w-[320px] max-w-[min(520px,92vw)]`,
   // Single padded wrapper hosts title + body — that way the `<h2>` (Title)
   // and `<p>` (Description) primitives can't drift apart from each other on
   // the left edge regardless of UA defaults / font metrics. Children get

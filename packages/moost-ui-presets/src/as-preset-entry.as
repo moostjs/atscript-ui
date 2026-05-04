@@ -11,6 +11,7 @@ type PresetAspect = 'columns' | 'filters' | 'filterOps' | 'sorters' | 'itemsPerP
 @db.table 'as_presets'
 export interface AsPresetEntry {
     @meta.id
+    @db.default.uuid
     @expect.maxLength 256
     @expect.minLength 3
     id: string
@@ -40,6 +41,10 @@ export interface AsPresetEntry {
     @expect.maxLength 128
     @expect.minLength 1
     user: string
+
+    @expect.maxLength 128
+    @expect.minLength 1
+    userLabel?: string
 
     @db.index.plain 'preset_public_idx'
     public?: boolean
@@ -141,5 +146,6 @@ export interface AsPresetEntry {
     @db.default.now
     createdAt: number
 
+    @db.default.now
     updatedAt: number
 }

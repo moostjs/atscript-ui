@@ -180,6 +180,7 @@ function onAction(
       :limit="limit"
       :row-value-fn="rowValueFn"
       :refresh-on-action="true"
+      :preset="{ url: '/api/db/_presets', tableKey: path }"
       class="flex-1 flex flex-col min-h-0 min-w-0"
       @action="onAction"
     >

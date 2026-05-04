@@ -15,7 +15,7 @@ import {
   processRemove,
   processWrite,
 } from "./preset-rules";
-import type { PresetCapabilities } from "./types";
+import type { PresetCapabilities } from "@atscript/ui-table";
 
 @Inherit()
 export abstract class AsPresetsController<
@@ -43,10 +43,15 @@ export abstract class AsPresetsController<
     return true;
   }
 
+  protected async getUserLabel(_user: string): Promise<string | undefined> {
+    return undefined;
+  }
+
   private get hooks(): PresetHooks {
     return {
       getMaxPresetsPerUser: this.getMaxPresetsPerUser.bind(this),
       canPublishPresets: this.canPublishPresets.bind(this),
+      getUserLabel: this.getUserLabel.bind(this),
     };
   }
 

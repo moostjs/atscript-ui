@@ -11,6 +11,7 @@ import type { FilterExpr } from "@uniqu/core";
 import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
 import type {
   ActionResult,
+  PresetConfig,
   ReactiveTableState,
   TAsCellTypeComponents,
   TAsTableControls,
@@ -18,6 +19,10 @@ import type {
 } from "../types";
 import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
 import { useTableSelection, type SelectionPersistence } from "./use-table-selection";
+import { injectPresetsApp } from "./as-presets-app";
+import { useLocalDraft } from "./use-local-draft";
+import { usePresets } from "./use-presets";
+import { DEFAULT_AVAILABLE_ASPECTS } from "./state/create-preset-state";
 
 /** Thin alias over `resetMetaCache` — retained so existing test code keeps working. */
 export function clearTableCache() {
@@ -112,6 +117,13 @@ export interface UseTableOptions {
    * Default (omitted): full sync.
    */
   urlQuerySync?: UrlQuerySync;
+
+  /**
+   * Preset feature config — opt-in. Omit to disable presets entirely
+   * (`<AsPresetPicker>` / `<AsPresetDialog>` render nothing). When set,
+   * `url` and `tableKey` are required.
+   */
+  preset?: PresetConfig;
 }
 
 /**
@@ -128,6 +140,26 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   }
   const { client } = entry;
   const defPromise = entry.tableDef;
+
+  const preset = opts?.preset;
+  const presetsHandle = preset
+    ? usePresets({
+        url: preset.url,
+        tableKey: preset.tableKey,
+        app: preset.app,
+        clientFactory: opts?.clientFactory,
+        systemPresets: preset.systemPresets,
+      })
+    : null;
+  const draftHandle = preset
+    ? useLocalDraft({
+        // Resolve the same `app` value `usePresets` saw so the storage key matches.
+        app: injectPresetsApp(preset.app),
+        tableKey: preset.tableKey,
+        enabled: preset.persistDrafts ?? false,
+        availableAspects: preset.aspects ?? DEFAULT_AVAILABLE_ASPECTS,
+      })
+    : null;
 
   const { state, internals } = createTableState({
     client: client as Client,
@@ -159,6 +191,12 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     actions: {
       refreshOnAction: opts?.refreshOnAction,
       onResolved: opts?.onActionResolved,
+    },
+    preset: {
+      presetsHandle,
+      draftHandle,
+      availableAspects: preset?.aspects,
+      persistDrafts: preset?.persistDrafts ?? false,
     },
   });
 

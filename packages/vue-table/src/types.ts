@@ -164,13 +164,48 @@ export interface TableNavBridge {
 }
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
 import type {
+  AspectMask,
+  AsPresetEntryRow,
   ColumnWidthsMap,
   ConfigTab,
   FieldFilters,
+  PresetAspect,
+  PresetCapabilities,
+  PresetSnapshot,
   SelectionMode,
+  SystemPreset,
+  SystemPresetInput,
   TableStateMethods,
 } from "@atscript/ui-table";
 export type { ConfigTab };
+
+/**
+ * Preset feature configuration passed to `useTable({ preset })` /
+ * `<AsTableRoot :preset>`. Presence of this object enables the feature;
+ * omit it entirely to disable. `app` defaults to `inject(AS_PRESETS_APP)`.
+ */
+export interface PresetConfig {
+  /** Preset controller URL, e.g. `"/api/db/_presets"`. */
+  url: string;
+  /** Per-table identifier — scopes preset rows under `(app, tableKey)`. */
+  tableKey: string;
+  /** Optional override; defaults to `inject(AS_PRESETS_APP)`. */
+  app?: string;
+  /** Consumer-supplied synthetic system presets (`sys:*` namespace, never persisted). */
+  systemPresets?: SystemPresetInput[];
+  /**
+   * App-declared aspect set — render gate for picker checkboxes / dialog
+   * badges + capture filter. Default `['columns','filters','filterOps','sorters']`.
+   * Add `'itemsPerPage'` for paginated tables; drop any aspect this app doesn't use.
+   */
+  aspects?: PresetAspect[];
+  /**
+   * Opt-in localStorage overlay for the user's in-flight tweaks (default
+   * `false`). Persists `columns` / `filters` / `sorters` / opt-in
+   * `itemsPerPage`; `filterOps` / `searchTerm` / pagination are NOT persisted.
+   */
+  persistDrafts?: boolean;
+}
 
 export type QueryErrorKind = "initial" | "query" | "queryNext" | "loadRange";
 
@@ -220,9 +255,10 @@ export interface TAsTableControls {
    */
   confirmDialog?: Component;
 
-  // Presets
-  createPreset?: Component;
-  managePresets?: Component;
+  /** Tier-1 dropdown picker. Renders the presets menu (Save / Save as / Reset / Manage). */
+  presetPicker?: Component;
+  /** Tier-2 management dialog (rename / delete / public-toggle / favorite / default). */
+  presetDialog?: Component;
 }
 
 /**
@@ -399,4 +435,97 @@ export interface ReactiveTableState extends TableStateMethods {
    * watchers refetch in reaction to the writes.
    */
   applyUrlQuery: (urlString: string) => void;
+
+  /**
+   * Preset feature surface. Always present; inert (`available=false`,
+   * mutators throw) when `useTable({ preset })` was not configured.
+   */
+  preset: PresetSurface;
+}
+
+/**
+ * Preset namespace exposed on `state.preset`. Read-only refs for picker
+ * UI; mutators are pure batched writes (never call `query()` — root
+ * watchers refetch automatically).
+ */
+export interface PresetSurface {
+  /** Owned + public preset rows for this `(app, tableKey)`. `[]` when feature off. */
+  presets: ShallowRef<AsPresetEntryRow[]>;
+  /** Lookup table for stored presets — O(1) by id. */
+  presetsById: ComputedRef<Map<string, AsPresetEntryRow>>;
+  /** This user's userConf row (`type='userConf'`), or null. */
+  userConf: ShallowRef<AsPresetEntryRow | null>;
+  /** Server-issued capabilities (`canPublish`, `presetLimit`); null when unavailable. */
+  capabilities: Ref<PresetCapabilities | null>;
+  /** Standard always at index 0; consumer-supplied named presets follow. */
+  systemPresets: ComputedRef<SystemPreset[]>;
+  /** Lookup table for system presets — O(1) by id. */
+  systemPresetsById: ComputedRef<Map<string, SystemPreset>>;
+  /**
+   * App-declared preset aspect set — render gate for picker checkboxes /
+   * dialog badges + capture filter. Static (captured at setup); default
+   * `['columns', 'filters', 'filterOps', 'sorters']`.
+   */
+  availableAspects: PresetAspect[];
+  /**
+   * False when `preset` config is absent OR the initial load returned
+   * 401/403 OR any other error. The picker / dialog should hide their UI.
+   */
+  available: ComputedRef<boolean>;
+  /** Currently active preset id (system `'sys:*'` or stored). null = no active. */
+  activeId: Ref<string | null>;
+  /** Active preset's snapshot (system presets are aspect-expanded). */
+  activeSnapshot: ComputedRef<PresetSnapshot>;
+  /** True when the current snapshot ≠ active preset's claimed aspects. */
+  isDirty: ComputedRef<boolean>;
+  /** True iff the active preset is owned by the current user (gates Save). */
+  canSaveActive: ComputedRef<boolean>;
+  /** Owner-aware: returns the user id resolved from capabilities or any private row. */
+  currentUser: ComputedRef<string | null>;
+  /** Open state for `<AsPresetDialog>` — picker's "Manage…" item flips this. */
+  dialogOpen: Ref<boolean>;
+
+  /** Capture a snapshot of the current state, gated by `availableAspects`. */
+  captureSnapshot: (mask?: AspectMask) => PresetSnapshot;
+  /**
+   * Apply a preset by id (system `sys:*` or stored) or by raw snapshot.
+   * Pure batched mutation — never calls `query()`. The root watcher
+   * picks up the changed state arrays and re-fetches automatically.
+   */
+  apply: (idOrSnapshot: string | PresetSnapshot) => void;
+  /** Re-apply the active preset's content; drops local edits to its claimed aspects. */
+  resetActive: () => void;
+  /** Drop the persisted localStorage draft (no-op when persistence is off). */
+  clearLocalDraft: () => void;
+  /**
+   * Resolve the bootstrap default preset id: pinned `userConf.defaultPresetId`
+   * if it still references a known preset, else `STANDARD_PRESET_ID`.
+   */
+  resolveDefaultId: () => string;
+
+  // Persistence — only meaningful when feature is configured.
+  /** Re-capture the active preset's existing aspect mask. Never widens. */
+  saveActive: () => Promise<void>;
+  /** Create a new preset and switch the active id to it. */
+  saveAs: (label: string, opts?: { aspects?: AspectMask; public?: boolean }) => Promise<string>;
+  rename: (id: string, label: string) => Promise<void>;
+  remove: (id: string) => Promise<void>;
+  togglePublic: (id: string) => Promise<void>;
+  /** Pin a preset as default for `(user, app, tableKey)`. */
+  setDefault: (id: string | null) => Promise<void>;
+  /** Toggle a preset's pinned-as-favorite state. */
+  toggleFav: (id: string) => Promise<void>;
+  /**
+   * Replace the full favorites list in one upsert. Use when a UI batches
+   * several toggles (manage dialog) so one round-trip applies the new set.
+   */
+  setFavorites: (ids: string[]) => Promise<void>;
+  /**
+   * Run `fn` with the trailing reload of every mutator deferred until `fn`
+   * resolves; one coalesced reload fires at the end. Use for batched flows
+   * (e.g. dialog Save with N renames + M public flips + K deletes) to
+   * collapse N+M+K reload round-trips into 1. Pass-through when the preset
+   * feature is off.
+   */
+  batch: <T>(fn: () => Promise<T>) => Promise<T>;
 }

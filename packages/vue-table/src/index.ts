@@ -42,6 +42,47 @@ export { useTableActions } from "./composables/use-table-actions";
 export { useTableUrlQuery, type UseTableUrlQueryOptions } from "./composables/use-table-url-query";
 export type { UrlQuerySync } from "@atscript/ui-table";
 
+// ── Presets / app prefs (public dev API) ────────────────────
+export { AS_PRESETS_APP, injectPresetsApp } from "./composables/as-presets-app";
+export {
+  useAppPrefs,
+  type UseAppPrefsOptions,
+  type UseAppPrefsReturn,
+} from "./composables/use-app-prefs";
+export {
+  usePresets,
+  type UsePresetsOptions,
+  type UsePresetsReturn,
+  type ActivePresetView,
+} from "./composables/use-presets";
+export {
+  useLocalDraft,
+  type UseLocalDraftOptions,
+  type UseLocalDraftReturn,
+  type StorageLike,
+} from "./composables/use-local-draft";
+
+// Re-export the framework-agnostic types for ergonomic single-import devs
+export type {
+  AppConfData,
+  AsPresetEntryRow,
+  PresetAspect,
+  PresetCapabilities,
+  PresetData,
+  PresetSnapshot,
+  PresetSnapshotWire,
+  SystemPreset,
+  SystemPresetInput,
+  UserConfData,
+} from "@atscript/ui-table";
+export {
+  PRESET_ASPECTS,
+  STANDARD_PRESET_ID,
+  SYSTEM_PRESET_PREFIX,
+  isSystemPresetId,
+  resolveSystemPresets,
+} from "@atscript/ui-table";
+
 // ── Component resolution ────────────────────────────────────
 export { useTableComponent } from "./composables/use-table-component";
 
@@ -51,6 +92,7 @@ export { default as AsTable } from "./components/as-table.vue";
 export { default as AsWindowTable } from "./components/as-window-table.vue";
 export { default as AsTableActions } from "./components/as-table-actions.vue";
 export { default as AsFilters } from "./components/as-filters.vue";
+export { default as AsPresetPicker } from "./components/as-preset-picker.vue";
 
 // ── Default implementations (Tier 2 — swap targets) ─────────
 export { createDefaultControls } from "./composables/create-default-controls";
@@ -61,6 +103,7 @@ export {
   AsFilterDialog,
   AsFilterField,
   AsFilterInput,
+  AsPresetDialog,
   AsRowActions,
   AsTableCellValue,
   AsTableHeaderCell,

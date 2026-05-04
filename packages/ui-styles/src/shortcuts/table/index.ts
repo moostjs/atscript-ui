@@ -8,6 +8,8 @@ import { asFilterFieldShortcuts } from "./as-filter-field";
 import { asFpillShortcuts } from "./as-fpill";
 import { asOrderableListShortcuts } from "./as-orderable-list";
 import { asPageShortcuts } from "./as-page";
+import { asPresetDialogShortcuts } from "./as-preset-dialog";
+import { asPresetPickerShortcuts } from "./as-preset-picker";
 import { asRowActionsShortcuts } from "./as-row-actions";
 import { asSorterShortcuts } from "./as-sorter";
 import { asTableActionsShortcuts } from "./as-table-actions";
@@ -26,6 +28,8 @@ export {
   asFpillShortcuts,
   asOrderableListShortcuts,
   asPageShortcuts,
+  asPresetDialogShortcuts,
+  asPresetPickerShortcuts,
   asRowActionsShortcuts,
   asSorterShortcuts,
   asTableActionsShortcuts,
@@ -40,6 +44,8 @@ export const tableShortcuts = mergeVunorShortcuts([
   asPageShortcuts,
   asFpillShortcuts,
   asColumnMenuShortcuts,
+  asPresetPickerShortcuts,
+  asPresetDialogShortcuts,
   asFilterDialogShortcuts,
   asFilterFieldShortcuts,
   asConfigDialogShortcuts,

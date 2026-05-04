@@ -15,6 +15,13 @@ export const PRESET_ASPECTS = [
 
 export type PresetAspect = (typeof PRESET_ASPECTS)[number];
 
+/**
+ * Per-aspect opt-in/out for `captureSnapshot(mask)`. A `true` flag includes
+ * the aspect; `false` / absent excludes. The capture filter intersects the
+ * mask with `availablePresetAspects` so unavailable aspects never leak in.
+ */
+export type AspectMask = Partial<Record<PresetAspect, boolean>>;
+
 // Picker projects this column to render aspect icons without loading the full
 // snapshot blob — output order must match `PRESET_ASPECTS` so icon rows look
 // identical regardless of the source object's key order.

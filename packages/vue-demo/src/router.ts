@@ -11,6 +11,11 @@ const routes = [
   },
   { path: "/", name: "dashboard", component: () => import("./client/pages/dashboard.vue") },
   {
+    path: "/preferences",
+    name: "preferences",
+    component: () => import("./client/pages/preferences.vue"),
+  },
+  {
     path: "/users/invite",
     name: "users-invite",
     component: () => import("./client/pages/invite-admin.vue"),

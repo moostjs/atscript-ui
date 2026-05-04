@@ -123,7 +123,7 @@ describe("GET /capabilities", () => {
   it("returns canPublish=true and the configured limit for the default policy", async () => {
     const { ctrl } = await setup("alice", { maxPresetsPerUser: 7 });
     const caps = await ctrl.callCapabilities("demo", "products");
-    expect(caps).toEqual({ canPublish: true, presetLimit: 7 });
+    expect(caps).toEqual({ canPublish: true, presetLimit: 7, userId: "alice" });
   });
 
   it("reflects canPublishPresets policy per (app, tableKey, user)", async () => {

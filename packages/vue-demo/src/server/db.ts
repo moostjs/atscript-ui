@@ -1,4 +1,5 @@
 import { createAdapter } from "@atscript/db-sqlite";
+import { AsPresetEntry } from "@atscript/moost-ui-presets";
 import { UsersTable } from "./schemas/users.as";
 import { RolesTable } from "./schemas/roles.as";
 import { CategoriesTable } from "./schemas/categories.as";
@@ -16,3 +17,4 @@ export const productsTable = db.getTable(ProductsTable);
 export const customersTable = db.getTable(CustomersTable);
 export const ordersTable = db.getTable(OrdersTable);
 export const auditLogTable = db.getTable(AuditLogTable);
+export const presetsTable = db.getTable(AsPresetEntry);

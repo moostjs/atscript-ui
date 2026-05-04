@@ -1,17 +1,39 @@
 <script setup lang="ts">
-import { computed } from "vue";
-import { useDark } from "@vueuse/core";
+import { computed, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
+import { usePreferredDark } from "@vueuse/core";
+import { useAppPrefs } from "@atscript/vue-table";
+import { clientFactory } from "../api/client-factory";
 import { useMe } from "../api/use-me";
 import { filterNavByPermissions } from "../domain/nav-filter";
 import { DEMO_TABLES } from "../domain/tables";
 
 const router = useRouter();
 const { me, logout } = useMe();
-const dark = useDark({ storageKey: "as-theme" });
-function toggleDark() {
-  dark.value = !dark.value;
+
+const { prefs, save } = useAppPrefs({ url: "/api/db/_presets", clientFactory });
+
+const preferredDark = usePreferredDark();
+const dark = computed(() => {
+  const a = prefs.value.appearance;
+  if (a === "dark") return true;
+  if (a === "light") return false;
+  return preferredDark.value;
+});
+
+watch(
+  dark,
+  (isDark) => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("dark", isDark);
+  },
+  { immediate: true },
+);
+
+async function toggleDark() {
+  await save({ appearance: dark.value ? "light" : "dark" });
 }
+
 const visible = computed(() => filterNavByPermissions(DEMO_TABLES, me.value?.permissions));
 
 async function onLogout() {
@@ -46,6 +68,10 @@ async function onLogout() {
       <div v-if="me" class="px-$s py-$xs text-callout text-current/70 truncate">
         Signed in as <strong>{{ me.username }}</strong> ({{ me.roleName }})
       </div>
+      <RouterLink to="/preferences" class="nav-link" active-class="nav-link-active">
+        <span class="i-ph:gear-six" aria-hidden="true" />
+        <span>Preferences</span>
+      </RouterLink>
       <button
         type="button"
         class="c8-flat scope-grey nav-link cursor-pointer border-0 bg-transparent text-left w-full font-inherit"

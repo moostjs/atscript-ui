@@ -5,6 +5,7 @@ import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
 import type {
   ActionResult,
+  PresetConfig,
   TAsCellTypeComponents,
   TAsTableControls,
   TVueTableActionInfo,
@@ -15,7 +16,7 @@ import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
 import type { PageResult } from "@atscript/db-client";
-import { AsFilterDialog, AsConfigDialog, AsConfirmDialog } from "./defaults";
+import { AsConfigDialog, AsConfirmDialog, AsFilterDialog, AsPresetDialog } from "./defaults";
 
 const props = withDefaults(
   defineProps<{
@@ -70,6 +71,9 @@ const props = withDefaults(
      *   `status` filter participates; sorters stay private.
      */
     urlQuerySync?: UrlQuerySync;
+
+    /** See {@link PresetConfig}. Omit to disable presets. */
+    preset?: PresetConfig;
   }>(),
   {
     queryOnMount: true,
@@ -141,6 +145,7 @@ const state = useTable(props.url, {
   urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
   onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
   urlQuerySync: props.urlQuerySync,
+  preset: props.preset,
 });
 
 if (urlQueryActive) {
@@ -210,4 +215,8 @@ defineExpose({ state, navBridge });
   <component :is="props.controls?.filterDialog ?? AsFilterDialog" />
   <component :is="props.controls?.configDialog ?? AsConfigDialog" />
   <component :is="props.controls?.confirmDialog ?? AsConfirmDialog" />
+  <component
+    v-if="state.preset.available.value"
+    :is="props.controls?.presetDialog ?? AsPresetDialog"
+  />
 </template>

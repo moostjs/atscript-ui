@@ -4,6 +4,8 @@ import { expect } from "vite-plus/test";
 import type { AtscriptDbTable } from "@atscript/db";
 
 import { AsPresetEntry } from "../as-preset-entry.as";
+import { userConfId } from "@atscript/ui-table";
+import type { PresetCapabilities } from "@atscript/ui-table";
 import {
   type PresetHooks,
   type PresetTable,
@@ -12,9 +14,7 @@ import {
   buildReadGate,
   processRemove,
   processWrite,
-  userConfId,
 } from "../preset-rules";
-import type { PresetCapabilities } from "../types";
 
 export async function createSpace(): Promise<{
   space: ReturnType<typeof createAdapter>;

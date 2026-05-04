@@ -29,11 +29,13 @@
     "@atscript/ui": "workspace:*"
   },
   "devDependencies": {
+    "@atscript/db-client": "catalog:",
     "@uniqu/core": "catalog:",
     "@uniqu/url": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
+    "@atscript/db-client": "^0.1.61",
     "@uniqu/core": "^0.1.2",
     "@uniqu/url": "^0.1.5"
   }

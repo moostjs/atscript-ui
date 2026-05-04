@@ -17,6 +17,13 @@ export function sameColumnSet<T>(a: readonly T[], b: readonly T[]): boolean {
   return true;
 }
 
+export function setsEqual<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean {
+  if (a === b) return true;
+  if (a.size !== b.size) return false;
+  for (const v of a) if (!b.has(v)) return false;
+  return true;
+}
+
 export function sortersEqual(a: SortControl[], b: SortControl[]): boolean {
   if (a === b) return true;
   if (a.length !== b.length) return false;

@@ -50,6 +50,16 @@
       "import": "./dist/as-filters.mjs",
       "require": "./dist/as-filters.cjs"
     },
+    "./as-preset-dialog": {
+      "types": "./dist/as-preset-dialog.d.mts",
+      "import": "./dist/as-preset-dialog.mjs",
+      "require": "./dist/as-preset-dialog.cjs"
+    },
+    "./as-preset-picker": {
+      "types": "./dist/as-preset-picker.d.mts",
+      "import": "./dist/as-preset-picker.mjs",
+      "require": "./dist/as-preset-picker.cjs"
+    },
     "./as-row-actions": {
       "types": "./dist/as-row-actions.d.mts",
       "import": "./dist/as-row-actions.mjs",

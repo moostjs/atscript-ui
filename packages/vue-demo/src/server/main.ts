@@ -10,6 +10,7 @@ import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
 import { AuditLogController } from "./controllers/audit-log.controller";
+import { PresetsController } from "./controllers/presets.controller";
 import { WorkflowsController } from "./controllers/workflows.controller";
 import { LoginWorkflow } from "./workflows/auth/login.workflow";
 import { RegisterWorkflow } from "./workflows/auth/register.workflow";
@@ -50,5 +51,6 @@ app.registerControllers(
   CustomersController,
   OrdersController,
   AuditLogController,
+  PresetsController,
 );
 void app.init();

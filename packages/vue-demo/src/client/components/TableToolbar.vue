@@ -4,6 +4,7 @@ import {
   useTableContext,
   useTableNavBridge,
   AsFilters,
+  AsPresetPicker,
   AsTableActions,
   type ConfigTab,
 } from "@atscript/vue-table";
@@ -72,6 +73,7 @@ function clearSelection() {
       <div v-if="subtitle" class="as-page-header-sub">{{ subtitle }}</div>
     </div>
     <div class="as-page-header-actions">
+      <AsPresetPicker />
       <AsTableActions />
       <slot name="actions" />
       <button type="button" class="as-page-toolbar-btn" @click="refresh">

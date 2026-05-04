@@ -54,8 +54,12 @@ import { createActions } from "./state/create-actions";
 import { createSelectionApi, type SelectionApiOptions } from "./state/create-selection";
 import { createMainActionRegistry } from "./state/create-main-action-registry";
 import { createNavController } from "./state/create-nav-controller";
+import { createPresetState } from "./state/create-preset-state";
 import { createWindowFetcher } from "./state/create-window-fetcher";
 import { extractIdentifier } from "./state/intent-scope";
+import type { UseLocalDraftReturn } from "./use-local-draft";
+import type { UsePresetsReturn } from "./use-presets";
+import type { PresetAspect, SystemPreset } from "@atscript/ui-table";
 
 const TABLE_KEY = "__as_table";
 const FILTER_DEBOUNCE_MS = 500;
@@ -161,6 +165,20 @@ export interface TableActionsOptions {
   ) => void;
 }
 
+export interface TablePresetOptions {
+  /** `usePresets` handle. When omitted, the preset surface degrades to a
+   * permanently-unavailable shape (`state.preset.available=false`). */
+  presetsHandle?: UsePresetsReturn | null;
+  /** `useLocalDraft` handle for opt-in localStorage persistence. */
+  draftHandle?: UseLocalDraftReturn | null;
+  /** App-declared aspect set; default `['columns','filters','filterOps','sorters']`. */
+  availableAspects?: PresetAspect[];
+  /** Static fallback for system presets when no `presetsHandle` is wired. */
+  fallbackSystemPresets?: SystemPreset[];
+  /** Whether localStorage drafts should be hydrated + persisted on bootstrap. */
+  persistDrafts?: boolean;
+}
+
 export interface CreateTableStateOptions {
   /** Data-layer client used for `client.pages` calls. */
   client: Client;
@@ -176,6 +194,8 @@ export interface CreateTableStateOptions {
   window?: TableWindowOptions;
   /** Action settings (built-in row delete + refetch policy). */
   actions?: TableActionsOptions;
+  /** Preset settings. */
+  preset?: TablePresetOptions;
 }
 
 /** Internal handles returned alongside the public state. */
@@ -254,6 +274,22 @@ export function createTableState(opts: CreateTableStateOptions): {
   const configDialogOpen = ref(false);
   const configTab = ref<ConfigTab>("columns");
   const filterDialogColumn = ref<ColumnDef | null>(null);
+
+  const { slice: presetSlice, internals: presetInternals } = createPresetState({
+    columnNames,
+    columnWidths,
+    filterFields,
+    filters,
+    sorters,
+    pagination,
+    allColumns,
+    presetsHandle: opts.preset?.presetsHandle,
+    draftHandle: opts.preset?.draftHandle,
+    availableAspects: opts.preset?.availableAspects,
+    persistDrafts: opts.preset?.persistDrafts,
+    fallbackSystemPresets: opts.preset?.fallbackSystemPresets,
+  });
+  presetInternals.bootstrap();
 
   // ── Prompt dialog ───────────────────────────────────────────────────────
   // A concurrent `prompt()` auto-resolves the prior request as `false` —
@@ -629,6 +665,9 @@ export function createTableState(opts: CreateTableStateOptions): {
       filterDialogColumn.value = null;
     },
     applyUrlQuery,
+
+    /** Preset feature surface. Inert when no `presetsHandle` is wired. */
+    preset: presetSlice,
   };
 
   // ── URL query bridge ────────────────────────────────────────────────────
@@ -806,19 +845,21 @@ export function createTableState(opts: CreateTableStateOptions): {
     },
   );
 
-  // Bootstrap the initial query once tableDef has loaded AND urlQueryReady
-  // (when bound) is true. `?? true` keeps the gate open when the URL bridge
-  // isn't wired. Sync flip so any columnNames watcher queued during `init()`
-  // coalesces into the same `scheduleQuery("initial")` microtask.
-  watch([() => tableDef.value, () => queryOpts?.urlQueryReady?.value ?? true], ([def, ready]) => {
-    if (queryDetected) return;
-    if (def === null || !ready) return;
-    if (queryOpts?.queryOnMount === false) return;
-    if (allColumns.value.length === 0) return;
-    if (results.value.length !== 0) return;
-    queryDetected = true;
-    scheduleQuery("initial");
-  });
+  // Each gate falls open (`?? true`) when its feature isn't wired, so the
+  // bootstrap fires as soon as tableDef has loaded.
+  const presetGateOpen = () => (opts.preset?.presetsHandle ? presetInternals.gate.value : true);
+  watch(
+    [() => tableDef.value, () => queryOpts?.urlQueryReady?.value ?? true, presetGateOpen],
+    ([def, urlReady, presetReady]) => {
+      if (queryDetected) return;
+      if (def === null || !urlReady || !presetReady) return;
+      if (queryOpts?.queryOnMount === false) return;
+      if (allColumns.value.length === 0) return;
+      if (results.value.length !== 0) return;
+      queryDetected = true;
+      scheduleQuery("initial");
+    },
+  );
 
   onScopeDispose(() => {
     debouncedFilterQuery.cancel();

@@ -1,16 +1,14 @@
 import { HttpError } from "@moostjs/event-http";
-import { derivePresetAspects } from "@atscript/ui-table";
-import { walkFilter } from "@uniqu/core";
-import type { PresetAspect } from "@atscript/ui-table";
-import type { FilterExpr, FilterVisitor, SelectExpr } from "@uniqu/core";
-
 import {
-  APP_CONF_PREFIX,
   RESERVED_ID_PREFIXES,
-  SYSTEM_PRESET_PREFIX,
-  USER_CONF_PREFIX,
-} from "./constants";
-import type { AsPresetsErrorCode, PresetCapabilities } from "./types";
+  appConfId,
+  derivePresetAspects,
+  isSystemPresetId,
+  userConfId,
+} from "@atscript/ui-table";
+import { walkFilter } from "@uniqu/core";
+import type { AsPresetsErrorCode, PresetAspect, PresetCapabilities } from "@atscript/ui-table";
+import type { FilterExpr, FilterVisitor, SelectExpr } from "@uniqu/core";
 
 const IDENTITY_FIELDS: readonly (keyof PresetRowLike)[] = ["user", "app", "tableKey"];
 
@@ -40,6 +38,7 @@ export interface PresetRowLike {
   app?: string;
   tableKey?: string;
   user?: string;
+  userLabel?: string;
   public?: boolean;
   label?: string;
   publicLabel?: string;
@@ -106,7 +105,7 @@ function assertNotReservedId(id: unknown): void {
 // `sys:*` is malformed. Rejected explicitly so callers see `reserved_id` rather
 // than the generic `identity_immutable` they'd get from the owner-check 403.
 function assertNotSystemId(id: unknown): void {
-  if (typeof id === "string" && id.startsWith(SYSTEM_PRESET_PREFIX)) {
+  if (typeof id === "string" && isSystemPresetId(id)) {
     throw presetError(400, {
       message: "Reserved id namespace; system presets are synthetic and not persisted",
       code: "reserved_id",
@@ -164,9 +163,18 @@ export type GetMaxPresetsPerUser = (app: string, tableKey: string, user: string)
 
 export type CanPublishPresets = (app: string, tableKey: string, user: string) => Promise<boolean>;
 
+/**
+ * Resolve a display label for the current writer (e.g. their username) to
+ * be stamped on the row at write-time. Optional — when absent or returning
+ * undefined, the row's `userLabel` stays empty and consumers fall back to
+ * `user` (the opaque identity string).
+ */
+export type GetUserLabel = (user: string) => Promise<string | undefined>;
+
 export interface PresetHooks {
   getMaxPresetsPerUser: GetMaxPresetsPerUser;
   canPublishPresets: CanPublishPresets;
+  getUserLabel?: GetUserLabel;
 }
 
 interface WriteCtx {
@@ -214,10 +222,11 @@ export async function processWrite(
 }
 
 async function processCreateRow(ctx: WriteCtx, row: PresetRowLike): Promise<PresetRowLike> {
-  const { user } = ctx;
+  const { user, hooks } = ctx;
   const next: PresetRowLike = { ...row };
-  // Identity from session — wire value is never trusted.
+  // Wire `user` / `userLabel` are sourced from session to prevent spoofed attribution.
   next.user = user;
+  const userLabelPromise = hooks.getUserLabel?.(user);
   const now = Date.now();
   next.updatedAt = now;
   if (typeof next.createdAt !== "number") next.createdAt = now;
@@ -234,6 +243,7 @@ async function processCreateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
     next.tableKey = undefined;
     next.id = appConfId(user, next.app);
     scrubPresetOnlyFields(next);
+    next.userLabel = await userLabelPromise;
     return next;
   }
 
@@ -247,6 +257,7 @@ async function processCreateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
     next.id = userConfId(user, next.app, next.tableKey);
     scrubPresetOnlyFields(next);
     await sanitiseUserConfData(ctx, next, next.app, next.tableKey);
+    next.userLabel = await userLabelPromise;
     return next;
   }
 
@@ -266,7 +277,8 @@ async function processCreateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
           id: next.id,
         })
       : undefined;
-  await Promise.all([capCheck, publicCheck]);
+  const [, , userLabel] = await Promise.all([capCheck, publicCheck, userLabelPromise]);
+  next.userLabel = userLabel;
   next.aspects = derivePresetAspects((next.data as { content?: unknown } | null)?.content);
   return next;
 }
@@ -301,12 +313,14 @@ function requireOwner(
 }
 
 async function processUpdateRow(ctx: WriteCtx, row: PresetRowLike): Promise<PresetRowLike> {
-  const { user } = ctx;
+  const { user, hooks } = ctx;
   const next: PresetRowLike = { ...row };
   requireString(next.id, "Update payload must include 'id'", "missing_id");
   assertNotSystemId(next.id);
   const existing = await fetchExisting(ctx, next.id);
   requireOwner(existing, user);
+  // Re-resolved on every update so a renamed user propagates to existing presets.
+  const userLabelPromise = hooks.getUserLabel?.(user);
   if (next.type !== undefined && next.type !== existing.type) {
     throw presetError(400, {
       message: "Field 'type' is immutable after create",
@@ -331,6 +345,7 @@ async function processUpdateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
   if (existing.type === "appConf") {
     next.tableKey = undefined;
     scrubPresetOnlyFields(next);
+    next.userLabel = await userLabelPromise;
     return next;
   }
 
@@ -345,6 +360,7 @@ async function processUpdateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
     if (newRef !== oldRef) {
       await sanitiseUserConfData(ctx, next, app, tableKey);
     }
+    next.userLabel = await userLabelPromise;
     return next;
   }
 
@@ -354,14 +370,28 @@ async function processUpdateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
   const nextLabel = readPresetLabel(mergedData);
   next.label = nextLabel;
   next.publicLabel = willBePublic ? nextLabel : undefined;
-  await gatePublicPreset(
-    ctx,
-    app,
-    tableKey,
-    { public: wasPublic, label: prevLabel },
-    { public: willBePublic, label: nextLabel, id: existing.id! },
-  );
-  next.aspects = derivePresetAspects((mergedData as { content?: unknown } | null)?.content);
+  const [, userLabel] = await Promise.all([
+    gatePublicPreset(
+      ctx,
+      app,
+      tableKey,
+      { public: wasPublic, label: prevLabel },
+      { public: willBePublic, label: nextLabel, id: existing.id! },
+    ),
+    userLabelPromise,
+  ]);
+  next.userLabel = userLabel;
+  // `aspects` only changes when `data.content` changes — togglePublic /
+  // renamePreset never touch content, so leave the column untouched on those
+  // paths and skip a redundant index write.
+  const patchHasContent =
+    next.data !== undefined &&
+    typeof next.data === "object" &&
+    next.data !== null &&
+    "content" in (next.data as Record<string, unknown>);
+  if (patchHasContent) {
+    next.aspects = derivePresetAspects((mergedData as { content?: unknown } | null)?.content);
+  }
   return next;
 }
 
@@ -432,7 +462,7 @@ export async function buildCapabilities(
     hooks.canPublishPresets(app, tableKey, user),
     hooks.getMaxPresetsPerUser(app, tableKey, user),
   ]);
-  return { canPublish, presetLimit };
+  return { canPublish, presetLimit, userId: user };
 }
 
 // userConf rows excluded — only `type='preset'` counts toward the cap, and
@@ -466,7 +496,7 @@ async function sanitiseUserConfData(
   const ref = data.defaultPresetId;
   if (typeof ref !== "string" || ref.length === 0) return;
   // sys:* refs are opaque pointers; don't try to resolve them server-side.
-  if (ref.startsWith(SYSTEM_PRESET_PREFIX)) return;
+  if (isSystemPresetId(ref)) return;
   const { table, user } = ctx;
   const target = (await table.findOne({
     filter: { id: ref },
@@ -483,14 +513,6 @@ async function sanitiseUserConfData(
   if (!visible) {
     delete data.defaultPresetId;
   }
-}
-
-export function userConfId(user: string, app: string, tableKey: string): string {
-  return `${USER_CONF_PREFIX}${user}:${app}:${tableKey}`;
-}
-
-export function appConfId(user: string, app: string): string {
-  return `${APP_CONF_PREFIX}${user}:${app}`;
 }
 
 function readPresetLabel(data: unknown): string {
