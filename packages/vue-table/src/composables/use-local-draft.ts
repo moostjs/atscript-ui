@@ -137,9 +137,7 @@ export function useLocalDraft(opts: UseLocalDraftOptions): UseLocalDraftReturn {
       const draftSerialized = stableStringify(draft);
       if (preset !== lastPresetRef) {
         lastPresetRef = preset;
-        lastPresetSerialized = stableStringify(
-          serializeDraft(preset, opts.availableAspects),
-        );
+        lastPresetSerialized = stableStringify(serializeDraft(preset, opts.availableAspects));
       }
       if (draftSerialized === lastPresetSerialized) {
         clear();

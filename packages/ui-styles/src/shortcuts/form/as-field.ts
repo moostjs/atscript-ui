@@ -1,10 +1,10 @@
 import { defineShortcuts } from "vunor/theme";
-import { inputBase, strongText } from "./_shared";
+import { inputBase } from "./_shared";
 
 export const asFieldShortcuts = defineShortcuts({
   "as-default-field": {
     "": "flex flex-col gap-$xs mb-$m relative",
-    "[&_label]:": `font-600 ${strongText}`,
+    "[&_label]:": "font-600",
     "[&.required_label]:after:": 'content-["_*"] scope-error text-current-hl font-700 ml-[0.1em]',
     "[&.error_.as-error-slot]:": "scope-error text-current-hl",
 
@@ -57,7 +57,7 @@ export const asFieldShortcuts = defineShortcuts({
   "as-select-caret":
     "absolute right-$s top-1/2 -translate-y-1/2 text-current/60 text-[1em] pointer-events-none",
 
-  "as-field-label": `font-600 ${strongText}`,
+  "as-field-label": "font-600",
 
   "as-field-header-row": "flex items-center gap-$xs min-h-[1.5em]",
   "as-field-header-content": "flex flex-wrap items-center gap-x-$xs gap-y-[0.15em] flex-1 min-w-0",
@@ -73,8 +73,7 @@ export const asFieldShortcuts = defineShortcuts({
     "hover:": "scope-error bg-current-hl/10 text-current-hl",
   },
   "as-field-remove-btn": {
-    "": "inline-grid place-items-center h-[1.5em] px-$s border-0 bg-transparent text-current/50 rounded-base cursor-pointer text-callout leading-none transition-all duration-120",
+    "": "inline-grid place-items-center h-[1.5em] px-$s border-0 bg-transparent text-current/50 rounded-base cursor-pointer text-callout leading-none transition-all duration-120 disabled-soft",
     "hover:not-disabled:": "scope-error bg-current-hl/10 text-current-hl",
-    "disabled:": "opacity-40 cursor-not-allowed",
   },
 });

@@ -27,7 +27,7 @@ export const asPresetDialogShortcuts = defineShortcuts({
   "as-preset-dialog-counter":
     "inline-flex items-center px-$s py-$xxs rounded-r2 layer-2 text-callout text-current/60 font-mono whitespace-nowrap",
   "as-preset-dialog-close": {
-    "": "ml-auto scope-neutral c8-flat inline-flex items-center justify-center size-fingertip-s rounded-base cursor-pointer",
+    "": "ml-auto scope-neutral c8-flat btn btn-square h-fingertip-s rounded-base",
     "hover:": "layer-2",
   },
 
@@ -54,10 +54,8 @@ export const asPresetDialogShortcuts = defineShortcuts({
   // `scope-primary` so the focus ring + outline read in the brand accent —
   // the search box is the primary entry point of this dialog so it should
   // visually dominate while typing.
-  "as-preset-dialog-search-input": {
-    "": "scope-primary w-full h-fingertip-s pl-$xl pr-$s border-1 layer-0 rounded-r1 outline-none current-outline-hl text-scope-dark-0 dark:text-scope-light-0",
-    "[&:focus]:": "i8-apply-outline current-border-hl",
-  },
+  "as-preset-dialog-search-input":
+    "scope-primary i8-bare w-full h-fingertip-s pl-$xl pr-$s rounded-r1",
   // Hidden on mobile so the search input gets the full toolbar width;
   // hints reappear at sm+ where there's room for them.
   "as-preset-dialog-legend":
@@ -107,7 +105,7 @@ export const asPresetDialogShortcuts = defineShortcuts({
   // `scope-primary` so the inline rename's focus ring + outline match
   // the search input — same accent for "actively editing this control".
   "as-preset-dialog-row-rename":
-    "scope-primary flex-1 min-w-0 h-fingertip-s px-$s border-1 layer-0 rounded-r1 outline-none current-outline-hl text-scope-dark-0 dark:text-scope-light-0 [&:focus]:i8-apply-outline current-border-hl",
+    "scope-primary i8-bare flex-1 min-w-0 h-fingertip-s px-$s rounded-r1",
   "as-preset-dialog-row-meta": "text-callout text-current/60 whitespace-nowrap",
   // Owner column — fixed width so the row's column grid stays consistent
   // across all rows regardless of name length. Hidden on narrow screens
@@ -175,10 +173,9 @@ export const asPresetDialogShortcuts = defineShortcuts({
   "as-preset-dialog-footer-unsaved-dot":
     "inline-block w-[0.55em] h-[0.55em] rounded-full bg-primary-500 shrink-0",
   "as-preset-dialog-footer-actions": "flex items-center gap-$s",
-  "as-preset-dialog-footer-close":
-    "scope-neutral c8-chrome inline-flex items-center justify-center h-fingertip-m px-$m font-500 cursor-pointer",
+  "as-preset-dialog-footer-close": "scope-neutral c8-chrome btn",
   "as-preset-dialog-footer-save": {
-    "": "scope-primary c8-filled inline-flex items-center justify-center h-fingertip-m px-$m font-500 cursor-pointer",
-    "[&:disabled]:": "opacity-40 cursor-not-allowed pointer-events-none",
+    "": "scope-primary c8-filled btn",
+    "[&:disabled]:": "pointer-events-none",
   },
 });

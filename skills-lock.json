@@ -11,7 +11,7 @@
       "source": "moostjs/atscript-db",
       "sourceType": "github",
       "skillPath": "skills/atscript-db/SKILL.md",
-      "computedHash": "e60a8134b0617b0270ea319e50bd80380ebaf5d397dac39b3a8667bee9cdf7aa"
+      "computedHash": "01eb330efc3be233f0b0e2cf072e46329b8b02b108f4cdabb98132fcbf986924"
     },
     "moostjs": {
       "source": "moostjs/moostjs",
@@ -23,7 +23,7 @@
       "source": "mav-rik/vunor",
       "sourceType": "github",
       "skillPath": "skills/vunor/SKILL.md",
-      "computedHash": "5aefca3cc4897d99326cbe4c7498c94525e3df040ab387435a831998cdbbd8e7"
+      "computedHash": "6880f16e966d1e6429941b601320c9484e1b1eb139176677bf25ea96d657fb39"
     },
     "wooksjs": {
       "source": "wooksjs/wooksjs",

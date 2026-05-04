@@ -8,8 +8,7 @@ export const asArrayShortcuts = defineShortcuts({
   "as-array-error": "scope-error text-callout text-current-hl mt-$xs",
   "as-array-add": "mt-$xs",
   "as-array-add-btn": {
-    "": "inline-flex items-center gap-$xs h-fingertip-m px-$m border-1 border-dashed rounded-base bg-transparent text-current/60 cursor-pointer transition-all duration-120",
+    "": "inline-flex items-center gap-$xs h-fingertip-m px-$m border-1 border-dashed rounded-base bg-transparent text-current/60 cursor-pointer transition-all duration-120 disabled-soft",
     "hover:not-disabled:": "border-current-hl text-current-hl bg-current-hl/10",
-    "disabled:": "opacity-40 cursor-not-allowed",
   },
 });

@@ -11,14 +11,7 @@ import {
   type SystemPresetInput,
 } from "@atscript/ui-table";
 import { type ClientFactory } from "@atscript/ui";
-import {
-  type ComputedRef,
-  type Ref,
-  type ShallowRef,
-  computed,
-  ref,
-  shallowRef,
-} from "vue";
+import { type ComputedRef, type Ref, type ShallowRef, computed, ref, shallowRef } from "vue";
 
 import { injectPresetsApp } from "./as-presets-app";
 

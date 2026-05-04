@@ -13,7 +13,7 @@ export const asRefShortcuts = defineShortcuts({
     "flex items-center justify-center h-fingertip-m w-full box-border border-1 layer-0 rounded-base",
   "as-ref-spinner": "i-as-loading text-current-hl text-[1.25em] opacity-70",
   "as-ref-content":
-    "scope-primary layer-1 z-[50] border-1 rounded-r2 shadow-popup w-[var(--reka-combobox-trigger-width)] overflow-hidden",
+    "scope-primary popup-card layer-1 z-[50] w-[var(--reka-combobox-trigger-width)]",
   "as-ref-viewport": "max-h-[15em] overflow-y-auto py-$xs",
   "as-ref-item": {
     "": "flex items-baseline gap-$m px-$m py-$s cursor-pointer",

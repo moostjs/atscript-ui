@@ -26,16 +26,12 @@ export const asConfirmDialogShortcuts = defineShortcuts({
   "as-confirm-dialog-title": "!m-0 !p-0 text-body-l font-600",
   "as-confirm-dialog-body": "!m-0 !p-0 text-body text-current/80 whitespace-pre-line",
   "as-confirm-dialog-footer": "flex items-center justify-end gap-$s px-$l py-$m border-t-1",
-  "as-confirm-dialog-cancel":
-    "scope-neutral c8-chrome inline-flex items-center justify-center h-fingertip-m px-$m font-500 cursor-pointer",
+  "as-confirm-dialog-cancel": "scope-neutral c8-chrome btn",
   // Default confirm chrome — `c8-filled` paints bg + contrasting fg via
   // vunor (see `as-table-actions-btn`). Intent variants below override the
   // scope; do NOT override text-color here (the `c8-filled` foreground
   // disappears if we do — red text on red bg).
-  "as-confirm-dialog-confirm": {
-    "": "scope-primary c8-filled inline-flex items-center justify-center h-fingertip-m px-$m font-500 cursor-pointer",
-    "disabled:": "opacity-40 cursor-not-allowed",
-  },
+  "as-confirm-dialog-confirm": "scope-primary c8-filled btn",
   // Scope variants — name matches vunor scope directly (passed as `scope` to
   // `state.prompt()`). `negative → error`, `positive → good`, etc., is the
   // caller's mapping concern (`intentToScope` for action.intent → scope).

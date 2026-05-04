@@ -256,9 +256,7 @@ describe("useAppPrefs localStorage cache", () => {
     setup(client);
     await flushPromises();
 
-    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(
-      JSON.stringify({ appearance: "dark" }),
-    );
+    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(JSON.stringify({ appearance: "dark" }));
   });
 
   it("writes optimistic patch to cache on save (before server settles)", async () => {
@@ -278,14 +276,10 @@ describe("useAppPrefs localStorage cache", () => {
     // the function body, which runs on the next microtask. Yield once
     // before asserting so the body has had a chance to execute.
     await Promise.resolve();
-    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(
-      JSON.stringify({ appearance: "dark" }),
-    );
+    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(JSON.stringify({ appearance: "dark" }));
     resolveSave({ id: "ac:bob:demo" });
     await pending;
-    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(
-      JSON.stringify({ appearance: "dark" }),
-    );
+    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(JSON.stringify({ appearance: "dark" }));
   });
 
   it("rolls back cache when save fails", async () => {
@@ -295,10 +289,7 @@ describe("useAppPrefs localStorage cache", () => {
     const { ret } = setup(client);
     await flushPromises();
     // Pre-cache a previous value.
-    globalThis.localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ appearance: "light" }),
-    );
+    globalThis.localStorage.setItem(CACHE_KEY, JSON.stringify({ appearance: "light" }));
     // Repaint prefs from cache by recreating the composable would be heavy;
     // simpler: assert the rolled-back cache reflects the pre-save state.
     await expect(ret.save({ appearance: "dark" })).rejects.toThrow();
@@ -308,10 +299,7 @@ describe("useAppPrefs localStorage cache", () => {
   });
 
   it("clears cache on reset() and on auth-denied load", async () => {
-    globalThis.localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ appearance: "dark" }),
-    );
+    globalThis.localStorage.setItem(CACHE_KEY, JSON.stringify({ appearance: "dark" }));
     const client = makeMockClient();
     client.query.mockResolvedValue([]);
     const { ret } = setup(client);
@@ -321,10 +309,7 @@ describe("useAppPrefs localStorage cache", () => {
     expect(globalThis.localStorage.getItem(CACHE_KEY)).toBeNull();
 
     // Now simulate a denied reload — also clears cache.
-    globalThis.localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ appearance: "dark" }),
-    );
+    globalThis.localStorage.setItem(CACHE_KEY, JSON.stringify({ appearance: "dark" }));
     client.query.mockRejectedValue(authError(401));
     await ret.reload();
     expect(globalThis.localStorage.getItem(CACHE_KEY)).toBeNull();
@@ -353,10 +338,7 @@ describe("useAppPrefs localStorage cache", () => {
   });
 
   it("does NOT touch localStorage when cache: false", async () => {
-    globalThis.localStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ appearance: "dark" }),
-    );
+    globalThis.localStorage.setItem(CACHE_KEY, JSON.stringify({ appearance: "dark" }));
     const client = makeMockClient();
     client.query.mockResolvedValue([
       {
@@ -387,8 +369,6 @@ describe("useAppPrefs localStorage cache", () => {
     expect(ret.prefs.value).toEqual({});
     await flushPromises();
     // Server response did NOT write to cache either.
-    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(
-      JSON.stringify({ appearance: "dark" }),
-    );
+    expect(globalThis.localStorage.getItem(CACHE_KEY)).toBe(JSON.stringify({ appearance: "dark" }));
   });
 });

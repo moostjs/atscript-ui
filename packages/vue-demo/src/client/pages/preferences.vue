@@ -18,10 +18,7 @@ const { prefs, loading, error, available, save, reload, reset } = useAppPrefs({
 const pendingField = ref<keyof AppConfData | null>(null);
 const lastSaveError = ref<string | null>(null);
 
-async function update<K extends keyof AppConfData>(
-  field: K,
-  value: AppConfData[K],
-) {
+async function update<K extends keyof AppConfData>(field: K, value: AppConfData[K]) {
   pendingField.value = field;
   lastSaveError.value = null;
   try {
@@ -56,19 +53,16 @@ function isPending(field: keyof AppConfData) {
   <div class="p-6 max-w-[640px]">
     <h1 class="text-lg font-semibold mb-1">Preferences</h1>
     <p class="text-sm opacity-60 mb-6">
-      Per-user app-wide settings persisted via the <code>useAppPrefs</code> API.
-      Writes go to <code>/db/_presets</code> (<code>type=appConf</code>) and are
-      mirrored to <code>localStorage</code> for instant paint on next visit.
+      Per-user app-wide settings persisted via the <code>useAppPrefs</code> API. Writes go to
+      <code>/db/_presets</code> (<code>type=appConf</code>) and are mirrored to
+      <code>localStorage</code> for instant paint on next visit.
     </p>
 
     <div v-if="!available" class="mb-4 p-3 rounded-base layer-2 text-sm">
       Sign in to read or write your preferences. (The API returned 401/403.)
     </div>
     <div v-if="loading" class="mb-4 text-xs opacity-60">Loading…</div>
-    <div
-      v-if="error"
-      class="mb-4 p-3 rounded-base scope-error layer-2 text-sm text-current-hl"
-    >
+    <div v-if="error" class="mb-4 p-3 rounded-base scope-error layer-2 text-sm text-current-hl">
       {{ (error as Error).message ?? String(error) }}
     </div>
     <div
@@ -85,7 +79,12 @@ function isPending(field: keyof AppConfData) {
           class="i8-input h-fingertip-m px-$s rounded-base"
           :disabled="!available || isPending('appearance')"
           :value="prefs.appearance ?? 'system'"
-          @change="update('appearance', ($event.target as HTMLSelectElement).value as AppConfData['appearance'])"
+          @change="
+            update(
+              'appearance',
+              ($event.target as HTMLSelectElement).value as AppConfData['appearance'],
+            )
+          "
         >
           <option v-for="v in APPEARANCE" :key="v" :value="v">{{ v }}</option>
         </select>
@@ -123,7 +122,9 @@ function isPending(field: keyof AppConfData) {
           class="i8-input h-fingertip-m px-$s rounded-base"
           :disabled="!available || isPending('density')"
           :value="prefs.density ?? 'cozy'"
-          @change="update('density', ($event.target as HTMLSelectElement).value as AppConfData['density'])"
+          @change="
+            update('density', ($event.target as HTMLSelectElement).value as AppConfData['density'])
+          "
         >
           <option v-for="v in DENSITY" :key="v" :value="v">{{ v }}</option>
         </select>
@@ -135,7 +136,12 @@ function isPending(field: keyof AppConfData) {
           class="i8-input h-fingertip-m px-$s rounded-base"
           :disabled="!available || isPending('dateFormat')"
           :value="prefs.dateFormat ?? 'iso'"
-          @change="update('dateFormat', ($event.target as HTMLSelectElement).value as AppConfData['dateFormat'])"
+          @change="
+            update(
+              'dateFormat',
+              ($event.target as HTMLSelectElement).value as AppConfData['dateFormat'],
+            )
+          "
         >
           <option v-for="v in DATE_FORMAT" :key="v" :value="v">{{ v }}</option>
         </select>
@@ -147,7 +153,12 @@ function isPending(field: keyof AppConfData) {
           class="i8-input h-fingertip-m px-$s rounded-base"
           :disabled="!available || isPending('firstDayOfWeek')"
           :value="prefs.firstDayOfWeek ?? 1"
-          @change="update('firstDayOfWeek', Number(($event.target as HTMLSelectElement).value) as AppConfData['firstDayOfWeek'])"
+          @change="
+            update(
+              'firstDayOfWeek',
+              Number(($event.target as HTMLSelectElement).value) as AppConfData['firstDayOfWeek'],
+            )
+          "
         >
           <option v-for="d in FIRST_DAY" :key="d.value" :value="d.value">{{ d.label }}</option>
         </select>

@@ -23,8 +23,7 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // a toolbar next to the primary CTA. Bold the active label and append
   // a "*" indicator when dirty (rendered as a small bullet in the template).
   "as-preset-picker-trigger": {
-    "": "scope-neutral c8-flat inline-flex items-center gap-$xs h-fingertip-m px-$m font-500 cursor-pointer",
-    "disabled:": "opacity-40 cursor-not-allowed",
+    "": "scope-neutral c8-flat btn",
     "[&[data-state=open]]:": "scope-primary c8-light",
   },
   "as-preset-picker-trigger-label": "text-body whitespace-nowrap",
@@ -32,7 +31,7 @@ export const asPresetPickerShortcuts = defineShortcuts({
   "as-preset-picker-trigger-chevron": "text-[1em] text-current/60 shrink-0 -mr-$xs",
 
   "as-preset-picker-menu":
-    "scope-primary layer-0 z-[200] whitespace-nowrap py-$xs border-1 rounded-r2 shadow-popup min-w-[16em] max-w-[28em]",
+    "scope-primary popup-card whitespace-nowrap py-$xs min-w-[16em] max-w-[28em]",
 
   "as-preset-picker-section": "flex flex-col",
   "as-preset-picker-section-header":
@@ -87,10 +86,9 @@ export const asPresetPickerShortcuts = defineShortcuts({
   "as-preset-picker-separator": "h-0 my-$xs border-t-1",
 
   "as-preset-picker-action": {
-    "": "flex items-center gap-$s w-full px-$m py-$xs border-0 bg-transparent text-current text-left cursor-pointer outline-none",
+    "": "flex items-center gap-$s w-full px-$m py-$xs border-0 bg-transparent text-current text-left cursor-pointer outline-none disabled-soft",
     "hover:": "layer-3",
     "data-[highlighted]:": "layer-3",
-    "disabled:": "opacity-40 cursor-not-allowed",
     "[&.as-preset-picker-action-primary]:": "font-700 scope-primary text-current-hl",
   },
   // Leading icon on each action row — sits in the same column slot as the
@@ -104,15 +102,12 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // space above and below the button row is symmetric (the wrapper's bottom
   // padding would otherwise stack on the footer's bottom and break it).
   "as-preset-picker-popover":
-    "scope-primary layer-0 z-[201] pt-$m px-$l border-1 rounded-r2 shadow-popup min-w-[20em] flex flex-col gap-$m",
+    "scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em] flex flex-col gap-$m",
   "as-preset-picker-popover-title": "text-body-l font-600 m-0",
   "as-preset-picker-popover-field": "flex flex-col gap-$xs",
   // Bold body-color labels ("Name", "Save:", etc.) — match reference: not muted.
   "as-preset-picker-popover-label": "text-body font-600 text-current",
-  "as-preset-picker-popover-input": {
-    "": "h-fingertip-m px-$s border-1 layer-0 rounded-r1 text-scope-dark-0 dark:text-scope-light-0 current-outline-hl outline-none",
-    "focus:": "current-border-hl outline i8-apply-outline",
-  },
+  "as-preset-picker-popover-input": "i8-bare h-fingertip-m px-$s rounded-r1",
   "as-preset-picker-popover-aspects": "flex flex-col gap-$s",
   // Aspect / public-toggle row. Icon color tracks the checkbox state —
   // primary when the input next to it is checked, body/40 when not — so
@@ -135,10 +130,6 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // popover's bottom margin entirely (wrapper has only `pt-$m`).
   "as-preset-picker-popover-footer":
     "flex items-center justify-end gap-$s py-$m -mx-$l px-$l border-t-1",
-  "as-preset-picker-popover-cancel":
-    "scope-neutral c8-chrome inline-flex items-center justify-center h-fingertip-s px-$m font-500 cursor-pointer",
-  "as-preset-picker-popover-save": {
-    "": "scope-primary c8-filled inline-flex items-center justify-center h-fingertip-s px-$m font-500 cursor-pointer",
-    "disabled:": "opacity-40 cursor-not-allowed",
-  },
+  "as-preset-picker-popover-cancel": "scope-neutral c8-chrome btn h-fingertip-s",
+  "as-preset-picker-popover-save": "scope-primary c8-filled btn h-fingertip-s",
 });

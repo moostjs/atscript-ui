@@ -8,14 +8,10 @@ export const asOrderableListShortcuts = defineShortcuts({
     "layer-1 flex items-center gap-$s px-$m py-$s border-b-1 flex-shrink-0",
   "as-orderable-list-search-wrap": searchWrap,
   "as-orderable-list-search-icon": searchIcon,
-  "as-orderable-list-search": {
-    "": `${smallInputBase} pl-[2em]`,
-    "focus:": "current-border-hl outline i8-apply-outline",
-  },
+  "as-orderable-list-search": `${smallInputBase} pl-[2em]`,
   "as-orderable-list-toolbar-actions": "flex gap-$xs flex-shrink-0",
-  "as-orderable-list-toolbar-btn": {
-    "": "scope-neutral c8-chrome inline-flex items-center justify-center h-fingertip-s px-$m text-callout font-600 cursor-pointer leading-none whitespace-nowrap",
-  },
+  "as-orderable-list-toolbar-btn":
+    "scope-neutral c8-chrome btn h-fingertip-s text-callout font-600 leading-none whitespace-nowrap",
 
   "as-orderable-list-items": "flex-1 overflow-y-auto flex flex-col",
   "as-orderable-list-item": {

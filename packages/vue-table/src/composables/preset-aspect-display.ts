@@ -1,8 +1,4 @@
-import {
-  type AsPresetEntryRow,
-  type PresetAspect,
-  derivePresetAspects,
-} from "@atscript/ui-table";
+import { type AsPresetEntryRow, type PresetAspect, derivePresetAspects } from "@atscript/ui-table";
 
 export const ASPECT_LABELS: Record<PresetAspect, string> = {
   columns: "Displayed Columns",
@@ -30,8 +26,8 @@ export function aspectsOf(
   availableAspects: readonly PresetAspect[],
 ): PresetAspect[] {
   if (Array.isArray(row.aspects) && row.aspects.length > 0) {
-    return row.aspects.filter(
-      (a): a is PresetAspect => availableAspects.includes(a as PresetAspect),
+    return row.aspects.filter((a): a is PresetAspect =>
+      availableAspects.includes(a as PresetAspect),
     );
   }
   // derivePresetAspects only checks top-level keys, which are identical

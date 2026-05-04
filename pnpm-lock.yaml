@@ -121,8 +121,8 @@ catalogs:
       specifier: ^3.2.6
       version: 3.2.6
     vunor:
-      specifier: ^0.1.6
-      version: 0.1.6
+      specifier: ^0.2
+      version: 0.2.0
 
 overrides:
   vite: npm:@voidzero-dev/vite-plus-core@0.1.12
@@ -314,7 +314,7 @@ importers:
         version: '@voidzero-dev/vite-plus-test@0.1.19(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
       vunor:
         specifier: 'catalog:'
-        version: 0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
+        version: 0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
 
   packages/ui-table:
     dependencies:
@@ -381,7 +381,7 @@ importers:
         version: 4.6.4(vue@3.5.30(typescript@5.9.3))
       vunor:
         specifier: 'catalog:'
-        version: 0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3))(typescript@5.9.3)
+        version: 0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
       '@atscript/db':
         specifier: 'catalog:'
@@ -503,7 +503,7 @@ importers:
         version: 3.2.6(typescript@5.9.3)
       vunor:
         specifier: 'catalog:'
-        version: 0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
+        version: 0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
 
   packages/vue-playground:
     dependencies:
@@ -545,7 +545,7 @@ importers:
         version: 4.6.4(vue@3.5.30(typescript@5.9.3))
       vunor:
         specifier: 'catalog:'
-        version: 0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3))(typescript@5.9.3)
+        version: 0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3))(typescript@5.9.3)
     devDependencies:
       '@atscript/db':
         specifier: 'catalog:'
@@ -652,7 +652,7 @@ importers:
         version: 3.2.6(typescript@5.9.3)
       vunor:
         specifier: 'catalog:'
-        version: 0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
+        version: 0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))
 
   packages/vue-wf:
     dependencies:
@@ -3960,8 +3960,8 @@ packages:
       typescript:
         optional: true
 
-  vunor@0.1.6:
-    resolution: {integrity: sha512-WX6HMEAXuMEamFQR6wm9EiKCznicuWTqbUL/wxDGp8L/dLD3qeBafOzPgZ9pRXb6rPZB8qvq9MFsHlwM+gs2LA==}
+  vunor@0.2.0:
+    resolution: {integrity: sha512-OshkMyIitTaVEmRAT7UGSCzPFPxlHJxr9oh/VZ8ZmH/Fs06sgvTTniEAQ7DmxJpB8i2ZdArbNaO0gdEOyMHlBw==}
 
   webpack-virtual-modules@0.6.2:
     resolution: {integrity: sha512-66/V2i5hQanC51vBQKPH4aI8NMAcBW59FVBs+rC7eGHupMyfn34q7rZIE+ETlJ+XTevqfUhVVBgSUNSW2flEUQ==}
@@ -5499,7 +5499,7 @@ snapshots:
       '@vue/shared': 3.5.32
       estree-walker: 2.0.2
       magic-string: 0.30.21
-      postcss: 8.5.8
+      postcss: 8.5.10
       source-map-js: 1.2.1
 
   '@vue/compiler-ssr@3.5.30':
@@ -6991,7 +6991,7 @@ snapshots:
     optionalDependencies:
       typescript: 5.9.3
 
-  vunor@0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3))(typescript@5.9.3):
+  vunor@0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(@voidzero-dev/vite-plus-core@0.1.12(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3))(typescript@5.9.3):
     dependencies:
       '@internationalized/date': 3.12.1
       '@prostojs/palitra': 0.0.4
@@ -7010,7 +7010,7 @@ snapshots:
       - typescript
       - vite
 
-  vunor@0.1.6(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)):
+  vunor@0.2.0(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)):
     dependencies:
       '@internationalized/date': 3.12.1
       '@prostojs/palitra': 0.0.4

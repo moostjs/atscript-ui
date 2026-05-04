@@ -6,7 +6,6 @@ import {
   searchIcon,
   searchWrap,
   smallInputBase,
-  strongText,
 } from "./_shared";
 
 export const asFilterDialogShortcuts = defineShortcuts({
@@ -54,10 +53,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
     "layer-1 flex items-center flex-wrap gap-$xs px-$m py-$s border-b-1 flex-shrink-0 empty:hidden",
   "as-filter-value-help-search-wrap": searchWrap,
   "as-filter-value-help-search-icon": searchIcon,
-  "as-filter-value-help-search": {
-    "": `${smallInputBase} pl-[2em]`,
-    "focus:": "current-border-hl outline i8-apply-outline",
-  },
+  "as-filter-value-help-search": `${smallInputBase} pl-[2em]`,
   "as-filter-value-help-count":
     "inline-flex items-center gap-$s ml-auto text-callout text-current/50 whitespace-nowrap flex-shrink-0",
   "as-filter-value-help-filters-toggle": {
@@ -69,11 +65,8 @@ export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-value-help-table": "flex flex-col flex-1 min-h-0 overflow-hidden",
 
   "as-filter-condition-row": "grid grid-cols-[150px_1fr_28px] gap-$s items-center",
-  "as-filter-condition-select": {
-    "": `scope-primary h-fingertip-m px-$s pr-[1.75em] border-1 layer-0 rounded-base min-w-0 outline-none current-outline-hl ${strongText} cursor-pointer appearance-none`,
-    "hover:": "border-scope-light-3 dark:border-scope-dark-3",
-    "focus:": "current-border-hl outline i8-apply-outline",
-  },
+  "as-filter-condition-select":
+    "scope-primary i8-bare h-fingertip-m px-$s pr-[1.75em] min-w-0 cursor-pointer appearance-none",
   "as-filter-condition-remove": {
     "": "inline-grid place-items-center size-fingertip-xs border-0 bg-transparent text-current/70 cursor-pointer rounded-base leading-none flex-shrink-0 transition-colors duration-120 text-[1em]",
     "hover:": "scope-error layer-2 text-current-hl",
@@ -83,11 +76,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
     "hover:": "underline",
   },
 
-  "as-filter-input": {
-    "": `scope-primary flex-1 h-fingertip-m px-$s border-1 layer-0 rounded-base min-w-0 outline-none current-outline-hl ${strongText} placeholder:text-current/50`,
-    "hover:": "border-scope-light-3 dark:border-scope-dark-3",
-    "focus:": "current-border-hl outline i8-apply-outline",
-  },
+  "as-filter-input": "scope-primary i8-bare flex-1 h-fingertip-m px-$s min-w-0",
   "as-filter-input-disabled": "flex-1 h-fingertip-m layer-1 rounded-base border-1 min-w-0",
   "as-filter-select": "cursor-pointer",
   "as-filter-input-range": "flex items-center gap-$xs flex-1",
@@ -102,10 +91,8 @@ export const asFilterDialogShortcuts = defineShortcuts({
 
   "as-filter-dialog-footer": "flex items-center gap-$s px-$l py-$m border-t-1",
   "as-filter-dialog-footer-right": "flex gap-$s ml-auto",
-  "as-filter-btn":
-    "scope-neutral c8-chrome inline-flex items-center justify-center h-fingertip-m px-$m font-600 cursor-pointer",
-  "as-filter-btn-apply":
-    "scope-primary c8-filled inline-flex items-center justify-center h-fingertip-m px-$m font-500 cursor-pointer",
+  "as-filter-btn": "scope-neutral c8-chrome btn font-600",
+  "as-filter-btn-apply": "scope-primary c8-filled btn",
   "as-filter-btn-clear": {
     "": "scope-error inline-flex items-center h-fingertip-m px-$s border-0 bg-transparent text-callout font-500 text-current-hl cursor-pointer",
     "hover:": "underline",

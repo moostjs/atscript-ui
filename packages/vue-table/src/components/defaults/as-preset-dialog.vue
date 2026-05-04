@@ -8,11 +8,7 @@ import {
   DialogTitle,
 } from "reka-ui";
 import { computed, nextTick, ref, watch } from "vue";
-import {
-  type PresetAspect,
-  isSystemPresetId,
-  setsEqual,
-} from "@atscript/ui-table";
+import { type PresetAspect, isSystemPresetId, setsEqual } from "@atscript/ui-table";
 import { useTableContext } from "../../composables/use-table-state";
 import {
   ASPECT_ICONS,
@@ -54,14 +50,15 @@ const counterText = computed(() =>
 );
 
 const serverFavIds = computed<Set<string>>(() => {
-  const arr = (state.preset.userConf.value?.data as { favPresetIds?: string[] } | undefined)?.favPresetIds;
+  const arr = (state.preset.userConf.value?.data as { favPresetIds?: string[] } | undefined)
+    ?.favPresetIds;
   return new Set(arr ?? []);
 });
 
 const serverDefaultId = computed<string | null>(
   () =>
-    (state.preset.userConf.value?.data as { defaultPresetId?: string } | undefined)?.defaultPresetId ??
-    null,
+    (state.preset.userConf.value?.data as { defaultPresetId?: string } | undefined)
+      ?.defaultPresetId ?? null,
 );
 
 const serverPublicIds = computed<Set<string>>(() => {

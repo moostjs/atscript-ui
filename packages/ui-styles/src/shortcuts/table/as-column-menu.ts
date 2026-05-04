@@ -2,8 +2,7 @@ import { defineShortcuts } from "vunor/theme";
 import { menuItemIconHl } from "./_shared";
 
 export const asColumnMenuShortcuts = defineShortcuts({
-  "as-column-menu-content":
-    "scope-primary layer-0 z-[200] whitespace-nowrap py-$xs border-1 rounded-r2 shadow-popup min-w-[14em]",
+  "as-column-menu-content": "scope-primary popup-card whitespace-nowrap py-$xs min-w-[14em]",
   "as-column-menu-label":
     "px-$m pt-$s pb-$xs text-callout font-mono font-600 tracking-[0.14em] uppercase text-current/50",
   "as-column-menu-item": {
@@ -23,5 +22,5 @@ export const asColumnMenuShortcuts = defineShortcuts({
     "hover:": "bg-current-hl/10",
     "data-[highlighted]:": "bg-current-hl/10",
   },
-  "as-column-menu-separator": "h-[1px] my-$xs bg-scope-light-2 dark:bg-scope-dark-2",
+  "as-column-menu-separator": "h-0 my-$xs border-t-1",
 });

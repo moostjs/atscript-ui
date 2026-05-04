@@ -1,5 +1,5 @@
 import { defineShortcuts } from "vunor/theme";
-import { searchIcon, strongText } from "./_shared";
+import { searchIcon } from "./_shared";
 
 export const asPageShortcuts = defineShortcuts({
   "as-page-header": "flex items-start justify-between gap-$m px-$l pt-$l pb-$m",
@@ -10,23 +10,20 @@ export const asPageShortcuts = defineShortcuts({
   // multi-select switch). The title element keeps its `text-[1.54em]`
   // intrinsic size; the toggle sits beside it as a small adjunct.
   "as-page-header-title-row": "flex items-center gap-$s min-w-0",
-  "as-page-header-title": `m-0 text-[1.54em] font-600 tracking-[-0.02em] ${strongText}`,
+  "as-page-header-title": "m-0 text-[1.54em] font-600 tracking-[-0.02em]",
   "as-page-header-sub": "text-callout text-current/70 mt-[0.15em]",
   "as-page-header-actions": "flex items-center gap-$xs flex-shrink-0",
   // Title-row toggle: `c8-flat` already wires `aria-[pressed=true]` to
   // `c8-flat-selected` so the button paints scope-tinted (icon + bg) when
   // pressed. `scope-primary` gives the pressed state the brand-blue tint.
   "as-page-title-toggle": {
-    "": "scope-primary c8-flat inline-grid place-items-center size-fingertip-s",
+    "": "scope-primary c8-flat btn btn-square h-fingertip-s",
     "[&_>span]:": "text-[1.25em]",
   },
   // Same chrome as dialog buttons (`as-filter-btn` etc.) — `c8-chrome`
   // handles bg + border + hover (only the bg shifts on hover, text color
   // stays neutral). Layout-only utilities live alongside.
-  "as-page-toolbar-btn": {
-    "": "scope-neutral c8-chrome inline-flex items-center gap-$xs h-fingertip-m px-$m text-callout font-500 cursor-pointer leading-none",
-    "disabled:": "opacity-40 cursor-not-allowed",
-  },
+  "as-page-toolbar-btn": "scope-neutral c8-chrome btn text-callout leading-none",
   // Island wrapper grouping a set of square icon-only toolbar buttons (e.g.
   // Columns / Filters / Sorters config triggers). Single shared border,
   // internal dividers between buttons, rounded outer ends. Children should
@@ -38,21 +35,16 @@ export const asPageShortcuts = defineShortcuts({
   // like the rest of the toolbar (`fingertip-m`) but icon-only and
   // border-0 so the parent island's border + dividers show through.
   "as-page-toolbar-island-btn": {
-    "": "scope-neutral inline-grid place-items-center size-fingertip-m bg-transparent border-0 text-current cursor-pointer",
+    "": "scope-neutral btn btn-square bg-transparent border-0",
     "hover:not-disabled:": "current-bg-scope-light-1 bg-current",
     "dark:hover:not-disabled:": "current-bg-scope-dark-1",
-    "disabled:": "opacity-40 cursor-not-allowed",
     "[&_>span]:": "text-[1.25em]",
   },
   "as-page-toolbar":
     "grid grid-cols-[minmax(240px,1fr)_auto] items-center gap-x-$m gap-y-$s px-$l pb-$m min-w-0",
   "as-page-search": "relative min-w-0 col-start-1",
   "as-page-search-icon": searchIcon,
-  "as-page-search-input": {
-    "": `scope-primary w-full h-fingertip-m pl-[2em] pr-$s border-1 layer-0 rounded-base ${strongText} outline-none current-outline-hl placeholder:text-current/50`,
-    "hover:": "border-scope-light-3 dark:border-scope-dark-3",
-    "focus:": "current-border-hl outline i8-apply-outline",
-  },
+  "as-page-search-input": "scope-primary i8-bare w-full h-fingertip-m pl-[2em] pr-$s",
   // Pinned to `min-h-fingertip-m` so the row keeps a stable height when the
   // selection summary (Clear button) appears/disappears — without this, the
   // pill-only state collapses to text height and the row jumps.

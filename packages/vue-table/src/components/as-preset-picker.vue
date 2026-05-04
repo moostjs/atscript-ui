@@ -145,7 +145,8 @@ function storedItem(row: AsPresetEntryRow, fav: boolean, meta?: string): PresetI
 }
 
 const favIds = computed<Set<string>>(() => {
-  const arr = (state.preset.userConf.value?.data as { favPresetIds?: string[] } | undefined)?.favPresetIds;
+  const arr = (state.preset.userConf.value?.data as { favPresetIds?: string[] } | undefined)
+    ?.favPresetIds;
   return new Set(arr ?? []);
 });
 
@@ -376,7 +377,11 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
             {{ ASPECT_LABELS[a] }}
           </label>
         </div>
-        <template v-if="state.preset.capabilities.value === null || state.preset.capabilities.value.canPublish">
+        <template
+          v-if="
+            state.preset.capabilities.value === null || state.preset.capabilities.value.canPublish
+          "
+        >
           <div class="as-preset-picker-popover-separator" />
           <label class="as-preset-picker-popover-public">
             <input v-model="saveAsPublic" type="checkbox" />

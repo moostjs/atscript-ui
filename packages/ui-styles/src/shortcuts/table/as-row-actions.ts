@@ -36,9 +36,8 @@ export const asRowActionsShortcuts = defineShortcuts({
   "as-row-actions-btn-icon": "text-[1.25em] shrink-0",
   "as-row-actions-btn-label": "text-callout",
   "as-row-actions-more": "",
-  "as-row-actions-menu":
-    "scope-primary layer-0 z-[200] whitespace-nowrap py-$xs border-1 rounded-r2 shadow-popup min-w-[12em]",
-  "as-row-actions-menu-separator": "h-[1px] my-$xs bg-scope-light-2 dark:bg-scope-dark-2",
+  "as-row-actions-menu": "scope-primary popup-card whitespace-nowrap py-$xs min-w-[12em]",
+  "as-row-actions-menu-separator": "h-0 my-$xs border-t-1",
   // Menu item base. Default-marked items get bold font so the primary CTA
   // is visually distinct in the dropdown list.
   "as-row-actions-menu-item": {

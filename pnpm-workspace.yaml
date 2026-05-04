@@ -46,7 +46,7 @@ catalog:
   vue: ^3
   vue-router: ^4
   vue-tsc: ^3.2.6
-  vunor: ^0.1.6
+  vunor: ^0.2
 
 catalogMode: prefer
 
