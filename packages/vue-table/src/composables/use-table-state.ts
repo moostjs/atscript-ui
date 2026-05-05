@@ -36,8 +36,10 @@ import {
   type UrlQuerySync,
 } from "@atscript/ui-table";
 import type { Client, PageResult } from "@atscript/db-client";
+import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type {
+  ActionFormRequest,
   ActionResult,
   ConfigTab,
   ConfirmOptions,
@@ -56,7 +58,7 @@ import { createMainActionRegistry } from "./state/create-main-action-registry";
 import { createNavController } from "./state/create-nav-controller";
 import { createPresetState } from "./state/create-preset-state";
 import { createWindowFetcher } from "./state/create-window-fetcher";
-import { extractIdentifier } from "./state/intent-scope";
+import { collectIdentifiers, triggerAction, type PromptCtx } from "./state/intent-scope";
 import type { UseLocalDraftReturn } from "./use-local-draft";
 import type { UsePresetsReturn } from "./use-presets";
 import type { PresetAspect, SystemPreset } from "@atscript/ui-table";
@@ -92,6 +94,10 @@ export interface TableContext {
   types?: TAsCellTypeComponents;
   /** Named cell-component overrides — looked up by `@ui.table.component "name"`. */
   components?: Record<string, Component>;
+  /** Form-type → component dispatch map for the action-form dialog. */
+  formTypes?: TAsTypeComponents;
+  /** Named form-component overrides for the action-form dialog. */
+  formComponents?: Record<string, Component>;
 }
 
 export type QueryFn = (
@@ -208,6 +214,50 @@ export interface TableStateInternals {
 
 type Row = Record<string, unknown>;
 
+interface RequestSlot<TBody, TResolved> {
+  ref: Ref<(TBody & { resolve: (value: TResolved) => void }) | null>;
+  request: (body: TBody) => Promise<TResolved>;
+  accept: (value: TResolved) => void;
+  dismiss: () => void;
+}
+
+/**
+ * Promise-based dialog slot. A second `request()` while one is open
+ * auto-resolves the prior one with `cancelValue` (the user couldn't have
+ * answered both). `dismiss()` is the same path; `accept(v)` resolves with `v`.
+ */
+function createRequestSlot<TBody, TResolved>(
+  cancelValue: TResolved,
+): RequestSlot<TBody, TResolved> {
+  type Req = TBody & { resolve: (value: TResolved) => void };
+  // `shallowRef`: every writer replaces the value wholesale and the slot can
+  // hold large `identifiers[]` arrays for `rows`-level actions — deep-tracking
+  // each identifier object would be wasted reactive overhead.
+  const r = shallowRef<Req | null>(null) as Ref<Req | null>;
+  function request(body: TBody): Promise<TResolved> {
+    if (r.value) {
+      r.value.resolve(cancelValue);
+      r.value = null;
+    }
+    return new Promise<TResolved>((resolve) => {
+      r.value = { ...body, resolve } as Req;
+    });
+  }
+  function accept(value: TResolved) {
+    const req = r.value;
+    if (!req) return;
+    r.value = null;
+    req.resolve(value);
+  }
+  function dismiss() {
+    const req = r.value;
+    if (!req) return;
+    r.value = null;
+    req.resolve(cancelValue);
+  }
+  return { ref: r, request, accept, dismiss };
+}
+
 export function createTableState(opts: CreateTableStateOptions): {
   state: ReactiveTableState;
   internals: TableStateInternals;
@@ -291,31 +341,26 @@ export function createTableState(opts: CreateTableStateOptions): {
   });
   presetInternals.bootstrap();
 
-  // ── Prompt dialog ───────────────────────────────────────────────────────
-  // A concurrent `prompt()` auto-resolves the prior request as `false` —
-  // the user couldn't have answered both.
-  const confirmRequest = ref<ConfirmRequest | null>(null);
+  // ── Request slots: prompt + action-form dialogs ─────────────────────────
+  const promptSlot = createRequestSlot<Omit<ConfirmRequest, "resolve">, boolean>(false);
+  const confirmRequest = promptSlot.ref;
   function promptFn(message: string, opts: ConfirmOptions = {}): Promise<boolean> {
-    if (confirmRequest.value) {
-      confirmRequest.value.resolve(false);
-      confirmRequest.value = null;
-    }
-    return new Promise<boolean>((resolve) => {
-      confirmRequest.value = { ...opts, message, resolve };
+    return promptSlot.request({ ...opts, message });
+  }
+  const acceptPrompt = () => promptSlot.accept(true);
+  const dismissPrompt = promptSlot.dismiss;
+
+  const formSlot = createRequestSlot<Omit<ActionFormRequest, "resolve">, unknown>(null);
+  const actionFormRequest = formSlot.ref;
+  function requestActionInput(action: TVueTableActionInfo, ctx: PromptCtx): Promise<unknown> {
+    return formSlot.request({
+      action,
+      identifiers: ctx.identifiers,
+      preferredId: ctx.preferredId,
     });
   }
-  function acceptPrompt() {
-    const req = confirmRequest.value;
-    if (!req) return;
-    confirmRequest.value = null;
-    req.resolve(true);
-  }
-  function dismissPrompt() {
-    const req = confirmRequest.value;
-    if (!req) return;
-    confirmRequest.value = null;
-    req.resolve(false);
-  }
+  const acceptActionForm = formSlot.accept;
+  const dismissActionForm = formSlot.dismiss;
 
   // Stable per-state UID so deterministic row IDs survive remount of consuming
   // components without colliding across multi-table pages.
@@ -420,15 +465,21 @@ export function createTableState(opts: CreateTableStateOptions): {
   const { actions } = actionsNs;
 
   // 5. Main-action registry — falls back to `actions.default.row` when no
-  // listener is registered.
+  // listener is registered. Routes through `triggerAction` so keyboard-Enter
+  // honours `promptText` / `inputForm` exactly like a click on the action.
+  // `stateRef` is patched after `state` is built below; the guard turns the
+  // construction-order hazard into a typed early-return.
+  let stateRef: ReactiveTableState | null = null;
   const mainAction = createMainActionRegistry({
     getActiveIndex: () => activeIndex.value,
     getActiveRow,
     getDefaultRowAction: () => actions.default.row,
-    invokeFallback: (action, row, event) =>
-      void actions.invoke(action, extractIdentifier(row, tableDef.value?.preferredId ?? []), {
-        event,
-      }),
+    invokeFallback: (action, row, event) => {
+      if (!stateRef) return;
+      const preferredId = tableDef.value?.preferredId ?? [];
+      const identifiers = collectIdentifiers(stateRef, [row], preferredId);
+      void triggerAction(stateRef, action, { identifiers, preferredId }, event);
+    },
   });
   const {
     hasMainActionListener,
@@ -612,6 +663,10 @@ export function createTableState(opts: CreateTableStateOptions): {
     prompt: promptFn,
     acceptPrompt,
     dismissPrompt,
+    actionFormRequest,
+    requestActionInput,
+    acceptActionForm,
+    dismissActionForm,
 
     query,
     queryImmediate,
@@ -669,6 +724,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     /** Preset feature surface. Inert when no `presetsHandle` is wired. */
     preset: presetSlice,
   };
+  stateRef = state;
 
   // ── URL query bridge ────────────────────────────────────────────────────
   // Echo guard for both directions — skip emit when state re-serializes to
@@ -864,13 +920,9 @@ export function createTableState(opts: CreateTableStateOptions): {
   onScopeDispose(() => {
     debouncedFilterQuery.cancel();
     disposeDebounces();
-    // Resolve any pending prompt as `false` so awaiters of `state.prompt()`
-    // don't hang forever when the table state is torn down mid-dialog.
-    if (confirmRequest.value) {
-      const req = confirmRequest.value;
-      confirmRequest.value = null;
-      req.resolve(false);
-    }
+    // Resolve any pending dialog so awaiters don't hang on teardown.
+    promptSlot.dismiss();
+    formSlot.dismiss();
   });
 
   const internals: TableStateInternals = {

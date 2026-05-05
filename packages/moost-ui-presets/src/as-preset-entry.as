@@ -40,6 +40,8 @@ export interface AsPresetEntry {
     @db.index.plain 'preset_user_idx'
     @expect.maxLength 128
     @expect.minLength 1
+    // Default keeps the client validator quiet; controller stamps from session.
+    @db.default ''
     user: string
 
     @expect.maxLength 128

@@ -44,7 +44,7 @@ export const asPageShortcuts = defineShortcuts({
     "grid grid-cols-[minmax(240px,1fr)_auto] items-center gap-x-$m gap-y-$s px-$l pb-$m min-w-0",
   "as-page-search": "relative min-w-0 col-start-1",
   "as-page-search-icon": searchIcon,
-  "as-page-search-input": "scope-primary i8-bare w-full h-fingertip-m pl-[2em] pr-$s",
+  "as-page-search-input": "scope-primary layer-0 i8-bare w-full h-fingertip-m pl-[2em] pr-$s",
   // Pinned to `min-h-fingertip-m` so the row keeps a stable height when the
   // selection summary (Clear button) appears/disappears — without this, the
   // pill-only state collapses to text height and the row jumps.

@@ -1,5 +1,11 @@
 import { defineShortcuts } from "vunor/theme";
-import { dialogBase, dialogOverlay } from "./_shared";
+import {
+  buildDialogConfirmVariants,
+  dialogBase,
+  dialogCancelBtn,
+  dialogConfirmBtn,
+  dialogOverlay,
+} from "./_shared";
 
 /**
  * `<AsConfirmDialog>` Tier-2 default. Replaces `window.confirm()` for action
@@ -26,27 +32,7 @@ export const asConfirmDialogShortcuts = defineShortcuts({
   "as-confirm-dialog-title": "!m-0 !p-0 text-body-l font-600",
   "as-confirm-dialog-body": "!m-0 !p-0 text-body text-current/80 whitespace-pre-line",
   "as-confirm-dialog-footer": "flex items-center justify-end gap-$s px-$l py-$m border-t-1",
-  "as-confirm-dialog-cancel": "scope-neutral c8-chrome btn",
-  // Default confirm chrome — `c8-filled` paints bg + contrasting fg via
-  // vunor (see `as-table-actions-btn`). Intent variants below override the
-  // scope; do NOT override text-color here (the `c8-filled` foreground
-  // disappears if we do — red text on red bg).
-  "as-confirm-dialog-confirm": "scope-primary c8-filled btn",
-  // Scope variants — name matches vunor scope directly (passed as `scope` to
-  // `state.prompt()`). `negative → error`, `positive → good`, etc., is the
-  // caller's mapping concern (`intentToScope` for action.intent → scope).
-  "as-confirm-dialog-confirm-good": {
-    "[&.as-confirm-dialog-confirm]:": "!scope-good",
-  },
-  "as-confirm-dialog-confirm-error": {
-    "[&.as-confirm-dialog-confirm]:": "!scope-error",
-  },
-  "as-confirm-dialog-confirm-warn": {
-    "[&.as-confirm-dialog-confirm]:": "!scope-warn",
-  },
-  "as-confirm-dialog-confirm-primary": "scope-primary",
-  "as-confirm-dialog-confirm-secondary": "scope-secondary",
-  "as-confirm-dialog-confirm-neutral": {
-    "[&.as-confirm-dialog-confirm]:": "!scope-neutral",
-  },
+  "as-confirm-dialog-cancel": dialogCancelBtn,
+  "as-confirm-dialog-confirm": dialogConfirmBtn,
+  ...buildDialogConfirmVariants("as-confirm-dialog-confirm"),
 });

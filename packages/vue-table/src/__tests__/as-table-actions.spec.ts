@@ -143,7 +143,11 @@ describe("<AsTableActions>", () => {
     });
     await wrapper.find("button").trigger("click");
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("bulk-lock", [{ id: "a" }, { id: "b" }, { id: "c" }]);
+    expect(actionFn).toHaveBeenCalledWith(
+      "bulk-lock",
+      [{ id: "a" }, { id: "b" }, { id: "c" }],
+      undefined,
+    );
   });
 
   it("default button click invokes default with the resolved identifier objects", async () => {
@@ -156,7 +160,7 @@ describe("<AsTableActions>", () => {
     });
     await wrapper.find("button").trigger("click");
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("bulk-lock", [{ id: "a" }, { id: "b" }]);
+    expect(actionFn).toHaveBeenCalledWith("bulk-lock", [{ id: "a" }, { id: "b" }], undefined);
   });
 
   it("scoped slot replaces built-in chrome", () => {

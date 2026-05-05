@@ -126,7 +126,7 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
         }
         case "backend":
         default: {
-          const data = await opts.client.action(action.name, pk);
+          const data = await opts.client.action(action.name, pk, callOpts?.input);
           const message =
             typeof data === "object" && data !== null && "message" in data
               ? ((data as { message?: unknown }).message as string | undefined)

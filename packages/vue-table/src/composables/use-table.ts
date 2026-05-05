@@ -5,6 +5,7 @@ import {
   type ClientFactory,
   type SortControl,
 } from "@atscript/ui";
+import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { Client } from "@atscript/db-client";
 import type { Component, Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
@@ -85,6 +86,13 @@ export interface UseTableOptions {
   types?: TAsCellTypeComponents;
   /** Named cell-component overrides — looked up by `@ui.table.component "name"`. */
   components?: Record<string, Component>;
+  /**
+   * Form-type → component dispatch map for the action-form dialog. Defaults to
+   * `createDefaultTypes()` from `@atscript/vue-form`.
+   */
+  formTypes?: TAsTypeComponents;
+  /** Named form-component overrides for the action-form dialog. */
+  formComponents?: Record<string, Component>;
   /** Whether to provide table context to the subtree (default: true). */
   provideContext?: boolean;
   /**
@@ -208,6 +216,8 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       controls: opts?.controls ?? {},
       types: opts?.types,
       components: opts?.components,
+      formTypes: opts?.formTypes,
+      formComponents: opts?.formComponents,
     });
   }
 

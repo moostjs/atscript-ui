@@ -19,10 +19,9 @@ import { useTableContext } from "../../composables/use-table-state";
 import {
   applyRowGate,
   ariaLabelFor,
-  confirmAction,
   extractIdentifier,
   intentClass,
-  pkForLevel,
+  triggerAction,
 } from "../../composables/state/intent-scope";
 import AsActionMenuContent from "../internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../../types";
@@ -63,9 +62,7 @@ async function trigger(action: TVueTableActionInfo, event?: MouseEvent | Keyboar
   const preferredId = state.tableDef.value?.preferredId ?? [];
   const id = props.pk !== undefined ? props.pk : extractIdentifier(props.row, preferredId);
   const identifiers = id === undefined ? [] : [id];
-  const ok = await confirmAction(state, action, { identifiers, preferredId });
-  if (!ok) return;
-  void state.actions.invoke(action, pkForLevel(action.level, identifiers), { event });
+  await triggerAction(state, action, { identifiers, preferredId }, event);
 }
 </script>
 

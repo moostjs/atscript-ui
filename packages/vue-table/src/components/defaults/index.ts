@@ -1,3 +1,6 @@
+// The action-form dialog is deliberately omitted from this barrel —
+// re-exporting would re-bundle `@atscript/vue-form` into every consumer.
+// Subpath import: `@atscript/vue-table/as-action-form-dialog`.
 export { default as AsColumnMenu } from "./as-column-menu.vue";
 export { default as AsConfigDialog } from "./as-config-dialog.vue";
 export { default as AsConfirmDialog } from "./as-confirm-dialog.vue";

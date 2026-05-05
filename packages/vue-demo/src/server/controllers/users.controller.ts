@@ -5,12 +5,14 @@ import {
   DbActionRows,
   DbRowActions,
   DbTableActions,
+  InputForm,
   perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
 import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
 import { usersTable } from "../db";
 import type { UsersTable } from "../schemas/users.as";
+import { ResendInviteInput, SuspendUsersInput } from "../schemas/action-forms.as";
 import { SessionGuard } from "../auth/session.guard";
 import { AsArbacDbController } from "../auth/arbac-db.controller";
 
@@ -72,8 +74,10 @@ export class UsersController extends AsArbacDbController<typeof UsersTable> {
   @ArbacAction("update")
   async resendInvite(
     @DbActionRow() row: { id: number; username: string; email: string; status: string },
+    @InputForm(ResendInviteInput) input: ResendInviteInput,
   ) {
-    return { ok: true, id: row.id, message: `Invite resent to ${row.email}` };
+    const note = input?.customMessage ? ` (with custom message)` : "";
+    return { ok: true, id: row.id, message: `Invite resent to ${row.email}${note}` };
   }
 
   /**
@@ -93,16 +97,21 @@ export class UsersController extends AsArbacDbController<typeof UsersTable> {
     promptText: ["Suspend user $1?", "Suspend $N users? They won't be able to sign in."],
   })
   @ArbacAction("update")
-  async suspend(@DbActionRows() rows: { id: number; username: string; status: string }[]) {
+  async suspend(
+    @DbActionRows() rows: { id: number; username: string; status: string }[],
+    @InputForm(SuspendUsersInput) input: SuspendUsersInput,
+  ) {
     const targetIds = rows.map((r) => r.id);
     if (targetIds.length === 0) {
       return { ok: false, ids: [], message: "No users to suspend." };
     }
     await usersTable.updateMany({ id: { $in: targetIds } }, { status: "suspended" });
+    const notify = input?.notifyUser !== false ? " They were notified by email." : "";
+    const reason = input?.reason ? `: ${input.reason}` : "";
     return {
       ok: true,
       ids: targetIds,
-      message: `Suspended ${targetIds.length} user${targetIds.length === 1 ? "" : "s"}.`,
+      message: `Suspended ${targetIds.length} user${targetIds.length === 1 ? "" : "s"}${reason}.${notify}`,
     };
   }
 }

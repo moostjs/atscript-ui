@@ -66,7 +66,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
 
   "as-filter-condition-row": "grid grid-cols-[150px_1fr_28px] gap-$s items-center",
   "as-filter-condition-select":
-    "scope-primary i8-bare h-fingertip-m px-$s pr-[1.75em] min-w-0 cursor-pointer appearance-none",
+    "scope-primary layer-0 i8-bare h-fingertip-m px-$s pr-[1.75em] min-w-0 cursor-pointer appearance-none",
   "as-filter-condition-remove": {
     "": "inline-grid place-items-center size-fingertip-xs border-0 bg-transparent text-current/70 cursor-pointer rounded-base leading-none flex-shrink-0 transition-colors duration-120 text-[1em]",
     "hover:": "scope-error layer-2 text-current-hl",
@@ -76,7 +76,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
     "hover:": "underline",
   },
 
-  "as-filter-input": "scope-primary i8-bare flex-1 h-fingertip-m px-$s min-w-0",
+  "as-filter-input": "scope-primary layer-0 i8-bare flex-1 h-fingertip-m px-$s min-w-0",
   "as-filter-input-disabled": "flex-1 h-fingertip-m layer-1 rounded-base border-1 min-w-0",
   "as-filter-select": "cursor-pointer",
   "as-filter-input-range": "flex items-center gap-$xs flex-1",

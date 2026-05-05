@@ -32,6 +32,7 @@
     "@atscript/db-sqlite": "catalog:",
     "@atscript/moost-db": "catalog:",
     "@atscript/moost-ui-presets": "workspace:^",
+    "@atscript/moost-validator": "catalog:",
     "@atscript/moost-wf": "workspace:^",
     "@atscript/typescript": "catalog:",
     "@iconify-json/ph": "^1.2.2",

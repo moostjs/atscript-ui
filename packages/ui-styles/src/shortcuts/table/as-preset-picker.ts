@@ -97,17 +97,20 @@ export const asPresetPickerShortcuts = defineShortcuts({
   "as-preset-picker-action-label": "flex-1 min-w-0",
 
   // Inline Save-as popover — same surface chrome as the menu but a small
-  // form layout inside. Borrows c8-* / i8-* primitives.
-  // `pt-$m` only on the wrapper — the footer owns its own `py-$m` so the
-  // space above and below the button row is symmetric (the wrapper's bottom
-  // padding would otherwise stack on the footer's bottom and break it).
-  "as-preset-picker-popover":
-    "scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em] flex flex-col gap-$m",
+  // chrome only — surface, padding, sizing, z-index. Vertical-stack layout
+  // lives on `-popover-inner` so its keydown wrapper IS the flex container
+  // (Tab keydown must bubble through a real DOM element BEFORE reaching
+  // Reka's RovingFocusGroup on MenuContent root). `pt-$m` only on the
+  // wrapper — the footer owns its own `py-$m` so the space above and below
+  // the button row is symmetric (the wrapper's bottom padding would
+  // otherwise stack on the footer's bottom and break it).
+  "as-preset-picker-popover": "scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em]",
+  "as-preset-picker-popover-inner": "flex flex-col gap-$m",
   "as-preset-picker-popover-title": "text-body-l font-600 m-0",
   "as-preset-picker-popover-field": "flex flex-col gap-$xs",
   // Bold body-color labels ("Name", "Save:", etc.) — match reference: not muted.
   "as-preset-picker-popover-label": "text-body font-600 text-current",
-  "as-preset-picker-popover-input": "i8-bare h-fingertip-m px-$s rounded-r1",
+  "as-preset-picker-popover-input": "layer-0 i8-bare h-fingertip-m px-$s rounded-r1",
   "as-preset-picker-popover-aspects": "flex flex-col gap-$s",
   // Aspect / public-toggle row. Icon color tracks the checkbox state —
   // primary when the input next to it is checked, body/40 when not — so

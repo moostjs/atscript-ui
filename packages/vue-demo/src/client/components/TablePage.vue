@@ -170,7 +170,6 @@ function onAction(
     <AsTableRoot
       v-else
       :key="path"
-      v-slot="{ loadingMetadata, tableDef }"
       v-model:filter-fields="filterFields"
       v-model:url-query="urlQuery"
       :url-query-sync="urlQuerySync"
@@ -184,42 +183,44 @@ function onAction(
       class="flex-1 flex flex-col min-h-0 min-w-0"
       @action="onAction"
     >
-      <TableToolbar
-        :title="label"
-        :table-def="tableDef"
-        :select-mode="select"
-        :can-toggle-select="canWrite"
-        @toggle-select-mode="toggleSelectMode"
-      />
+      <template #default="{ loadingMetadata, tableDef }">
+        <TableToolbar
+          :title="label"
+          :table-def="tableDef"
+          :select-mode="select"
+          :can-toggle-select="canWrite"
+          @toggle-select-mode="toggleSelectMode"
+        />
 
-      <div
-        class="relative flex flex-col flex-1 mx-$l mb-$l min-h-0 min-w-0 border-1 rounded-r2 layer-0 overflow-hidden"
-      >
-        <AsWindowTable
-          v-if="kind === 'window'"
-          :select="select"
-          :row-delete="canDeleteRows"
-          :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
-        />
-        <AsTable
-          v-else
-          :select="select"
-          :row-delete="canDeleteRows"
-          :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
-          :row-actions-column="actionsColumn"
-          sticky-header
-          :virtual-row-height="36"
-          :virtual-overscan="10"
-        />
         <div
-          v-if="loadingMetadata"
-          class="absolute inset-0 grid place-items-center text-current/60"
+          class="relative flex flex-col flex-1 mx-$l mb-$l min-h-0 min-w-0 border-1 rounded-r2 layer-0 overflow-hidden"
         >
-          Loading…
+          <AsWindowTable
+            v-if="kind === 'window'"
+            :select="select"
+            :row-delete="canDeleteRows"
+            :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
+          />
+          <AsTable
+            v-else
+            :select="select"
+            :row-delete="canDeleteRows"
+            :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
+            :row-actions-column="actionsColumn"
+            sticky-header
+            :virtual-row-height="36"
+            :virtual-overscan="10"
+          />
+          <div
+            v-if="loadingMetadata"
+            class="absolute inset-0 grid place-items-center text-current/60"
+          >
+            Loading…
+          </div>
         </div>
-      </div>
 
-      <TablePagination v-if="kind !== 'window' && mode === 'pagination'" />
+        <TablePagination v-if="kind !== 'window' && mode === 'pagination'" />
+      </template>
     </AsTableRoot>
   </div>
 </template>

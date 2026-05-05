@@ -2,6 +2,7 @@ import { Moost, createProvideRegistry } from "moost";
 import { MoostHttp } from "@moostjs/event-http";
 import { MoostWf } from "@moostjs/event-wf";
 import { MoostArbac, ArbacUserProvider } from "@moostjs/arbac";
+import { validatorPipe } from "@atscript/moost-validator";
 import { AuthController, MeController } from "./controllers/auth.controller";
 import { UsersController } from "./controllers/users.controller";
 import { RolesController } from "./controllers/roles.controller";
@@ -35,6 +36,11 @@ app.setProvideRegistry(
 void app.adapter(new MoostHttp()).listen(3200);
 app.adapter(new MoostWf());
 app.applyGlobalInterceptors(auditInterceptor);
+// Validate `@InputForm` payloads (and any other params stamped with the
+// `MOOST_ATSCRIPT_TYPE` mate key by moost-db / future plugins) against
+// their compiled .as schemas. Failures surface as HTTP 400 via the
+// existing `validationErrorTransform()` interceptor in moost-db.
+app.applyGlobalPipes(validatorPipe());
 app.registerControllers(
   AuthController,
   MeController,

@@ -76,6 +76,7 @@ const props = defineProps<{
 const types = inject<ComputedRef<Record<string, Component>>>("__as_types");
 const components = inject<ComputedRef<Record<string, Component> | undefined>>("__as_components");
 const errors = inject<ComputedRef<Record<string, string | undefined> | undefined>>("__as_errors");
+const hideRootTitle = inject<boolean>("__as_hide_root_title", false);
 const handleAction = inject<(name: string) => void>("__as_action_handler", () => {});
 const handleChange = inject<(type: TAsChangeType, path: string, value: unknown) => void>(
   "__as_change_handler",
@@ -524,7 +525,7 @@ const displayProps = computed(() => ({
   hidden: unwrap(hidden),
   readonly: unwrap(readonly),
   options: unwrap(options),
-  title: unwrap(title),
+  title: myLevel === 0 && hideRootTitle ? undefined : unwrap(title),
   onRemove: props.onRemove,
   canRemove: props.canRemove,
   removeLabel: props.removeLabel,

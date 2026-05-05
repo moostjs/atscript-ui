@@ -19,9 +19,8 @@ import {
   applyRowGate,
   ariaLabelFor,
   collectIdentifiers,
-  confirmAction,
   intentClass,
-  pkForLevel,
+  triggerAction,
 } from "../composables/state/intent-scope";
 import AsActionMenuContent from "./internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../types";
@@ -57,8 +56,6 @@ interface Resolved {
   ids: Record<string, unknown>[];
 }
 
-const EMPTY_IDS: Record<string, unknown>[] = [];
-
 // Promote a sole non-default entry into `defaultAction` so it renders as a
 // labelled button rather than hiding alone behind a `…` dropdown.
 function collapseSingle(r: Resolved): Resolved {
@@ -93,14 +90,10 @@ const resolved = computed<Resolved>(() => {
       otherActions: state.actions.others.table,
       trailingRowActions: [],
       level: "table",
-      ids: EMPTY_IDS,
+      ids: [],
     });
   }
   if (effectiveLevel === "row") {
-    // Auto + 1 selected: drive the toolbar from the user's selection (which
-    // holds whatever `rowValueFn` returns — collectIdentifiers normalises
-    // both row-shaped and scalar values, per db-client invariant #11).
-    // Otherwise: derive from the active (highlighted) row.
     const source =
       explicit === "auto" && selectedCount === 1
         ? state.selectedRows.value[0]
@@ -125,7 +118,7 @@ const resolved = computed<Resolved>(() => {
       otherActions: filtered.others,
       trailingRowActions: filtered.rows,
       level: "row",
-      ids: collectIdentifiers([source], pid),
+      ids: collectIdentifiers(state, [source], pid),
     });
   }
   return collapseSingle({
@@ -133,7 +126,7 @@ const resolved = computed<Resolved>(() => {
     otherActions: state.actions.others.rows,
     trailingRowActions: [],
     level: "rows",
-    ids: collectIdentifiers(state.selectedRows.value, pid),
+    ids: collectIdentifiers(state, state.selectedRows.value, pid),
   });
 });
 
@@ -145,15 +138,12 @@ const hasAny = computed(
 );
 
 async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | KeyboardEvent) {
-  const identifiers = resolved.value.ids;
-  const ok = await confirmAction(state, action, {
-    identifiers,
-    preferredId: preferredId.value,
-  });
-  if (!ok) return;
-  // pk shape follows the action's own level, not the resolved bucket — auto+1
-  // mixes row-level and rows-level actions in the same dropdown.
-  void state.actions.invoke(action, pkForLevel(action.level, identifiers), { event });
+  await triggerAction(
+    state,
+    action,
+    { identifiers: resolved.value.ids, preferredId: preferredId.value },
+    event,
+  );
 }
 </script>
 

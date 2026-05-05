@@ -5,12 +5,14 @@ import {
   DbActionIDs,
   DbRowActions,
   DbTableActions,
+  InputForm,
   perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
 import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
 import { ordersTable } from "../db";
 import type { OrdersTable } from "../schemas/orders.as";
+import { CancelOrdersInput } from "../schemas/action-forms.as";
 import { SessionGuard } from "../auth/session.guard";
 import { AsArbacDbController } from "../auth/arbac-db.controller";
 
@@ -110,16 +112,20 @@ export class OrdersController extends AsArbacDbController<typeof OrdersTable> {
     promptText: ["Cancel order $1?", "Cancel $N orders? Delivered/cancelled rows are skipped."],
   })
   @ArbacAction("update")
-  async cancel(@DbActionIDs() ids: { id: number }[]) {
+  async cancel(
+    @DbActionIDs() ids: { id: number }[],
+    @InputForm(CancelOrdersInput) input: CancelOrdersInput,
+  ) {
     const targetIds = ids.map((o) => o.id);
     if (targetIds.length === 0) {
       return { ok: false, ids: [], message: "No cancellable orders selected." };
     }
     await ordersTable.updateMany({ id: { $in: targetIds } }, { status: "cancelled" });
+    const refund = input?.refund !== false ? " Refunds queued." : "";
     return {
       ok: true,
       ids: targetIds,
-      message: `Cancelled ${targetIds.length} order${targetIds.length === 1 ? "" : "s"}.`,
+      message: `Cancelled ${targetIds.length} order${targetIds.length === 1 ? "" : "s"} (${input?.reason}).${refund}`,
     };
   }
 }

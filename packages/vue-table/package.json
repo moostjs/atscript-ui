@@ -15,6 +15,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./as-action-form-dialog": {
+      "types": "./dist/as-action-form-dialog.d.mts",
+      "import": "./dist/as-action-form-dialog.mjs",
+      "require": "./dist/as-action-form-dialog.cjs"
+    },
     "./as-column-menu": {
       "types": "./dist/as-column-menu.d.mts",
       "import": "./dist/as-column-menu.mjs",
@@ -112,7 +117,8 @@
   },
   "dependencies": {
     "@atscript/ui": "workspace:^",
-    "@atscript/ui-table": "workspace:^"
+    "@atscript/ui-table": "workspace:^",
+    "@atscript/vue-form": "workspace:^"
   },
   "devDependencies": {
     "@atscript/db-client": "catalog:",
@@ -131,7 +137,7 @@
     "vunor": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/db-client": "^0.1.57",
+    "@atscript/db-client": "^0.1.62",
     "@tanstack/vue-virtual": "^3",
     "@vueuse/core": "^12",
     "reka-ui": "^2",

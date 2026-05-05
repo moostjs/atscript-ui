@@ -28,8 +28,8 @@ const EXEMPT_PROCESSORS = new Set<TDbActionProcessor | typeof REMOVE_PROCESSOR>(
 export function rowActionGate(row: unknown): ((a: TVueTableActionInfo) => boolean) | null {
   const raw = (row as { $actions?: unknown } | null | undefined)?.$actions;
   if (!Array.isArray(raw)) return null;
-  const allowed = raw as string[];
-  return (a) => EXEMPT_PROCESSORS.has(a.processor) || allowed.includes(a.name);
+  const allowed = new Set(raw as string[]);
+  return (a) => EXEMPT_PROCESSORS.has(a.processor) || allowed.has(a.name);
 }
 
 export interface ActionBuckets {
@@ -114,17 +114,36 @@ export function extractIdentifier(
 }
 
 /**
- * Map a list of sources (rows or row-shaped values) through `extractIdentifier`,
- * dropping any that resolve to `undefined`.
+ * Map a list of sources (full row objects or scalar `rowValueFn` values)
+ * through `extractIdentifier`. Scalar sources rehydrate from
+ * `state.windowCache` via `state.rowValueFn` so consumers that override
+ * `rowValueFn` to return a scalar can still reconstruct multi-field
+ * identifiers; the lookup `Map` is built lazily so all-object source
+ * lists pay nothing.
  */
 export function collectIdentifiers(
+  state: ReactiveTableState,
   sources: readonly unknown[],
   preferredId: readonly string[],
 ): Record<string, unknown>[] {
+  if (preferredId.length === 0 || sources.length === 0) return [];
   const out: Record<string, unknown>[] = [];
+  let lookup: Map<unknown, Record<string, unknown>> | null = null;
   for (const s of sources) {
-    const id = extractIdentifier(s, preferredId);
-    if (id !== undefined) out.push(id);
+    if (s === undefined || s === null) continue;
+    let row: Record<string, unknown> | undefined;
+    if (typeof s === "object") {
+      row = s as Record<string, unknown>;
+    } else {
+      if (lookup === null) {
+        const fn = state.rowValueFn;
+        lookup = new Map();
+        for (const r of state.windowCache.value.values()) lookup.set(fn(r), r);
+      }
+      row = lookup.get(s);
+    }
+    const id = extractIdentifier(row ?? s, preferredId);
+    if (id) out.push(id);
   }
   return out;
 }
@@ -179,6 +198,29 @@ export function substitute(template: string, ctx: PromptCtx): string {
   return template
     .replace(/\$1/g, () => formatIdentifier(ctx.identifiers[0], ctx.preferredId))
     .replace(/\$N/g, () => String(ctx.identifiers.length));
+}
+
+/**
+ * Dispatch user-initiated invocation: actions with `inputForm` open the form
+ * dialog (the form IS the confirm surface, so `promptText` is ignored);
+ * others run `confirmAction()`. Cancelling either dialog short-circuits.
+ */
+export async function triggerAction(
+  state: ReactiveTableState,
+  action: TVueTableActionInfo,
+  ctx: PromptCtx,
+  event?: KeyboardEvent | MouseEvent,
+): Promise<void> {
+  const pk = pkForLevel(action.level, ctx.identifiers);
+  if (action.inputForm) {
+    const input = await state.requestActionInput(action, ctx);
+    if (input === null) return;
+    void state.actions.invoke(action, pk, { event, input });
+    return;
+  }
+  const ok = await confirmAction(state, action, ctx);
+  if (!ok) return;
+  void state.actions.invoke(action, pk, { event });
 }
 
 /**

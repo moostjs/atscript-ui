@@ -29,6 +29,12 @@ export interface InvokeOpts {
   suppressRefresh?: boolean;
   /** Originating user event — bridged to the AsTableRoot @action emit. */
   event?: KeyboardEvent | MouseEvent;
+  /**
+   * `@InputForm` payload for actions whose `inputForm` field is set. Wrapped
+   * by the client into the request envelope's `input` field. Omit for
+   * actions without a form.
+   */
+  input?: unknown;
 }
 
 /** Discriminated result returned by `state.actions.invoke`. Never throws. */
@@ -150,6 +156,16 @@ export interface ConfirmRequest extends ConfirmOptions {
   resolve: (ok: boolean) => void;
 }
 
+/** Internal pending-request shape held in `state.actionFormRequest`. */
+export interface ActionFormRequest {
+  action: TVueTableActionInfo;
+  /** Identifier objects for the targeted rows (used by `$1`/`$N` substitution in dialog copy). */
+  identifiers: Record<string, unknown>[];
+  preferredId: readonly string[];
+  /** Internal — the dialog never calls this directly; use accept/dismiss. */
+  resolve: (input: unknown) => void;
+}
+
 /**
  * Public bridge object exposed by `state.navBridge` (and by the slot prop
  * on `<AsTableRoot>`). Lets external `<input>`s drive table nav without
@@ -254,6 +270,13 @@ export interface TAsTableControls {
    * caller's `scope` so destructive ops show in the error scope, etc.
    */
   confirmDialog?: Component;
+
+  /**
+   * Dialog rendered for actions that declare an `@InputForm` schema. Owns
+   * the form-schema fetch + dialog chrome; the consumer fills the body via
+   * `<AsTableRoot>`'s `#actionForm` slot (forwarded through to this dialog).
+   */
+  actionFormDialog?: Component;
 
   /** Tier-1 dropdown picker. Renders the presets menu (Save / Save as / Reset / Manage). */
   presetPicker?: Component;
@@ -427,6 +450,25 @@ export interface ReactiveTableState extends TableStateMethods {
   acceptPrompt: () => void;
   /** Resolve the active prompt with `false`. Internal — used by the dialog. */
   dismissPrompt: () => void;
+
+  /**
+   * Currently pending action-form request — `null` when no form is open.
+   * Writes are owned by `requestActionInput()` / `acceptActionForm()` /
+   * `dismissActionForm()`; consumers should not mutate directly.
+   */
+  actionFormRequest: Ref<ActionFormRequest | null>;
+  /**
+   * Open the action-form dialog. Resolves with the submitted form payload
+   * on accept, or `null` on cancel/dismiss.
+   */
+  requestActionInput: (
+    action: TVueTableActionInfo,
+    ctx: { identifiers: Record<string, unknown>[]; preferredId: readonly string[] },
+  ) => Promise<unknown>;
+  /** Resolve the active form request with `input`. Internal — used by the dialog. */
+  acceptActionForm: (input: unknown) => void;
+  /** Resolve the active form request with `null`. Internal — used by the dialog. */
+  dismissActionForm: () => void;
   /**
    * Hydrate state from a URL query string produced by `stateToUrlQueryString`.
    * Replaces filters / sorters / search / pagination with values decoded from

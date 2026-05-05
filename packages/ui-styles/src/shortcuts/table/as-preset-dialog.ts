@@ -55,7 +55,7 @@ export const asPresetDialogShortcuts = defineShortcuts({
   // the search box is the primary entry point of this dialog so it should
   // visually dominate while typing.
   "as-preset-dialog-search-input":
-    "scope-primary i8-bare w-full h-fingertip-s pl-$xl pr-$s rounded-r1",
+    "scope-primary layer-0 i8-bare w-full h-fingertip-s pl-$xl pr-$s rounded-r1",
   // Hidden on mobile so the search input gets the full toolbar width;
   // hints reappear at sm+ where there's room for them.
   "as-preset-dialog-legend":
@@ -105,7 +105,7 @@ export const asPresetDialogShortcuts = defineShortcuts({
   // `scope-primary` so the inline rename's focus ring + outline match
   // the search input — same accent for "actively editing this control".
   "as-preset-dialog-row-rename":
-    "scope-primary i8-bare flex-1 min-w-0 h-fingertip-s px-$s rounded-r1",
+    "scope-primary layer-0 i8-bare flex-1 min-w-0 h-fingertip-s px-$s rounded-r1",
   "as-preset-dialog-row-meta": "text-callout text-current/60 whitespace-nowrap",
   // Owner column — fixed width so the row's column grid stays consistent
   // across all rows regardless of name length. Hidden on narrow screens

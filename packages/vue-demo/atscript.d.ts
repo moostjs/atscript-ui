@@ -35,6 +35,7 @@ declare global {
     "db.table.filterable": string | true
     "db.table.sortable": string | true
     "db.table.renamed": string
+    "db.table.preferredId.uniqueIndex": string | true
     "db.schema": string
     "db.index.plain": ({ name?: string, sort?: string })[]
     "db.index.unique": (string | true)[]
@@ -85,19 +86,17 @@ declare global {
     "ui.form.styles": (string)[]
     "ui.form.autocomplete": string
     "ui.form.disabled": boolean
-    "ui.form.readonly": boolean
     "ui.form.options": ({ label: string, value?: string })[]
     "ui.form.order": number
     "ui.form.type": string
     "ui.form.component": string
     "ui.form.hidden": boolean
     "ui.form.attr": ({ name: string, value: string })[]
-    "ui.form.title": string
     "ui.form.width": string
     "ui.form.icon": string
     "ui.form.submit.text": string
-    "ui.form.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }
+    "ui.form.validate": (string)[]
     "ui.form.fn.title": string
     "ui.form.fn.submit.text": string
     "ui.form.fn.submit.disabled": string
@@ -132,7 +131,6 @@ declare global {
     "ui.dict.searchable": boolean
     "ui.array.add.label": string
     "ui.array.remove.label": string
-    "ui.validate": (string)[]
     "wf.context.pass": (string)[]
     "wf.action.withData": string
   }

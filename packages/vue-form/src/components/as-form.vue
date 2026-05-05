@@ -38,6 +38,20 @@ export interface Props<TF, TC> {
    * factory when unset.
    */
   clientFactory?: ClientFactory;
+  /**
+   * Suppress the root field's title rendering. Use when the form is mounted
+   * inside a chrome that already shows the form's `@meta.label` (e.g. a
+   * dialog header). Nested fields keep their own headings.
+   */
+  hideRootTitle?: boolean;
+  /**
+   * Suppress the default submit button. Use when the host chrome owns the
+   * submit affordance (e.g. a dialog footer with its own submit button
+   * wired via HTML5 `<button form="...">`). Vue 3 treats an empty
+   * `<template #form.submit />` as "slot not provided" and falls back to
+   * the default button — this prop is the explicit way to skip it.
+   */
+  hideSubmit?: boolean;
 }
 
 const props = defineProps<Props<TFormData, TFormContext>>();
@@ -90,6 +104,7 @@ provide(
   "__as_errors",
   computed(() => props.errors),
 );
+provide("__as_hide_root_title", props.hideRootTitle === true);
 if (props.clientFactory) {
   provide(CLIENT_FACTORY_KEY, props.clientFactory);
 }
@@ -191,6 +206,7 @@ function onSubmit() {
     ></slot>
 
     <slot
+      v-if="!hideSubmit"
       name="form.submit"
       :disabled="_submitDisabled"
       :text="_submitText"

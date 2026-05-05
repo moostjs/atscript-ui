@@ -127,7 +127,7 @@ describe("<AsRowActions>", () => {
     const { wrapper, actionFn } = setup({ rowActions: [block], pk: { id: "user-42" } });
     await wrapper.find("button").trigger("click");
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-42" });
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-42" }, undefined);
   });
 
   it("with promptText, prompt-cancel skips invoke", async () => {
@@ -157,7 +157,7 @@ describe("<AsRowActions>", () => {
     expect(state.confirmRequest.value?.message).toBe("Really?");
     state.acceptPrompt();
     await flushPromises();
-    expect(actionFn).toHaveBeenCalledWith("block", { id: "x" });
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "x" }, undefined);
   });
 
   it("prompt request maps action intent → scope for the styled button", async () => {

@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "reka-ui";
-import { computed, onScopeDispose, ref, watch } from "vue";
+import { computed, nextTick, onScopeDispose, ref, watch } from "vue";
 import {
   type AsPresetEntryRow,
   type AspectMask,
@@ -38,16 +38,45 @@ const saveAsPublic = ref(false);
 const saveAsAspectsMask = ref<AspectMask>({});
 const saveAsInputRef = ref<HTMLInputElement | null>(null);
 
-// Two RAF ticks past Reka's DropdownMenuContent focus management — one
-// for Vue mount, one for Reka's settle — lets focus + select stick.
+// Reka's MenuContent and the menu's own close-restore both move focus
+// elsewhere (popover container / picker trigger button) right after the
+// popover mounts, sometimes seconds later as the menu's animation
+// settles. Run a `focusin`-driven assertion loop for the WHOLE time the
+// popover is open — bound to its lifecycle, not a fixed window — so any
+// stray focus steal gets corrected. Tab to a form control inside the
+// popover is exempt (must not be undone).
+const FORM_TAGS = new Set(["INPUT", "BUTTON", "TEXTAREA", "SELECT"]);
+let focusStickListener: ((event: FocusEvent) => void) | null = null;
+function disposeFocusStick() {
+  if (focusStickListener !== null) {
+    document.removeEventListener("focusin", focusStickListener, true);
+    focusStickListener = null;
+  }
+}
+onScopeDispose(disposeFocusStick);
 watch(saveAsOpen, (open) => {
+  disposeFocusStick();
   if (!open) return;
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      saveAsInputRef.value?.focus();
-      saveAsInputRef.value?.select();
-    });
-  });
+  let popover: Element | null = null;
+  const stickFocus = (event?: FocusEvent) => {
+    const input = saveAsInputRef.value;
+    if (!input) return;
+    if (event && event.target === input) return;
+    if (popover === null) popover = input.closest(".as-preset-picker-popover");
+    const target = (event?.target as Element | null) ?? document.activeElement;
+    if (
+      target instanceof HTMLElement &&
+      popover?.contains(target) &&
+      FORM_TAGS.has(target.tagName)
+    ) {
+      return;
+    }
+    input.focus();
+    input.select();
+  };
+  focusStickListener = stickFocus;
+  void nextTick(() => stickFocus());
+  document.addEventListener("focusin", stickFocus, true);
 });
 
 const aspects = computed<PresetAspect[]>(() => state.preset.availableAspects);
@@ -341,7 +370,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
         </DropdownMenuItem>
       </DropdownMenuContent>
 
-      <!-- Inline Save-as popover (replaces menu content while open) -->
+      <!-- Inline Save-as popover (replaces menu content while open). -->
       <DropdownMenuContent
         v-else
         class="as-preset-picker-popover"
@@ -350,57 +379,64 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
         @escape-key-down="cancelSaveAs"
         @pointer-down-outside="cancelSaveAs"
       >
-        <h3 class="as-preset-picker-popover-title">Save as new preset</h3>
-        <div class="as-preset-picker-popover-field">
-          <label class="as-preset-picker-popover-label" for="as-preset-picker-label">Name</label>
-          <input
-            id="as-preset-picker-label"
-            ref="saveAsInputRef"
-            v-model="saveAsLabel"
-            class="as-preset-picker-popover-input"
-            type="text"
-            @keydown.enter.prevent="commitSaveAs"
-          />
-        </div>
-        <div class="as-preset-picker-popover-aspects">
-          <span class="as-preset-picker-popover-label">Save:</span>
-          <label v-for="a in aspects" :key="a" class="as-preset-picker-popover-aspect">
+        <!-- The popover's vertical-stack layout lives on this inner wrapper
+             so the Tab keydown bubbles through a real DOM element before
+             reaching Reka's RovingFocusGroup on MenuContent — without the
+             intercept, RovingFocusGroup would pin focus on the first menu
+             item. Escape/Enter still bubble so `@escape-key-down` fires. -->
+        <div class="as-preset-picker-popover-inner" @keydown.tab.stop>
+          <h3 class="as-preset-picker-popover-title">Save as new preset</h3>
+          <div class="as-preset-picker-popover-field">
+            <label class="as-preset-picker-popover-label" for="as-preset-picker-label">Name</label>
             <input
-              type="checkbox"
-              :checked="saveAsAspectsMask[a] === true"
-              @change="(ev: Event) => toggleAspect(a, ev)"
+              id="as-preset-picker-label"
+              ref="saveAsInputRef"
+              v-model="saveAsLabel"
+              class="as-preset-picker-popover-input"
+              type="text"
+              @keydown.enter.prevent="commitSaveAs"
             />
-            <span
-              :class="[ASPECT_ICONS[a], 'as-preset-picker-popover-aspect-icon']"
-              aria-hidden="true"
-            />
-            {{ ASPECT_LABELS[a] }}
-          </label>
-        </div>
-        <template
-          v-if="
-            state.preset.capabilities.value === null || state.preset.capabilities.value.canPublish
-          "
-        >
-          <div class="as-preset-picker-popover-separator" />
-          <label class="as-preset-picker-popover-public">
-            <input v-model="saveAsPublic" type="checkbox" />
-            <span class="i-as-eye-off as-preset-picker-popover-aspect-icon" aria-hidden="true" />
-            Make public
-          </label>
-        </template>
-        <div class="as-preset-picker-popover-footer">
-          <button type="button" class="as-preset-picker-popover-cancel" @click="cancelSaveAs">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="as-preset-picker-popover-save"
-            :disabled="!saveAsLabel.trim()"
-            @click="commitSaveAs"
+          </div>
+          <div class="as-preset-picker-popover-aspects">
+            <span class="as-preset-picker-popover-label">Save:</span>
+            <label v-for="a in aspects" :key="a" class="as-preset-picker-popover-aspect">
+              <input
+                type="checkbox"
+                :checked="saveAsAspectsMask[a] === true"
+                @change="(ev: Event) => toggleAspect(a, ev)"
+              />
+              <span
+                :class="[ASPECT_ICONS[a], 'as-preset-picker-popover-aspect-icon']"
+                aria-hidden="true"
+              />
+              {{ ASPECT_LABELS[a] }}
+            </label>
+          </div>
+          <template
+            v-if="
+              state.preset.capabilities.value === null || state.preset.capabilities.value.canPublish
+            "
           >
-            Save
-          </button>
+            <div class="as-preset-picker-popover-separator" />
+            <label class="as-preset-picker-popover-public">
+              <input v-model="saveAsPublic" type="checkbox" />
+              <span class="i-as-eye-off as-preset-picker-popover-aspect-icon" aria-hidden="true" />
+              Make public
+            </label>
+          </template>
+          <div class="as-preset-picker-popover-footer">
+            <button type="button" class="as-preset-picker-popover-cancel" @click="cancelSaveAs">
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="as-preset-picker-popover-save"
+              :disabled="!saveAsLabel.trim()"
+              @click="commitSaveAs"
+            >
+              Save
+            </button>
+          </div>
         </div>
       </DropdownMenuContent>
     </DropdownMenuPortal>

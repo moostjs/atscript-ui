@@ -69,7 +69,7 @@ describe("main-action fallback", () => {
     state.requestMainAction(new KeyboardEvent("keydown"));
     await Promise.resolve();
     await Promise.resolve();
-    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" });
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" }, undefined);
   });
 
   it("registered listener wins over fallback", async () => {
@@ -105,7 +105,7 @@ describe("main-action fallback", () => {
     state.handleNavKey(ev);
     await Promise.resolve();
     await Promise.resolve();
-    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" });
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" }, undefined);
   });
 
   it("requestMainAction with no active row is a no-op even with default", async () => {
@@ -147,6 +147,6 @@ describe("main-action fallback", () => {
     state.requestMainAction(new KeyboardEvent("keydown"));
     await Promise.resolve();
     await Promise.resolve();
-    expect(actionFn).toHaveBeenCalledWith("block", undefined);
+    expect(actionFn).toHaveBeenCalledWith("block", undefined, undefined);
   });
 });

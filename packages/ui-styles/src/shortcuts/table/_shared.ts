@@ -10,7 +10,8 @@ export const dialogBase =
   "sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 " +
   "sm:rounded-r3 sm:shadow-popup sm:border-1";
 
-export const smallInputBase = "scope-primary i8-bare flex-1 h-fingertip-s px-$s min-w-[8em]";
+export const smallInputBase =
+  "scope-primary layer-0 i8-bare flex-1 h-fingertip-s px-$s min-w-[8em]";
 
 export const chipBase =
   "inline-flex items-center px-$s py-[0.15em] rounded-r0 text-callout whitespace-nowrap";
@@ -21,6 +22,45 @@ export const searchIcon =
   "absolute left-$s top-1/2 -translate-y-1/2 text-current/50 pointer-events-none inline-flex text-body";
 
 export const menuItemIconHl = "[&_.as-column-menu-item-icon]:text-current-hl";
+
+export const dialogClose = {
+  "":
+    "inline-grid place-items-center size-fingertip-s p-0 ml-auto border-0 " +
+    "bg-transparent text-current/80 cursor-pointer leading-none rounded-base " +
+    "flex-shrink-0 transition-colors duration-120 text-[1.25em]",
+  "hover:": "layer-2 text-current",
+};
+
+// Cancel/confirm-button base recipes shared by `as-confirm-dialog-*` and
+// `as-action-form-*`. Confirm chrome paints `c8-filled` (bg + contrasting
+// fg derived by vunor) — never override text-color or the contrast disappears
+// (red text on red bg). Intent variants come from `buildDialogConfirmVariants`.
+export const dialogCancelBtn = "scope-neutral c8-chrome btn";
+export const dialogConfirmBtn = "scope-primary c8-filled btn";
+
+/**
+ * Confirm-button intent variant block shared by `as-confirm-dialog-confirm-*`
+ * and `as-action-form-submit-*`. The caller maps `action.intent → scope` via
+ * `intentToScope` (runtime); this returns the matching CSS-side overrides.
+ *
+ * Only retunes scope; never overrides text color (`c8-filled` derives the
+ * contrasting fg — red text on red bg if we touch it). `primary`/`secondary`
+ * are bare scope tokens because the base shortcut already paints `c8-filled`
+ * and they don't need the `!`-flagged override.
+ */
+export function buildDialogConfirmVariants(
+  prefix: string,
+): Record<string, string | Record<string, string>> {
+  const base = `[&.${prefix}]:`;
+  return {
+    [`${prefix}-good`]: { [base]: "!scope-good" },
+    [`${prefix}-error`]: { [base]: "!scope-error" },
+    [`${prefix}-warn`]: { [base]: "!scope-warn" },
+    [`${prefix}-primary`]: "scope-primary",
+    [`${prefix}-secondary`]: "scope-secondary",
+    [`${prefix}-neutral`]: { [base]: "!scope-neutral" },
+  };
+}
 
 /**
  * Build the `as-{prefix}-intent-*` shortcut variants used by `<AsRowActions>`

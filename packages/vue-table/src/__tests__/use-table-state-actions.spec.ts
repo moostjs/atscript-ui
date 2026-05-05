@@ -95,7 +95,7 @@ describe("state.actions.invoke", () => {
     const { state, actionFn, pagesFn } = mountActionsState();
     pagesFn.mockClear();
     const result = await state.actions.invoke(backendAction, { id: "user-1" });
-    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" });
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" }, undefined);
     expect(result.ok).toBe(true);
     expect(state.actions.lastResult.value.get("block")).toMatchObject({
       ok: true,

@@ -17,6 +17,11 @@ import {
  * ```ts
  * const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog }
  * ```
+ *
+ * `actionFormDialog` is intentionally not seeded — the table root
+ * lazy-mounts it only when an `@InputForm` action is detected. To override
+ * or eager-load, import from `@atscript/vue-table/as-action-form-dialog`
+ * and assign it as the `actionFormDialog` entry on this map.
  */
 export function createDefaultControls(): TAsTableControls {
   return {

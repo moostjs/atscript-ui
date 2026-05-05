@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watch, type Component } from "vue";
+import { computed, defineAsyncComponent, ref, watch, type Component } from "vue";
 import type { SortControl, ClientFactory } from "@atscript/ui";
+import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
 import type {
@@ -18,6 +19,15 @@ import type { SelectionPersistence } from "../composables/use-table-selection";
 import type { PageResult } from "@atscript/db-client";
 import { AsConfigDialog, AsConfirmDialog, AsFilterDialog, AsPresetDialog } from "./defaults";
 
+// `AsActionFormDialog` pulls in the whole `@atscript/vue-form` runtime, so
+// it's lazy-loaded and only mounted when `hasInputFormActions` flips true
+// (see below). Consumers who want eager loading or a custom dialog assign
+// `controls.actionFormDialog` to override this fallback. Don't inline-import
+// here — it silently re-bundles vue-form into every table consumer.
+const LazyActionFormDialog = defineAsyncComponent(
+  () => import("./defaults/as-action-form-dialog.vue"),
+);
+
 const props = withDefaults(
   defineProps<{
     /** Table endpoint URL (e.g. "/db/tables/products"). */
@@ -30,6 +40,13 @@ const props = withDefaults(
     types?: TAsCellTypeComponents;
     /** Named cell-component overrides — looked up by `@ui.table.component "name"`. */
     components?: Record<string, Component>;
+    /**
+     * Form-type → component dispatch map for the built-in action-form dialog.
+     * Defaults to `createDefaultTypes()` from `@atscript/vue-form`.
+     */
+    formTypes?: TAsTypeComponents;
+    /** Named form-component overrides for the action-form dialog. */
+    formComponents?: Record<string, Component>;
     limit?: number;
     forceFilters?: FilterExpr;
     forceSorters?: SortControl[];
@@ -133,6 +150,8 @@ const state = useTable(props.url, {
   controls: props.controls,
   types: props.types,
   components: props.components,
+  formTypes: props.formTypes,
+  formComponents: props.formComponents,
   refreshOnAction: () => props.refreshOnAction,
   onActionResolved: (action, ids, result, event) => {
     emit("action", action, ids, result, event);
@@ -171,6 +190,18 @@ useRegisterMainActionListener(
 );
 
 const navBridge = useTableNavBridge(state);
+
+// Gates the lazy dialog mount so its chunk fetch overlaps the table's
+// first render rather than waiting for a user click.
+const hasInputFormActions = computed(() => {
+  const a = state.tableDef.value?.actions;
+  if (!a) return false;
+  for (const list of [a.table, a.row, a.rows]) {
+    for (const x of list) if (x.inputForm) return true;
+  }
+  return false;
+});
+
 defineExpose({ state, navBridge });
 </script>
 
@@ -218,5 +249,10 @@ defineExpose({ state, navBridge });
   <component
     v-if="state.preset.available.value"
     :is="props.controls?.presetDialog ?? AsPresetDialog"
+  />
+
+  <component
+    v-if="hasInputFormActions || props.controls?.actionFormDialog"
+    :is="props.controls?.actionFormDialog ?? LazyActionFormDialog"
   />
 </template>
