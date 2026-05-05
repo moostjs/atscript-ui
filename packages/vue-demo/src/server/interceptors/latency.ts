@@ -4,7 +4,15 @@ import { useRequest } from "@wooksjs/event-http";
 const META_DELAY_MS = 50;
 const DATA_DELAY_MS = 100;
 
+// E2E tests opt out via this env var. The Playwright rig sets it in
+// `tests/e2e/global-setup.ts` so the broad test population isn't paying
+// 100 ms × N round-trips for no coverage gain — specs that DO need to
+// observe loading states (Scenario 12.1) inject their own delay via
+// `page.route(...)`, which is more deterministic than the natural latency.
+const SKIP_LATENCY = process.env.DEMO_NO_LATENCY === "1";
+
 export const latencyInterceptor = defineBeforeInterceptor(async () => {
+  if (SKIP_LATENCY) return;
   const { url } = useRequest();
   const path = url?.split("?", 1)[0] ?? "";
   // Cheap discovery endpoints (`/meta`, `/capabilities`) get a tiny delay so

@@ -4,19 +4,22 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ready": "vp fmt && vp lint && vp run test -r && vp run build -r",
+    "ready": "vp fmt && vp lint && vp run test -r && vp run build -r && pnpm run test:e2e",
     "dev": "pnpm --filter vue-playground run dev",
     "demo:dev": "pnpm --filter @atscript/vue-demo run dev",
     "docs:dev": "pnpm --filter docs run dev",
     "docs:build": "pnpm --filter docs run build",
     "build": "vp run build -r",
     "test": "vp run test -r",
+    "test:e2e": "playwright test --config=tests/e2e/playwright.config.ts",
+    "test:e2e:install": "playwright install chromium",
     "release": "node scripts/release.js patch",
     "release:minor": "node scripts/release.js minor",
     "release:major": "node scripts/release.js major",
     "prepare": "vp config"
   },
   "devDependencies": {
+    "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:"

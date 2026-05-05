@@ -48,3 +48,9 @@ WF.md
 openspec
 .playwright
 .playwright-cli
+
+# Playwright e2e
+playwright/.auth
+playwright-report
+test-results
+tests/e2e/.tmp
