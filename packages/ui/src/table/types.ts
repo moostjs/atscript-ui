@@ -116,6 +116,16 @@ export interface ColumnDef {
   options?: { key: string; label: string }[];
   /** Value-help info for FK columns (from extractValueHelp). */
   valueHelpInfo?: ValueHelpInfo;
+  /** Literal currency code from `@db.amount.currency 'EUR'`. */
+  currencyCode?: string;
+  /** Sibling field path from `@db.amount.currency.ref 'fieldName'`. */
+  currencyRefField?: string;
+  /** Literal unit-of-measure from `@db.unit 'kg'`. */
+  unitCode?: string;
+  /** Sibling field path from `@db.unit.ref 'fieldName'`. */
+  unitRefField?: string;
+  /** Decimal scale (fraction digits) — second arg of `@db.column.precision precision, scale`. */
+  precisionScale?: number;
   /**
    * Synthesised, locked-chrome column. When `true`: header-cell column-menu
    * skipped, resize handle skipped, drag-reorder excluded, NOT in the

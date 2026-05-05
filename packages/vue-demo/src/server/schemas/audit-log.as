@@ -24,5 +24,5 @@ export interface AuditLogTable {
     @meta.label 'At'
     @db.default.now
     @db.index.plain 'audit_created_idx', 'desc'
-    createdAt: number
+    createdAt: number.timestamp
 }

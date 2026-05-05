@@ -24,14 +24,29 @@ export interface UsersTable {
     @meta.label 'Status'
     @db.index.plain 'users_status_idx'
     @db.default 'pending'
+    @ui.table.type 'status'
     status: 'active' | 'suspended' | 'pending' | 'invited'
 
     @meta.label 'MFA Enabled'
     @db.default 'false'
     mfaEnabled: boolean
 
+    @meta.label 'Profile'
+    profile: {
+        @meta.label 'First Name'
+        firstName: string
+
+        @meta.label 'Last Name'
+        lastName: string
+    }
+
     @meta.label 'Last Login'
-    lastLoginAt?: number
+    @ui.table.type 'relative'
+    lastLoginAt?: number.timestamp
+
+    @meta.label 'Birthday'
+    @ui.table.type 'date'
+    birthday?: number.timestamp
 
     // filled by P6 workflows; empty until then
     password?: string
@@ -39,5 +54,5 @@ export interface UsersTable {
 
     @meta.label 'Created'
     @db.default.now
-    createdAt: number
+    createdAt: number.timestamp
 }

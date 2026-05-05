@@ -31,5 +31,5 @@ export interface CustomersTable {
 
     @meta.label 'Created'
     @db.default.now
-    createdAt: number
+    createdAt: number.timestamp
 }

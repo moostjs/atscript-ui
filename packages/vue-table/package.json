@@ -20,6 +20,26 @@
       "import": "./dist/as-action-form-dialog.mjs",
       "require": "./dist/as-action-form-dialog.cjs"
     },
+    "./as-cell-array": {
+      "types": "./dist/as-cell-array.d.mts",
+      "import": "./dist/as-cell-array.mjs",
+      "require": "./dist/as-cell-array.cjs"
+    },
+    "./as-cell-date": {
+      "types": "./dist/as-cell-date.d.mts",
+      "import": "./dist/as-cell-date.mjs",
+      "require": "./dist/as-cell-date.cjs"
+    },
+    "./as-cell-json": {
+      "types": "./dist/as-cell-json.d.mts",
+      "import": "./dist/as-cell-json.mjs",
+      "require": "./dist/as-cell-json.cjs"
+    },
+    "./as-cell-number": {
+      "types": "./dist/as-cell-number.d.mts",
+      "import": "./dist/as-cell-number.mjs",
+      "require": "./dist/as-cell-number.cjs"
+    },
     "./as-column-menu": {
       "types": "./dist/as-column-menu.d.mts",
       "import": "./dist/as-column-menu.mjs",

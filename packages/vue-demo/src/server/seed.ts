@@ -8,6 +8,8 @@ export const seedRoles = () => [
 
 export const seedUsers = async () => {
   const pw = await hashPassword("demo-password");
+  const now = Date.now();
+  const day = 86_400_000;
   return [
     {
       username: "admin",
@@ -15,6 +17,9 @@ export const seedUsers = async () => {
       roleId: 1,
       status: "active",
       mfaEnabled: false,
+      profile: { firstName: "Admin", lastName: "Root" },
+      lastLoginAt: now - 5 * 60_000, // 5 minutes ago
+      birthday: Date.UTC(1985, 2, 14), // 1985-03-14
       password: pw.hash,
       salt: pw.salt,
     },
@@ -24,6 +29,9 @@ export const seedUsers = async () => {
       roleId: 2,
       status: "active",
       mfaEnabled: false,
+      profile: { firstName: "Morgan", lastName: "Lee" },
+      lastLoginAt: now - 2 * 3_600_000, // 2 hours ago
+      birthday: Date.UTC(1990, 6, 1), // 1990-07-01
       password: pw.hash,
       salt: pw.salt,
     },
@@ -33,6 +41,8 @@ export const seedUsers = async () => {
       roleId: 3,
       status: "active",
       mfaEnabled: false,
+      profile: { firstName: "Vera", lastName: "Smith" },
+      lastLoginAt: now - 26 * 3_600_000, // yesterday-ish
       password: pw.hash,
       salt: pw.salt,
     },
@@ -42,6 +52,9 @@ export const seedUsers = async () => {
       roleId: 2,
       status: "active",
       mfaEnabled: true,
+      profile: { firstName: "Alice", lastName: "Adams" },
+      lastLoginAt: now - 3 * day, // 3 days ago
+      birthday: Date.UTC(1992, 10, 23), // 1992-11-23
       password: pw.hash,
       salt: pw.salt,
     },
@@ -51,6 +64,7 @@ export const seedUsers = async () => {
       roleId: 3,
       status: "pending",
       mfaEnabled: false,
+      profile: { firstName: "Bob", lastName: "Brown" },
       password: pw.hash,
       salt: pw.salt,
     },
@@ -76,13 +90,18 @@ export const seedProducts = () => {
     ["bestseller", "featured"],
   ];
   for (let i = 1; i <= 2000; i++) {
+    // `decimal` columns serialize as strings on the wire; pre-format so the
+    // seed shape matches what the adapter writes and reads back.
+    const price = (10 + ((i * 7) % 990) + (i % 17) / 10).toFixed(2);
+    const weight = ((i % 50) + 1 + (i % 7) / 10).toFixed(2);
     rows.push({
       name: `Product ${i}`,
       description: `Description for product ${i}`,
       categoryId: ((i - 1) % 5) + 1,
       createdById: ((i - 1) % 5) + 1,
       sku: `SKU-${String(i).padStart(5, "0")}`,
-      price: 10 + ((i * 7) % 990) + (i % 17) / 10,
+      price,
+      weight,
       tags: TAG_POOL[i % TAG_POOL.length],
       publishedAt: i % 4 === 0 ? undefined : Date.now() - i * 3_600_000,
     });
@@ -115,16 +134,25 @@ export const seedCustomers = () => {
 export const seedOrders = () => {
   const rows: Record<string, unknown>[] = [];
   const statuses = ["pending", "processing", "shipped", "delivered", "cancelled"] as const;
+  const currencies = ["USD", "EUR", "GBP"] as const;
   for (let i = 1; i <= 15; i++) {
-    const lines = [
-      { productId: ((i - 1) % 20) + 1, quantity: 1 + (i % 3), priceAtTime: 10 + i * 3 },
-      { productId: (i % 20) + 1, quantity: 1, priceAtTime: 15 + i },
+    // `decimal` columns (top-level + inside `@db.json`) round-trip as strings;
+    // compute as numbers then `.toFixed(2)` at the boundary.
+    const lineNums = [
+      { productId: ((i - 1) % 20) + 1, quantity: 1 + (i % 3), priceAt: 10 + i * 3 },
+      { productId: (i % 20) + 1, quantity: 1, priceAt: 15 + i },
     ];
-    const total = lines.reduce((s, l) => s + l.quantity * l.priceAtTime, 0);
+    const lines = lineNums.map((l) => ({
+      productId: l.productId,
+      quantity: l.quantity,
+      priceAtTime: l.priceAt.toFixed(2),
+    }));
+    const total = lineNums.reduce((s, l) => s + l.quantity * l.priceAt, 0).toFixed(2);
     rows.push({
       customerId: ((i - 1) % 10) + 1,
       assigneeId: (i % 3) + 1,
       status: statuses[i % statuses.length],
+      currency: currencies[i % currencies.length],
       lines,
       total,
       shippedAt: i % 2 === 0 ? Date.now() - i * 3_600_000 : null,

@@ -29,15 +29,23 @@ export interface ProductsTable {
     sku: string
 
     @meta.label 'Price'
-    price: number
+    @db.amount.currency 'USD'
+    @db.column.precision 10, 2
+    @db.column.measure
+    price: decimal
+
+    @meta.label 'Weight'
+    @db.unit 'kg'
+    @db.column.precision 6, 2
+    weight?: decimal
 
     @meta.label 'Tags'
     tags: string[]
 
     @meta.label 'Published At'
-    publishedAt?: number
+    publishedAt?: number.timestamp
 
     @meta.label 'Created'
     @db.default.now
-    createdAt: number
+    createdAt: number.timestamp
 }

@@ -81,6 +81,12 @@ export interface PresetStateSlice {
   /** Owned-by-current-user predicate. Returns false for system + missing rows. */
   isOwned: (id: string) => boolean;
   dialogOpen: Ref<boolean>;
+  /**
+   * `true` once preset bootstrap has applied the default, or always when the
+   * feature isn't configured. Consumers (URL-query bridge) wait on this so
+   * preset baseline is written first and URL overlays cleanly on top.
+   */
+  ready: ComputedRef<boolean>;
 
   captureSnapshot: (mask?: AspectMask) => PresetSnapshot;
   apply: (idOrSnapshot: string | PresetSnapshot) => void;
@@ -138,6 +144,9 @@ export function createPresetState(opts: CreatePresetStateOptions): {
 
   const dialogOpen = ref(false);
   const gate = ref(false);
+  // No `presetsHandle` → bootstrap is a no-op, gate never flips, so surface
+  // `ready=true` to keep URL-bridge consumers from deadlocking.
+  const ready = computed(() => (opts.presetsHandle ? gate.value : true));
 
   // Inert handle when the feature isn't wired keeps the slice reading from
   // one source — no `?? fallback` aliasing for every state field.
@@ -491,6 +500,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     currentUser,
     isOwned: (id: string) => handle.isOwned(id),
     dialogOpen,
+    ready,
     captureSnapshot,
     apply,
     resetActive,

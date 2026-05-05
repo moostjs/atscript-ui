@@ -4,11 +4,11 @@ packages:
 
 catalog:
   "@atscript/core": ^0.1.50
-  "@atscript/db": ^0.1.63
-  "@atscript/db-client": ^0.1.63
-  "@atscript/db-sql-tools": ^0.1.63
-  "@atscript/db-sqlite": ^0.1.63
-  "@atscript/moost-db": ^0.1.63
+  "@atscript/db": ^0.1.64
+  "@atscript/db-client": ^0.1.64
+  "@atscript/db-sql-tools": ^0.1.64
+  "@atscript/db-sqlite": ^0.1.64
+  "@atscript/moost-db": ^0.1.64
   "@atscript/moost-validator": ^0.1.50
   "@atscript/typescript": ^0.1.50
   "@iconify/utils": ^3.1.0

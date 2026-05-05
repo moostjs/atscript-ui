@@ -34,7 +34,10 @@ export const uiAnnotations: TAnnotationsTree = {
     type: new AnnotationSpec({
       description:
         "Cell + input renderer type override applied to whichever surface lacks its own override " +
-        "(`ui.form.type` / `ui.table.type`)." +
+        "(`ui.form.type` / `ui.table.type`). Built-in types: " +
+        BUILTIN_TYPES.join(", ") +
+        ". Consumers may dispatch additional custom types via the renderer registry — the " +
+        "argument is intentionally open-ended." +
         "\n\n**Example:**\n" +
         "```atscript\n" +
         '@ui.type "currency"\n' +
@@ -44,7 +47,6 @@ export const uiAnnotations: TAnnotationsTree = {
       argument: {
         name: "type",
         type: "string",
-        values: [...BUILTIN_TYPES],
         description: "The renderer type used by both form input and table cell unless overridden.",
       },
     }),
@@ -384,12 +386,15 @@ export const uiAnnotations: TAnnotationsTree = {
 
       type: new AnnotationSpec({
         description:
-          "Cell renderer type override. Wins over the shared `@ui.type` for this prop's table cell.",
+          "Cell renderer type override. Wins over the shared `@ui.type` for this prop's table cell. " +
+          "Built-in types: " +
+          BUILTIN_TYPES.join(", ") +
+          ". Consumers may register additional types in the table types map; the argument is " +
+          "intentionally open-ended.",
         nodeType: ["prop", "type"],
         argument: {
           name: "type",
           type: "string",
-          values: [...BUILTIN_TYPES],
           description: "The cell renderer type dispatched via the table types map.",
         },
       }),

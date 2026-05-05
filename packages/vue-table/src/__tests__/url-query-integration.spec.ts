@@ -218,6 +218,43 @@ describe("URL query bridge — state↔URL integration", () => {
     expect(pagesFn).not.toHaveBeenCalled();
   });
 
+  it("ignores URLSearchParams round-trip echo for nested-path filters with operator chars", async () => {
+    // Reproduces the production bug user hit on the users page: typing a
+    // contains-filter on `profile.firstName` fired two `/pages` queries —
+    // one immediate, one ~500ms later. Root cause: `useTableUrlQuery`'s
+    // vue-router bridge round-trips through `URLSearchParams.toString()`,
+    // which percent-encodes `~` (operator marker), `/`, and `'` — but
+    // `buildUrl` from `@uniqu/url` emits them raw. Strings differ byte-wise
+    // ("profile.firstName~='/bob/i'" vs "profile.firstName%7E=%27%2Fbob%2Fi%27")
+    // even though they decode to the same URL, so applyUrlQuery's echo
+    // guard missed the round-trip and scheduled a redundant query.
+    const onUrlQueryChange = vi.fn();
+    const { state, pagesFn } = mountTableState({
+      columns: [mockColumn("profile.firstName")],
+      queryOnMount: false,
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    state.setFieldFilter("profile.firstName", [{ type: "contains", value: ["bob"] }]);
+    await nextTick();
+    const emitted = onUrlQueryChange.mock.calls.at(-1)?.[0] as string;
+    // Sanity: the emit IS the buildUrl-format string (operator/regex chars raw).
+    expect(emitted).toContain("profile.firstName~=");
+    pagesFn.mockClear();
+
+    // Simulate the URLSearchParams-encoded form vue-router delivers back.
+    const encodedEcho = emitted.replace(/~/g, "%7E").replace(/'/g, "%27").replace(/\//g, "%2F");
+    expect(encodedEcho).not.toBe(emitted); // confirms encoding actually differs
+    state.applyUrlQuery(encodedEcho);
+    await nextTick();
+    await nextTick();
+
+    // Echo guard must catch the round-trip. The debounced filter watcher
+    // (mutation path) is the single source of refetch.
+    expect(pagesFn).not.toHaveBeenCalled();
+  });
+
   it("hydrating drops filter conditions on unknown fields", async () => {
     const { state } = mountTableState({
       columns: [mockColumn("status")],

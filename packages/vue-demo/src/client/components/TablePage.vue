@@ -6,7 +6,6 @@ import {
   AsTableRoot,
   AsWindowTable,
   createDefaultControls,
-  createDefaultCellTypes,
   useTableUrlQuery,
   type ActionResult,
   type TVueTableActionInfo,
@@ -17,6 +16,7 @@ import { getDemoTable, type ActionsColumn, type TableKind, type TableMode } from
 import { useMe } from "../api/use-me";
 import { onActionToast } from "../api/error-bus";
 import { clientForTable } from "../api/client-factory";
+import { createDemoTableTypes, createDemoTableComponents } from "../types/demo-table-types";
 
 // Shareable URLs: filters, sorters, pagination, and search are reflected in
 // the browser query string (e.g. `?status=active&$sort=-createdAt&$skip=50`).
@@ -27,7 +27,8 @@ import { clientForTable } from "../api/client-factory";
 const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 
 const controls = createDefaultControls();
-const types = createDefaultCellTypes();
+const types = createDemoTableTypes();
+const components = createDemoTableComponents();
 const rowValueFn = (row: Record<string, unknown>) => row.id;
 
 const props = defineProps<{ path: string; label: string }>();
@@ -37,6 +38,9 @@ const mode = computed<TableMode>(() => tableMeta.value?.mode ?? "pagination");
 const limit = computed(() => tableMeta.value?.limit ?? 25);
 const actionsColumn = computed<ActionsColumn>(() => tableMeta.value?.actionsColumn ?? "last");
 const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
+const apiPath = computed(() => tableMeta.value?.apiPath ?? props.path);
+const tableKey = computed(() => tableMeta.value?.tableKey ?? props.path);
+const forceFilters = computed(() => tableMeta.value?.forceFilters);
 
 const { me, loaded: meLoaded } = useMe();
 const canWrite = computed(() => !!me.value?.permissions?.[props.path]?.write);
@@ -100,8 +104,8 @@ function rowsToCsv(rows: Record<string, unknown>[]): string {
   return lines.join("\n");
 }
 
-async function downloadCsv(name: string, ids: unknown[]) {
-  const client = clientForTable(name);
+async function downloadCsv(apiName: string, ids: unknown[]) {
+  const client = clientForTable(apiName);
   // ids empty (table-level) → first 5000 rows. ids non-empty (rows-level) →
   // filter by PK. Single-PK tables only — composite-PK demo tables aren't on
   // the CSV path today.
@@ -117,6 +121,22 @@ async function downloadCsv(name: string, ids: unknown[]) {
   URL.revokeObjectURL(url);
 }
 
+// `ids` is `Record<string, unknown>[]` per db-client preferredId model — bare
+// `Array#join` would emit `[object Object]`. Field order isn't load-bearing
+// here (toast text only), so a `/`-joined values list is good enough.
+function formatIds(ids: unknown[]): string {
+  return ids
+    .map((id) => {
+      if (id == null) return "";
+      if (typeof id === "object") {
+        return Object.values(id as Record<string, unknown>).join("/");
+      }
+      return String(id);
+    })
+    .filter(Boolean)
+    .join(", ");
+}
+
 function onAction(
   action: TVueTableActionInfo,
   ids: unknown[],
@@ -126,9 +146,22 @@ function onAction(
   // Custom processor: dispatch only — no server hit. Wire the export here.
   if (action.processor === "custom" && action.name === "export-csv") {
     pushToast(true, `Exporting ${props.path} (${ids.length || "all"} rows)…`);
-    void downloadCsv(props.path, ids).catch((err) => {
+    void downloadCsv(apiPath.value, ids).catch((err) => {
       pushToast(false, `Export failed: ${err instanceof Error ? err.message : String(err)}`);
     });
+    return;
+  }
+  if (action.processor === "custom" && action.name === "copy-invite-link") {
+    const formatted = formatIds(ids.slice(0, 1));
+    if (!formatted) {
+      pushToast(false, "No user identifier available");
+      return;
+    }
+    const link = `${location.origin}/invite/${encodeURIComponent(formatted)}`;
+    void navigator.clipboard?.writeText(link).then(
+      () => pushToast(true, `Copied invite link for ${formatted}`),
+      () => pushToast(false, `Couldn't copy invite link for ${formatted}`),
+    );
     return;
   }
   if (!result.ok) {
@@ -137,7 +170,7 @@ function onAction(
   }
   if (result.kind === "navigate") {
     // Navigate handled by Client.action(); just confirm in the toast.
-    pushToast(true, `Open → ${ids.join(", ")}`);
+    pushToast(true, `Open → ${formatIds(ids)}`);
     return;
   }
   if (result.kind === "remove") {
@@ -173,13 +206,15 @@ function onAction(
       v-model:filter-fields="filterFields"
       v-model:url-query="urlQuery"
       :url-query-sync="urlQuerySync"
-      :url="`/api/db/tables/${path}`"
+      :url="`/api/db/tables/${apiPath}`"
       :controls="controls"
       :types="types"
+      :components="components"
       :limit="limit"
       :row-value-fn="rowValueFn"
       :refresh-on-action="true"
-      :preset="{ url: '/api/db/_presets', tableKey: path }"
+      :force-filters="forceFilters"
+      :preset="{ url: '/api/db/_presets', tableKey: tableKey }"
       class="flex-1 flex flex-col min-h-0 min-w-0"
       @action="onAction"
     >

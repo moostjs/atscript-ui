@@ -21,6 +21,7 @@ import { InviteWorkflow } from "./workflows/users/invite.workflow";
 import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import { auditInterceptor } from "./auth/audit";
+import { latencyInterceptor } from "./interceptors/latency";
 import type { DemoScope, DemoUserAttrs } from "./auth/arbac-scope";
 
 const arbac = new MoostArbac<DemoUserAttrs, DemoScope>();
@@ -35,7 +36,7 @@ app.setProvideRegistry(
 );
 void app.adapter(new MoostHttp()).listen(3200);
 app.adapter(new MoostWf());
-app.applyGlobalInterceptors(auditInterceptor);
+app.applyGlobalInterceptors(auditInterceptor, latencyInterceptor);
 // Validate `@InputForm` payloads (and any other params stamped with the
 // `MOOST_ATSCRIPT_TYPE` mate key by moost-db / future plugins) against
 // their compiled .as schemas. Failures surface as HTTP 400 via the

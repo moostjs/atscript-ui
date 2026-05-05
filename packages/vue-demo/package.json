@@ -7,7 +7,8 @@
     "build": "vite build",
     "start": "node dist/server/server.js",
     "test": "vp test --config vite.setup.config.ts",
-    "db:setup": "pnpm dlx vite-node --config vite.setup.config.ts src/server/setup.ts"
+    "db:setup": "pnpm dlx vite-node --config vite.setup.config.ts src/server/setup.ts",
+    "as:dts": "asc -f dts"
   },
   "dependencies": {
     "@atscript/db-client": "catalog:",

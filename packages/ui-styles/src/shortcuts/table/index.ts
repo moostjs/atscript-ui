@@ -1,5 +1,6 @@
 import { mergeVunorShortcuts } from "vunor/theme";
 import { asActionFormShortcuts } from "./as-action-form";
+import { asCellShortcuts } from "./as-cell";
 import { asColumnMenuShortcuts } from "./as-column-menu";
 import { asConfigDialogShortcuts } from "./as-config-dialog";
 import { asConfigTabShortcuts } from "./as-config-tab";
@@ -21,6 +22,7 @@ import { asWindowTableShortcuts } from "./as-window-table";
 
 export {
   asActionFormShortcuts,
+  asCellShortcuts,
   asColumnMenuShortcuts,
   asConfigDialogShortcuts,
   asConfigTabShortcuts,
@@ -43,6 +45,7 @@ export {
 
 export const tableShortcuts = mergeVunorShortcuts([
   asTableShortcuts,
+  asCellShortcuts,
   asPageShortcuts,
   asFpillShortcuts,
   asColumnMenuShortcuts,

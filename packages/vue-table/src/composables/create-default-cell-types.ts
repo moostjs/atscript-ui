@@ -1,25 +1,30 @@
 import { ROW_ACTIONS_TYPE, type TAsCellTypeComponents } from "../types";
-import { AsRowActions, AsTableCellValue } from "../components/defaults";
+import {
+  AsCellArray,
+  AsCellDate,
+  AsCellJson,
+  AsCellNumber,
+  AsRowActions,
+  AsTableCellValue,
+} from "../components/defaults";
 
 /**
  * Returns a fresh cell-type-to-component map pre-filled with the built-in
- * `AsTableCellValue` for every known cell type. The default renderer formats
- * the value via {@link formatCellValue} based on `column.type`.
- *
- * Spread or assign additional entries to extend with custom cell types or to
- * replace the renderer for a specific type:
+ * defaults. Spread to extend or override:
  * ```ts
- * const types = { ...createDefaultCellTypes(), money: MyMoneyCell }
+ * const types = { ...createDefaultCellTypes(), status: StatusBadgeCell }
  * ```
  */
 export function createDefaultCellTypes(): TAsCellTypeComponents {
   return {
     text: AsTableCellValue,
-    number: AsTableCellValue,
+    number: AsCellNumber,
     boolean: AsTableCellValue,
-    date: AsTableCellValue,
-    array: AsTableCellValue,
-    object: AsTableCellValue,
+    date: AsCellDate,
+    datetime: AsCellDate,
+    relative: AsCellDate,
+    array: AsCellArray,
+    object: AsCellJson,
     enum: AsTableCellValue,
     ref: AsTableCellValue,
     /** Synthesised row-actions pseudo-column (`:rowActionsColumn` opt-in). */

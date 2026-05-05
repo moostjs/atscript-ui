@@ -22,6 +22,7 @@ describe("p1 crud", () => {
       roleId,
       status: "active",
       mfaEnabled: false,
+      profile: { firstName: "Alice", lastName: "Adams" },
       password: "",
       salt: "",
     });

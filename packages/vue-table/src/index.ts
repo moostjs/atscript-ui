@@ -98,6 +98,10 @@ export { default as AsPresetPicker } from "./components/as-preset-picker.vue";
 export { createDefaultControls } from "./composables/create-default-controls";
 export { createDefaultCellTypes } from "./composables/create-default-cell-types";
 export {
+  AsCellArray,
+  AsCellDate,
+  AsCellJson,
+  AsCellNumber,
   AsColumnMenu,
   AsConfigDialog,
   AsFilterDialog,
@@ -108,6 +112,9 @@ export {
   AsTableCellValue,
   AsTableHeaderCell,
 } from "./components/defaults";
+
+// ── Cell-renderer locale source (provide/inject) ────────────
+export { provideCellLocale, useCellLocale, type CellLocale } from "./composables/use-cell-locale";
 
 // ── Utilities ───────────────────────────────────────────────
 export { getColumnWidth } from "./utils/column-width";

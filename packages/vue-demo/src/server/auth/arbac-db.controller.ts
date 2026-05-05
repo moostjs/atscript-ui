@@ -1,9 +1,24 @@
-import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import type { TAtscriptAnnotatedType, TProcessAnnotationContext } from "@atscript/typescript/utils";
 import { AsDbController } from "@atscript/moost-db";
+import {
+  DB_AMOUNT_CURRENCY,
+  DB_AMOUNT_CURRENCY_REF,
+  DB_COLUMN_PRECISION,
+  DB_UNIT,
+  DB_UNIT_REF,
+} from "@atscript/ui";
 import { useArbac } from "@moostjs/arbac";
 import { Inherit } from "moost";
 import type { UniqueryControls } from "@atscript/db";
 import type { DemoScope } from "./arbac-scope";
+
+const UI_QUANTITY_ANNOTATION_KEYS = new Set<string>([
+  DB_AMOUNT_CURRENCY,
+  DB_AMOUNT_CURRENCY_REF,
+  DB_UNIT,
+  DB_UNIT_REF,
+  DB_COLUMN_PRECISION,
+]);
 
 /**
  * Resolve the union of `columns` whitelists from a list of scopes.
@@ -85,6 +100,27 @@ export function narrowProjection(
 export class AsArbacDbController<
   T extends TAtscriptAnnotatedType = TAtscriptAnnotatedType,
 > extends AsDbController<T> {
+  /**
+   * Extend the inherited annotation whitelist (which strips most `db.*` keys
+   * for cleanliness) so the cell renderers receive the quantity-tagging
+   * metadata they need: money (`db.amount.currency` / `.ref`), unit
+   * (`db.unit` / `.ref`), and decimal scale (`db.column.precision`). Allow-
+   * list stays narrow — we don't leak indexes, collation, gate modes, etc.
+   */
+  protected override getSerializeOptions() {
+    const base = super.getSerializeOptions();
+    const baseProcess = base.processAnnotation;
+    return {
+      ...base,
+      processAnnotation: (entry: TProcessAnnotationContext) => {
+        if (UI_QUANTITY_ANNOTATION_KEYS.has(entry.key)) {
+          return { key: entry.key, value: entry.value };
+        }
+        return baseProcess?.(entry);
+      },
+    };
+  }
+
   /** Current request's scopes (as set by `arbackAuthorizeInterceptor`). */
   protected scopes(): DemoScope[] {
     const scopes = useArbac<DemoScope>().getScopes?.();

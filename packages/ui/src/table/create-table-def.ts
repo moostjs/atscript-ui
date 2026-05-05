@@ -7,6 +7,12 @@ import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typesc
 import type { TDbActionInfo } from "@atscript/db-client";
 import { getFieldMeta } from "../shared/field-resolver";
 import {
+  DB_AMOUNT_CURRENCY,
+  DB_AMOUNT_CURRENCY_REF,
+  DB_COLUMN_PRECISION,
+  DB_JSON,
+  DB_UNIT,
+  DB_UNIT_REF,
   EXPECT_MAX_LENGTH,
   META_LABEL,
   UI_TABLE_COMPONENT,
@@ -46,9 +52,15 @@ export function createTableDef(
 
   for (const [path, prop] of flatMap.entries()) {
     if (path === "") continue;
-    // Sub-paths become columns only when the server lists them in meta.fields —
-    // keeps atomic JSON/document columns from leaking their internals as synthetic columns.
-    if (path.includes(".") && !(path in meta.fields)) continue;
+    if (!(path in meta.fields)) {
+      // Sub-paths become columns only when the server lists them in meta.fields —
+      // keeps atomic JSON/document columns from leaking their internals as synthetic columns.
+      // Top-level object/array parents that aren't in meta.fields are flat-flattened
+      // structures (no `@db.json`) — their leaves are the real physical columns and
+      // appear in meta.fields, so skip the synthetic parent here.
+      const kind = prop.type.kind;
+      if (path.includes(".") || kind === "object" || kind === "array") continue;
+    }
 
     const fieldMeta = meta.fields[path];
     const options = extractLiteralOptions(prop);
@@ -61,20 +73,35 @@ export function createTableDef(
     const tableType = getFieldMeta(prop, UI_TABLE_TYPE) as string | undefined;
     const sharedType = getFieldMeta(prop, UI_TYPE) as string | undefined;
     const tableComponent = getFieldMeta(prop, UI_TABLE_COMPONENT) as string | undefined;
+    const precisionMeta = getFieldMeta(prop, DB_COLUMN_PRECISION) as
+      | { precision: number; scale: number }
+      | undefined;
+
+    // `@db.json` columns store an opaque JSON blob — the adapter contract
+    // doesn't support filtering or sorting on the raw value, so force both
+    // capabilities off regardless of what the server reported. Defensive:
+    // moost-db currently emits `filterable: true` by default for every
+    // non-ignored field (see atscript-db TODO.md).
+    const isJsonColumn = getFieldMeta(prop, DB_JSON) === true;
 
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
       type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
       component: tableComponent,
-      sortable: fieldMeta?.sortable ?? false,
-      filterable: fieldMeta?.filterable ?? false,
+      sortable: isJsonColumn ? false : (fieldMeta?.sortable ?? false),
+      filterable: isJsonColumn ? false : (fieldMeta?.filterable ?? false),
       visible: getFieldMeta(prop, UI_TABLE_HIDDEN) === undefined,
       width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
       maxLen: maxLengthMeta?.length,
       order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
       options,
       valueHelpInfo,
+      currencyCode: getFieldMeta(prop, DB_AMOUNT_CURRENCY) as string | undefined,
+      currencyRefField: getFieldMeta(prop, DB_AMOUNT_CURRENCY_REF) as string | undefined,
+      unitCode: getFieldMeta(prop, DB_UNIT) as string | undefined,
+      unitRefField: getFieldMeta(prop, DB_UNIT_REF) as string | undefined,
+      precisionScale: precisionMeta?.scale,
     });
   }
 
@@ -146,8 +173,14 @@ function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: unknown): 
   if (kind === "object") return "object";
   if (kind === "union") return literalOpts !== undefined ? "enum" : "text";
   if (kind === "") {
-    const dt = (prop.type as TAtscriptTypeFinal).designType;
-    if (dt === "number" || dt === "decimal") return "number";
+    const final = prop.type as TAtscriptTypeFinal;
+    const dt = final.designType;
+    if (dt === "number") {
+      // `number.timestamp` (wire-tagged `timestamp`) epoch-ms primitive →
+      // render as datetime out of the box. Plain numbers stay numeric.
+      return final.tags?.has("timestamp") ? "datetime" : "number";
+    }
+    if (dt === "decimal") return "number";
     if (dt === "boolean") return "boolean";
     return "text";
   }

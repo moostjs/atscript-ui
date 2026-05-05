@@ -168,14 +168,18 @@ const state = useTable(props.url, {
 });
 
 if (urlQueryActive) {
-  // Apply URL once tableDef settles (schema must be known before parsing,
-  // unknown fields drop). Subsequent urlQuery changes reapply for browser
-  // back / deep-link paste / programmatic nav. `applyUrlQuery` is idempotent
-  // (echo-guarded), so reapplying when both deps fire is safe.
+  // Wait for tableDef (schema-driven parsing) AND preset bootstrap. Preset
+  // writes its baseline first, URL overlays on top — so a deep link survives
+  // a preset that would otherwise clear filters. `preset.ready` is `true`
+  // when the feature isn't wired, so non-preset tables stay single-step.
   watch(
-    [() => state.tableDef.value, () => urlQuery.value],
-    ([def, q]) => {
-      if (def === null) return;
+    [
+      () => state.tableDef.value,
+      () => urlQuery.value,
+      () => state.preset.ready.value,
+    ],
+    ([def, q, presetReady]) => {
+      if (def === null || !presetReady) return;
       if (typeof q === "string" && q !== "") state.applyUrlQuery(q);
       if (!urlQueryReady.value) urlQueryReady.value = true;
     },

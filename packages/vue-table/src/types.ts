@@ -297,6 +297,10 @@ export type TAsCellTypeComponents = {
   number: Component;
   boolean: Component;
   date: Component;
+  /** Date + time-of-day. Defaulted to `<AsCellDate>`. */
+  datetime?: Component;
+  /** Relative time (`"3 hours ago"`). Defaulted to `<AsCellDate>`. */
+  relative?: Component;
   array: Component;
   object: Component;
   enum: Component;

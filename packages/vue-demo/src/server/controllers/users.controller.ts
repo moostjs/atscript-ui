@@ -46,6 +46,13 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
     intent: "secondary",
     default: true,
   },
+  "copy-invite-link": {
+    processor: "custom",
+    label: "Copy invite link",
+    icon: "i-as-clipboard",
+    intent: "secondary",
+    description: "Copy /invite/<id> to clipboard via @action event",
+  },
 })
 export class UsersController extends AsArbacDbController<typeof UsersTable> {
   /** `pending`/`suspended` → `active`. */

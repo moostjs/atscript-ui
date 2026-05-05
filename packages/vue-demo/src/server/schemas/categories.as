@@ -18,5 +18,5 @@ export interface CategoriesTable {
 
     @meta.label 'Created'
     @db.default.now
-    createdAt: number
+    createdAt: number.timestamp
 }

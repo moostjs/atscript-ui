@@ -40,6 +40,12 @@ export const UI_DICT_SEARCHABLE = "ui.dict.searchable" as const;
 // ── DB annotation keys (registered by @atscript/db plugin) ──
 export const DB_REL_FK = "db.rel.FK" as const;
 export const DB_HTTP_PATH = "db.http.path" as const;
+export const DB_JSON = "db.json" as const;
+export const DB_AMOUNT_CURRENCY = "db.amount.currency" as const;
+export const DB_AMOUNT_CURRENCY_REF = "db.amount.currency.ref" as const;
+export const DB_UNIT = "db.unit" as const;
+export const DB_UNIT_REF = "db.unit.ref" as const;
+export const DB_COLUMN_PRECISION = "db.column.precision" as const;
 
 // ── Workflow annotation keys (registered by @atscript/moost-wf plugin) ──
 export const WF_ACTION_WITH_DATA = "wf.action.withData" as const;

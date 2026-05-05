@@ -747,6 +747,23 @@ export function createTableState(opts: CreateTableStateOptions): {
     );
   }
 
+  // Bridges that round-trip via `URLSearchParams` (e.g. the vue-router bridge
+  // in `useTableUrlQuery`) re-encode characters that `buildUrl` from
+  // `@uniqu/url` emits raw — `~` (operator marker in keys), `/`, `'` — so the
+  // string we emit and the string we receive back differ byte-wise even
+  // though they represent the same URL. Compare on decoded form so the echo
+  // guard catches the round-trip; without this every state mutation produces
+  // a duplicate query (one immediate from `applyUrlQuery`, one debounced from
+  // the filter watcher).
+  function urlsEquivalent(a: string, b: string): boolean {
+    if (a === b) return true;
+    try {
+      return decodeURIComponent(a) === decodeURIComponent(b);
+    } catch {
+      return false;
+    }
+  }
+
   function emitUrlIfChanged(): void {
     if (!queryOpts?.onUrlQueryChange) return;
     if (hydratingFromUrl) return;
@@ -757,7 +774,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   }
 
   function applyUrlQuery(urlString: string): void {
-    if (urlString === lastEmittedUrl) return;
+    if (urlsEquivalent(urlString, lastEmittedUrl)) return;
     const cols = allColumns.value;
     const parsed = urlQueryStringToState(urlString, {
       knownFields: cols.length > 0 ? cols.map((c) => c.path) : undefined,

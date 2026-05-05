@@ -19,23 +19,31 @@ export interface OrdersTable {
     @meta.label 'Status'
     @db.index.plain 'orders_status_idx'
     @db.default 'pending'
+    @ui.table.component 'status-badge'
     status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+
+    @meta.label 'Currency'
+    @db.column.dimension
+    currency: db.currencyCode
 
     @meta.label 'Lines'
     @db.json
     lines: {
         productId: ProductsTable.id
         quantity: number
-        priceAtTime: number
+        priceAtTime: decimal
     }[]
 
     @meta.label 'Total'
-    total: number
+    @db.amount.currency.ref 'currency'
+    @db.column.precision 10, 2
+    @db.column.measure
+    total: decimal
 
     @meta.label 'Shipped At'
-    shippedAt?: number
+    shippedAt?: number.timestamp
 
     @meta.label 'Created'
     @db.default.now
-    createdAt: number
+    createdAt: number.timestamp
 }

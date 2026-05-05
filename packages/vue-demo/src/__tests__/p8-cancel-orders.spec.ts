@@ -30,8 +30,8 @@ describe("orders cancel rows-action filter logic", () => {
   it("detects delivered in selection", async () => {
     const { orders } = await prep();
     await orders.insertMany([
-      { customerId: 1, status: "pending", lines: [], total: 0 },
-      { customerId: 1, status: "delivered", lines: [], total: 0 },
+      { customerId: 1, status: "pending", currency: "USD", lines: [], total: "0.00" },
+      { customerId: 1, status: "delivered", currency: "USD", lines: [], total: "0.00" },
     ]);
     const selected = await orders.findMany({ filter: { id: { $in: [1, 2] } } });
     expect(selected.some((o) => o.status === "delivered")).toBe(true);
@@ -40,8 +40,8 @@ describe("orders cancel rows-action filter logic", () => {
   it("all non-delivered → cancellable", async () => {
     const { orders } = await prep();
     await orders.insertMany([
-      { customerId: 1, status: "pending", lines: [], total: 0 },
-      { customerId: 1, status: "processing", lines: [], total: 0 },
+      { customerId: 1, status: "pending", currency: "USD", lines: [], total: "0.00" },
+      { customerId: 1, status: "processing", currency: "USD", lines: [], total: "0.00" },
     ]);
     const selected = await orders.findMany({ filter: { id: { $in: [1, 2] } } });
     expect(selected.some((o) => o.status === "delivered")).toBe(false);

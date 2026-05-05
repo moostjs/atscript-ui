@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, onBeforeUnmount, watch } from "vue";
+import { computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
+import { provideCellLocale, useAppPrefs } from "@atscript/vue-table";
 import { useMe } from "../api/use-me";
 import { on401 } from "../api/error-bus";
+import { clientFactory } from "../api/client-factory";
 import SidebarNav from "./SidebarNav.vue";
 import ToastStack from "./ToastStack.vue";
 import WfExpiryBanner from "./WfExpiryBanner.vue";
@@ -11,6 +13,15 @@ import ServerErrorDialog from "./ServerErrorDialog.vue";
 const router = useRouter();
 const { me, loaded, reset } = useMe();
 let off401: (() => void) | null = null;
+
+// One subscription at the shell — descendant cells inject this same ref.
+const { prefs } = useAppPrefs({ url: "/api/db/_presets", clientFactory });
+provideCellLocale(
+  computed(() => ({
+    language: prefs.value.language,
+    timezone: prefs.value.timezone,
+  })),
+);
 
 onMounted(() => {
   off401 = on401.on(() => {

@@ -15,10 +15,14 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
   // `<AsRowActions>` text-only render path: the row cell shows a labelled
   // button instead of an icon-only button. Useful real-world admin pattern
   // (cross-table navigation: "show me this customer's orders").
+  // `$1` is substituted by db-client with the customer's preferredId (here:
+  // numeric `id`). The orders page reads `?customerId=…` via its URL-query
+  // bridge and applies it as a sticky filter — pasting the link in another
+  // tab opens the customer's order list in a single fetch.
   "view-orders": {
     processor: "navigate",
     label: "View orders",
-    value: "/orders",
+    value: "/orders?customerId=$1",
     default: true,
   },
 })

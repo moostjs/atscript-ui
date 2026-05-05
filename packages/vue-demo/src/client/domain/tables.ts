@@ -5,7 +5,32 @@ export type TableKind = "virtual" | "window";
 export type ActionsColumn = "first" | "last" | "merge-select";
 
 export interface DemoTable {
+  /** URL slug. Defaults to `apiPath` and `tableKey` unless overridden. */
   path: string;
+  /**
+   * Override the controller path when the route slug differs from the API
+   * path — e.g. `orders-cancelled` is a UI alias of the `orders` API table
+   * with a sticky `status === 'cancelled'` filter. Defaults to `path`.
+   */
+  apiPath?: string;
+  /**
+   * Override the preset `tableKey` (per-`(user, app, tableKey)` scope).
+   * Defaults to `path`. Required when the URL slug contains chars that
+   * `@uniqu/url`'s `serializeValue` doesn't auto-quote (currently `-`,
+   * `+`, `*`, `:`, `;`, `?`) — those slip through as unquoted Uniquery
+   * values and the parser reads them as arithmetic / control tokens.
+   * Use a safe identifier (alphanumeric + underscore) here.
+   */
+  tableKey?: string;
+  /**
+   * Server-side sticky filter merged into every query. Users see the filter
+   * applied but cannot remove it (no UI surface). Use for permission-locked
+   * views (e.g. cancelled-only orders) where the URL slug encodes the slice.
+   * Shape is the `@uniqu/core` `FilterExpr` JSON form (typed loosely here to
+   * keep the demo free of the `@uniqu/core` dep — `<AsTableRoot>` widens to
+   * the real type at the boundary).
+   */
+  forceFilters?: Record<string, unknown>;
   label: string;
   resource: string;
   icon: string;
@@ -81,9 +106,30 @@ export const DEMO_TABLES: DemoTable[] = [
     mode: "pagination",
     actionsColumn: "merge-select",
     defaultFilterFields: ["customerId", "status"],
-    // Shareable filtered view: recipients see the same filter/sort but land
-    // on page 1 instead of being pinned to whatever page the linker was on.
-    urlQuerySync: { pagination: false },
+    // Shareable filtered view: recipients see filters but land on page 1
+    // (no `pagination` round-trip). The `filters` allowlist also exercises
+    // the `string[]` form of `urlQuerySync.filters` — only `status` and
+    // `customerId` round-trip; other filters (e.g. ad-hoc `total` ranges)
+    // stay private to the linker.
+    urlQuerySync: { pagination: false, filters: ["status", "customerId"] },
+  },
+  // Sticky-filter alias of `orders` — `forceFilters` pins `status =
+  // 'cancelled'` server-side. Users see the filter applied but cannot remove
+  // it (no UI surface). Demonstrates the `forceFilters` contract end-to-end.
+  // `apiPath: 'orders'` re-uses the orders controller; `tableKey:
+  // 'ordersCancelled'` keeps the preset scope distinct from `/orders` while
+  // sidestepping the `@uniqu/url` bug where `-` in unquoted Uniquery values
+  // is parsed as subtraction (so `tableKey=orders-cancelled` 400s).
+  {
+    path: "orders-cancelled",
+    apiPath: "orders",
+    tableKey: "ordersCancelled",
+    label: "Cancelled orders",
+    resource: "orders",
+    icon: "i-ph:prohibit",
+    mode: "pagination",
+    actionsColumn: "last",
+    forceFilters: { status: "cancelled" },
   },
   {
     path: "audit_log",
