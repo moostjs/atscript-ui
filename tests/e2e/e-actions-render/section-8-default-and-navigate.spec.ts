@@ -27,12 +27,6 @@ import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import { expectSinglePages, gotoTable } from "../helpers";
 
-/**
- * Inlined helper — open the row-actions dropdown for a row, return the
- * portalled menu locator. The cell button class is `as-row-actions-more`
- * (single-button rows render `as-row-actions-btn` instead — those don't
- * open a menu and are exercised via `triggerSingleRowAction`).
- */
 async function openRowActionsMenu(page: Page, row: Locator): Promise<Locator> {
   await row.locator(".as-row-actions-more").click();
   const menu = page.locator(".as-row-actions-menu");
@@ -40,7 +34,6 @@ async function openRowActionsMenu(page: Page, row: Locator): Promise<Locator> {
   return menu;
 }
 
-/** Body row whose cell at the supplied column index has exact text. */
 function rowByCellText(table: Locator, columnIndex: number, text: string): Locator {
   return table.locator("tbody tr").filter({
     has: table.page().locator(`xpath=./td[${columnIndex + 1}][normalize-space(.)="${text}"]`),
@@ -51,6 +44,19 @@ async function columnCellIndex(table: Locator, columnPath: string): Promise<numb
   const th = table.locator(`thead th[data-column-path="${columnPath}"]`);
   await expect(th).toHaveCount(1);
   return await th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
+}
+
+/**
+ * Read the first customers-table row's id (numeric preferredId). Used
+ * three times in this file — extract instead of inlining the cell-text
+ * read each time.
+ */
+async function readFirstCustomerId(table: Locator): Promise<string> {
+  const idIdx = await columnCellIndex(table, "id");
+  const firstRow = table.locator("tbody tr").first();
+  const text = ((await firstRow.locator("td").nth(idIdx).textContent()) ?? "").trim();
+  expect(text).toMatch(/^\d+$/u);
+  return text;
 }
 
 test.describe("Section 8.1 + 8.17 — Default row action via dblclick / main-action", () => {
@@ -95,12 +101,8 @@ test.describe("Section 8.1 + 8.17 — Default row action via dblclick / main-act
   }) => {
     await gotoTable(page, "customers");
     const table = page.locator("table.as-table").first();
-    const idIdx = await columnCellIndex(table, "id");
-    // `id` is the customers table's preferredId (numeric). Read the
-    // first row's id from the cell text — deterministic against the seed.
+    const firstIdText = await readFirstCustomerId(table);
     const firstRow = table.locator("tbody tr").first();
-    const firstIdText = ((await firstRow.locator("td").nth(idIdx).textContent()) ?? "").trim();
-    expect(firstIdText).toMatch(/^\d+$/u);
 
     // The labelled-single render is the load-bearing assertion: customers
     // sets `noRowDelete: true` AND has exactly one declared row action
@@ -123,13 +125,7 @@ test.describe("Section 8.1 + 8.17 — Default row action via dblclick / main-act
     const table2 = page.locator("table.as-table").first();
     const firstRow2 = table2.locator("tbody tr").first();
     // Re-read the first id (seed is stable but order is independent).
-    const firstIdText2 = (
-      (await firstRow2
-        .locator("td")
-        .nth(await columnCellIndex(table2, "id"))
-        .textContent()) ?? ""
-    ).trim();
-    expect(firstIdText2).toMatch(/^\d+$/u);
+    const firstIdText2 = await readFirstCustomerId(table2);
 
     // dblclick on a data cell of the customer row → main-action fires the
     // default `view-orders` action.
@@ -149,10 +145,8 @@ test.describe("Section 8.2 — Navigate action with $1 substitution", () => {
   }) => {
     await gotoTable(page, "customers");
     const table = page.locator("table.as-table").first();
-    const idIdx = await columnCellIndex(table, "id");
+    const firstIdText = await readFirstCustomerId(table);
     const firstRow = table.locator("tbody tr").first();
-    const firstIdText = ((await firstRow.locator("td").nth(idIdx).textContent()) ?? "").trim();
-    expect(firstIdText).toMatch(/^\d+$/u);
 
     // The labelled single button is the navigate trigger here — clicking
     // it should replace the route AND fire EXACTLY ONE composed `/pages`

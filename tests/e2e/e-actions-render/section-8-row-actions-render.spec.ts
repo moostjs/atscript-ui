@@ -51,8 +51,15 @@ async function columnCellIndex(table: Locator, columnPath: string): Promise<numb
 
 async function menuItemLabels(menu: Locator): Promise<string[]> {
   const items = menu.locator(".as-row-actions-menu-item");
-  const raw = await items.evaluateAll((els) => els.map((el) => (el.textContent ?? "").trim()));
-  return raw;
+  return await items.evaluateAll((els) => els.map((el) => (el.textContent ?? "").trim()));
+}
+
+/** All five row lookups in this spec hit the `username` column on /users. */
+async function userRowByName(table: Locator, name: string): Promise<Locator> {
+  const usernameIdx = await columnCellIndex(table, "username");
+  const row = rowByCellText(table, usernameIdx, name).first();
+  await expect(row).toHaveCount(1);
+  return row;
 }
 
 test.describe("Section 8.14 — Row-actions cell render branches", () => {
@@ -84,8 +91,7 @@ test.describe("Section 8.14 — Row-actions cell render branches", () => {
   }) => {
     await gotoTable(page, "users");
     const table = page.locator("table.as-table").first();
-    const usernameIdx = await columnCellIndex(table, "username");
-    const adminRow = rowByCellText(table, usernameIdx, "admin").first();
+    const adminRow = await userRowByName(table, "admin");
 
     // Single-button paths absent — dropdown trigger present.
     await expect(adminRow.locator(".as-row-actions-btn-labelled")).toHaveCount(0);
@@ -117,8 +123,7 @@ test.describe("Section 8.15 — Per-row gating drops actions out of the menu", (
   test("/users — admin (active) menu excludes Activate + Resend invite", async ({ page }) => {
     await gotoTable(page, "users");
     const table = page.locator("table.as-table").first();
-    const usernameIdx = await columnCellIndex(table, "username");
-    const adminRow = rowByCellText(table, usernameIdx, "admin").first();
+    const adminRow = await userRowByName(table, "admin");
     const menu = await openRowActionsMenu(page, adminRow);
     const labels = await menuItemLabels(menu);
     // active → Suspend stays (predicate fires for status==='suspended'),
@@ -133,9 +138,7 @@ test.describe("Section 8.15 — Per-row gating drops actions out of the menu", (
   }) => {
     await gotoTable(page, "users");
     const table = page.locator("table.as-table").first();
-    const usernameIdx = await columnCellIndex(table, "username");
-    const bobRow = rowByCellText(table, usernameIdx, "bob").first();
-    await expect(bobRow).toHaveCount(1);
+    const bobRow = await userRowByName(table, "bob");
     const menu = await openRowActionsMenu(page, bobRow);
     const labels = await menuItemLabels(menu);
     // pending → Activate eligible (predicate fires for active);
@@ -154,8 +157,7 @@ test.describe("Section 8.16 — Synthetic `__remove` (Delete) presence + absence
   test("Present: admin on /users — Delete in the row menu", async ({ page }) => {
     await gotoTable(page, "users");
     const table = page.locator("table.as-table").first();
-    const usernameIdx = await columnCellIndex(table, "username");
-    const aliceRow = rowByCellText(table, usernameIdx, "alice").first();
+    const aliceRow = await userRowByName(table, "alice");
     const menu = await openRowActionsMenu(page, aliceRow);
     await expect(
       menu.locator(".as-row-actions-menu-item").filter({ hasText: "Delete" }),
@@ -197,8 +199,7 @@ test.describe("Section 8.16 — Synthetic `__remove` (Delete) presence + absence
       await gotoTable(page, "users");
 
       const table = page.locator("table.as-table").first();
-      const usernameIdx = await columnCellIndex(table, "username");
-      const adminRow = rowByCellText(table, usernameIdx, "admin").first();
+      const adminRow = await userRowByName(table, "admin");
 
       // Scenario 8.16's "Absent — no write permission" claim narrows to:
       // `Delete` (synth __remove) is gated on `crud.remove` AND
