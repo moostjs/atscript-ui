@@ -38,6 +38,7 @@ export interface OrdersTable {
     @db.amount.currency.ref 'currency'
     @db.column.precision 10, 2
     @db.column.measure
+    @db.index.plain 'orders_total_idx'
     total: decimal
 
     @meta.label 'Shipped At'

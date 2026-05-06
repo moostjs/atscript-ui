@@ -52,63 +52,53 @@ async function pickSort(page: Page, direction: "asc" | "desc"): Promise<void> {
 }
 
 test.describe("Section 7.1 — Single-column sort cycle", () => {
-  // Deviation from the scenario text: the scenario specifies clicking the
-  // `Total` column on `/orders`, but the demo's `orders.total` schema field
-  // declares `@db.column.measure` which marks it un-indexed and therefore
-  // un-sortable on the wire (`column.sortable === false` → the Sort section
-  // is hidden in `<AsColumnMenu>`, see Scenario 7.2). We retarget the cycle
-  // to `Username` on `/users` — a plain string column with `@db.index.unique`
-  // — keeping the cycle behaviour assertion intact (asc → desc → cleared).
-  // /users declares `urlQuerySync: { sorters: false }` so the URL bar bridge
-  // omits `$sort=`; we still capture the wire URL via `expectSinglePages` and
-  // assert against that, not `location.href`.
-  test("Username header on /users: asc → desc → cleared, single /pages each step", async ({
+  test("Total header on /orders: asc → desc → cleared, single /pages each step", async ({
     page,
   }) => {
-    await gotoTable(page, "users");
+    await gotoTable(page, "orders");
     const table = page.locator("table.as-table").first();
-    const usernameHeader = table.locator(`thead th[data-column-path="username"]`);
+    const totalHeader = table.locator(`thead th[data-column-path="total"]`);
 
     // Click 1 — pick Ascending.
     const ascCaptured = await expectSinglePages(
       page,
       async () => {
-        await clickColumnHeader(page, "username");
+        await clickColumnHeader(page, "total");
         await pickSort(page, "asc");
       },
-      { table: "users" },
+      { table: "orders" },
     );
-    expect(decodeURIComponent(ascCaptured.url)).toMatch(/\$sort=\+?username\b/u);
+    expect(decodeURIComponent(ascCaptured.url)).toMatch(/\$sort=\+?total\b/u);
     // Header indicator: `as-th-sort` glyph + class encoding direction.
-    await expect(usernameHeader.locator(".as-th-sort.i-as-arrow-up")).toHaveCount(1);
-    await expect(usernameHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(0);
+    await expect(totalHeader.locator(".as-th-sort.i-as-arrow-up")).toHaveCount(1);
+    await expect(totalHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(0);
 
     // Click 2 — pick Descending. `emitSort('desc')` differs from current
     // `props.order === 'asc'`, so it emits `'desc'`.
     const descCaptured = await expectSinglePages(
       page,
       async () => {
-        await clickColumnHeader(page, "username");
+        await clickColumnHeader(page, "total");
         await pickSort(page, "desc");
       },
-      { table: "users" },
+      { table: "orders" },
     );
-    expect(decodeURIComponent(descCaptured.url)).toMatch(/\$sort=-username\b/u);
-    await expect(usernameHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(1);
-    await expect(usernameHeader.locator(".as-th-sort.i-as-arrow-up")).toHaveCount(0);
+    expect(decodeURIComponent(descCaptured.url)).toMatch(/\$sort=-total\b/u);
+    await expect(totalHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(1);
+    await expect(totalHeader.locator(".as-th-sort.i-as-arrow-up")).toHaveCount(0);
 
     // Click 3 — pick Descending AGAIN. `emitSort('desc')` matches current
     // `props.order === 'desc'` → emits `null` → sorter cleared.
     const clearedCaptured = await expectSinglePages(
       page,
       async () => {
-        await clickColumnHeader(page, "username");
+        await clickColumnHeader(page, "total");
         await pickSort(page, "desc");
       },
-      { table: "users" },
+      { table: "orders" },
     );
     expect(decodeURIComponent(clearedCaptured.url)).not.toContain("$sort=");
-    await expect(usernameHeader.locator(".as-th-sort")).toHaveCount(0);
+    await expect(totalHeader.locator(".as-th-sort")).toHaveCount(0);
   });
 });
 

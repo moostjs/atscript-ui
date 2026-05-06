@@ -32,6 +32,7 @@ export interface ProductsTable {
     @db.amount.currency 'USD'
     @db.column.precision 10, 2
     @db.column.measure
+    @db.index.plain 'products_price_idx'
     price: decimal
 
     @meta.label 'Weight'

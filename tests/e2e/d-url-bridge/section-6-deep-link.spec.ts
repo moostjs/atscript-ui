@@ -11,11 +11,9 @@
 //   - 6.1 — the bridge emits `customerId=2` (bare-key, default `eq` op) for a
 //     deep link of `?customerId=2`, NOT `customer~='2'`. The doc's wire
 //     fragment is wrong; we assert against what the bridge actually emits.
-//   - 6.7 — `orders.total` is `@db.column.measure` (un-indexed → not sortable
-//     on the wire), so we retarget the sort step to `Status` (`@db.index.plain`,
-//     a sortable dimension on /orders). And /orders has no `@db.index.fulltext`
-//     so the toolbar search input does not render — the search aspect of 6.7
-//     is dropped. See PROMPT-batch-d-url-bridge.md "Caveat 1" + "Caveat 2".
+//   - 6.7 — /orders has no `@db.index.fulltext` so the toolbar search input
+//     does not render — the search aspect of 6.7 is dropped. See
+//     PROMPT-batch-d-url-bridge.md "Caveat 2".
 
 import { type BrowserContext, expect, test } from "@playwright/test";
 
@@ -130,13 +128,12 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
       { table: "orders" },
     );
 
-    // Apply a desc sort on `Status` (a `@db.index.plain` column → sortable).
-    // Retargeted from the scenario's `Total` since `total` is unsortable.
-    const statusHeader = page.locator(`thead th[data-column-path="status"]`).first();
+    // Apply a desc sort on `Total` (`@db.index.plain 'orders_total_idx'` → sortable).
+    const totalHeader = page.locator(`thead th[data-column-path="total"]`).first();
     await expectSinglePages(
       page,
       async () => {
-        await statusHeader.locator(".as-th-btn").click();
+        await totalHeader.locator(".as-th-btn").click();
         await page
           .locator(".as-column-menu-content .as-column-menu-item", { hasText: "Descending" })
           .click();
@@ -145,13 +142,14 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
     );
 
     // Header sort indicator visible.
-    await expect(statusHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(1);
+    await expect(totalHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(1);
 
-    // Linker URL now carries the four allowlisted aspects: status, customer,
-    // sorters (no allowlist gate), no `$skip` (pagination off), no search
-    // (orders is not searchable — input doesn't render).
-    expectUrlQuery(page, ["status=shipped", "customerId=2", "$sort=-status"]);
-    expectUrlQuery(page, ["$skip", "$search"], { not: true });
+    // Linker URL now carries the allowlisted aspects: status + customer
+    // (filters allowlist), $sort (sorters not gated). No $page/$size
+    // (pagination off), no $search (orders is not searchable — input
+    // doesn't render).
+    expectUrlQuery(page, ["status=shipped", "customerId=2", "$sort=-total"]);
+    expectUrlQuery(page, ["$skip", "$limit", "$page", "$size", "$search"], { not: true });
 
     const linkerUrl = page.url();
     const linkerSearch = new URL(linkerUrl).search;
@@ -172,7 +170,7 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
     const decoded = decodeURIComponent(recipientCaptured.url);
     expect(decoded).toMatch(/status=shipped\b/u);
     expect(decoded).toMatch(/customerId=2\b/u);
-    expect(decoded).toContain("$sort=-status");
+    expect(decoded).toContain("$sort=-total");
 
     // Recipient pills reflect the linker state.
     const recipientStatusPill = recipient
@@ -186,8 +184,8 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
     await expect(recipientCustomerPill.locator(".as-filter-field-chip")).toHaveCount(1);
 
     // Header sort indicator preserved.
-    const recipientStatusHeader = recipient.locator(`thead th[data-column-path="status"]`).first();
-    await expect(recipientStatusHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(1);
+    const recipientTotalHeader = recipient.locator(`thead th[data-column-path="total"]`).first();
+    await expect(recipientTotalHeader.locator(".as-th-sort.i-as-arrow-down")).toHaveCount(1);
 
     // Recipient URL exactly mirrors linker URL — round-trip is byte-exact via
     // vue-router's percent-encoding (operator chars survive encode/decode).
