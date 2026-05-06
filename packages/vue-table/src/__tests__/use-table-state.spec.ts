@@ -32,7 +32,7 @@ describe("createTableState", () => {
     expect(state.queryingNext.value).toBe(false);
     expect(state.totalCount.value).toBe(0);
     expect(state.loadedCount.value).toBe(0);
-    expect(state.pagination.value).toEqual({ page: 1, itemsPerPage: 50 });
+    expect(state.pagination.value).toEqual({ page: 1, itemsPerPage: 25 });
     expect(state.queryError.value).toBeNull();
     expect(state.metadataError.value).toBeNull();
     expect(state.mustRefresh.value).toBe(false);

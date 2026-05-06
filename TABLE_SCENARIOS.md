@@ -1152,16 +1152,21 @@ with field-level errors that the action-form dialog renders inline.
 
 ## Section 10 — Pagination
 
+> **Test note:** the framework's default `itemsPerPage` is 25 (no demo-side
+> override). `/orders` only seeds 15 rows, so it fits on a single page and
+> renders no pagination UI — pagination scenarios run against `/products`
+> (2000 seed rows).
+
 ### Scenario 10.1: Page navigation
 
-1. On `/orders`, click `Page 2` (or `>` if rendered).
+1. On `/products`, click `Page 2` (or `>` if rendered).
    - → Single `/pages?$page=2&$size=25` call.
    - ✓ Table rebuilds; pagination indicator highlights page 2.
    - ✓ Selection (if any) is trimmed per Scenario 9.2.
 
 ### Scenario 10.2: Rows-per-page change
 
-1. On `/orders`, change `Rows per page` from 25 to 50.
+1. On `/products`, change `Rows per page` from 25 to 50.
    - → Single `/pages?$size=50` call.
    - ✓ Table now displays up to 50 rows.
 
@@ -1172,6 +1177,40 @@ with field-level errors that the action-form dialog renders inline.
 2. Scroll the table to the end of the loaded window.
    - → Next `/pages` for the next window (block-aligned to `blockSize`).
    - ✓ Rows append seamlessly; no page-number UI.
+
+### Scenario 10.4: Infinite-scroll mode (paginated + auto-load-on-scroll)
+
+> Cross-ref 10.3 — same data (`audit_log` controller, `/audit_log_infinite`
+> route alias) but a different render path. 10.3 uses `<AsWindowTable>` +
+> `.as-window-row-pool` wheel events; 10.4 uses `<AsTable>` (paginated
+> renderer) + the demo's `<InfiniteScroll>` listener
+> (`packages/vue-demo/src/client/components/InfiniteScroll.vue`) bridging
+> `useInfiniteScroll` (VueUse) over the table's `.as-table-scroll-container`
+> and calling `state.queryNext()` on near-bottom (`distance: 200 px`).
+
+1. Visit `/audit_log_infinite`.
+   - → Initial `/pages?$page=1&$size=100` call (`tables.ts` sets
+     `limit: 100` so the initial fetch lands block-aligned with
+     `DEFAULT_BLOCK_SIZE`).
+   - ✓ Table renders the first 100 rows.
+   - ✓ No `<TablePagination>` chrome — no page-number buttons, no
+     `Rows per page` select.
+   - ✓ Pagination summary reads `100 of <total>`.
+2. Scroll the table near the bottom (within 200 px).
+   - → Single follow-up `/pages?$page=2&$size=100` call (block-aligned
+     next block; `state.queryNext()` re-entry-guarded via
+     `state.queryingNext`).
+   - ✓ `<InfiniteScroll>`'s `Loading more…` indicator surfaces while
+     the request is in flight (may be too brief to assert when latency
+     interceptor is short-circuited via `DEMO_NO_LATENCY=1`).
+   - ✓ Rows accumulate (100 → 200) — `walkForwardAbsorb` appends the
+     incoming block onto `state.results` rather than replacing it.
+   - ✓ Pagination summary reads `200 of <total>`.
+   - ✓ Page-number UI still absent.
+3. Continue scrolling once the loaded count equals the total count.
+   - ✓ `<InfiniteScroll>` switches to terminal `All N rows loaded`
+     state — `state.queryNext()` no-ops (`canLoadMore` returns false
+     when `loadedCount >= totalCount`).
 
 ---
 

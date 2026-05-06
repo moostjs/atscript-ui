@@ -1,10 +1,33 @@
 import { watch } from "vue";
-import { trimSelection } from "@atscript/ui-table";
+import { trimSelection, type SelectionMode } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 
 type Row = Record<string, unknown>;
 
 export type SelectionPersistence = "clear" | "trim" | "persist";
+
+/**
+ * Renderer-owned cleanup for the `select` prop transition. Dropping into
+ * `'none'` clears `selectedRows` so the next opt-in to multi-mode starts
+ * clean; other transitions are no-ops (`'none' → 'multi'` already has an
+ * empty selection, `'multi' → 'multi'` doesn't change semantics). The
+ * getter is invoked once per change — NOT immediate, so the mount-time
+ * default `'none'` doesn't clobber externally-seeded selections.
+ *
+ * Lives outside `useTableSelection` because selection mode is a renderer
+ * concern (a prop, not state) — both `<AsTable>` and `<AsWindowTable>`
+ * call this from their setup so the cleanup tracks the renderer's prop.
+ */
+export function useSelectModeReset(
+  state: ReactiveTableState,
+  selectGetter: () => SelectionMode,
+): void {
+  watch(selectGetter, (next, prev) => {
+    if (next === "none" && prev !== "none" && state.selectedRows.value.length > 0) {
+      state.selectedRows.value = [];
+    }
+  });
+}
 
 /**
  * Wire up selection reconciliation on results change.
@@ -27,10 +50,9 @@ export function useTableSelection(
 ): void {
   const mode: SelectionPersistence = opts?.mode ?? "trim";
 
-  // Mode-transition cleanup (`multi → none` clears `selectedRows`) lives in
-  // the renderer's own `watch(() => props.select, ...)`. Selection mode is
-  // a renderer concern, not a state concern — the cleanup belongs where the
-  // mode prop lives, not here.
+  // Mode-transition cleanup (`multi → none` clears `selectedRows`) lives
+  // in `useSelectModeReset` above — renderer-owned because `select` is a
+  // prop, not state.
 
   watch(
     [() => state.results.value, () => state.resultsStart.value] as const,

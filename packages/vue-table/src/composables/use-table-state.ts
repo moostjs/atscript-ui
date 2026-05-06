@@ -67,7 +67,7 @@ const TABLE_KEY = "__as_table";
 const FILTER_DEBOUNCE_MS = 500;
 const DEFAULT_BLOCK_SIZE = 100;
 const DEFAULT_DRAG_RELEASE_DEBOUNCE_MS = 300;
-const DEFAULT_ITEMS_PER_PAGE = 50;
+const DEFAULT_ITEMS_PER_PAGE = 25;
 
 let _tblUid = 0;
 

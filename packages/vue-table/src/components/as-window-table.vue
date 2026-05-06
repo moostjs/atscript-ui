@@ -4,6 +4,7 @@ import { DEFAULT_ROW_HEIGHT_PX, clampTopIndex, type SelectionMode } from "@atscr
 import type { ColumnMenuConfig, EnterAction, QueryErrorKind, RowDeleteOpt } from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
+import { useSelectModeReset } from "../composables/use-table-selection";
 import AsWindowTableBase from "./internal/as-window-table-base.vue";
 
 type Row = Record<string, unknown>;
@@ -99,6 +100,8 @@ watch(
   },
   { immediate: true },
 );
+
+useSelectModeReset(state, () => props.select);
 
 useRegisterMainActionListener(
   state,

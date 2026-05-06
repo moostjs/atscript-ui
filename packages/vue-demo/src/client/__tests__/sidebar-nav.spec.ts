@@ -22,7 +22,7 @@ describe("filterNavByPermissions", () => {
     const perms = Object.fromEntries(
       DEMO_TABLES.map((t) => [t.resource, { read: true, write: true }]),
     );
-    expect(filterNavByPermissions(DEMO_TABLES, perms)).toHaveLength(8);
+    expect(filterNavByPermissions(DEMO_TABLES, perms)).toHaveLength(9);
   });
 
   it("no perms → empty", () => {

@@ -10,6 +10,7 @@ import {
 } from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
+import { useSelectModeReset } from "../composables/use-table-selection";
 import { useTableColumnHandlers } from "../composables/use-table-column-handlers";
 import AsTableBase from "./internal/as-table-base.vue";
 
@@ -93,6 +94,8 @@ watch(
   },
   { immediate: true },
 );
+
+useSelectModeReset(state, () => props.select);
 
 // `?$actions=true` is gated on this watcher so tables without a row-actions
 // column don't pay the per-row payload cost.

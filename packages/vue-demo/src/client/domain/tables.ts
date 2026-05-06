@@ -1,7 +1,7 @@
 import type { SystemPresetInput, UrlQuerySync } from "@atscript/vue-table";
 
 export type TableMode = "pagination" | "infinite";
-export type TableKind = "virtual" | "window";
+export type TableKind = "virtual" | "window" | "infinite-scroll";
 export type ActionsColumn = "first" | "last" | "merge-select";
 
 export interface DemoTable {
@@ -33,7 +33,12 @@ export interface DemoTable {
    * Render strategy. `virtual` (default) = `<AsTable>` with virtual rows;
    * `window` = `<AsWindowTable>` with pool-based rendering and synthesised
    * scrollbar (block-aligned async fetcher). Pick `window` for high-volume,
-   * append-only tables (audit logs, events).
+   * append-only tables (audit logs, events). `infinite-scroll` = `<AsTable>`
+   * (paginated) + `<InfiniteScroll>` listener that auto-advances pages on
+   * near-bottom scroll. Rows accumulate (no replacement) and no
+   * `<TablePagination>` UI is rendered. Set `limit: 100` (matching
+   * `DEFAULT_BLOCK_SIZE`) so the first paint fills a full block — partial
+   * blocks would re-fetch on the first `queryNext`.
    */
   kind?: TableKind;
   /**
@@ -135,6 +140,22 @@ export const DEMO_TABLES: DemoTable[] = [
     resource: "audit_log",
     icon: "i-ph:list-magnifying-glass",
     kind: "window",
+    limit: 100,
+    systemPresets: [
+      { id: "standard", label: "Standard", content: { filters: ["action", "entityType"] } },
+    ],
+  },
+  // Infinite-scroll alias of `audit_log` — `<AsTable>` (paginated) +
+  // `<InfiniteScroll>` listener. Same controller (`apiPath: 'audit_log'`)
+  // so both routes share the dataset; `limit: 100` keeps the initial
+  // block aligned with `DEFAULT_BLOCK_SIZE` (see `kind` doc above).
+  {
+    path: "audit_log_infinite",
+    apiPath: "audit_log",
+    label: "Audit Log (infinite)",
+    resource: "audit_log",
+    icon: "i-ph:scroll",
+    kind: "infinite-scroll",
     limit: 100,
     systemPresets: [
       { id: "standard", label: "Standard", content: { filters: ["action", "entityType"] } },

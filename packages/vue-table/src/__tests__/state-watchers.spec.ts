@@ -253,8 +253,9 @@ describe("createTableState watchers", () => {
       init();
       await flushPromises();
       const lastCall = pagesFn.mock.calls[pagesFn.mock.calls.length - 1];
-      // Args: (query, page, size)
-      expect(lastCall?.[2]).toBe(50);
+      // Args: (query, page, size). With no `limit:` override, the framework
+      // default `DEFAULT_ITEMS_PER_PAGE = 25` flows through.
+      expect(lastCall?.[2]).toBe(25);
       void state;
     });
 

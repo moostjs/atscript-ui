@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, useTemplateRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import {
   AsTable,
@@ -12,6 +12,7 @@ import {
 } from "@atscript/vue-table";
 import TableToolbar from "./TableToolbar.vue";
 import TablePagination from "./TablePagination.vue";
+import InfiniteScroll from "./InfiniteScroll.vue";
 import { getDemoTable, type ActionsColumn, type TableKind, type TableMode } from "../domain/tables";
 import { useMe } from "../api/use-me";
 import { onActionToast } from "../api/error-bus";
@@ -35,7 +36,7 @@ const props = defineProps<{ path: string; label: string }>();
 const tableMeta = computed(() => getDemoTable(props.path));
 const kind = computed<TableKind>(() => tableMeta.value?.kind ?? "virtual");
 const mode = computed<TableMode>(() => tableMeta.value?.mode ?? "pagination");
-const limit = computed(() => tableMeta.value?.limit ?? 25);
+const limit = computed(() => tableMeta.value?.limit);
 const actionsColumn = computed<ActionsColumn>(() => tableMeta.value?.actionsColumn ?? "last");
 const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
 const apiPath = computed(() => tableMeta.value?.apiPath ?? props.path);
@@ -185,6 +186,24 @@ function onAction(
 // framework's main-action path on dblclick or Enter (when not in select
 // mode). Single-click is reserved for cursor placement / selection
 // toggle, never the default action.
+
+// `data-as-main-table` marks the demo's page-level `<table>` so e2e
+// helpers can disambiguate it from filter-pill value-help (which also
+// renders `<table class="as-table">` inside its own `<AsTableBase>`).
+// Stamped via DOM after mount because the renderers wrap the `<table>`
+// in their own outer divs, so a template attr would land on the wrap
+// instead. Re-runs on `kind` / `path` change since each remounts the
+// renderer (`:key="path"` on `<AsTableRoot>`).
+const tableWrapEl = useTemplateRef<HTMLElement>("tableWrap");
+watch(
+  [tableWrapEl, kind, () => props.path],
+  async () => {
+    await nextTick();
+    const table = tableWrapEl.value?.querySelector("table.as-table");
+    table?.setAttribute("data-as-main-table", "true");
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
@@ -219,6 +238,7 @@ function onAction(
         />
 
         <div
+          ref="tableWrap"
           class="relative flex flex-col flex-1 mx-$l mb-$l min-h-0 min-w-0 border-1 rounded-r2 layer-0 overflow-hidden"
         >
           <AsWindowTable
@@ -245,7 +265,14 @@ function onAction(
           </div>
         </div>
 
-        <TablePagination v-if="kind !== 'window' && mode === 'pagination'" />
+        <!-- Sits outside the bordered table wrap so its status row
+             (`Loading more…` / `All N rows loaded`) renders below the
+             table chrome. See `InfiniteScroll.vue` for the bridge contract. -->
+        <InfiniteScroll v-if="kind === 'infinite-scroll'" :container="tableWrapEl" />
+
+        <TablePagination
+          v-if="kind !== 'window' && kind !== 'infinite-scroll' && mode === 'pagination'"
+        />
       </template>
     </AsTableRoot>
   </div>

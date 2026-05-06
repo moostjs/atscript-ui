@@ -92,9 +92,8 @@ export function useTableUrlQuery(
   router: Router,
   opts: UseTableUrlQueryOptions = {},
 ): WritableComputedRef<string> {
-  const navigate = (opts.mode ?? "replace") === "push"
-    ? router.push.bind(router)
-    : router.replace.bind(router);
+  const navigate =
+    (opts.mode ?? "replace") === "push" ? router.push.bind(router) : router.replace.bind(router);
 
   return computed<string>({
     get: () => {

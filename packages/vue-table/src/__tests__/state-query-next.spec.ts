@@ -42,7 +42,10 @@ describe("state.queryNext()", () => {
   });
 
   it("extends results AND windowCache via loadRange", async () => {
-    // Use loadRange directly to demonstrate forward-merge extension.
+    // Use loadRange directly to demonstrate forward-merge extension. Pin
+    // itemsPerPage explicitly so this test doesn't drift with the framework
+    // default — we want a 50-row first page so queryNext exercises the
+    // "block 1 partial + block 2 new" cache extension path.
     const pages = vi.fn().mockImplementation((_q, page: number, size: number) =>
       Promise.resolve({
         data: rows((page - 1) * size, size),
@@ -53,6 +56,7 @@ describe("state.queryNext()", () => {
       }),
     );
     const { state } = setup({ pages });
+    state.pagination.value = { page: 1, itemsPerPage: 50 };
     // First query lands at resultsStart=0 with first page (50 rows).
     state.query();
     await flushPromises();
