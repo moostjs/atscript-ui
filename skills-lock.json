@@ -11,13 +11,13 @@
       "source": "moostjs/atscript-db",
       "sourceType": "github",
       "skillPath": "skills/atscript-db/SKILL.md",
-      "computedHash": "f62b8eaa563aece7a8a556338289ce676cd31b3b0bbddb4bbd3268a4dcfac9f3"
+      "computedHash": "4203a3b152ed03a270b2a34edd5b8a21e106c02f84e2de1744fd4ab4c51d33cc"
     },
     "moostjs": {
       "source": "moostjs/moostjs",
       "sourceType": "github",
       "skillPath": "skills/moostjs/SKILL.md",
-      "computedHash": "d44099a58057b224bafaaf690084f7de2746da3a93ad658d88a77f2c0fc30097"
+      "computedHash": "9e022e59813c7027ce50f88e78f4e299a60ebea5fcce2fc5137a675d91c5dd61"
     },
     "vunor": {
       "source": "mav-rik/vunor",

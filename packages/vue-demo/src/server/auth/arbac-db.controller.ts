@@ -1,5 +1,5 @@
 import type { TAtscriptAnnotatedType, TProcessAnnotationContext } from "@atscript/typescript/utils";
-import { AsDbController } from "@atscript/moost-db";
+import { AsDbController, getAtscriptDbMate } from "@atscript/moost-db";
 import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
@@ -7,8 +7,8 @@ import {
   DB_UNIT,
   DB_UNIT_REF,
 } from "@atscript/ui";
-import { useArbac } from "@moostjs/arbac";
-import { Inherit, getInstanceOwnMethods, getMoostMate } from "moost";
+import { getArbacMate, useArbac } from "@moostjs/arbac";
+import { Inherit, getInstanceOwnMethods } from "moost";
 import type { TCrudOp, TMetaResponse, UniqueryControls } from "@atscript/db";
 import type { DemoScope } from "./arbac-scope";
 
@@ -19,17 +19,6 @@ const UI_QUANTITY_ANNOTATION_KEYS = new Set<string>([
   DB_UNIT_REF,
   DB_COLUMN_PRECISION,
 ]);
-
-/**
- * Internal moost-db method-metadata key written by `@DbAction(name, opts)`.
- *
- * Mirrors `MOOST_DB_ACTION` from `@atscript/moost-db/src/actions/keys.ts` —
- * not re-exported from the package's public barrel, so we duplicate the
- * literal here. Keep in sync with upstream if the constant changes (low
- * risk: it's part of the wire shape between decorator + discoverer and
- * tracked by the moost-db internal contract). Re-used by `audit.ts`.
- */
-export const MOOST_DB_ACTION = "atscript_db_action";
 
 /** Write-side CRUD ops we gate via ARBAC. Reads pass through unchanged — the per-request column scope already narrows their projections. */
 const WRITE_CRUD_OPS: readonly TCrudOp[] = ["insert", "update", "replace", "remove"] as const;
@@ -120,17 +109,15 @@ function getArbacActionMap(instance: object): Map<string, string> {
   let cached = arbacActionMapCache.get(ctor);
   if (cached) return cached;
   cached = new Map<string, string>();
-  const mate = getMoostMate();
+  // Two typed mates — moost-db owns `atscript_db_action`, arbac owns
+  // `arbacActionId`. Both read from the same underlying Mate store, so
+  // separate `read(...)` calls just narrow the type per call site.
+  const dbMate = getAtscriptDbMate();
+  const arbacMate = getArbacMate();
   for (const methodName of getInstanceOwnMethods(instance) as string[]) {
     if (typeof methodName !== "string") continue;
-    const meta = mate.read(ctor, methodName) as
-      | {
-          arbacActionId?: string;
-          [MOOST_DB_ACTION]?: { name?: string };
-        }
-      | undefined;
-    const dbAction = meta?.[MOOST_DB_ACTION];
-    const arbacActionId = meta?.arbacActionId;
+    const dbAction = dbMate.read(ctor, methodName)?.atscript_db_action;
+    const arbacActionId = arbacMate.read(ctor, methodName)?.arbacActionId;
     if (dbAction?.name && arbacActionId) {
       cached.set(dbAction.name, arbacActionId);
     }

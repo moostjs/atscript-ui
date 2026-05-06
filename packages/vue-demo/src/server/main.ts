@@ -38,10 +38,10 @@ app.setProvideRegistry(
 void app.adapter(new MoostHttp()).listen(3200);
 app.adapter(new MoostWf());
 app.applyGlobalInterceptors(auditInterceptor, latencyInterceptor);
-// Validate `@InputForm` payloads (and any other params stamped with the
-// `MOOST_ATSCRIPT_TYPE` mate key by moost-db / future plugins) against
-// their compiled .as schemas. Failures surface as HTTP 400 via the
-// existing `validationErrorTransform()` interceptor in moost-db.
+// Validate `@InputForm` payloads (and any other params stamped with an
+// atscript-type meta marker via `@atscript/moost-db`'s typed mate getter)
+// against their compiled .as schemas. Failures surface as HTTP 400 via
+// the existing `validationErrorTransform()` interceptor in moost-db.
 app.applyGlobalPipes(validatorPipe());
 app.registerControllers(
   AuthController,
