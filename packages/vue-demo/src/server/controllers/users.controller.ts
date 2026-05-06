@@ -98,10 +98,13 @@ export class UsersController extends AsArbacDbController<typeof UsersTable> {
     label: "Suspend",
     icon: "i-as-close",
     intent: "negative",
+    description: "These users will not be able to sign in.",
     requiredFields: ["id", "username", "status"],
     disabled: perRow((u) => u.status === "suspended"),
     onDisabledRows: "skip",
-    promptText: ["Suspend user $1?", "Suspend $N users? They won't be able to sign in."],
+    // No `promptText`: the action declares `@InputForm(SuspendUsersInput)`,
+    // so `triggerAction()` short-circuits to the form-dialog path and any
+    // `promptText` would be unreachable.
   })
   @ArbacAction("update")
   async suspend(

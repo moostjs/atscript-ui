@@ -1,34 +1,46 @@
-import { spawnSync } from "node:child_process";
+import { request as playwrightRequest } from "@playwright/test";
+
+import { SERVER_URL } from "../global-setup";
 
 /**
  * Wipe and re-seed the demo sqlite db.
  *
- * Implementation: shells out to `pnpm --filter @atscript/vue-demo run db:setup`,
- * which is the same script `globalSetup` runs once per test session. The
- * script `rmSync`s `.data/demo.db*` and re-runs `syncSchema` + the seed
- * factories under `packages/vue-demo/src/server/seed.ts`.
+ * Implementation: hits `POST /api/_test/reset-seed` on the live dev server
+ * (mounted by `packages/vue-demo/src/server/controllers/test.controller.ts`
+ * when `DEMO_TEST_MODE=1`, set in `tests/e2e/global-setup.ts`). The endpoint
+ * runs the wipe + reseed inside a single transaction on the SAME live
+ * better-sqlite3 connection the rest of the app uses — no rmSync, no
+ * read-only desync.
  *
- * Cost is non-trivial (~2–4 s end-to-end on a warm machine — vite-node has to
- * boot, schemas have to compile, ~7 k rows are inserted across products +
- * audit_log). Phase-2 mutating batches should call this at most once per file
- * via `test.beforeAll`, NOT per test — and wrap the file in
- * `test.describe.serial` so concurrent workers don't trample each other.
+ * History: an earlier version shelled out to
+ * `pnpm --filter @atscript/vue-demo run db:setup`, which `rmSync`'d
+ * `.data/demo.db*` underneath the dev server. better-sqlite3 keeps the
+ * connection's lock state pinned to the original inode, so the next write
+ * after the file is recreated fails with `attempt to write a readonly
+ * database`. Phase-2 batch F discovered this and worked around it via
+ * serial test ordering. Future mutating batches need a working reset, so
+ * this helper now uses the HTTP path.
  *
- * The dev server keeps its sqlite handle through this rewrite. better-sqlite3
- * tolerates the file being re-created underneath it for read paths but not
- * for mid-flight writes — there are currently no in-flight writes during
- * `resetSeed()` calls (Phase-2 batches always call it from `beforeAll`,
- * never from inside a `test` step), so this works in practice. If a future
- * batch needs in-test reseed, route the wipe through a dedicated test-only
- * HTTP endpoint instead.
+ * Cost: ~100 ms on a warm machine — one round-trip + ~7 k-row reseed
+ * inside one transaction. Phase-2 mutating batches should still call this
+ * at most once per file via `test.beforeAll`, NOT per test, and wrap the
+ * file in `test.describe.serial` so concurrent workers don't trample each
+ * other.
  */
-export function resetSeed(): void {
-  const result = spawnSync("pnpm", ["--filter", "@atscript/vue-demo", "run", "db:setup"], {
-    stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env },
-  });
-  if (result.status !== 0) {
-    const stderr = result.stderr?.toString() ?? "";
-    throw new Error(`resetSeed: db:setup failed (exit ${result.status})\n${stderr}`);
+export async function resetSeed(): Promise<void> {
+  const ctx = await playwrightRequest.newContext({ baseURL: SERVER_URL });
+  try {
+    // Explicit JSON content-type so the moost HTTP adapter parses
+    // the empty body consistently across runs.
+    const res = await ctx.post("/api/_test/reset-seed", {
+      headers: { "content-type": "application/json" },
+      data: {},
+    });
+    if (!res.ok()) {
+      const body = await res.text();
+      throw new Error(`resetSeed: POST /api/_test/reset-seed failed (${res.status()})\n${body}`);
+    }
+  } finally {
+    await ctx.dispose();
   }
 }

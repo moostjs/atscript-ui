@@ -15,8 +15,8 @@
 //
 // Per-row gating drops actions until total falls below 2, downgrading
 // the cell from dropdown → single button. The seed has 4 active users
-// (admin / manager / viewer / alice) + 1 pending (bob); no suspended /
-// invited users. Suspended-row + invited-row coverage deferred.
+// (admin / manager / viewer / alice) + 1 pending (bob) + 1 invited
+// (eve); no suspended users. Suspended-row coverage deferred.
 //
 // `__remove` (Delete) is added when:
 //   - user has write permission on the resource AND

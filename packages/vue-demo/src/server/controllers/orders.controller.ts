@@ -106,10 +106,13 @@ export class OrdersController extends AsArbacDbController<typeof OrdersTable> {
     label: "Cancel",
     icon: "i-as-close",
     intent: "negative",
+    description: "Delivered and already-cancelled rows are skipped.",
     requiredFields: ["status"],
     disabled: perRow((o) => o.status === "delivered" || o.status === "cancelled"),
     onDisabledRows: "skip",
-    promptText: ["Cancel order $1?", "Cancel $N orders? Delivered/cancelled rows are skipped."],
+    // No `promptText`: the action declares `@InputForm(CancelOrdersInput)`,
+    // so `triggerAction()` short-circuits to the form-dialog path and any
+    // `promptText` would be unreachable.
   })
   @ArbacAction("update")
   async cancel(

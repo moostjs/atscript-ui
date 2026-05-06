@@ -104,7 +104,7 @@ test.describe("Section 4.13 — Pill-input special prefix / wildcard syntax", ()
       // `*text` → `ends` op → regex `/demo\.test$/i`. uniqu 0.1.6 escapes
       // `\` as `\\` inside quoted strings, and atscript-db 0.1.66's
       // `regexToLike` then translates `\.` to a literal `.` via the
-      // `ESCAPE '\'` clause so the LIKE predicate matches the 5 seeded
+      // `ESCAPE '\'` clause so the LIKE predicate matches the 6 seeded
       // `@demo.test` rows.
       fragment: "email~='/demo\\\\.test$/i'",
     },

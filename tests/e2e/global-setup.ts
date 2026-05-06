@@ -78,7 +78,14 @@ export default async function globalSetup(): Promise<void> {
     // actually need to observe loading states (Scenario 12.1) inject their
     // own delay via `page.route(...)` — that's deterministic and doesn't
     // depend on the natural latency surviving Playwright's locator polling.
-    env: { ...process.env, DEMO_NO_LATENCY: "1" },
+    //
+    // `DEMO_TEST_MODE=1` mounts `POST /api/_test/reset-seed` (see
+    // `packages/vue-demo/src/server/controllers/test.controller.ts`). The
+    // helper `resetSeed()` calls that endpoint instead of shelling out to
+    // `db:setup` — wiping `.data/demo.db` on disk would desync the dev
+    // server's long-lived better-sqlite3 connection and flip writes to
+    // read-only mid-flight.
+    env: { ...process.env, DEMO_NO_LATENCY: "1", DEMO_TEST_MODE: "1" },
   });
   if (!child.pid) throw new Error("Failed to spawn vue-demo dev server");
   writeFileSync(SERVER_PID, String(child.pid));

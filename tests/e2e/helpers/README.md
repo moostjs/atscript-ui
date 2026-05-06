@@ -27,13 +27,14 @@ Login plumbing for the four demo roles (`admin` / `manager` / `viewer` / `alice`
 
 ## seed.ts — `resetSeed()`
 
-Wipes `.data/demo.db*` and re-seeds via the demo's `db:setup` script (~2–4 s). Call from `test.beforeAll` of mutating files.
+Wipes the demo db and re-seeds it inside a single transaction on the live dev-server connection (~100 ms). Call from `test.beforeAll` of mutating files.
 
-- `resetSeed()` shells out to `pnpm --filter @atscript/vue-demo run db:setup`. Same script `globalSetup` runs once per session.
+- `resetSeed()` is async — `await` the result. It hits `POST /api/_test/reset-seed` (mounted by `packages/vue-demo/src/server/controllers/test.controller.ts` only when `DEMO_TEST_MODE=1`, set in `global-setup.ts`).
+- Earlier shell-out version (`pnpm db:setup`) `rmSync`'d the db file underneath the dev server, which kept its long-lived better-sqlite3 connection open — the connection's lock state desynced from the new inode and SQLite flipped writes to read-only on the next mutation. Phase-2 batch F discovered this and worked around it via serial test ordering.
 
 **Does not:** reset per-user state (presets, appConf). Those live in the same sqlite file so `resetSeed()` clears them transitively.
 
-**Phase-2 add via RFC if you need:** a faster narrow-table reset (e.g. `resetTable('orders')`) — would need a test-only HTTP endpoint on the demo.
+**Phase-2 add via RFC if you need:** a faster narrow-table reset (e.g. `resetTable('orders')`) — would need a sibling test-only endpoint on the demo controller.
 
 ---
 

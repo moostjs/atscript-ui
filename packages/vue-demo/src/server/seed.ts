@@ -68,6 +68,21 @@ export const seedUsers = async () => {
       password: pw.hash,
       salt: pw.salt,
     },
+    // Eve: status: 'invited' so the Resend-invite action path (gated on
+    // `status === 'invited'`) is reachable. Kept FK-orphan — neither
+    // products.createdById (cycles 1..5) nor orders.assigneeId (cycles
+    // 1..3) reference user 6 — so DELETE-on-eve scenarios stay open
+    // without seeding a fresh user via raw HTTP.
+    {
+      username: "eve",
+      email: "eve@demo.test",
+      roleId: 3,
+      status: "invited",
+      mfaEnabled: false,
+      profile: { firstName: "Eve", lastName: "East" },
+      password: pw.hash,
+      salt: pw.salt,
+    },
   ];
 };
 

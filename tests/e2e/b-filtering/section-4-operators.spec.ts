@@ -101,8 +101,8 @@ test.describe("Section 4.3 — Operator coverage on /users", () => {
     );
     const decoded = decodeURIComponent(captured.url);
     expect(decoded).toContain("status!=active");
-    // Only `bob` (status: pending) survives.
-    await expect(dataRows(page)).toHaveCount(1);
+    // `bob` (status: pending) + `eve` (status: invited) survive.
+    await expect(dataRows(page)).toHaveCount(2);
   });
 
   test("contains — First Name `bob` (default operator on text)", async ({ page }) => {
@@ -136,7 +136,7 @@ test.describe("Section 4.3 — Operator coverage on /users", () => {
     );
     const decoded = decodeURIComponent(captured.url);
     expect(decoded).toContain("username~='/^ad/i'");
-    // `admin` matches; alice/manager/viewer/bob don't.
+    // `admin` matches; alice/manager/viewer/bob/eve don't.
     await expect(dataRows(page)).toHaveCount(1);
   });
 
@@ -159,8 +159,8 @@ test.describe("Section 4.3 — Operator coverage on /users", () => {
     // atscript-db 0.1.66's `regexToLike` translates `\.` to a literal `.`
     // via the `ESCAPE '\'` clause, so the LIKE predicate matches.
     expect(decoded).toContain("email~='/@demo\\\\.test$/i'");
-    // All 5 seeded users (admin/manager/viewer/alice/bob) have @demo.test emails.
-    await expect(dataRows(page)).toHaveCount(5);
+    // All 6 seeded users (admin/manager/viewer/alice/bob/eve) have @demo.test emails.
+    await expect(dataRows(page)).toHaveCount(6);
   });
 
   test("regex — Username `/^a/`", async ({ page }) => {
@@ -267,8 +267,8 @@ test.describe("Section 4.3 — null/notNull on /users", () => {
     // `serializeComparison` — NOT `lastLoginAt='null'` (the scenario doc
     // drift).
     expect(decoded).toContain("$!exists=lastLoginAt");
-    // Only bob has null lastLoginAt.
-    await expect(dataRows(page)).toHaveCount(1);
+    // bob and eve both have null lastLoginAt.
+    await expect(dataRows(page)).toHaveCount(2);
   });
 
   test("notNull — Birthday `!<empty>`", async ({ page }) => {
@@ -285,13 +285,13 @@ test.describe("Section 4.3 — null/notNull on /users", () => {
     );
     const decoded = decodeURIComponent(captured.url);
     expect(decoded).toContain("$exists=birthday");
-    // admin/manager/alice have birthdays; viewer + bob don't.
+    // admin/manager/alice have birthdays; viewer/bob/eve don't.
     await expect(dataRows(page)).toHaveCount(3);
   });
 });
 
 test.describe("Section 4.4 — null/notNull on real nullable columns", () => {
-  test("Birthday is null → viewer + bob", async ({ page }) => {
+  test("Birthday is null → viewer + bob + eve", async ({ page }) => {
     await gotoTable(page, "users");
     const pill = await addFilterPill(page, "Birthday");
     const captured = await expectSinglePages(
@@ -305,9 +305,9 @@ test.describe("Section 4.4 — null/notNull on real nullable columns", () => {
     );
     const decoded = decodeURIComponent(captured.url);
     expect(decoded).toContain("$!exists=birthday");
-    await expect(dataRows(page)).toHaveCount(2);
+    await expect(dataRows(page)).toHaveCount(3);
     expect(await readUsernames(page.locator("table.as-table").first())).toEqual(
-      new Set(["viewer", "bob"]),
+      new Set(["viewer", "bob", "eve"]),
     );
   });
 
@@ -329,7 +329,7 @@ test.describe("Section 4.4 — null/notNull on real nullable columns", () => {
     );
   });
 
-  test("Last Login is null → bob only", async ({ page }) => {
+  test("Last Login is null → bob + eve", async ({ page }) => {
     await gotoTable(page, "users");
     const pill = await addFilterPill(page, "Last Login");
     await expectSinglePages(
@@ -341,7 +341,9 @@ test.describe("Section 4.4 — null/notNull on real nullable columns", () => {
       },
       { table: "users" },
     );
-    await expect(dataRows(page)).toHaveCount(1);
-    expect(await readUsernames(page.locator("table.as-table").first())).toEqual(new Set(["bob"]));
+    await expect(dataRows(page)).toHaveCount(2);
+    expect(await readUsernames(page.locator("table.as-table").first())).toEqual(
+      new Set(["bob", "eve"]),
+    );
   });
 });

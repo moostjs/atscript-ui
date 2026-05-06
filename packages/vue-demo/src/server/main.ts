@@ -12,6 +12,7 @@ import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
 import { AuditLogController } from "./controllers/audit-log.controller";
 import { PresetsController } from "./controllers/presets.controller";
+import { TestController } from "./controllers/test.controller";
 import { WorkflowsController } from "./controllers/workflows.controller";
 import { LoginWorkflow } from "./workflows/auth/login.workflow";
 import { RegisterWorkflow } from "./workflows/auth/register.workflow";
@@ -60,4 +61,12 @@ app.registerControllers(
   AuditLogController,
   PresetsController,
 );
+// Test-only controller (`POST /api/_test/reset-seed`) — only registered when
+// `DEMO_TEST_MODE=1`. Set by `tests/e2e/global-setup.ts` so the e2e
+// `resetSeed()` helper can wipe + reseed the demo db on the live connection
+// without unlinking the file underneath the dev server (which would flip
+// better-sqlite3 to read-only mid-flight). Never wire this in production.
+if (process.env.DEMO_TEST_MODE === "1") {
+  app.registerControllers(TestController);
+}
 void app.init();

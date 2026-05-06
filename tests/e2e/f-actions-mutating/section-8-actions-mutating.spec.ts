@@ -13,24 +13,10 @@
 // Collapsing the batch into ONE file pins everything to a single
 // worker → sequential execution → coherent seed evolution.
 //
-// Rig-bug finding (also in hand-off): `resetSeed()` BREAKS the demo's
-// in-process better-sqlite3 connection in WAL mode. The dev server
-// keeps its handle to `.data/demo.db`; rewriting the file underneath
-// flips the connection to read-only state. Subsequent writes fail with
-// `attempt to write a readonly database`. Verified by:
-//   1. Run a Suspend / Activate from a fresh global-setup boot →
-//      succeeds.
-//   2. Call `resetSeed()` in `beforeAll` → next mutation fails with
-//      readonly error (toast: `Activate failed: attempt to write a
-//      readonly database`).
-// Workaround: this batch DOES NOT call `resetSeed()`. The seed comes
-// from `globalSetup`'s one-off `db:setup` (a fresh wipe BEFORE the
-// dev server boots). Tests are ordered linearly so subsequent tests
-// inherit prior tests' mutations without conflict. Document deferral:
-// any future test requiring a fresh seed mid-batch needs a different
-// rig path (e.g. server restart, a test-only DELETE/POST endpoint that
-// reseeds via the SAME live connection, or a Playwright project that
-// owns its own dev-server instance).
+// This batch intentionally does NOT call `resetSeed()` in `beforeAll`
+// — the serial mutation chain below is self-consistent against the
+// `globalSetup` seed, and skipping the reset shaves ~100 ms off the
+// run. Future mutating batches that need a fresh seed can opt in.
 //
 // ---------------------------------------------------------------------
 // Coverage map (each `test()` block at a glance):
@@ -44,9 +30,13 @@
 //          ActionDisabledError (NOT 400/403 as prompt guessed); admin
 //          status unchanged
 //   8.18.1 row-actions menu items carry `as-row-actions-intent-${scope}`
+//          (pivots off eve `invited` so all six intents surface in one
+//          menu walk)
 //   8.18.2 confirm dialog Delete (negative) → confirm-error class;
 //          cancel stays neutral
 //   8.18.3 action-form Suspend (negative) submit → submit-error class
+//   8.18.4 action-form Resend invite (primary) submit → submit-primary
+//          class (eve `invited` is the only row passing the gate)
 //   8.19.1 4-row Suspend chip strip — visible chips + +N more sums
 //          to idTotal; measure clone present
 //   8.19.2 1-row Suspend chip strip — single chip, no overflow,
@@ -74,13 +64,14 @@
 //          scenario doc) → toast → row removed
 //
 // Mutation chain (in declaration order):
-//   start  → admin/manager/viewer/alice ACTIVE, bob PENDING
+//   start  → admin/manager/viewer/alice ACTIVE, bob PENDING, eve INVITED
 //   8.5    → manager + alice → suspended
 //   8.20   → admin → suspended
 //   8.6    → bob → active
 //   8.8    → bob → suspended (admin/alice skipped, already suspended)
 //   8.9    → bob deleted
-//   end    → admin/manager/alice SUSPENDED, viewer ACTIVE, bob deleted
+//   end    → admin/manager/alice SUSPENDED, viewer ACTIVE, eve INVITED,
+//           bob deleted
 // (admin's storageState session cookie still valid throughout — the
 //  session lookup doesn't enforce status.)
 //
@@ -380,8 +371,14 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
   }) => {
     await gotoTable(page, "users");
     const table = page.locator("table.as-table").first();
-    const bobRow = await userRowByName(table, "bob");
-    const menu = await openRowActionsMenu(page, bobRow);
+    // Use eve (`status: 'invited'`) — the only seeded user where every
+    // gate-relevant action is enabled simultaneously: Activate (status
+    // !== 'active'), Resend invite (status === 'invited'), Suspend
+    // (status !== 'suspended'). Pivoting off bob (`pending`, where
+    // Resend invite is gated out) lets us assert all six intents in a
+    // single menu walk without a fallthrough conditional.
+    const eveRow = await userRowByName(table, "eve");
+    const menu = await openRowActionsMenu(page, eveRow);
 
     const byLabel = new Map(
       await menu
@@ -392,13 +389,11 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
     );
 
     // positive — Activate (predicate `status === 'active'` fails on
-    // pending bob → action enabled in row menu).
+    // invited eve → action enabled in row menu).
     expect(byLabel.get("Activate")).toMatch(/\bas-row-actions-intent-positive\b/);
-    // primary — Resend invite is gated out for bob (status !==
-    // invited), so it doesn't appear; documenting the gap.
-    if (byLabel.has("Resend invite")) {
-      expect(byLabel.get("Resend invite")).toMatch(/\bas-row-actions-intent-primary\b/);
-    }
+    // primary — Resend invite (gate `status !== 'invited'` fails on
+    // invited eve → enabled).
+    expect(byLabel.get("Resend invite")).toMatch(/\bas-row-actions-intent-primary\b/);
     expect(byLabel.get("Suspend")).toMatch(/\bas-row-actions-intent-negative\b/);
     expect(byLabel.get("Edit")).toMatch(/\bas-row-actions-intent-secondary\b/);
     expect(byLabel.get("Copy invite link")).toMatch(/\bas-row-actions-intent-secondary\b/);
@@ -456,6 +451,31 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
 
     const cancelClass = (await page.locator(".as-action-form-cancel").getAttribute("class")) ?? "";
     expect(cancelClass).not.toMatch(/as-action-form-cancel-/);
+
+    await dismissActionForm(page);
+  });
+
+  test("8.18.4 Surface 3 — action-form submit: Resend invite (primary) → `as-action-form-submit-primary`", async ({
+    page,
+  }) => {
+    // Resend invite is `intent: 'primary'` and `@InputForm`-bearing.
+    // `triggerAction()` short-circuits to the form-dialog path; the
+    // submit button picks up `as-action-form-submit-primary`. Eve
+    // (`status: 'invited'`) is the only seeded row where the gate
+    // (`status !== 'invited'`) doesn't strip the action.
+    await gotoTable(page, "users");
+    const table = page.locator("table.as-table").first();
+    const eveRow = await userRowByName(table, "eve");
+    const menu = await openRowActionsMenu(page, eveRow);
+    await clickRowMenuItem(menu, "Resend invite");
+
+    const formContent = page.locator(".as-action-form-content");
+    await expect(formContent).toBeVisible();
+
+    const submit = page.locator(".as-action-form-submit");
+    await expect(submit).toHaveClass(/\bas-action-form-submit-primary\b/);
+    // Submit text comes from `@ui.form.submit.text 'Send'` (form schema).
+    await expect(submit).toHaveText("Send");
 
     await dismissActionForm(page);
   });
