@@ -499,22 +499,29 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
     const fresh = await browser.newContext({ storageState: authFileFor("admin") });
     try {
       const dlPage = await fresh.newPage();
-      const observed: string[] = [];
-      dlPage.on("request", (req) => {
-        if (req.url().includes("/api/db/tables/orders/pages") && req.method() === "GET") {
-          observed.push(decodeURIComponent(req.url()));
-        }
-      });
-      await dlPage.goto("/orders?status='shipped'");
-      await expect(dlPage.getByText("Loading…", { exact: true })).toHaveCount(0);
-      await dlPage.waitForTimeout(700);
+      // Use `expectSinglePages` so 11.4 and 11.8 share the same
+      // assertion shape post-Phase-1 alignment — a deep-link arrival
+      // and a preset-apply gesture both fire SINGLE composed `/pages`,
+      // and a future double-fire regression (e.g. URL bridge echo or
+      // preset-baseline gate flapping) would surface in either spec
+      // identically. The wrapped gesture is the navigation + initial
+      // paint settle; the 700 ms quiet-window past the LAST matching
+      // request replaces the previous fixed `waitForTimeout(700)`.
+      const captured = await expectSinglePages(
+        dlPage,
+        async () => {
+          await dlPage.goto("/orders?status='shipped'");
+          await expect(dlPage.getByText("Loading…", { exact: true })).toHaveCount(0);
+        },
+        { table: "orders" },
+      );
 
       // Single composed `/pages` fetch on first paint; URL's `status=shipped`
       // wins over preset's `status=pending` at the field level. Preset stays
       // "active" (label, dirty glyph) — only the colliding field is overlaid.
-      expect(observed.length).toBe(1);
-      expect(observed[0]).toContain("status=shipped");
-      expect(observed[0]).not.toContain("status=pending");
+      const decoded = decodeURIComponent(captured.url);
+      expect(decoded).toContain("status=shipped");
+      expect(decoded).not.toContain("status=pending");
       await expect(dlPage.locator(PICKER_TRIGGER_LABEL)).toHaveText("Pending only");
     } finally {
       await fresh.close();
@@ -524,22 +531,42 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
     // (manage-dialog assertions count rows). setDefault→null is implicit in
     // the row-delete batch via the dangling-id sanitiser on the server, so we
     // don't need to unpin explicitly.
+    //
+    // Hardened (Phase-2 batch H follow-up): the cleanup MUST find the
+    // `Pending only` row — the setup block above asserts the POST fired
+    // (via `fillAndSaveAs`'s `waitForRequest`) and the default-pin Save
+    // upserted the userConf. If the row is missing, the deep-link assertions
+    // earlier in the test fired against an empty preset list, which means
+    // either (a) the setup itself silently failed, or (b) a prior test
+    // leaked a `Pending only` deletion onto the shared admin-presets table.
+    // Either way we want to fail-loud here, not silently leave a stray
+    // default-pinned row for downstream tests.
     await page.bringToFront();
     await gotoTable(page, "orders");
     const menuC = await openPresetPicker(page);
     const dialogC = await openManageDialog(page, menuC);
     const rowC = dialogRow(dialogC, "Pending only");
-    if ((await rowC.count()) > 0) {
-      await rowC.locator(".as-preset-dialog-row-delete").click();
-      const deleteR = page.waitForRequest(
-        (r) => r.url().includes("/api/db/_presets") && r.method() === "DELETE",
-      );
-      await dialogC.locator(DIALOG_FOOTER_SAVE).click();
-      await deleteR;
-      await expect(dialogC).toHaveCount(0);
-    } else {
-      await dialogC.locator(DIALOG_FOOTER_CLOSE).click();
-    }
+    await expect(
+      rowC,
+      "11.4 cleanup: `Pending only` preset must exist after the deep-link setup ran — " +
+        "if this fails, the setup phase silently regressed and prior assertions are meaningless",
+    ).toHaveCount(1);
+    await rowC.locator(".as-preset-dialog-row-delete").click();
+    const deleteR = page.waitForRequest(
+      (r) => r.url().includes("/api/db/_presets") && r.method() === "DELETE",
+    );
+    await dialogC.locator(DIALOG_FOOTER_SAVE).click();
+    await deleteR;
+    await expect(dialogC).toHaveCount(0);
+
+    // Post-cleanup verification: re-open the manage dialog and confirm the
+    // row is actually gone (not just "the DELETE fired" — the picker could
+    // still echo a stale row from a server cache).
+    const menuV = await openPresetPicker(page);
+    const dialogV = await openManageDialog(page, menuV);
+    await expect(dialogRow(dialogV, "Pending only")).toHaveCount(0);
+    await dialogV.locator(DIALOG_FOOTER_CLOSE).click();
+    await expect(dialogV).toHaveCount(0);
   });
 
   // -------------------------------------------------------------------
@@ -823,19 +850,112 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
   });
 
   test("11.7.10 — Cancel button discards pending edits without firing HTTP", async () => {
+    // Capture baseline: which row (if any) is currently pinned-default and
+    // public-toggled BEFORE we start editing. Post-Cancel re-open we assert
+    // the dialog reverts to this baseline — not blindly-empty — so the test
+    // also passes when prior tests left a pinned/public state behind.
     const menu = await openPresetPicker(page);
     const dialog = await openManageDialog(page, menu);
 
-    await dialogRow(dialog, "My C").locator(".as-preset-dialog-row-default").click();
-    await dialogRow(dialog, "My B v2").locator(".as-preset-dialog-row-delete").click();
+    // Pre-baseline: take note of which rows carry data-on=""  for default /
+    // public toggles. The shape is `[locator-string, count]` recorded BEFORE
+    // any pending edits land. We re-assert this after Cancel + re-open.
+    const rowMyB = dialogRow(dialog, "My B v2");
+    const rowMyC = dialogRow(dialog, "My C");
+    const baselineMyBDefault = await rowMyB
+      .locator(".as-preset-dialog-row-default[data-on='']")
+      .count();
+    const baselineMyBPublic = await rowMyB
+      .locator(".as-preset-dialog-row-public-toggle[data-on='']")
+      .count();
+    const baselineMyCDefault = await rowMyC
+      .locator(".as-preset-dialog-row-default[data-on='']")
+      .count();
+    const baselineMyCPublic = await rowMyC
+      .locator(".as-preset-dialog-row-public-toggle[data-on='']")
+      .count();
+
+    // Stage four kinds of pending edits to exercise every branch of
+    // `syncPendingFromServer()` reset on dialog re-open:
+    //   1. Toggle default-pin on `My C`
+    //   2. Toggle public on `My B v2`
+    //   3. Rename `My B v2` → `My B v2 PENDING` (committed via Enter so
+    //      the input unmounts and the span re-renders with the
+    //      [data-pending=""] indicator — pendingLabels.size > 0).
+    //   4. Mark the (now-renamed) row for delete.
+    //
+    // Sequence note: rename is gated off when the row is mark-for-delete
+    // (`v-else-if="!pendingDeleteIds.has(row.id)"` in the template) — and
+    // the row label SPAN unmounts during edit (so a `:text-is("My B v2")`
+    // filter can't resolve the row). Hence we commit-rename FIRST. Once
+    // committed, `liveLabel = pending ?? original` shows the pending
+    // value, so the row locator must follow the rename to "My B v2 PENDING".
+    await rowMyC.locator(".as-preset-dialog-row-default").click();
+    await rowMyB.locator(".as-preset-dialog-row-public-toggle").click();
+    await rowMyB.locator(".as-preset-dialog-row-label-text").click();
+    const renameInput = dialog.locator(".as-preset-dialog-row-rename");
+    await expect(renameInput).toBeVisible();
+    await renameInput.fill("My B v2 PENDING");
+    await renameInput.press("Enter");
+    await expect(renameInput).toHaveCount(0);
+    // Re-acquire the row locator under the pending label.
+    const rowMyBPending = dialogRow(dialog, "My B v2 PENDING");
+    await expect(
+      rowMyBPending.locator(".as-preset-dialog-row-label-text[data-pending='']"),
+    ).toHaveCount(1);
+    await rowMyBPending.locator(".as-preset-dialog-row-delete").click();
+    await expect(rowMyBPending).toHaveAttribute("data-deleted", "");
     await expect(dialog.locator(DIALOG_FOOTER_UNSAVED)).toBeVisible();
 
+    // Cancel — dialog closes, no HTTP fires.
     const wire = capturePresetWire(page);
     await dialog.locator(DIALOG_FOOTER_CLOSE).click();
     await expect(dialog).toHaveCount(0);
     await page.waitForTimeout(300);
 
     expect(wire.records.filter((r) => r.method !== "GET")).toEqual([]);
+
+    // Re-open the dialog and verify each pendingX dict was discarded by
+    // `syncPendingFromServer()` running in the open-watch. If a future
+    // regression makes Cancel suppress HTTP but keep pendingX populated,
+    // a subsequent Save would flush stale edits — these assertions catch
+    // that pattern.
+    const menu2 = await openPresetPicker(page);
+    const dialog2 = await openManageDialog(page, menu2);
+
+    // 1. Default-pin reverted to baseline on both `My B v2` and `My C`.
+    const myB2 = dialogRow(dialog2, "My B v2");
+    const myC2 = dialogRow(dialog2, "My C");
+    await expect(myC2.locator(".as-preset-dialog-row-default[data-on='']")).toHaveCount(
+      baselineMyCDefault,
+    );
+    await expect(myB2.locator(".as-preset-dialog-row-default[data-on='']")).toHaveCount(
+      baselineMyBDefault,
+    );
+
+    // 2. Public-toggle on `My B v2` reverted to baseline.
+    await expect(myB2.locator(".as-preset-dialog-row-public-toggle[data-on='']")).toHaveCount(
+      baselineMyBPublic,
+    );
+    await expect(myC2.locator(".as-preset-dialog-row-public-toggle[data-on='']")).toHaveCount(
+      baselineMyCPublic,
+    );
+
+    // 3. Mark-for-delete reverted: `My B v2` no longer carries data-deleted.
+    await expect(myB2).not.toHaveAttribute("data-deleted", "");
+
+    // 4. Pending-label reverted: `My B v2` label is the server label, the
+    //    [data-pending=""] indicator is gone, and the pendingLabels-driven
+    //    "PENDING" suffix is not visible.
+    await expect(myB2.locator(".as-preset-dialog-row-label-text")).toHaveText("My B v2");
+    await expect(myB2.locator(".as-preset-dialog-row-label-text[data-pending='']")).toHaveCount(0);
+
+    // Footer's "unsaved changes" indicator is gone because pending dicts
+    // are clean.
+    await expect(dialog2.locator(DIALOG_FOOTER_UNSAVED)).toHaveCount(0);
+
+    await dialog2.locator(DIALOG_FOOTER_CLOSE).click();
+    await expect(dialog2).toHaveCount(0);
   });
 
   // -------------------------------------------------------------------

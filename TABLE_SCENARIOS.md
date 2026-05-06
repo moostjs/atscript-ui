@@ -742,9 +742,14 @@ Covered by Scenario 8.17 (default action interaction with row main-action), whic
    - → GET `/pages?$limit=5000` (the demo's CSV exporter pulls up to 5000 rows).
    - ✓ A `users-<timestamp>.csv` file downloads.
    - ✓ A toast appears: `Exporting users (all rows)…`.
-2. Toggle multi-select, select 2 rows, click `Export CSV` again.
-   - ✓ `Exporting users (2 rows)…` toast.
-   - ✓ CSV contains only the 2 selected rows.
+
+> **Note:** `Export CSV` is declared as a table-level action
+> (`@DbTableActions`). When the user toggles multi-select and selects
+> rows, `<AsTableActions>` hides table-level actions from the toolbar by
+> design — table-level actions don't surface while the user is acting on
+> a selection. To export only the selected rows, declare the action at
+> `level: 'rows'` instead. There is no "selected-rows export" branch in
+> this scenario.
 
 ### Scenario 8.5: Backend action with `@InputForm` (form is the confirm surface)
 

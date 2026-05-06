@@ -36,7 +36,7 @@
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { expectSinglePages, gotoTable } from "../helpers";
+import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
 
 // ---------------------------------------------------------------------
 // Inline helpers — not promoted to the helper barrel (chat-RFC required).
@@ -163,6 +163,20 @@ test.describe("Section 10 — Pagination", () => {
     await gotoTable(page, "products");
     await expect(page.locator(".table-pagination-btn-active")).toHaveText("1");
 
+    // Stabilization (Phase-2 batch H follow-up): `gotoTable` returns the
+    // moment the FIRST `/pages` response arrives, but the URL-bridge / state
+    // watchers can schedule a follow-up `/pages` echo within the next ~500 ms
+    // debounce window. If the next-arrow click lands inside that window,
+    // `expectSinglePages` below counts the in-flight echo as a 2nd
+    // request and fails. 10.1 (page-number click) settles naturally — it
+    // performs several read-only assertions + select-mode mutations between
+    // gotoTable and the click, which gives the echo time to arrive. 10.1b
+    // had no such pre-click settle, so it flaked under full-suite timing
+    // (passed in isolation 20/20). Using `expectNoPages` with an empty
+    // gesture pins the 700 ms quiet window to elapse with zero requests
+    // before we measure the click.
+    await expectNoPages(page, async () => {}, { table: "products" });
+
     const captured = await expectSinglePages(
       page,
       async () => {
@@ -172,6 +186,10 @@ test.describe("Section 10 — Pagination", () => {
     );
     expectPageWire(captured.url, 2, 25);
 
+    // Indicator: assert the UI has settled BEFORE returning. The indicator
+    // update is reactive on the response payload arriving — by the time
+    // `expectSinglePages` resolves the request was sent (not necessarily
+    // responded to), so this is the indicator-settle gate.
     await expect(page.locator(".table-pagination-btn-active")).toHaveText("2");
   });
 

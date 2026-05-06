@@ -13,10 +13,11 @@
 //         demo's `onAction` handler in TablePage.vue and out of scope
 //         for the framework e2e suite.
 //
-// Scenario-doc divergence: 8.4 multi-row toast `(2 rows)…` — `Export CSV`
-// is declared as a table-level action; with rows selected,
-// `<AsTableActions>` resolves to `level="rows"` and the action is
-// hidden from the toolbar. Sub-case marked DEFERRED below.
+// Note: `Export CSV` is declared as a table-level action; with rows
+// selected, `<AsTableActions>` hides it by design (table-level actions
+// don't surface in selection-active mode). Single-test coverage below
+// — no "with N rows selected" branch since the action isn't reachable
+// in that state.
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
@@ -146,22 +147,5 @@ test.describe("Section 8.4 — Custom table action: Export CSV", () => {
     } finally {
       actionHits.dispose();
     }
-  });
-
-  test.skip("DEFERRED — Export CSV with 2 rows selected emits `Exporting users (2 rows)…`", () => {
-    // SUB-CASE DEFERRED: the demo declares `Export CSV` as a
-    // table-level action (`@DbTableActions`). `<AsTableActions>` with
-    // `level="auto"` + selectedCount >= 1 resolves to `level: "rows"`,
-    // so `Export CSV` is not surfaced from the toolbar in the
-    // selection-active path. Triggering it with selection still
-    // active would require either declaring it as `level: "rows"` in
-    // the demo controller (schema mutation — locked-file) or routing
-    // through a non-toolbar surface that doesn't exist today.
-    //
-    // Scenario-doc divergence: TABLE_SCENARIOS.md 8.4 step 2 implies
-    // `Export CSV` is reachable while rows are selected. With the
-    // current demo wiring, the `(2 rows)…` toast branch is
-    // unreachable in this read-only batch — flagged for batch F /
-    // schema-touch follow-up.
   });
 });
