@@ -11,7 +11,7 @@
       "source": "moostjs/atscript-db",
       "sourceType": "github",
       "skillPath": "skills/atscript-db/SKILL.md",
-      "computedHash": "16dc20b91594518f8475889492dfa1242804d40e375181764b129a8e2b7aecf7"
+      "computedHash": "f62b8eaa563aece7a8a556338289ce676cd31b3b0bbddb4bbd3268a4dcfac9f3"
     },
     "moostjs": {
       "source": "moostjs/moostjs",
