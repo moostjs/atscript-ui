@@ -39,6 +39,23 @@ export { newAnonRequestContext, newRequestContext } from "./request";
 // Table navigation — `gotoTable` is the only DOM helper Phase 1 needs.
 export { gotoTable } from "./table";
 
+// Filter pills (toolbar Filters dialog) — Section 4.
+export { addFilterPill, pillByLabel } from "./filter";
+
+// Toolbar `<AsConfigDialog>` (Columns / Filters / Sorters tabs) — Sections 5 + 7.
+export {
+  applyConfig,
+  cancelConfig,
+  configActivePanel,
+  configDialog,
+  configListRow,
+  configTabTrigger,
+  moveConfigListRowDown,
+  openConfigDialog,
+  toggleConfigListRow,
+} from "./dialog";
+export type { ConfigTab } from "./dialog";
+
 // ---------------------------------------------------------------------------
 // Phase-2 helpers — placeholders. Add via chat RFC, not by ad-hoc import.
 //
@@ -46,15 +63,10 @@ export { gotoTable } from "./table";
 //   - getRow(page, identifier): Locator                           // unique row by `data-row-id` or row content
 //   - getCell(page, row, column): Locator                         // cell by header label
 //   - openColumnMenu(page, column): Promise<void>                 // open header dropdown
-//   - openTableSettings(page, tab: 'columns'|'filters'|'sorters') // toolbar settings dialog
 // filter.ts:
-//   - addFilterPill(page, column, value?): Promise<void>          // adds via Filters dialog
 //   - setPillValue(page, column, value): Promise<void>            // type into pill input + commit
 //   - removeFilterPill(page, column): Promise<void>               // x button on pill
 //   - openFilterDialog(page, column): Promise<void>               // per-column dialog (Section 4)
-// dialog.ts:
-//   - waitForDialog(page, name): Promise<Locator>
-//   - dismissDialog(page): Promise<void>
 // action.ts:
 //   - triggerRowAction(page, rowId, name): Promise<void>          // row-level action menu
 //   - triggerTableAction(page, name): Promise<void>               // toolbar actions

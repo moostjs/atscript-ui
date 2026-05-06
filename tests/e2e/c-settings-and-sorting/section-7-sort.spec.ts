@@ -20,54 +20,17 @@
 // via `expectSinglePages` and assert on the `/pages?` query string instead
 // of `location.href`. URL-bridge round-trip assertions are batch D's scope.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
-import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
-
-type ConfigTab = "columns" | "filters" | "sorters";
-
-const TAB_ORDER: ConfigTab[] = ["columns", "filters", "sorters"];
-const TAB_TITLES: Record<ConfigTab, string> = {
-  columns: "Columns",
-  filters: "Filters",
-  sorters: "Sorters",
-};
-
-function dialogLocator(page: Page): Locator {
-  return page.locator(".as-config-dialog-content");
-}
-
-function tabTrigger(dialog: Locator, tab: ConfigTab): Locator {
-  return dialog.locator(".as-config-tab-trigger").nth(TAB_ORDER.indexOf(tab));
-}
-
-async function openConfigDialog(page: Page, tab: ConfigTab): Promise<Locator> {
-  await page.getByTitle(TAB_TITLES[tab], { exact: true }).click();
-  const dialog = dialogLocator(page);
-  await expect(dialog).toBeVisible();
-  await expect(tabTrigger(dialog, tab)).toHaveAttribute("data-state", "active");
-  return dialog;
-}
-
-async function applyConfig(dialog: Locator): Promise<void> {
-  await dialog.locator(".as-filter-btn-apply").click();
-  await expect(dialog).toHaveCount(0);
-}
-
-function activePanel(dialog: Locator): Locator {
-  return dialog.locator("[role='tabpanel'][data-state='active']");
-}
-
-function listRow(dialog: Locator, label: string): Locator {
-  return activePanel(dialog).locator(
-    `.as-orderable-list-item:has(.as-orderable-list-item-label:text-is("${label}")),` +
-      `.as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
-  );
-}
-
-async function toggleListRow(dialog: Locator, label: string): Promise<void> {
-  await listRow(dialog, label).click();
-}
+import {
+  applyConfig,
+  configListRow,
+  expectNoPages,
+  expectSinglePages,
+  gotoTable,
+  openConfigDialog,
+  toggleConfigListRow,
+} from "../helpers";
 
 async function clickColumnHeader(page: Page, columnPath: string): Promise<void> {
   const table = page.locator("table.as-table").first();
@@ -205,15 +168,19 @@ test.describe("Section 7.3 — Multi-sort via Sorters dialog", () => {
     const dialog = await openConfigDialog(page, "sorters");
 
     // Add Status, then Username — selection order = priority order.
-    await toggleListRow(dialog, "Status");
-    await listRow(dialog, "Status").getByTitle("Descending", { exact: true }).click();
-    await toggleListRow(dialog, "Username");
+    await toggleConfigListRow(dialog, "Status");
+    await configListRow(dialog, "Status").getByTitle("Descending", { exact: true }).click();
+    await toggleConfigListRow(dialog, "Username");
     // `Username` defaults to `asc`, no explicit click needed; assert it.
     await expect(
-      listRow(dialog, "Username").locator(".as-sorter-segment-btn", { hasText: "Asc" }).first(),
+      configListRow(dialog, "Username")
+        .locator(".as-sorter-segment-btn", { hasText: "Asc" })
+        .first(),
     ).toHaveClass(/as-sorter-segment-btn-active/);
     await expect(
-      listRow(dialog, "Status").locator(".as-sorter-segment-btn", { hasText: "Desc" }).first(),
+      configListRow(dialog, "Status")
+        .locator(".as-sorter-segment-btn", { hasText: "Desc" })
+        .first(),
     ).toHaveClass(/as-sorter-segment-btn-active/);
 
     const captured = await expectSinglePages(

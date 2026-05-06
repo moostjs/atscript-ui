@@ -30,72 +30,22 @@
 // assertion. Re-stating it here as a YES would contradict the rest of the
 // suite. Sanity-net test below pins the inverse direction.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "@playwright/test";
 
-import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
-
-type ConfigTab = "columns" | "filters" | "sorters";
-
-const TAB_ORDER: ConfigTab[] = ["columns", "filters", "sorters"];
-const TAB_TITLES: Record<ConfigTab, string> = {
-  columns: "Columns",
-  filters: "Filters",
-  sorters: "Sorters",
-};
-
-function dialogLocator(page: Page): Locator {
-  return page.locator(".as-config-dialog-content");
-}
-
-function tabTrigger(dialog: Locator, tab: ConfigTab): Locator {
-  return dialog.locator(".as-config-tab-trigger").nth(TAB_ORDER.indexOf(tab));
-}
-
-async function openConfigDialog(page: Page, tab: ConfigTab): Promise<Locator> {
-  await page.getByTitle(TAB_TITLES[tab], { exact: true }).click();
-  const dialog = dialogLocator(page);
-  await expect(dialog).toBeVisible();
-  await expect(tabTrigger(dialog, tab)).toHaveAttribute("data-state", "active");
-  return dialog;
-}
-
-async function applyConfig(dialog: Locator): Promise<void> {
-  await dialog.locator(".as-filter-btn-apply").click();
-  await expect(dialog).toHaveCount(0);
-}
-
-function activePanel(dialog: Locator): Locator {
-  return dialog.locator("[role='tabpanel'][data-state='active']");
-}
-
-function listRow(dialog: Locator, label: string): Locator {
-  return activePanel(dialog).locator(
-    `.as-orderable-list-item:has(.as-orderable-list-item-label:text-is("${label}")),` +
-      `.as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
-  );
-}
-
-async function toggleListRow(dialog: Locator, label: string): Promise<void> {
-  await listRow(dialog, label).click();
-}
-
-async function moveListRowDown(dialog: Locator, label: string): Promise<void> {
-  // The action toolbar (`.as-orderable-list-item-actions`) sits at
-  // `opacity-0 pointer-events-none` until `group-hover` flips it on. Hover
-  // the row first so the button becomes clickable.
-  const row = listRow(dialog, label);
-  await row.hover();
-  await row.getByTitle("Move down", { exact: true }).click();
-}
+import {
+  applyConfig,
+  configListRow,
+  expectNoPages,
+  expectSinglePages,
+  gotoTable,
+  moveConfigListRowDown,
+  openConfigDialog,
+  pillByLabel,
+  toggleConfigListRow,
+} from "../helpers";
 
 async function rowChecked(dialog: Locator, label: string): Promise<boolean> {
-  return (await listRow(dialog, label).getAttribute("data-state")) === "checked";
-}
-
-function pillByLabel(page: Page, label: string): Locator {
-  return page
-    .locator(".as-filter-field")
-    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
+  return (await configListRow(dialog, label).getAttribute("data-state")) === "checked";
 }
 
 test.describe("Section 5.3 — Apply: only query-affecting changes trigger /pages", () => {
@@ -105,7 +55,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
 
     // Move `Username` down one slot — visible-column set unchanged, just order
     // (covered by the `sameColumnSet` short-circuit in `use-table-state`).
-    await moveListRowDown(dialog, "Username");
+    await moveConfigListRowDown(dialog, "Username");
 
     await expectNoPages(
       page,
@@ -132,7 +82,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
 
     // Uncheck `Email` → `$select` shrinks.
     expect(await rowChecked(dialog, "Email")).toBe(true);
-    await toggleListRow(dialog, "Email");
+    await toggleConfigListRow(dialog, "Email");
     expect(await rowChecked(dialog, "Email")).toBe(false);
 
     await expectSinglePages(
@@ -157,7 +107,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     // Step 1: hide `Email` so we have something to re-show. Wrap in the
     // observer so the per-test assertion isn't polluted by setup traffic.
     const setup = await openConfigDialog(page, "columns");
-    await toggleListRow(setup, "Email");
+    await toggleConfigListRow(setup, "Email");
     await expectSinglePages(
       page,
       async () => {
@@ -169,7 +119,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     // Step 2: re-open and toggle Email back on — `$select` widens, /pages fires.
     const dialog = await openConfigDialog(page, "columns");
     expect(await rowChecked(dialog, "Email")).toBe(false);
-    await toggleListRow(dialog, "Email");
+    await toggleConfigListRow(dialog, "Email");
     expect(await rowChecked(dialog, "Email")).toBe(true);
 
     await expectSinglePages(
@@ -196,7 +146,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     // Standard preset, so `Username` is the safest pick (it's not in the
     // baseline set — toggling it adds a NEW pill rather than removing one).
     expect(await rowChecked(dialog, "Username")).toBe(false);
-    await toggleListRow(dialog, "Username");
+    await toggleConfigListRow(dialog, "Username");
 
     await expectNoPages(
       page,
@@ -219,7 +169,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     // Standard preset baseline = ['status', 'roleId']. Move `Status` down so
     // the order becomes ['roleId', 'status']. `filters` map is unaffected
     // (display-only mutation; `filterFields` array order is the only change).
-    await moveListRowDown(dialog, "Status");
+    await moveConfigListRowDown(dialog, "Status");
 
     await expectNoPages(
       page,
@@ -241,7 +191,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     await gotoTable(page, "users");
     const dialog = await openConfigDialog(page, "sorters");
 
-    await toggleListRow(dialog, "Username");
+    await toggleConfigListRow(dialog, "Username");
     expect(await rowChecked(dialog, "Username")).toBe(true);
 
     const captured = await expectSinglePages(
@@ -265,7 +215,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
 
     // Setup: add `Username` asc.
     const setup = await openConfigDialog(page, "sorters");
-    await toggleListRow(setup, "Username");
+    await toggleConfigListRow(setup, "Username");
     await expectSinglePages(
       page,
       async () => {
@@ -277,7 +227,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     // Now remove it — toggle off.
     const dialog = await openConfigDialog(page, "sorters");
     expect(await rowChecked(dialog, "Username")).toBe(true);
-    await toggleListRow(dialog, "Username");
+    await toggleConfigListRow(dialog, "Username");
     expect(await rowChecked(dialog, "Username")).toBe(false);
 
     const captured = await expectSinglePages(
@@ -296,8 +246,8 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
 
     // Setup: add `Status` asc + `Username` asc (in that order).
     const setup = await openConfigDialog(page, "sorters");
-    await toggleListRow(setup, "Status");
-    await toggleListRow(setup, "Username");
+    await toggleConfigListRow(setup, "Status");
+    await toggleConfigListRow(setup, "Username");
     await expectSinglePages(
       page,
       async () => {
@@ -310,14 +260,14 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     const dialog = await openConfigDialog(page, "sorters");
 
     // Sanity: priority badges read 1, 2 in the current order.
-    await expect(listRow(dialog, "Status").locator(".as-sorter-index")).toHaveText("1");
-    await expect(listRow(dialog, "Username").locator(".as-sorter-index")).toHaveText("2");
+    await expect(configListRow(dialog, "Status").locator(".as-sorter-index")).toHaveText("1");
+    await expect(configListRow(dialog, "Username").locator(".as-sorter-index")).toHaveText("2");
 
-    await moveListRowDown(dialog, "Status");
+    await moveConfigListRowDown(dialog, "Status");
 
     // Priority badges flip — Username is now #1, Status #2.
-    await expect(listRow(dialog, "Username").locator(".as-sorter-index")).toHaveText("1");
-    await expect(listRow(dialog, "Status").locator(".as-sorter-index")).toHaveText("2");
+    await expect(configListRow(dialog, "Username").locator(".as-sorter-index")).toHaveText("1");
+    await expect(configListRow(dialog, "Status").locator(".as-sorter-index")).toHaveText("2");
 
     const captured = await expectSinglePages(
       page,
@@ -367,7 +317,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
     // Now toggle Status OFF in the toolbar Filters dialog — pill disappears
     // from the toolbar but the applied predicate (`filters.status`) survives.
     const cfg = await openConfigDialog(page, "filters");
-    await toggleListRow(cfg, "Status");
+    await toggleConfigListRow(cfg, "Status");
     expect(await rowChecked(cfg, "Status")).toBe(false);
 
     await expectNoPages(
@@ -383,7 +333,7 @@ test.describe("Section 5.3 — Apply: only query-affecting changes trigger /page
 
     // Re-toggle Status ON — pill reappears with the preserved value chip.
     const cfg2 = await openConfigDialog(page, "filters");
-    await toggleListRow(cfg2, "Status");
+    await toggleConfigListRow(cfg2, "Status");
     expect(await rowChecked(cfg2, "Status")).toBe(true);
     await expectNoPages(
       page,

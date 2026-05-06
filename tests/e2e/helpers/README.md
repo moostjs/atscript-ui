@@ -116,3 +116,35 @@ Single helper — navigates to the route and waits for `/meta` + initial `/pages
 - `gotoTable(page, 'orders-cancelled', { apiPath: 'orders' })` — when route slug ≠ API path (sticky-filter aliases).
 
 **Phase-2 add via RFC if you need:** `getRow`, `getCell`, `openColumnMenu`, etc. The shape sketches live as TODO comments at the bottom of [`index.ts`](./index.ts).
+
+---
+
+## filter.ts — `addFilterPill(page, label)`, `pillByLabel(page, label)`
+
+Toolbar Filters-dialog pill helpers (Section 4). Hoisted from batch B after the inlined `addFilterPill` shape stabilised across four spec files.
+
+- `pillByLabel(page, label)` — locator for a filter pill by its column label (exact match).
+- `addFilterPill(page, label)` — opens the toolbar Filters dialog, toggles the named row, applies, and returns the pill locator. **Idempotent** — short-circuits when the named pill already exists (the Standard preset can auto-render pills on first paint, e.g. `/users` ships Status + Role pre-rendered).
+
+**Does not:** type into the pill input or commit a value. Compose with the spec's own input interaction so the assertion ("typing X fires one /pages") stays readable.
+
+**Phase-2 add via RFC if you need:** `setPillValue` (type + Enter), `removeFilterPill` (× on chip), `openFilterDialog` (per-column dialog via F4). The per-column dialog is a different surface from the toolbar dialog and lives in `<AsFilterDialog>` (`.as-filter-dialog-content`), not `<AsConfigDialog>` (`.as-config-dialog-content`).
+
+---
+
+## dialog.ts — `<AsConfigDialog>` helpers (toolbar Columns / Filters / Sorters tabs)
+
+The toolbar's three buttons (Columns / Filters / Sorters) all open the same `<AsConfigDialog>` with three tabs. Hoisted from batch C after the inlined helpers stabilised across three spec files.
+
+- `configDialog(page)` — root locator (`.as-config-dialog-content`).
+- `configTabTrigger(dialog, tab)` — tab trigger by name; matched by canonical-order index for stability against label-text drift.
+- `configActivePanel(dialog)` — active `[role='tabpanel']` inside the dialog.
+- `configListRow(dialog, label)` — row in the active tabpanel by visible label. Handles both label classes (`.as-orderable-list-item-label` for Columns/Sorters, `.as-config-field-label-text` for Filters).
+- `openConfigDialog(page, tab)` — clicks the toolbar entry button (`title="Columns" | "Filters" | "Sorters"`) and asserts the named tab is active. Returns the dialog locator.
+- `applyConfig(dialog)` / `cancelConfig(dialog)` — clicks the footer button and asserts the dialog dismissed.
+- `toggleConfigListRow(dialog, label)` — toggles a row's checkbox via row click.
+- `moveConfigListRowDown(dialog, label)` — moves a row down one slot via its hover-revealed Move-down arrow. Hovers first since `.as-orderable-list-item-actions` is `opacity-0 pointer-events-none` until group-hover.
+
+**Does not:** drag-reorder via HTML5 drag events (Playwright's `dragTo` flakes on Reka-style overlays). Use the click-arrow path instead — same effect, deterministic.
+
+**Phase-2 add via RFC if you need:** `searchConfigList(dialog, term)`, `clearAllSorters(dialog)`, `setSorterDirection(dialog, label, dir)`. The first two are likely; the third was inlined-and-then-removed during batch C's simplify pass since it's a one-liner at the call site.

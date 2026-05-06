@@ -22,87 +22,36 @@
 // attribute — only `data-state`, `aria-controls`, and a synthesised `id`. We
 // locate triggers by their declared positional order (`columns/filters/sorters`).
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "@playwright/test";
 
-import { expectNoPages, gotoTable } from "../helpers";
-
-type ConfigTab = "columns" | "filters" | "sorters";
-
-const TAB_ORDER: ConfigTab[] = ["columns", "filters", "sorters"];
-const TAB_TITLES: Record<ConfigTab, string> = {
-  columns: "Columns",
-  filters: "Filters",
-  sorters: "Sorters",
-};
-
-function dialogLocator(page: Page): Locator {
-  return page.locator(".as-config-dialog-content");
-}
-
-function tabTrigger(dialog: Locator, tab: ConfigTab): Locator {
-  return dialog.locator(".as-config-tab-trigger").nth(TAB_ORDER.indexOf(tab));
-}
+import {
+  type ConfigTab,
+  cancelConfig,
+  configActivePanel,
+  configListRow,
+  configTabTrigger,
+  expectNoPages,
+  gotoTable,
+  moveConfigListRowDown,
+  openConfigDialog,
+  toggleConfigListRow,
+} from "../helpers";
 
 async function expectActiveTab(dialog: Locator, tab: ConfigTab): Promise<void> {
-  await expect(tabTrigger(dialog, tab)).toHaveAttribute("data-state", "active");
-}
-
-async function openConfigDialog(page: Page, tab: ConfigTab): Promise<Locator> {
-  await page.getByTitle(TAB_TITLES[tab], { exact: true }).click();
-  const dialog = dialogLocator(page);
-  await expect(dialog).toBeVisible();
-  await expectActiveTab(dialog, tab);
-  return dialog;
-}
-
-async function cancelConfig(dialog: Locator): Promise<void> {
-  await dialog.locator(".as-filter-btn", { hasText: "Cancel" }).click();
-  await expect(dialog).toHaveCount(0);
-}
-
-function activePanel(dialog: Locator): Locator {
-  return dialog.locator("[role='tabpanel'][data-state='active']");
-}
-
-/**
- * Locate a row in the active tab by its visible label. Columns/Sorters tabs
- * render the label as `.as-orderable-list-item-label`; the Filters tab uses
- * the `<template #label>` slot which renders `.as-config-field-label-text`.
- * Match either to keep the helper tab-agnostic.
- */
-function listRow(dialog: Locator, label: string): Locator {
-  return activePanel(dialog).locator(
-    `.as-orderable-list-item:has(.as-orderable-list-item-label:text-is("${label}")),` +
-      `.as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
-  );
-}
-
-async function toggleListRow(dialog: Locator, label: string): Promise<void> {
-  await listRow(dialog, label).click();
-}
-
-async function moveListRowDown(dialog: Locator, label: string): Promise<void> {
-  // The action toolbar (`.as-orderable-list-item-actions`) sits at
-  // `opacity-0 pointer-events-none` until `group-hover` or
-  // `group-focus-within` flips it on. Hover the row first so the button is
-  // actually clickable, then dispatch the click — without the hover the
-  // pointer event lands on the underlying body element.
-  const row = listRow(dialog, label);
-  await row.hover();
-  await row.getByTitle("Move down", { exact: true }).click();
+  await expect(configTabTrigger(dialog, tab)).toHaveAttribute("data-state", "active");
 }
 
 async function countBadge(dialog: Locator, tab: ConfigTab): Promise<number> {
-  const text = await tabTrigger(dialog, tab).locator(".as-config-tab-count").textContent();
+  const text = await configTabTrigger(dialog, tab).locator(".as-config-tab-count").textContent();
   return Number((text ?? "0").trim());
 }
 
 async function rowChecked(dialog: Locator, label: string): Promise<boolean> {
-  return (await listRow(dialog, label).getAttribute("data-state")) === "checked";
+  return (await configListRow(dialog, label).getAttribute("data-state")) === "checked";
 }
 
 async function listOrder(dialog: Locator): Promise<string[]> {
-  const labels = await activePanel(dialog)
+  const labels = await configActivePanel(dialog)
     .locator(".as-orderable-list-item .as-orderable-list-item-label")
     .allTextContents();
   return labels.map((s) => s.trim()).filter(Boolean);
@@ -155,11 +104,11 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
 
     // Switch tabs by clicking the in-dialog tab triggers — network-silent.
     await expectNoPages(page, async () => {
-      await tabTrigger(dialog, "columns").click();
+      await configTabTrigger(dialog, "columns").click();
       await expectActiveTab(dialog, "columns");
-      await tabTrigger(dialog, "filters").click();
+      await configTabTrigger(dialog, "filters").click();
       await expectActiveTab(dialog, "filters");
-      await tabTrigger(dialog, "sorters").click();
+      await configTabTrigger(dialog, "sorters").click();
       await expectActiveTab(dialog, "sorters");
     });
 
@@ -175,13 +124,13 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
       // Search — substring filter applied to visible rows. `Email` matches a
       // single column; assert the row appears and an unrelated header
       // (`Status`) is filtered out.
-      const search = activePanel(dialog).locator(".as-orderable-list-search");
+      const search = configActivePanel(dialog).locator(".as-orderable-list-search");
       await search.fill("email");
       await expect(
-        activePanel(dialog).locator(".as-orderable-list-item:has-text('Email')"),
+        configActivePanel(dialog).locator(".as-orderable-list-item:has-text('Email')"),
       ).toHaveCount(1);
       await expect(
-        activePanel(dialog).locator(".as-orderable-list-item:has-text('Status')"),
+        configActivePanel(dialog).locator(".as-orderable-list-item:has-text('Status')"),
       ).toHaveCount(0);
       await search.fill("");
 
@@ -194,7 +143,7 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
       expect(usernameIdx).toBeGreaterThanOrEqual(0);
       const wasBelow = orderBefore[usernameIdx + 1];
       expect(wasBelow).toBeTruthy();
-      await moveListRowDown(dialog, "Username");
+      await moveConfigListRowDown(dialog, "Username");
       const orderAfter = await listOrder(dialog);
       expect(orderAfter[usernameIdx]).toBe(wasBelow);
       expect(orderAfter[usernameIdx + 1]).toBe("Username");
@@ -204,25 +153,25 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
       // marker (the `.as-orderable-list-check-icon` is shown via
       // `<ListboxItemIndicator>` only when checked).
       expect(await rowChecked(dialog, "Username")).toBe(true);
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       expect(await rowChecked(dialog, "Username")).toBe(false);
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       expect(await rowChecked(dialog, "Username")).toBe(true);
     });
 
     // Switch to Filters tab — same primitives. Search must filter the
     // (smaller) filterable subset and unrelated rows must NOT match.
-    await tabTrigger(dialog, "filters").click();
+    await configTabTrigger(dialog, "filters").click();
     await expectActiveTab(dialog, "filters");
 
     await expectNoPages(page, async () => {
-      const search = activePanel(dialog).locator(".as-orderable-list-search");
+      const search = configActivePanel(dialog).locator(".as-orderable-list-search");
       await search.fill("status");
       await expect(
-        activePanel(dialog).locator(".as-orderable-list-item:has-text('Status')"),
+        configActivePanel(dialog).locator(".as-orderable-list-item:has-text('Status')"),
       ).toHaveCount(1);
       await expect(
-        activePanel(dialog).locator(".as-orderable-list-item:has-text('Username')"),
+        configActivePanel(dialog).locator(".as-orderable-list-item:has-text('Username')"),
       ).toHaveCount(0);
       await search.fill("");
 
@@ -231,31 +180,31 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
       expect(await rowChecked(dialog, "Role")).toBe(true);
       // Toggle a previously-unchecked row — `Username`.
       expect(await rowChecked(dialog, "Username")).toBe(false);
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       expect(await rowChecked(dialog, "Username")).toBe(true);
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       expect(await rowChecked(dialog, "Username")).toBe(false);
     });
 
     // Switch to Sorters tab — same primitives, model is empty by default.
-    await tabTrigger(dialog, "sorters").click();
+    await configTabTrigger(dialog, "sorters").click();
     await expectActiveTab(dialog, "sorters");
 
     await expectNoPages(page, async () => {
-      const search = activePanel(dialog).locator(".as-orderable-list-search");
+      const search = configActivePanel(dialog).locator(".as-orderable-list-search");
       await search.fill("username");
       await expect(
-        activePanel(dialog).locator(".as-orderable-list-item:has-text('Username')"),
+        configActivePanel(dialog).locator(".as-orderable-list-item:has-text('Username')"),
       ).toHaveCount(1);
       await search.fill("");
 
       // Toggle Username on, asc by default — `as-sorter-segment` only renders
       // for selected rows.
-      await toggleListRow(dialog, "Username");
-      const usernameRow = listRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
+      const usernameRow = configListRow(dialog, "Username");
       await expect(usernameRow.locator(".as-sorter-segment")).toHaveCount(1);
       // Toggle off again — segment hides.
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       await expect(usernameRow.locator(".as-sorter-segment")).toHaveCount(0);
     });
 
@@ -283,15 +232,15 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
     // Pending changes that affect each tab.
     await expectNoPages(page, async () => {
       // 1. Reorder Username → moves down one slot.
-      await moveListRowDown(dialog, "Username");
+      await moveConfigListRowDown(dialog, "Username");
       // 2. Hide a column (uncheck Email).
       expect(await rowChecked(dialog, "Email")).toBe(true);
-      await toggleListRow(dialog, "Email");
+      await toggleConfigListRow(dialog, "Email");
       expect(await rowChecked(dialog, "Email")).toBe(false);
 
       // 3. Switch to Sorters tab and add `Username` asc.
-      await tabTrigger(dialog, "sorters").click();
-      await toggleListRow(dialog, "Username");
+      await configTabTrigger(dialog, "sorters").click();
+      await toggleConfigListRow(dialog, "Username");
       expect(await rowChecked(dialog, "Username")).toBe(true);
 
       // Cancel — no /pages should fire.
@@ -316,18 +265,18 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
 
     await expectNoPages(page, async () => {
       // Toggle `Username` ON → 3.
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       expect(await countBadge(dialog, "filters")).toBe(3);
       // Toggle `Status` OFF → 2.
-      await toggleListRow(dialog, "Status");
+      await toggleConfigListRow(dialog, "Status");
       expect(await countBadge(dialog, "filters")).toBe(2);
       // Toggle `Username` OFF → 1.
-      await toggleListRow(dialog, "Username");
+      await toggleConfigListRow(dialog, "Username");
       expect(await countBadge(dialog, "filters")).toBe(1);
 
       // Sorters tab — add one, count goes to 1.
-      await tabTrigger(dialog, "sorters").click();
-      await toggleListRow(dialog, "Username");
+      await configTabTrigger(dialog, "sorters").click();
+      await toggleConfigListRow(dialog, "Username");
       expect(await countBadge(dialog, "sorters")).toBe(1);
 
       await cancelConfig(dialog);

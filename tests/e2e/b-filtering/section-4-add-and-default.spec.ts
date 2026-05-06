@@ -15,24 +15,17 @@
 // renders rows with `.as-config-field-label-text` (custom label slot in
 // `<AsConfigDialog>`); the Columns tab uses `.as-orderable-list-item-label`.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "@playwright/test";
 
-import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
-
-/** Locator for the filter pill whose label matches the column label exactly. */
-function pillByLabel(page: Page, label: string): Locator {
-  return page
-    .locator(".as-filter-field")
-    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
-}
-
-/** Open the toolbar Filters dialog (the shared <AsConfigDialog> on Filters tab). */
-async function openToolbarFiltersDialog(page: Page): Promise<Locator> {
-  await page.getByTitle("Filters", { exact: true }).click();
-  const dialog = page.locator(".as-config-dialog-content");
-  await expect(dialog).toBeVisible();
-  return dialog;
-}
+import {
+  applyConfig,
+  expectNoPages,
+  expectSinglePages,
+  gotoTable,
+  openConfigDialog,
+  pillByLabel,
+  toggleConfigListRow,
+} from "../helpers";
 
 /**
  * Available filter labels in the toolbar Filters dialog. The Filters tab
@@ -46,21 +39,13 @@ async function filterableLabels(dialog: Locator): Promise<string[]> {
   return all.map((s) => s.trim()).filter(Boolean);
 }
 
-/** Click the row in the Filters tab whose label matches `label` exactly. */
-async function toggleFilterableRow(dialog: Locator, label: string): Promise<void> {
-  const row = dialog.locator(
-    `[role='tabpanel'][data-state='active'] .as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
-  );
-  await row.click();
-}
-
 test.describe("Section 4 — Filtering: add and default", () => {
   test("4.1: Add a filter via the Filters dialog, no query until value entered", async ({
     page,
   }) => {
     await gotoTable(page, "users");
 
-    const dialog = await openToolbarFiltersDialog(page);
+    const dialog = await openConfigDialog(page, "filters");
 
     // Filterable subset: `Password` / `Salt` are sensitive (filterable: false
     // forced via @db.json on json columns; for users they're plain strings
@@ -72,9 +57,8 @@ test.describe("Section 4 — Filtering: add and default", () => {
 
     // Adding a filter pill is display-only state — must NOT fire a query.
     await expectNoPages(page, async () => {
-      await toggleFilterableRow(dialog, "First Name");
-      await dialog.locator(".as-filter-btn-apply").click();
-      await expect(dialog).toHaveCount(0);
+      await toggleConfigListRow(dialog, "First Name");
+      await applyConfig(dialog);
     });
 
     // Pill rendered in toolbar.

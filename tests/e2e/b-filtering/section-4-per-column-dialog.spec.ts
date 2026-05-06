@@ -15,27 +15,7 @@
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
-
-async function addFilterPill(page: Page, label: string): Promise<Locator> {
-  const pill = page
-    .locator(".as-filter-field")
-    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
-  // Idempotent: short-circuit when the named pill already exists (the
-  // Standard preset can auto-render pills on first paint).
-  if ((await pill.count()) === 1) return pill;
-  await page.getByTitle("Filters", { exact: true }).click();
-  const dialog = page.locator(".as-config-dialog-content");
-  await expect(dialog).toBeVisible();
-  const row = dialog.locator(
-    `[role='tabpanel'][data-state='active'] .as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
-  );
-  await row.click();
-  await dialog.locator(".as-filter-btn-apply").click();
-  await expect(dialog).toHaveCount(0);
-  await expect(pill).toHaveCount(1);
-  return pill;
-}
+import { addFilterPill, expectNoPages, expectSinglePages, gotoTable } from "../helpers";
 
 async function openDialogViaF4(page: Page, pill: Locator): Promise<Locator> {
   await pill.locator(".as-filter-field-search").focus();

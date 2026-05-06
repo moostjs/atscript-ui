@@ -19,32 +19,7 @@
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { expectSinglePages, gotoTable } from "../helpers";
-
-/**
- * Add a filter pill via the toolbar Filters dialog. Apply is display-only
- * (no query fires) — the caller owns the value-set step.
- */
-async function addFilterPill(page: Page, label: string): Promise<Locator> {
-  const pill = page
-    .locator(".as-filter-field")
-    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
-  // Idempotent: tables can ship a Standard preset with `content.filters`
-  // that auto-renders pills on first paint (e.g. /users → Status + Role).
-  // Short-circuit when the named pill already exists.
-  if ((await pill.count()) === 1) return pill;
-  await page.getByTitle("Filters", { exact: true }).click();
-  const dialog = page.locator(".as-config-dialog-content");
-  await expect(dialog).toBeVisible();
-  const row = dialog.locator(
-    `[role='tabpanel'][data-state='active'] .as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
-  );
-  await row.click();
-  await dialog.locator(".as-filter-btn-apply").click();
-  await expect(dialog).toHaveCount(0);
-  await expect(pill).toHaveCount(1);
-  return pill;
-}
+import { addFilterPill, expectSinglePages, gotoTable } from "../helpers";
 
 /** Open the per-column filter dialog by F4-key on the named pill's input. */
 async function openPerColumnDialog(page: Page, pill: Locator): Promise<Locator> {
