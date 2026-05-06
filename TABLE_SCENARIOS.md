@@ -789,20 +789,27 @@ When the row-actions column is mounted, the table sends `?$actions=true`. For ev
    - ✓ Row `admin` (status `active`): `$actions` excludes `activate` (`disabled` when status === `active`).
    - ✓ Row `bob` (status `pending`): `$actions` includes `activate`, excludes `resend-invite` (`disabled` when status !== `invited`).
    - ✓ A `suspended` row excludes `suspend`.
-3. Open `admin`'s row menu — `Activate` hidden / disabled.
-4. Open `bob`'s row menu — `Activate` available; `Resend invite` hidden.
-5. **Bulk path** — multi-select `admin` + `bob`. Click toolbar `Activate`.
-   - ✓ `onDisabledRows: 'skip'` (Scenario 8.8) silently drops `admin` from the request payload server-side; only `bob` is activated.
-   - ✓ Toast confirms `1 user activated`.
+3. Open `admin`'s row menu — `Activate` hidden / filtered out by the client-side `applyRowGate` (`packages/vue-table/src/composables/state/intent-scope.ts:47`) reading `admin.$actions: string[]`.
+4. Open `bob`'s row menu — `Activate` available; `Resend invite` filtered out the same way.
+5. **Bulk path (toolbar `<AsTableActions>`)** — the `level === 'rows'` branch in `as-table-actions.vue` does NOT apply `applyRowGate` (selection is whole-rows, not per-row context), so EVERY selected id rides the wire. Disabled rows are dropped exclusively server-side by the gate-interceptor (`packages/moost-db/src/actions/gate-interceptor.ts`) per the action's `onDisabledRows` mode — see 8.8 for the `'skip'` branch and 8.12 for the `'reject'` (default) branch which raises `ActionDisabledError(409)`.
 
 ### Scenario 8.8: `onDisabledRows: 'skip'` for bulk actions
+
+`onDisabledRows: 'skip'` is a SERVER-side mode — the `gate-interceptor` evaluates each row's `disabled` predicate in the AFTER_GUARD phase and trims the rows/ids arrays before the handler body runs. Only the survivors reach the handler; the failing-id list is silently discarded. If ALL rows fail, the interceptor raises `ActionDisabledError(409)` with the failing-id list (see `gate-interceptor.ts:71-79`). The CLIENT does NOT pre-filter the bulk selection — every selected id is sent to the server.
 
 1. On `/users`, multi-select `admin` (active), `bob` (pending), `alice` (suspended in scenario 7.5).
 2. Click `Suspend` toolbar.
    - ✓ Form dialog opens directly (no prompt — `Suspend` declares `@InputForm`; see Scenario 8.5 for why `promptText` is ignored).
-   - ✓ Header chip strip lists exactly two ids: `admin`, `bob`. The already-suspended `alice` was filtered out (`onDisabledRows: 'skip'`), so only the two eligible rows are passed downstream — verify against `view.idTotal === 2` and the form's title/header copy.
+   - ✓ Header chip strip lists ALL three selected ids: `admin`, `bob`, `alice`. `view.idTotal === 3` matches `state.selectedRows.value.length`. The dialog has no knowledge of the server-side gate; chips are taken straight from the caller's `ctx.identifiers`.
 3. Submit the form.
-   - ✓ Server receives `ids: [{username:'admin'}, {username:'bob'}]` only.
+   - → POST `/api/db/tables/users/actions/suspend` with `ids: [{username:'admin'}, {username:'bob'}, {username:'alice'}]` (all three). The wire body always carries the user's full selection.
+   - ✓ Server gate-interceptor evaluates `disabled: perRow(u => u.status === 'suspended')` → drops `alice` from the rows/ids arrays before the handler runs.
+   - ✓ Handler receives `rows = [{admin}, {bob}]` only.
+   - ✓ Response body lists the actually-suspended user(s); toast reflects the handler's count, not the wire id count.
+4. **All-disabled edge** — multi-select only already-suspended rows and submit the same action.
+   - → Same wire payload (every selected id forwarded).
+   - ✓ Server raises `ActionDisabledError(409)` with the full failing-id list (`gate-interceptor.ts:73`).
+   - ✓ Client renders an error toast; no state change.
 
 ### Scenario 8.9: Synthetic `__remove` row action
 
@@ -1066,16 +1073,14 @@ The same `action.intent` value drives all three rendering surfaces below — sin
 
 #### Surface 2 — Confirm dialog confirm button
 
-When an action with `confirm: true` (or a `__remove` synthetic) opens the confirm dialog, the `Confirm` button paints with the action's intent scope. The cancel button stays neutral.
+Actions WITHOUT `@InputForm` route through `triggerAction` → `confirmAction` → `state.prompt(message, { scope: intentToScope(action.intent) })` (`intent-scope.ts:183-194`); the confirm dialog renders the action's intent scope on its `Confirm` button. The cancel button stays neutral. Actions WITH `@InputForm` (`Suspend`, `Cancel`, `Resend invite`) short-circuit past the prompt path — see Surface 3.
 
-1. Trigger `Suspend` on a single user.
-   - ✓ Confirm dialog opens. Confirm button reads `Suspend` and paints **red** (`!scope-error`).
-2. Trigger `Activate`.
-   - ✓ Confirm dialog (if `confirm: true` is set; demo's `activate` doesn't confirm — adapt to a primary/positive action that does).
-   - ✓ Confirm button paints green.
-3. Trigger `Delete` (synthetic `__remove`).
-   - ✓ Confirm button paints red.
-4. The cancel button stays `scope-neutral` regardless.
+1. Trigger `Delete` on a single orphan user (synthetic `__remove`, intent inherited via `negative` mapping at the `__remove` synth site).
+   - ✓ Confirm dialog opens. Confirm button reads `Delete` and paints **red** (`!scope-error`).
+2. Trigger any custom-processor action with `promptText` set and `intent: 'positive' | 'primary' | 'warning'`.
+   - ✓ Confirm button paints the matching scope (`scope-good` / `scope-primary` / `scope-warn`).
+   - ✓ The demo today has no positive/primary/warning prompt-only action — verify against intent-scope unit tests + 11.x preset-delete confirm.
+3. The cancel button stays `scope-neutral` regardless.
 
 #### Surface 3 — Action input form submit button
 
@@ -1238,15 +1243,23 @@ with field-level errors that the action-form dialog renders inline.
 
 ### Scenario 11.3: Apply, favorite, public, delete a preset
 
+The favorite (star) toggle is a **bookmark mechanism for FOREIGN-OWNED public presets** — presets the current user does not own but wants quick access to. It does NOT control own-preset visibility: own presets are unconditionally surfaced in the picker's "My presets" section regardless of favorite state. Toggling the star on an own preset is a no-op for the picker's "My presets" section; the star only governs the "Favorites" section, which lists alien public presets the user has bookmarked.
+
 1. With the preset created in 11.2, switch back to Standard, then click `Open shipments`.
    - → PATCH `/api/db/_presets/` (active preset id update) + `/pages` refetch.
    - ✓ Filter/sort restored to the saved snapshot.
-2. In the preset picker, click the favorite (star) icon next to `Open shipments`.
-   - ✓ Star fills (active state), preset moves to the Favorites section.
-3. Open the Manage Presets dialog (gear icon in picker).
-   - ✓ `Open shipments` row visible. Toggle the `public` icon — confirm only owner can publish.
+2. **Foreign-public bookmark flow.** Sign in as `manager`. On `/orders`, save a public preset `Manager view` (Make-public toggled on). Sign in as `admin`. Open the preset picker.
+   - ✓ `Manager view` is NOT visible in the picker dropdown — alien public presets are hidden by default.
+   - Open Manage Presets (gear icon). Find `Manager view` under "Shared". Click its star.
+   - ✓ Star fills, row pins under the user's favorites.
+   - Save. Re-open the preset picker.
+   - ✓ `Manager view` now appears in the picker's `Favorites` section (alien-public bookmark surfaced).
+3. **Own-preset star is ineffective for picker visibility.** Click the favorite (star) icon next to `Open shipments` (own preset).
+   - ✓ Star fills (visual state) but `Open shipments` was already in the picker's "My presets" section and stays there. The star toggle on own presets writes the same `pendingFavIds` field server-side but has no observable picker-section effect (no aspect of own-preset surfacing is gated on the star).
+4. Open the Manage Presets dialog (gear icon in picker).
+   - ✓ `Open shipments` row visible under "My". Toggle the `public` icon — only owner can publish.
    - ✓ Save flushes a single PATCH with the diff.
-4. Mark for delete + Save.
+5. Mark for delete + Save.
    - → DELETE `/api/db/_presets/<id>`.
    - ✓ Preset disappears from the picker.
 
@@ -1313,8 +1326,18 @@ The Manage dialog opens via the gear icon in the preset picker. All mutations (r
    - → No HTTP yet — pending batch.
 5. **Rename inline** — click `My A`'s label.
    - ✓ Input becomes editable; focus is placed at end of text.
-   - Type ` v2` so label reads `My A v2`. Pending state captures it (live-write on `@input`).
+   - Type ` v2` so label reads `My A v2`. Pending state captures it (live-write on `@input` keystroke writeback into `pendingLabels`).
    - ✓ Save remains enabled.
+   - **Blur behaviour (Phase-1 Fix 3).** Click another button (e.g. another row's pin icon) to dismiss the inline input WITHOUT pressing Enter / Cancel.
+     - ✓ Input collapses; the row's display label still reads `My A v2` (the pending value, not the original DB `My A`).
+     - ✓ The display label gains a "modified" indicator: `[data-pending=""]` tags the row's `.as-preset-dialog-row-label-text`, which paints italic + appends an `::after` asterisk. Reads visually as "this label has unsaved changes".
+     - ✓ `pendingLabels` dict persists across blur. Save still enabled (Unsaved-changes indicator still showing).
+   - **Re-enter rename.** Click `My A v2`'s label again.
+     - ✓ Input pre-fills with `My A v2` (the staged pending value, NOT the original DB `My A`). Continued edits re-write the same `pendingLabels` entry.
+   - **Delete-toggle cancels rename.** With a pending label staged, mark the same row for delete (trash icon).
+     - ✓ Pending rename is dropped (`pendingLabels` entry for that row deleted), display label reverts to original DB value with strikethrough.
+     - ✓ Re-clicking the trash UN-marks delete; rename re-enabled but no longer pre-filled with the prior staged value.
+   - **Cancel discards.** Pressing the dialog `Cancel` button discards `pendingLabels` along with all other pending fields; nothing flushes server-side.
 6. **Toggle public** — click eye icon on `My B`. Pending toggle. Click again to revert. Repeat.
 7. **Mark for delete** — click trash on `Shared C`.
    - ✓ Row visually struck through.

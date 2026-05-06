@@ -20,36 +20,19 @@
 // via `expectSinglePages` and assert on the `/pages?` query string instead
 // of `location.href`. URL-bridge round-trip assertions are batch D's scope.
 
-import { type Page, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import {
   applyConfig,
+  clickColumnHeader,
   configListRow,
   expectNoPages,
   expectSinglePages,
   gotoTable,
   openConfigDialog,
+  pickSort,
   toggleConfigListRow,
 } from "../helpers";
-
-async function clickColumnHeader(page: Page, columnPath: string): Promise<void> {
-  const table = page.locator("table.as-table").first();
-  // The actual click target is the inner `<button class="as-th-btn">`. Reka's
-  // `DropdownMenuTrigger as-child` slot binds the open handler onto that
-  // button (the `<th>` itself is the drag-reorder target).
-  await table.locator(`thead th[data-column-path="${columnPath}"] .as-th-btn`).click();
-}
-
-async function pickSort(page: Page, direction: "asc" | "desc"): Promise<void> {
-  const label = direction === "asc" ? "Ascending" : "Descending";
-  // Reka portals dropdown menus to `<body>`, so the menu is reached through
-  // `page.locator(...)` rather than relative to the table.
-  await page
-    .locator(".as-column-menu-content .as-column-menu-item", {
-      hasText: label,
-    })
-    .click();
-}
 
 test.describe("Section 7.1 — Single-column sort cycle", () => {
   test("Total header on /orders: asc → desc → cleared, single /pages each step", async ({

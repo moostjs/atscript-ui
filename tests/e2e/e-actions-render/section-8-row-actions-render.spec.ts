@@ -35,40 +35,13 @@
 // unfiltered — the demo accepts that navigate-only table actions stay
 // visible and rely on destination-route ARBAC for the actual gate.
 
-import { type BrowserContext, type Locator, type Page, expect, test } from "@playwright/test";
+import { type BrowserContext, type Locator, expect, test } from "@playwright/test";
 
-import { authFileFor, gotoTable } from "../helpers";
-
-async function openRowActionsMenu(page: Page, row: Locator): Promise<Locator> {
-  await row.locator(".as-row-actions-more").click();
-  const menu = page.locator(".as-row-actions-menu");
-  await expect(menu).toBeVisible();
-  return menu;
-}
-
-function rowByCellText(table: Locator, columnIndex: number, text: string): Locator {
-  return table.locator("tbody tr").filter({
-    has: table.page().locator(`xpath=./td[${columnIndex + 1}][normalize-space(.)="${text}"]`),
-  });
-}
-
-async function columnCellIndex(table: Locator, columnPath: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${columnPath}"]`);
-  await expect(th).toHaveCount(1);
-  return await th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
+import { authFileFor, gotoTable, openRowActionsMenu, userRowByName } from "../helpers";
 
 async function menuItemLabels(menu: Locator): Promise<string[]> {
   const items = menu.locator(".as-row-actions-menu-item");
   return await items.evaluateAll((els) => els.map((el) => (el.textContent ?? "").trim()));
-}
-
-/** All five row lookups in this spec hit the `username` column on /users. */
-async function userRowByName(table: Locator, name: string): Promise<Locator> {
-  const usernameIdx = await columnCellIndex(table, "username");
-  const row = rowByCellText(table, usernameIdx, name).first();
-  await expect(row).toHaveCount(1);
-  return row;
 }
 
 test.describe("Section 8.14 — Row-actions cell render branches", () => {

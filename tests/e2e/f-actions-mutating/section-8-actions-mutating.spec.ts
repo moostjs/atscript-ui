@@ -101,47 +101,33 @@
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { authFileFor, expectSinglePages, gotoTable, newRequestContext } from "../helpers";
+import {
+  authFileFor,
+  awaitActionFormReady,
+  captureLastPost,
+  clearSelection,
+  clickRowMenuItem,
+  clickToolbarAction,
+  columnCellIndex,
+  dismissActionForm,
+  dismissConfirm,
+  expectSinglePages,
+  findToast,
+  gotoTable,
+  newRequestContext,
+  openRowActionsMenu,
+  toggleSelectMode,
+  userRowByName,
+} from "../helpers";
 
 // ---------------------------------------------------------------------
-// Inline helpers — not promoted to the helper barrel (chat-RFC required).
-
-/** cellIndex of `<thead th[data-column-path]>` for `column`. */
-async function columnIndex(table: Locator, column: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${column}"]`);
-  return th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
-
-/** Locator for the user row whose `username` column equals `name`. */
-async function userRowByName(table: Locator, name: string): Promise<Locator> {
-  const idx = await columnIndex(table, "username");
-  const row = table
-    .locator("tbody tr")
-    .filter({
-      has: table.page().locator(`xpath=./td[${idx + 1}][normalize-space(.)="${name}"]`),
-    })
-    .first();
-  await expect(row).toHaveCount(1);
-  return row;
-}
+// File-local helpers (single-call-site or domain-specific to /users).
 
 /** Trim of the `status` column for `name`'s row. */
 async function userStatus(table: Locator, name: string): Promise<string> {
   const row = await userRowByName(table, name);
-  const idx = await columnIndex(table, "status");
+  const idx = await columnCellIndex(table, "status");
   return ((await row.locator("td").nth(idx).textContent()) ?? "").trim();
-}
-
-/** Click the row's `…` trigger and return the open menu locator. */
-async function openRowActionsMenu(page: Page, row: Locator): Promise<Locator> {
-  await row.locator(".as-row-actions-more").click();
-  const menu = page.locator(".as-row-actions-menu");
-  await expect(menu).toBeVisible();
-  return menu;
-}
-
-async function clickRowMenuItem(menu: Locator, label: string): Promise<void> {
-  await menu.locator(".as-row-actions-menu-item").filter({ hasText: label }).first().click();
 }
 
 /** Read trimmed labels of the items in an open `.as-*-menu`. */
@@ -157,37 +143,10 @@ async function closeMenuViaEscape(page: Page, menu: Locator): Promise<void> {
   await expect(menu).toHaveCount(0);
 }
 
-async function toggleSelectMode(page: Page): Promise<void> {
-  await page.locator(".as-page-title-toggle").first().click();
-}
-
+/** Tick the selection checkbox on the row whose `username` matches `name`. */
 async function selectUserCheckbox(table: Locator, name: string): Promise<void> {
   const row = await userRowByName(table, name);
   await row.locator(".as-table-checkbox").first().click();
-}
-
-/** Click toolbar Clear, then exit multi-select mode. */
-async function clearSelection(page: Page): Promise<void> {
-  await page.locator(".as-page-toolbar-btn").filter({ hasText: "Clear" }).click();
-  await toggleSelectMode(page);
-}
-
-/** Click a toolbar `.as-table-actions-btn` whose label matches `label`. */
-async function clickToolbarAction(page: Page, label: string): Promise<void> {
-  await page.locator(".as-table-actions-btn").filter({ hasText: label }).first().click();
-}
-
-/**
- * Wait for the action-form dialog to be both visible AND fully bound
- * (reason input rendered) — the form schema fetch is async, so a fast
- * test could click submit before AsForm hydrates and the validate /
- * submit handler misfire.
- */
-async function awaitActionFormReady(page: Page): Promise<Locator> {
-  const form = page.locator(".as-action-form-content");
-  await expect(form).toBeVisible();
-  await expect(page.locator('.as-action-form-content input[name="reason"]')).toHaveCount(1);
-  return form;
 }
 
 async function fillReason(page: Page, value: string): Promise<void> {
@@ -196,37 +155,6 @@ async function fillReason(page: Page, value: string): Promise<void> {
 
 async function clickActionFormSubmit(page: Page): Promise<void> {
   await page.locator(".as-action-form-submit").click();
-}
-
-async function dismissActionForm(page: Page): Promise<void> {
-  await page.locator(".as-action-form-cancel").click();
-  await expect(page.locator(".as-action-form-content")).toHaveCount(0);
-}
-
-async function dismissConfirm(page: Page): Promise<void> {
-  await page.locator(".as-confirm-dialog-cancel").click();
-  await expect(page.locator(".as-confirm-dialog-content")).toHaveCount(0);
-}
-
-/**
- * Capture the most recent `POST <substring>` body via `page.on("request")`.
- * Returns a getter — body becomes non-null after the request fires.
- */
-function captureWirePost(page: Page, urlSubstring: string): { body: () => string | null } {
-  let body: string | null = null;
-  page.on("request", (req) => {
-    if (req.url().includes(urlSubstring) && req.method() === "POST") {
-      body = req.postData();
-    }
-  });
-  return { body: () => body };
-}
-
-/** TablePage's `<ToastStack>` mounts each toast as a direct child of `.fixed.bottom-4.right-4`. */
-async function findToast(page: Page, contains: string): Promise<Locator> {
-  const toast = page.locator(".fixed.bottom-4.right-4 > div").filter({ hasText: contains });
-  await expect(toast).toBeVisible();
-  return toast;
 }
 
 // ---------------------------------------------------------------------
@@ -658,7 +586,7 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
     await fillReason(page, "policy review");
     await expect(page.locator('.as-action-form-content input[name="notifyUser"]')).toBeChecked();
 
-    const wire = captureWirePost(page, "/api/db/tables/users/actions/suspend");
+    const wire = captureLastPost(page, "/api/db/tables/users/actions/suspend");
 
     await expectSinglePages(
       page,
@@ -714,7 +642,7 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
     await expect(errorSlot).toHaveText("At least 4 characters");
 
     // Good submit — wire body uses `{ ids: [{ username }], input }`.
-    const wire = captureWirePost(page, "/api/db/tables/users/actions/suspend");
+    const wire = captureLastPost(page, "/api/db/tables/users/actions/suspend");
     await fillReason(page, "inactive admin");
     await expectSinglePages(
       page,
@@ -753,7 +681,7 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
 
     const menu = await openRowActionsMenu(page, bobRow);
 
-    const wire = captureWirePost(page, "/api/db/tables/users/actions/activate");
+    const wire = captureLastPost(page, "/api/db/tables/users/actions/activate");
 
     await expectSinglePages(
       page,
@@ -801,7 +729,7 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
       .allTextContents();
     expect(measureChips.toSorted()).toEqual(["admin", "alice", "bob"]);
 
-    const wire = captureWirePost(page, "/api/db/tables/users/actions/suspend");
+    const wire = captureLastPost(page, "/api/db/tables/users/actions/suspend");
 
     await fillReason(page, "scheduled cleanup");
     await expectSinglePages(
@@ -874,7 +802,7 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
     const table = page.locator("table.as-table").first();
     const targetRow = await userRowByName(table, username);
 
-    const idIdx = await columnIndex(table, "id");
+    const idIdx = await columnCellIndex(table, "id");
     const idText = ((await targetRow.locator("td").nth(idIdx).textContent()) ?? "").trim();
     expect(idText).toBe(String(createdId));
 

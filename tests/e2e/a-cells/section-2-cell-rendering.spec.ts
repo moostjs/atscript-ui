@@ -19,28 +19,10 @@
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { expectSinglePages, gotoTable } from "../helpers";
-
-/**
- * Resolve the rendered `<td>` cell-index for a column path by reading its
- * matching `<th data-column-path="...">`'s native `cellIndex`. Lives inline
- * per the Phase-2 helper-RFC rule (chat-RFC required to extend the barrel).
- */
-async function columnCellIndex(table: Locator, columnPath: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${columnPath}"]`);
-  await expect(th).toHaveCount(1);
-  return await th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
-
-/** Body row whose cell at the supplied column path matches `text` (exact). */
-function rowByCellText(table: Locator, columnIndex: number, text: string): Locator {
-  return table.locator(`tbody tr`).filter({
-    has: table.page().locator(`xpath=./td[${columnIndex + 1}][normalize-space(.)="${text}"]`),
-  });
-}
+import { columnCellIndex, expectSinglePages, gotoTable, rowByCellText } from "../helpers";
 
 async function cellTextByPath(
-  page: Page,
+  _page: Page,
   table: Locator,
   rowLocator: Locator,
   columnPath: string,

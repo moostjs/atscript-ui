@@ -14,7 +14,14 @@
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
-import { addFilterPill, expectSinglePages, expectUrlQuery, gotoTable } from "../helpers";
+import {
+  addFilterPill,
+  commitPillInput,
+  expectSinglePages,
+  expectUrlQuery,
+  gotoTable,
+  pickPillEnumValue,
+} from "../helpers";
 
 /** Open the per-column filter dialog by pressing F4 on the focused pill input. */
 async function openPillDialog(page: Page, pill: Locator): Promise<Locator> {
@@ -37,13 +44,7 @@ test.describe("Section 6.2 — Outbound URL emit on filter change", () => {
     await expectSinglePages(
       page,
       async () => {
-        await pill.locator(".as-filter-field-search").click();
-        const dropdown = page.locator(".as-filter-field-dropdown");
-        await expect(dropdown).toBeVisible();
-        await dropdown
-          .locator("tbody tr td", { hasText: /^shipped$/ })
-          .first()
-          .click();
+        await pickPillEnumValue(page, pill, "shipped");
       },
       { table: "orders" },
     );
@@ -72,9 +73,7 @@ test.describe("Section 6.4 — URL bridge echo — no spurious refetch", () => {
     const captured = await expectSinglePages(
       page,
       async () => {
-        const input = pill.locator(".as-filter-field-search");
-        await input.fill("*bob*");
-        await input.press("Enter");
+        await commitPillInput(pill, "*bob*");
       },
       { table: "users" },
     );
@@ -93,9 +92,7 @@ test.describe("Section 6.4 — URL bridge echo — no spurious refetch", () => {
     const captured = await expectSinglePages(
       page,
       async () => {
-        const input = pill.locator(".as-filter-field-search");
-        await input.fill("*@demo.test*");
-        await input.press("Enter");
+        await commitPillInput(pill, "*@demo.test*");
       },
       { table: "users" },
     );
@@ -119,13 +116,7 @@ test.describe("Section 6.6 — Filter operator change updates URL", () => {
     await expectSinglePages(
       page,
       async () => {
-        await pill.locator(".as-filter-field-search").click();
-        const dropdown = page.locator(".as-filter-field-dropdown");
-        await expect(dropdown).toBeVisible();
-        await dropdown
-          .locator("tbody tr td", { hasText: /^shipped$/ })
-          .first()
-          .click();
+        await pickPillEnumValue(page, pill, "shipped");
       },
       { table: "orders" },
     );

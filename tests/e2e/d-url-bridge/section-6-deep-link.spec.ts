@@ -17,7 +17,13 @@
 
 import { type BrowserContext, expect, test } from "@playwright/test";
 
-import { authFileFor, expectSinglePages, expectUrlQuery, pillByLabel } from "../helpers";
+import {
+  authFileFor,
+  expectSinglePages,
+  expectUrlQuery,
+  pickPillEnumValue,
+  pillByLabel,
+} from "../helpers";
 
 test.describe("Section 6.1 — Direct deep-link load — single fetch", () => {
   test("Navigating to /orders?customerId=2 fires ONE composed /pages with the customer filter", async ({
@@ -88,13 +94,7 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
     await expectSinglePages(
       page,
       async () => {
-        await statusPill.locator(".as-filter-field-search").click();
-        const dropdown = page.locator(".as-filter-field-dropdown");
-        await expect(dropdown).toBeVisible();
-        await dropdown
-          .locator("tbody tr td", { hasText: /^shipped$/ })
-          .first()
-          .click();
+        await pickPillEnumValue(page, statusPill, "shipped");
       },
       { table: "orders" },
     );

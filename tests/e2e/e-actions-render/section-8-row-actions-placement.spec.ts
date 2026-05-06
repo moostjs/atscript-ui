@@ -24,15 +24,10 @@
 
 import { type Page, expect, test } from "@playwright/test";
 
-import { gotoTable } from "../helpers";
+import { gotoTable, toggleSelectMode } from "../helpers";
 
-const SELECT_TOGGLE = ".as-page-title-toggle";
 const ACTIONS_TH = 'thead th[data-column-path="__actions"]';
 const SELECT_TH = "thead th.as-th-select";
-
-async function toggleSelectMode(page: Page): Promise<void> {
-  await page.locator(SELECT_TOGGLE).first().click();
-}
 
 /**
  * Read every header cell's identity in DOM order. The trailing

@@ -23,28 +23,15 @@
 //     `<AsActionMenuItem>` `default` prop → `:data-default="default ? '' : undefined"`).
 //     We assert on that attribute.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "@playwright/test";
 
-import { expectSinglePages, gotoTable } from "../helpers";
-
-async function openRowActionsMenu(page: Page, row: Locator): Promise<Locator> {
-  await row.locator(".as-row-actions-more").click();
-  const menu = page.locator(".as-row-actions-menu");
-  await expect(menu).toBeVisible();
-  return menu;
-}
-
-function rowByCellText(table: Locator, columnIndex: number, text: string): Locator {
-  return table.locator("tbody tr").filter({
-    has: table.page().locator(`xpath=./td[${columnIndex + 1}][normalize-space(.)="${text}"]`),
-  });
-}
-
-async function columnCellIndex(table: Locator, columnPath: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${columnPath}"]`);
-  await expect(th).toHaveCount(1);
-  return await th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
+import {
+  columnCellIndex,
+  expectSinglePages,
+  gotoTable,
+  openRowActionsMenu,
+  rowByCellText,
+} from "../helpers";
 
 /**
  * Read the first customers-table row's id (numeric preferredId). Used

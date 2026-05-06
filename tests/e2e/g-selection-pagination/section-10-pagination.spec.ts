@@ -34,46 +34,26 @@
 // page 2 ids 26..50). Selection trim collapses `selectedRows` to `[]`
 // after refetch.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "@playwright/test";
 
-import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
+import {
+  clickPaginationNext,
+  clickPaginationPage,
+  columnCellIndex,
+  expectNoPages,
+  expectSinglePages,
+  gotoTable,
+  selectRowByIndex,
+  setItemsPerPage,
+  toggleSelectMode,
+} from "../helpers";
 
 // ---------------------------------------------------------------------
-// Inline helpers — not promoted to the helper barrel (chat-RFC required).
-
-async function clickPaginationPage(page: Page, n: number): Promise<void> {
-  await page
-    .locator(".table-pagination-btn")
-    .filter({ hasText: new RegExp(`^${n}$`, "u") })
-    .first()
-    .click();
-}
-
-async function clickPaginationNext(page: Page): Promise<void> {
-  await page.locator(".table-pagination-btn[aria-label='Next page']").click();
-}
-
-async function setItemsPerPage(page: Page, n: number): Promise<void> {
-  await page.locator(".table-pagination select.i8-filled").selectOption(String(n));
-}
-
-async function toggleSelectMode(page: Page): Promise<void> {
-  await page.locator(".as-page-title-toggle").first().click();
-}
-
-async function columnIndex(table: Locator, column: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${column}"]`);
-  return th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
-
-async function selectRowByIndex(table: Locator, rowIndex: number): Promise<void> {
-  const row = table.locator("tbody tr:has(td)").nth(rowIndex);
-  await row.locator(".as-td-select .as-table-checkbox").click();
-}
+// File-local helper.
 
 /** Read the trimmed text of `column` for every visible data row. */
 async function readColumnValues(table: Locator, column: string): Promise<string[]> {
-  const idx = await columnIndex(table, column);
+  const idx = await columnCellIndex(table, column);
   return table.locator("tbody tr:has(td)").evaluateAll((rows, columnIdx) => {
     return rows.map((row) => {
       const cells = row.querySelectorAll("td");

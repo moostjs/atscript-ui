@@ -18,25 +18,19 @@
 //     prompt's caveat we retarget to `Username` (`@db.index.unique` →
 //     sortable). This is the same column batch C 7.1 settled on.
 
-import { type Page, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 import {
   addFilterPill,
+  clickColumnHeader,
+  commitPillInput,
   expectSinglePages,
   expectUrlQuery,
   gotoTable,
+  pickPillEnumValue,
+  pickSort,
   pillByLabel,
 } from "../helpers";
-
-async function clickColumnHeader(page: Page, columnPath: string): Promise<void> {
-  const table = page.locator("table.as-table").first();
-  await table.locator(`thead th[data-column-path="${columnPath}"] .as-th-btn`).click();
-}
-
-async function pickSort(page: Page, direction: "asc" | "desc"): Promise<void> {
-  const label = direction === "asc" ? "Ascending" : "Descending";
-  await page.locator(".as-column-menu-content .as-column-menu-item", { hasText: label }).click();
-}
 
 test.describe("Section 6.3 — urlQuerySync allowlist (orders)", () => {
   test("Status round-trips, Total stays private, $sort round-trips, $skip absent", async ({
@@ -85,13 +79,7 @@ test.describe("Section 6.3 — urlQuerySync allowlist (orders)", () => {
     await expectSinglePages(
       page,
       async () => {
-        await statusPill.locator(".as-filter-field-search").click();
-        const dropdown = page.locator(".as-filter-field-dropdown");
-        await expect(dropdown).toBeVisible();
-        await dropdown
-          .locator("tbody tr td", { hasText: /^shipped$/ })
-          .first()
-          .click();
+        await pickPillEnumValue(page, statusPill, "shipped");
       },
       { table: "orders" },
     );
@@ -102,9 +90,7 @@ test.describe("Section 6.3 — urlQuerySync allowlist (orders)", () => {
     const captured = await expectSinglePages(
       page,
       async () => {
-        const input = totalPill.locator(".as-filter-field-search");
-        await input.fill(">100");
-        await input.press("Enter");
+        await commitPillInput(totalPill, ">100");
       },
       { table: "orders" },
     );
@@ -172,13 +158,7 @@ test.describe("Section 6.5 — urlQuerySync.sorters: false (users)", () => {
     const filterCaptured = await expectSinglePages(
       page,
       async () => {
-        await statusPill.locator(".as-filter-field-search").click();
-        const dropdown = page.locator(".as-filter-field-dropdown");
-        await expect(dropdown).toBeVisible();
-        await dropdown
-          .locator("tbody tr td", { hasText: /^active$/ })
-          .first()
-          .click();
+        await pickPillEnumValue(page, statusPill, "active");
       },
       { table: "users" },
     );

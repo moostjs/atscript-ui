@@ -19,28 +19,17 @@
 // — no "with N rows selected" branch since the action isn't reachable
 // in that state.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "@playwright/test";
 
-import { expectNoPages, getLastClipboardWrite, gotoTable, installClipboardSink } from "../helpers";
-
-async function openRowActionsMenu(page: Page, row: Locator): Promise<Locator> {
-  await row.locator(".as-row-actions-more").click();
-  const menu = page.locator(".as-row-actions-menu");
-  await expect(menu).toBeVisible();
-  return menu;
-}
-
-function rowByCellText(table: Locator, columnIndex: number, text: string): Locator {
-  return table.locator("tbody tr").filter({
-    has: table.page().locator(`xpath=./td[${columnIndex + 1}][normalize-space(.)="${text}"]`),
-  });
-}
-
-async function columnCellIndex(table: Locator, columnPath: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${columnPath}"]`);
-  await expect(th).toHaveCount(1);
-  return await th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
+import {
+  columnCellIndex,
+  expectNoPages,
+  getLastClipboardWrite,
+  gotoTable,
+  installClipboardSink,
+  openRowActionsMenu,
+  rowByCellText,
+} from "../helpers";
 
 /**
  * Inline observer for "did the action endpoint fire?" — increments on any

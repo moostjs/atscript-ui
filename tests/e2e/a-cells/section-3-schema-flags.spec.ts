@@ -7,15 +7,9 @@
 // All assertions read DOM directly — toolbar buttons (`title="Columns"` /
 // `title="Filters"` / `title="Sorters"`) open the shared config dialog.
 
-import { type Locator, expect, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { gotoTable } from "../helpers";
-
-async function columnCellIndex(table: Locator, columnPath: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${columnPath}"]`);
-  await expect(th).toHaveCount(1);
-  return await th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
+import { columnCellIndex, gotoTable } from "../helpers";
 
 test.describe("Section 3 — Schema-driven flags", () => {
   test("3.1: Flat-flattened parents are not synthetic columns", async ({ page }) => {

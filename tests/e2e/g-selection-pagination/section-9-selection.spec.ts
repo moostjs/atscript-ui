@@ -26,60 +26,28 @@
 // auto-renders empty; clicking into it fires the inline-dropdown fast-path
 // (matching `b-filtering/section-4-pill-input.spec.ts`).
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "@playwright/test";
 
-import { expectSinglePages, gotoTable, pillByLabel } from "../helpers";
+import {
+  columnCellIndex,
+  expectSinglePages,
+  gotoTable,
+  pillByLabel,
+  selectedRowCellTexts,
+  selectRowByIndex,
+  toggleSelectMode,
+} from "../helpers";
 
 // ---------------------------------------------------------------------
-// Inline helpers — not promoted to the helper barrel (chat-RFC required).
+// File-local helpers (single-call-site / file-specific).
 
-const SELECT_TOGGLE = ".as-page-title-toggle";
 const SELECT_TH = "thead th.as-th-select";
-
-async function toggleSelectMode(page: Page): Promise<void> {
-  await page.locator(SELECT_TOGGLE).first().click();
-}
-
-/** cellIndex of `<thead th[data-column-path]>` for `column`. */
-async function columnIndex(table: Locator, column: string): Promise<number> {
-  const th = table.locator(`thead th[data-column-path="${column}"]`);
-  return th.evaluate((el) => (el as HTMLTableCellElement).cellIndex);
-}
-
-/**
- * Click the `.as-table-checkbox` inside the row at `rowIndex` (0-based)
- * within the table's tbody. Click the checkbox cell explicitly (not the
- * row body) to keep the gesture pointed at the checkbox surface — keeps
- * the assertion on the checkbox→toggle path rather than the row→toggle
- * shortcut documented in `as-table-base.vue` line 155.
- */
-async function selectRowByIndex(table: Locator, rowIndex: number): Promise<void> {
-  const row = table.locator("tbody tr:has(td)").nth(rowIndex);
-  await row.locator(".as-td-select .as-table-checkbox").click();
-}
 
 /** Read trimmed text of the data-column-path cell at `rowIndex`. */
 async function readCellText(table: Locator, rowIndex: number, column: string): Promise<string> {
-  const idx = await columnIndex(table, column);
+  const idx = await columnCellIndex(table, column);
   const row = table.locator("tbody tr:has(td)").nth(rowIndex);
   return ((await row.locator("td").nth(idx).textContent()) ?? "").trim();
-}
-
-/**
- * Read trimmed text of the `column` cell for every row currently
- * displaying as `aria-selected="true"`. Drives 9.2's "which ids
- * survived the trim" assertion.
- */
-async function selectedRowIds(table: Locator, column: string): Promise<string[]> {
-  const idx = await columnIndex(table, column);
-  const rows = table.locator("tbody tr:has(td)[aria-selected='true']");
-  const out: string[] = [];
-  const count = await rows.count();
-  for (let i = 0; i < count; i++) {
-    const text = await rows.nth(i).locator("td").nth(idx).textContent();
-    out.push((text ?? "").trim());
-  }
-  return out;
 }
 
 // ---------------------------------------------------------------------
@@ -243,7 +211,7 @@ test.describe("Section 9 — Selection", () => {
     // After refetch, only the surviving id is selected. Trim semantics:
     // server returns rows matching the filter; ids whose pk no longer
     // appears in the result drop out of `selectedRows`.
-    const survivors = await selectedRowIds(table, "id");
+    const survivors = await selectedRowCellTexts(table, "id");
     expect(new Set(survivors)).toEqual(new Set(expectedSurvivorIds));
 
     // Toolbar selection-count reflects the trim — `selectedCount.value`

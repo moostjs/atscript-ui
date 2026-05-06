@@ -59,12 +59,22 @@ import { type Locator, type Page, expect, test } from "@playwright/test";
 
 import {
   addFilterPill,
+  applyPickerItem,
   authFileFor,
+  capturePresetWire,
+  clickColumnHeader,
+  dialogRow,
   expectSinglePages,
   gotoTable,
   newRequestContext,
+  openManageDialog,
+  openPresetPicker,
+  openSaveAsPopover,
+  pickSort,
   pillByLabel,
   resetSeed,
+  sortIndicator,
+  texts,
 } from "../helpers";
 
 // ---------------------------------------------------------------------
@@ -72,83 +82,17 @@ import {
 
 const PICKER_TRIGGER = ".as-preset-picker-trigger";
 const PICKER_TRIGGER_LABEL = ".as-preset-picker-trigger-label";
-const PICKER_MENU = ".as-preset-picker-menu";
-const PICKER_POPOVER = ".as-preset-picker-popover";
-const PICKER_ACTION = ".as-preset-picker-action";
 const PICKER_ITEM = ".as-preset-picker-item";
 const POPOVER_NAME_INPUT = ".as-preset-picker-popover-input";
 const POPOVER_SAVE_BTN = ".as-preset-picker-popover-save";
 const POPOVER_ASPECT = ".as-preset-picker-popover-aspect";
 
-const DIALOG_CONTENT = ".as-preset-dialog-content";
-const DIALOG_ROW = ".as-preset-dialog-row";
 const DIALOG_FOOTER_SAVE = ".as-preset-dialog-footer-save";
 const DIALOG_FOOTER_CLOSE = ".as-preset-dialog-footer-close";
 const DIALOG_SEARCH_INPUT = ".as-preset-dialog-search-input";
 const DIALOG_COUNTER = ".as-preset-dialog-counter";
 const DIALOG_SECTION_HEADER = ".as-preset-dialog-section-header";
 const DIALOG_FOOTER_UNSAVED = ".as-preset-dialog-footer-unsaved";
-
-async function openPresetPicker(page: Page): Promise<Locator> {
-  await page.locator(PICKER_TRIGGER).click();
-  const menu = page.locator(PICKER_MENU);
-  await expect(menu).toBeVisible();
-  return menu;
-}
-
-async function openSaveAsPopover(page: Page, menu: Locator): Promise<Locator> {
-  await menu.locator(PICKER_ACTION).filter({ hasText: "Save as" }).click();
-  const popover = page.locator(PICKER_POPOVER);
-  await expect(popover).toBeVisible();
-  return popover;
-}
-
-async function openManageDialog(page: Page, menu: Locator): Promise<Locator> {
-  await menu.locator(PICKER_ACTION).filter({ hasText: "Manage presets" }).click();
-  const dialog = page.locator(DIALOG_CONTENT);
-  await expect(dialog).toBeVisible();
-  return dialog;
-}
-
-function dialogRow(dialog: Locator, label: string): Locator {
-  return dialog
-    .locator(DIALOG_ROW)
-    .filter({ has: dialog.page().locator(`.as-preset-dialog-row-label-text:text-is("${label}")`) });
-}
-
-interface WireRecord {
-  url: string;
-  method: string;
-  body?: unknown;
-  ts: number;
-}
-
-function capturePresetWire(page: Page): {
-  records: WireRecord[];
-  reset: () => void;
-} {
-  const records: WireRecord[] = [];
-  page.on("request", (req) => {
-    const url = req.url();
-    if (!url.includes("/api/db/_presets")) return;
-    const method = req.method();
-    let body: unknown;
-    if (method === "POST" || method === "PATCH" || method === "PUT") {
-      try {
-        body = req.postDataJSON();
-      } catch {
-        body = req.postData();
-      }
-    }
-    records.push({ url, method, body, ts: Date.now() });
-  });
-  return {
-    records,
-    reset() {
-      records.length = 0;
-    },
-  };
-}
 
 async function fillAndSaveAs(popover: Locator, page: Page, label: string): Promise<void> {
   await popover.locator(POPOVER_NAME_INPUT).fill(label);
@@ -190,17 +134,6 @@ async function setAspectMask(popover: Locator, mask: Record<string, boolean>): P
   }
 }
 
-async function applySort(
-  page: Page,
-  columnPath: string,
-  dir: "Ascending" | "Descending",
-): Promise<void> {
-  await page
-    .locator(`table[data-as-main-table] thead th[data-column-path='${columnPath}'] .as-th-btn`)
-    .click();
-  await page.locator(".as-column-menu-content .as-column-menu-item", { hasText: dir }).click();
-}
-
 async function waitForPagesGet(page: Page, table: string): Promise<void> {
   await page.waitForResponse(
     (r) =>
@@ -210,36 +143,20 @@ async function waitForPagesGet(page: Page, table: string): Promise<void> {
   );
 }
 
-// Click a picker row by its label, wait for menu to close, then optionally
-// wait for a /pages refetch driven by the snapshot-state watcher.
-async function applyPickerItem(
-  page: Page,
-  label: string,
-  opts: { table?: string } = {},
-): Promise<void> {
-  const menu = await openPresetPicker(page);
-  await menu.locator(PICKER_ITEM).filter({ hasText: label }).click();
-  await expect(menu).toHaveCount(0);
-  if (opts.table) await waitForPagesGet(page, opts.table);
-}
-
-// Sort indicator on the main table header (i-as-arrow-up = asc, -down = desc).
-function sortIndicator(page: Page, column: string, dir: "asc" | "desc"): Locator {
-  const cls = dir === "asc" ? "i-as-arrow-up" : "i-as-arrow-down";
-  return page.locator(
-    `table[data-as-main-table] thead th[data-column-path='${column}'] .as-th-sort.${cls}`,
-  );
-}
-
-// Sorted, trimmed text content of every element matched by `loc`.
-async function texts(loc: Locator): Promise<string[]> {
-  return loc.evaluateAll((els) => els.map((el) => (el.textContent ?? "").trim()));
-}
-
 // Sorted top-level keys of a captured POST/PATCH body's `data.content` blob.
 function contentKeys(body: unknown): string[] {
   const c = (body as { data?: { content?: Record<string, unknown> } } | undefined)?.data?.content;
   return Object.keys(c ?? {}).toSorted();
+}
+
+// Counts of `[data-on=""]` markers on a manager-dialog row's default + public
+// toggles. Used by 11.7.10 to baseline-then-revert-then-assert the Cancel
+// button discarding pending edits.
+async function snapshotRowToggles(row: Locator): Promise<{ default: number; public: number }> {
+  return {
+    default: await row.locator(".as-preset-dialog-row-default[data-on='']").count(),
+    public: await row.locator(".as-preset-dialog-row-public-toggle[data-on='']").count(),
+  };
 }
 
 // ---------------------------------------------------------------------
@@ -308,9 +225,14 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
       { table: "orders" },
     );
 
-    await expectSinglePages(page, async () => applySort(page, "total", "Descending"), {
-      table: "orders",
-    });
+    await expectSinglePages(
+      page,
+      async () => {
+        await clickColumnHeader(page, "total");
+        await pickSort(page, "desc");
+      },
+      { table: "orders" },
+    );
 
     await expect(page.locator(".as-preset-picker-trigger-dirty")).toBeVisible();
 
@@ -576,7 +498,8 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
     await gotoTable(page, "users");
 
     await applyStatusPill(page, "active", "users");
-    await applySort(page, "username", "Ascending");
+    await clickColumnHeader(page, "username");
+    await pickSort(page, "asc");
     await waitForPagesGet(page, "users");
 
     // Save #1: filter-only.
@@ -656,7 +579,8 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
     await applyPickerItem(page, "Standard", { table: "users" });
 
     await applyStatusPill(page, "pending", "users");
-    await applySort(page, "email", "Descending");
+    await clickColumnHeader(page, "email");
+    await pickSort(page, "desc");
     await waitForPagesGet(page, "users");
     await expect(sortIndicator(page, "email", "desc")).toHaveCount(1);
 
@@ -850,30 +774,16 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
   });
 
   test("11.7.10 — Cancel button discards pending edits without firing HTTP", async () => {
-    // Capture baseline: which row (if any) is currently pinned-default and
-    // public-toggled BEFORE we start editing. Post-Cancel re-open we assert
-    // the dialog reverts to this baseline — not blindly-empty — so the test
-    // also passes when prior tests left a pinned/public state behind.
     const menu = await openPresetPicker(page);
     const dialog = await openManageDialog(page, menu);
 
-    // Pre-baseline: take note of which rows carry data-on=""  for default /
-    // public toggles. The shape is `[locator-string, count]` recorded BEFORE
-    // any pending edits land. We re-assert this after Cancel + re-open.
+    // Snapshot data-on counts on default + public toggles BEFORE any
+    // pending edits land. Re-asserting these counts after Cancel + re-open
+    // is baseline-tolerant — passes regardless of state earlier tests left.
     const rowMyB = dialogRow(dialog, "My B v2");
     const rowMyC = dialogRow(dialog, "My C");
-    const baselineMyBDefault = await rowMyB
-      .locator(".as-preset-dialog-row-default[data-on='']")
-      .count();
-    const baselineMyBPublic = await rowMyB
-      .locator(".as-preset-dialog-row-public-toggle[data-on='']")
-      .count();
-    const baselineMyCDefault = await rowMyC
-      .locator(".as-preset-dialog-row-default[data-on='']")
-      .count();
-    const baselineMyCPublic = await rowMyC
-      .locator(".as-preset-dialog-row-public-toggle[data-on='']")
-      .count();
+    const baseMyB = await snapshotRowToggles(rowMyB);
+    const baseMyC = await snapshotRowToggles(rowMyC);
 
     // Stage four kinds of pending edits to exercise every branch of
     // `syncPendingFromServer()` reset on dialog re-open:
@@ -923,23 +833,11 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
     const menu2 = await openPresetPicker(page);
     const dialog2 = await openManageDialog(page, menu2);
 
-    // 1. Default-pin reverted to baseline on both `My B v2` and `My C`.
+    // 1+2. Default-pin and public toggles reverted to baseline on both rows.
     const myB2 = dialogRow(dialog2, "My B v2");
     const myC2 = dialogRow(dialog2, "My C");
-    await expect(myC2.locator(".as-preset-dialog-row-default[data-on='']")).toHaveCount(
-      baselineMyCDefault,
-    );
-    await expect(myB2.locator(".as-preset-dialog-row-default[data-on='']")).toHaveCount(
-      baselineMyBDefault,
-    );
-
-    // 2. Public-toggle on `My B v2` reverted to baseline.
-    await expect(myB2.locator(".as-preset-dialog-row-public-toggle[data-on='']")).toHaveCount(
-      baselineMyBPublic,
-    );
-    await expect(myC2.locator(".as-preset-dialog-row-public-toggle[data-on='']")).toHaveCount(
-      baselineMyCPublic,
-    );
+    expect(await snapshotRowToggles(myB2)).toEqual(baseMyB);
+    expect(await snapshotRowToggles(myC2)).toEqual(baseMyC);
 
     // 3. Mark-for-delete reverted: `My B v2` no longer carries data-deleted.
     await expect(myB2).not.toHaveAttribute("data-deleted", "");

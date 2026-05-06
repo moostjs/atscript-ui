@@ -149,3 +149,97 @@ The toolbar's three buttons (Columns / Filters / Sorters) all open the same `<As
 **Does not:** drag-reorder via HTML5 drag events (Playwright's `dragTo` flakes on Reka-style overlays). Use the click-arrow path instead — same effect, deterministic.
 
 **Phase-2 add via RFC if you need:** `searchConfigList(dialog, term)`, `clearAllSorters(dialog)`, `setSorterDirection(dialog, label, dir)`. The first two are likely; the third was inlined-and-then-removed during batch C's simplify pass since it's a one-liner at the call site.
+
+---
+
+## selection.ts — `toggleSelectMode`, `selectRowByIndex`, `clearSelection`, `selectedRowCellTexts`
+
+Multi-select toggle + checkbox interaction (Section 9 + supporting paths in batches F / G / H). Promoted in Phase-3 after the `toggleSelectMode` + `selectRowByIndex` shapes appeared in 5+ files.
+
+- `toggleSelectMode(page)` — clicks `.as-page-title-toggle` (first match).
+- `selectRowByIndex(table, rowIndex)` — clicks `.as-td-select .as-table-checkbox` inside the row at `rowIndex`. Click target is the checkbox cell (NOT the row body) so the gesture stays scoped to the checkbox-toggle path documented in `as-table-base.vue`.
+- `clearSelection(page)` — clicks toolbar `Clear` then exits multi-select. Use between sub-tests in serial chains.
+- `selectedRowCellTexts(table, columnPath)` — trimmed text of the `columnPath` cell for every `aria-selected="true"` row. Drives 9.2's selection-trim assertion.
+
+**Phase-2 add via RFC if you need:** `selectRowByCellText(table, column, text)`, `selectAllOnPage(page)`. Both are one-liners at the call site today; promote when 3+ specs need them.
+
+---
+
+## pagination.ts — `clickPaginationPage`, `clickPaginationNext`, `setItemsPerPage`
+
+TablePage's `<TablePagination>` — paginated browsing (Section 10). The pagination component is demo-side, not framework-side, so selectors target `.table-pagination*` (no `as-` prefix).
+
+- `clickPaginationPage(page, n)` — clicks `.table-pagination-btn` whose label is exactly `n` (anchored regex).
+- `clickPaginationNext(page)` — clicks `.table-pagination-btn[aria-label='Next page']`.
+- `setItemsPerPage(page, n)` — `selectOption` on `.table-pagination select.i8-filled`.
+
+**Does not:** assert on the wire (`$page` / `$size`) — compose with `expectSinglePages(page, () => clickPaginationPage(...))` and assert on the captured URL.
+
+---
+
+## rows.ts — `columnCellIndex`, `rowByCellText`, `userRowByName`, `texts`
+
+Row identity + cell access (Sections 2 / 8 / 10). All four were inlined across 6+ specs; the canonical signatures live here.
+
+- `columnCellIndex(table, columnPath)` — `cellIndex` of `<thead th[data-column-path="…"]>`. Asserts exactly one match (loud failure on duplicate / missing column).
+- `rowByCellText(table, columnIndex, text)` — `tbody tr` filter via XPath `./td[N][normalize-space(.)="text"]`. Returns the unfiltered Locator; caller chooses `.first()`.
+- `userRowByName(table, name)` — `/users` specialization (resolves `username` column index, asserts single match).
+- `texts(loc)` — `evaluateAll` → trimmed `textContent` for every match. Fast for large lists.
+
+**Phase-2 add via RFC if you need:** `customerRowById(table, id)` etc. — only if a fourth specialization actually appears across batches. Most specs should compose `columnCellIndex` + `rowByCellText` directly.
+
+---
+
+## actions.ts — `openRowActionsMenu`, `clickRowMenuItem`, `clickToolbarAction`, `awaitActionFormReady`, `dismissActionForm`, `dismissConfirm`, `findToast`
+
+Action surfaces (Section 8). Promoted in Phase-3 from batch F (mutating-actions) + batch E (action-render).
+
+- `openRowActionsMenu(page, row)` — clicks `.as-row-actions-more`, awaits the portalled `.as-row-actions-menu`. Returns the menu Locator.
+- `clickRowMenuItem(menu, label)` — clicks `.as-row-actions-menu-item` whose text contains `label`.
+- `clickToolbarAction(page, label)` — clicks the toolbar `.as-table-actions-btn` whose label contains `label`.
+- `awaitActionFormReady(page)` — waits for `.as-action-form-content` + at least one form input. Returns the form Locator. Specs that need a specific named field add their own `expect(...).toHaveCount(1)` after.
+- `dismissActionForm(page)` — clicks `.as-action-form-cancel` and asserts dismount.
+- `dismissConfirm(page)` — clicks `.as-confirm-dialog-cancel` and asserts dismount.
+- `findToast(page, contains)` — TablePage's `<ToastStack>` is `.fixed.bottom-4.right-4 > div`; filter by text. Asserts visible. Does NOT dismiss the toast.
+
+**Phase-2 add via RFC if you need:** `confirmConfirmDialog(page)` (clicks Confirm), `submitActionForm(page, fields)`. The first is a one-liner today; the second needs a stable field-fill API design (per-type input handling).
+
+---
+
+## columns.ts — `clickColumnHeader`, `pickSort`, `sortIndicator`
+
+Column-header sort menu surface (Sections 6 + 7 + 11). Promoted from batches C / D / H.
+
+- `clickColumnHeader(page, columnPath)` — clicks `<button class="as-th-btn">` inside the matching `<th>`. The `<th>` itself is the drag-reorder surface, so the inner button is the click target. Scoped to `table[data-as-main-table]` so an open value-help dropdown (its own `table.as-table`) doesn't match.
+- `pickSort(page, dir)` — clicks `Ascending` / `Descending` in the open `.as-column-menu-content`.
+- `sortIndicator(page, columnPath, dir)` — Locator for the `.as-th-sort.i-as-arrow-{up,down}` glyph on the matching column header. Scoped to `table[data-as-main-table]` so it ignores secondary tables (e.g. value-help inside filter dialogs).
+
+**Phase-2 add via RFC if you need:** `clickColumnMenuItem(page, label)` (currently a one-liner with `pickSort` covering the common case), `hideColumn(page, columnPath)` (column-menu Hide entry).
+
+---
+
+## preset.ts — `openPresetPicker`, `openSaveAsPopover`, `openManageDialog`, `dialogRow`, `applyPickerItem`
+
+Preset picker + manager dialog navigation (Section 11). Promoted from batch H — `applyPickerItem` was used 7×, the strongest dedup candidate of the entire RFC slate.
+
+- `openPresetPicker(page)` — clicks `.as-preset-picker-trigger`, asserts `.as-preset-picker-menu` visible. Returns the menu Locator.
+- `openSaveAsPopover(page, menu)` — clicks `Save as` action in the open menu, asserts `.as-preset-picker-popover` visible. Returns the popover Locator.
+- `openManageDialog(page, menu)` — clicks `Manage presets` action in the open menu, asserts `.as-preset-dialog-content` visible. Returns the dialog Locator.
+- `dialogRow(dialog, label)` — Locator for the `.as-preset-dialog-row` whose `.as-preset-dialog-row-label-text` exactly matches `label`. Scoped to the supplied dialog so it ignores any other dialogs in the DOM.
+- `applyPickerItem(page, label, opts?)` — opens picker, clicks the named row, awaits menu dismount; with `{ table }` also waits for the `/pages` GET refetch.
+
+**Phase-2 add via RFC if you need:** `setAspectMask(popover, mask)` (Save-as aspect checkboxes — currently inline in 11.5/11.6), `clickDialogRowAction(row, name)` (pin / star / public / trash icons inside a manager-dialog row).
+
+---
+
+## wire.ts — `captureWire`, `captureLastPost`, `capturePresetWire`
+
+Wire-request capture with leak-free `dispose()` (Sections 8 + 11). Promoted in Phase-3 to fix batch F's listener-leak — the original `captureWirePost` attached a `page.on("request")` handler that never detached, so handlers accumulated across the serial chain (each new test added another handler firing on every subsequent request).
+
+- `captureWire(page, { urlSubstring, method? })` — generalised. Returns `{ records, reset, dispose }`. Bodies JSON-parsed when possible, fall back to raw string. ALWAYS call `dispose()` from a `try/finally`.
+- `captureLastPost(page, urlSubstring)` — narrow shape mirroring batch F's `captureWirePost` but with `dispose()`. Returns `{ body(), dispose() }` — `body()` returns `null` until the first matching POST fires, then the most-recent POST body string.
+- `capturePresetWire(page)` — convenience wrapper for `/api/db/_presets` (batch H's specialisation).
+
+**Does not:** consume the response body. Use `page.waitForResponse(...)` for status / response-body assertions.
+
+**Phase-2 add via RFC if you need:** response capture (`{ records: ResponseRecord[]; … }`), regex-URL match (`urlPattern: RegExp`).
