@@ -767,6 +767,10 @@ export function createTableState(opts: CreateTableStateOptions): {
   function emitUrlIfChanged(): void {
     if (!queryOpts?.onUrlQueryChange) return;
     if (hydratingFromUrl) return;
+    // Suppress emits until the bootstrap gate releases — otherwise preset
+    // baseline writes would ricochet through the router and overwrite the
+    // user's deep-link query before `applyUrlQuery` overlays on top of it.
+    if (queryOpts.urlQueryReady && !queryOpts.urlQueryReady.value) return;
     const next = serializeStateForUrl();
     if (next === lastEmittedUrl) return;
     lastEmittedUrl = next;
@@ -791,27 +795,25 @@ export function createTableState(opts: CreateTableStateOptions): {
     const wasQueryDetected = queryDetected;
     hydratingFromUrl = true;
 
+    // Per-field overlay: URL fields override, others (preset/local) survive.
+    // Allowlist gating is already applied by the parser (parsed.filters only
+    // contains allowlisted paths in that mode), so the merge step is the
+    // same shape for "all" and allowlist.
     const filtersGate = resolveAspectGate(urlQuerySync?.filters);
-    if (filtersGate === "all") {
-      filters.value = parsed.filters;
-    } else if (filtersGate !== "none") {
-      // Allowlist: replace allowlist entries (or delete if absent in parsed),
-      // preserve non-allowlist entries.
-      const next: FieldFilters = {};
-      for (const path in filters.value) {
-        if (!filtersGate.has(path)) next[path] = filters.value[path];
-      }
+    if (filtersGate !== "none") {
+      const next: FieldFilters = { ...filters.value };
       for (const path in parsed.filters) next[path] = parsed.filters[path];
       filters.value = next;
     }
 
+    // Sorters merge field-level: drop existing sorters whose field URL
+    // re-specifies, then append URL's. Preserves preset sorters whose field
+    // URL is silent on.
     const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
-    if (sortersGate === "all") {
-      if (!sortersEqual(sorters.value, parsed.sorters)) sorters.value = parsed.sorters;
-    } else if (sortersGate !== "none") {
-      // Allowlist: drop existing sorters whose field is in allowlist, then
-      // append parsed (decoder already filtered to allowlist).
-      const survivors = sorters.value.filter((s) => !sortersGate.has(s.field));
+    if (sortersGate !== "none") {
+      const urlFields = new Set<string>();
+      for (const s of parsed.sorters) urlFields.add(s.field);
+      const survivors = sorters.value.filter((s) => !urlFields.has(s.field));
       const merged = [...survivors, ...parsed.sorters];
       if (!sortersEqual(sorters.value, merged)) sorters.value = merged;
     }

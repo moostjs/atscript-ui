@@ -326,6 +326,73 @@ describe("URL query bridge — first-query gate via urlQueryReady", () => {
     const [query] = pagesFn.mock.calls[0];
     expect(query).toMatchObject({ filter: { status: "active" } });
   });
+
+  it("suppresses URL emit while urlQueryReady is false (preset baseline can't ricochet the deep-link query)", async () => {
+    // Pre-hydration mutations (preset apply, programmatic seed) must not
+    // serialize through the router — otherwise they overwrite the user's
+    // deep-link query before `applyUrlQuery` overlays on top.
+    const urlQueryReady = ref(false);
+    const onUrlQueryChange = vi.fn();
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("customer")],
+      queryOnMount: true,
+      urlQueryReady,
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    // Preset baseline write before the gate releases.
+    state.filters.value = {
+      status: [{ type: "eq", value: ["pending"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    };
+    await nextTick();
+    await nextTick();
+    expect(onUrlQueryChange).not.toHaveBeenCalled();
+
+    urlQueryReady.value = true;
+    await nextTick();
+
+    state.setFieldFilter("status", [{ type: "eq", value: ["shipped"] }]);
+    await nextTick();
+    expect(onUrlQueryChange).toHaveBeenCalled();
+  });
+
+  it("URL deep-link overrides preset baseline at the field level (preset's other fields preserved)", async () => {
+    const urlQueryReady = ref(false);
+    const onUrlQueryChange = vi.fn();
+    const { state, pagesFn } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("customer")],
+      queryOnMount: true,
+      urlQueryReady,
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    state.filters.value = {
+      status: [{ type: "eq", value: ["pending"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    };
+    await nextTick();
+
+    // URL specifies only `status`; preset's `customer` must survive.
+    state.applyUrlQuery("status=shipped");
+    urlQueryReady.value = true;
+    await nextTick();
+    await nextTick();
+
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["shipped"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    });
+
+    // Single composed fetch carries the merged multi-field state.
+    expect(pagesFn).toHaveBeenCalledTimes(1);
+    const [query] = pagesFn.mock.calls[0];
+    expect(query).toMatchObject({
+      filter: { $and: [{ status: "shipped" }, { customer: "5" }] },
+    });
+  });
 });
 
 describe("urlQuerySync — emit gating", () => {

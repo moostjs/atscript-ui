@@ -101,7 +101,13 @@ export const asPresetDialogShortcuts = defineShortcuts({
   // system rows) so labels still align with the public-preset rows below.
   "as-preset-dialog-row-fav-spacer": "inline-block size-fingertip-s shrink-0",
   "as-preset-dialog-row-label": "flex-1 min-w-0 flex items-center gap-$s",
-  "as-preset-dialog-row-label-text": "truncate text-body",
+  // `[data-pending]` modifier signals a staged rename. Asterisk lives on
+  // `::after` so the `truncate` ellipsis on long labels doesn't eat it.
+  "as-preset-dialog-row-label-text": {
+    "": "truncate text-body",
+    "[&[data-pending]]:": "italic text-primary-500",
+    "[&[data-pending]]:after:": "content-['*'] ml-$xxs not-italic",
+  },
   // `scope-primary` so the inline rename's focus ring + outline match
   // the search input — same accent for "actively editing this control".
   "as-preset-dialog-row-rename":

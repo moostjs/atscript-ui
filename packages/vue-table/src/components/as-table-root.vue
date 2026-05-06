@@ -169,9 +169,10 @@ const state = useTable(props.url, {
 
 if (urlQueryActive) {
   // Wait for tableDef (schema-driven parsing) AND preset bootstrap. Preset
-  // writes its baseline first, URL overlays on top — so a deep link survives
-  // a preset that would otherwise clear filters. `preset.ready` is `true`
-  // when the feature isn't wired, so non-preset tables stay single-step.
+  // writes its baseline first, URL overlays per-field on top — so a deep
+  // link survives a preset that would otherwise clear filters, and preset's
+  // non-URL fields are preserved. `preset.ready` is `true` when the feature
+  // isn't wired, so non-preset tables stay single-step.
   watch(
     [() => state.tableDef.value, () => urlQuery.value, () => state.preset.ready.value],
     ([def, q, presetReady]) => {

@@ -123,6 +123,9 @@ interface DialogRow {
   isPublic: boolean;
   ownerLabel: string; // "—" for system, "you" for owned, username for others
   aspects: PresetAspect[];
+  // True when `pendingLabels[id]` differs from the DB label — drives the
+  // `[data-pending]` "modified" visual on the row label.
+  pendingLabel: boolean;
 }
 
 interface DialogSection {
@@ -142,13 +145,17 @@ const allRows = computed<DialogRow[]>(() => {
       isPublic: false,
       ownerLabel: "—",
       aspects: [...state.preset.availableAspects],
+      pendingLabel: false,
     });
   }
   const stored: DialogRow[] = [];
   for (const row of state.preset.presets.value) {
     const isOwned = state.preset.isOwned(row.id);
-    // Pending label takes precedence so edits show through until Save (or Cancel) commits.
-    const liveLabel = pendingLabels.value.get(row.id) ?? readPresetLabel(row);
+    // Pending label takes precedence so edits show through until Save (or
+    // Cancel) commits.
+    const original = readPresetLabel(row);
+    const pending = pendingLabels.value.get(row.id);
+    const liveLabel = pending ?? original;
     stored.push({
       id: row.id,
       label: liveLabel,
@@ -156,6 +163,7 @@ const allRows = computed<DialogRow[]>(() => {
       isPublic: pendingPublicIds.value.has(row.id),
       ownerLabel: isOwned ? "you" : ownerNameOf(row, "—"),
       aspects: aspectsOf(row, state.preset.availableAspects),
+      pendingLabel: pending !== undefined && pending !== original,
     });
   }
   // Owned rows aren't pinned above public — single sort order maintains
@@ -551,12 +559,18 @@ function canToggleRowPublic(row: DialogRow): boolean {
                 <span
                   v-else-if="row.kind === 'owned' && !pendingDeleteIds.has(row.id)"
                   class="as-preset-dialog-row-label-text cursor-pointer"
-                  title="Click to rename"
+                  :data-pending="row.pendingLabel ? '' : undefined"
+                  :title="row.pendingLabel ? 'Modified — click to keep editing' : 'Click to rename'"
                   @mousedown.prevent.stop="startRename(row)"
                 >
                   {{ row.label }}
                 </span>
-                <span v-else class="as-preset-dialog-row-label-text">{{ row.label }}</span>
+                <span
+                  v-else
+                  class="as-preset-dialog-row-label-text"
+                  :data-pending="row.pendingLabel ? '' : undefined"
+                  >{{ row.label }}</span
+                >
               </div>
               <span class="as-preset-dialog-row-owner">
                 <span v-if="row.kind === 'owned'" class="as-preset-dialog-row-owner-self">you</span>

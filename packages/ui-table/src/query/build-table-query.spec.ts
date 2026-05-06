@@ -88,6 +88,24 @@ describe("buildTableQuery", () => {
     });
   });
 
+  it("wraps same-field collision so wire shape survives upstream parser merge", () => {
+    // forceFilters AND user filter target `status` with the same op — see
+    // `mergeFilters` for the `$not($not(...))` wrap rationale.
+    const filters: FieldFilters = {
+      status: [{ type: "eq", value: ["shipped"] }],
+    };
+    const forceFilters = { status: "cancelled" };
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters,
+      forceFilters,
+    });
+    expect(q.filter).toEqual({
+      $and: [{ status: "cancelled" }, { $not: { $not: { status: "shipped" } } }],
+    });
+  });
+
   it("uses forceFilters alone when user filters are empty", () => {
     const q = buildTableQuery({
       visibleColumnPaths: [],

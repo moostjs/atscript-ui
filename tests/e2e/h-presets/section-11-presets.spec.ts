@@ -49,11 +49,11 @@
 //     fires when clicking a picker row. The /pages refetch comes from the
 //     state-watcher reacting to the snapshot mutation.
 //
-// Documented divergences from scenario doc (asserted as observed):
-//   11.4   TWO /pages fetches fire (URL first, then preset overlay
-//          overrides) — scenario predicted single composed fetch.
-//   11.8   user-side preset filter wins over `forceFilters` overlay
-//          when both target the same field — scenario predicted ∅.
+// Wire-shape note (11.8): `forceFilters` AND user-side preset filters are
+// merged in `buildTableQuery` (`mergeFilters`). Same-field collisions go
+// out as `?status=cancelled&!(!(status=shipped))` — the `$not($not(...))`
+// wrap defeats `@uniqu/url`'s `mergeConjunction` collapse so both clauses
+// reach the server.
 
 import { type Locator, type Page, expect, test } from "@playwright/test";
 
@@ -465,7 +465,7 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
   // 11.4 — Deep-link with default-pinned preset.
   // Uses fresh contexts to avoid polluting the shared `page` state.
 
-  test("11.4 — saved preset baseline + URL deep-link load (observed: preset overrides URL)", async ({
+  test("11.4 — saved preset baseline + URL deep-link load (single composed fetch, URL wins on field conflict)", async ({
     browser,
   }) => {
     // Setup: in a temp context, save a preset and pin it as default.
@@ -509,12 +509,12 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
       await expect(dlPage.getByText("Loading…", { exact: true })).toHaveCount(0);
       await dlPage.waitForTimeout(700);
 
-      // OBSERVED divergence from scenario doc: TWO /pages fire — URL first
-      // (`status=shipped`), then preset overlay overrides (`status=pending`).
-      // Scenario doc says single composed fetch with URL winning; observed
-      // is double-fetch with preset winning. We assert >= 1 fetch fired and
-      // the active preset is `Pending only`. Flag for follow-up.
-      expect(observed.length).toBeGreaterThanOrEqual(1);
+      // Single composed `/pages` fetch on first paint; URL's `status=shipped`
+      // wins over preset's `status=pending` at the field level. Preset stays
+      // "active" (label, dirty glyph) — only the colliding field is overlaid.
+      expect(observed.length).toBe(1);
+      expect(observed[0]).toContain("status=shipped");
+      expect(observed[0]).not.toContain("status=pending");
       await expect(dlPage.locator(PICKER_TRIGGER_LABEL)).toHaveText("Pending only");
     } finally {
       await fresh.close();
@@ -841,7 +841,7 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
   // -------------------------------------------------------------------
   // 11.8 — forceFilters overlay survives preset apply.
 
-  test("11.8 — preset with status='shipped' applied on /orders-cancelled (observed: user filter wins)", async ({
+  test("11.8 — preset with status='shipped' applied on /orders-cancelled AND-merges with forceFilters (empty result)", async ({
     browser,
   }) => {
     // Setup: in a fresh context, save `Shipped overlay` on /orders-cancelled.
@@ -874,14 +874,13 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
         },
         { table: "orders" },
       );
-      // OBSERVED: the wire query carries `status=shipped` only; the
-      // `forceFilters: { status: 'cancelled' }` from the route config
-      // does NOT compose with the user-side preset filter on the wire
-      // when both target the same field. Result: shipped rows appear
-      // (NOT empty as scenario doc predicted). Documented as divergence.
-      expect(decodeURIComponent(captured.url)).toMatch(/status=['"]?shipped['"]?/u);
+      // Wire shape: `?status=cancelled&!(!(status=shipped))` — both clauses
+      // reach the server, AND-evaluated, no row is both → empty result.
+      const decoded = decodeURIComponent(captured.url);
+      expect(decoded).toMatch(/status=['"]?cancelled['"]?/u);
+      expect(decoded).toMatch(/!\(!\(status=['"]?shipped['"]?\)\)/u);
       const rows = dlPage.locator("table[data-as-main-table] tbody tr:has(td)");
-      expect(await rows.count()).toBeGreaterThan(0);
+      await expect(rows).toHaveCount(0);
     } finally {
       await fresh.close();
     }
