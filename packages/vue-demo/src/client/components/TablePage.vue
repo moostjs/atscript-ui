@@ -40,6 +40,7 @@ const actionsColumn = computed<ActionsColumn>(() => tableMeta.value?.actionsColu
 const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
 const apiPath = computed(() => tableMeta.value?.apiPath ?? props.path);
 const forceFilters = computed(() => tableMeta.value?.forceFilters);
+const systemPresets = computed(() => tableMeta.value?.systemPresets);
 
 const { me, loaded: meLoaded } = useMe();
 const canWrite = computed(() => !!me.value?.permissions?.[props.path]?.write);
@@ -68,14 +69,6 @@ watch(
   () => props.path,
   () => {
     selectMode.value = "none";
-  },
-);
-
-const filterFields = ref<string[]>([...(tableMeta.value?.defaultFilterFields ?? [])]);
-watch(
-  () => props.path,
-  () => {
-    filterFields.value = [...(tableMeta.value?.defaultFilterFields ?? [])];
   },
 );
 
@@ -202,7 +195,6 @@ function onAction(
     <AsTableRoot
       v-else
       :key="path"
-      v-model:filter-fields="filterFields"
       v-model:url-query="urlQuery"
       :url-query-sync="urlQuerySync"
       :url="`/api/db/tables/${apiPath}`"
@@ -213,7 +205,7 @@ function onAction(
       :row-value-fn="rowValueFn"
       :refresh-on-action="true"
       :force-filters="forceFilters"
-      :preset="{ url: '/api/db/_presets', tableKey: path }"
+      :preset="{ url: '/api/db/_presets', tableKey: path, systemPresets }"
       class="flex-1 flex flex-col min-h-0 min-w-0"
       @action="onAction"
     >

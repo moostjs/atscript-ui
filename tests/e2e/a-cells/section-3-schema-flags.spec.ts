@@ -74,8 +74,8 @@ test.describe("Section 3 — Schema-driven flags", () => {
 
     // Toolbar Filters dialog: footer summary advertises filterable count.
     // Customers has 6 columns; address + preferences are `@db.json` →
-    // 4 filterable remain. Default `defaultFilterFields` is empty for
-    // customers, so the model count is 0.
+    // 4 filterable remain. Customers has no `systemPresets` so the empty
+    // Standard preset expands to no filter pills — model count is 0.
     await page.getByTitle("Filters", { exact: true }).click();
     const dialog = page.locator(".as-config-dialog-content");
     await expect(dialog).toBeVisible();

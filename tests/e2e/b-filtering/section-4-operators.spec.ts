@@ -26,6 +26,13 @@ import { expectSinglePages, gotoTable } from "../helpers";
  * (no query fires) — the caller owns the value-set step.
  */
 async function addFilterPill(page: Page, label: string): Promise<Locator> {
+  const pill = page
+    .locator(".as-filter-field")
+    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
+  // Idempotent: tables can ship a Standard preset with `content.filters`
+  // that auto-renders pills on first paint (e.g. /users → Status + Role).
+  // Short-circuit when the named pill already exists.
+  if ((await pill.count()) === 1) return pill;
   await page.getByTitle("Filters", { exact: true }).click();
   const dialog = page.locator(".as-config-dialog-content");
   await expect(dialog).toBeVisible();
@@ -35,9 +42,6 @@ async function addFilterPill(page: Page, label: string): Promise<Locator> {
   await row.click();
   await dialog.locator(".as-filter-btn-apply").click();
   await expect(dialog).toHaveCount(0);
-  const pill = page
-    .locator(".as-filter-field")
-    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
   await expect(pill).toHaveCount(1);
   return pill;
 }
@@ -161,17 +165,27 @@ test.describe("Section 4.3 — Operator coverage on /users", () => {
     await expect(dataRows(page)).toHaveCount(1);
   });
 
-  // BLOCKED on atscript-db regex-to-LIKE bug: the wildcard input `*@demo.test`
-  // emits regex source `@demo\.test$` (escapeRegex turns `.` → `\.`).
-  // `@atscript/db-sqlite`'s `regexToLike` translates `\.` → `\_`, but SQLite
-  // LIKE without an `ESCAPE` clause treats `\` as a literal char and `_` as
-  // a single-char wildcard, so the predicate becomes "literal `\` then any
-  // char" and matches zero rows. See ../atscript-db/REGEX_ISSUE.md.
-  // Pre-uniqu-0.1.6 this passed by accident: parseUrl ate the unescaped
-  // backslash, regex source was `@demo.test$`, and `_` matching `.` gave
-  // false positives.
-  test.skip("ends — Email `*@demo.test`", async ({ page: _page }) => {
-    void _page;
+  test("ends — Email `*@demo.test`", async ({ page }) => {
+    await gotoTable(page, "users");
+    const pill = await addFilterPill(page, "Email");
+    const captured = await expectSinglePages(
+      page,
+      async () => {
+        const input = pill.locator(".as-filter-field-search");
+        await input.fill("*@demo.test");
+        await input.press("Enter");
+      },
+      { table: "users" },
+    );
+    const decoded = decodeURIComponent(captured.url);
+    // `*text` → `ends` operator → regex `/@demo\.test$/i`. uniqu 0.1.6
+    // escapes `\` as `\\` inside quoted strings (wire format), so the regex
+    // source's single backslash appears as `\\` after percent-decoding.
+    // atscript-db 0.1.66's `regexToLike` translates `\.` to a literal `.`
+    // via the `ESCAPE '\'` clause, so the LIKE predicate matches.
+    expect(decoded).toContain("email~='/@demo\\\\.test$/i'");
+    // All 5 seeded users (admin/manager/viewer/alice/bob) have @demo.test emails.
+    await expect(dataRows(page)).toHaveCount(5);
   });
 
   test("regex — Username `/^a/`", async ({ page }) => {

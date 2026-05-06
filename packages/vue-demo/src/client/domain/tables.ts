@@ -1,4 +1,4 @@
-import type { UrlQuerySync } from "@atscript/vue-table";
+import type { SystemPresetInput, UrlQuerySync } from "@atscript/vue-table";
 
 export type TableMode = "pagination" | "infinite";
 export type TableKind = "virtual" | "window";
@@ -43,8 +43,14 @@ export interface DemoTable {
    * mode. Demo configures different placements per resource for showcase.
    */
   actionsColumn?: ActionsColumn;
-  /** Filter pills to show in the toolbar on first render (empty-valued — user still has to pick). */
-  defaultFilterFields?: string[];
+  /**
+   * Synthetic system presets injected into the picker (`sys:*` namespace,
+   * never persisted). The `Standard` preset is the source of first-paint
+   * baseline state — set `content.filters` here to render filter pills by
+   * default, or `content.sorters` for a default sort, etc. Tables that omit
+   * this fall back to the empty Standard (no pills, no sorters).
+   */
+  systemPresets?: SystemPresetInput[];
   /**
    * Opt out of the built-in synthetic `__remove` row action even when the
    * user has write permission. Useful when a table has exactly one declared
@@ -69,7 +75,9 @@ export const DEMO_TABLES: DemoTable[] = [
     resource: "users",
     icon: "i-ph:users",
     actionsColumn: "last",
-    defaultFilterFields: ["status", "roleId"],
+    systemPresets: [
+      { id: "standard", label: "Standard", content: { filters: ["status", "roleId"] } },
+    ],
     urlQuerySync: { sorters: false },
   },
   { path: "roles", label: "Roles", resource: "roles", icon: "i-ph:shield-check" },
@@ -80,7 +88,7 @@ export const DEMO_TABLES: DemoTable[] = [
     resource: "products",
     icon: "i-ph:package",
     actionsColumn: "first",
-    defaultFilterFields: ["categoryId"],
+    systemPresets: [{ id: "standard", label: "Standard", content: { filters: ["categoryId"] } }],
   },
   {
     path: "customers",
@@ -96,7 +104,9 @@ export const DEMO_TABLES: DemoTable[] = [
     icon: "i-ph:shopping-cart",
     mode: "pagination",
     actionsColumn: "merge-select",
-    defaultFilterFields: ["customerId", "status"],
+    systemPresets: [
+      { id: "standard", label: "Standard", content: { filters: ["customerId", "status"] } },
+    ],
     // Shareable filtered view: recipients see filters but land on page 1
     // (no `pagination` round-trip). The `filters` allowlist also exercises
     // the `string[]` form of `urlQuerySync.filters` — only `status` and
@@ -126,7 +136,9 @@ export const DEMO_TABLES: DemoTable[] = [
     icon: "i-ph:list-magnifying-glass",
     kind: "window",
     limit: 100,
-    defaultFilterFields: ["action", "entityType"],
+    systemPresets: [
+      { id: "standard", label: "Standard", content: { filters: ["action", "entityType"] } },
+    ],
   },
 ];
 

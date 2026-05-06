@@ -10,6 +10,12 @@ import { type Locator, type Page, expect, test } from "@playwright/test";
 import { expectNoPages, expectSinglePages, gotoTable } from "../helpers";
 
 async function addFilterPill(page: Page, label: string): Promise<Locator> {
+  const pill = page
+    .locator(".as-filter-field")
+    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
+  // Idempotent: short-circuit when the named pill already exists (the
+  // Standard preset can auto-render pills on first paint).
+  if ((await pill.count()) === 1) return pill;
   await page.getByTitle("Filters", { exact: true }).click();
   const dialog = page.locator(".as-config-dialog-content");
   await expect(dialog).toBeVisible();
@@ -19,9 +25,6 @@ async function addFilterPill(page: Page, label: string): Promise<Locator> {
   await row.click();
   await dialog.locator(".as-filter-btn-apply").click();
   await expect(dialog).toHaveCount(0);
-  const pill = page
-    .locator(".as-filter-field")
-    .filter({ has: page.locator(`label.as-filter-field-label:text-is("${label}")`) });
   await expect(pill).toHaveCount(1);
   return pill;
 }
@@ -113,9 +116,18 @@ test.describe("Section 4.13 — Pill-input special prefix / wildcard syntax", ()
       typed: "bob*",
       fragment: "profile.firstName~='/^bob/i'",
     },
-    // Skipped: same regex-to-LIKE bug as the `ends` test in section-4-operators.
-    // `*demo.test` → regex `\demo\.test$` (well, `demo\.test$`) → LIKE `%demo\_test`
-    // → 0 rows. See ../atscript-db/REGEX_ISSUE.md.
+    {
+      label: "*demo.test",
+      column: "Email",
+      table: "users",
+      typed: "*demo.test",
+      // `*text` → `ends` op → regex `/demo\.test$/i`. uniqu 0.1.6 escapes
+      // `\` as `\\` inside quoted strings, and atscript-db 0.1.66's
+      // `regexToLike` then translates `\.` to a literal `.` via the
+      // `ESCAPE '\'` clause so the LIKE predicate matches the 5 seeded
+      // `@demo.test` rows.
+      fragment: "email~='/demo\\\\.test$/i'",
+    },
     {
       label: "=Admin",
       column: "First Name",

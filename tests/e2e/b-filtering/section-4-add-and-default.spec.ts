@@ -1,16 +1,14 @@
-// Section 4 — Filtering: add via dialog + default-filter-fields drift.
+// Section 4 — Filtering: add via dialog + default-filter-fields baseline.
 //
 // Read-only batch. Asserts:
 //   - 4.1 Adding a filter pill via the toolbar Filters dialog: Apply closes
 //     dialog, pill appears, NO query fires for an empty pill, then typing
 //     `bob` produces ONE `/pages?...firstName...` after the 500 ms debounce.
-//   - 4.2 Spec-vs-impl drift on `defaultFilterFields`. The DemoTable
-//     declares `defaultFilterFields` for users / orders / products, but the
-//     preset bootstrap (system Standard preset) clobbers `filterFields` to
-//     `[]` on first paint. So no pills auto-render. We assert the columns
-//     ARE filterable (visible in the Filters dialog) so a future fix
-//     stays observable. The expected "pills render by default" behaviour
-//     is flagged in the batch hand-off.
+//   - 4.2 First-paint baseline pills come from the Standard system preset's
+//     `content.filters`. The demo configures `systemPresets: [{ id:
+//     'standard', label: 'Standard', content: { filters: [...] } }]` per
+//     table; preset bootstrap applies the resolved default and the named
+//     pills auto-render empty-valued.
 //
 // Selector strategy: filter pills carry `<label class="as-filter-field-label">`
 // with the column.label text. The Filters tab in the toolbar config dialog
@@ -115,49 +113,50 @@ test.describe("Section 4 — Filtering: add and default", () => {
     expect((bobCell ?? "").trim()).toBe("bob");
   });
 
-  test("4.2: defaultFilterFields columns ARE filterable (drift: pills no longer auto-render)", async ({
+  test("4.2: Standard preset's content.filters renders pills auto-rendered on first paint", async ({
     page,
   }) => {
-    // Spec-vs-impl drift: TABLE_SCENARIOS.md expects pills `Status` + `Role`
-    // to auto-render on `/users` (per `defaultFilterFields: ['status',
-    // 'roleId']`), but the preset bootstrap (system Standard preset) clears
-    // `filterFields` to `[]` after mount, hiding all pills. Until that's
-    // resolved, we verify the demo's *intent* — the named columns are
-    // available to add as filter pills via the toolbar dialog — and assert
-    // the current observable state (zero pills auto-rendered).
+    // Demo wires `systemPresets: [{ id: 'standard', ..., content: { filters:
+    // [...] } }]` per table. Preset bootstrap applies the resolved default
+    // (Standard, since no `userConf.defaultPresetId` is pinned) and the
+    // named pills render empty-valued — no query is narrowed until the user
+    // commits a value.
 
     await gotoTable(page, "users");
     {
-      // No pills auto-render today — drift baseline.
-      await expect(page.locator(".as-filter-field")).toHaveCount(0);
-
-      const dialog = await openToolbarFiltersDialog(page);
-      const labels = await filterableLabels(dialog);
-      expect(labels).toContain("Status");
-      expect(labels).toContain("Role");
-      await page.keyboard.press("Escape");
-      await expect(dialog).toHaveCount(0);
+      // /users baseline: status + roleId.
+      const pills = page.locator(".as-filter-field");
+      await expect(pills).toHaveCount(2);
+      const labels = await pills.locator("label.as-filter-field-label").allTextContents();
+      expect(labels.map((s) => s.trim())).toEqual(["Status", "Role"]);
+      // No applied predicate — empty-valued pills don't fire a query.
+      for (const label of ["Status", "Role"]) {
+        const pill = pillByLabel(page, label);
+        await expect(pill.locator(".as-filter-field-chip")).toHaveCount(0);
+      }
     }
 
     await gotoTable(page, "orders");
     {
-      await expect(page.locator(".as-filter-field")).toHaveCount(0);
-      const dialog = await openToolbarFiltersDialog(page);
-      const labels = await filterableLabels(dialog);
-      expect(labels).toContain("Customer");
-      expect(labels).toContain("Status");
-      await page.keyboard.press("Escape");
-      await expect(dialog).toHaveCount(0);
+      // /orders baseline: customerId + status.
+      const pills = page.locator(".as-filter-field");
+      await expect(pills).toHaveCount(2);
+      const labels = await pills.locator("label.as-filter-field-label").allTextContents();
+      expect(labels.map((s) => s.trim())).toEqual(["Customer", "Status"]);
     }
 
     await gotoTable(page, "products");
     {
+      // /products baseline: categoryId only.
+      const pills = page.locator(".as-filter-field");
+      await expect(pills).toHaveCount(1);
+      await expect(pills.first().locator("label.as-filter-field-label")).toHaveText("Category");
+    }
+
+    await gotoTable(page, "customers");
+    {
+      // /customers has no `systemPresets` — empty Standard expands to no pills.
       await expect(page.locator(".as-filter-field")).toHaveCount(0);
-      const dialog = await openToolbarFiltersDialog(page);
-      const labels = await filterableLabels(dialog);
-      expect(labels).toContain("Category");
-      await page.keyboard.press("Escape");
-      await expect(dialog).toHaveCount(0);
     }
   });
 });
