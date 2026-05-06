@@ -17,7 +17,7 @@
 
 import { type BrowserContext, expect, test } from "@playwright/test";
 
-import { authFileFor, expectSinglePages, expectUrlQuery } from "../helpers";
+import { authFileFor, expectSinglePages, expectUrlQuery, pillByLabel } from "../helpers";
 
 test.describe("Section 6.1 — Direct deep-link load — single fetch", () => {
   test("Navigating to /orders?customerId=2 fires ONE composed /pages with the customer filter", async ({
@@ -45,9 +45,7 @@ test.describe("Section 6.1 — Direct deep-link load — single fetch", () => {
 
     // The Standard preset auto-renders Customer + Status pills on /orders;
     // the deep-link customer value lands as a Customer chip on first paint.
-    const customerPill = page
-      .locator(".as-filter-field")
-      .filter({ has: page.locator(`label.as-filter-field-label:text-is("Customer")`) });
+    const customerPill = pillByLabel(page, "Customer");
     await expect(customerPill).toHaveCount(1);
     await expect(customerPill.locator(".as-filter-field-chip")).toHaveCount(1);
 
@@ -81,12 +79,8 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
     await page.goto("/orders");
     await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
 
-    const statusPill = page
-      .locator(".as-filter-field")
-      .filter({ has: page.locator(`label.as-filter-field-label:text-is("Status")`) });
-    const customerPill = page
-      .locator(".as-filter-field")
-      .filter({ has: page.locator(`label.as-filter-field-label:text-is("Customer")`) });
+    const statusPill = pillByLabel(page, "Status");
+    const customerPill = pillByLabel(page, "Customer");
     await expect(statusPill).toHaveCount(1);
     await expect(customerPill).toHaveCount(1);
 
@@ -173,12 +167,8 @@ test.describe("Section 6.7 — Copy URL + paste in new tab — full state recove
     expect(decoded).toContain("$sort=-total");
 
     // Recipient pills reflect the linker state.
-    const recipientStatusPill = recipient
-      .locator(".as-filter-field")
-      .filter({ has: recipient.locator(`label.as-filter-field-label:text-is("Status")`) });
-    const recipientCustomerPill = recipient
-      .locator(".as-filter-field")
-      .filter({ has: recipient.locator(`label.as-filter-field-label:text-is("Customer")`) });
+    const recipientStatusPill = pillByLabel(recipient, "Status");
+    const recipientCustomerPill = pillByLabel(recipient, "Customer");
     await expect(recipientStatusPill.locator(".as-filter-field-chip")).toHaveCount(1);
     await expect(recipientStatusPill.locator(".as-filter-field-chip")).toHaveText(/shipped/);
     await expect(recipientCustomerPill.locator(".as-filter-field-chip")).toHaveCount(1);
