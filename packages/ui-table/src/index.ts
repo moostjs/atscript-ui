@@ -9,6 +9,7 @@ export {
   conditionLabel,
   filledFilterCount,
   filterTokenLabel,
+  NULL_OPS,
 } from "./filters/filter-conditions";
 
 // ── Filter conditions map ───────────────────────────────────

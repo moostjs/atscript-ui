@@ -1,11 +1,14 @@
 import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
 
+/** Conditions that operate purely on nullability — value is ignored. */
+export const NULL_OPS: ReadonlySet<FilterConditionType> = new Set(["null", "notNull"]);
+
 /** Check if a condition has a filled/meaningful value. */
 export function isFilled(condition: FilterCondition): boolean {
   const { type, value } = condition;
 
   // null/notNull don't need values
-  if (type === "null" || type === "notNull") return true;
+  if (NULL_OPS.has(type)) return true;
 
   // bw needs both values
   if (type === "bw") {

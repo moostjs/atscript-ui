@@ -26,29 +26,15 @@ export function defaultCondition(columnType: ColumnFilterType): FilterConditionT
   }
 }
 
-/**
- * Build a condition and validate it against available conditions for the column type.
- * Returns undefined if the condition type is not available or the value is invalid.
- */
-function buildCondition(
-  type: FilterConditionType,
-  value: (string | number | boolean)[],
-  columnType: ColumnFilterType,
-  nullable: boolean,
-): FilterCondition | undefined {
-  const available = conditionsForType(columnType, nullable);
-  if (!available.includes(type)) return undefined;
-
-  // Validate numeric values
-  if (columnType === "number") {
-    for (const v of value) {
-      if (typeof v === "string" && v !== "") return undefined;
-      if (typeof v === "number" && Number.isNaN(v)) return undefined;
-    }
-  }
-
-  return { type, value };
-}
+/** Prefix operators in match order (longest first). */
+const PREFIX_OPS: ReadonlyArray<readonly [string, FilterConditionType]> = [
+  ["!=", "ne"],
+  [">=", "gte"],
+  ["<=", "lte"],
+  [">", "gt"],
+  ["<", "lt"],
+  ["=", "eq"],
+];
 
 /**
  * Parse a user-typed filter input string into a FilterCondition.
@@ -83,17 +69,34 @@ export function parseFilterInput(
   const trimmed = text.trim();
   if (trimmed === "") return undefined;
 
+  const available = conditionsForType(columnType, nullable);
+  const isNumber = columnType === "number";
+  const build = (
+    type: FilterConditionType,
+    value: (string | number | boolean)[],
+  ): FilterCondition | undefined => {
+    if (!available.includes(type)) return undefined;
+    if (isNumber) {
+      for (const v of value) {
+        if (typeof v === "string" && v !== "") return undefined;
+        if (typeof v === "number" && Number.isNaN(v)) return undefined;
+      }
+    }
+    return { type, value };
+  };
+  const coerce = (raw: string) => coerceValue(raw, columnType);
+
   const lower = trimmed.toLowerCase();
 
   // 1. Null literals (case-insensitive, exact match)
-  if (lower === "!<empty>") return buildCondition("notNull", [], columnType, nullable);
-  if (lower === "<empty>") return buildCondition("null", [], columnType, nullable);
+  if (lower === "!<empty>") return build("notNull", []);
+  if (lower === "<empty>") return build("null", []);
 
   // 2. Regex: /pattern/
   if (trimmed.length >= 3 && trimmed[0] === "/" && trimmed[trimmed.length - 1] === "/") {
     const pattern = trimmed.slice(1, -1);
     if (pattern === "") return undefined;
-    return buildCondition("regex", [pattern], columnType, nullable);
+    return build("regex", [pattern]);
   }
 
   // 3. Between: lo...hi (split on first "...")
@@ -101,65 +104,33 @@ export function parseFilterInput(
   if (bwIdx > 0 && bwIdx + 3 < trimmed.length) {
     const lo = trimmed.slice(0, bwIdx).trim();
     const hi = trimmed.slice(bwIdx + 3).trim();
-    if (lo !== "" && hi !== "") {
-      return buildCondition(
-        "bw",
-        [coerceValue(lo, columnType), coerceValue(hi, columnType)],
-        columnType,
-        nullable,
-      );
-    }
+    if (lo !== "" && hi !== "") return build("bw", [coerce(lo), coerce(hi)]);
   }
 
   // 4. Prefix operators (longest first)
-  if (trimmed.startsWith("!=") && trimmed.length > 2) {
-    const val = trimmed.slice(2).trim();
-    if (val !== "")
-      return buildCondition("ne", [coerceValue(val, columnType)], columnType, nullable);
-  }
-  if (trimmed.startsWith(">=") && trimmed.length > 2) {
-    const val = trimmed.slice(2).trim();
-    if (val !== "")
-      return buildCondition("gte", [coerceValue(val, columnType)], columnType, nullable);
-  }
-  if (trimmed.startsWith("<=") && trimmed.length > 2) {
-    const val = trimmed.slice(2).trim();
-    if (val !== "")
-      return buildCondition("lte", [coerceValue(val, columnType)], columnType, nullable);
-  }
-  if (trimmed.startsWith(">") && trimmed.length > 1) {
-    const val = trimmed.slice(1).trim();
-    if (val !== "")
-      return buildCondition("gt", [coerceValue(val, columnType)], columnType, nullable);
-  }
-  if (trimmed.startsWith("<") && trimmed.length > 1) {
-    const val = trimmed.slice(1).trim();
-    if (val !== "")
-      return buildCondition("lt", [coerceValue(val, columnType)], columnType, nullable);
-  }
-  if (trimmed.startsWith("=") && trimmed.length > 1) {
-    const val = trimmed.slice(1).trim();
-    if (val !== "")
-      return buildCondition("eq", [coerceValue(val, columnType)], columnType, nullable);
+  for (const [sym, op] of PREFIX_OPS) {
+    if (trimmed.startsWith(sym) && trimmed.length > sym.length) {
+      const val = trimmed.slice(sym.length).trim();
+      if (val !== "") return build(op, [coerce(val)]);
+    }
   }
 
   // 5. Wildcards: *text*, text*, *text
   if (trimmed.length >= 3 && trimmed[0] === "*" && trimmed[trimmed.length - 1] === "*") {
     const inner = trimmed.slice(1, -1);
-    if (inner !== "") return buildCondition("contains", [inner], columnType, nullable);
+    if (inner !== "") return build("contains", [inner]);
   }
   if (trimmed.length >= 2 && trimmed[trimmed.length - 1] === "*" && trimmed[0] !== "*") {
     const inner = trimmed.slice(0, -1);
-    if (inner !== "") return buildCondition("starts", [inner], columnType, nullable);
+    if (inner !== "") return build("starts", [inner]);
   }
   if (trimmed.length >= 2 && trimmed[0] === "*" && trimmed[trimmed.length - 1] !== "*") {
     const inner = trimmed.slice(1);
-    if (inner !== "") return buildCondition("ends", [inner], columnType, nullable);
+    if (inner !== "") return build("ends", [inner]);
   }
 
   // 6. Default: no symbol matched
-  const defType = defaultCondition(columnType);
-  return buildCondition(defType, [coerceValue(trimmed, columnType)], columnType, nullable);
+  return build(defaultCondition(columnType), [coerce(trimmed)]);
 }
 
 /**

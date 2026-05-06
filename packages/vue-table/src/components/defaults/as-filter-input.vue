@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import type { FilterCondition, FilterConditionType, ColumnFilterType } from "@atscript/ui-table";
-import { hasSecondValue } from "@atscript/ui-table";
+import type { FilterCondition, ColumnFilterType } from "@atscript/ui-table";
+import { hasSecondValue, NULL_OPS } from "@atscript/ui-table";
 
 const props = defineProps<{
   column: ColumnDef;
@@ -14,10 +14,7 @@ const emit = defineEmits<{
   (e: "update:condition", condition: FilterCondition): void;
 }>();
 
-const needsInput = computed(() => {
-  const t = props.condition.type;
-  return t !== "null" && t !== "notNull";
-});
+const needsInput = computed(() => !NULL_OPS.has(props.condition.type));
 
 const isBetween = computed(() => hasSecondValue(props.condition.type));
 

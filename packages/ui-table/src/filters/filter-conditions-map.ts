@@ -1,3 +1,4 @@
+import { NULL_OPS } from "./filter-conditions";
 import type { FilterConditionType } from "./filter-types";
 
 /** Column type categories for condition availability. */
@@ -50,21 +51,25 @@ const CONDITIONS_MAP: Record<ColumnFilterType, FilterConditionType[]> = {
   ref: TEXT_CONDITIONS,
 };
 
+const NON_NULLABLE_CONDITIONS_MAP = {
+  text: TEXT_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
+  number: NUMBER_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
+  boolean: BOOLEAN_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
+  date: DATE_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
+  enum: TEXT_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
+  ref: TEXT_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
+} satisfies Record<ColumnFilterType, readonly FilterConditionType[]>;
+
 /**
  * Available filter conditions for a given column filter type.
- *
- * `nullable` controls whether `null` / `notNull` survive — non-nullable
- * columns can never match those predicates, so the picker drops them.
- * Defaults to `true` to preserve historical behaviour for callers that
- * don't yet thread the column flag through.
+ * Non-nullable columns drop `null` / `notNull` since they can never match.
  */
 export function conditionsForType(
   type: ColumnFilterType,
   nullable = true,
 ): readonly FilterConditionType[] {
-  const base = CONDITIONS_MAP[type] ?? CONDITIONS_MAP.text;
-  if (nullable) return base;
-  return base.filter((c) => c !== "null" && c !== "notNull");
+  const map = nullable ? CONDITIONS_MAP : NON_NULLABLE_CONDITIONS_MAP;
+  return map[type] ?? map.text;
 }
 
 /** Map a ColumnDef display type string to a ColumnFilterType. */
