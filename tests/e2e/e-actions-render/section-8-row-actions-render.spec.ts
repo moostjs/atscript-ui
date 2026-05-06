@@ -23,8 +23,17 @@
 //   - consumer didn't set `noRowDelete: true` AND
 //   - `/meta.crud.remove` survives the wire envelope.
 // /customers sets `noRowDelete: true` so Delete never appears regardless
-// of role; viewer-on-/users hits both the wire-strip and the row-delete
-// gate.
+// of role; viewer-on-/users hits both the wire-strip (crud.remove gone)
+// and the row-delete gate (canWrite false).
+//
+// Action wire-strip: the demo's `AsArbacDbController` overrides
+// `applyMetaOverlay` to filter `actions[]` by per-method `@ArbacAction`
+// permission, so viewer's `/meta.actions[]` excludes activate / suspend
+// / resend-invite (all gated `@ArbacAction("update")`). Class-level
+// `@DbTableActions` entries (invite-user / export-csv / edit /
+// copy-invite-link) carry no method-level metadata so they pass through
+// unfiltered — the demo accepts that navigate-only table actions stay
+// visible and rely on destination-route ARBAC for the actual gate.
 
 import { type BrowserContext, type Locator, type Page, expect, test } from "@playwright/test";
 
@@ -187,7 +196,7 @@ test.describe("Section 8.16 — Synthetic `__remove` (Delete) presence + absence
     ).not.toContain("Delete");
   });
 
-  test("Absent — viewer (read-only) on /users: synth __remove (Delete) is stripped from the row menu", async ({
+  test("Absent — viewer (read-only) on /users: ARBAC strips gated actions + synth __remove from the row menu", async ({
     browser,
   }) => {
     let viewerCtx: BrowserContext | undefined;
@@ -201,19 +210,18 @@ test.describe("Section 8.16 — Synthetic `__remove` (Delete) presence + absence
       const table = page.locator("table.as-table").first();
       const adminRow = await userRowByName(table, "admin");
 
-      // Scenario 8.16's "Absent — no write permission" claim narrows to:
-      // `Delete` (synth __remove) is gated on `crud.remove` AND
-      // `canWrite`; viewer fails `canWrite`, so Delete is stripped from
-      // the cell's menu. We assert ONLY that — Scenario 8.10's claim
-      // that `@ArbacAction("update")` strips `Suspend` / `Activate` /
-      // `Resend invite` from `/meta.actions[]` is owned by batch F and
-      // not enforced here (the demo currently leaves those in the
-      // viewer's row menu — see scenario-doc divergence note in the
-      // batch hand-off).
+      // Scenarios 8.10 + 8.16 converge: viewer loses activate / suspend /
+      // resend-invite (gated `@ArbacAction("update")`) AND the synth
+      // `__remove` (`crud.remove` stripped). Survivors are the un-gated
+      // row actions `edit` + `copy-invite-link`; toolbar-level
+      // `invite-user` / `export-csv` aren't in this menu.
       const menu = await openRowActionsMenu(page, adminRow);
       const labels = await menuItemLabels(menu);
-      expect(labels).toEqual(expect.arrayContaining(["Edit", "Copy invite link"]));
+      expect(labels).toEqual(["Edit", "Copy invite link"]);
       expect(labels).not.toContain("Delete");
+      expect(labels).not.toContain("Suspend");
+      expect(labels).not.toContain("Activate");
+      expect(labels).not.toContain("Resend invite");
     } finally {
       await viewerCtx?.close();
     }

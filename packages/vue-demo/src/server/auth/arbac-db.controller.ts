@@ -8,8 +8,8 @@ import {
   DB_UNIT_REF,
 } from "@atscript/ui";
 import { useArbac } from "@moostjs/arbac";
-import { Inherit } from "moost";
-import type { UniqueryControls } from "@atscript/db";
+import { Inherit, getInstanceOwnMethods, getMoostMate } from "moost";
+import type { TCrudOp, TMetaResponse, UniqueryControls } from "@atscript/db";
 import type { DemoScope } from "./arbac-scope";
 
 const UI_QUANTITY_ANNOTATION_KEYS = new Set<string>([
@@ -19,6 +19,20 @@ const UI_QUANTITY_ANNOTATION_KEYS = new Set<string>([
   DB_UNIT_REF,
   DB_COLUMN_PRECISION,
 ]);
+
+/**
+ * Internal moost-db method-metadata key written by `@DbAction(name, opts)`.
+ *
+ * Mirrors `MOOST_DB_ACTION` from `@atscript/moost-db/src/actions/keys.ts` —
+ * not re-exported from the package's public barrel, so we duplicate the
+ * literal here. Keep in sync with upstream if the constant changes (low
+ * risk: it's part of the wire shape between decorator + discoverer and
+ * tracked by the moost-db internal contract). Re-used by `audit.ts`.
+ */
+export const MOOST_DB_ACTION = "atscript_db_action";
+
+/** Write-side CRUD ops we gate via ARBAC. Reads pass through unchanged — the per-request column scope already narrows their projections. */
+const WRITE_CRUD_OPS: readonly TCrudOp[] = ["insert", "update", "replace", "remove"] as const;
 
 /**
  * Resolve the union of `columns` whitelists from a list of scopes.
@@ -83,6 +97,46 @@ export function narrowProjection(
     if (allowed.includes(key)) out[key] = obj[key];
   }
   return out as unknown as UniqueryControls["$select"];
+}
+
+/**
+ * Per-controller-class memo of `actionName → arbacActionId` derived from
+ * `@DbAction(name, ...)` + `@ArbacAction(arbacActionId)` co-decoration on
+ * the same handler method.
+ *
+ * Method-level metadata is static for the controller class — same lookup
+ * on every request — so we cache by ctor. `WeakMap` lets the entry be
+ * GC'd if the controller class is itself collected (test isolation).
+ *
+ * Class-level entries declared via `@DbTableActions` / `@DbRowActions`
+ * (`invite-user`, `export-csv`, `edit`, `copy-invite-link`) carry NO
+ * method-level metadata, so they never appear in this map and the
+ * overlay leaves them visible — see option (a) note below.
+ */
+const arbacActionMapCache = new WeakMap<Function, Map<string, string>>();
+
+function getArbacActionMap(instance: object): Map<string, string> {
+  const ctor = instance.constructor as Function;
+  let cached = arbacActionMapCache.get(ctor);
+  if (cached) return cached;
+  cached = new Map<string, string>();
+  const mate = getMoostMate();
+  for (const methodName of getInstanceOwnMethods(instance) as string[]) {
+    if (typeof methodName !== "string") continue;
+    const meta = mate.read(ctor, methodName) as
+      | {
+          arbacActionId?: string;
+          [MOOST_DB_ACTION]?: { name?: string };
+        }
+      | undefined;
+    const dbAction = meta?.[MOOST_DB_ACTION];
+    const arbacActionId = meta?.arbacActionId;
+    if (dbAction?.name && arbacActionId) {
+      cached.set(dbAction.name, arbacActionId);
+    }
+  }
+  arbacActionMapCache.set(ctor, cached);
+  return cached;
 }
 
 /**
@@ -160,14 +214,91 @@ export class AsArbacDbController<
     return data;
   }
 
-  override async meta() {
-    const raw = await super.meta();
+  /**
+   * Per-request meta-envelope overlay: narrows `fields` by allowed columns,
+   * gates `actions[]` by per-method `@ArbacAction(<id>)`, and gates write
+   * `crud` keys (`insert`/`update`/`replace`/`remove`) by the principal.
+   * Reads in `crud` pass through — column scoping in
+   * {@link transformProjection} already narrows their results.
+   *
+   * Overriding this hook also flips the framework's `_overlayIsNoOp` flag,
+   * threading the same gating into `/pages?$actions=true` row augmentation
+   * via `_resolveAugmentEnvelopes` — no separate hook needed.
+   *
+   * **Sub-decision — class-level `@DbTableActions` / `@DbRowActions` pass
+   * through unfiltered.** Their declarative dict entries (`invite-user`,
+   * `export-csv`, `edit`, `copy-invite-link`) have no method handler and
+   * therefore no `@ArbacAction(...)` to read; the destination route
+   * enforces its own ARBAC (401/403 on click-through). Extending
+   * `@DbTableActions` with an `arbacAction?` hint would close the gap but
+   * requires a moost-db type change — out of scope: the framework must
+   * stay ARBAC-agnostic.
+   *
+   * **No "empty-scopes-as-admin" branch on actions/crud.** Field narrowing
+   * returns the envelope unchanged when no scopes are present (a
+   * test-direct-instantiation accommodation). DO NOT carry that over for
+   * actions/crud — without scopes the gated envelope would falsely appear
+   * unrestricted. We use `useArbac().evaluate(...)`, which works whenever
+   * an event context exists.
+   */
+  protected override async applyMetaOverlay(meta: TMetaResponse): Promise<TMetaResponse> {
+    const arbac = useArbac<DemoScope>();
+    if (arbac.isPublic) return meta;
+
+    const resource = arbac.resource;
+    const next: TMetaResponse = { ...meta };
+
+    // 1. Field narrowing.
     const allowed = this.allowedColumns();
-    if (!allowed) return raw;
-    const fields: Record<string, { sortable: boolean; filterable: boolean }> = {};
-    for (const k of Object.keys(raw.fields)) {
-      if (allowed.includes(k)) fields[k] = raw.fields[k];
+    if (allowed) {
+      const fields: Record<string, { sortable: boolean; filterable: boolean }> = {};
+      for (const k of Object.keys(meta.fields)) {
+        if (allowed.includes(k)) fields[k] = meta.fields[k];
+      }
+      next.fields = fields;
     }
-    return { ...raw, fields };
+
+    // 2. Action gating — only method-level @DbAction handlers carrying @ArbacAction.
+    const arbacActionMap = getArbacActionMap(this);
+    if (arbacActionMap.size > 0) {
+      // Dedupe: one evaluate per unique arbacActionId per request.
+      const verdicts = new Map<string, boolean>();
+      const filteredActions = [];
+      for (const action of meta.actions) {
+        const arbacActionId = arbacActionMap.get(action.name);
+        if (!arbacActionId) {
+          filteredActions.push(action);
+          continue;
+        }
+        let allowedAction = verdicts.get(arbacActionId);
+        if (allowedAction === undefined) {
+          const result = await arbac.evaluate({ resource, action: arbacActionId });
+          allowedAction = result.allowed;
+          verdicts.set(arbacActionId, allowedAction);
+        }
+        if (allowedAction) filteredActions.push(action);
+      }
+      next.actions = filteredActions;
+    }
+
+    // 3. CRUD gating — only the four write ops are gated; reads pass through.
+    const crudKeys = Object.keys(meta.crud) as TCrudOp[];
+    let crudChanged = false;
+    const filteredCrud: TMetaResponse["crud"] = {};
+    for (const op of crudKeys) {
+      if (!WRITE_CRUD_OPS.includes(op)) {
+        filteredCrud[op] = meta.crud[op];
+        continue;
+      }
+      const result = await arbac.evaluate({ resource, action: op });
+      if (result.allowed) {
+        filteredCrud[op] = meta.crud[op];
+      } else {
+        crudChanged = true;
+      }
+    }
+    if (crudChanged) next.crud = filteredCrud;
+
+    return next;
   }
 }

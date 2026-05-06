@@ -1,14 +1,8 @@
 import { defineInterceptor, TInterceptorPriority, useControllerContext } from "moost";
 import { useArbac } from "@moostjs/arbac";
 import { auditLogTable } from "../db";
+import { MOOST_DB_ACTION } from "./arbac-db.controller";
 import { useSession } from "./use-session";
-
-/**
- * Method-level metadata key written by `@DbAction(name, opts)` from
- * `@atscript/moost-db`. Mirrored locally because the key is not part of the
- * public export surface (lives in `actions/keys.ts`). Stable contract.
- */
-const MOOST_DB_ACTION_KEY = "atscript_db_action";
 
 interface ActionMeta {
   name: string;
@@ -51,9 +45,9 @@ function logAuditError(err: unknown) {
 
 function methodAction(): ActionMeta | undefined {
   const meta = useControllerContext().getMethodMeta() as
-    | (Record<string, unknown> & { [MOOST_DB_ACTION_KEY]?: ActionMeta })
+    | (Record<string, unknown> & { [MOOST_DB_ACTION]?: ActionMeta })
     | undefined;
-  const m = meta?.[MOOST_DB_ACTION_KEY];
+  const m = meta?.[MOOST_DB_ACTION];
   return m?.name ? m : undefined;
 }
 
