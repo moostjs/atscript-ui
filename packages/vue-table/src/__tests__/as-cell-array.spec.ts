@@ -11,6 +11,7 @@ function makeColumn(): ColumnDef {
     type: "array",
     sortable: false,
     filterable: false,
+    nullable: false,
     visible: true,
     order: 0,
   };

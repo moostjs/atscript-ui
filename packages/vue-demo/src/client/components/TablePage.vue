@@ -39,7 +39,6 @@ const limit = computed(() => tableMeta.value?.limit ?? 25);
 const actionsColumn = computed<ActionsColumn>(() => tableMeta.value?.actionsColumn ?? "last");
 const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
 const apiPath = computed(() => tableMeta.value?.apiPath ?? props.path);
-const tableKey = computed(() => tableMeta.value?.tableKey ?? props.path);
 const forceFilters = computed(() => tableMeta.value?.forceFilters);
 
 const { me, loaded: meLoaded } = useMe();
@@ -214,7 +213,7 @@ function onAction(
       :row-value-fn="rowValueFn"
       :refresh-on-action="true"
       :force-filters="forceFilters"
-      :preset="{ url: '/api/db/_presets', tableKey: tableKey }"
+      :preset="{ url: '/api/db/_presets', tableKey: path }"
       class="flex-1 flex flex-col min-h-0 min-w-0"
       @action="onAction"
     >

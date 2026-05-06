@@ -104,6 +104,12 @@ export interface ColumnDef {
   sortable: boolean;
   /** Whether this column supports filtering. */
   filterable: boolean;
+  /**
+   * Whether the column accepts `null` values (atscript prop is `optional`).
+   * Drives operator-picker availability — `null` / `notNull` are dropped
+   * for non-nullable columns since they can never match.
+   */
+  nullable: boolean;
   /** Whether this column is visible by default. */
   visible: boolean;
   /** Default column width from @ui.table.width. */

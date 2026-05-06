@@ -50,9 +50,21 @@ const CONDITIONS_MAP: Record<ColumnFilterType, FilterConditionType[]> = {
   ref: TEXT_CONDITIONS,
 };
 
-/** Available filter conditions for a given column filter type. */
-export function conditionsForType(type: ColumnFilterType): readonly FilterConditionType[] {
-  return CONDITIONS_MAP[type] ?? CONDITIONS_MAP.text;
+/**
+ * Available filter conditions for a given column filter type.
+ *
+ * `nullable` controls whether `null` / `notNull` survive — non-nullable
+ * columns can never match those predicates, so the picker drops them.
+ * Defaults to `true` to preserve historical behaviour for callers that
+ * don't yet thread the column flag through.
+ */
+export function conditionsForType(
+  type: ColumnFilterType,
+  nullable = true,
+): readonly FilterConditionType[] {
+  const base = CONDITIONS_MAP[type] ?? CONDITIONS_MAP.text;
+  if (nullable) return base;
+  return base.filter((c) => c !== "null" && c !== "notNull");
 }
 
 /** Map a ColumnDef display type string to a ColumnFilterType. */

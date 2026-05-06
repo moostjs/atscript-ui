@@ -4,11 +4,11 @@ packages:
 
 catalog:
   "@atscript/core": ^0.1.50
-  "@atscript/db": ^0.1.64
-  "@atscript/db-client": ^0.1.64
-  "@atscript/db-sql-tools": ^0.1.64
-  "@atscript/db-sqlite": ^0.1.64
-  "@atscript/moost-db": ^0.1.64
+  "@atscript/db": ^0.1.65
+  "@atscript/db-client": ^0.1.65
+  "@atscript/db-sql-tools": ^0.1.65
+  "@atscript/db-sqlite": ^0.1.65
+  "@atscript/moost-db": ^0.1.65
   "@atscript/moost-validator": ^0.1.50
   "@atscript/typescript": ^0.1.50
   "@iconify/utils": ^3.1.0
@@ -22,8 +22,8 @@ catalog:
   "@tanstack/vue-virtual": ^3.13.23
   "@tsdown/css": ^0.21.4
   "@types/node": ^24
-  "@uniqu/core": ^0.1.5
-  "@uniqu/url": ^0.1.5
+  "@uniqu/core": ^0.1.6
+  "@uniqu/url": ^0.1.6
   "@unocss/cli": ^66.6.0
   "@unocss/preset-icons": ^66.6.0
   "@unocss/reset": ^66.6.8

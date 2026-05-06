@@ -19,6 +19,7 @@ describe("AsFilterValueHelp - enum mode", () => {
       type: "enum",
       sortable: true,
       filterable: true,
+      nullable: false,
       visible: true,
       order: 0,
       options: [

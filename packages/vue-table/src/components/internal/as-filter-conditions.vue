@@ -19,7 +19,9 @@ const props = defineProps<{
 const model = defineModel<FilterCondition[]>({ required: true });
 
 const filterType = computed(() => columnFilterType(props.column.type));
-const availableConditions = computed(() => conditionsForType(filterType.value));
+const availableConditions = computed(() =>
+  conditionsForType(filterType.value, props.column.nullable),
+);
 const defCondition = computed<FilterConditionType>(() => defaultCondition(filterType.value));
 const isDateType = computed(() => filterType.value === "date");
 const shortcuts = computed(() => (isDateType.value ? dateShortcuts() : []));

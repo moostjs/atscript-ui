@@ -358,7 +358,7 @@ function onInputFocus() {
 function onEnter() {
   if (hasDropdown || !searchTerm.value.trim()) return;
 
-  const parsed = parseFilterInput(searchTerm.value, filterType);
+  const parsed = parseFilterInput(searchTerm.value, filterType, props.column.nullable);
   if (!parsed) return;
 
   const existing = state.filters.value[props.column.path] ?? [];

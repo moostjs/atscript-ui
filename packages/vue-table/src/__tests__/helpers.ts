@@ -149,6 +149,7 @@ export function mockColumn(path: string, overrides?: Partial<ColumnDef>): Column
     type: "text",
     sortable: true,
     filterable: true,
+    nullable: false,
     visible: true,
     order: 0,
     ...overrides,

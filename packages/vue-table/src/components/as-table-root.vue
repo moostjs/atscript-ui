@@ -173,11 +173,7 @@ if (urlQueryActive) {
   // a preset that would otherwise clear filters. `preset.ready` is `true`
   // when the feature isn't wired, so non-preset tables stay single-step.
   watch(
-    [
-      () => state.tableDef.value,
-      () => urlQuery.value,
-      () => state.preset.ready.value,
-    ],
+    [() => state.tableDef.value, () => urlQuery.value, () => state.preset.ready.value],
     ([def, q, presetReady]) => {
       if (def === null || !presetReady) return;
       if (typeof q === "string" && q !== "") state.applyUrlQuery(q);

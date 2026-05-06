@@ -4,7 +4,6 @@ import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
   DB_COLUMN_PRECISION,
-  DB_JSON,
   DB_UNIT,
   DB_UNIT_REF,
   META_LABEL,
@@ -206,6 +205,32 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "age")!.filterable).toBe(false);
   });
 
+  it("nullable flag mirrors prop.optional", () => {
+    // Required prop → nullable: false; optional `?` prop → nullable: true.
+    const objectType = defineAnnotatedType("object")
+      .prop("required", stringProp())
+      .prop("optional", defineAnnotatedType().designType("string").optional().$type);
+    const serialized = serializeAnnotatedType(objectType.$type);
+    const meta: MetaResponse = {
+      searchable: false,
+      vectorSearchable: false,
+      searchIndexes: [],
+      primaryKeys: [],
+      preferredId: [],
+      crud: {},
+      actions: [],
+      relations: [],
+      fields: {
+        required: { sortable: false, filterable: true },
+        optional: { sortable: false, filterable: true },
+      },
+      type: serialized,
+    };
+    const def = createTableDef(meta);
+    expect(def.columns.find((c) => c.path === "required")!.nullable).toBe(false);
+    expect(def.columns.find((c) => c.path === "optional")!.nullable).toBe(true);
+  });
+
   it("fields not in meta.fields default to not sortable/filterable", () => {
     const meta = buildMeta({ name: stringProp() }, {});
     const def = createTableDef(meta);
@@ -405,45 +430,6 @@ describe("createTableDef", () => {
       expect.arrayContaining(["name", "profile.firstName", "profile.lastName"]),
     );
     expect(paths).not.toContain("profile");
-  });
-
-  it("forces @db.json columns to sortable=false / filterable=false even if server says otherwise", () => {
-    // Defensive client-side workaround for an atscript-db bug: `/meta` emits
-    // `filterable: true` by default for every non-ignored field, including
-    // `@db.json` atomic JSON columns where filter/sort don't apply. The table
-    // def must zero those out regardless of wire flags.
-    const addressObj = defineAnnotatedType("object")
-      .prop("street", stringProp())
-      .prop("city", stringProp())
-      .annotate(DB_JSON as keyof AtscriptMetadata, true as never).$type;
-    const objectType = defineAnnotatedType("object")
-      .prop("name", stringProp())
-      .prop("address", addressObj);
-    const serialized = serializeAnnotatedType(objectType.$type);
-    const meta: MetaResponse = {
-      searchable: false,
-      vectorSearchable: false,
-      searchIndexes: [],
-      primaryKeys: [],
-      preferredId: [],
-      crud: {},
-      actions: [],
-      relations: [],
-      // Server (incorrectly) reports both as filterable/sortable.
-      fields: {
-        name: { sortable: true, filterable: true },
-        address: { sortable: true, filterable: true },
-      },
-      type: serialized,
-    };
-    const def = createTableDef(meta);
-    const addressCol = def.columns.find((c) => c.path === "address")!;
-    expect(addressCol.filterable).toBe(false);
-    expect(addressCol.sortable).toBe(false);
-    // Sanity: non-JSON column still honours the wire flags.
-    const nameCol = def.columns.find((c) => c.path === "name")!;
-    expect(nameCol.filterable).toBe(true);
-    expect(nameCol.sortable).toBe(true);
   });
 
   it("keeps @db.json (atomic) object parent as a single column", () => {

@@ -10,7 +10,6 @@ import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
   DB_COLUMN_PRECISION,
-  DB_JSON,
   DB_UNIT,
   DB_UNIT_REF,
   EXPECT_MAX_LENGTH,
@@ -77,20 +76,14 @@ export function createTableDef(
       | { precision: number; scale: number }
       | undefined;
 
-    // `@db.json` columns store an opaque JSON blob — the adapter contract
-    // doesn't support filtering or sorting on the raw value, so force both
-    // capabilities off regardless of what the server reported. Defensive:
-    // moost-db currently emits `filterable: true` by default for every
-    // non-ignored field (see atscript-db TODO.md).
-    const isJsonColumn = getFieldMeta(prop, DB_JSON) === true;
-
     columns.push({
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
       type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
       component: tableComponent,
-      sortable: isJsonColumn ? false : (fieldMeta?.sortable ?? false),
-      filterable: isJsonColumn ? false : (fieldMeta?.filterable ?? false),
+      sortable: fieldMeta?.sortable ?? false,
+      filterable: fieldMeta?.filterable ?? false,
+      nullable: prop.optional === true,
       visible: getFieldMeta(prop, UI_TABLE_HIDDEN) === undefined,
       width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
       maxLen: maxLengthMeta?.length,

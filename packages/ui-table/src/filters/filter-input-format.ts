@@ -34,8 +34,9 @@ function buildCondition(
   type: FilterConditionType,
   value: (string | number | boolean)[],
   columnType: ColumnFilterType,
+  nullable: boolean,
 ): FilterCondition | undefined {
-  const available = conditionsForType(columnType);
+  const available = conditionsForType(columnType, nullable);
   if (!available.includes(type)) return undefined;
 
   // Validate numeric values
@@ -77,6 +78,7 @@ function buildCondition(
 export function parseFilterInput(
   text: string,
   columnType: ColumnFilterType,
+  nullable = true,
 ): FilterCondition | undefined {
   const trimmed = text.trim();
   if (trimmed === "") return undefined;
@@ -84,14 +86,14 @@ export function parseFilterInput(
   const lower = trimmed.toLowerCase();
 
   // 1. Null literals (case-insensitive, exact match)
-  if (lower === "!<empty>") return buildCondition("notNull", [], columnType);
-  if (lower === "<empty>") return buildCondition("null", [], columnType);
+  if (lower === "!<empty>") return buildCondition("notNull", [], columnType, nullable);
+  if (lower === "<empty>") return buildCondition("null", [], columnType, nullable);
 
   // 2. Regex: /pattern/
   if (trimmed.length >= 3 && trimmed[0] === "/" && trimmed[trimmed.length - 1] === "/") {
     const pattern = trimmed.slice(1, -1);
     if (pattern === "") return undefined;
-    return buildCondition("regex", [pattern], columnType);
+    return buildCondition("regex", [pattern], columnType, nullable);
   }
 
   // 3. Between: lo...hi (split on first "...")
@@ -104,6 +106,7 @@ export function parseFilterInput(
         "bw",
         [coerceValue(lo, columnType), coerceValue(hi, columnType)],
         columnType,
+        nullable,
       );
     }
   }
@@ -111,46 +114,52 @@ export function parseFilterInput(
   // 4. Prefix operators (longest first)
   if (trimmed.startsWith("!=") && trimmed.length > 2) {
     const val = trimmed.slice(2).trim();
-    if (val !== "") return buildCondition("ne", [coerceValue(val, columnType)], columnType);
+    if (val !== "")
+      return buildCondition("ne", [coerceValue(val, columnType)], columnType, nullable);
   }
   if (trimmed.startsWith(">=") && trimmed.length > 2) {
     const val = trimmed.slice(2).trim();
-    if (val !== "") return buildCondition("gte", [coerceValue(val, columnType)], columnType);
+    if (val !== "")
+      return buildCondition("gte", [coerceValue(val, columnType)], columnType, nullable);
   }
   if (trimmed.startsWith("<=") && trimmed.length > 2) {
     const val = trimmed.slice(2).trim();
-    if (val !== "") return buildCondition("lte", [coerceValue(val, columnType)], columnType);
+    if (val !== "")
+      return buildCondition("lte", [coerceValue(val, columnType)], columnType, nullable);
   }
   if (trimmed.startsWith(">") && trimmed.length > 1) {
     const val = trimmed.slice(1).trim();
-    if (val !== "") return buildCondition("gt", [coerceValue(val, columnType)], columnType);
+    if (val !== "")
+      return buildCondition("gt", [coerceValue(val, columnType)], columnType, nullable);
   }
   if (trimmed.startsWith("<") && trimmed.length > 1) {
     const val = trimmed.slice(1).trim();
-    if (val !== "") return buildCondition("lt", [coerceValue(val, columnType)], columnType);
+    if (val !== "")
+      return buildCondition("lt", [coerceValue(val, columnType)], columnType, nullable);
   }
   if (trimmed.startsWith("=") && trimmed.length > 1) {
     const val = trimmed.slice(1).trim();
-    if (val !== "") return buildCondition("eq", [coerceValue(val, columnType)], columnType);
+    if (val !== "")
+      return buildCondition("eq", [coerceValue(val, columnType)], columnType, nullable);
   }
 
   // 5. Wildcards: *text*, text*, *text
   if (trimmed.length >= 3 && trimmed[0] === "*" && trimmed[trimmed.length - 1] === "*") {
     const inner = trimmed.slice(1, -1);
-    if (inner !== "") return buildCondition("contains", [inner], columnType);
+    if (inner !== "") return buildCondition("contains", [inner], columnType, nullable);
   }
   if (trimmed.length >= 2 && trimmed[trimmed.length - 1] === "*" && trimmed[0] !== "*") {
     const inner = trimmed.slice(0, -1);
-    if (inner !== "") return buildCondition("starts", [inner], columnType);
+    if (inner !== "") return buildCondition("starts", [inner], columnType, nullable);
   }
   if (trimmed.length >= 2 && trimmed[0] === "*" && trimmed[trimmed.length - 1] !== "*") {
     const inner = trimmed.slice(1);
-    if (inner !== "") return buildCondition("ends", [inner], columnType);
+    if (inner !== "") return buildCondition("ends", [inner], columnType, nullable);
   }
 
   // 6. Default: no symbol matched
   const defType = defaultCondition(columnType);
-  return buildCondition(defType, [coerceValue(trimmed, columnType)], columnType);
+  return buildCondition(defType, [coerceValue(trimmed, columnType)], columnType, nullable);
 }
 
 /**

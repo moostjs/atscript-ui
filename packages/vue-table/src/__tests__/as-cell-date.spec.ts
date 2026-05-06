@@ -12,6 +12,7 @@ function makeColumn(type: string, overrides: Partial<ColumnDef> = {}): ColumnDef
     type,
     sortable: false,
     filterable: false,
+    nullable: false,
     visible: true,
     order: 0,
     ...overrides,

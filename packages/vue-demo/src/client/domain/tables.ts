@@ -14,15 +14,6 @@ export interface DemoTable {
    */
   apiPath?: string;
   /**
-   * Override the preset `tableKey` (per-`(user, app, tableKey)` scope).
-   * Defaults to `path`. Required when the URL slug contains chars that
-   * `@uniqu/url`'s `serializeValue` doesn't auto-quote (currently `-`,
-   * `+`, `*`, `:`, `;`, `?`) — those slip through as unquoted Uniquery
-   * values and the parser reads them as arithmetic / control tokens.
-   * Use a safe identifier (alphanumeric + underscore) here.
-   */
-  tableKey?: string;
-  /**
    * Server-side sticky filter merged into every query. Users see the filter
    * applied but cannot remove it (no UI surface). Use for permission-locked
    * views (e.g. cancelled-only orders) where the URL slug encodes the slice.
@@ -116,14 +107,11 @@ export const DEMO_TABLES: DemoTable[] = [
   // Sticky-filter alias of `orders` — `forceFilters` pins `status =
   // 'cancelled'` server-side. Users see the filter applied but cannot remove
   // it (no UI surface). Demonstrates the `forceFilters` contract end-to-end.
-  // `apiPath: 'orders'` re-uses the orders controller; `tableKey:
-  // 'ordersCancelled'` keeps the preset scope distinct from `/orders` while
-  // sidestepping the `@uniqu/url` bug where `-` in unquoted Uniquery values
-  // is parsed as subtraction (so `tableKey=orders-cancelled` 400s).
+  // `apiPath: 'orders'` re-uses the orders controller; the route slug
+  // `orders-cancelled` doubles as the preset scope (per-`(user, app, tableKey)`).
   {
     path: "orders-cancelled",
     apiPath: "orders",
-    tableKey: "ordersCancelled",
     label: "Cancelled orders",
     resource: "orders",
     icon: "i-ph:prohibit",

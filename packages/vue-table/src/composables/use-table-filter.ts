@@ -19,7 +19,7 @@ import type { ReactiveTableState } from "../types";
  */
 export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
   const filterType = columnFilterType(column.type);
-  const availableConditions = conditionsForType(filterType);
+  const availableConditions = conditionsForType(filterType, column.nullable);
 
   const defCondition = defaultCondition(filterType);
 

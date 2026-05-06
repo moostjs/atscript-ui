@@ -28,9 +28,20 @@ describe("conditionsForType", () => {
     expect(conditions).not.toContain("regex");
   });
 
-  it("boolean has only eq, ne, null, notNull", () => {
+  it("boolean has only eq, ne, null, notNull when nullable", () => {
     const conditions = conditionsForType("boolean");
     expect(conditions).toEqual(["eq", "ne", "null", "notNull"]);
+  });
+
+  it("drops null/notNull when nullable=false", () => {
+    expect(conditionsForType("boolean", false)).toEqual(["eq", "ne"]);
+    expect(conditionsForType("text", false)).not.toContain("null");
+    expect(conditionsForType("text", false)).not.toContain("notNull");
+    expect(conditionsForType("text", false)).toContain("contains");
+    expect(conditionsForType("number", false)).not.toContain("null");
+    expect(conditionsForType("number", false)).toContain("gt");
+    expect(conditionsForType("date", false)).not.toContain("null");
+    expect(conditionsForType("date", false)).toContain("bw");
   });
 
   it("date has range operators but no text-specific conditions", () => {
