@@ -413,7 +413,7 @@ test.describe("Batch J — Section 17 (useAppPrefs) + Section 18 (mobile dialogs
       expect(await readAppPrefsCacheRaw(alicePage)).not.toBeNull();
     });
 
-    test("17.6 — POST with appearance:'invalid' returns 4xx-or-5xx; UI's last-valid value survives", async () => {
+    test("17.6 — POST with appearance:'invalid' returns 400 with structured body; UI's last-valid value survives", async () => {
       await writeAppConfRaw(alicePage.context().request, { appearance: "light" });
       await clearAppPrefsCache(alicePage);
 
@@ -422,8 +422,10 @@ test.describe("Batch J — Section 17 (useAppPrefs) + Section 18 (mobile dialogs
         data: { type: "appConf", app: "vuedemo", data: { appearance: "invalid" } },
         headers: { "content-type": "application/json" },
       });
-      expect(resp.status()).toBeGreaterThanOrEqual(400);
-      expect(await resp.text()).toMatch(/data:.*does not match any/iu);
+      expect(resp.status()).toBe(400);
+      const body = (await resp.json()) as { message?: string; _body?: unknown };
+      expect(body.message).toMatch(/data:.*does not match any/iu);
+      expect(body._body).toBeDefined();
 
       const listResp = await ctx.get("/api/db/_presets/query?app=vuedemo&type=appConf");
       const list = (await listResp.json()) as Array<{ id: string }>;
@@ -433,7 +435,7 @@ test.describe("Batch J — Section 17 (useAppPrefs) + Section 18 (mobile dialogs
           data: { id, data: { appearance: "invalid" } },
           headers: { "content-type": "application/json" },
         });
-        expect(patchResp.status()).toBeGreaterThanOrEqual(400);
+        expect(patchResp.status()).toBe(400);
       }
 
       await alicePage.goto("/preferences");

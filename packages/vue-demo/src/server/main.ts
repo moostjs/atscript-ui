@@ -2,7 +2,7 @@ import { Moost, createProvideRegistry } from "moost";
 import { MoostHttp } from "@moostjs/event-http";
 import { MoostWf } from "@moostjs/event-wf";
 import { MoostArbac, ArbacUserProvider } from "@moostjs/arbac";
-import { validatorPipe } from "@atscript/moost-validator";
+import { validatorPipe, validationErrorTransform } from "@atscript/moost-validator";
 import { AuthController, MeController } from "./controllers/auth.controller";
 import { UsersController } from "./controllers/users.controller";
 import { RolesController } from "./controllers/roles.controller";
@@ -37,11 +37,15 @@ app.setProvideRegistry(
 );
 void app.adapter(new MoostHttp()).listen(3200);
 app.adapter(new MoostWf());
-app.applyGlobalInterceptors(auditInterceptor, latencyInterceptor);
+// `validationErrorTransform()` (CATCH_ERROR priority) catches ValidatorError
+// throws from the global `validatorPipe()` during arg-resolve — controller-
+// level `@UseValidationErrorTransform()` only catches errors thrown FROM
+// controller method bodies, not from pipe-stage validation. Without this
+// global registration, pipe-stage validation throws bubble as HTTP 500.
+app.applyGlobalInterceptors(validationErrorTransform(), auditInterceptor, latencyInterceptor);
 // Validate `@InputForm` payloads (and any other params stamped with an
 // atscript-type meta marker via `@atscript/moost-db`'s typed mate getter)
-// against their compiled .as schemas. Failures surface as HTTP 400 via
-// the existing `validationErrorTransform()` interceptor in moost-db.
+// against their compiled .as schemas.
 app.applyGlobalPipes(validatorPipe());
 app.registerControllers(
   AuthController,

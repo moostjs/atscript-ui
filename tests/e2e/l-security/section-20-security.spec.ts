@@ -259,9 +259,9 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     }
   });
 
-  // 20.4 — Schema validation on @InputForm payload. Status is allowed to be
-  // 400/422/500: ValidatorError on action endpoints currently emits 500
-  // (security finding #1) so we assert the gate fires, not the exact code.
+  // 20.4 — Schema validation on @InputForm payload. ValidatorError throws
+  // from `validatorPipe()` arg-resolve are caught by the global
+  // `validationErrorTransform()` interceptor → HTTP 400 + structured `_body`.
 
   test("20.4 — InputForm payload with wrong type is rejected", async () => {
     const ctx = await newRequestContext("admin");
@@ -269,10 +269,10 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       const res = await ctx.post("/api/db/tables/users/actions/suspend", {
         data: { ids: [{ username: "bob" }], input: { reason: 42 } },
       });
-      expect(res.ok()).toBeFalsy();
-      expect([400, 422, 500]).toContain(res.status());
-      const body = (await res.json()) as { message?: string };
+      expect(res.status()).toBe(400);
+      const body = (await res.json()) as { message?: string; _body?: unknown };
       expect(body.message).toMatch(/reason/i);
+      expect(body._body).toBeDefined();
     } finally {
       await ctx.dispose();
     }
@@ -284,8 +284,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       const res = await ctx.post("/api/db/tables/users/actions/suspend", {
         data: { ids: [{ username: "bob" }], input: { reason: "x" } },
       });
-      expect(res.ok()).toBeFalsy();
-      expect([400, 422, 500]).toContain(res.status());
+      expect(res.status()).toBe(400);
       const body = (await res.json()) as { message?: string };
       expect(body.message).toMatch(/reason|At least/i);
     } finally {
@@ -299,8 +298,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       const res = await ctx.post("/api/db/tables/users/actions/suspend", {
         data: { ids: [{ username: "bob" }], input: { sneakyAdmin: true } },
       });
-      expect(res.ok()).toBeFalsy();
-      expect([400, 422, 500]).toContain(res.status());
+      expect(res.status()).toBe(400);
     } finally {
       await ctx.dispose();
     }
