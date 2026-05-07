@@ -54,28 +54,9 @@
 // Bob is gate-flipped to active in 20.16; downstream tests must not assume
 // bob is still pending.
 
-import {
-  expect,
-  request as playwrightRequest,
-  test,
-  type APIRequestContext,
-} from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
 
-import { newRequestContext, resetSeed } from "../helpers";
-
-import { SERVER_URL } from "../global-setup";
-
-// helpers/request.ts#newAnonRequestContext transparently inherits the
-// project-level use.storageState (admin cookie from auth.setup.ts) so
-// 401 probes silently 200. Inline override with explicit empty
-// storageState; RFC candidate to fold into helpers/request.ts.
-async function newTrulyAnonRequestContext(): Promise<APIRequestContext> {
-  return await playwrightRequest.newContext({
-    baseURL: SERVER_URL,
-    storageState: { cookies: [], origins: [] },
-    extraHTTPHeaders: { "content-type": "application/json" },
-  });
-}
+import { newAnonRequestContext, newRequestContext, resetSeed } from "../helpers";
 
 interface InsertResp {
   insertedId?: string;
@@ -635,7 +616,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   // 20.12 — Anonymous access (SessionGuard).
 
   test("20.12 — anonymous GET /users/meta → 401", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const res = await ctx.get("/api/db/tables/users/meta");
       expect(res.status()).toBe(401);
@@ -647,7 +628,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   });
 
   test("20.12 — anonymous POST /users/actions/suspend → 401", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const res = await ctx.post("/api/db/tables/users/actions/suspend", {
         data: { ids: [{ username: "alice" }], input: { reason: "anon" } },
@@ -659,7 +640,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   });
 
   test("20.12 — anonymous /api/me → 401", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const res = await ctx.get("/api/me");
       expect(res.status()).toBe(401);
@@ -669,7 +650,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   });
 
   test("20.12 — anonymous can hit /api/wf to start the public login workflow", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const res = await ctx.post("/api/wf", {
         data: { wfid: "api/auth/login" },
@@ -686,7 +667,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   // 20.13 — Session tampering.
 
   test("20.13 — modified payload with stale signature → 401", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const evilPayload = Buffer.from(
         JSON.stringify({
@@ -711,7 +692,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   });
 
   test("20.13 — gibberish cookie value → 401", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const res = await ctx.get("/api/db/tables/users/meta", {
         headers: { Cookie: "demo.sid=this-is-not-a-jwt-and-has-no-dot" },
@@ -723,7 +704,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   });
 
   test("20.13 — empty cookie value → 401", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const res = await ctx.get("/api/db/tables/users/meta", {
         headers: { Cookie: "demo.sid=" },
@@ -753,7 +734,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     const sig = realCookie.slice(dotIdx + 1);
     const tampered = `${payload[0] === "A" ? "B" : "A"}${payload.slice(1)}.${sig}`;
 
-    const anonCtx = await newTrulyAnonRequestContext();
+    const anonCtx = await newAnonRequestContext();
     try {
       const res = await anonCtx.get("/api/db/tables/users/meta", {
         headers: { Cookie: `demo.sid=${tampered}` },
@@ -1033,7 +1014,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   // 20.20 — Same-site cookie semantics.
 
   test("20.20 — login Set-Cookie includes SameSite=Lax + HttpOnly + Path=/ + Max-Age=604800", async () => {
-    const ctx = await newTrulyAnonRequestContext();
+    const ctx = await newAnonRequestContext();
     try {
       const start = await ctx.post("/api/wf", {
         data: { wfid: "api/auth/login" },
@@ -1115,9 +1096,76 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     }
   });
 
-  // SECURITY FINDING: auditInterceptor.error hook does not fire when
-  // ActionDisabledError is thrown from the gate interceptor at
-  // AFTER_GUARD priority, so gate-rejected attempts are NOT audited.
-  // Doc says rejected attempts MAY be audited per demo policy → deferred.
-  test.skip("20.21 — failed action is also logged with `<action>.failed` label [SECURITY FINDING]", () => {});
+  // 20.21 — Gate-rejected attempts are also audited (`<action>.failed`).
+  test("20.21 — gate-rejected suspend is logged with `<action>.failed` label", async () => {
+    const adminCtx = await newRequestContext("admin");
+    try {
+      // viewer is already suspended (earlier 20.1 test), so replay trips the
+      // AFTER_GUARD gate and throws `ActionDisabledError`.
+      const failRes = await adminCtx.post("/api/db/tables/users/actions/suspend", {
+        data: {
+          ids: [{ username: "viewer" }],
+          input: { reason: "audit-test 20.21-FAILED" },
+        },
+      });
+      expect(failRes.status()).toBe(409);
+      const body = (await failRes.json()) as { name?: string };
+      expect(body.name).toBe("ActionDisabledError");
+
+      // Fire-and-forget audit write; poll the most-recent rows for ours.
+      let ours:
+        | {
+            actorId?: number;
+            entityType?: string;
+            entityId?: number;
+            action?: string;
+            changes?: string;
+          }
+        | undefined;
+      for (let i = 0; i < 30; i++) {
+        const rows = await adminCtx.get(
+          "/api/db/tables/audit_log/pages?$size=100&$sort=-createdAt",
+        );
+        const list = (await rows.json()) as {
+          data?: Array<{
+            actorId?: number;
+            entityType?: string;
+            entityId?: number;
+            action?: string;
+            changes?: string;
+          }>;
+        };
+        // `changes` is `JSON.stringify({ message, response })`; parse to match
+        // shape rather than substring-grepping escaped wire form.
+        ours = (list.data ?? []).find((r) => {
+          if (r.action !== "suspend.failed") return false;
+          try {
+            const parsed = JSON.parse(r.changes ?? "{}") as { message?: string };
+            return (
+              typeof parsed.message === "string" &&
+              parsed.message.includes('Action "suspend" is disabled')
+            );
+          } catch {
+            return false;
+          }
+        });
+        if (ours) break;
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      expect(ours, "fresh audit-failure row not found after polling 3s").toBeTruthy();
+      expect(ours?.actorId).toBe(1);
+      expect(ours?.entityType).toBe("users");
+      expect(ours?.action).toBe("suspend.failed");
+      // `error` callback writes `entityId: 0` since the thrown error has no id/ids.
+      expect(ours?.entityId).toBe(0);
+      const parsedChanges = JSON.parse(ours?.changes ?? "{}") as {
+        message?: string;
+        response?: unknown;
+      };
+      expect(parsedChanges.message).toContain('Action "suspend" is disabled');
+      expect(parsedChanges.response).toEqual({});
+    } finally {
+      await adminCtx.dispose();
+    }
+  });
 });

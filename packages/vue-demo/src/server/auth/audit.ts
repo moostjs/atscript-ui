@@ -31,7 +31,10 @@ export const auditInterceptor = defineInterceptor(
       void writeRows({}, `${action.name}.failed`, message).catch(logAuditError);
     },
   },
-  TInterceptorPriority.AFTER_ALL,
+  // BEFORE_ALL so the unwind-mirrored `after`/`error` callbacks fire LAST,
+  // after every later interceptor (including AFTER_GUARD gates that throw
+  // `ActionDisabledError`) — otherwise gate-rejected attempts go un-audited.
+  TInterceptorPriority.BEFORE_ALL,
 );
 
 function logAuditError(err: unknown) {

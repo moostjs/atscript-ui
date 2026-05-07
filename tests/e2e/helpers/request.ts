@@ -24,11 +24,14 @@ export async function newRequestContext(role: DemoRole): Promise<APIRequestConte
 
 /**
  * Anonymous APIRequestContext — no storage state, no `demo.sid` cookie.
- * Use for sign-in flows and unauthenticated probes.
+ * The explicit empty `storageState` is load-bearing: without it Playwright
+ * silently inherits the project-level `use.storageState` (admin's cookie),
+ * so 401 probes would pass for the wrong reason.
  */
 export async function newAnonRequestContext(): Promise<APIRequestContext> {
   return await playwrightRequest.newContext({
     baseURL: SERVER_URL,
+    storageState: { cookies: [], origins: [] },
     extraHTTPHeaders: { "content-type": "application/json" },
   });
 }
