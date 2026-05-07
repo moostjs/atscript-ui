@@ -1,7 +1,14 @@
 import { request as playwrightRequest, type APIRequestContext } from "@playwright/test";
 
-import { SERVER_URL } from "../global-setup";
+import { workerUrl } from "../global-setup";
 import { authFileFor, type DemoRole } from "./auth";
+
+/** URL of the replica owning the current Playwright worker process.
+ *  `TEST_WORKER_INDEX` is set by Playwright per worker; falls back to 0 for
+ *  contexts created outside a test (e.g. `auth.setup.ts`). */
+function currentWorkerUrl(): string {
+  return workerUrl(Number(process.env.TEST_WORKER_INDEX ?? 0));
+}
 
 /**
  * Spawn an `APIRequestContext` pre-loaded with the storage state for a demo
@@ -16,7 +23,7 @@ import { authFileFor, type DemoRole } from "./auth";
  */
 export async function newRequestContext(role: DemoRole): Promise<APIRequestContext> {
   return await playwrightRequest.newContext({
-    baseURL: SERVER_URL,
+    baseURL: currentWorkerUrl(),
     storageState: authFileFor(role),
     extraHTTPHeaders: { "content-type": "application/json" },
   });
@@ -30,7 +37,7 @@ export async function newRequestContext(role: DemoRole): Promise<APIRequestConte
  */
 export async function newAnonRequestContext(): Promise<APIRequestContext> {
   return await playwrightRequest.newContext({
-    baseURL: SERVER_URL,
+    baseURL: currentWorkerUrl(),
     storageState: { cookies: [], origins: [] },
     extraHTTPHeaders: { "content-type": "application/json" },
   });

@@ -31,7 +31,7 @@
 // directly. Playwright's `mouse.down()` fires both `pointerdown` and
 // `mousedown` so the framework's `@pointerdown` handler fires correctly.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import {
   applyConfig,

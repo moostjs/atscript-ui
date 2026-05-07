@@ -36,7 +36,7 @@
 //     body shape is the contract; whether the demo adapter accepts the
 //     nested key is a demo concern, not a framework concern.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { gotoTable, resetSeed, userRowByName } from "../helpers";
 

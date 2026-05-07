@@ -54,7 +54,7 @@
 // Bob is gate-flipped to active in 20.16; downstream tests must not assume
 // bob is still pending.
 
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "../fixtures";
 
 import { newAnonRequestContext, newRequestContext, resetSeed } from "../helpers";
 

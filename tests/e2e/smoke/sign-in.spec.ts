@@ -6,7 +6,7 @@
 // were missing or rejected, `<AppShell>` redirects to `/login` and the
 // "Signed in as ..." line never renders.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 test("admin storage state lands on the dashboard", async ({ page }) => {
   await page.goto("/");

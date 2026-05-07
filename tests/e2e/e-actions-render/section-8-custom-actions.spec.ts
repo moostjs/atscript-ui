@@ -19,7 +19,7 @@
 // — no "with N rows selected" branch since the action isn't reachable
 // in that state.
 
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "../fixtures";
 
 import {
   columnCellIndex,
@@ -57,6 +57,7 @@ test.describe("Section 8.3 — Custom row action: clipboard via `@action` event"
 
   test("/users `Copy invite link` writes ${origin}/invite/admin to clipboard, no server hit, toast shown", async ({
     page,
+    baseURL,
   }) => {
     await gotoTable(page, "users");
     const table = page.locator("table.as-table").first();
@@ -97,7 +98,9 @@ test.describe("Section 8.3 — Custom row action: clipboard via `@action` event"
     // `formatIds` URL-encodes the formatted id; admin has no special
     // chars so the encoded form equals `admin`.
     const wrote = await getLastClipboardWrite(page);
-    expect(wrote).toBe("http://localhost:3200/invite/admin");
+    // `${origin}` here is `window.location.origin`, which equals `baseURL`
+    // for the worker that loaded the page.
+    expect(wrote).toBe(`${baseURL}/invite/admin`);
 
     // Toast appears with the literal demo `pushToast` body. The toast
     // markup is hand-rolled in `ToastStack.vue` (no `as-toast-*` class)

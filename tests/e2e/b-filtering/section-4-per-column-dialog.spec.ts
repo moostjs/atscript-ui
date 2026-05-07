@@ -13,7 +13,7 @@
 // FK columns trigger a nested inner-table fetch on open; enum/union columns
 // resolve options from the schema with no HTTP traffic.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import { addFilterPill, expectNoPages, expectSinglePages, gotoTable } from "../helpers";
 

@@ -23,7 +23,7 @@
 // different trigger mechanism (`useInfiniteScroll` on the container's
 // scroll event). Two routes, same data, two render paths to verify.
 
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "../fixtures";
 
 import { expectSinglePages, gotoTable } from "../helpers";
 

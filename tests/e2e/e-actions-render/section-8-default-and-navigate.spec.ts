@@ -23,7 +23,7 @@
 //     `<AsActionMenuItem>` `default` prop → `:data-default="default ? '' : undefined"`).
 //     We assert on that attribute.
 
-import { type Locator, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "../fixtures";
 
 import {
   columnCellIndex,

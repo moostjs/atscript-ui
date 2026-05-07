@@ -34,7 +34,7 @@
 // page 2 ids 26..50). Selection trim collapses `selectedRows` to `[]`
 // after refetch.
 
-import { type Locator, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "../fixtures";
 
 import {
   clickPaginationNext,

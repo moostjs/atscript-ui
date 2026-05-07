@@ -15,7 +15,7 @@
 // renders rows with `.as-config-field-label-text` (custom label slot in
 // `<AsConfigDialog>`); the Columns tab uses `.as-orderable-list-item-label`.
 
-import { type Locator, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "../fixtures";
 
 import {
   applyConfig,

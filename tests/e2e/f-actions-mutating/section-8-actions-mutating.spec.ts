@@ -99,7 +99,7 @@
 //     carries `scope-good` (positive) or `scope-error` (negative)
 //     class.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import {
   authFileFor,

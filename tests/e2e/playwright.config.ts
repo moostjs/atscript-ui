@@ -7,7 +7,7 @@ import { defineConfig } from "@playwright/test";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { SERVER_URL } from "./global-setup";
+import { WORKERS } from "./global-setup";
 
 const E2E_ROOT = dirname(fileURLToPath(import.meta.url));
 
@@ -16,11 +16,11 @@ export default defineConfig({
   // Smoke specs only for Phase 1. Phase-2 batches add their own `testMatch`s.
   fullyParallel: false,
 
-  // Serialise the whole suite. Mutating batches (F/H/J/K/L) write to shared
-  // SQLite tables (`users`, `_presets`, `audit_log`); cross-file parallelism
-  // produces transaction-conflict flakes. Trade-off: ~1m20s → ~4m40s wall time
-  // for bulletproof signal.
-  workers: 1,
+  // Worker count is driven by `E2E_WORKERS` (read in `global-setup.ts`).
+  // Each worker gets its own demo-server replica + SQLite file, so cross-
+  // worker parallelism is safe — no shared state to race over. Default 1
+  // → unchanged single-server wall time. Set `E2E_WORKERS=4` for parallel.
+  workers: WORKERS,
 
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
@@ -29,15 +29,17 @@ export default defineConfig({
 
   // We manage the dev server ourselves in `global-setup.ts` so we can:
   //   1. Run `db:setup` BEFORE the server starts (sqlite file is wiped + re-seeded).
-  //   2. Pipe stdout into `tests/e2e/.tmp/server.log` so the OTP outlet sink
-  //      (`helpers/outlet.ts`) can tail it for MFA login of `alice`.
+  //   2. Pipe stdout into `tests/e2e/.tmp/server-<i>.log` so the OTP outlet
+  //      sink (`helpers/outlet.ts`) can tail the per-worker log for MFA codes.
   // Playwright's `webServer` option doesn't expose stdout to user code, so we
   // skip it here.
   globalSetup: resolve(E2E_ROOT, "global-setup.ts"),
   globalTeardown: resolve(E2E_ROOT, "global-teardown.ts"),
 
   use: {
-    baseURL: SERVER_URL,
+    // baseURL is injected per-worker by `tests/e2e/fixtures.ts`. The setup
+    // project (auth.setup.ts) hits replica 0 directly via `SERVER_URL`.
+    baseURL: undefined,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",

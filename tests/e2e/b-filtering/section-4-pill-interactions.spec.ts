@@ -7,7 +7,7 @@
 // internally), and parts of 4.16 (chip strip overflow + Backspace pop +
 // Reset button + dropdown Clear-all).
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import { addFilterPill, expectNoPages, expectSinglePages, gotoTable } from "../helpers";
 

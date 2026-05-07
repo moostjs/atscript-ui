@@ -3,7 +3,15 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const HELPERS_DIR = dirname(fileURLToPath(import.meta.url));
-const SERVER_LOG = resolve(HELPERS_DIR, "../.tmp/server.log");
+
+/** Per-worker server log. `TEST_WORKER_INDEX` is set by Playwright in each
+ *  worker process; outside a test (e.g. ad-hoc helper invocation) we fall
+ *  back to replica 0. The corresponding file is opened by `global-setup.ts`'s
+ *  `setupWorker(idx)` and lives at `tests/e2e/.tmp/server-<i>.log`. */
+function currentServerLog(): string {
+  const idx = Number(process.env.TEST_WORKER_INDEX ?? 0);
+  return resolve(HELPERS_DIR, `../.tmp/server-${idx}.log`);
+}
 
 // The login workflow logs MFA OTPs inline as:
 //   📧 [auth-otp] → alice@demo.test
@@ -56,7 +64,7 @@ interface WaitOptions {
  */
 export function serverLogOffset(): number {
   try {
-    return statSync(SERVER_LOG).size;
+    return statSync(currentServerLog()).size;
   } catch {
     return 0;
   }
@@ -65,7 +73,7 @@ export function serverLogOffset(): number {
 function readEntries(): OutletEntry[] {
   let buf: Buffer;
   try {
-    buf = readFileSync(SERVER_LOG);
+    buf = readFileSync(currentServerLog());
   } catch {
     return [];
   }

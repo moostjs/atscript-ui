@@ -6,7 +6,7 @@
 //   - Page heading swaps
 //   - Active link state migrates between sidebar entries
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 test("sidebar links cycle Users → Orders, fetch meta + pages each time", async ({ page }) => {
   await page.goto("/");

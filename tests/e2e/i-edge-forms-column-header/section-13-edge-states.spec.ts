@@ -27,7 +27,7 @@
 //     the framework-side error rendered into `.as-vh-empty-body`. The 500
 //     fulfilled body just needs a `message` property to surface readably.
 
-import { expect, test, type ConsoleMessage } from "@playwright/test";
+import { expect, test, type ConsoleMessage } from "../fixtures";
 
 import {
   addFilterPill,

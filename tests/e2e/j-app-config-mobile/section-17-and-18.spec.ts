@@ -16,7 +16,7 @@
 //     shadow=none / border=0. Confirm dialog uses `!`-prefixed overrides to defeat
 //     this even on mobile.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import {
   authFileFor,

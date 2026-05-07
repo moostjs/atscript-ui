@@ -17,7 +17,7 @@
 //     these specs depend on a visible loading state. Per-route delays are not
 //     used here.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import { columnCellIndex, expectSinglePages, gotoTable, rowByCellText } from "../helpers";
 

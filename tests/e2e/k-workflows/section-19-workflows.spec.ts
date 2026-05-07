@@ -43,7 +43,7 @@ import {
   type Browser,
   type BrowserContext,
   type Page,
-} from "@playwright/test";
+} from "../fixtures";
 
 import {
   authFileFor,
@@ -539,6 +539,7 @@ test.describe("Section 19 — workflows", () => {
   test.describe("19.7 — admin issues invitation", () => {
     test("19.7 UI — admin invites; invite-send outlets magic link; pending row appears in /users", async ({
       page,
+      baseURL,
     }) => {
       const id = uniq();
       const email = `invitee-${id}@demo.test`;
@@ -564,7 +565,9 @@ test.describe("Section 19 — workflows", () => {
         email,
         sinceOffset: outletAnchor,
       });
-      expect(entry.link).toMatch(/^http:\/\/localhost:3200\/invite\//);
+      // Replica's `DEMO_BASE_URL` env var (set in `global-setup.ts`) is what
+      // the email-sender stamps into the magic-link, so it equals `baseURL`.
+      expect(entry.link?.startsWith(`${baseURL}/invite/`)).toBe(true);
 
       // Skip gotoTable here — the auto-redirect already lands hydrated, so
       // re-navigating would just clear the loading overlay we don't need.

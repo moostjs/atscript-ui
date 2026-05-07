@@ -22,7 +22,7 @@
 // attribute — only `data-state`, `aria-controls`, and a synthesised `id`. We
 // locate triggers by their declared positional order (`columns/filters/sorters`).
 
-import { type Locator, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "../fixtures";
 
 import {
   type ConfigTab,

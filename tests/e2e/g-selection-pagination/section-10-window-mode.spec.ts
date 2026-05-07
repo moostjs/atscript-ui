@@ -23,7 +23,7 @@
 // `$size` exactly on both initial and follow-up fetches, and assert the
 // no-page-number-UI contract via `.table-pagination`.
 
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "../fixtures";
 
 import { expectSinglePages, gotoTable } from "../helpers";
 

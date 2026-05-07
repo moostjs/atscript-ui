@@ -55,7 +55,7 @@
 // wrap defeats `@uniqu/url`'s `mergeConjunction` collapse so both clauses
 // reach the server.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import {
   addFilterPill,

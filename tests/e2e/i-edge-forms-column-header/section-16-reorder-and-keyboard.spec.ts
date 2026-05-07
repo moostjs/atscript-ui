@@ -33,7 +33,7 @@
 // own dragTo orchestrator rather than hand-rolled mouse events. If the
 // reorder doesn't take, retry once before failing.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import {
   cancelConfig,

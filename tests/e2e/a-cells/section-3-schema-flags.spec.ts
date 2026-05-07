@@ -7,7 +7,7 @@
 // All assertions read DOM directly — toolbar buttons (`title="Columns"` /
 // `title="Filters"` / `title="Sorters"`) open the shared config dialog.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { columnCellIndex, gotoTable } from "../helpers";
 

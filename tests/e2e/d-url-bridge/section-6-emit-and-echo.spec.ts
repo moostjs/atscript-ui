@@ -12,7 +12,7 @@
 //     existing pill via the per-column dialog re-emits the URL with the new
 //     wire shape and fires a single /pages.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import {
   addFilterPill,

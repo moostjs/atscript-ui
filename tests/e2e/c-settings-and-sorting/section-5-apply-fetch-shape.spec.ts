@@ -30,7 +30,7 @@
 // assertion. Re-stating it here as a YES would contradict the rest of the
 // suite. Sanity-net test below pins the inverse direction.
 
-import { type Locator, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "../fixtures";
 
 import {
   applyConfig,

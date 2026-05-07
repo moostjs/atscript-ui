@@ -18,7 +18,7 @@
 //     prompt's caveat we retarget to `Username` (`@db.index.unique` →
 //     sortable). This is the same column batch C 7.1 settled on.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import {
   addFilterPill,

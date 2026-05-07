@@ -5,7 +5,7 @@
 // F4 / Enter / Escape), 4.15 (pill input dropdown for FK + union — no
 // wrapping dialog, static enums fire zero HTTP).
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { addFilterPill, expectNoPages, expectSinglePages, gotoTable } from "../helpers";
 

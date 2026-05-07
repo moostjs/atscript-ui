@@ -15,7 +15,7 @@
 //     does not render — the search aspect of 6.7 is dropped. See
 //     PROMPT-batch-d-url-bridge.md "Caveat 2".
 
-import { type BrowserContext, expect, test } from "@playwright/test";
+import { type BrowserContext, expect, test } from "../fixtures";
 
 import {
   authFileFor,

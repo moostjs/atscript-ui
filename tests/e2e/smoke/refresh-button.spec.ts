@@ -6,7 +6,7 @@
 // is a user-initiated refresh, not a model mutation). `expectSinglePages`
 // uses 700 ms quiet-window heuristics regardless, so it tolerates the immediate-fire case too.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import { expectSinglePages, gotoTable } from "../helpers";
 

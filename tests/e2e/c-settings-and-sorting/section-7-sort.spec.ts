@@ -20,7 +20,7 @@
 // via `expectSinglePages` and assert on the `/pages?` query string instead
 // of `location.href`. URL-bridge round-trip assertions are batch D's scope.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import {
   applyConfig,

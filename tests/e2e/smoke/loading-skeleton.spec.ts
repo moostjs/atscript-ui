@@ -10,7 +10,7 @@
 //
 // After /pages settles, the overlay must disappear.
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 test("table loading overlay visible during in-flight, hidden after settle", async ({ page }) => {
   let metaDelayed = false;

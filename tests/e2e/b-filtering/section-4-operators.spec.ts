@@ -17,7 +17,7 @@
 // `field='null'` / `field!='null'`. The assertions here track the impl —
 // I flag the doc drift in the batch hand-off.
 
-import { type Locator, type Page, expect, test } from "@playwright/test";
+import { type Locator, type Page, expect, test } from "../fixtures";
 
 import { addFilterPill, expectSinglePages, gotoTable } from "../helpers";
 

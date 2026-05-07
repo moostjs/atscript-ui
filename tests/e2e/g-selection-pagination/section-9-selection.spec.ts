@@ -26,7 +26,7 @@
 // auto-renders empty; clicking into it fires the inline-dropdown fast-path
 // (matching `b-filtering/section-4-pill-input.spec.ts`).
 
-import { type Locator, expect, test } from "@playwright/test";
+import { type Locator, expect, test } from "../fixtures";
 
 import {
   columnCellIndex,

@@ -35,7 +35,7 @@
 //   - reset width item: text "Reset width"
 //   - per-column filter dialog content root: `.as-filter-dialog-content`
 
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../fixtures";
 
 import {
   clickColumnHeader,

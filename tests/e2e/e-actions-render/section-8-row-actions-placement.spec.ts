@@ -22,7 +22,7 @@
 // Toggling select-mode is done via the page-title toggle button
 // (`.as-page-title-toggle` in `TableToolbar.vue`).
 
-import { type Page, expect, test } from "@playwright/test";
+import { type Page, expect, test } from "../fixtures";
 
 import { gotoTable, toggleSelectMode } from "../helpers";
 

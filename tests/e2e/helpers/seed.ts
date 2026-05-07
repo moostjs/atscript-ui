@@ -1,6 +1,10 @@
 import { request as playwrightRequest } from "@playwright/test";
 
-import { SERVER_URL } from "../global-setup";
+import { workerUrl } from "../global-setup";
+
+function currentWorkerUrl(): string {
+  return workerUrl(Number(process.env.TEST_WORKER_INDEX ?? 0));
+}
 
 /**
  * Wipe and re-seed the demo sqlite db.
@@ -28,7 +32,7 @@ import { SERVER_URL } from "../global-setup";
  * other.
  */
 export async function resetSeed(): Promise<void> {
-  const ctx = await playwrightRequest.newContext({ baseURL: SERVER_URL });
+  const ctx = await playwrightRequest.newContext({ baseURL: currentWorkerUrl() });
   try {
     // Explicit JSON content-type so the moost HTTP adapter parses
     // the empty body consistently across runs.

@@ -35,7 +35,7 @@
 // unfiltered — the demo accepts that navigate-only table actions stay
 // visible and rely on destination-route ARBAC for the actual gate.
 
-import { type BrowserContext, type Locator, expect, test } from "@playwright/test";
+import { type BrowserContext, type Locator, expect, test } from "../fixtures";
 
 import { authFileFor, gotoTable, openRowActionsMenu, userRowByName } from "../helpers";
 
