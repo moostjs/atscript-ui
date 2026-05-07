@@ -336,9 +336,44 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     }
   });
 
-  // SECURITY FINDING #2: read-gate is missing on the findById path, so
-  // /api/db/_presets/one/:id leaks any preset by id. Skipped pending fix.
-  test.skip("20.6 — GET /api/db/_presets/one/<other-user-id> → 404 [SECURITY FINDING]", () => {});
+  // Originally a SECURITY FINDING (#1 in atscript-db SECURITY_REPORT) — the
+  // read-gate overlay was missing on the findById path, so `/one/:id` leaked
+  // any preset by id. Fixed in `@atscript/moost-db@0.1.69`.
+  test("20.6 — GET /api/db/_presets/one/<other-user-id> closes leak (no row in body)", async () => {
+    const managerCtx = await newRequestContext("manager");
+    const viewerCtx = await newRequestContext("viewer");
+    try {
+      const presetId = await savePreset(managerCtx, {
+        tableKey: "orders",
+        label: "Manager direct-fetch",
+      });
+      // Narrow projection bypasses the unrelated reconstructNullParent
+      // null-deref noise on the default `$select`. Either way, the gate
+      // must reject the row regardless of projection.
+      // Pre-fix: this returned HTTP 200 with the manager's row (read-gate
+      // wasn't applied to `findById`). Post-fix: moost-db routes /one/:id
+      // through `transformOne()` which delegates to `transformFilter()`,
+      // and `AsPresetsController.transformFilter` requires `app` /
+      // `tableKey` in the filter for scope isolation. The /one/:id route
+      // doesn't accept URL filter params (returns 400 "Filtering is not
+      // allowed for one endpoint"), so the leak path is now closed: a
+      // probe without scope params can't reach the row at all.
+      const res = await viewerCtx.get(
+        `/api/db/_presets/one/${encodeURIComponent(presetId)}?$select=id,user,label`,
+      );
+      // Either 400 (filter required by overlay can't be carried via URL)
+      // or 404 (overlay applies and row hidden). Both close the leak;
+      // 200 (the pre-fix shape) is the failure mode.
+      expect([400, 404]).toContain(res.status());
+      // And under no circumstances should the body carry manager's row.
+      const body = await res.text();
+      expect(body).not.toMatch(/Manager direct-fetch/);
+      expect(body).not.toMatch(/"user":\s*"manager"/);
+    } finally {
+      await managerCtx.dispose();
+      await viewerCtx.dispose();
+    }
+  });
 
   // 20.7 — Preset edit/delete by non-owner is rejected.
 
@@ -350,12 +385,10 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
         tableKey: "orders",
         label: "Manager edit-target",
       });
-      // Wire-shape divergence: from APIRequestContext this PATCH returns
-      // 500 ("Cannot read properties of null (reading 'columns')") upstream
-      // of `requireOwner`. Same payload via curl returns 404
-      // preset_not_found. Ownership gate IS enforced; only the wire
-      // shape diverges — assert the gate fires (non-2xx). The 20.7 DELETE
-      // case below is the canonical path and asserts the tight wire shape.
+      // Originally tolerant of [404, 500] because of the
+      // `reconstructNullParent` null-deref upstream of `requireOwner`.
+      // Fixed in `@atscript/db@0.1.69` — wire shape now matches the
+      // DELETE path's tight `404 preset_not_found`.
       const res = await viewerCtx.patch("/api/db/_presets", {
         data: {
           id: presetId,
@@ -365,8 +398,9 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
           data: { label: "Hacked" },
         },
       });
-      expect(res.ok()).toBeFalsy();
-      expect([404, 500]).toContain(res.status());
+      expect(res.status()).toBe(404);
+      const body = (await res.json()) as { code?: string };
+      expect(body.code).toBe("preset_not_found");
     } finally {
       await managerCtx.dispose();
       await viewerCtx.dispose();
@@ -874,6 +908,11 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
           input: { reason: "test injection" },
         },
       });
+      // Tolerant of [400, 422, 500] because the gate-interceptor's
+      // pre-arg-resolve `ValidatorError` throw escapes moost's
+      // interceptor stack as 500. Awaiting moost fix to interceptor
+      // registration ordering — see SECURITY_REPORT.md finding 3c
+      // (still open at moost@0.6.9). Tighten to 400 once landed.
       expect(res.ok()).toBeFalsy();
       expect([400, 422, 500]).toContain(res.status());
       const body = (await res.json()) as { message?: string };
@@ -1005,10 +1044,24 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     }
   });
 
-  // SECURITY FINDING #3: filter on @db.json silently 200s instead of 400.
-  // Sort path correctly rejects (above); filter never gates because
-  // demo's customers table lacks @db.table.filterable 'manual'.
-  test.skip("20.19 — filter on customers.address (@db.json) → 400 [SECURITY FINDING]", () => {});
+  // Originally a SECURITY FINDING — filter on @db.json silently 200'd
+  // instead of 400. Fixed in `@atscript/moost-db@0.1.69` — the field-
+  // descriptor `filterable: false` (set automatically for `@db.json`
+  // and array columns by the SQL adapter, see invariant #14) is now
+  // honoured by the URL filter parser too.
+  test("20.19 — filter on customers.address (@db.json) → 400", async () => {
+    const ctx = await newRequestContext("admin");
+    try {
+      // Plain string equality syntax — the URL parser accepts it; the
+      // moost-db filter handler must reject because address is @db.json.
+      const res = await ctx.get("/api/db/tables/customers/pages?address=Berlin&$size=2");
+      expect(res.status()).toBe(400);
+      const body = (await res.json()) as { message?: string };
+      expect(body.message).toMatch(/Unknown field|address|filter|json/i);
+    } finally {
+      await ctx.dispose();
+    }
+  });
 
   // 20.20 — Same-site cookie semantics.
 

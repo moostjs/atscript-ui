@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { Controller } from "moost";
 import { Post } from "@moostjs/event-http";
-import { useResponse } from "@wooksjs/event-http";
 import {
   MoostWf,
   createHttpOutlet,
@@ -53,7 +52,7 @@ export class WorkflowsController {
           eventContext: opts?.eventContext as never,
         }),
     };
-    const result = await handleWfOutletRequest(
+    return await handleWfOutletRequest(
       {
         allow: [...ALLOWED_WORKFLOWS],
         state: new EncapsulatedStateStrategy({ secret: WF_SECRET }),
@@ -62,19 +61,5 @@ export class WorkflowsController {
       },
       deps,
     );
-    // Workaround: @wooksjs/event-wf returns `{ error, status: 400 }` in the body
-    // for expired/invalid tokens but doesn't honor body.status at the HTTP layer.
-    // Map to 410 Gone so the client's `on410` bus fires + `WfExpiryBanner` renders.
-    // Track upstream fix in /Users/mavrik/code/wooksjs/TODO.md.
-    if (isWfExpiredError(result)) {
-      useResponse().setStatus(410);
-    }
-    return result;
   }
-}
-
-function isWfExpiredError(result: unknown): boolean {
-  if (!result || typeof result !== "object") return false;
-  const err = (result as { error?: unknown }).error;
-  return typeof err === "string" && /expired/i.test(err);
 }
