@@ -73,7 +73,7 @@ export interface PresetTable {
 }
 
 function presetError(
-  status: 400 | 403 | 405 | 409,
+  status: 400 | 403 | 404 | 405 | 409,
   body: { message: string; code: AsPresetsErrorCode; [k: string]: unknown },
 ): HttpError {
   return new HttpError(status, body as never);
@@ -103,7 +103,7 @@ function assertNotReservedId(id: unknown): void {
 
 // Synthetic system presets are never persisted, so any update/remove targeting
 // `sys:*` is malformed. Rejected explicitly so callers see `reserved_id` rather
-// than the generic `identity_immutable` they'd get from the owner-check 403.
+// than the generic `preset_not_found` they'd get from the owner-check 404.
 function assertNotSystemId(id: unknown): void {
   if (typeof id === "string" && isSystemPresetId(id)) {
     throw presetError(400, {
@@ -302,8 +302,11 @@ async function gatePublicPreset(
   await Promise.all([publishCheck, labelCheck]);
 }
 
+// requireOwner returns 404 (not 403) so the same response covers both
+// "row doesn't exist" and "row exists but isn't yours" — no information leak
+// about existence.
 const ownerError = (): HttpError =>
-  presetError(403, { message: "Forbidden — not the row owner", code: "identity_immutable" });
+  presetError(404, { message: "Preset not found", code: "preset_not_found" });
 
 function requireOwner(
   existing: PresetRowLike | null,

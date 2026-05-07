@@ -22,7 +22,7 @@
 //   - Preset CRUD endpoints: NO trailing slash (`/api/db/_presets`). Insert
 //     response is `{ insertedId }`, not `{ id }`.
 //   - Reserved-id POST/PATCH/DELETE → 400 code "reserved_id".
-//   - Cross-user PATCH/DELETE → 403 code "identity_immutable" (NOT 404).
+//   - Cross-user PATCH/DELETE → 404 code "preset_not_found" (no existence leak).
 //   - canPublish denial → 403 code "publish_forbidden".
 //   - Public-label collision → 409 code "public_name_conflict".
 //   - insertMany on _presets → 405 code "action_unsupported".
@@ -344,7 +344,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
 
   // 20.7 — Preset edit/delete by non-owner is rejected.
 
-  test("20.7 — viewer PATCH on manager's preset → 403 identity_immutable", async () => {
+  test("20.7 — viewer PATCH on manager's preset → 404 preset_not_found", async () => {
     const managerCtx = await newRequestContext("manager");
     const viewerCtx = await newRequestContext("viewer");
     try {
@@ -354,9 +354,10 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       });
       // Wire-shape divergence: from APIRequestContext this PATCH returns
       // 500 ("Cannot read properties of null (reading 'columns')") upstream
-      // of `requireOwner`. Same payload via curl returns 403
-      // identity_immutable. Ownership gate IS enforced; only the wire
-      // shape diverges — assert the gate fires (non-2xx).
+      // of `requireOwner`. Same payload via curl returns 404
+      // preset_not_found. Ownership gate IS enforced; only the wire
+      // shape diverges — assert the gate fires (non-2xx). The 20.7 DELETE
+      // case below is the canonical path and asserts the tight wire shape.
       const res = await viewerCtx.patch("/api/db/_presets", {
         data: {
           id: presetId,
@@ -367,14 +368,14 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
         },
       });
       expect(res.ok()).toBeFalsy();
-      expect([403, 404, 500]).toContain(res.status());
+      expect([404, 500]).toContain(res.status());
     } finally {
       await managerCtx.dispose();
       await viewerCtx.dispose();
     }
   });
 
-  test("20.7 — viewer DELETE on manager's preset → 403", async () => {
+  test("20.7 — viewer DELETE on manager's preset → 404 preset_not_found", async () => {
     const managerCtx = await newRequestContext("manager");
     const viewerCtx = await newRequestContext("viewer");
     try {
@@ -383,9 +384,9 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
         label: "Manager delete-target",
       });
       const res = await viewerCtx.delete(`/api/db/_presets/${presetId}`);
-      expect(res.status()).toBe(403);
+      expect(res.status()).toBe(404);
       const body = (await res.json()) as { code?: string };
-      expect(body.code).toBe("identity_immutable");
+      expect(body.code).toBe("preset_not_found");
     } finally {
       await managerCtx.dispose();
       await viewerCtx.dispose();

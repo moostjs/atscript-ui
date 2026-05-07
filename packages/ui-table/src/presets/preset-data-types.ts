@@ -64,6 +64,7 @@ export type AsPresetsErrorCode =
   | "invalid_type"
   | "type_immutable"
   | "identity_immutable"
+  | "preset_not_found"
   | "publish_forbidden"
   | "action_unsupported";
 

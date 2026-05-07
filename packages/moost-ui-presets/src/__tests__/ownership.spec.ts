@@ -3,7 +3,7 @@ import { describe, it } from "vite-plus/test";
 import { expectHttpRejection, seedPreset, setup } from "./helpers";
 
 describe("ownership gate", () => {
-  it("403 on update of another user's row", async () => {
+  it("404 on update of another user's row", async () => {
     const { table, ctrl } = await setup();
     const aliceRow = await seedPreset(table, {
       app: "demo",
@@ -14,12 +14,12 @@ describe("ownership gate", () => {
 
     await expectHttpRejection(
       () => ctrl.callOnWrite("update", { id: aliceRow, data: { label: "hijack" } }),
-      403,
-      "identity_immutable",
+      404,
+      "preset_not_found",
     );
   });
 
-  it("403 on remove of another user's row", async () => {
+  it("404 on remove of another user's row", async () => {
     const { table, ctrl } = await setup();
     const aliceRow = await seedPreset(table, {
       app: "demo",
@@ -28,7 +28,7 @@ describe("ownership gate", () => {
       data: { label: "Alice's" },
     });
 
-    await expectHttpRejection(() => ctrl.callOnRemove(aliceRow), 403, "identity_immutable");
+    await expectHttpRejection(() => ctrl.callOnRemove(aliceRow), 404, "preset_not_found");
   });
 
   it("blocks 'replace' as unsupported (would otherwise bypass cap + identity checks)", async () => {
