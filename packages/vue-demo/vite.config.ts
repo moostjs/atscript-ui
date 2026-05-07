@@ -6,7 +6,7 @@ import { defineConfig } from "vite";
 import { moostVite } from "@moostjs/vite";
 
 export default defineConfig({
-  server: { port: 3200 },
+  server: { port: Number(process.env.PORT ?? 3200) },
   plugins: [
     atscript() as any,
     UnoCSS(),

@@ -8,7 +8,8 @@ import { CustomersTable } from "./schemas/customers.as";
 import { OrdersTable } from "./schemas/orders.as";
 import { AuditLogTable } from "./schemas/audit-log.as";
 
-export const db = createAdapter(".data/demo.db");
+const DB_PATH = process.env.DEMO_DB_PATH ?? ".data/demo.db";
+export const db = createAdapter(DB_PATH);
 
 export const usersTable = db.getTable(UsersTable);
 export const rolesTable = db.getTable(RolesTable);

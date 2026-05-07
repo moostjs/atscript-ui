@@ -35,7 +35,8 @@ app.setProvideRegistry(
     [ArbacUserProvider, () => new DemoArbacUserProvider()],
   ),
 );
-void app.adapter(new MoostHttp()).listen(3200);
+const PORT = Number(process.env.PORT ?? 3200);
+void app.adapter(new MoostHttp()).listen(PORT);
 app.adapter(new MoostWf());
 // `validationErrorTransform()` (CATCH_ERROR priority) catches ValidatorError
 // throws from the global `validatorPipe()` during arg-resolve — controller-

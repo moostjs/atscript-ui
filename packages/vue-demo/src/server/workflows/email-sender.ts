@@ -9,10 +9,11 @@ export function consoleEmailSender(payload: {
   context: Record<string, unknown>;
   token: string;
 }): Promise<void> {
+  const baseUrl = process.env.DEMO_BASE_URL ?? `http://localhost:${process.env.PORT ?? 3200}`;
   const link =
     payload.template === "user-invite"
-      ? `http://localhost:3200/invite/${encodeURIComponent(payload.token)}`
-      : `http://localhost:3200/wf/resume?wfs=${encodeURIComponent(payload.token)}`;
+      ? `${baseUrl}/invite/${encodeURIComponent(payload.token)}`
+      : `${baseUrl}/wf/resume?wfs=${encodeURIComponent(payload.token)}`;
   // eslint-disable-next-line no-console
   console.log(
     `\n📧 [${payload.template}] → ${payload.target}\n` +

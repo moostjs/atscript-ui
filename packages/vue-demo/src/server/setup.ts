@@ -1,9 +1,13 @@
 import { rmSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 
-rmSync(".data/demo.db", { force: true });
-rmSync(".data/demo.db-wal", { force: true });
-rmSync(".data/demo.db-shm", { force: true });
-mkdirSync(".data", { recursive: true });
+const DB_PATH = process.env.DEMO_DB_PATH ?? ".data/demo.db";
+const DB_DIR = dirname(DB_PATH);
+
+rmSync(DB_PATH, { force: true });
+rmSync(`${DB_PATH}-wal`, { force: true });
+rmSync(`${DB_PATH}-shm`, { force: true });
+mkdirSync(DB_DIR, { recursive: true });
 console.log("🗑️  Removed existing database");
 
 const { syncSchema } = await import("@atscript/db/sync");
@@ -57,4 +61,4 @@ await productsT.insertMany(seedProducts() as Record<string, unknown>[]);
 await customersT.insertMany(seedCustomers() as Record<string, unknown>[]);
 await ordersT.insertMany(seedOrders() as Record<string, unknown>[]);
 await auditLogT.insertMany(seedAuditLog() as Record<string, unknown>[]);
-console.log("✅ Demo DB ready at .data/demo.db");
+console.log(`✅ Demo DB ready at ${DB_PATH}`);
