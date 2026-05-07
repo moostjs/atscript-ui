@@ -2,7 +2,17 @@ import { Moost, createProvideRegistry } from "moost";
 import { MoostHttp } from "@moostjs/event-http";
 import { MoostWf } from "@moostjs/event-wf";
 import { MoostArbac, ArbacUserProvider } from "@moostjs/arbac";
-import { validatorPipe, validationErrorTransform } from "@atscript/moost-validator";
+import { validatorPipe } from "@atscript/moost-validator";
+// Use moost-db's `validationErrorTransform` (BEFORE_ALL priority) instead of
+// moost-validator's (CATCH_ERROR). The BEFORE_ALL variant registers its
+// `error` callback FIRST in the interceptor stack, so it fires for
+// `ValidatorError`s thrown by higher-priority `before` interceptors too —
+// notably moost-db's action-gate at AFTER_GUARD which throws on bad-shape
+// `ids` payloads. moost-validator's CATCH_ERROR variant only catches
+// pipe-stage throws (after all `before`s have registered their callbacks).
+// Same `transformValidationError` body in both packages — just different
+// priority. See atscript-db SECURITY_REPORT.md finding 3c.
+import { validationErrorTransform } from "@atscript/moost-db";
 import { AuthController, MeController } from "./controllers/auth.controller";
 import { UsersController } from "./controllers/users.controller";
 import { RolesController } from "./controllers/roles.controller";

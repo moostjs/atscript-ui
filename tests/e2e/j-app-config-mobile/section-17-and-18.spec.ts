@@ -423,9 +423,9 @@ test.describe("Batch J — Section 17 (useAppPrefs) + Section 18 (mobile dialogs
         headers: { "content-type": "application/json" },
       });
       expect(resp.status()).toBe(400);
-      const body = (await resp.json()) as { message?: string; _body?: unknown };
+      const body = (await resp.json()) as { message?: string; errors?: unknown };
       expect(body.message).toMatch(/data:.*does not match any/iu);
-      expect(body._body).toBeDefined();
+      expect(body.errors).toBeDefined();
 
       const listResp = await ctx.get("/api/db/_presets/query?app=vuedemo&type=appConf");
       const list = (await listResp.json()) as Array<{ id: string }>;

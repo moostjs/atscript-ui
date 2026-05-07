@@ -260,8 +260,9 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
   });
 
   // 20.4 — Schema validation on @InputForm payload. ValidatorError throws
-  // from `validatorPipe()` arg-resolve are caught by the global
-  // `validationErrorTransform()` interceptor → HTTP 400 + structured `_body`.
+  // from `validatorPipe()` arg-resolve are caught by moost-db's
+  // `validationErrorTransform()` interceptor (BEFORE_ALL priority — see
+  // demo's `main.ts`) → HTTP 400 + structured `errors` array.
 
   test("20.4 — InputForm payload with wrong type is rejected", async () => {
     const ctx = await newRequestContext("admin");
@@ -270,9 +271,9 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
         data: { ids: [{ username: "bob" }], input: { reason: 42 } },
       });
       expect(res.status()).toBe(400);
-      const body = (await res.json()) as { message?: string; _body?: unknown };
+      const body = (await res.json()) as { message?: string; errors?: unknown };
       expect(body.message).toMatch(/reason/i);
-      expect(body._body).toBeDefined();
+      expect(body.errors).toBeDefined();
     } finally {
       await ctx.dispose();
     }
@@ -908,13 +909,14 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
           input: { reason: "test injection" },
         },
       });
-      // Tolerant of [400, 422, 500] because the gate-interceptor's
-      // pre-arg-resolve `ValidatorError` throw escapes moost's
-      // interceptor stack as 500. Awaiting moost fix to interceptor
-      // registration ordering — see SECURITY_REPORT.md finding 3c
-      // (still open at moost@0.6.9). Tighten to 400 once landed.
-      expect(res.ok()).toBeFalsy();
-      expect([400, 422, 500]).toContain(res.status());
+      // Originally 500 — gate-interceptor's `ValidatorError` throw at
+      // AFTER_GUARD escaped moost's interceptor stack because
+      // moost-validator's `validationErrorTransform` runs at CATCH_ERROR
+      // (priority 5), so its `error` handler wasn't yet registered when
+      // the gate (priority 3) threw. Closed in `@atscript/moost-db@0.1.69`
+      // which exports its own `validationErrorTransform` at BEFORE_ALL —
+      // the demo now imports from there.
+      expect(res.status()).toBe(400);
       const body = (await res.json()) as { message?: string };
       expect(body.message).toMatch(/Identifier fields|exactly match/i);
     } finally {
@@ -928,8 +930,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       const res = await ctx.post("/api/db/tables/users/actions/suspend", {
         data: { ids: "alice", input: { reason: "test" } },
       });
-      expect(res.ok()).toBeFalsy();
-      expect([400, 422, 500]).toContain(res.status());
+      expect(res.status()).toBe(400);
       const body = (await res.json()) as { message?: string };
       expect(body.message).toMatch(/Expected JSON array|identifier/i);
     } finally {
@@ -964,8 +965,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
           input: { reason: "composite" },
         },
       });
-      expect(res.ok()).toBeFalsy();
-      expect([400, 422, 500]).toContain(res.status());
+      expect(res.status()).toBe(400);
       const body = (await res.json()) as { message?: string };
       expect(body.message).toMatch(/Identifier fields|exactly match/i);
     } finally {
