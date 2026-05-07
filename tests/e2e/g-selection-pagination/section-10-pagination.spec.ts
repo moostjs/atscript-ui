@@ -71,6 +71,10 @@ function expectPageWire(url: string, page: number, size: number): void {
 
 // ---------------------------------------------------------------------
 
+// Serial: `expectSinglePages` windows flake when siblings contend for
+// /pages observation slots (10.1b post-paint URL-bridge race).
+test.describe.configure({ mode: "serial" });
+
 test.describe("Section 10 — Pagination", () => {
   // -------------------------------------------------------------------
   // 10.1 — Page navigation

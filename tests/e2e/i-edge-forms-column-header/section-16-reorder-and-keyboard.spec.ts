@@ -44,6 +44,10 @@ import {
   texts,
 } from "../helpers";
 
+// Serial: 16.9 keyboard-focus + 16.8 HTML5 drag are timing-fragile
+// under parallel sibling execution.
+test.describe.configure({ mode: "serial" });
+
 test.describe("Section 16.8 — Drag-reorder columns", () => {
   test("/users Email → before Username: columnNames reorders, ZERO /pages, Columns tab reflects", async ({
     page,
