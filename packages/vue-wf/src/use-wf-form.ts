@@ -24,6 +24,12 @@ export interface UseWfFormOptions {
   wfidName?: string;
   /** Custom fetch options (headers, credentials, etc.) */
   fetchOptions?: RequestInit;
+  /**
+   * Override the global `fetch` — lets the host wire its own status-code
+   * bus or interceptors (e.g. a wrapper that emits on `on410` so the app's
+   * expiry banner lights up). Defaults to `globalThis.fetch`.
+   */
+  fetch?: typeof fetch;
   /** Whether to auto-start the workflow on mount (default: true) */
   autoStart?: boolean;
   /**
@@ -191,7 +197,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     lastRequestBody = body;
 
     try {
-      const res = await fetch(options.path, {
+      const doFetch = options.fetch ?? fetch;
+      const res = await doFetch(options.path, {
         ...baseFetchOpts,
         signal,
         body: JSON.stringify(buildBody(body)),

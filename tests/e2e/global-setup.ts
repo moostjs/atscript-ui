@@ -85,7 +85,15 @@ export default async function globalSetup(): Promise<void> {
     // `db:setup` — wiping `.data/demo.db` on disk would desync the dev
     // server's long-lived better-sqlite3 connection and flip writes to
     // read-only mid-flight.
-    env: { ...process.env, DEMO_NO_LATENCY: "1", DEMO_TEST_MODE: "1" },
+    // `DEMO_INVITE_TTL_MS=2000` shortens the invite magic-link TTL so 19.11
+    // can verify expiry without waiting real time. Read by invite.workflow.ts
+    // only when `DEMO_TEST_MODE=1`.
+    env: {
+      ...process.env,
+      DEMO_NO_LATENCY: "1",
+      DEMO_TEST_MODE: "1",
+      DEMO_INVITE_TTL_MS: "2000",
+    },
   });
   if (!child.pid) throw new Error("Failed to spawn vue-demo dev server");
   writeFileSync(SERVER_PID, String(child.pid));

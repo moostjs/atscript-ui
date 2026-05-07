@@ -99,6 +99,7 @@ export class RegisterWorkflow {
       mfaEnabled: false,
       password: ctx.passwordHash,
       salt: ctx.passwordSalt,
+      profile: { firstName: "", lastName: "" },
     });
 
     const fresh = await usersTable.findOne({ filter: { username: ctx.username! } });

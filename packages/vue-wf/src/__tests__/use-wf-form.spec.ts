@@ -304,4 +304,28 @@ describe("useWfForm", () => {
 
     expect(result.error.value).toEqual({ message: "Unexpected response format" });
   });
+
+  it("custom fetch override is used instead of global fetch", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const globalSpy = vi.fn();
+    vi.stubGlobal("fetch", globalSpy);
+
+    const customFetch = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          json: async () => mockInputRequired(LoginForm, { token: "tok1" }),
+        }) as Response,
+    );
+
+    mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      fetch: customFetch as unknown as typeof fetch,
+    });
+    await flushPromises();
+
+    expect(customFetch).toHaveBeenCalledTimes(1);
+    expect(globalSpy).not.toHaveBeenCalled();
+  });
 });

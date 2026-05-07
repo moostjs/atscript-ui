@@ -109,6 +109,9 @@ if (props.clientFactory) {
   provide(CLIENT_FACTORY_KEY, props.clientFactory);
 }
 
+// `__form` = moost-wf convention for form-level (non-field) errors.
+const formError = computed(() => props.errors?.__form);
+
 // ── Form-level resolved props ──────────────────────────────
 const ctx = computed<TFnScope>(() => ({
   v: undefined,
@@ -204,6 +207,10 @@ function onSubmit() {
       :disabled="_submitDisabled"
       :formContext="formContext"
     ></slot>
+
+    <slot v-if="formError" name="form.error" :message="formError">
+      <div role="alert" class="as-form-error">{{ formError }}</div>
+    </slot>
 
     <slot
       v-if="!hideSubmit"

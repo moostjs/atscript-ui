@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { Controller } from "moost";
 import { Post } from "@moostjs/event-http";
+import { useResponse } from "@wooksjs/event-http";
 import {
   MoostWf,
   createHttpOutlet,
@@ -34,7 +35,7 @@ export class WorkflowsController {
   constructor(private readonly wf: MoostWf) {}
 
   @Post("wf")
-  handle() {
+  async handle() {
     // Use handleWfOutletRequest directly so we can forward the HTTP eventContext
     // into the workflow — otherwise `useWfFinished().set({ cookies })` in a step
     // writes to the WF's isolated context and the HTTP trigger can't read it back.
@@ -52,7 +53,7 @@ export class WorkflowsController {
           eventContext: opts?.eventContext as never,
         }),
     };
-    return handleWfOutletRequest(
+    const result = await handleWfOutletRequest(
       {
         allow: [...ALLOWED_WORKFLOWS],
         state: new EncapsulatedStateStrategy({ secret: WF_SECRET }),
@@ -61,5 +62,19 @@ export class WorkflowsController {
       },
       deps,
     );
+    // Workaround: @wooksjs/event-wf returns `{ error, status: 400 }` in the body
+    // for expired/invalid tokens but doesn't honor body.status at the HTTP layer.
+    // Map to 410 Gone so the client's `on410` bus fires + `WfExpiryBanner` renders.
+    // Track upstream fix in /Users/mavrik/code/wooksjs/TODO.md.
+    if (isWfExpiredError(result)) {
+      useResponse().setStatus(410);
+    }
+    return result;
   }
+}
+
+function isWfExpiredError(result: unknown): boolean {
+  if (!result || typeof result !== "object") return false;
+  const err = (result as { error?: unknown }).error;
+  return typeof err === "string" && /expired/i.test(err);
 }

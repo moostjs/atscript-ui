@@ -3,6 +3,7 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
+import { sharedFetch } from "../api/fetch";
 
 const router = useRouter();
 const types = createDemoTypes();
@@ -33,6 +34,7 @@ function onFinished() {
         path="/api/wf"
         name="api/users/invite"
         :types="types"
+        :fetch="sharedFetch"
         first-validation="on-submit"
         @finished="onFinished"
       >

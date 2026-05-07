@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
 import { useMe } from "../api/use-me";
+import { sharedFetch } from "../api/fetch";
 
 const route = useRoute();
 const router = useRouter();
@@ -39,6 +40,7 @@ function onError(e: { status?: number; message?: string }) {
         name="api/users/invite"
         :initial-token="token"
         :types="types"
+        :fetch="sharedFetch"
         first-validation="on-submit"
         @finished="onFinished"
         @error="onError"

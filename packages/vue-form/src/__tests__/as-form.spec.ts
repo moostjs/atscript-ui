@@ -88,4 +88,26 @@ describe("AsForm", () => {
     expect(changeType).toBe("update");
     expect(path).toBe("name");
   });
+
+  it("renders `__form` errors via the form.error slot above submit", () => {
+    const type = objectType({ name: stringProp() });
+    const { wrapper } = mountForm(type, {
+      errors: { __form: "Account is suspended" },
+    });
+    const banner = wrapper.find('[role="alert"].as-form-error');
+    expect(banner.exists()).toBe(true);
+    expect(banner.text()).toBe("Account is suspended");
+    // Banner sits between the form fields and the submit button.
+    const html = wrapper.html();
+    const errorIdx = html.indexOf('class="as-form-error"');
+    const submitIdx = html.indexOf("as-submit-btn");
+    expect(errorIdx).toBeGreaterThan(-1);
+    expect(submitIdx).toBeGreaterThan(errorIdx);
+  });
+
+  it("hides the form.error slot when `errors.__form` is absent", () => {
+    const type = objectType({ name: stringProp() });
+    const { wrapper } = mountForm(type, { errors: { name: "field-only" } });
+    expect(wrapper.find(".as-form-error").exists()).toBe(false);
+  });
 });

@@ -32,7 +32,12 @@ interface InviteCtx {
   inviteEmailSent?: boolean;
 }
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+// Default 1 day. Tests override via `DEMO_INVITE_TTL_MS` (only honored when
+// `DEMO_TEST_MODE=1`) so the magic-link expiry path is testable in real time.
+const INVITE_TTL_MS =
+  process.env.DEMO_TEST_MODE === "1" && process.env.DEMO_INVITE_TTL_MS
+    ? Number(process.env.DEMO_INVITE_TTL_MS)
+    : 24 * 60 * 60 * 1000;
 
 @Controller()
 export class InviteWorkflow {
@@ -81,6 +86,7 @@ export class InviteWorkflow {
       mfaEnabled: false,
       password: "",
       salt: "",
+      profile: { firstName: "", lastName: "" },
     });
     const fresh = await usersTable.findOne({ filter: { username: placeholderUsername } });
 
@@ -92,7 +98,7 @@ export class InviteWorkflow {
   }
 
   @Step("invite-send")
-  @StepTTL(ONE_DAY_MS)
+  @StepTTL(INVITE_TTL_MS)
   sendInvite(@WorkflowParam("context") ctx: InviteCtx) {
     // First run: emit the email outlet (engine persists state, sender logs link, flow pauses).
     // Resume run (invitee POSTs with wfs): advance past this step.
