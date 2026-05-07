@@ -11,6 +11,7 @@ import {
   type Ref,
   type WritableComputedRef,
   computed,
+  effectScope,
   ref,
   shallowRef,
 } from "vue";
@@ -71,19 +72,39 @@ interface BusResetPayload {
 }
 type BusPayload = BusSavePayload | BusResetPayload;
 
-// Module-scoped bus key so every `useAppPrefs(app)` listener (sidebar, prefs
-// page, etc.) sees save/reset events from any other instance. VueUse's
-// `useEventBus(key)` shares listeners across calls with the same key and
-// auto-removes them on `onScopeDispose`.
+type ChannelMessage =
+  | { type: "save"; prefs: AppConfData; row: AsPresetEntryRow | null }
+  | { type: "reset" };
+
+// Module-scoped bus so two singletons sharing one app namespace (different
+// `url`s) still see each other's save/reset events in-window.
 const APP_PREFS_BUS: EventBusKey<BusPayload> = Symbol("as-app-prefs");
 
 const CACHE_PREFIX = "as-app-prefs";
+
+interface AppPrefsInstance {
+  cacheEnabled: boolean;
+  public: UseAppPrefsReturn;
+  dispose: () => void;
+}
+
+// Singleton registry keyed by `${app}|${url}`. Prevents N parallel
+// `/query?type=appConf` requests when multiple widgets call the composable.
+const REGISTRY = new Map<string, AppPrefsInstance>();
+
+function instanceKey(app: string, url: string): string {
+  return `${app}|${url}`;
+}
 
 /**
  * Public dev-facing composable for app-wide user preferences. Independent
  * of presets / tables — devs can use it on any settings surface to read
  * and write `appearance`, `language`, `density`, `customJson` etc. for
  * `(currentUser, app)`.
+ *
+ * Multiple calls with the same `(app, url)` share one underlying instance,
+ * so duplicate widgets (sidebar + page header + /preferences) make a single
+ * `/query?type=appConf` request total.
  *
  * @example
  * ```ts
@@ -94,147 +115,200 @@ const CACHE_PREFIX = "as-app-prefs";
  */
 export function useAppPrefs(opts: UseAppPrefsOptions): UseAppPrefsReturn {
   const app = injectPresetsApp(opts.app);
-  const cacheEnabled = opts.cache !== false;
-  const client = new AppPrefsClient({
-    url: opts.url,
-    app,
-    clientFactory: opts.clientFactory,
-  });
-
-  // `useStorage` (when cached) handles JSON encode/decode, SSR-null storage,
-  // and try/catch around quota errors. `null` removes the key on assignment,
-  // matching the previous `clearCache` semantics. When `cache: false`, fall
-  // back to a plain ref so we don't even READ from localStorage on mount.
-  const cacheKey = `${CACHE_PREFIX}:${app}`;
-  const cache = cacheEnabled
-    ? useStorage<AppConfData | null>(cacheKey, null, undefined, {
-        listenToStorageChanges: true,
-        serializer: StorageSerializers.object,
-        // Sync flush so optimistic writes / reset hit localStorage before
-        // the next assertion / mount — matches the previous direct-write
-        // semantics callers rely on.
-        flush: "sync",
-      })
-    : ref<AppConfData | null>(null);
-
-  function clearCache(): void {
-    // Setting `cache.value = null` only triggers the watcher when the ref
-    // was non-null; if a foreign tab wrote to the same key while ours was
-    // already null, the watcher would no-op and the stale entry would
-    // survive. Force-remove via the storage API to keep that case clean.
-    cache.value = null;
-    if (cacheEnabled) {
-      try {
-        globalThis.localStorage?.removeItem(cacheKey);
-      } catch {
-        // ignored — sandboxed iframes / quota / SSR
-      }
-    }
-  }
-
-  const prefs = computed<AppConfData>({
-    get: () => cache.value ?? {},
-    set: (value) => {
-      cache.value = value;
-    },
-  });
-  const existing = shallowRef<AsPresetEntryRow | null>(null);
-  const loading = ref(false);
-  const error = ref<unknown>(null);
-  const denied = ref(false);
-
-  const available = computed(() => !denied.value);
-
-  async function reload(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      const result = await client.load();
-      if (result.denied) {
-        denied.value = true;
-        clearCache();
-        existing.value = null;
-        return;
-      }
-      denied.value = false;
-      cache.value = { ...result.prefs };
-      existing.value = result.row;
-    } catch (err) {
-      if (isAuthError(err)) {
-        denied.value = true;
-        clearCache();
-        existing.value = null;
-        return;
-      }
-      error.value = err;
+  const key = instanceKey(app, opts.url);
+  const existing = REGISTRY.get(key);
+  if (existing) {
+    const requested = opts.cache !== false;
+    if (requested !== existing.cacheEnabled) {
       // eslint-disable-next-line no-console
-      console.warn("[vue-table] useAppPrefs load failed:", err);
-    } finally {
-      loading.value = false;
+      console.warn(
+        `[vue-table] useAppPrefs("${app}", "${opts.url}"): cache=${requested} ignored — first caller registered cache=${existing.cacheEnabled}.`,
+      );
     }
+    return existing.public;
   }
+  const instance = createInstance(app, opts);
+  REGISTRY.set(key, instance);
+  return instance.public;
+}
 
-  async function save(patch: Partial<AppConfData>): Promise<void> {
-    const prev = { ...prefs.value };
-    // Optimistic: writes flow through the cache ref so subscribers (other
-    // instances + storage event listeners) see the new value before the
-    // network settles.
-    cache.value = { ...prev, ...patch };
-    try {
-      const id = await client.save(existing.value, patch);
-      if (!existing.value && id) {
-        existing.value = {
-          id,
-          type: "appConf",
-          app,
-          user: "",
-          data: { ...prefs.value },
-          createdAt: 0,
-          updatedAt: 0,
-        };
+/** Tear down a singleton instance — closes its BroadcastChannel and clears the registry slot. Test escape hatch. */
+export function disposeAppPrefs(app: string, url: string): void {
+  const key = instanceKey(app, url);
+  const instance = REGISTRY.get(key);
+  if (!instance) return;
+  instance.dispose();
+  REGISTRY.delete(key);
+}
+
+function createInstance(app: string, opts: UseAppPrefsOptions): AppPrefsInstance {
+  // Detached scope: the singleton outlives any individual component's scope,
+  // so its watchers/listeners must not be torn down by `onScopeDispose`.
+  const scope = effectScope(true);
+  return scope.run((): AppPrefsInstance => {
+    const cacheEnabled = opts.cache !== false;
+    const client = new AppPrefsClient({
+      url: opts.url,
+      app,
+      clientFactory: opts.clientFactory,
+    });
+
+    const cacheKey = `${CACHE_PREFIX}:${app}`;
+    // `useStorage` (when cached) handles JSON encode/decode, SSR-null storage,
+    // and try/catch around quota errors. Sync flush so optimistic writes hit
+    // localStorage before the next assertion / mount. `cache: false` falls back
+    // to a plain ref so we never read from localStorage on mount.
+    const cache = cacheEnabled
+      ? useStorage<AppConfData | null>(cacheKey, null, undefined, {
+          listenToStorageChanges: true,
+          serializer: StorageSerializers.object,
+          flush: "sync",
+        })
+      : ref<AppConfData | null>(null);
+
+    function clearCache(): void {
+      // Foreign-tab safety: if a peer wrote to `cacheKey` while ours was
+      // already null, `cache.value = null` no-ops; force-remove via the
+      // storage API to keep the entry from surviving.
+      cache.value = null;
+      if (cacheEnabled) {
+        try {
+          globalThis.localStorage?.removeItem(cacheKey);
+        } catch {
+          /* sandboxed iframes / quota / SSR */
+        }
       }
-      bus.emit({ app, prefs: prefs.value, row: existing.value });
-    } catch (err) {
-      cache.value = prev;
-      throw err;
     }
-  }
 
-  function reset(): void {
-    clearCache();
-    existing.value = null;
-    error.value = null;
-    denied.value = false;
-    bus.emit({ app, reset: true });
-  }
+    const prefs = computed<AppConfData>({
+      get: () => cache.value ?? {},
+      set: (value) => {
+        cache.value = value;
+      },
+    });
+    const existing = shallowRef<AsPresetEntryRow | null>(null);
+    const loading = ref(false);
+    const error = ref<unknown>(null);
+    const denied = ref(false);
+    const available = computed(() => !denied.value);
 
-  // Cross-instance sync: any `useAppPrefs(app)` save/reset fans out to
-  // every other instance sharing the same `app` namespace. Saver also
-  // publishes the server-stamped row so receivers route the next save
-  // through update (not a duplicate insert).
-  const bus = useEventBus(APP_PREFS_BUS);
-  bus.on((payload) => {
-    if (payload.app !== app) return;
-    if ("reset" in payload) {
+    const channel = createChannel(app);
+
+    async function reload(): Promise<void> {
+      loading.value = true;
+      error.value = null;
+      try {
+        const result = await client.load();
+        if (result.denied) {
+          denied.value = true;
+          clearCache();
+          existing.value = null;
+          return;
+        }
+        denied.value = false;
+        cache.value = { ...result.prefs };
+        existing.value = result.row;
+      } catch (err) {
+        if (isAuthError(err)) {
+          denied.value = true;
+          clearCache();
+          existing.value = null;
+          return;
+        }
+        error.value = err;
+        // eslint-disable-next-line no-console
+        console.warn("[vue-table] useAppPrefs load failed:", err);
+      } finally {
+        loading.value = false;
+      }
+    }
+
+    async function save(patch: Partial<AppConfData>): Promise<void> {
+      const prev = { ...prefs.value };
+      cache.value = { ...prev, ...patch };
+      try {
+        const id = await client.save(existing.value, patch);
+        if (!existing.value && id) {
+          existing.value = {
+            id,
+            type: "appConf",
+            app,
+            user: "",
+            data: { ...prefs.value },
+            createdAt: 0,
+            updatedAt: 0,
+          };
+        }
+        const snapshot = { ...prefs.value };
+        bus.emit({ app, prefs: snapshot, row: existing.value });
+        channel?.postMessage({ type: "save", prefs: snapshot, row: existing.value });
+      } catch (err) {
+        cache.value = prev;
+        throw err;
+      }
+    }
+
+    function reset(): void {
       clearCache();
       existing.value = null;
-      return;
+      error.value = null;
+      denied.value = false;
+      bus.emit({ app, reset: true });
+      channel?.postMessage({ type: "reset" });
     }
-    cache.value = { ...payload.prefs };
-    if (payload.row && !existing.value) existing.value = payload.row;
-  });
 
-  // Skip the SSR pass — `fetch` / `localStorage` aren't available, the
-  // load would warn and the cached value (or {}) is what SSR should serialise.
-  if (opts.autoLoad !== false && typeof window !== "undefined") void reload();
+    // In-window cross-instance sync (covers two singletons under one app w/
+    // different `url`s). Saver also publishes the server-stamped row so
+    // receivers route the next save through update, not a duplicate insert.
+    const bus = useEventBus(APP_PREFS_BUS);
+    bus.on((payload) => {
+      if (payload.app !== app) return;
+      if ("reset" in payload) {
+        clearCache();
+        existing.value = null;
+        return;
+      }
+      cache.value = { ...payload.prefs };
+      if (payload.row && !existing.value) existing.value = payload.row;
+    });
 
-  return {
-    prefs,
-    loading,
-    error,
-    available,
-    reload,
-    save,
-    reset,
-  };
+    // Cross-tab sync — peers in other tabs/windows. The channel does not echo
+    // messages back to the sender.
+    channel?.addEventListener("message", (e: MessageEvent) => {
+      const msg = e.data as ChannelMessage;
+      if (!msg || typeof msg !== "object") return;
+      if (msg.type === "reset") {
+        clearCache();
+        existing.value = null;
+        return;
+      }
+      if (msg.type === "save") {
+        cache.value = { ...msg.prefs };
+        if (msg.row && !existing.value) existing.value = msg.row;
+      }
+    });
+
+    // Skip SSR — `fetch` / `localStorage` aren't available; serialise the
+    // cached value (or {}) as-is.
+    if (opts.autoLoad !== false && typeof window !== "undefined") void reload();
+
+    return {
+      cacheEnabled,
+      public: { prefs, loading, error, available, reload, save, reset },
+      dispose() {
+        channel?.close();
+        scope.stop();
+      },
+    };
+  })!;
+}
+
+function createChannel(app: string): BroadcastChannel | null {
+  if (typeof window === "undefined") return null;
+  if (typeof BroadcastChannel !== "function") return null;
+  try {
+    return new BroadcastChannel(`as-app-prefs:${app}`);
+  } catch {
+    return null;
+  }
 }
