@@ -185,6 +185,10 @@ test.describe("Section 10 — Pagination", () => {
     // Pagination summary reflects "loaded of total".
     await expect(page.locator(".as-page-pill")).toContainText("25 of 2000");
 
+    // Drain the URL-bridge echo before measuring the size change — same
+    // post-`gotoTable` settle pattern as 10.1b above.
+    await expectNoPages(page, async () => {}, { table: "products" });
+
     // Bump to 100. Pagination handler resets `page` to 1 (verified at
     // `TablePagination.vue` lines 27–28: setter spreads `{ page: 1, ... }`).
     const captured = await expectSinglePages(

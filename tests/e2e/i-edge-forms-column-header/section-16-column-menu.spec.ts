@@ -101,6 +101,27 @@ test.describe("Section 16.1 — Menu items gated by capability + config", () => 
     await page.keyboard.press("Escape");
     await expect(menu).toHaveCount(0);
   });
+
+  test("/orders-no-menu Lines (@db.json + hide:false + resetWidth:false): no menu mounts on click", async ({
+    page,
+  }) => {
+    // `lines` is @db.json (sortable=false + filterable=false) and the route
+    // disables hide + resetWidth, so all four gates collapse to
+    // `hasAnyItem === false` and `as-column-menu.vue` renders the slot
+    // without DropdownMenuRoot — clicking the header doesn't portal a menu.
+    await gotoTable(page, "orders-no-menu", { apiPath: "orders" });
+
+    await clickColumnHeader(page, "lines");
+    await page.waitForTimeout(150);
+    await expect(page.locator(".as-column-menu-content")).toHaveCount(0);
+
+    // Sibling sortable column on the same route still gets a menu — proves
+    // the no-menu fallback is column-scoped, not route-wide.
+    await clickColumnHeader(page, "total");
+    await expect(page.locator(".as-column-menu-content")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".as-column-menu-content")).toHaveCount(0);
+  });
 });
 
 test.describe("Section 16.2 — Sort items + hotkeys (a, d)", () => {

@@ -1,4 +1,4 @@
-import type { SystemPresetInput, UrlQuerySync } from "@atscript/vue-table";
+import type { ColumnMenuConfig, SystemPresetInput, UrlQuerySync } from "@atscript/vue-table";
 
 export type TableMode = "pagination" | "infinite";
 export type TableKind = "virtual" | "window" | "infinite-scroll";
@@ -71,6 +71,13 @@ export interface DemoTable {
    * UI state shouldn't leak to the URL.
    */
   urlQuerySync?: UrlQuerySync;
+  /**
+   * Per-table override for `<AsTable>` / `<AsWindowTable>`'s `column-menu`
+   * prop. Defaults to all four gates on. The `orders-no-menu` route turns
+   * `hide` + `resetWidth` off so a `@db.json` column collapses every gate
+   * and exercises the no-DropdownMenu fallback in `as-column-menu.vue`.
+   */
+  columnMenu?: ColumnMenuConfig;
 }
 
 export const DEMO_TABLES: DemoTable[] = [
@@ -133,6 +140,19 @@ export const DEMO_TABLES: DemoTable[] = [
     mode: "pagination",
     actionsColumn: "last",
     forceFilters: { status: "cancelled" },
+  },
+  // Sticky-config alias of `orders` — disables Hide + Reset width so the
+  // `@db.json` `lines` column collapses all four column-menu gates and
+  // exercises the no-DropdownMenu fallback in `as-column-menu.vue`.
+  {
+    path: "orders-no-menu",
+    apiPath: "orders",
+    label: "Orders (no menu)",
+    resource: "orders",
+    icon: "i-ph:dots-three",
+    mode: "pagination",
+    actionsColumn: "last",
+    columnMenu: { sort: true, filters: true, hide: false, resetWidth: false },
   },
   {
     path: "audit_log",

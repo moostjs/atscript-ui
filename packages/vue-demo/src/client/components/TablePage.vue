@@ -8,6 +8,7 @@ import {
   createDefaultControls,
   useTableUrlQuery,
   type ActionResult,
+  type ColumnMenuConfig,
   type TVueTableActionInfo,
 } from "@atscript/vue-table";
 import TableToolbar from "./TableToolbar.vue";
@@ -42,6 +43,15 @@ const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
 const apiPath = computed(() => tableMeta.value?.apiPath ?? props.path);
 const forceFilters = computed(() => tableMeta.value?.forceFilters);
 const systemPresets = computed(() => tableMeta.value?.systemPresets);
+const DEFAULT_COLUMN_MENU: ColumnMenuConfig = {
+  sort: true,
+  filters: true,
+  hide: true,
+  resetWidth: true,
+};
+const columnMenu = computed<ColumnMenuConfig>(
+  () => tableMeta.value?.columnMenu ?? DEFAULT_COLUMN_MENU,
+);
 
 const { me, loaded: meLoaded } = useMe();
 const canWrite = computed(() => !!me.value?.permissions?.[props.path]?.write);
@@ -245,13 +255,13 @@ watch(
             v-if="kind === 'window'"
             :select="select"
             :row-delete="canDeleteRows"
-            :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
+            :column-menu="columnMenu"
           />
           <AsTable
             v-else
             :select="select"
             :row-delete="canDeleteRows"
-            :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }"
+            :column-menu="columnMenu"
             :row-actions-column="actionsColumn"
             sticky-header
             :virtual-row-height="36"
