@@ -16,6 +16,12 @@ export default defineConfig({
   // Smoke specs only for Phase 1. Phase-2 batches add their own `testMatch`s.
   fullyParallel: false,
 
+  // Serialise the whole suite. Mutating batches (F/H/J/K/L) write to shared
+  // SQLite tables (`users`, `_presets`, `audit_log`); cross-file parallelism
+  // produces transaction-conflict flakes. Trade-off: ~1m20s → ~4m40s wall time
+  // for bulletproof signal.
+  workers: 1,
+
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
 
