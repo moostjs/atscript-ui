@@ -19,9 +19,22 @@ export const test = base.extend<object, { workerBaseURL: string }>({
   workerBaseURL: [
     // eslint-disable-next-line no-empty-pattern -- Playwright fixture signature
     async ({}, use, workerInfo) => {
+      // `TEST_WORKER_INDEX` (= Playwright's `workerIndex`) is unbounded —
+      // it increments every time a worker process restarts (e.g. between
+      // test files for isolation), so it can exceed `workers - 1`. Helpers
+      // (`request.ts`, `seed.ts`, `outlet.ts`) need the bounded
+      // `parallelIndex` to map to one of the spawned replicas, so we stamp
+      // it onto `process.env` here. Worker-scoped fixtures fire once per
+      // worker process before any test runs, so by the time a helper is
+      // invoked the env var is already set in the same process.
+      process.env.TEST_PARALLEL_INDEX = String(workerInfo.parallelIndex);
       await use(`http://localhost:${BASE_PORT + workerInfo.parallelIndex}`);
     },
-    { scope: "worker" },
+    // `auto: true` so the fixture (and the env-var stamp) fires for every
+    // test, even tests whose signature doesn't destructure `baseURL` /
+    // `workerBaseURL` (e.g. raw-HTTP probes that build their own
+    // `APIRequestContext` via `newAnonRequestContext()`).
+    { scope: "worker", auto: true },
   ],
   baseURL: async ({ workerBaseURL }, use) => {
     await use(workerBaseURL);

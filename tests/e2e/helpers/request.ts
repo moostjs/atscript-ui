@@ -4,10 +4,13 @@ import { workerUrl } from "../global-setup";
 import { authFileFor, type DemoRole } from "./auth";
 
 /** URL of the replica owning the current Playwright worker process.
- *  `TEST_WORKER_INDEX` is set by Playwright per worker; falls back to 0 for
- *  contexts created outside a test (e.g. `auth.setup.ts`). */
+ *  `TEST_PARALLEL_INDEX` is stamped by `tests/e2e/fixtures.ts`'s
+ *  `workerBaseURL` fixture (Playwright's own `TEST_WORKER_INDEX` is
+ *  unbounded across worker restarts and would route past the spawned
+ *  replicas). Falls back to 0 for contexts created outside a fixture-aware
+ *  test (e.g. `auth.setup.ts`, which always pins to replica 0). */
 function currentWorkerUrl(): string {
-  return workerUrl(Number(process.env.TEST_WORKER_INDEX ?? 0));
+  return workerUrl(Number(process.env.TEST_PARALLEL_INDEX ?? 0));
 }
 
 /**

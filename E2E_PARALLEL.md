@@ -1,10 +1,14 @@
 # E2E parallel-workers proposal
 
-**Status:** proposed, not implemented. Captured for future work.
+**Status:** implemented. Default is still `E2E_WORKERS=1` for unchanged single-server behaviour; opt into parallel runs with `E2E_WORKERS=4 pnpm test:e2e`.
 
-**Context:** As of commit `ec6efba`, the e2e suite runs at `workers: 1` to eliminate cross-worker SQLite contention flakes. Wall time: ~4m6s for 258 tests. Two consecutive 100% green runs confirmed.
+**Context:** Originally captured at commit `ec6efba` when the suite was forced to `workers: 1` (~4m6s wall time) to dodge cross-worker SQLite contention. Implementation lands the per-worker server+DB design proposed below: each Playwright parallel slot now owns its own `:3200+i` server + `tests/e2e/.tmp/db-i/demo.db` SQLite file. Two consecutive 100% green runs at `E2E_WORKERS=4`: 258 passed in ~2.1m (49% reduction).
 
-This doc proposes restoring parallel execution by giving each Playwright worker its own demo server + database. Estimated speedup: ~4m6s → ~1m20s on 4 workers.
+**Implementation notes:**
+- `process.env.TEST_WORKER_INDEX` (Playwright's `workerIndex`) is unbounded — increments past `WORKERS-1` whenever a worker process restarts (e.g. between test files for isolation). Helpers must read `process.env.TEST_PARALLEL_INDEX` instead, which is stamped by the `auto: true` `workerBaseURL` fixture in `tests/e2e/fixtures.ts` from `workerInfo.parallelIndex` (bounded by `WORKERS`).
+- The `auto: true` flag is load-bearing: tests like `19.1 raw HTTP` don't destructure `baseURL` and would otherwise leave `TEST_PARALLEL_INDEX` unset — helpers would silently route to replica 0 across all workers.
+- A single SSR-warmup pass (`fetch /` + `fetch /login`) happens at the end of `setupWorker(idx)`; without it, the first navigation on a freshly-spawned replica eats a 5-15s cold-Vite-SSR delay that blows past `page.waitForURL`'s 20s timeout under 4-way CPU contention.
+- `f-actions-mutating/section-8-actions-mutating.spec.ts` mutates `admin → suspended` and never restores. Files that do fresh form-based admin login (`k-workflows/section-19-workflows.spec.ts`) need `resetSeed()` in `beforeAll` so they survive landing on a worker that already ran section 8. Under parallel workers `resetSeed()` only touches the calling worker's DB — no cross-batch race like in the shared-DB era.
 
 ## Problem
 

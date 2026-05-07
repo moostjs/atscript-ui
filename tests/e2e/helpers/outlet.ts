@@ -4,12 +4,14 @@ import { fileURLToPath } from "node:url";
 
 const HELPERS_DIR = dirname(fileURLToPath(import.meta.url));
 
-/** Per-worker server log. `TEST_WORKER_INDEX` is set by Playwright in each
- *  worker process; outside a test (e.g. ad-hoc helper invocation) we fall
- *  back to replica 0. The corresponding file is opened by `global-setup.ts`'s
- *  `setupWorker(idx)` and lives at `tests/e2e/.tmp/server-<i>.log`. */
+/** Per-worker server log. `TEST_PARALLEL_INDEX` is stamped by
+ *  `tests/e2e/fixtures.ts`'s `workerBaseURL` fixture (Playwright's
+ *  `TEST_WORKER_INDEX` is unbounded across worker restarts and would point
+ *  past the spawned replicas). Outside a test we fall back to replica 0.
+ *  The matching file is opened by `global-setup.ts`'s `setupWorker(idx)`
+ *  and lives at `tests/e2e/.tmp/server-<i>.log`. */
 function currentServerLog(): string {
-  const idx = Number(process.env.TEST_WORKER_INDEX ?? 0);
+  const idx = Number(process.env.TEST_PARALLEL_INDEX ?? 0);
   return resolve(HELPERS_DIR, `../.tmp/server-${idx}.log`);
 }
 

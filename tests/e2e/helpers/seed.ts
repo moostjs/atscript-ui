@@ -3,7 +3,10 @@ import { request as playwrightRequest } from "@playwright/test";
 import { workerUrl } from "../global-setup";
 
 function currentWorkerUrl(): string {
-  return workerUrl(Number(process.env.TEST_WORKER_INDEX ?? 0));
+  // See `helpers/request.ts` for why this reads `TEST_PARALLEL_INDEX` (set
+  // by the `workerBaseURL` fixture) rather than Playwright's unbounded
+  // `TEST_WORKER_INDEX`.
+  return workerUrl(Number(process.env.TEST_PARALLEL_INDEX ?? 0));
 }
 
 /**

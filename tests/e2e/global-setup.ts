@@ -72,6 +72,23 @@ async function waitForReady(url: string, timeoutMs = READY_TIMEOUT_MS): Promise<
   throw new Error(`Dev server did not become ready at ${url} within ${timeoutMs}ms`);
 }
 
+/** Pre-compile Vite's SSR bundle by hitting the most common entry routes
+ *  before any test runs. Without this, the FIRST test to navigate to
+ *  `/login` or `/` on a freshly-spawned replica eats a 5-15 s cold-compile
+ *  delay that can blow past `page.waitForURL`'s 20 s timeout under load
+ *  (4 replicas competing for CPU). `/api/me` doesn't trigger SSR so
+ *  `waitForReady` alone isn't sufficient. */
+async function warmupSsr(url: string): Promise<void> {
+  for (const path of ["/", "/login"]) {
+    try {
+      await fetch(`${url}${path}`, { method: "GET" });
+    } catch {
+      // Ignore — SSR errors don't block test setup; the actual page-load
+      // assertions in tests will surface real issues.
+    }
+  }
+}
+
 function killStaleServers(workers: number) {
   for (let i = 0; i < workers; i++) {
     const pidPath = workerPidPath(i);
@@ -156,6 +173,11 @@ async function setupWorker(idx: number): Promise<void> {
     } catch {}
     throw err;
   }
+
+  // 4. Pre-compile SSR bundles so the first test doesn't pay cold-start
+  //    latency. Cheap (one fetch each, no assertion) and only happens once
+  //    per replica.
+  await warmupSsr(url);
 }
 
 export default async function globalSetup(): Promise<void> {

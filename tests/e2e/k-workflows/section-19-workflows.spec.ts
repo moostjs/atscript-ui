@@ -1,10 +1,13 @@
 // Section 19 — Workflows: login, register, invite.
 //
-// **Pinned to one file.** A global `resetSeed()` here would race the
-// F/H/J mutation chains on the shared sqlite connection
-// (`cannot start a transaction within a transaction`). K's mutations
-// stay scoped (per-test `uniq()` for inserts; viewer suspend/activate
-// in 19.3's afterAll), so cross-batch state stays clean without a reset.
+// **Per-worker reset.** Each Playwright worker owns its own demo-server
+// replica + sqlite file (see `tests/e2e/global-setup.ts`), so `resetSeed()`
+// here only touches THIS worker's DB and never races other batches. This
+// undoes any prior file's mutations to `admin` / `alice` / `viewer` (e.g.
+// section 8.20 leaves admin suspended) so 19.1's login-as-admin starts
+// from a clean baseline. Per-test mutations still scope themselves via
+// `uniq()` ids + viewer suspend/activate in 19.3's afterAll for in-file
+// hygiene.
 //
 // Wire-shape findings:
 //   - Login finish: `{ wfs?, finished: true, ok: true, user: { username, roleName } }`
@@ -52,6 +55,7 @@ import {
   gotoTable,
   newAnonRequestContext,
   newRequestContext,
+  resetSeed,
   rowByCellText,
   serverLogOffset,
   waitForOtp,
@@ -143,8 +147,11 @@ async function suspendUserViaApi(
 test.describe.configure({ mode: "serial" });
 
 test.describe("Section 19 — workflows", () => {
-  // No `resetSeed()` — see file header. Mutations stay scoped via per-test
-  // `uniq()` ids and the viewer suspend/activate pair in 19.3.
+  // Restore per-worker DB to seed state — see file header for why this is
+  // safe under parallel workers (it wasn't in the shared-DB era).
+  test.beforeAll(async () => {
+    await resetSeed();
+  });
 
   test.describe("19.1 — login happy path", () => {
     test("19.1 UI — admin signs in via /login form; redirects + sidebar reflects", async ({
