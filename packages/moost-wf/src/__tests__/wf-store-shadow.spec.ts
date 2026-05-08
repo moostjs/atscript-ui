@@ -17,7 +17,7 @@ function makeState(overrides?: Partial<WfState>): WfState {
   } as WfState;
 }
 
-describe("AsWfStore — @wf.context.copy shadow columns", () => {
+describe("AsWfStore — @wf.store.fromContext shadow columns", () => {
   let warnSpy: ReturnType<typeof vi.spyOn>;
   beforeEach(() => {
     warnSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -176,9 +176,9 @@ describe("AsWfStore — @wf.context.copy shadow columns", () => {
   });
 });
 
-describe("AsWfStore — @wf.context.copy with no annotated fields", () => {
+describe("AsWfStore — @wf.store.fromContext with no annotated fields", () => {
   it("heal() returns 0 when schema declares no shadow columns", async () => {
-    // Use the non-shadow fixture (no @wf.context.copy on any field).
+    // Use the non-shadow fixture (no @wf.store.fromContext on any field).
     const { store, table } = await setupStore();
     const now = Date.now();
     await table.insertOne({

@@ -7,9 +7,10 @@ type CopyPrimitive = (typeof COPY_PRIMITIVES)[number];
 
 /**
  * ATScript plugin that registers workflow-specific annotations:
- * - `@wf.context.pass` — whitelist context keys to send to the client
- * - `@wf.context.copy` — copy a context value into a top-level column on every `set()`
+ * - `@wf.context.pass` — whitelist context keys to send to the client form
  * - `@wf.action.withData` — action that sends form data with deep-partial validation
+ * - `@wf.store.fromContext` — wf-store: copy a context value into a top-level
+ *   column on every `set()` (shadow column for indexable queries)
  *
  * Install in your `atscript.config.ts`:
  * ```ts
@@ -43,7 +44,23 @@ export default function wfPlugin(): TAtscriptPlugin {
                   description: "Context key name to whitelist",
                 },
               }),
-              copy: new AnnotationSpec({
+            },
+            action: {
+              withData: new AnnotationSpec({
+                description:
+                  "Form action that sends partial form data with deep-partial validation. " +
+                  "Workflow-only — the server validates filled fields but allows missing ones. " +
+                  "Use for actions like 'save draft' where partial data is useful.",
+                nodeType: ["prop", "type"],
+                argument: {
+                  name: "id",
+                  type: "string",
+                  description: "The action name",
+                },
+              }),
+            },
+            store: {
+              fromContext: new AnnotationSpec({
                 description:
                   "Copy a value from `state.context` to a top-level column on every `set()`. " +
                   "Use to add indexable shadow columns (e.g. `approver`) for UIs and queries " +
@@ -60,21 +77,7 @@ export default function wfPlugin(): TAtscriptPlugin {
                   description:
                     "Dot-notation path into state.context (e.g. 'approver' or 'approval.approver').",
                 },
-                validate: validateContextCopy,
-              }),
-            },
-            action: {
-              withData: new AnnotationSpec({
-                description:
-                  "Form action that sends partial form data with deep-partial validation. " +
-                  "Workflow-only — the server validates filled fields but allows missing ones. " +
-                  "Use for actions like 'save draft' where partial data is useful.",
-                nodeType: ["prop", "type"],
-                argument: {
-                  name: "id",
-                  type: "string",
-                  description: "The action name",
-                },
+                validate: validateStoreFromContext,
               }),
             },
           },
@@ -84,13 +87,13 @@ export default function wfPlugin(): TAtscriptPlugin {
   };
 }
 
-const validateContextCopy: NonNullable<
+const validateStoreFromContext: NonNullable<
   ConstructorParameters<typeof AnnotationSpec>[0]["validate"]
 > = (token, args, doc) => {
-  const errors: ReturnType<NonNullable<typeof validateContextCopy>> = [];
+  const errors: ReturnType<NonNullable<typeof validateStoreFromContext>> = [];
   const field = token.parentNode as SemanticPropNode | undefined;
   if (!field) return errors;
-  const ann = "@wf.context.copy";
+  const ann = "@wf.store.fromContext";
 
   // 1. Path syntax — dot-notation only.
   const path = args[0]?.text;

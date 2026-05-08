@@ -98,6 +98,7 @@ const managerRole: Role = {
     ...allowAll("orders", WRITE_METHODS),
     // audit_log: read-only
     ...allowAll("audit_log", READ_METHODS),
+    // wf_states intentionally omitted — admin-only via the admin wildcard.
   ],
 };
 

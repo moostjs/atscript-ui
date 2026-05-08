@@ -44,6 +44,7 @@ const DEMO_RESOURCES = [
   "customers",
   "orders",
   "audit_log",
+  "wf_states",
 ] as const;
 
 type PermEntry = { read: boolean; write: boolean; columns?: string[] };

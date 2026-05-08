@@ -21,6 +21,7 @@ import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
 import { AuditLogController } from "./controllers/audit-log.controller";
+import { WfStatesController } from "./controllers/wf-states.controller";
 import { PresetsController } from "./controllers/presets.controller";
 import { TestController } from "./controllers/test.controller";
 import { WorkflowsController } from "./controllers/workflows.controller";
@@ -74,6 +75,7 @@ app.registerControllers(
   CustomersController,
   OrdersController,
   AuditLogController,
+  WfStatesController,
   PresetsController,
 );
 // Test-only controller (`POST /api/_test/reset-seed`) — only registered when

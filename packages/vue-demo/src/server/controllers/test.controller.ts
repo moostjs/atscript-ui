@@ -170,7 +170,7 @@ export class TestController {
 
   /**
    * List every `wf_states` row's `(handle, schemaId, expiresAt)` plus the
-   * `@wf.context.copy` shadow columns (`inviteEmail`, `inviteRole`). Used by
+   * `@wf.store.fromContext` shadow columns (`inviteEmail`, `inviteRole`). Used by
    * 19.W4 (cleanup retention), 19.W5 (schemaId lift), and 19.W6 (shadow
    * columns) to inspect store-side state.
    */

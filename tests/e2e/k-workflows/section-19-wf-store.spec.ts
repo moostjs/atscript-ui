@@ -21,9 +21,12 @@ import { expect, test, type APIRequestContext } from "../fixtures";
 
 import {
   authFileFor,
+  columnCellIndex,
+  gotoTable,
   newAnonRequestContext,
   newRequestContext,
   resetSeed,
+  rowByCellText,
   serverLogOffset,
   waitForOutletEntry,
 } from "../helpers";
@@ -445,7 +448,7 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
     });
   });
 
-  test.describe("19.W6 — @wf.context.copy populates shadow columns from state.context", () => {
+  test.describe("19.W6 — @wf.store.fromContext populates shadow columns from state.context", () => {
     test("19.W6 raw — seed rows with email/roleName context; shadow columns inviteEmail/inviteRole reflect the copy", async () => {
       const adminCtx = await newRequestContext("admin");
       try {
@@ -489,8 +492,8 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         expect(byHandle.get("shadow-2")?.inviteEmail).toBeUndefined();
         expect(byHandle.get("shadow-2")?.inviteRole).toBeUndefined();
 
-        // Nested email is not picked up — `@wf.context.copy 'email'` is a
-        // top-level path, not a recursive search.
+        // Nested email is not picked up — `@wf.store.fromContext 'email'` is
+        // a top-level dot-path, not a recursive search.
         expect(byHandle.get("shadow-3")?.inviteEmail).toBeUndefined();
       } finally {
         await adminCtx.dispose();
@@ -524,6 +527,94 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         expect(inviteRow.inviteRole).toBe("viewer");
       } finally {
         await adminCtx.dispose();
+      }
+    });
+  });
+
+  test.describe("19.W7 — /wf_states demo table renders shadow columns and respects @ui.table.hidden", () => {
+    // Hidden in the schema — `state`, `handle`, `createdBy`, `lastUpdatedBy`
+    // come from `AsWfStateRecord` (moost-wf base); `id` is the demo's own
+    // re-declared `@meta.id` column.
+    const HIDDEN_COLUMNS = ["state", "handle", "id", "createdBy", "lastUpdatedBy"] as const;
+    // Visible — schemaId is inherited (no annotation), shadows are local.
+    const VISIBLE_COLUMNS = ["schemaId", "inviteEmail", "inviteRole"] as const;
+
+    test("19.W7 raw — meta payload carries @ui.table.hidden in the type metadata", async () => {
+      const adminCtx = await newRequestContext("admin");
+      try {
+        const res = await adminCtx.get("/api/db/tables/wf_states/meta");
+        expect(res.ok()).toBe(true);
+        const meta = (await res.json()) as {
+          type: { type: { props: Record<string, { metadata?: Record<string, unknown> }> } };
+        };
+        const props = meta.type?.type?.props ?? {};
+        for (const col of HIDDEN_COLUMNS) {
+          expect(
+            props[col]?.metadata?.["ui.table.hidden"],
+            `${col} must carry ui.table.hidden in wire metadata`,
+          ).toBe(true);
+        }
+        for (const col of VISIBLE_COLUMNS) {
+          expect(
+            props[col]?.metadata?.["ui.table.hidden"],
+            `${col} must NOT carry ui.table.hidden`,
+          ).toBeUndefined();
+        }
+      } finally {
+        await adminCtx.dispose();
+      }
+    });
+
+    test("19.W7 UI — admin opens /wf_states; thead omits hidden columns, shadow columns reflect a fresh invite", async ({
+      browser,
+    }) => {
+      // Seed: drive one invite so a wf_states row exists with shadow values.
+      const email = `wf-states-ui-${Date.now()}@example.com`;
+      const adminCtx = await newRequestContext("admin");
+      try {
+        const offset = await serverLogOffset();
+        const r = await adminCtx.post("/api/wf", {
+          data: { wfid: "api/users/invite", input: { email, roleId: 3 } },
+        });
+        expect([200, 201]).toContain(r.status());
+        await waitForOutletEntry({ template: "user-invite", sinceOffset: offset });
+      } finally {
+        await adminCtx.dispose();
+      }
+
+      const adminBrowserCtx = await browser.newContext({
+        storageState: authFileFor("admin"),
+      });
+      try {
+        const adminPage = await adminBrowserCtx.newPage();
+        await gotoTable(adminPage, "wf_states");
+        const table = adminPage.locator("table[data-as-main-table]");
+
+        for (const col of HIDDEN_COLUMNS) {
+          await expect(
+            table.locator(`thead th[data-column-path="${col}"]`),
+            `hidden column ${col} must not render a <th>`,
+          ).toHaveCount(0);
+        }
+        for (const col of VISIBLE_COLUMNS) {
+          await expect(
+            table.locator(`thead th[data-column-path="${col}"]`),
+            `visible column ${col} must render exactly one <th>`,
+          ).toHaveCount(1);
+        }
+
+        // Shadow column populated — admin can spot the pending invite by
+        // email without inspecting the JSON state blob.
+        const emailIdx = await columnCellIndex(table, "inviteEmail");
+        await expect
+          .poll(async () => await rowByCellText(table, emailIdx, email).count())
+          .toBeGreaterThan(0);
+
+        const inviteRow = rowByCellText(table, emailIdx, email).first();
+        const roleIdx = await columnCellIndex(table, "inviteRole");
+        await expect(inviteRow.locator("td").nth(roleIdx)).toHaveText("viewer");
+      } finally {
+        await adminBrowserCtx.close();
       }
     });
   });

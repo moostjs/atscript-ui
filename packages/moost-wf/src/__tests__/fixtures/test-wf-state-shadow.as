@@ -7,15 +7,15 @@ export interface ShadowWfStateRecord extends AsWfStateRecord {
     id: string
 
     // Shadow column from `state.context.approver` — optional, indexed.
-    @wf.context.copy 'approver'
+    @wf.store.fromContext 'approver'
     @db.index.plain 'approver_idx'
     approver?: string
 
     // Nested dot-path: copies `state.context.approval.priority`.
-    @wf.context.copy 'approval.priority'
+    @wf.store.fromContext 'approval.priority'
     priority?: number
 
     // Boolean shadow.
-    @wf.context.copy 'urgent'
+    @wf.store.fromContext 'urgent'
     urgent?: boolean
 }

@@ -39,7 +39,7 @@ export interface AsWfStoreOptions {
    * different annotated type than the base — `AtscriptDbTable<typeof
    * AsWfStateRecord>` would not accept the subtype, and there is no public
    * variance helper. The store only touches base columns + any
-   * `@wf.context.copy`-annotated shadow columns, so the loose generic is safe.
+   * `@wf.store.fromContext`-annotated shadow columns, so the loose generic is safe.
    */
   // biome-ignore lint/suspicious/noExplicitAny: see jsdoc above
   table: AtscriptDbTable<any>;
@@ -61,7 +61,7 @@ const defaultClock = { now: () => Date.now() };
  * The full `WfState` is stored as-is in the `state` column (`@db.json` blob).
  * `state.schemaId` is lifted to a top-level indexed column so `schema_idx` can
  * enumerate flows by schema. Consumers may add **shadow columns** by annotating
- * fields on their schema extension with `@wf.context.copy 'path.in.context'` —
+ * fields on their schema extension with `@wf.store.fromContext 'path.in.context'` —
  * those columns are populated from `state.context` on every `set()` and made
  * available for filtering, sorting, and indexing.
  *
@@ -148,13 +148,13 @@ export class AsWfStore implements WfStateStore {
   }
 
   /**
-   * Re-apply `@wf.context.copy` shadow columns to existing rows.
+   * Re-apply `@wf.store.fromContext` shadow columns to existing rows.
    *
    * Use after adding a new annotation to backfill old rows without waiting for
    * each workflow to next pause. Returns the count of rows whose shadows were
    * (re-)written. Filter narrows the scan; defaults to all rows.
    *
-   * No-op when the schema declares no `@wf.context.copy` fields.
+   * No-op when the schema declares no `@wf.store.fromContext` fields.
    */
   async heal(opts?: { filter?: Record<string, unknown>; batchSize?: number }): Promise<number> {
     const specs = this.scanShadowFields();
@@ -284,11 +284,11 @@ export class AsWfStore implements WfStateStore {
     this.#warnedFields.add(field);
     // biome-ignore lint/suspicious/noConsole: diagnostic for misconfigured shadow column
     console.warn(
-      `[AsWfStore] @wf.context.copy field "${field}" expected ${expected} but got ${typeof actual} — writing null. Subsequent mismatches on this field are silent.`,
+      `[AsWfStore] @wf.store.fromContext field "${field}" expected ${expected} but got ${typeof actual} — writing null. Subsequent mismatches on this field are silent.`,
     );
   }
 
-  /** Lazily build shadow specs from `@wf.context.copy` annotations. Override for a different source annotation. */
+  /** Lazily build shadow specs from `@wf.store.fromContext` annotations. Override for a different source annotation. */
   protected scanShadowFields(): ShadowFieldSpec[] {
     if (this.#shadowFieldsCache !== null) return this.#shadowFieldsCache;
     const specs: ShadowFieldSpec[] = [];
@@ -296,7 +296,7 @@ export class AsWfStore implements WfStateStore {
     const tableType = this.table.type as TAtscriptAnnotatedType;
     if (tableType?.type?.kind === "object") {
       for (const [fieldName, fieldType] of tableType.type.props) {
-        const path = fieldType.metadata.get("wf.context.copy") as string | undefined;
+        const path = fieldType.metadata.get("wf.store.fromContext") as string | undefined;
         if (!path) continue;
         const expectedType = this.resolveFieldPrimitive(fieldType);
         // Plugin-side validation rejects non-primitive fields; runtime miss = silently skip.

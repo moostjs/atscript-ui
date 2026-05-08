@@ -165,6 +165,14 @@ export const DEMO_TABLES: DemoTable[] = [
       { id: "standard", label: "Standard", content: { filters: ["action", "entityType"] } },
     ],
   },
+  // Workflow state store — admin-only listing of paused workflow rows;
+  // demo for `@wf.store.fromContext` shadow columns and `@ui.table.hidden`.
+  {
+    path: "wf_states",
+    label: "Workflow States",
+    resource: "wf_states",
+    icon: "i-ph:flow-arrow",
+  },
   // Infinite-scroll alias of `audit_log` — `<AsTable>` (paginated) +
   // `<InfiniteScroll>` listener. Same controller (`apiPath: 'audit_log'`)
   // so both routes share the dataset; `limit: 100` keeps the initial
