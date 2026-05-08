@@ -1,5 +1,5 @@
 import { Controller } from "moost";
-import { Post, HttpError } from "@moostjs/event-http";
+import { Post, Get, Body, HttpError } from "@moostjs/event-http";
 import {
   db,
   usersTable,
@@ -10,8 +10,10 @@ import {
   ordersTable,
   auditLogTable,
   presetsTable,
+  wfStateTable,
 } from "../db";
 import { UsersTable } from "../schemas/users.as";
+import { wfStore } from "./workflows.controller";
 import {
   seedRoles,
   seedUsers,
@@ -104,5 +106,94 @@ export class TestController {
     });
 
     return { ok: true, ms: Date.now() - started };
+  }
+
+  // ===========================================================================
+  // wf-store introspection / seed / cleanup — Section 19.W (handle-based store).
+  //
+  // These endpoints exercise the SAME `wfStore` module-level singleton the
+  // production strategy uses (re-exported from `workflows.controller.ts`), so
+  // tests verify the exact retention semantics live traffic would see. Only
+  // mounted under `DEMO_TEST_MODE=1`; the `resetSeed`'s defence-in-depth
+  // pattern repeats on each handler.
+
+  /**
+   * Wipe + seed the `wf_states` table. Always clears first so each seed call
+   * starts from a clean slate — folds the legacy `wf-store/reset` endpoint
+   * into seed (the two were always called in sequence).
+   *
+   * Calls `wfStore.set()` per row so the lift-`schemaId`-to-top-level
+   * behaviour matches what production wires write, and forwards the test-
+   * supplied `expiresAt` directly (the third arg, not the forward-only TTL
+   * signal). Cast keeps TS quiet across the package-boundary `WfState` shape.
+   */
+  @Post("wf-store/seed")
+  async wfStoreSeed(
+    @Body()
+    body: {
+      rows: Array<{
+        handle: string;
+        schemaId: string;
+        expiresAt: number;
+        state?: { context?: unknown; indexes?: number[]; meta?: Record<string, unknown> };
+      }>;
+    },
+  ): Promise<{ inserted: number }> {
+    if (process.env.DEMO_TEST_MODE !== "1") throw new HttpError(404, "Not found");
+    if (!Array.isArray(body?.rows)) throw new HttpError(400, "rows[] required");
+    await wfStateTable.deleteMany({});
+    for (const row of body.rows) {
+      await wfStore.set(
+        row.handle,
+        {
+          schemaId: row.schemaId,
+          context: row.state?.context ?? {},
+          indexes: row.state?.indexes ?? [0],
+          ...(row.state?.meta && { meta: row.state.meta }),
+        } as unknown as Parameters<typeof wfStore.set>[1],
+        row.expiresAt,
+      );
+    }
+    return { inserted: body.rows.length };
+  }
+
+  /** Run `wfStore.cleanup({ retention })` against the live store. */
+  @Post("wf-store/cleanup")
+  async wfStoreCleanup(
+    @Body() body: { retention?: number } | undefined,
+  ): Promise<{ deletedCount: number }> {
+    if (process.env.DEMO_TEST_MODE !== "1") throw new HttpError(404, "Not found");
+    const retention = body?.retention;
+    const deletedCount = await wfStore.cleanup(
+      retention === undefined ? undefined : { retention },
+    );
+    return { deletedCount };
+  }
+
+  /**
+   * List every `wf_states` row's `(handle, schemaId, expiresAt)`. Used by
+   * 19.W4 to assert which seeded rows survived a cleanup pass and 19.W5 to
+   * verify the schemaId lift is wired correctly.
+   */
+  @Get("wf-store/handles")
+  async wfStoreHandles(): Promise<{
+    handles: Array<{ handle: string; schemaId: string; expiresAt?: number }>;
+  }> {
+    if (process.env.DEMO_TEST_MODE !== "1") throw new HttpError(404, "Not found");
+    const rows = (await wfStateTable.findMany({ filter: {} })) as unknown as Array<{
+      handle: string;
+      schemaId: string;
+      expiresAt?: number | null;
+    }>;
+    const handles: Array<{ handle: string; schemaId: string; expiresAt?: number }> = [];
+    for (const r of rows) {
+      const entry: { handle: string; schemaId: string; expiresAt?: number } = {
+        handle: r.handle,
+        schemaId: r.schemaId,
+      };
+      if (r.expiresAt != null) entry.expiresAt = r.expiresAt;
+      handles.push(entry);
+    }
+    return { handles };
   }
 }

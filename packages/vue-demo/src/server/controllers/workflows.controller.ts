@@ -39,7 +39,10 @@ const ALLOWED_WORKFLOWS = [
 const HANDLE_STATE_WFIDS = new Set<string>(["api/users/invite"]);
 
 // Module-level singletons — one store + one strategy instance per process.
-const wfStore = new AsWfStore({
+// Exported so the test-only controller (mounted under `DEMO_TEST_MODE=1`) can
+// drive seed/cleanup/introspection through the SAME store instance the
+// production strategy uses. Never imported by non-test code.
+export const wfStore = new AsWfStore({
   // biome-ignore lint/suspicious/noExplicitAny: store only touches base columns; subtype generic
   table: wfStateTable as any,
   actor: () => useSession()?.username,
