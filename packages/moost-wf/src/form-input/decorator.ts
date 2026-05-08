@@ -5,7 +5,7 @@ import { isAnnotatedType } from "@atscript/typescript/utils";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { serializeFormSchema } from "./serialize";
 import { extractPassContext, getFormActions } from "./context";
-import { useFormInput } from "./use-form-input";
+import { useFormInput } from "./use";
 import { useWfAction } from "./use-wf-action";
 
 /**

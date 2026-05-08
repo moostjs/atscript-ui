@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FormInputRequired } from "../form-input-required";
+import { FormInputRequired } from "../form-input/required";
 
 describe("FormInputRequired", () => {
   it("stores schema", () => {

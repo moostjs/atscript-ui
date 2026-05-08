@@ -7,7 +7,11 @@ export default defineConfig({
     globalSetup: "src/__tests__/global-setup.ts",
   },
   pack: {
-    entry: ["src/index.ts", "src/plugin.ts", "src/store.ts"],
+    entry: {
+      index: "src/index.ts",
+      plugin: "src/plugin.ts",
+      store: "src/store/index.ts",
+    },
     dts: true,
     // ESM-only because the `./store` subpath re-exports atscript-generated
     // classes (`AsWfStateRecord`) from `as-wf-state.as`, and vite-plus does

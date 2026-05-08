@@ -1,7 +1,7 @@
 import type { WfState } from "@prostojs/wf/outlets";
 import { describe, expect, it } from "vite-plus/test";
 
-import { AsWfStore } from "../wf-store";
+import { AsWfStore } from "../store/wf-store";
 import { setupTable } from "./helpers";
 
 async function setupStore(opts?: {

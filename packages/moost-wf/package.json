@@ -4,7 +4,7 @@
   "description": "Workflow form integration for moost — decorators, interceptors, and serialization driven by atscript type metadata",
   "files": [
     "dist",
-    "src/as-wf-state.as"
+    "src/store/as-wf-state.as"
   ],
   "type": "module",
   "main": "dist/index.mjs",
@@ -22,7 +22,7 @@
       "types": "./dist/store.d.mts",
       "import": "./dist/store.mjs"
     },
-    "./store.as": "./src/as-wf-state.as",
+    "./store.as": "./src/store/as-wf-state.as",
     "./package.json": "./package.json"
   },
   "publishConfig": {
