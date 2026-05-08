@@ -33,6 +33,7 @@
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/db": "catalog:",
+    "@atscript/db-sqlite": "catalog:",
     "@atscript/typescript": "catalog:",
     "@atscript/ui": "workspace:^",
     "@moostjs/event-wf": "catalog:",

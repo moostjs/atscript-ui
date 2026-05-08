@@ -216,6 +216,9 @@ importers:
       '@atscript/db':
         specifier: 'catalog:'
         version: 0.1.69(@atscript/core@0.1.51(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.51)(@uniqu/core@0.1.6)
+      '@atscript/db-sqlite':
+        specifier: 'catalog:'
+        version: 0.1.69(@atscript/core@0.1.51(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.69(@atscript/db@0.1.69)(@uniqu/core@0.1.6))(@atscript/db@0.1.69)(@atscript/typescript@0.1.51)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.1.51(@atscript/core@0.1.51(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.69)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
