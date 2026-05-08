@@ -5,7 +5,7 @@
       "source": "moostjs/atscript",
       "sourceType": "github",
       "skillPath": "skills/atscript/SKILL.md",
-      "computedHash": "3db743dbbc67bf8189b9ad670c9543b03462c2480ba272d7644ad182156af839"
+      "computedHash": "c9d70ace3a858e21e58f3d0c8557c416e1f42ff147d42faf1720ca1fdfcd9564"
     },
     "atscript-db": {
       "source": "moostjs/atscript-db",
@@ -29,7 +29,7 @@
       "source": "wooksjs/wooksjs",
       "sourceType": "github",
       "skillPath": "skills/wooksjs/SKILL.md",
-      "computedHash": "d9f4a07d056338edea3aa20477f3775d9ed93555018280952dab085d1d82ceee"
+      "computedHash": "286561edaf96fdca2cd713bcb41e29d690df86e0cd33acb792c8ed0bae905df7"
     }
   }
 }
