@@ -21,7 +21,7 @@ export interface SuspendUsersInput {
 export interface ResendInviteInput {
     @meta.label 'Custom message (optional)'
     @ui.form.placeholder 'Add a personal note to the invitation email…'
-    @ui.type 'paragraph'
+    @ui.type 'textarea'
     @expect.maxLength 1000
     customMessage?: string
 }
@@ -33,7 +33,7 @@ export interface CancelOrdersInput {
 
     @meta.label 'Notes'
     @ui.form.placeholder 'Optional context shown in the audit log'
-    @ui.type 'paragraph'
+    @ui.type 'textarea'
     @expect.maxLength 500
     notes?: string
 
