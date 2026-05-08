@@ -465,9 +465,7 @@ describe("useAppPrefs singleton", () => {
     await flushPromises();
 
     expect(second).toBe(first);
-    expect(warn).toHaveBeenCalledWith(
-      expect.stringContaining("cache=true ignored"),
-    );
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("cache=true ignored"));
   });
 
   it("disposeAppPrefs() lets a fresh instance be created", async () => {
