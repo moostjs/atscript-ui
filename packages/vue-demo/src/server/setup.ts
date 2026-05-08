@@ -20,6 +20,7 @@ const { CustomersTable } = await import("./schemas/customers.as");
 const { OrdersTable } = await import("./schemas/orders.as");
 const { AuditLogTable } = await import("./schemas/audit-log.as");
 const { AsPresetEntry } = await import("@atscript/moost-ui-presets");
+const { WfStateRow } = await import("./schemas/wf-state.as");
 const {
   seedRoles,
   seedUsers,
@@ -41,6 +42,7 @@ const result = await syncSchema(
     OrdersTable,
     AuditLogTable,
     AsPresetEntry,
+    WfStateRow,
   ],
   { force: true },
 );
