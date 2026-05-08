@@ -17,15 +17,13 @@ export function formInputInterceptor(): TInterceptorDef {
     priority: TInterceptorPriority.CATCH_ERROR,
     error(error, reply) {
       if (error instanceof FormInputRequired) {
-        const context: Record<string, unknown> = { ...error.context };
-        if (error.errors) {
-          context.errors = error.errors;
-        }
         reply({
           inputRequired: {
             payload: error.schema,
             transport: "http" as const,
-            context,
+            context: error.errors
+              ? { ...error.context, errors: error.errors }
+              : { ...error.context },
           },
         });
       }

@@ -46,14 +46,8 @@ export function FormInput(): ParameterDecorator {
   };
 }
 
-/** Type for the injected form input helper. */
 export type TFormInput<_T = unknown> = ReturnType<typeof useFormInput>;
 
-/**
- * Per-method interceptor that validates workflow input against the atscript
- * form type before the step handler executes. Throws {@link FormInputRequired}
- * on validation failure, which is caught by {@link formInputInterceptor}.
- */
 function formInputCheckFn(): TInterceptorDef {
   return {
     priority: TInterceptorPriority.INTERCEPTOR,
@@ -89,16 +83,13 @@ function formInputCheckFn(): TInterceptorDef {
         const { actions, actionsWithData } = getFormActions(type);
 
         if (actionsWithData.includes(action)) {
-          const validator = type.validator({ partial: "deep", unknownProps: "strip" });
-          try {
-            validator.validate(input ?? {});
-          } catch (err) {
-            if (isValidatorError(err)) {
-              reply(toInputRequired(type, wfState, flattenErrors(err)));
-              return;
-            }
-            throw err;
-          }
+          validateOrReply(
+            type,
+            wfState,
+            input ?? {},
+            { partial: "deep", unknownProps: "strip" },
+            reply,
+          );
           return;
         }
 
@@ -112,38 +103,42 @@ function formInputCheckFn(): TInterceptorDef {
         return;
       }
 
-      const validator = type.validator({ unknownProps: "strip" });
-      try {
-        validator.validate(input);
-      } catch (err) {
-        if (isValidatorError(err)) {
-          reply(toInputRequired(type, wfState, flattenErrors(err)));
-          return;
-        }
-        throw err;
-      }
+      validateOrReply(type, wfState, input, { unknownProps: "strip" }, reply);
     },
   };
 }
 
-/** Build the inputRequired response payload. */
+function validateOrReply(
+  type: TAtscriptAnnotatedType,
+  wfState: ReturnType<typeof useWfState>,
+  input: unknown,
+  validatorOpts: Parameters<TAtscriptAnnotatedType["validator"]>[0],
+  reply: (value: unknown) => void,
+): void {
+  const validator = type.validator(validatorOpts);
+  try {
+    validator.validate(input);
+  } catch (err) {
+    if (isValidatorError(err)) {
+      reply(toInputRequired(type, wfState, flattenErrors(err)));
+      return;
+    }
+    throw err;
+  }
+}
+
 function toInputRequired(
   type: TAtscriptAnnotatedType,
   wfState: ReturnType<typeof useWfState>,
   errors?: Record<string, string>,
 ) {
   const wfContext = wfState.ctx<Record<string, unknown>>();
-  const schema = serializeFormSchema(type);
   const passedContext = extractPassContext(type, wfContext);
-  const context: Record<string, unknown> = { ...passedContext };
-  if (errors) {
-    context.errors = errors;
-  }
   return {
     inputRequired: {
-      payload: schema,
+      payload: serializeFormSchema(type),
       transport: "http" as const,
-      context,
+      context: errors ? { ...passedContext, errors } : { ...passedContext },
     },
   };
 }

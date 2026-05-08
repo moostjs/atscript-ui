@@ -1,26 +1,12 @@
-import { createAdapter } from "@atscript/db-sqlite";
-import { syncSchema } from "@atscript/db/sync";
 import type { WfState } from "@prostojs/wf/outlets";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { AsWfStore } from "../store/wf-store";
 import { ShadowWfStateRecord } from "./fixtures/test-wf-state-shadow.as";
+import { setupStore } from "./helpers";
 
-async function setupShadowStore(opts?: {
-  clock?: { now(): number };
-  actor?: () => string | undefined;
-}) {
-  const space = createAdapter(":memory:");
-  await syncSchema(space, [ShadowWfStateRecord], { force: true });
-  const table = space.getTable(ShadowWfStateRecord);
-  const store = new AsWfStore({
-    // biome-ignore lint/suspicious/noExplicitAny: subtype generic
-    table: table as any,
-    clock: opts?.clock,
-    actor: opts?.actor,
-  });
-  return { space, table, store };
-}
+const setupShadowStore = (opts?: { clock?: { now(): number }; actor?: () => string | undefined }) =>
+  setupStore({ ...opts, record: ShadowWfStateRecord });
 
 function makeState(overrides?: Partial<WfState>): WfState {
   return {
@@ -43,10 +29,7 @@ describe("AsWfStore — @wf.context.copy shadow columns", () => {
   it("copies top-level context value to shadow column on set()", async () => {
     const { store, table } = await setupShadowStore();
 
-    await store.set(
-      "h-approver",
-      makeState({ context: { approver: "alice", other: "ignored" } }),
-    );
+    await store.set("h-approver", makeState({ context: { approver: "alice", other: "ignored" } }));
     const row = await table.findOne({ filter: { handle: "h-approver" } });
     expect(row?.approver).toBe("alice");
   });
@@ -54,10 +37,7 @@ describe("AsWfStore — @wf.context.copy shadow columns", () => {
   it("resolves nested dot-paths (approval.priority)", async () => {
     const { store, table } = await setupShadowStore();
 
-    await store.set(
-      "h-nested",
-      makeState({ context: { approval: { priority: 7 } } }),
-    );
+    await store.set("h-nested", makeState({ context: { approval: { priority: 7 } } }));
     const row = await table.findOne({ filter: { handle: "h-nested" } });
     expect(row?.priority).toBe(7);
   });
@@ -111,10 +91,7 @@ describe("AsWfStore — @wf.context.copy shadow columns", () => {
     const { store, table } = await setupShadowStore();
 
     // approval.priority but `approval` is an array → path doesn't resolve
-    await store.set(
-      "h-arr",
-      makeState({ context: { approval: [{ priority: 5 }] } }),
-    );
+    await store.set("h-arr", makeState({ context: { approval: [{ priority: 5 }] } }));
     const row = await table.findOne({ filter: { handle: "h-arr" } });
     expect(row?.priority).toBeNull();
   });
@@ -195,23 +172,14 @@ describe("AsWfStore — @wf.context.copy shadow columns", () => {
     const a = inspect.peek();
     const b = inspect.peek();
     expect(a).toBe(b); // same array reference → cached
-    expect(a.map((s) => s.field).sort()).toEqual(["approver", "priority", "urgent"]);
+    expect(a.map((s) => s.field).toSorted()).toEqual(["approver", "priority", "urgent"]);
   });
 });
 
 describe("AsWfStore — @wf.context.copy with no annotated fields", () => {
   it("heal() returns 0 when schema declares no shadow columns", async () => {
-    // Use the non-shadow fixture (no @wf.context.copy on any field)
-    const { TestWfStateRecord } = await import("./fixtures/test-wf-state.as");
-    const space = createAdapter(":memory:");
-    await syncSchema(space, [TestWfStateRecord], { force: true });
-    const table = space.getTable(TestWfStateRecord);
-    const store = new AsWfStore({
-      // biome-ignore lint/suspicious/noExplicitAny: subtype generic
-      table: table as any,
-    });
-
-    // Insert a row directly + run heal
+    // Use the non-shadow fixture (no @wf.context.copy on any field).
+    const { store, table } = await setupStore();
     const now = Date.now();
     await table.insertOne({
       handle: "h-no-shadow",

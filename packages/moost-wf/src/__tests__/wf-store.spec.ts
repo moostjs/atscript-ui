@@ -1,22 +1,7 @@
 import type { WfState } from "@prostojs/wf/outlets";
 import { describe, expect, it } from "vite-plus/test";
 
-import { AsWfStore } from "../store/wf-store";
-import { setupTable } from "./helpers";
-
-async function setupStore(opts?: {
-  clock?: { now(): number };
-  actor?: () => string | undefined;
-}) {
-  const { space, table } = await setupTable();
-  const store = new AsWfStore({
-    // biome-ignore lint/suspicious/noExplicitAny: subtype generic — store only touches base columns
-    table: table as any,
-    clock: opts?.clock,
-    actor: opts?.actor,
-  });
-  return { space, table, store };
-}
+import { setupStore } from "./helpers";
 
 function makeState(overrides?: Partial<WfState>): WfState {
   return {
@@ -114,10 +99,7 @@ describe("AsWfStore", () => {
     const { store } = await setupStore();
     await store.set("h-race", makeState());
 
-    const [a, b] = await Promise.all([
-      store.getAndDelete("h-race"),
-      store.getAndDelete("h-race"),
-    ]);
+    const [a, b] = await Promise.all([store.getAndDelete("h-race"), store.getAndDelete("h-race")]);
 
     const winners = [a, b].filter(Boolean);
     expect(winners).toHaveLength(1);

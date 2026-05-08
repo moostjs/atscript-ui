@@ -131,9 +131,9 @@ const validateContextCopy: NonNullable<
       const ct = (unwound.def as unknown as { config: { type: unknown } }).config.type;
       const baseType =
         typeof ct === "object" && ct !== null
-          ? ((ct as { kind: string; value?: string }).kind === "final"
-              ? (ct as { value: string }).value
-              : (ct as { kind: string }).kind)
+          ? (ct as { kind: string; value?: string }).kind === "final"
+            ? (ct as { value: string }).value
+            : (ct as { kind: string }).kind
           : (ct as string);
       if (!COPY_PRIMITIVES.includes(baseType as CopyPrimitive)) {
         errors.push({

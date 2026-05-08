@@ -1,4 +1,5 @@
 import type { AtscriptDbTable } from "@atscript/db";
+import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { WfState, WfStateStore } from "@prostojs/wf/outlets";
 
 /** Internal row shape — only the columns the store reads back from the table. */
@@ -54,8 +55,6 @@ export interface AsWfStoreOptions {
 
 const defaultClock = { now: () => Date.now() };
 
-const SHADOW_ANNOTATION = "wf.context.copy";
-
 /**
  * Persistent {@link WfStateStore} backed by an atscript-db table.
  *
@@ -66,22 +65,15 @@ const SHADOW_ANNOTATION = "wf.context.copy";
  * those columns are populated from `state.context` on every `set()` and made
  * available for filtering, sorting, and indexing.
  *
- * ### Extension points
- *
- * Subclass-friendly: most behaviour is in `protected` methods so consumers can
- * override individual concerns (storage primitives, payload composition, path
- * resolution, type coercion, diagnostic emission) without reimplementing the
- * full store. The race-safe consume contract (`getAndDelete`) is public but
- * relies on `findRow` + the table's `deleteMany.deletedCount` — subclasses
- * that override `findRow` must preserve those semantics.
+ * Subclass-friendly: most behaviour lives in `protected` methods. When
+ * overriding `findRow`, preserve the `getAndDelete` contract (deleteMany +
+ * `deletedCount === 1` race gate) — see method docstring.
  */
 export class AsWfStore implements WfStateStore {
-  // ── PROTECTED — extension-friendly accessors ──────────────────────────
   // biome-ignore lint/suspicious/noExplicitAny: see AsWfStoreOptions.table
   protected readonly table: AtscriptDbTable<any>;
   protected readonly clock: { now(): number };
 
-  // ── PRIVATE — internal state, never overridden ────────────────────────
   readonly #actor?: () => string | undefined;
   #shadowFieldsCache: ShadowFieldSpec[] | null = null;
   readonly #warnedFields = new Set<string>();
@@ -91,10 +83,6 @@ export class AsWfStore implements WfStateStore {
     this.clock = opts.clock ?? defaultClock;
     this.#actor = opts.actor;
   }
-
-  // ════════════════════════════════════════════════════════════════════════
-  // PUBLIC API
-  // ════════════════════════════════════════════════════════════════════════
 
   async set(handle: string, state: WfState, expiresAt?: number): Promise<void> {
     const now = this.clock.now();
@@ -168,10 +156,7 @@ export class AsWfStore implements WfStateStore {
    *
    * No-op when the schema declares no `@wf.context.copy` fields.
    */
-  async heal(opts?: {
-    filter?: Record<string, unknown>;
-    batchSize?: number;
-  }): Promise<number> {
+  async heal(opts?: { filter?: Record<string, unknown>; batchSize?: number }): Promise<number> {
     const specs = this.scanShadowFields();
     if (specs.length === 0) return 0;
 
@@ -209,9 +194,7 @@ export class AsWfStore implements WfStateStore {
     return healed;
   }
 
-  // ════════════════════════════════════════════════════════════════════════
-  // PROTECTED — extension points
-  // ════════════════════════════════════════════════════════════════════════
+  // ── Extension points ──────────────────────────────────────────────────
 
   /** Resolve the actor stamping createdBy/lastUpdatedBy. Override for custom auth. */
   protected getActor(): string | undefined {
@@ -237,32 +220,28 @@ export class AsWfStore implements WfStateStore {
     opts: { expiresAt?: number; existing: StoredRow | null; now: number; actor?: string },
   ): Record<string, unknown> {
     const { schemaId, ...stateBlob } = state;
+    const { existing, actor } = opts;
+    const createdBy = existing ? existing.createdBy : actor;
     const payload: Record<string, unknown> = {
       handle,
       schemaId,
       state: stateBlob,
       updatedAt: opts.now,
+      createdAt: existing ? existing.createdAt : opts.now,
     };
     if (opts.expiresAt !== undefined) payload.expiresAt = opts.expiresAt;
-    if (opts.actor !== undefined) payload.lastUpdatedBy = opts.actor;
-    if (opts.existing) {
-      payload.createdAt = opts.existing.createdAt;
-      if (opts.existing.createdBy !== undefined) payload.createdBy = opts.existing.createdBy;
-    } else {
-      payload.createdAt = opts.now;
-      if (opts.actor !== undefined) payload.createdBy = opts.actor;
-    }
+    if (actor !== undefined) payload.lastUpdatedBy = actor;
+    if (createdBy !== undefined) payload.createdBy = createdBy;
 
     this.applyShadows(payload, state);
     return payload;
   }
 
   /**
-   * Walk the cached shadow specs and copy values from `state.context` onto the
-   * payload. For optional fields, path-miss / type-mismatch writes `null`.
-   * For default-bearing non-optional fields, path-miss / mismatch *omits* the
-   * column — leaving DB defaults to fire on insert and the prior value to
-   * stick on update.
+   * Copy values from `state.context` onto the payload using cached specs.
+   * Optional fields get `null` on path-miss / type-mismatch (clears stale
+   * values). Non-optional default-bearing fields are *omitted* on miss — DB
+   * defaults fire on insert, prior value sticks on update.
    */
   protected applyShadows(payload: Record<string, unknown>, state: WfState): void {
     const specs = this.scanShadowFields();
@@ -276,7 +255,6 @@ export class AsWfStore implements WfStateStore {
       } else if (spec.optional) {
         payload[spec.field] = null;
       }
-      // non-optional + default: omit from payload
     }
   }
 
@@ -292,11 +270,7 @@ export class AsWfStore implements WfStateStore {
     return cur;
   }
 
-  /**
-   * Validate + coerce a raw context value against the field's expected primitive.
-   * Returns `undefined` to signal "do not write" (let `applyShadows` decide
-   * between null-overwrite and column-omission).
-   */
+  /** Validate primitive type. `undefined` means "do not write" — applyShadows decides null vs omit. */
   protected coerceShadowValue(raw: unknown, spec: ShadowFieldSpec): unknown {
     if (raw === undefined || raw === null) return undefined;
     if (typeof raw === spec.expectedType) return raw;
@@ -304,7 +278,7 @@ export class AsWfStore implements WfStateStore {
     return undefined;
   }
 
-  /** Diagnostic emitted on the first type-mismatch per field per store instance. */
+  /** Type-mismatch diagnostic. Fires once per field per store instance. */
   protected onShadowTypeMismatch(field: string, expected: string, actual: unknown): void {
     if (this.#warnedFields.has(field)) return;
     this.#warnedFields.add(field);
@@ -314,23 +288,19 @@ export class AsWfStore implements WfStateStore {
     );
   }
 
-  /**
-   * Lazily build the per-field shadow spec list from the table's annotated type.
-   * Called on first `set()` / `applyShadows()` / `heal()`; cached per instance.
-   * Override to source specs from a different annotation (e.g. `@wf.meta.copy`).
-   */
+  /** Lazily build shadow specs from `@wf.context.copy` annotations. Override for a different source annotation. */
   protected scanShadowFields(): ShadowFieldSpec[] {
     if (this.#shadowFieldsCache !== null) return this.#shadowFieldsCache;
     const specs: ShadowFieldSpec[] = [];
 
-    const tableType = this.table.type;
+    const tableType = this.table.type as TAtscriptAnnotatedType;
     if (tableType?.type?.kind === "object") {
-      const props = tableType.type.props as Map<string, AnnotatedFieldLike>;
-      for (const [fieldName, fieldType] of props) {
-        const path = fieldType.metadata.get(SHADOW_ANNOTATION) as string | undefined;
+      for (const [fieldName, fieldType] of tableType.type.props) {
+        const path = fieldType.metadata.get("wf.context.copy") as string | undefined;
         if (!path) continue;
         const expectedType = this.resolveFieldPrimitive(fieldType);
-        if (expectedType === undefined) continue; // compile-time check should have caught this
+        // Plugin-side validation rejects non-primitive fields; runtime miss = silently skip.
+        if (expectedType === undefined) continue;
         specs.push({
           field: fieldName,
           path: path.split("."),
@@ -344,24 +314,16 @@ export class AsWfStore implements WfStateStore {
     return specs;
   }
 
-  /** Resolve the runtime primitive type of a field. Override to support unions. */
+  /** Resolve a field's runtime primitive type, or `undefined` if not a copy-supported primitive. */
   protected resolveFieldPrimitive(
-    fieldType: AnnotatedFieldLike,
+    fieldType: TAtscriptAnnotatedType,
   ): "string" | "number" | "boolean" | undefined {
     const def = fieldType.type;
     if (def.kind !== "") return undefined;
-    const designType = (def as { designType: string }).designType;
+    const { designType } = def;
     if (designType === "string" || designType === "number" || designType === "boolean") {
       return designType;
     }
     return undefined;
   }
-}
-
-// Loose structural alias for atscript runtime types we read in the scanner.
-// Pinned narrow rather than dragging the full `TAtscriptAnnotatedType` chain.
-interface AnnotatedFieldLike {
-  type: { kind: string; designType?: string };
-  metadata: { get(key: string): unknown };
-  optional?: boolean;
 }
