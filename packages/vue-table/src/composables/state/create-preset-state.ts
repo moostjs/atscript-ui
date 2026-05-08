@@ -35,6 +35,20 @@ export const DEFAULT_AVAILABLE_ASPECTS: PresetAspect[] = [
   "sorters",
 ];
 
+/**
+ * Default `columnNames` for a system preset that doesn't specify them — every
+ * column whose schema declares it visible (i.e. lacking `@ui.table.hidden`).
+ * Used by both `apply` (no-explicit-columnNames fallback) and `expandDefault`,
+ * so the two paths can never drift apart.
+ */
+function defaultVisibleColumnPaths(o: CreatePresetStateOptions): string[] {
+  const out: string[] = [];
+  for (const col of o.allColumns.value) {
+    if (col.visible) out.push(col.path);
+  }
+  return out;
+}
+
 export interface CreatePresetStateOptions {
   // State refs to read/write.
   columnNames: ShallowRef<string[]>;
@@ -201,7 +215,10 @@ export function createPresetState(opts: CreatePresetStateOptions): {
       apply(o, value, isSystem) {
         if (!value && !isSystem) return;
         const cols = value as PresetSnapshot["columns"];
-        const columnNames = cols?.columnNames ?? o.allColumns.value.map((c) => c.path);
+        // System preset with no explicit columnNames falls back to the same
+        // visible-only set used by `expandDefault` — `@ui.table.hidden`
+        // columns are not auto-included.
+        const columnNames = cols?.columnNames ?? defaultVisibleColumnPaths(o);
         const columnWidths = cols?.columnWidths;
         o.columnNames.value = [...columnNames];
         // Reset existing widths to defaults, then apply overrides.
@@ -218,7 +235,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
         o.columnWidths.value = next;
       },
       expandDefault(o) {
-        return { columnNames: o.allColumns.value.map((c) => c.path) };
+        return { columnNames: defaultVisibleColumnPaths(o) };
       },
     },
     filters: {
