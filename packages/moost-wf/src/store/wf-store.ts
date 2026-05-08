@@ -1,6 +1,27 @@
 import type { AtscriptDbTable } from "@atscript/db";
 import type { WfState, WfStateStore } from "@prostojs/wf/outlets";
 
+/** Internal row shape — only the columns the store reads back from the table. */
+export type StoredRow = {
+  schemaId: string;
+  state: Omit<WfState, "schemaId">;
+  expiresAt?: number | null;
+  createdAt: number;
+  createdBy?: string;
+};
+
+/** Per-field spec built once by {@link AsWfStore.scanShadowFields}. */
+export interface ShadowFieldSpec {
+  /** Column name on the row. */
+  field: string;
+  /** Pre-split dot-path into `state.context`. */
+  path: string[];
+  /** Expected primitive type, validated against the runtime value. */
+  expectedType: "string" | "number" | "boolean";
+  /** Whether the field is declared optional (`?:`) on the schema. */
+  optional: boolean;
+}
+
 /**
  * Options for {@link AsWfStore}.
  *
@@ -16,9 +37,10 @@ export interface AsWfStoreOptions {
    * (e.g. `extends AsWfStateRecord` plus `@meta.id`) is structurally a
    * different annotated type than the base — `AtscriptDbTable<typeof
    * AsWfStateRecord>` would not accept the subtype, and there is no public
-   * variance helper. The store only touches base columns, so the loose
-   * generic here is safe.
+   * variance helper. The store only touches base columns + any
+   * `@wf.context.copy`-annotated shadow columns, so the loose generic is safe.
    */
+  // biome-ignore lint/suspicious/noExplicitAny: see jsdoc above
   table: AtscriptDbTable<any>;
   /** Optional clock for testability. Default: `{ now: () => Date.now() }`. */
   clock?: { now(): number };
@@ -32,53 +54,53 @@ export interface AsWfStoreOptions {
 
 const defaultClock = { now: () => Date.now() };
 
+const SHADOW_ANNOTATION = "wf.context.copy";
+
 /**
  * Persistent {@link WfStateStore} backed by an atscript-db table.
  *
  * The full `WfState` is stored as-is in the `state` column (`@db.json` blob).
- * `state.schemaId` is also lifted to the row's top-level `schemaId` column
- * so the indexed `schema_idx` can be used to enumerate flows by schema.
+ * `state.schemaId` is lifted to a top-level indexed column so `schema_idx` can
+ * enumerate flows by schema. Consumers may add **shadow columns** by annotating
+ * fields on their schema extension with `@wf.context.copy 'path.in.context'` —
+ * those columns are populated from `state.context` on every `set()` and made
+ * available for filtering, sorting, and indexing.
+ *
+ * ### Extension points
+ *
+ * Subclass-friendly: most behaviour is in `protected` methods so consumers can
+ * override individual concerns (storage primitives, payload composition, path
+ * resolution, type coercion, diagnostic emission) without reimplementing the
+ * full store. The race-safe consume contract (`getAndDelete`) is public but
+ * relies on `findRow` + the table's `deleteMany.deletedCount` — subclasses
+ * that override `findRow` must preserve those semantics.
  */
 export class AsWfStore implements WfStateStore {
-  private readonly table: AtscriptDbTable<any>;
-  private readonly clock: { now(): number };
-  private readonly actor?: () => string | undefined;
+  // ── PROTECTED — extension-friendly accessors ──────────────────────────
+  // biome-ignore lint/suspicious/noExplicitAny: see AsWfStoreOptions.table
+  protected readonly table: AtscriptDbTable<any>;
+  protected readonly clock: { now(): number };
+
+  // ── PRIVATE — internal state, never overridden ────────────────────────
+  readonly #actor?: () => string | undefined;
+  #shadowFieldsCache: ShadowFieldSpec[] | null = null;
+  readonly #warnedFields = new Set<string>();
 
   constructor(opts: AsWfStoreOptions) {
     this.table = opts.table;
     this.clock = opts.clock ?? defaultClock;
-    this.actor = opts.actor;
+    this.#actor = opts.actor;
   }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // PUBLIC API
+  // ════════════════════════════════════════════════════════════════════════
 
   async set(handle: string, state: WfState, expiresAt?: number): Promise<void> {
     const now = this.clock.now();
-    const actor = this.actor?.();
-    const existing = (await this.table.findOne({ filter: { handle } })) as
-      | { createdAt: number; createdBy?: string }
-      | null;
-
-    // The `state` JSON column's atscript-validated shape is `{ context, indexes, meta? }`
-    // (see as-wf-state.as). `schemaId` is lifted to the top-level indexed column
-    // and stripped from the persisted blob; `get` re-attaches it on read so the
-    // public API still hands callers a complete `WfState`.
-    const { schemaId, ...stateBlob } = state;
-    const payload = {
-      handle,
-      schemaId,
-      state: stateBlob,
-      updatedAt: now,
-      ...(expiresAt !== undefined && { expiresAt }),
-      ...(actor !== undefined && { lastUpdatedBy: actor }),
-      ...(existing
-        ? {
-            createdAt: existing.createdAt,
-            ...(existing.createdBy !== undefined && { createdBy: existing.createdBy }),
-          }
-        : {
-            createdAt: now,
-            ...(actor !== undefined && { createdBy: actor }),
-          }),
-    };
+    const actor = this.getActor();
+    const existing = await this.findRow(handle);
+    const payload = this.buildSetPayload(handle, state, { expiresAt, existing, now, actor });
 
     if (existing) {
       await this.table.replaceMany({ handle }, payload);
@@ -88,9 +110,7 @@ export class AsWfStore implements WfStateStore {
   }
 
   async get(handle: string): Promise<{ state: WfState; expiresAt?: number } | null> {
-    const row = (await this.table.findOne({ filter: { handle } })) as
-      | { schemaId: string; state: Omit<WfState, "schemaId">; expiresAt?: number | null }
-      | null;
+    const row = await this.findRow(handle);
     if (!row) return null;
     const expiresAt = row.expiresAt ?? undefined;
     if (expiresAt !== undefined && expiresAt <= this.clock.now()) {
@@ -98,30 +118,38 @@ export class AsWfStore implements WfStateStore {
       void this.delete(handle);
       return null;
     }
-    const state = { schemaId: row.schemaId, ...row.state } as WfState;
-    return expiresAt === undefined ? { state } : { state, expiresAt };
+    return this.assembleResult(row);
   }
 
   async delete(handle: string): Promise<void> {
-    // Ignore result; deleteMany on a missing row resolves with deletedCount 0.
     await this.table.deleteMany({ handle });
   }
 
-  async getAndDelete(
-    handle: string,
-  ): Promise<{ state: WfState; expiresAt?: number } | null> {
-    const row = (await this.table.findOne({ filter: { handle } })) as
-      | { schemaId: string; state: Omit<WfState, "schemaId">; expiresAt?: number | null }
-      | null;
+  /**
+   * Race-safe single-use consume.
+   *
+   * **Contract** (do not violate when overriding `findRow`):
+   *   `findRow` → `deleteMany({ handle })` → `deletedCount === 1` gate.
+   * Two concurrent callers: only one's delete returns `1`; the other returns
+   * `null` (its delete found 0 rows).
+   */
+  async getAndDelete(handle: string): Promise<{ state: WfState; expiresAt?: number } | null> {
+    const row = await this.findRow(handle);
     if (!row) return null;
-    const expiresAt = row.expiresAt ?? undefined;
     const result = await this.table.deleteMany({ handle });
     if (result.deletedCount !== 1) return null;
+    const expiresAt = row.expiresAt ?? undefined;
     if (expiresAt !== undefined && expiresAt <= this.clock.now()) return null;
-    const state = { schemaId: row.schemaId, ...row.state } as WfState;
-    return expiresAt === undefined ? { state } : { state, expiresAt };
+    return this.assembleResult(row);
   }
 
+  /**
+   * Delete expired rows.
+   *
+   * - `retention` absent or `0`: drop rows where `expiresAt <= now()`.
+   * - `retention > 0`: drop rows where `expiresAt <= now() - retention` (grace).
+   * - `retention === Number.POSITIVE_INFINITY`: no-op (return 0).
+   */
   async cleanup(opts?: { retention?: number }): Promise<number> {
     const retention = opts?.retention;
     if (retention === Number.POSITIVE_INFINITY) return 0;
@@ -130,4 +158,210 @@ export class AsWfStore implements WfStateStore {
     const result = await this.table.deleteMany({ expiresAt: { $lte: cutoff } });
     return result.deletedCount;
   }
+
+  /**
+   * Re-apply `@wf.context.copy` shadow columns to existing rows.
+   *
+   * Use after adding a new annotation to backfill old rows without waiting for
+   * each workflow to next pause. Returns the count of rows whose shadows were
+   * (re-)written. Filter narrows the scan; defaults to all rows.
+   *
+   * No-op when the schema declares no `@wf.context.copy` fields.
+   */
+  async heal(opts?: {
+    filter?: Record<string, unknown>;
+    batchSize?: number;
+  }): Promise<number> {
+    const specs = this.scanShadowFields();
+    if (specs.length === 0) return 0;
+
+    const batchSize = opts?.batchSize ?? 100;
+    const baseFilter = opts?.filter ?? {};
+    let healed = 0;
+    let skip = 0;
+
+    while (true) {
+      const rows = (await this.table.findMany({
+        filter: baseFilter,
+        controls: {
+          $skip: skip,
+          $limit: batchSize,
+          $sort: { handle: 1 },
+          $select: ["handle", "schemaId", "state"],
+        },
+      })) as Array<StoredRow & { handle: string }>;
+      if (rows.length === 0) break;
+
+      for (const row of rows) {
+        const wfState = { schemaId: row.schemaId, ...row.state } as WfState;
+        const shadowPatch: Record<string, unknown> = {};
+        this.applyShadows(shadowPatch, wfState);
+        if (Object.keys(shadowPatch).length > 0) {
+          await this.table.updateMany({ handle: row.handle }, shadowPatch);
+          healed++;
+        }
+      }
+
+      if (rows.length < batchSize) break;
+      skip += rows.length;
+    }
+
+    return healed;
+  }
+
+  // ════════════════════════════════════════════════════════════════════════
+  // PROTECTED — extension points
+  // ════════════════════════════════════════════════════════════════════════
+
+  /** Resolve the actor stamping createdBy/lastUpdatedBy. Override for custom auth. */
+  protected getActor(): string | undefined {
+    return this.#actor?.();
+  }
+
+  /** Storage primitive: load a row by handle. Override for sharded/multi-tenant tables. */
+  protected async findRow(handle: string): Promise<StoredRow | null> {
+    return (await this.table.findOne({ filter: { handle } })) as StoredRow | null;
+  }
+
+  /** Re-attach `schemaId` to the JSON `state` blob and add expiresAt if set. */
+  protected assembleResult(row: StoredRow): { state: WfState; expiresAt?: number } {
+    const state = { schemaId: row.schemaId, ...row.state } as WfState;
+    const expiresAt = row.expiresAt ?? undefined;
+    return expiresAt === undefined ? { state } : { state, expiresAt };
+  }
+
+  /** Compose the row payload written on `set()`. Override to add custom columns. */
+  protected buildSetPayload(
+    handle: string,
+    state: WfState,
+    opts: { expiresAt?: number; existing: StoredRow | null; now: number; actor?: string },
+  ): Record<string, unknown> {
+    const { schemaId, ...stateBlob } = state;
+    const payload: Record<string, unknown> = {
+      handle,
+      schemaId,
+      state: stateBlob,
+      updatedAt: opts.now,
+    };
+    if (opts.expiresAt !== undefined) payload.expiresAt = opts.expiresAt;
+    if (opts.actor !== undefined) payload.lastUpdatedBy = opts.actor;
+    if (opts.existing) {
+      payload.createdAt = opts.existing.createdAt;
+      if (opts.existing.createdBy !== undefined) payload.createdBy = opts.existing.createdBy;
+    } else {
+      payload.createdAt = opts.now;
+      if (opts.actor !== undefined) payload.createdBy = opts.actor;
+    }
+
+    this.applyShadows(payload, state);
+    return payload;
+  }
+
+  /**
+   * Walk the cached shadow specs and copy values from `state.context` onto the
+   * payload. For optional fields, path-miss / type-mismatch writes `null`.
+   * For default-bearing non-optional fields, path-miss / mismatch *omits* the
+   * column — leaving DB defaults to fire on insert and the prior value to
+   * stick on update.
+   */
+  protected applyShadows(payload: Record<string, unknown>, state: WfState): void {
+    const specs = this.scanShadowFields();
+    if (specs.length === 0) return;
+    const ctx = state.context;
+    for (const spec of specs) {
+      const raw = this.resolvePath(ctx, spec.path);
+      const coerced = this.coerceShadowValue(raw, spec);
+      if (coerced !== undefined) {
+        payload[spec.field] = coerced;
+      } else if (spec.optional) {
+        payload[spec.field] = null;
+      }
+      // non-optional + default: omit from payload
+    }
+  }
+
+  /** Dot-path resolver. Returns `undefined` on miss, array hit, or non-object. */
+  protected resolvePath(obj: unknown, path: string[]): unknown {
+    let cur: unknown = obj;
+    for (const seg of path) {
+      if (cur === null || cur === undefined) return undefined;
+      if (typeof cur !== "object") return undefined;
+      if (Array.isArray(cur)) return undefined;
+      cur = (cur as Record<string, unknown>)[seg];
+    }
+    return cur;
+  }
+
+  /**
+   * Validate + coerce a raw context value against the field's expected primitive.
+   * Returns `undefined` to signal "do not write" (let `applyShadows` decide
+   * between null-overwrite and column-omission).
+   */
+  protected coerceShadowValue(raw: unknown, spec: ShadowFieldSpec): unknown {
+    if (raw === undefined || raw === null) return undefined;
+    if (typeof raw === spec.expectedType) return raw;
+    this.onShadowTypeMismatch(spec.field, spec.expectedType, raw);
+    return undefined;
+  }
+
+  /** Diagnostic emitted on the first type-mismatch per field per store instance. */
+  protected onShadowTypeMismatch(field: string, expected: string, actual: unknown): void {
+    if (this.#warnedFields.has(field)) return;
+    this.#warnedFields.add(field);
+    // biome-ignore lint/suspicious/noConsole: diagnostic for misconfigured shadow column
+    console.warn(
+      `[AsWfStore] @wf.context.copy field "${field}" expected ${expected} but got ${typeof actual} — writing null. Subsequent mismatches on this field are silent.`,
+    );
+  }
+
+  /**
+   * Lazily build the per-field shadow spec list from the table's annotated type.
+   * Called on first `set()` / `applyShadows()` / `heal()`; cached per instance.
+   * Override to source specs from a different annotation (e.g. `@wf.meta.copy`).
+   */
+  protected scanShadowFields(): ShadowFieldSpec[] {
+    if (this.#shadowFieldsCache !== null) return this.#shadowFieldsCache;
+    const specs: ShadowFieldSpec[] = [];
+
+    const tableType = this.table.type;
+    if (tableType?.type?.kind === "object") {
+      const props = tableType.type.props as Map<string, AnnotatedFieldLike>;
+      for (const [fieldName, fieldType] of props) {
+        const path = fieldType.metadata.get(SHADOW_ANNOTATION) as string | undefined;
+        if (!path) continue;
+        const expectedType = this.resolveFieldPrimitive(fieldType);
+        if (expectedType === undefined) continue; // compile-time check should have caught this
+        specs.push({
+          field: fieldName,
+          path: path.split("."),
+          expectedType,
+          optional: fieldType.optional === true,
+        });
+      }
+    }
+
+    this.#shadowFieldsCache = specs;
+    return specs;
+  }
+
+  /** Resolve the runtime primitive type of a field. Override to support unions. */
+  protected resolveFieldPrimitive(
+    fieldType: AnnotatedFieldLike,
+  ): "string" | "number" | "boolean" | undefined {
+    const def = fieldType.type;
+    if (def.kind !== "") return undefined;
+    const designType = (def as { designType: string }).designType;
+    if (designType === "string" || designType === "number" || designType === "boolean") {
+      return designType;
+    }
+    return undefined;
+  }
+}
+
+// Loose structural alias for atscript runtime types we read in the scanner.
+// Pinned narrow rather than dragging the full `TAtscriptAnnotatedType` chain.
+interface AnnotatedFieldLike {
+  type: { kind: string; designType?: string };
+  metadata: { get(key: string): unknown };
+  optional?: boolean;
 }
