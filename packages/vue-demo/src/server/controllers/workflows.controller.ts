@@ -6,12 +6,17 @@ import {
   createHttpOutlet,
   createEmailOutlet,
   EncapsulatedStateStrategy,
+  HandleStateStrategy,
   handleWfOutletRequest,
   type WfOutletTriggerDeps,
+  type WfStateStrategy,
 } from "@moostjs/event-wf";
+import { AsWfStore } from "@atscript/moost-wf/store";
 // Keep the email outlet registered for future magic-link flows (user invite, password-reset);
 // current P6 workflows dispatch OTP inline so they can pause on a form in the same response.
 import { consoleEmailSender } from "../workflows/email-sender";
+import { wfStateTable } from "../db";
+import { useSession } from "../auth/use-session";
 
 // EncapsulatedStateStrategy requires a 32-byte key. Derive it deterministically
 // from SESSION_SECRET via SHA-256 so operators can still set a human-friendly secret.
@@ -28,6 +33,48 @@ const ALLOWED_WORKFLOWS = [
   "api/profile/edit",
   "api/users/invite",
 ] as const;
+
+// Workflows whose state must survive process restart (durable handle persistence).
+// All other workflows fall through to `EncapsulatedStateStrategy` (stateless tokens).
+const HANDLE_STATE_WFIDS = new Set<string>(["api/users/invite"]);
+
+// Module-level singletons — one store + one strategy instance per process.
+const wfStore = new AsWfStore({
+  // biome-ignore lint/suspicious/noExplicitAny: store only touches base columns; subtype generic
+  table: wfStateTable as any,
+  actor: () => useSession()?.username,
+});
+
+// Periodic cleanup: drop expired wf_states rows that survived past their
+// retention window. `.unref()` keeps the timer from blocking node shutdown —
+// fine for a demo; production would mount this on an explicit startup hook.
+const RETENTION_MS = Number(process.env.DEMO_WF_RETENTION_MS ?? 86_400_000);
+setInterval(() => {
+  wfStore.cleanup({ retention: RETENTION_MS }).catch((err) => {
+    // biome-ignore lint/suspicious/noConsole: server-side diagnostic
+    console.error("[wf-store] cleanup failed:", err);
+  });
+}, 5 * 60_000).unref();
+
+const encapsulatedStrategy = new EncapsulatedStateStrategy({ secret: WF_SECRET });
+const handleStrategy = new HandleStateStrategy({ store: wfStore });
+
+// `HandleStateStrategy` mints crypto.randomUUID() handles (8-4-4-4-12 hex);
+// `EncapsulatedStateStrategy` mints base64url AES-GCM blobs that never match.
+// Resume requests carry only `wfs` (no `wfid`), so we dispatch on token shape.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const pickByToken = (token: string) =>
+  UUID_RE.test(token) ? handleStrategy : encapsulatedStrategy;
+
+// Dispatcher for the resume path (no `wfid`). `persist` is never reached here:
+// the framework re-resolves with `state.schemaId` after consume (see
+// `@wooksjs/event-wf` `handleWfOutletRequest`), so we fall back to encapsulated
+// as a safe default.
+const dispatchingStrategy: WfStateStrategy = {
+  persist: (state, options) => encapsulatedStrategy.persist(state, options),
+  retrieve: (token) => pickByToken(token).retrieve(token),
+  consume: (token) => pickByToken(token).consume(token),
+};
 
 @Controller()
 export class WorkflowsController {
@@ -55,7 +102,17 @@ export class WorkflowsController {
     return await handleWfOutletRequest(
       {
         allow: [...ALLOWED_WORKFLOWS],
-        state: new EncapsulatedStateStrategy({ secret: WF_SECRET }),
+        // Per-call strategy selection: the framework calls this with `wfid`
+        // (fresh start) or `""` (resume — no wfid in body). On resume,
+        // `dispatchingStrategy` inspects token shape to pick the right backend;
+        // after consume the framework re-resolves with `state.schemaId`, so the
+        // next persist hits the schema-correct strategy.
+        state: (wfid) =>
+          wfid
+            ? HANDLE_STATE_WFIDS.has(wfid)
+              ? handleStrategy
+              : encapsulatedStrategy
+            : dispatchingStrategy,
         outlets: [createHttpOutlet(), createEmailOutlet(consoleEmailSender)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },
