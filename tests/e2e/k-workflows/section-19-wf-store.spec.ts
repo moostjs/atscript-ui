@@ -99,10 +99,7 @@ async function seedStore(ctx: APIRequestContext, rows: SeedRow[]): Promise<numbe
   return body.inserted;
 }
 
-async function cleanupStore(
-  ctx: APIRequestContext,
-  retention?: number,
-): Promise<number> {
+async function cleanupStore(ctx: APIRequestContext, retention?: number): Promise<number> {
   const res = await ctx.post("/api/_test/wf-store/cleanup", {
     data: retention === undefined ? {} : { retention },
     headers: { "content-type": "application/json" },
@@ -114,11 +111,25 @@ async function cleanupStore(
 
 async function listHandles(
   ctx: APIRequestContext,
-): Promise<Array<{ handle: string; schemaId: string; expiresAt?: number }>> {
+): Promise<
+  Array<{
+    handle: string;
+    schemaId: string;
+    expiresAt?: number;
+    inviteEmail?: string;
+    inviteRole?: string;
+  }>
+> {
   const res = await ctx.get("/api/_test/wf-store/handles");
   if (!res.ok()) throw new Error(`wf-store/handles failed: ${res.status()} ${await res.text()}`);
   const body = (await res.json()) as {
-    handles: Array<{ handle: string; schemaId: string; expiresAt?: number }>;
+    handles: Array<{
+      handle: string;
+      schemaId: string;
+      expiresAt?: number;
+      inviteEmail?: string;
+      inviteRole?: string;
+    }>;
   };
   return body.handles;
 }
@@ -161,9 +172,7 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         wfs = extractWfsFromLink(entry.link);
         // Sanity: HandleStateStrategy mints UUIDs (8-4-4-4-12 hex) — proves
         // the dispatcher routed `api/users/invite` to the handle store.
-        expect(wfs).toMatch(
-          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
-        );
+        expect(wfs).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       } finally {
         await adminCtx.dispose();
       }
@@ -430,6 +439,89 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         // alongside the lift, not just on update paths.
         expect(byHandle.get(handle1)?.expiresAt).toBe(now + 60_000);
         expect(byHandle.get(handle2)?.expiresAt).toBe(now + 60_000);
+      } finally {
+        await adminCtx.dispose();
+      }
+    });
+  });
+
+  test.describe("19.W6 — @wf.context.copy populates shadow columns from state.context", () => {
+    test("19.W6 raw — seed rows with email/roleName context; shadow columns inviteEmail/inviteRole reflect the copy", async () => {
+      const adminCtx = await newRequestContext("admin");
+      try {
+        const now = Date.now();
+        await seedStore(adminCtx, [
+          {
+            handle: "shadow-1",
+            schemaId: "api/users/invite",
+            expiresAt: now + 60_000,
+            state: {
+              context: { email: "alice@example.com", roleName: "viewer", other: "ignored" },
+              indexes: [0],
+            },
+          },
+          {
+            // Path-miss + clear semantics: no email/roleName in context →
+            // shadow columns null.
+            handle: "shadow-2",
+            schemaId: "api/users/invite",
+            expiresAt: now + 60_000,
+            state: { context: { unrelated: 1 }, indexes: [0] },
+          },
+          {
+            // Nested-path skip: `email` only at top level — `state.foo.email`
+            // should NOT count.
+            handle: "shadow-3",
+            schemaId: "api/users/invite",
+            expiresAt: now + 60_000,
+            state: { context: { foo: { email: "nope@x.com" } }, indexes: [0] },
+          },
+        ]);
+
+        const handles = await listHandles(adminCtx);
+        const byHandle = new Map(handles.map((h) => [h.handle, h]));
+
+        // Top-level keys copied verbatim.
+        expect(byHandle.get("shadow-1")?.inviteEmail).toBe("alice@example.com");
+        expect(byHandle.get("shadow-1")?.inviteRole).toBe("viewer");
+
+        // Path-miss leaves the column null (omitted from the response).
+        expect(byHandle.get("shadow-2")?.inviteEmail).toBeUndefined();
+        expect(byHandle.get("shadow-2")?.inviteRole).toBeUndefined();
+
+        // Nested email is not picked up — `@wf.context.copy 'email'` is a
+        // top-level path, not a recursive search.
+        expect(byHandle.get("shadow-3")?.inviteEmail).toBeUndefined();
+      } finally {
+        await adminCtx.dispose();
+      }
+    });
+
+    test("19.W6 UI — invite flow populates inviteEmail / inviteRole on the wf_states row", async () => {
+      const adminCtx = await newRequestContext("admin");
+      try {
+        // Drive the real invite workflow once (admin invites a fresh email)
+        // and assert the wf_states row shadows reflect the context.
+        const offset = await serverLogOffset();
+        const r1 = await postWf(adminCtx, {
+          wfid: "api/users/invite",
+          input: { email: "shadow-test@example.com", roleId: 3 },
+        });
+        // 200 (synchronous) or 201 (async) — both indicate the flow ran;
+        // shadow column check runs against the persisted row regardless.
+        expect([200, 201]).toContain(r1.status);
+        // The flow pauses on the email outlet; no need to consume the magic
+        // link — we just want the wf_states row written.
+        await waitForOutletEntry({ template: "user-invite", sinceOffset: offset });
+
+        const handles = await listHandles(adminCtx);
+        const inviteRow = handles.find((h) => h.inviteEmail === "shadow-test@example.com");
+        expect(inviteRow, "wf_states row for the new invite must exist").toBeTruthy();
+        if (!inviteRow) return;
+        expect(inviteRow.schemaId).toBe("api/users/invite");
+        // roleId 3 in the seeded role table maps to roleName 'viewer' (see
+        // packages/vue-demo/src/server/seed.ts).
+        expect(inviteRow.inviteRole).toBe("viewer");
       } finally {
         await adminCtx.dispose();
       }

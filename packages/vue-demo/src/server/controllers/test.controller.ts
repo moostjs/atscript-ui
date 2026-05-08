@@ -164,34 +164,55 @@ export class TestController {
   ): Promise<{ deletedCount: number }> {
     if (process.env.DEMO_TEST_MODE !== "1") throw new HttpError(404, "Not found");
     const retention = body?.retention;
-    const deletedCount = await wfStore.cleanup(
-      retention === undefined ? undefined : { retention },
-    );
+    const deletedCount = await wfStore.cleanup(retention === undefined ? undefined : { retention });
     return { deletedCount };
   }
 
   /**
-   * List every `wf_states` row's `(handle, schemaId, expiresAt)`. Used by
-   * 19.W4 to assert which seeded rows survived a cleanup pass and 19.W5 to
-   * verify the schemaId lift is wired correctly.
+   * List every `wf_states` row's `(handle, schemaId, expiresAt)` plus the
+   * `@wf.context.copy` shadow columns (`inviteEmail`, `inviteRole`). Used by
+   * 19.W4 (cleanup retention), 19.W5 (schemaId lift), and 19.W6 (shadow
+   * columns) to inspect store-side state.
    */
   @Get("wf-store/handles")
   async wfStoreHandles(): Promise<{
-    handles: Array<{ handle: string; schemaId: string; expiresAt?: number }>;
+    handles: Array<{
+      handle: string;
+      schemaId: string;
+      expiresAt?: number;
+      inviteEmail?: string;
+      inviteRole?: string;
+    }>;
   }> {
     if (process.env.DEMO_TEST_MODE !== "1") throw new HttpError(404, "Not found");
     const rows = (await wfStateTable.findMany({ filter: {} })) as unknown as Array<{
       handle: string;
       schemaId: string;
       expiresAt?: number | null;
+      inviteEmail?: string | null;
+      inviteRole?: string | null;
     }>;
-    const handles: Array<{ handle: string; schemaId: string; expiresAt?: number }> = [];
+    const handles: Array<{
+      handle: string;
+      schemaId: string;
+      expiresAt?: number;
+      inviteEmail?: string;
+      inviteRole?: string;
+    }> = [];
     for (const r of rows) {
-      const entry: { handle: string; schemaId: string; expiresAt?: number } = {
+      const entry: {
+        handle: string;
+        schemaId: string;
+        expiresAt?: number;
+        inviteEmail?: string;
+        inviteRole?: string;
+      } = {
         handle: r.handle,
         schemaId: r.schemaId,
       };
       if (r.expiresAt != null) entry.expiresAt = r.expiresAt;
+      if (r.inviteEmail != null) entry.inviteEmail = r.inviteEmail;
+      if (r.inviteRole != null) entry.inviteRole = r.inviteRole;
       handles.push(entry);
     }
     return { handles };
