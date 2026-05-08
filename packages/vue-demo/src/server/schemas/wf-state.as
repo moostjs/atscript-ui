@@ -1,9 +1,6 @@
 import { AsWfStateRecord, JsonValue } from '@atscript/moost-wf/store'
 
-// Atscript codegen workaround — see /Users/mavrik/code/atscript/TODO.md.
-// Re-exporting JsonValue under a fresh name keeps the import live in the
-// generated `wf-state.as.js` so `extends`-inherited prop refs to JsonValue
-// resolve at module load.
+// Re-export keeps JsonValue's import live in the generated `.as.js`; see /Users/mavrik/code/atscript/TODO.md (codegen drops parent-only refs on `extends`).
 export type WfStateJsonValue = JsonValue
 
 @db.table 'wf_states'
