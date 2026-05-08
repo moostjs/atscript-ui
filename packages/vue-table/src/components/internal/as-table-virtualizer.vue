@@ -52,7 +52,14 @@ const virtualizedItems = computed(() =>
   })),
 );
 
-const spaceBefore = computed(() => virtualItems.value[0]?.start ?? 0);
+// Padding rows are the correct approach for HTML table virtualization.
+// `height` on `<tbody>` is not reliably honored in CSS table layout when the
+// actual rendered content is shorter (e.g. 42 visible rows vs 3750 total),
+// so spacer <tr> elements drive the total scrollable height instead.
+const paddingTop = computed(() => virtualItems.value[0]?.start ?? 0);
+const paddingBottom = computed(
+  () => virtualizer.value.getTotalSize() - (virtualItems.value.at(-1)?.end ?? 0),
+);
 
 defineExpose({
   /**
@@ -78,13 +85,17 @@ defineExpose({
     >
     </slot>
   </Primitive>
-  <Primitive
-    v-else
-    :style="{
-      height: `${virtualizer.getTotalSize()}px`,
-    }"
-  >
-    <slot v-for="vItem of virtualizedItems" :key="vItem.index" v-bind="vItem" :space-before> </slot>
-    <tr />
+  <Primitive v-else>
+    <tr v-if="paddingTop > 0" aria-hidden="true">
+      <td :style="{ height: `${paddingTop}px`, padding: '0', border: 'none' }" />
+    </tr>
+    <slot
+      v-for="vItem of virtualizedItems"
+      :key="vItem.index"
+      v-bind="{ item: vItem.item, index: vItem.index, spaceBefore: undefined }"
+    />
+    <tr v-if="paddingBottom > 0" aria-hidden="true">
+      <td :style="{ height: `${paddingBottom}px`, padding: '0', border: 'none' }" />
+    </tr>
   </Primitive>
 </template>
