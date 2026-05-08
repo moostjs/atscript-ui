@@ -11,13 +11,15 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.mjs"
     },
     "./plugin": {
       "types": "./dist/plugin.d.mts",
-      "import": "./dist/plugin.mjs",
-      "require": "./dist/plugin.cjs"
+      "import": "./dist/plugin.mjs"
+    },
+    "./store": {
+      "types": "./dist/store.d.mts",
+      "import": "./dist/store.mjs"
     },
     "./package.json": "./package.json"
   },
