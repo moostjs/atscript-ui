@@ -37,6 +37,7 @@
     "@atscript/typescript": "catalog:",
     "@atscript/ui": "workspace:^",
     "@moostjs/event-wf": "catalog:",
+    "@prostojs/wf": "^0.1.1",
     "@wooksjs/event-core": "catalog:",
     "moost": "catalog:",
     "unplugin-atscript": "catalog:",

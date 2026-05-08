@@ -228,6 +228,9 @@ importers:
       '@moostjs/event-wf':
         specifier: 'catalog:'
         version: 0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/mate@0.4.0)(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11))(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)(wooks@0.7.11)
+      '@prostojs/wf':
+        specifier: ^0.1.1
+        version: 0.1.1
       '@wooksjs/event-core':
         specifier: 'catalog:'
         version: 0.7.11

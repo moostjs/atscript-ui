@@ -1,15 +1,6 @@
-import { createAdapter } from "@atscript/db-sqlite";
-import { syncSchema } from "@atscript/db/sync";
 import { describe, expect, it } from "vite-plus/test";
 
-import { TestWfStateRecord } from "./fixtures/test-wf-state.as";
-
-async function setupTable() {
-  const space = createAdapter(":memory:");
-  await syncSchema(space, [TestWfStateRecord], { force: true });
-  const table = space.getTable(TestWfStateRecord);
-  return { space, table };
-}
+import { setupTable } from "./helpers";
 
 describe("AsWfStateRecord — base schema contract", () => {
   it("round-trips an inserted row through findOne", async () => {

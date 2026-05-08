@@ -1,5 +1,19 @@
+import { createAdapter } from "@atscript/db-sqlite";
+import { syncSchema } from "@atscript/db/sync";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { defineAnnotatedType } from "@atscript/typescript/utils";
+
+import { TestWfStateRecord } from "./fixtures/test-wf-state.as";
+
+// ── In-memory adapter setup ──────────────────────────────────
+
+/** Creates an in-memory SQLite space synced against `TestWfStateRecord`. */
+export async function setupTable() {
+  const space = createAdapter(":memory:");
+  await syncSchema(space, [TestWfStateRecord], { force: true });
+  const table = space.getTable(TestWfStateRecord);
+  return { space, table };
+}
 
 // ── Programmatic type builders (for edge-case tests) ─────────
 
