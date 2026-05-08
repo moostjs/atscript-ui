@@ -43,6 +43,20 @@ async function scrollTableToBottom(page: Page): Promise<void> {
   });
 }
 
+/**
+ * Return the `.as-table-scroll-container`'s `scrollHeight`. Used to verify
+ * the virtualizer's padding-rows approach creates the correct virtual space
+ * (regression guard for the `height` on `<tbody>` bug where CSS table layout
+ * ignores the declared height, capping scroll at the rendered-row subset).
+ */
+async function getScrollHeight(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>(".as-table-scroll-container");
+    if (!el) throw new Error(".as-table-scroll-container not found");
+    return el.scrollHeight;
+  });
+}
+
 // ---------------------------------------------------------------------
 
 test.describe("Section 10.4 — Infinite-scroll mode (audit_log_infinite)", () => {
@@ -77,6 +91,15 @@ test.describe("Section 10.4 — Infinite-scroll mode (audit_log_infinite)", () =
     // block fully loaded, total seeded count visible. Confirms accumulator
     // is reading from `state.loadedCount` (not just total).
     await expect(page.locator(".as-page-pill")).toContainText("100 of");
+
+    // Virtual scroll space must cover all 100 loaded rows. The padding-rows
+    // virtualizer sets scrollHeight ≈ count × rowHeight; regression guard
+    // against the old `height` on `<tbody>` approach where CSS table layout
+    // ignored the declared height and capped scroll at the rendered subset.
+    const scrollHeight = await getScrollHeight(page);
+    expect(scrollHeight, "scrollHeight must cover 100 rows at ~36px").toBeGreaterThanOrEqual(
+      100 * 30,
+    );
   });
 
   test("Scroll near bottom fires next-block /pages with $page=2&$size=100; rows accumulate to 200; status indicator surfaces", async ({
@@ -114,5 +137,12 @@ test.describe("Section 10.4 — Infinite-scroll mode (audit_log_infinite)", () =
 
     // Page-number UI still absent after the follow-up fetch.
     await expect(page.locator(".table-pagination")).toHaveCount(0);
+
+    // After the second block lands, the virtual scroll space must cover all
+    // 200 loaded rows — not just the ~40 currently visible in the viewport.
+    const scrollHeight = await getScrollHeight(page);
+    expect(scrollHeight, "scrollHeight must cover 200 rows at ~36px").toBeGreaterThanOrEqual(
+      200 * 30,
+    );
   });
 });
