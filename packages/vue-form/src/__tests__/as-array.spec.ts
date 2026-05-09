@@ -32,11 +32,10 @@ describe("AsArray", () => {
     });
     const { wrapper, formData } = mountForm(type);
 
-    // Add two items
     formData.value.items = ["a", "b"];
     await nextTick();
 
-    const removeBtns = wrapper.findAll(".as-field-remove-btn");
+    const removeBtns = wrapper.findAll(".as-array-remove-btn");
     expect(removeBtns.length).toBe(2);
   });
 
@@ -46,11 +45,10 @@ describe("AsArray", () => {
     });
     const { wrapper, formData } = mountForm(type);
 
-    // Add items via mutation
     formData.value.items = ["a", "b", "c"];
     await nextTick();
 
-    const removeBtns = wrapper.findAll(".as-field-remove-btn");
+    const removeBtns = wrapper.findAll(".as-array-remove-btn");
     expect(removeBtns.length).toBe(3);
 
     await removeBtns[1]!.trigger("click");
@@ -78,25 +76,79 @@ describe("AsArray", () => {
     formData.value.items = ["a", "b"];
     await nextTick();
 
-    const removeBtns = wrapper.findAll(".as-field-remove-btn");
+    const removeBtns = wrapper.findAll(".as-array-remove-btn");
     expect(removeBtns.length).toBe(2);
     for (const btn of removeBtns) {
       expect(btn.attributes("disabled")).toBeDefined();
     }
   });
 
-  it("custom add label from @ui.array.add.label annotation", async () => {
-    const { CustomAddLabelArray } = await import("./fixtures/array-forms.as");
-    const { wrapper } = mountForm(CustomAddLabelArray);
+  it("Add button uses singular from @ui.form.label.singular", async () => {
+    const { SingularLabelArray } = await import("./fixtures/array-forms.as");
+    const { wrapper } = mountForm(SingularLabelArray);
     const addBtn = wrapper.find(".as-array-add-btn");
     expect(addBtn.text()).toBe("Add tag");
+  });
+
+  it("items chip shows correct count", async () => {
+    const type = objectType({
+      items: arrayType(stringProp()),
+    });
+    const { wrapper, formData } = mountForm(type);
+
+    expect(wrapper.find(".as-array-items-chip").text()).toContain("0 items");
+
+    formData.value.items = ["a", "b", "c"];
+    await nextTick();
+
+    expect(wrapper.find(".as-array-items-chip").text()).toContain("3 items");
+  });
+
+  it("Clear sets length 0 for required arrays", async () => {
+    const type = objectType({
+      items: arrayType(stringProp()),
+    });
+    const { wrapper, formData } = mountForm(type);
+
+    formData.value.items = ["a", "b"];
+    await nextTick();
+
+    const clearBtn = wrapper.find(".as-array-clear-btn");
+    expect(clearBtn.exists()).toBe(true);
+    await clearBtn.trigger("click");
+    await nextTick();
+
+    expect(Array.isArray(formData.value.items)).toBe(true);
+    expect(formData.value.items.length).toBe(0);
+  });
+
+  it("Clear is disabled when array is empty", () => {
+    const type = objectType({
+      items: arrayType(stringProp()),
+    });
+    const { wrapper } = mountForm(type);
+    const clearBtn = wrapper.find(".as-array-clear-btn");
+    expect(clearBtn.attributes("disabled")).toBeDefined();
+  });
+
+  it("required+empty array renders open with no rows and only Add visible", async () => {
+    const type = objectType({
+      items: arrayType(stringProp()),
+    });
+    const { wrapper } = mountForm(type);
+    await nextTick();
+
+    expect(wrapper.findAll(".as-array-row-bare").length).toBe(0);
+    expect(wrapper.findAll(".as-array-row-island").length).toBe(0);
+    expect(wrapper.find(".as-array-add-btn").exists()).toBe(true);
+    const details = wrapper.find("details");
+    expect(details.attributes("open")).toBeDefined();
   });
 
   it("array validation error displayed on submit", async () => {
     const { RequiredArrayForm } = await import("./fixtures/array-forms.as");
     const { wrapper } = mountForm(RequiredArrayForm);
 
-    // Items is empty by default — submit should trigger validation
     await wrapper.find("form").trigger("submit");
     await nextTick();
 

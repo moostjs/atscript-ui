@@ -13,6 +13,11 @@ export interface CustomAddLabelArray {
     items: string[]
 }
 
+export interface SingularLabelArray {
+    @ui.form.label.singular 'tag'
+    items: string[]
+}
+
 export interface RequiredArrayForm {
     @expect.minLength 1, 'At least one item required'
     items: string[]

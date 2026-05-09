@@ -17,18 +17,18 @@ import { useFormContext } from "./use-form-context";
  * Used by the default `AsArray` component and available for custom array components.
  */
 export function useFormArray(field: FormArrayFieldDef, disabled?: ComputedRef<boolean>) {
-  // ── Context (root data, path, getByPath) ──────────────────────
   const { rootFormData, formContext, pathPrefix, getByPath, setByPath } =
     useFormContext("useFormArray");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
-  // ── Array value reference ───────────────────────────────────
   const arrayValue = computed<unknown[]>(() => {
     const v = getByPath(pathPrefix.value);
     return Array.isArray(v) ? v : [];
   });
 
-  // ── Stable keys for v-for ───────────────────────────────────
+  const isOptional = field.prop.optional ?? false;
+  const isEmpty = computed(() => arrayValue.value.length === 0);
+
   let keyCounter = 0;
   const itemKeys: string[] = reactive([]);
 
@@ -37,18 +37,13 @@ export function useFormArray(field: FormArrayFieldDef, disabled?: ComputedRef<bo
   }
 
   function syncKeys() {
-    while (itemKeys.length < arrayValue.value.length) {
-      itemKeys.push(generateKey());
-    }
     const newLen = arrayValue.value.length;
+    while (itemKeys.length < newLen) itemKeys.push(generateKey());
     if (itemKeys.length > newLen) {
-      // Invalidate cached field defs for removed indices
       for (const key of itemFieldCache.keys()) {
         if (key >= newLen) itemFieldCache.delete(key);
       }
-      while (itemKeys.length > newLen) {
-        itemKeys.pop();
-      }
+      itemKeys.length = newLen;
     }
   }
 
@@ -58,37 +53,31 @@ export function useFormArray(field: FormArrayFieldDef, disabled?: ComputedRef<bo
     () => syncKeys(),
   );
 
-  // ── Union info (derived from item field template) ─────────────
   const isUnion = isUnionField(field.itemField);
   const unionVariants: FormUnionVariant[] = isUnion
     ? (field.itemField as FormUnionFieldDef).unionVariants
     : [];
 
-  // ── Item field resolution ─────────────────────────────────────
+  // `name` doubles as AsField label fallback so primitive items read
+  // `<singular> #N` via formatIndexedLabel without a separate decorator.
   const itemFieldCache = new Map<number, FormFieldDef>();
 
-  function getItemField(index: number): FormFieldDef {
-    let cached = itemFieldCache.get(index);
-    if (!cached) {
-      cached = { ...field.itemField, path: String(index), name: "" };
-      itemFieldCache.set(index, cached);
-    }
-    return cached;
+  function getItemField(index: number, name = ""): FormFieldDef {
+    const cached = itemFieldCache.get(index);
+    if (cached && cached.name === name) return cached;
+    const fresh = { ...field.itemField, path: String(index), name };
+    itemFieldCache.set(index, fresh);
+    return fresh;
   }
 
-  // ── Length constraints ──────────────────────────────────────
-  const minLengthMeta = getFieldMeta(field.prop, "expect.minLength") as
-    | { length: number }
-    | undefined;
-  const maxLengthMeta = getFieldMeta(field.prop, "expect.maxLength") as
-    | { length: number }
-    | undefined;
-  const minLength = minLengthMeta?.length ?? 0;
-  const maxLength = maxLengthMeta?.length ?? Infinity;
+  const minLength =
+    (getFieldMeta(field.prop, "expect.minLength") as { length: number } | undefined)?.length ?? 0;
+  const maxLength =
+    (getFieldMeta(field.prop, "expect.maxLength") as { length: number } | undefined)?.length ??
+    Infinity;
   const canAdd = computed(() => !disabled?.value && arrayValue.value.length < maxLength);
   const canRemove = computed(() => !disabled?.value && arrayValue.value.length > minLength);
 
-  // ── Array mutations ─────────────────────────────────────────
   function ensureArray(): unknown[] {
     let arr = getByPath(pathPrefix.value);
     if (!Array.isArray(arr)) {
@@ -121,29 +110,36 @@ export function useFormArray(field: FormArrayFieldDef, disabled?: ComputedRef<bo
     if (!canRemove.value) return;
     ensureArray().splice(index, 1);
     itemKeys.splice(index, 1);
-    // Invalidate cached field defs at and above the removed index
-    // since items shift down and cached `path` values become stale
+    // Cached `path` values shift with the array — invalidate from `index` up.
     for (const key of itemFieldCache.keys()) {
       if (key >= index) itemFieldCache.delete(key);
     }
     handleChange("array-remove", pathPrefix.value, arrayValue.value);
   }
 
-  // ── Labels from annotations ─────────────────────────────────
-  const addLabel = getFieldMeta(field.prop, "ui.array.add.label") ?? "Add item";
-  const removeLabel = getFieldMeta(field.prop, "ui.array.remove.label") ?? "Remove";
+  function clear() {
+    if (isOptional) {
+      setByPath(pathPrefix.value, undefined);
+    } else {
+      const arr = getByPath(pathPrefix.value);
+      if (Array.isArray(arr)) arr.length = 0;
+    }
+    itemFieldCache.clear();
+    handleChange("array-remove", pathPrefix.value, arrayValue.value);
+  }
 
   return {
     arrayValue,
     itemKeys,
     isUnion,
     unionVariants,
+    isOptional,
+    isEmpty,
     getItemField,
     addItem,
     removeItem,
+    clear,
     canAdd,
     canRemove,
-    addLabel,
-    removeLabel,
   };
 }

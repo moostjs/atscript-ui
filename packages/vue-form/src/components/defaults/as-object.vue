@@ -37,9 +37,9 @@ const displayTitle = computed(
 );
 
 const store = useNestedSectionsStore();
-const collapsibleRef = useTemplateRef<{ runAndFocus: (action: () => void, ticks?: number) => void }>(
-  "collapsibleRef",
-);
+const collapsibleRef = useTemplateRef<{
+  runAndFocus: (action: () => void, ticks?: number) => void;
+}>("collapsibleRef");
 
 function handleAddData(): void {
   // Two ticks: one for the optional toggle to render `<details>`, one for the
@@ -72,11 +72,7 @@ function handleAddData(): void {
     :hidden="hidden"
   >
     <template #header-extras>
-      <AsVariantPicker
-        v-if="hasVariantPicker"
-        :union-context="unionCtx!"
-        :disabled="disabled"
-      />
+      <AsVariantPicker v-if="hasVariantPicker" :union-context="unionCtx!" :disabled="disabled" />
     </template>
 
     <template #actions>

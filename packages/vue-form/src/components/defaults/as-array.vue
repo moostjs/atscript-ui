@@ -1,120 +1,178 @@
 <script setup lang="ts">
-import type { FormArrayFieldDef } from "@atscript/ui";
-import { isArrayField } from "@atscript/ui";
-import { computed, ref } from "vue";
+import type { FormArrayFieldDef, FormFieldDef } from "@atscript/ui";
+import { resolveSingularLabel } from "@atscript/ui";
+import { computed, inject, ref, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useConsumeUnionContext } from "../../composables/use-form-context";
 import { useFormArray } from "../../composables/use-form-array";
 import { useDropdown } from "../../composables/use-dropdown";
-import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
+import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
 import AsField from "../as-field.vue";
-import AsNoData from "../internal/as-no-data.vue";
-import AsStructuredHeader from "../internal/as-structured-header.vue";
+import AsCollapsible from "../internal/as-collapsible.vue";
+import AsItemsChip from "../internal/as-items-chip.vue";
+import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
+import AsArrayRemoveBtn from "../internal/as-array-remove-btn.vue";
 
 const props = defineProps<TAsComponentProps>();
 
-const arrayField = isArrayField(props.field!) ? (props.field as FormArrayFieldDef) : undefined;
+const arrayField = props.field as FormArrayFieldDef;
 
-// ── Union context: consume and clear for nested children ────
-const unionCtx = useConsumeUnionContext();
+useConsumeUnionContext();
+
+const path = inject(
+  PATH_PREFIX_KEY,
+  computed(() => ""),
+);
 
 const optionalEnabled = computed(() => Array.isArray(props.model?.value));
+const disabled = computed(() => props.disabled ?? false);
 
 const {
   arrayValue,
   itemKeys,
-  getItemField,
   isUnion,
   unionVariants,
+  isOptional,
+  isEmpty,
+  getItemField,
   addItem,
   removeItem,
+  clear,
   canAdd,
   canRemove,
-  addLabel,
-  removeLabel,
-} = useFormArray(
-  arrayField!,
-  computed(() => props.disabled ?? false),
-);
+} = useFormArray(arrayField, disabled);
 
-// ── Union add dropdown ──────────────────────────────────────
+const level = computed(() => props.level ?? 0);
+
+// `@ui.form.label.singular` lives on the array prop; the item prop is a
+// fallback so structural item types can override their own singular.
+const fromArray = resolveSingularLabel(arrayField.prop);
+const singular = fromArray !== "item" ? fromArray : resolveSingularLabel(arrayField.itemField.prop);
+
+const STRUCTURED = new Set(["object", "array", "tuple", "union"]);
+const isItemStructured = STRUCTURED.has(arrayField.itemField.type);
+
+// Primitive items pass `singular` as the AsField label fallback so
+// formatIndexedLabel produces "phone #2"; island rows render their own
+// header and pass an empty name to suppress AsField's inner label.
+function fieldFor(idx: number): FormFieldDef {
+  return getItemField(idx, isItemStructured ? "" : singular);
+}
+
+// Required arrays open by default so the empty body surfaces Add.
+const defaultOpen = !isOptional;
+
 const addDropdownRef = ref<HTMLElement | null>(null);
 const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useDropdown(addDropdownRef);
 
-const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
+const collapsibleRef = useTemplateRef<{
+  runAndFocus: (action: () => void, ticks?: number) => void;
+}>("collapsibleRef");
+const store = useNestedSectionsStore();
+
+function handleAdd(variantIndex = 0) {
+  collapsibleRef.value?.runAndFocus(() => {
+    if (path.value) store?.setOpen(path.value, true);
+    addItem(variantIndex);
+  }, 1);
+}
+
+function handleEnableOptional() {
+  collapsibleRef.value?.runAndFocus(() => {
+    props.onToggleOptional?.(true);
+    if (path.value) store?.setOpen(path.value, true);
+  }, 2);
+}
 </script>
 
 <template>
-  <div
-    ref="rootRef"
-    class="as-array as-grid-item"
-    :class="[{ 'as-array--root': level === 0, 'as-array--nested': (level ?? 0) > 0 }, $props.class]"
-    v-show="!hidden"
+  <AsCollapsible
+    ref="collapsibleRef"
+    :class="$props.class"
+    :title="title ?? ''"
+    :description="description"
+    :level="level"
+    :optional="!!optional"
+    :optional-enabled="optionalEnabled"
+    :path="path"
+    :error="error"
+    :hidden="hidden"
+    :default-open="defaultOpen"
   >
-    <AsStructuredHeader
-      :title="title"
-      :level="level"
-      :on-remove="onRemove"
-      :can-remove="props.canRemove"
-      :remove-label="props.removeLabel"
-      :optional="optional"
-      :optional-enabled="optionalEnabled"
-      :on-toggle-optional="onToggleOptional"
-      :disabled="disabled"
-      :union-context="unionCtx"
-    />
-
-    <template v-if="optional && !optionalEnabled">
-      <AsNoData :on-edit="enableOptional" />
+    <template #badges>
+      <AsItemsChip :count="arrayValue.length" />
     </template>
-    <template v-else>
-      <!-- Items — each rendered as a single AsField inside the array's grid -->
-      <div class="as-form-grid">
-        <AsField
-          v-for="(_item, i) in arrayValue"
-          :key="itemKeys[i]"
-          :field="getItemField(i)"
-          :on-remove="() => removeItem(i)"
-          :can-remove="canRemove"
-          :remove-label="removeLabel"
-          :array-index="i"
-        />
-      </div>
 
-      <!-- Add button -->
-      <div class="as-array-add">
-        <!-- Single type: simple add button -->
-        <button
-          v-if="!isUnion"
-          type="button"
-          class="as-array-add-btn"
-          :disabled="!canAdd"
-          @click="addItem(0)"
-        >
-          {{ addLabel }}
-        </button>
+    <template #actions>
+      <AsArrayClearBtn :label="title" :disabled="disabled || isEmpty" @clear="clear" />
+    </template>
 
-        <!-- Union: single button with variant dropdown -->
-        <div v-else ref="addDropdownRef" class="as-dropdown">
-          <button type="button" class="as-array-add-btn" :disabled="!canAdd" @click="toggleAdd">
-            {{ addLabel }} &#x25BE;
+    <template #body>
+      <div class="as-array-body">
+        <template v-for="(_item, idx) in arrayValue" :key="itemKeys[idx]">
+          <div v-if="!isItemStructured" class="as-array-row-bare">
+            <AsField :field="fieldFor(idx)" :array-index="idx" />
+            <AsArrayRemoveBtn
+              :singular="singular"
+              :disabled="!canRemove"
+              @click="removeItem(idx)"
+            />
+          </div>
+
+          <div v-else class="as-array-row-island">
+            <div class="as-array-row-header">
+              <span class="as-array-row-label">
+                {{ singular }}<span class="as-array-row-label-suffix">#{{ idx + 1 }}</span>
+              </span>
+              <AsArrayRemoveBtn
+                :singular="singular"
+                :disabled="!canRemove"
+                @click="removeItem(idx)"
+              />
+            </div>
+            <AsField :field="fieldFor(idx)" />
+          </div>
+        </template>
+
+        <div class="as-array-add-row">
+          <button
+            v-if="!isUnion"
+            type="button"
+            class="as-array-add-btn"
+            :disabled="!canAdd"
+            @click="handleAdd(0)"
+          >
+            Add {{ singular }}
           </button>
-          <div v-if="addOpen" class="as-dropdown-menu">
-            <button
-              v-for="(v, vi) in unionVariants"
-              :key="vi"
-              type="button"
-              class="as-dropdown-item"
-              @click="selectAdd(() => addItem(vi))"
-            >
-              {{ v.label }}
+          <div v-else ref="addDropdownRef" class="as-dropdown">
+            <button type="button" class="as-array-add-btn" :disabled="!canAdd" @click="toggleAdd">
+              Add {{ singular }} &#x25BE;
             </button>
+            <div v-if="addOpen" class="as-dropdown-menu">
+              <button
+                v-for="(v, vi) in unionVariants"
+                :key="vi"
+                type="button"
+                class="as-dropdown-item"
+                @click="selectAdd(() => handleAdd(vi))"
+              >
+                {{ v.label }}
+              </button>
+            </div>
           </div>
         </div>
       </div>
-
-      <!-- Array-level validation error -->
-      <div v-if="error" class="as-array-error" role="alert">{{ error }}</div>
     </template>
-  </div>
+
+    <template #empty>
+      <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
+        <button type="button" class="as-object-empty-add" @click="handleEnableOptional">
+          <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
+          Add {{ singular }}
+        </button>
+        <p v-if="description" class="as-collapsible-description">{{ description }}</p>
+      </div>
+    </template>
+  </AsCollapsible>
 </template>
