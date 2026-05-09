@@ -62,7 +62,8 @@ function handleAddData(): void {
     v-else
     ref="collapsibleRef"
     :class="$props.class"
-    :title="displayTitle"
+    :title="title"
+    :array-index="arrayIndex"
     :description="description"
     :level="level"
     :optional="!!optional"
@@ -70,6 +71,7 @@ function handleAddData(): void {
     :path="path"
     :error="error"
     :hidden="hidden"
+    :default-open="arrayIndex !== undefined"
   >
     <template #header-extras>
       <AsVariantPicker v-if="hasVariantPicker" :union-context="unionCtx!" :disabled="disabled" />
@@ -81,13 +83,14 @@ function handleAddData(): void {
         type="button"
         class="as-field-remove-btn"
         :disabled="!canRemove"
-        :aria-label="removeLabel || 'Remove item'"
+        aria-label="Remove"
+        title="Remove"
         @click.stop.prevent="onRemove"
       >
-        {{ removeLabel || "Remove" }}
+        <span class="as-field-remove-btn-icon" aria-hidden="true" />
       </button>
       <AsOptionalClear
-        v-if="optional && optionalEnabled"
+        v-else-if="optional && optionalEnabled"
         :label="displayTitle"
         @clear="onToggleOptional?.(false)"
       />

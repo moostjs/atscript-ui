@@ -68,13 +68,18 @@ export const asFieldShortcuts = defineShortcuts({
   "as-error-slot": "leading-[1] text-callout text-current/60",
 
   "as-field-description": "text-callout text-current/60 -mt-[0.2em]",
+  "as-field-label-index": "text-current/60 font-400 font-mono normal-case",
+
 
   "as-optional-clear": {
     "": "inline-flex items-center h-[1.5em] px-$s border-1 layer-0 text-current/60 rounded-base cursor-pointer text-callout leading-none transition-all duration-120",
     "hover:": "scope-error bg-current-hl/10 text-current-hl",
   },
+  // Square X-icon button — same height as Clear so they swap cleanly
+  // in the actions slot when an item is in array context.
   "as-field-remove-btn": {
-    "": "inline-grid place-items-center h-[1.5em] px-$s border-0 bg-transparent text-current/50 rounded-base cursor-pointer text-callout leading-none transition-all duration-120 disabled-soft",
-    "hover:not-disabled:": "scope-error bg-current-hl/10 text-current-hl",
+    "": "inline-grid place-items-center h-[1.5em] w-[1.5em] text-current/50 rounded-base cursor-pointer transition-colors duration-120 disabled-soft",
+    "hover:not-disabled:": "scope-error text-current-hl",
   },
+  "as-field-remove-btn-icon": "i-as-close text-[1em]",
 });

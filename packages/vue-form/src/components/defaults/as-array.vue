@@ -12,7 +12,6 @@ import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsItemsChip from "../internal/as-items-chip.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
-import AsArrayRemoveBtn from "../internal/as-array-remove-btn.vue";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -45,28 +44,17 @@ const {
 
 const level = computed(() => props.level ?? 0);
 
-// Mirrors AsObject's empty-state heading source so the optional placeholder
-// reads "Add <label>" with the field's @meta.label, not the singular.
+// Empty placeholder reads "Add <label>" using the field's own label.
 const displayTitle = computed(
   () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
 );
 
-// `@ui.form.label.singular` lives on the array prop; the item prop is a
-// fallback so structural item types can override their own singular.
+// `@ui.form.label.singular` lives on the array prop; falls back to the
+// item prop, then to "item". Becomes the per-item label that AsField /
+// AsObject capitalize and decorate with `#N`.
 const fromArray = resolveSingularLabel(arrayField.prop);
 const singular = fromArray !== "item" ? fromArray : resolveSingularLabel(arrayField.itemField.prop);
 
-const STRUCTURED = new Set(["object", "array", "tuple", "union"]);
-const isItemStructured = STRUCTURED.has(arrayField.itemField.type);
-
-// Primitive items pass `singular` as the AsField label fallback so
-// formatIndexedLabel produces "phone #2"; island rows render their own
-// header and pass an empty name to suppress AsField's inner label.
-function fieldFor(idx: number): FormFieldDef {
-  return getItemField(idx, isItemStructured ? "" : singular);
-}
-
-// Required arrays open by default so the empty body surfaces Add.
 const defaultOpen = !isOptional;
 
 const addDropdownRef = ref<HTMLElement | null>(null);
@@ -76,6 +64,13 @@ const collapsibleRef = useTemplateRef<{
   runAndFocus: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
 const store = useNestedSectionsStore();
+
+// Pass `singular` as the per-item label. The dispatched component
+// (AsField / AsObject / AsArray) capitalizes it, appends muted `#N`,
+// and renders the X-icon Remove from the on-remove callback.
+function fieldFor(idx: number): FormFieldDef {
+  return getItemField(idx, singular);
+}
 
 function handleAdd(variantIndex = 0) {
   collapsibleRef.value?.runAndFocus(() => {
@@ -115,49 +110,39 @@ function handleEnableOptional() {
     </template>
 
     <template #body>
-      <div class="as-array-body">
-        <template v-for="(_item, idx) in arrayValue" :key="itemKeys[idx]">
-          <div v-if="!isItemStructured" class="as-array-row-bare">
-            <AsField :field="fieldFor(idx)" :array-index="idx" />
-            <AsArrayRemoveBtn :disabled="!canRemove" @click="removeItem(idx)" />
-          </div>
+      <AsField
+        v-for="(_item, idx) in arrayValue"
+        :key="itemKeys[idx]"
+        :field="fieldFor(idx)"
+        :array-index="idx"
+        :on-remove="() => removeItem(idx)"
+        :can-remove="canRemove"
+      />
 
-          <div v-else class="as-array-row-island">
-            <div class="as-array-row-header">
-              <span class="as-array-row-label">
-                {{ singular }}<span class="as-array-row-label-suffix">#{{ idx + 1 }}</span>
-              </span>
-              <AsArrayRemoveBtn :disabled="!canRemove" @click="removeItem(idx)" />
-            </div>
-            <AsField :field="fieldFor(idx)" />
-          </div>
-        </template>
-
-        <div class="as-array-add-row">
-          <button
-            v-if="!isUnion"
-            type="button"
-            class="as-array-add-btn"
-            :disabled="!canAdd"
-            @click="handleAdd(0)"
-          >
-            Add {{ singular }}
+      <div class="as-array-add-row">
+        <button
+          v-if="!isUnion"
+          type="button"
+          class="as-array-add-btn"
+          :disabled="!canAdd"
+          @click="handleAdd(0)"
+        >
+          Add {{ singular }}
+        </button>
+        <div v-else ref="addDropdownRef" class="as-dropdown">
+          <button type="button" class="as-array-add-btn" :disabled="!canAdd" @click="toggleAdd">
+            Add {{ singular }} &#x25BE;
           </button>
-          <div v-else ref="addDropdownRef" class="as-dropdown">
-            <button type="button" class="as-array-add-btn" :disabled="!canAdd" @click="toggleAdd">
-              Add {{ singular }} &#x25BE;
+          <div v-if="addOpen" class="as-dropdown-menu">
+            <button
+              v-for="(v, vi) in unionVariants"
+              :key="vi"
+              type="button"
+              class="as-dropdown-item"
+              @click="selectAdd(() => handleAdd(vi))"
+            >
+              {{ v.label }}
             </button>
-            <div v-if="addOpen" class="as-dropdown-menu">
-              <button
-                v-for="(v, vi) in unionVariants"
-                :key="vi"
-                type="button"
-                class="as-dropdown-item"
-                @click="selectAdd(() => handleAdd(vi))"
-              >
-                {{ v.label }}
-              </button>
-            </div>
           </div>
         </div>
       </div>

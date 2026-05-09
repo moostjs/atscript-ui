@@ -92,12 +92,14 @@ export interface OptionalFieldsForm {
     // ── Array of primitives ─────────────────────────────────
     @meta.label 'Tags'
     @meta.description 'String array — minLength validates the array as a whole.'
+    @ui.form.label.singular 'tag'
     @expect.minLength 1, 'At least one tag is required'
     tags?: string[]
 
     // ── Array of objects ────────────────────────────────────
     @meta.label 'Phone numbers'
     @meta.description 'Object array — each row has its own required fields.'
+    @ui.form.label.singular 'phone number'
     @expect.minLength 1, 'At least one phone number is required'
     phones?: {
         @meta.label 'Label'

@@ -47,6 +47,7 @@ export interface ProductsTable {
     weight?: decimal
 
     @meta.label 'Tags'
+    @ui.form.label.singular 'tag'
     tags: string[]
 
     @meta.label 'Published At'

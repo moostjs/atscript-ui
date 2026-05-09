@@ -31,6 +31,7 @@ export interface OrdersTable {
     currency: db.currencyCode
 
     @meta.label 'Lines'
+    @ui.form.label.singular 'line'
     @db.json
     lines: {
         @ui.form.grid.colSpan '6'

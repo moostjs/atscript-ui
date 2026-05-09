@@ -35,16 +35,11 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
-    to: "/forms-demo/arrays-of-primitives",
-    title: "Arrays of primitives",
-    description: "string[], number[] — add/remove/reorder rendering.",
-    status: "todo",
-  },
-  {
-    to: "/forms-demo/arrays-of-objects",
-    title: "Arrays of objects",
-    description: "Repeating struct rows — header, remove, optional toggle.",
-    status: "todo",
+    to: "/forms-demo/array-showcase",
+    title: "Array showcase",
+    description:
+      "Optional and required arrays of primitives and objects, plus a nested array.",
+    status: "ready",
   },
   {
     to: "/forms-demo/tuples",

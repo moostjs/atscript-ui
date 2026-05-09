@@ -11,6 +11,7 @@ import {
   useNestedSectionsStore,
 } from "../../composables/use-nested-sections";
 import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
+import { formatIndexedLabelParts } from "../../composables/use-form-context";
 
 const props = withDefaults(
   defineProps<{
@@ -23,9 +24,12 @@ const props = withDefaults(
     error?: string;
     defaultOpen?: boolean;
     hidden?: boolean;
+    arrayIndex?: number;
   }>(),
   { defaultOpen: false },
 );
+
+const titleParts = computed(() => formatIndexedLabelParts(props.title, props.arrayIndex));
 
 defineSlots<{
   "header-extras"(): unknown;
@@ -111,7 +115,12 @@ defineExpose({ runAndFocus });
   >
     <summary class="as-collapsible-summary">
       <div class="as-collapsible-header">
-        <component :is="headingTag" :class="titleClass">{{ title }}</component>
+        <component :is="headingTag" :class="titleClass">
+          {{ titleParts?.base
+          }}<span v-if="titleParts?.suffix" class="as-collapsible-title-index"
+            >&nbsp;{{ titleParts.suffix }}</span
+          >
+        </component>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>
       <slot name="header-extras" />

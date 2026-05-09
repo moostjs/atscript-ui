@@ -35,7 +35,7 @@ describe("AsArray", () => {
     formData.value.items = ["a", "b"];
     await nextTick();
 
-    const removeBtns = wrapper.findAll(".as-array-remove-btn");
+    const removeBtns = wrapper.findAll(".as-field-remove-btn");
     expect(removeBtns.length).toBe(2);
   });
 
@@ -48,7 +48,7 @@ describe("AsArray", () => {
     formData.value.items = ["a", "b", "c"];
     await nextTick();
 
-    const removeBtns = wrapper.findAll(".as-array-remove-btn");
+    const removeBtns = wrapper.findAll(".as-field-remove-btn");
     expect(removeBtns.length).toBe(3);
 
     await removeBtns[1]!.trigger("click");
@@ -76,7 +76,7 @@ describe("AsArray", () => {
     formData.value.items = ["a", "b"];
     await nextTick();
 
-    const removeBtns = wrapper.findAll(".as-array-remove-btn");
+    const removeBtns = wrapper.findAll(".as-field-remove-btn");
     expect(removeBtns.length).toBe(2);
     for (const btn of removeBtns) {
       expect(btn.attributes("disabled")).toBeDefined();
@@ -161,8 +161,7 @@ describe("AsArray", () => {
     const { wrapper } = mountForm(type);
     await nextTick();
 
-    expect(wrapper.findAll(".as-array-row-bare").length).toBe(0);
-    expect(wrapper.findAll(".as-array-row-island").length).toBe(0);
+    expect(wrapper.findAll(".as-field-remove-btn").length).toBe(0);
     expect(wrapper.find(".as-array-add-btn").exists()).toBe(true);
     const details = wrapper.find("details");
     expect(details.attributes("open")).toBeDefined();

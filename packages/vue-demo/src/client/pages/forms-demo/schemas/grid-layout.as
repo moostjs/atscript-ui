@@ -119,6 +119,7 @@ export interface GridLayoutForm {
 
     @meta.label 'Phone numbers'
     @meta.description 'Array of objects — each item is full-width inside the array grid, but its own fields use the item-level grid.'
+    @ui.form.label.singular 'phone'
     @expect.minLength 1, 'At least one phone number is required'
     phones?: {
         @meta.label 'Label'

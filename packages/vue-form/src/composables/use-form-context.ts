@@ -99,18 +99,34 @@ export function useConsumeUnionContext(): TAsUnionContext | undefined {
   return unionCtx;
 }
 
+function capitalize(s: string): string {
+  return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
+}
+
 /**
- * Format a label/title with an array-index prefix.
- *
- * When `arrayIndex` is defined, prepends `#<index+1>` to the label.
- * Used by field-shell (label) and object (title) components for array items.
+ * Format a label/title for rendering. Capitalizes the first letter and,
+ * when in array context, appends a `#N` suffix as a separate piece so
+ * callers can render it muted.
  */
 export function formatIndexedLabel(
   label: string | undefined,
   arrayIndex: number | undefined,
 ): string | undefined {
+  const base = label ? capitalize(label) : undefined;
   if (arrayIndex !== undefined) {
-    return label ? `${label} #${arrayIndex + 1}` : `#${arrayIndex + 1}`;
+    return base ? `${base} #${arrayIndex + 1}` : `#${arrayIndex + 1}`;
   }
-  return label;
+  return base;
+}
+
+/** Split a label into base + optional `#N` suffix for two-part rendering. */
+export function formatIndexedLabelParts(
+  label: string | undefined,
+  arrayIndex: number | undefined,
+): { base: string; suffix?: string } | undefined {
+  const base = label ? capitalize(label) : "";
+  if (arrayIndex === undefined) {
+    return base ? { base } : undefined;
+  }
+  return { base, suffix: `#${arrayIndex + 1}` };
 }

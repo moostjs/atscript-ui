@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { computed, useId } from "vue";
 import type { TAsComponentProps } from "../types";
-import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";
+import {
+  useConsumeUnionContext,
+  formatIndexedLabelParts,
+} from "../../composables/use-form-context";
 import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
 import AsNoData from "./as-no-data.vue";
 import AsOptionalClear from "./as-optional-clear.vue";
@@ -31,8 +34,7 @@ const optionalEnabled = computed(() => props.model?.value !== undefined);
 const unionCtx = useConsumeUnionContext();
 const hasVariantPicker = unionCtx !== undefined && unionCtx.variants.length > 1;
 
-// In array context, prepend #<index+1> to the label (same as as-object displayTitle)
-const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayIndex));
+const labelParts = computed(() => formatIndexedLabelParts(props.label, props.arrayIndex));
 
 const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 
@@ -51,7 +53,7 @@ const showEmptyPlaceholder = computed(
     <div
       v-if="
         $slots.header ||
-        (displayLabel && !chromeless) ||
+        (labelParts && !chromeless) ||
         onRemove ||
         showOptionalClear ||
         hasVariantPicker
@@ -68,9 +70,12 @@ const showEmptyPlaceholder = computed(
           />
         </template>
         <template v-else-if="!chromeless">
-          <label v-if="displayLabel" :for="inputId" class="as-field-label">{{
-            displayLabel
-          }}</label>
+          <label v-if="labelParts" :for="inputId" class="as-field-label">
+            {{ labelParts.base
+            }}<span v-if="labelParts.suffix" class="as-field-label-index"
+              >&nbsp;{{ labelParts.suffix }}</span
+            >
+          </label>
         </template>
 
         <!-- Union variant picker — inline next to label -->
@@ -80,14 +85,15 @@ const showEmptyPlaceholder = computed(
       <div v-if="showOptionalClear || onRemove" class="as-field-header-actions">
         <AsOptionalClear v-if="showOptionalClear" @clear="onToggleOptional?.(false)" />
         <button
-          v-if="onRemove"
+          v-else-if="onRemove"
           type="button"
           class="as-field-remove-btn"
           :disabled="!canRemove"
-          :aria-label="removeLabel || 'Remove item'"
+          aria-label="Remove"
+          title="Remove"
           @click="onRemove"
         >
-          {{ removeLabel || "Remove" }}
+          <span class="as-field-remove-btn-icon" aria-hidden="true" />
         </button>
       </div>
     </div>

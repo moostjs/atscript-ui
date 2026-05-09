@@ -96,9 +96,11 @@ declare global {
     "ui.form.component": string
     "ui.form.hidden": boolean
     "ui.form.attr": ({ name: string, value: string })[]
-    "ui.form.width": string
+    "ui.form.grid.colSpan": { desktop: string, narrow?: string }
+    "ui.form.grid.rowSpan": { desktop: string, narrow?: string }
     "ui.form.icon": string
     "ui.form.submit.text": string
+    "ui.form.label.singular": string
     "ui.form.action": { id: string, label?: string }
     "ui.form.validate": (string)[]
     "ui.form.fn.title": string

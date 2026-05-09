@@ -51,6 +51,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/grid-layout.vue"),
   },
   {
+    path: "/forms-demo/array-showcase",
+    name: "forms-demo-array-showcase",
+    component: () => import("./client/pages/forms-demo/array-showcase.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),
