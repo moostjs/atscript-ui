@@ -30,6 +30,6 @@ const rootClass = computed(() =>
     <span class="as-no-data-icon" aria-hidden="true">
       <span :class="hovered ? 'i-as-field-fill' : 'i-as-field-empty'" />
     </span>
-    <span class="as-no-data-text">{{ hovered ? "Click to edit" : "Not defined" }}</span>
+    <span class="as-no-data-text">{{ hovered ? "Click to edit" : "Not set" }}</span>
   </div>
 </template>
