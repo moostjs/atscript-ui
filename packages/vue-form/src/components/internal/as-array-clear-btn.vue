@@ -1,14 +1,24 @@
 <script setup lang="ts">
-// `label` only feeds the aria-label so screen-readers say "Clear Tags";
-// visible text is always just "Clear" to mirror AsObject's chrome parity.
-defineProps<{ label?: string; disabled?: boolean }>();
+import AsOptionalClear from "./as-optional-clear.vue";
+
+// Optional arrays delegate to AsOptionalClear (X icon, "Unset" — value
+// → undefined). Required arrays use a text "Clear" button (length → 0)
+// since the action keeps the array around.
+defineProps<{ label?: string; disabled?: boolean; optional?: boolean }>();
 defineEmits<{ clear: [] }>();
 </script>
 
 <template>
+  <AsOptionalClear
+    v-if="optional"
+    :label="label"
+    :disabled="disabled"
+    @clear="$emit('clear')"
+  />
   <button
+    v-else
     type="button"
-    class="as-array-clear-btn"
+    class="as-optional-clear"
     :disabled="disabled"
     :aria-label="label ? `Clear ${label}` : 'Clear'"
     @click.stop.prevent="$emit('clear')"

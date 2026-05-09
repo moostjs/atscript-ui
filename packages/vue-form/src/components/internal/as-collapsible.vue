@@ -96,9 +96,9 @@ const descendantErrorCount = computed(() =>
 // `rootRef` is null while the empty slot renders; it binds to `<details>`
 // on the next tick after `optionalEnabled` flips, so the deferred focus
 // query lands on the freshly mounted subtree.
-const { rootRef, runAndFocus } = useFocusFirstAfter();
+const { rootRef, runAndFocus, runAndFocusNew } = useFocusFirstAfter();
 
-defineExpose({ runAndFocus });
+defineExpose({ runAndFocus, runAndFocusNew });
 </script>
 
 <template>
@@ -125,6 +125,7 @@ defineExpose({ runAndFocus });
       </div>
       <slot name="header-extras" />
       <slot name="badges" />
+      <slot name="actions" />
       <span
         v-if="!isOpen && descendantErrorCount > 0"
         class="as-collapsible-error-badge"
@@ -132,7 +133,6 @@ defineExpose({ runAndFocus });
       >
         {{ descendantErrorCount }}
       </span>
-      <slot name="actions" />
       <span
         class="as-collapsible-chevron"
         :class="{ 'as-collapsible-chevron-collapsed': !isOpen }"

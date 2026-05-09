@@ -183,6 +183,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-object-empty",
     "as-object-empty-add",
     "as-object-empty-add-icon",
+    "as-optional-clear",
     "i-as-field-fill",
   ],
   "as-cell-array": [

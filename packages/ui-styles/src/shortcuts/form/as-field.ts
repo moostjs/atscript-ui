@@ -1,6 +1,10 @@
 import { defineShortcuts } from "vunor/theme";
 import { inputBase } from "./_shared";
 
+const clearBtnChrome =
+  "border-1 layer-0 text-current/60 rounded-base cursor-pointer transition-all duration-120 disabled-soft";
+const clearBtnHover = "scope-error bg-current-hl/10 text-current-hl";
+
 export const asFieldShortcuts = defineShortcuts({
   "as-default-field": {
     "": "as-grid-item flex flex-col gap-$xs relative",
@@ -71,15 +75,15 @@ export const asFieldShortcuts = defineShortcuts({
   "as-field-label-index": "text-current/60 font-400 font-mono normal-case",
 
 
+  // Clear/Remove buttons share chrome so they read as one family in
+  // headers; only layout (text-pill vs square-icon) differs.
   "as-optional-clear": {
-    "": "inline-flex items-center h-[1.5em] px-$s border-1 layer-0 text-current/60 rounded-base cursor-pointer text-callout leading-none transition-all duration-120",
-    "hover:": "scope-error bg-current-hl/10 text-current-hl",
+    "": `inline-flex items-center h-[1.5em] px-$s text-callout leading-none ${clearBtnChrome}`,
+    "hover:not-disabled:": clearBtnHover,
   },
-  // Square X-icon button — same height as Clear so they swap cleanly
-  // in the actions slot when an item is in array context.
   "as-field-remove-btn": {
-    "": "inline-grid place-items-center h-[1.5em] w-[1.5em] text-current/50 rounded-base cursor-pointer transition-colors duration-120 disabled-soft",
-    "hover:not-disabled:": "scope-error text-current-hl",
+    "": `inline-grid place-items-center h-[1.5em] w-[1.5em] ${clearBtnChrome}`,
+    "hover:not-disabled:": clearBtnHover,
   },
   "as-field-remove-btn-icon": "i-as-close text-[1em]",
 });

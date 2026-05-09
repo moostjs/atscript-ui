@@ -26,7 +26,9 @@ export const asCollapsibleShortcuts = defineShortcuts({
 
   "as-collapsible-body": "mt-$m as-form-grid",
 
-  "as-collapsible-error": "scope-error text-callout text-current-hl mb-$xs",
+  // `as-grid-item` claims the whole row so the message wraps naturally
+  // instead of getting squeezed into a single grid column.
+  "as-collapsible-error": "as-grid-item scope-error text-callout text-current-hl mb-$xs",
 
   "as-collapsible-error-badge":
     "scope-error surface-500 inline-flex items-center justify-center min-w-[1.4em] h-[1.4em] px-$xxs rounded-r0 text-callout font-mono font-600 leading-none shrink-0",

@@ -215,6 +215,29 @@ function handleAction(name: string) {
 provide(ACTION_HANDLER_KEY, handleAction);
 
 function handleChange(type: TAsChangeType, path: string, value: unknown) {
+  // Field-local watches clear scalar errors on direct edits, but a parent
+  // struct/array error never sees a model identity change when a child
+  // mutates — so drop the changed path + ancestors here. Next submit
+  // re-validates.
+  const errors = internalErrors.value;
+  let hasAny = false;
+  for (const _ in errors) {
+    hasAny = true;
+    break;
+  }
+  if (hasAny) {
+    const stale = new Set(iteratePathAncestors(path));
+    const next: Record<string, string> = {};
+    let changed = false;
+    for (const key in errors) {
+      if (stale.has(key)) changed = true;
+      else next[key] = errors[key];
+    }
+    if (changed) {
+      internalErrors.value = next;
+      setErrors(next);
+    }
+  }
   emit("change", type, path, value, domainData());
 }
 provide(CHANGE_HANDLER_KEY, handleChange);

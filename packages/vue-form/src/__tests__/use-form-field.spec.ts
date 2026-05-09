@@ -27,6 +27,7 @@ function setupFormField(
   const formState = reactive<TFormState>({
     firstSubmitHappened: false,
     firstValidation: "on-change",
+    freshFields: new Set<symbol>(),
     register: vi.fn(),
     unregister: vi.fn(),
     ...formStateOverrides,

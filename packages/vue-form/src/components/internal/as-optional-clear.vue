@@ -1,16 +1,18 @@
 <script setup lang="ts">
-/** `label` is appended to the visible text + aria-label, e.g. "City" → "Clear City". */
-defineProps<{ label?: string }>();
+/** `label` only feeds the aria-label so screen-readers say "Unset City". */
+defineProps<{ label?: string; disabled?: boolean }>();
 defineEmits<{ clear: [] }>();
 </script>
 
 <template>
   <button
     type="button"
-    class="as-optional-clear"
-    :aria-label="label ? `Clear ${label}` : 'Clear value'"
+    class="as-field-remove-btn"
+    :disabled="disabled"
+    :aria-label="label ? `Unset ${label}` : 'Unset value'"
+    :title="label ? `Unset ${label}` : 'Unset'"
     @click.stop.prevent="$emit('clear')"
   >
-    Clear{{ label ? ` ${label}` : "" }}
+    <span class="as-field-remove-btn-icon" aria-hidden="true" />
   </button>
 </template>

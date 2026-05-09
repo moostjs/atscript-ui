@@ -37,12 +37,16 @@ export function useFormField<TValue = any, TFormData = any, TContext = any>(
       submitError.value = undefined;
       externalError.value = undefined;
       touched.value = true;
+      // Editing a fresh field promotes it: it now participates in live
+      // validation like any field that existed at submit time.
+      formState?.freshFields.delete(id);
     },
     {},
   );
 
   const isValidationActive = computed(() => {
     if (!formState?.firstValidation) return false;
+    if (formState.freshFields.has(id)) return false;
     switch (formState.firstValidation) {
       case "on-change":
         return formState.firstSubmitHappened || touched.value;
@@ -86,6 +90,11 @@ export function useFormField<TValue = any, TFormData = any, TContext = any>(
 
   function onBlur() {
     blur.value = true;
+    // Tabbing past a fresh field counts as "considered" — promote it out of
+    // freshness so its error surfaces. Without this, a user can tab through
+    // an entire newly-added array item and never see its required-field
+    // errors until they either type into one or submit again.
+    formState?.freshFields.delete(id);
   }
 
   // Register with form

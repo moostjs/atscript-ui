@@ -44,12 +44,11 @@ const {
 
 const level = computed(() => props.level ?? 0);
 
-// Empty placeholder reads "Add <label>" using the field's own label.
 const displayTitle = computed(
   () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
 );
 
-// `@ui.form.label.singular` lives on the array prop; falls back to the
+// `@ui.form.label.singular` lives on the array prop; fall back to the
 // item prop, then to "item". Becomes the per-item label that AsField /
 // AsObject capitalize and decorate with `#N`.
 const fromArray = resolveSingularLabel(arrayField.prop);
@@ -62,27 +61,28 @@ const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useDropdown(ad
 
 const collapsibleRef = useTemplateRef<{
   runAndFocus: (action: () => void, ticks?: number) => void;
+  runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
 const store = useNestedSectionsStore();
 
-// Pass `singular` as the per-item label. The dispatched component
-// (AsField / AsObject / AsArray) capitalizes it, appends muted `#N`,
-// and renders the X-icon Remove from the on-remove callback.
 function fieldFor(idx: number): FormFieldDef {
   return getItemField(idx, singular);
 }
 
 function handleAdd(variantIndex = 0) {
-  collapsibleRef.value?.runAndFocus(() => {
+  collapsibleRef.value?.runAndFocusNew(() => {
     if (path.value) store?.setOpen(path.value, true);
     addItem(variantIndex);
   }, 1);
 }
 
 function handleEnableOptional() {
-  collapsibleRef.value?.runAndFocus(() => {
+  // Enable + add the first item in one go so the user lands directly on
+  // an editable row instead of the empty placeholder.
+  collapsibleRef.value?.runAndFocusNew(() => {
     props.onToggleOptional?.(true);
     if (path.value) store?.setOpen(path.value, true);
+    addItem(0);
   }, 2);
 }
 </script>
@@ -106,7 +106,15 @@ function handleEnableOptional() {
     </template>
 
     <template #actions>
-      <AsArrayClearBtn :label="displayTitle" :disabled="disabled || isEmpty" @clear="clear" />
+      <!-- Hide Clear only when required+empty: optional arrays keep it
+           so the user can collapse back to undefined. -->
+      <AsArrayClearBtn
+        v-if="isOptional || !isEmpty"
+        :label="displayTitle"
+        :optional="isOptional"
+        :disabled="disabled"
+        @clear="clear"
+      />
     </template>
 
     <template #body>

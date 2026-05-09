@@ -17,9 +17,17 @@ export function useFormState<TFormData, TContext>(opts: {
   // Stable functions — outside computed to avoid re-creation on reactivity ticks
   const register = (id: symbol, registration: TFormFieldRegistration) => {
     fieldsById.set(id, registration);
+    // Fields mounted after the first failed submit start "fresh": live
+    // validation stays suppressed until the user edits the field or the
+    // next submit fires. Without this, a newly-added array item lights up
+    // every required field in red the moment it's rendered.
+    if (formState.firstSubmitHappened) {
+      formState.freshFields.add(id);
+    }
   };
   const unregister = (id: symbol) => {
     fieldsById.delete(id);
+    formState.freshFields.delete(id);
   };
 
   // Reactive object — properties are mutated in-place so Vue's fine-grained
@@ -28,6 +36,7 @@ export function useFormState<TFormData, TContext>(opts: {
   const formState = reactive<TFormState>({
     firstSubmitHappened: false,
     firstValidation: toValue(opts.firstValidation) ?? "on-change",
+    freshFields: new Set<symbol>(),
     register,
     unregister,
   });
@@ -50,6 +59,7 @@ export function useFormState<TFormData, TContext>(opts: {
 
   function clearErrors() {
     formState.firstSubmitHappened = false;
+    formState.freshFields.clear();
     for (const reg of fieldsById.values()) {
       reg.callbacks.clearErrors();
     }
@@ -65,6 +75,10 @@ export function useFormState<TFormData, TContext>(opts: {
 
   function submit(): true | { path: string; message: string }[] {
     formState.firstSubmitHappened = true;
+    // A submit applies to every currently-registered field — they're no
+    // longer "fresh" past this point, regardless of whether validation
+    // passes or fails.
+    formState.freshFields.clear();
     if (formState.firstValidation === "none") return true;
 
     // Custom form-level validator — replaces per-field iteration

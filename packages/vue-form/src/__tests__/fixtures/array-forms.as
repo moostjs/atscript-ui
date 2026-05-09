@@ -28,3 +28,15 @@ export interface OptionalLabelArrayForm {
     @ui.form.label.singular 'tag'
     items?: string[]
 }
+
+export interface PhoneItem {
+    @expect.minLength 1, 'Label is required'
+    label: string
+    @expect.minLength 1, 'Number is required'
+    number: string
+}
+
+export interface PhonesArrayForm {
+    @expect.minLength 1, 'At least one phone required'
+    items: PhoneItem[]
+}
