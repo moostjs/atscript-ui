@@ -112,8 +112,8 @@ export type TAsTypeComponents = {
 
 /**
  * Union context provided by `AsUnion` via `UNION_CONTEXT_KEY`.
- * Consumed by header components (AsStructuredHeader, AsFieldShell) to render
- * the variant picker inline with the item's own header.
+ * Consumed by `AsFieldShell` to render the variant picker inline with the
+ * item's own header.
  */
 export interface TAsUnionContext {
   /** All available union variant branches. */

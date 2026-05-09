@@ -56,6 +56,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/array-showcase.vue"),
   },
   {
+    path: "/forms-demo/tuples",
+    name: "forms-demo-tuples",
+    component: () => import("./client/pages/forms-demo/tuples.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

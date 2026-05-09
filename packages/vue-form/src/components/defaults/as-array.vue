@@ -60,7 +60,6 @@ const addDropdownRef = ref<HTMLElement | null>(null);
 const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useDropdown(addDropdownRef);
 
 const collapsibleRef = useTemplateRef<{
-  runAndFocus: (action: () => void, ticks?: number) => void;
   runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
 const store = useNestedSectionsStore();

@@ -45,7 +45,7 @@ const variations: Variation[] = [
     to: "/forms-demo/tuples",
     title: "Tuples",
     description: "Fixed-length, mixed-type tuples (e.g. [number, string, boolean]).",
-    status: "todo",
+    status: "ready",
   },
   {
     to: "/forms-demo/unions",

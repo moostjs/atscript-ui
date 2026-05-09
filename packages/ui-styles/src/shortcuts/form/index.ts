@@ -11,7 +11,6 @@ import { asInputShortcuts } from "./as-input";
 import { asNoDataShortcuts } from "./as-no-data";
 import { asObjectShortcuts } from "./as-object";
 import { asRefShortcuts } from "./as-ref";
-import { asStructuredShortcuts } from "./as-structured";
 
 export {
   asActionShortcuts,
@@ -26,7 +25,6 @@ export {
   asNoDataShortcuts,
   asObjectShortcuts,
   asRefShortcuts,
-  asStructuredShortcuts,
 };
 
 export const formShortcuts = mergeVunorShortcuts([
@@ -35,7 +33,6 @@ export const formShortcuts = mergeVunorShortcuts([
   asFieldShortcuts,
   asInputShortcuts,
   asCheckboxRadioShortcuts,
-  asStructuredShortcuts,
   asCollapsibleShortcuts,
   asObjectShortcuts,
   asArrayShortcuts,

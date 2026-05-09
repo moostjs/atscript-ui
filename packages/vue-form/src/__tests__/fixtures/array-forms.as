@@ -40,3 +40,24 @@ export interface PhonesArrayForm {
     @expect.minLength 1, 'At least one phone required'
     items: PhoneItem[]
 }
+
+// ── Tuple fixtures ──
+
+export interface RequiredTupleForm {
+    coords: [number, number]
+}
+
+@meta.label 'Latitude'
+type Latitude = number
+
+@meta.label 'Longitude'
+type Longitude = number
+
+export interface LabeledTupleForm {
+    coords: [Latitude, Longitude]
+}
+
+export interface OptionalTupleForm {
+    @meta.label 'Coordinates'
+    coords?: [number, number]
+}

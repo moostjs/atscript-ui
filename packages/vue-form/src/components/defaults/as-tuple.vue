@@ -1,57 +1,89 @@
 <script setup lang="ts">
 import type { FormTupleFieldDef } from "@atscript/ui";
-import { isTupleField } from "@atscript/ui";
-import { computed } from "vue";
+import { computed, inject, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
-import { useConsumeUnionContext } from "../../composables/use-form-context";
-import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
+import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";
+import { useFormTuple } from "../../composables/use-form-tuple";
+import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
 import AsField from "../as-field.vue";
-import AsNoData from "../internal/as-no-data.vue";
-import AsStructuredHeader from "../internal/as-structured-header.vue";
+import AsCollapsible from "../internal/as-collapsible.vue";
+import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
 
 const props = defineProps<TAsComponentProps>();
 
-const tupleField = isTupleField(props.field!) ? (props.field as FormTupleFieldDef) : undefined;
+const tupleField = props.field as FormTupleFieldDef;
 
-// ── Union context: consume and clear for nested children ────
-const unionCtx = useConsumeUnionContext();
+useConsumeUnionContext();
 
-const optionalEnabled = computed(() => props.model?.value !== undefined);
+const path = inject(
+  PATH_PREFIX_KEY,
+  computed(() => ""),
+);
 
-const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
+const optionalEnabled = computed(() => Array.isArray(props.model?.value));
+const disabled = computed(() => props.disabled ?? false);
+
+const { itemFields, isOptional, clear, fillMissing } = useFormTuple(tupleField);
+
+const level = computed(() => props.level ?? 0);
+
+const displayTitle = computed(
+  () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
+);
+
+const defaultOpen = !isOptional;
+
+const collapsibleRef = useTemplateRef<{
+  runAndFocusNew: (action: () => void, ticks?: number) => void;
+}>("collapsibleRef");
+const store = useNestedSectionsStore();
+
+function handleEnableOptional() {
+  // Enable + fill in one go so focus lands on the first editable position.
+  collapsibleRef.value?.runAndFocusNew(() => {
+    props.onToggleOptional?.(true);
+    if (path.value) store?.setOpen(path.value, true);
+    fillMissing();
+  }, 2);
+}
 </script>
 
 <template>
-  <div ref="rootRef" class="as-tuple as-grid-item" :class="$props.class" v-show="!hidden">
-    <AsStructuredHeader
-      :title="title"
-      :level="level"
-      :on-remove="onRemove"
-      :can-remove="canRemove"
-      :remove-label="removeLabel"
-      :optional="optional"
-      :optional-enabled="optionalEnabled"
-      :on-toggle-optional="onToggleOptional"
-      :disabled="disabled"
-      :union-context="unionCtx"
-    />
-
-    <template v-if="optional && !optionalEnabled">
-      <AsNoData :on-edit="enableOptional" />
+  <AsCollapsible
+    ref="collapsibleRef"
+    :class="$props.class"
+    :title="displayTitle"
+    :description="description"
+    :level="level"
+    :optional="!!optional"
+    :optional-enabled="optionalEnabled"
+    :path="path"
+    :error="error"
+    :hidden="hidden"
+    :default-open="defaultOpen"
+  >
+    <template v-if="isOptional && optionalEnabled" #actions>
+      <AsArrayClearBtn
+        :optional="true"
+        :label="displayTitle"
+        :disabled="disabled"
+        @clear="clear"
+      />
     </template>
-    <template v-else>
-      <div v-if="tupleField" class="as-form-grid">
-        <AsField v-for="(itemField, i) in tupleField.itemFields" :key="i" :field="itemField" />
+
+    <template #body>
+      <AsField v-for="(itemField, i) in itemFields" :key="i" :field="itemField" />
+    </template>
+
+    <template #empty>
+      <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
+        <button type="button" class="as-object-empty-add" @click="handleEnableOptional">
+          <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
+          Add {{ displayTitle }}
+        </button>
+        <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>
-
-      <div v-if="error" class="as-tuple-error" role="alert">{{ error }}</div>
     </template>
-  </div>
+  </AsCollapsible>
 </template>
-
-<style>
-.as-tuple-error {
-  font-size: 12px;
-  color: #ef4444;
-}
-</style>
