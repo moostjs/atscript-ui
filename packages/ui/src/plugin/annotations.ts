@@ -225,21 +225,57 @@ export const uiAnnotations: TAnnotationsTree = {
         ],
       }),
 
-      width: new AnnotationSpec({
-        description:
-          "Provides a **layout width hint** for the field in auto-generated forms." +
-          "\n\n**Example:**\n" +
-          "```atscript\n" +
-          '@ui.form.width "half"\n' +
-          "firstName: string\n" +
-          "```\n",
-        nodeType: ["prop", "type"],
-        argument: {
-          name: "width",
-          type: "string",
-          description: 'Layout width hint (e.g., "half", "full", "third", "quarter").',
-        },
-      }),
+      grid: {
+        colSpan: new AnnotationSpec({
+          description:
+            "Grid column span for the field in auto-generated forms. " +
+            'Accepts numeric strings `"1"` to `"12"` or aliases `"full"` (12), `"half"` (6), `"third"` (4). ' +
+            'Optional second argument applies inside narrow containers (≤480px); defaults to `"full"` when omitted.' +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.form.grid.colSpan "6", "12"  // half-width desktop, full-width narrow\n' +
+            "firstName: string\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: [
+            {
+              name: "desktop",
+              type: "string",
+              description: 'Column span for non-narrow containers. "1"-"12", "full", "half", or "third".',
+            },
+            {
+              name: "narrow",
+              type: "string",
+              optional: true,
+              description: 'Column span for containers ≤480px wide. Defaults to "full".',
+            },
+          ],
+        }),
+        rowSpan: new AnnotationSpec({
+          description:
+            'Grid row span for the field. Accepts numeric strings `"1"`, `"2"`, etc. ' +
+            'Optional second argument applies inside narrow containers (≤480px); defaults to `"1"` when omitted.' +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.form.grid.rowSpan "2"\n' +
+            "bio: string\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: [
+            {
+              name: "desktop",
+              type: "string",
+              description: 'Row span for non-narrow containers. Numeric string, e.g. "1", "2", "3".',
+            },
+            {
+              name: "narrow",
+              type: "string",
+              optional: true,
+              description: 'Row span for containers ≤480px wide. Defaults to "1".',
+            },
+          ],
+        }),
+      },
 
       icon: new AnnotationSpec({
         description:

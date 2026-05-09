@@ -15,7 +15,8 @@ export {
   UI_FORM_COMPONENT,
   UI_FORM_HIDDEN,
   UI_FORM_ATTR,
-  UI_FORM_WIDTH,
+  UI_FORM_GRID_COL_SPAN,
+  UI_FORM_GRID_ROW_SPAN,
   UI_FORM_ICON,
   UI_FORM_SUBMIT_TEXT,
   UI_FORM_ACTION,
@@ -135,6 +136,16 @@ export {
   iteratePathAncestors,
   buildDescendantErrorCounts,
 } from "./form/error-utils";
+
+// ── Grid layout (framework-agnostic) ────────────────────────
+export {
+  DEFAULT_COL_SPAN,
+  DEFAULT_ROW_SPAN,
+  parseColSpan,
+  parseRowSpan,
+  resolveGridSpec,
+} from "./form/grid";
+export type { GridSpec, GridSpanArgs } from "./form/grid";
 
 // ── Table types ─────────────────────────────────────────────
 export type {
