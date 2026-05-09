@@ -65,16 +65,8 @@ export interface GridLayoutForm {
     @ui.form.grid.colSpan '6'
     mobile: string
 
-    @meta.label 'Discount %'
-    @meta.description 'Quarter-width on desktop, half on narrow — explicit narrow override.'
-    @ui.type 'number'
-    @expect.min 0, 'Must be ≥ 0'
-    @expect.max 100, 'Must be ≤ 100'
-    @ui.form.grid.colSpan '4', '6'
-    discount: number
-
     @meta.label 'Bio'
-    @meta.description 'Tall textarea — rowSpan=2 lets it span two rows next to a half-width neighbour.'
+    @meta.description 'rowSpan=2 — tall textarea spans two rows; the two short fields on its right (Nickname, Website) stack into those slots instead of wrapping below.'
     @ui.type 'textarea'
     @ui.form.placeholder 'A short bio…'
     @meta.required 'Bio is required'
@@ -94,6 +86,14 @@ export interface GridLayoutForm {
     @meta.required 'Website is required'
     @ui.form.grid.colSpan '6'
     website: string
+
+    @meta.label 'Discount %'
+    @meta.description 'Quarter-width on desktop, half on narrow — explicit narrow override.'
+    @ui.type 'number'
+    @expect.min 0, 'Must be ≥ 0'
+    @expect.max 100, 'Must be ≤ 100'
+    @ui.form.grid.colSpan '4', '6'
+    discount: number
 
     @meta.label 'Address'
     @meta.description 'Optional struct at half-width — its inner grid auto-stacks because the inner container is below 480px.'

@@ -18,10 +18,12 @@ export interface NestedOptionalsForm {
         @meta.label 'City'
         @ui.form.placeholder 'San Francisco'
         @meta.required 'City is required'
+        @ui.form.grid.colSpan '6'
         city: string
 
         @meta.label 'ZIP'
         @ui.form.placeholder '94158'
+        @ui.form.grid.colSpan '6'
         zip?: string
 
         @meta.label 'Geo'
@@ -31,12 +33,14 @@ export interface NestedOptionalsForm {
             @ui.type 'number'
             @expect.min -90, 'Latitude must be ≥ -90'
             @expect.max 90, 'Latitude must be ≤ 90'
+            @ui.form.grid.colSpan '6'
             lat: number
 
             @meta.label 'Longitude'
             @ui.type 'number'
             @expect.min -180, 'Longitude must be ≥ -180'
             @expect.max 180, 'Longitude must be ≤ 180'
+            @ui.form.grid.colSpan '6'
             lng: number
 
             @meta.label 'Precision'
@@ -45,12 +49,14 @@ export interface NestedOptionalsForm {
                 @meta.label 'Radius (m)'
                 @ui.type 'number'
                 @expect.min 0, '0 or greater'
+                @ui.form.grid.colSpan '6'
                 radiusM: number
 
                 @meta.label 'Source'
                 @ui.form.options 'GPS', 'gps'
                 @ui.form.options 'Manual entry', 'manual'
                 @ui.form.options 'IP geolocation', 'ip'
+                @ui.form.grid.colSpan '6'
                 source?: ui.select
 
                 @meta.label 'Audit'
@@ -72,10 +78,12 @@ export interface NestedOptionalsForm {
                         @meta.label 'Created (ISO)'
                         @ui.form.placeholder '2026-01-15T10:30:00Z'
                         @meta.required 'Created timestamp is required'
+                        @ui.form.grid.colSpan '6'
                         created: string
 
                         @meta.label 'Updated (ISO)'
                         @ui.form.placeholder '2026-01-16T11:45:00Z'
+                        @ui.form.grid.colSpan '6'
                         updated?: string
                     }
                 }

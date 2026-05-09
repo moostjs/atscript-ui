@@ -22,6 +22,7 @@ export interface OptionalFieldsForm {
     @ui.type 'password'
     @meta.required 'Password is required'
     @expect.minLength 8, 'At least 8 characters'
+    @ui.form.grid.colSpan '6'
     password?: string
 
     @meta.label 'Age'
@@ -29,6 +30,7 @@ export interface OptionalFieldsForm {
     @ui.type 'number'
     @expect.min 18, 'Must be 18 or older'
     @expect.max 150, 'Must be 150 or less'
+    @ui.form.grid.colSpan '6'
     age?: number
 
     @meta.label 'Bio'
@@ -54,6 +56,7 @@ export interface OptionalFieldsForm {
     @ui.form.options 'Germany', 'de'
     @ui.form.options 'Japan', 'jp'
     @meta.required 'Country is required'
+    @ui.form.grid.colSpan '6'
     country?: ui.select
 
     @meta.label 'Priority (radio)'
@@ -62,6 +65,7 @@ export interface OptionalFieldsForm {
     @ui.form.options 'Medium', 'medium'
     @ui.form.options 'High', 'high'
     @meta.required 'Priority is required'
+    @ui.form.grid.colSpan '6'
     priority?: ui.radio
 
     // ── Object (inline nested struct) ───────────────────────
@@ -76,10 +80,12 @@ export interface OptionalFieldsForm {
         @meta.label 'City'
         @ui.form.placeholder 'San Francisco'
         @meta.required 'City is required'
+        @ui.form.grid.colSpan '6'
         city: string
 
         @meta.label 'ZIP'
         @ui.form.placeholder '94158'
+        @ui.form.grid.colSpan '6'
         zip?: string
     }
 
@@ -97,11 +103,13 @@ export interface OptionalFieldsForm {
         @meta.label 'Label'
         @ui.form.placeholder 'Mobile'
         @meta.required 'Label is required'
+        @ui.form.grid.colSpan '4'
         label: string
 
         @meta.label 'Number'
         @ui.form.placeholder '+1 555 0100'
         @meta.required 'Number is required'
+        @ui.form.grid.colSpan '8'
         number: string
     }[]
 

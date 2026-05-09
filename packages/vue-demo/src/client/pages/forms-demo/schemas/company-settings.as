@@ -18,11 +18,13 @@ export interface CompanySettings {
         @meta.label 'City'
         @ui.form.placeholder 'San Francisco'
         @meta.required 'City is required'
+        @ui.form.grid.colSpan '6'
         city: string
 
         @meta.label 'ZIP Code'
         @ui.form.placeholder '94158'
         @meta.required 'ZIP code is required'
+        @ui.form.grid.colSpan '6'
         zip: string
 
         @meta.label 'Country'
@@ -31,16 +33,19 @@ export interface CompanySettings {
             @meta.label 'Country Name'
             @ui.form.placeholder 'United States'
             @meta.required 'Country name is required'
+            @ui.form.grid.colSpan '6'
             name: string
 
             @meta.label 'ISO Code'
             @ui.form.placeholder 'US'
             @ui.form.fn.hint '(v) => v && v.length !== 2 ? "Use a 2-letter ISO code" : ""'
             @meta.required 'ISO code is required'
+            @ui.form.grid.colSpan '3'
             code: string
 
             @meta.label 'Dial Code'
             @ui.form.placeholder '+1'
+            @ui.form.grid.colSpan '3'
             dialCode?: string
 
             @meta.label 'Timezone'
@@ -56,10 +61,12 @@ export interface CompanySettings {
                 dst: {
                     @meta.label 'Auto-adjust'
                     @ui.type 'checkbox'
+                    @ui.form.grid.colSpan '6'
                     autoAdjust?: boolean
 
                     @meta.label 'Manual offset (minutes)'
                     @ui.type 'number'
+                    @ui.form.grid.colSpan '6'
                     manualOffset?: number
 
                     @meta.label 'Reminder rules'
@@ -69,11 +76,13 @@ export interface CompanySettings {
                         @ui.form.options 'Email', 'email'
                         @ui.form.options 'Slack', 'slack'
                         @meta.required 'Channel is required'
+                        @ui.form.grid.colSpan '6'
                         channel: ui.select
 
                         @meta.label 'Lead time (days)'
                         @ui.type 'number'
                         @expect.min 0, '0 or greater'
+                        @ui.form.grid.colSpan '6'
                         leadTimeDays?: number
                     }
                 }
@@ -87,19 +96,23 @@ export interface CompanySettings {
         @meta.label 'First Name'
         @ui.form.placeholder 'Jane'
         @meta.required 'First name is required'
+        @ui.form.grid.colSpan '6'
         firstName: string
 
         @meta.label 'Last Name'
         @ui.form.placeholder 'Doe'
+        @ui.form.grid.colSpan '6'
         lastName?: string
 
         @meta.label 'Email'
         @ui.form.placeholder 'jane@acme.com'
         @meta.required 'Email is required'
+        @ui.form.grid.colSpan '6'
         email: string.email
 
         @meta.label 'Phone'
         @ui.form.placeholder '+1 555 0100'
+        @ui.form.grid.colSpan '6'
         phone?: string
     }
 
@@ -108,6 +121,7 @@ export interface CompanySettings {
     billing: {
         @meta.label 'VAT ID'
         @ui.form.placeholder 'EU123456789'
+        @ui.form.grid.colSpan '6'
         vatId?: string
 
         @meta.label 'Currency'
@@ -117,6 +131,7 @@ export interface CompanySettings {
         @ui.form.options 'GBP — Pound', 'GBP'
         @ui.form.options 'JPY — Yen', 'JPY'
         @meta.required 'Currency is required'
+        @ui.form.grid.colSpan '6'
         currency: ui.select
 
         @meta.label 'Invoice Email'
@@ -130,11 +145,13 @@ export interface CompanySettings {
             @ui.type 'number'
             @expect.min 0, 'Must be 0 or greater'
             @expect.max 180, 'Cannot exceed 180 days'
+            @ui.form.grid.colSpan '6'
             dueDays: number
 
             @meta.label 'Late fee (%)'
             @ui.type 'number'
             @expect.min 0, 'Must be 0 or greater'
+            @ui.form.grid.colSpan '6'
             lateFeePercent?: number
 
             @meta.label 'Send reminder emails'
