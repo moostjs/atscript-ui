@@ -48,7 +48,7 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
   <div
     ref="rootRef"
     class="as-array as-grid-item"
-    :class="{ 'as-array--root': level === 0, 'as-array--nested': (level ?? 0) > 0 }"
+    :class="[{ 'as-array--root': level === 0, 'as-array--nested': (level ?? 0) > 0 }, $props.class]"
     v-show="!hidden"
   >
     <AsStructuredHeader

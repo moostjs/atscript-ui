@@ -18,6 +18,11 @@ const props = defineProps<TAsComponentProps>();
 // reaching this component's fragment template.
 defineEmits<{ (e: "action", name: string): void }>();
 
+// `class` is a declared prop on TAsComponentProps (not an attr), so it lives
+// at `props.class` and Vue's auto class fallthrough doesn't fire. Each
+// template branch merges it explicitly so grid-span classes (`col-span-N`,
+// `as-narrow:…`) injected by AsField reach the wrapper.
+
 const objectDef = computed(() =>
   isObjectField(props.field!) ? (props.field as FormObjectFieldDef).objectDef : undefined,
 );
@@ -109,7 +114,7 @@ function handleAddData(): void {
 <template>
   <!-- L0 root: no chrome, just iterate children inside the form's root grid -->
   <template v-if="variant === 'root'">
-    <div v-if="objectDef" class="as-form-grid">
+    <div v-if="objectDef" class="as-form-grid" :class="$props.class">
       <AsIterator :def="objectDef" />
     </div>
   </template>
@@ -119,6 +124,7 @@ function handleAddData(): void {
     v-else-if="optional && !optionalEnabled"
     ref="rootRef"
     class="as-object-empty as-grid-item"
+    :class="$props.class"
     v-show="!hidden"
   >
     <button type="button" class="as-object-empty-add" @click="handleAddData">
@@ -134,7 +140,7 @@ function handleAddData(): void {
     ref="rootRef"
     v-show="!hidden"
     :open="isOpen"
-    :class="[containerClass, 'as-grid-item']"
+    :class="[containerClass, 'as-grid-item', $props.class]"
     :data-object-level="level"
     @toggle="onNativeToggle"
   >

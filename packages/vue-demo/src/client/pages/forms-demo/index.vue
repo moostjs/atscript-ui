@@ -29,6 +29,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/grid-layout",
+    title: "Grid layout",
+    description:
+      "12-col grid with col/row span, aliases, and container-query mobile fallback.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/arrays-of-primitives",
     title: "Arrays of primitives",
     description: "string[], number[] — add/remove/reorder rendering.",

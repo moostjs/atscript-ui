@@ -46,6 +46,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/nested-optionals.vue"),
   },
   {
+    path: "/forms-demo/grid-layout",
+    name: "forms-demo-grid-layout",
+    component: () => import("./client/pages/forms-demo/grid-layout.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

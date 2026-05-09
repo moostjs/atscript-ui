@@ -22,7 +22,7 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 </script>
 
 <template>
-  <div ref="rootRef" class="as-tuple as-grid-item" v-show="!hidden">
+  <div ref="rootRef" class="as-tuple as-grid-item" :class="$props.class" v-show="!hidden">
     <AsStructuredHeader
       :title="title"
       :level="level"
