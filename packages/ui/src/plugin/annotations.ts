@@ -14,6 +14,26 @@ const BUILTIN_TYPES = [
   "action",
 ] as const;
 
+const COL_SPAN_VALUES: string[] = [
+  "1",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "11",
+  "12",
+  "full",
+  "half",
+  "third",
+];
+
+const ROW_SPAN_VALUES: string[] = ["1", "2", "3", "4", "5", "6"];
+
 /**
  * Static `@ui.*` annotation specs registered by the `@atscript/ui` plugin.
  *
@@ -243,18 +263,20 @@ export const uiAnnotations: TAnnotationsTree = {
               type: "string",
               description:
                 'Column span for non-narrow containers. "1"-"12", "full", "half", or "third".',
+              values: COL_SPAN_VALUES,
             },
             {
               name: "narrow",
               type: "string",
               optional: true,
               description: 'Column span for containers ≤480px wide. Defaults to "full".',
+              values: COL_SPAN_VALUES,
             },
           ],
         }),
         rowSpan: new AnnotationSpec({
           description:
-            'Grid row span for the field. Accepts numeric strings `"1"`, `"2"`, etc. ' +
+            'Grid row span for the field. Accepts numeric strings `"1"` to `"6"`. ' +
             'Optional second argument applies inside narrow containers (≤480px); defaults to `"1"` when omitted.' +
             "\n\n**Example:**\n" +
             "```atscript\n" +
@@ -266,14 +288,15 @@ export const uiAnnotations: TAnnotationsTree = {
             {
               name: "desktop",
               type: "string",
-              description:
-                'Row span for non-narrow containers. Numeric string, e.g. "1", "2", "3".',
+              description: 'Row span for non-narrow containers. "1"-"6".',
+              values: ROW_SPAN_VALUES,
             },
             {
               name: "narrow",
               type: "string",
               optional: true,
               description: 'Row span for containers ≤480px wide. Defaults to "1".',
+              values: ROW_SPAN_VALUES,
             },
           ],
         }),
