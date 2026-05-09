@@ -4,28 +4,33 @@
 export interface OptionalFieldsForm {
     // ── Primitives ──────────────────────────────────────────
     @meta.label 'Text'
+    @meta.description 'Free-form short text. Description should render muted below the label.'
     @ui.form.placeholder 'Hello'
     @meta.required 'Text is required'
     text?: string
 
     @meta.label 'Email'
+    @meta.description 'We will use this for account notifications and password resets.'
     @ui.form.placeholder 'me@example.com'
     @meta.required 'Email is required'
     email?: string.email
 
     @meta.label 'Password'
+    @meta.description 'At least 8 characters. Mix letters, numbers, and symbols for strength.'
     @ui.type 'password'
     @meta.required 'Password is required'
     @expect.minLength 8, 'At least 8 characters'
     password?: string
 
     @meta.label 'Age'
+    @meta.description 'Used for age-gated features. We never display this publicly.'
     @ui.type 'number'
     @expect.min 18, 'Must be 18 or older'
     @expect.max 150, 'Must be 150 or less'
     age?: number
 
     @meta.label 'Bio'
+    @meta.description 'A short blurb shown on your profile. Markdown is not supported.'
     @ui.type 'textarea'
     @ui.form.placeholder 'A few words about yourself…'
     @meta.required 'Bio is required'
@@ -40,6 +45,7 @@ export interface OptionalFieldsForm {
 
     // ── Select / Radio (with @ui.form.options) ──────────────
     @meta.label 'Country (select)'
+    @meta.description 'Determines the default tax rate and currency for your invoices.'
     @ui.form.placeholder 'Pick a country'
     @ui.form.options 'United States', 'us'
     @ui.form.options 'Canada', 'ca'
@@ -49,6 +55,7 @@ export interface OptionalFieldsForm {
     country?: ui.select
 
     @meta.label 'Priority (radio)'
+    @meta.description 'Higher priority items are reviewed first. Most teams pick Medium.'
     @ui.form.options 'Low', 'low'
     @ui.form.options 'Medium', 'medium'
     @ui.form.options 'High', 'high'

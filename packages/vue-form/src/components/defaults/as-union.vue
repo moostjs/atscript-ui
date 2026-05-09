@@ -2,7 +2,9 @@
 import type { TAsComponentProps } from "../types";
 import AsField from "../as-field.vue";
 import AsNoData from "../internal/as-no-data.vue";
+import AsOptionalClear from "../internal/as-optional-clear.vue";
 import { useFormUnion } from "../../composables/use-form-union";
+import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -19,10 +21,20 @@ const {
   select,
   handleNaClick,
 } = useFormUnion(props);
+
+const { rootRef, runAndFocus, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
+function handleVariantPick(vi: number): void {
+  runAndFocus(() =>
+    select(() => {
+      changeVariant(vi);
+      props.onToggleOptional?.(true);
+    }),
+  );
+}
 </script>
 
 <template>
-  <div class="as-union" v-show="!hidden">
+  <div ref="rootRef" class="as-union" v-show="!hidden">
     <!-- Optional N/A state: click opens variant picker when multiple variants -->
     <template v-if="optional && !optionalEnabled">
       <div v-if="hasMultipleVariants" ref="dropdownRef" class="as-dropdown-anchor">
@@ -33,30 +45,17 @@ const {
             :key="vi"
             type="button"
             class="as-dropdown-item"
-            @click="
-              select(() => {
-                changeVariant(vi);
-                onToggleOptional?.(true);
-              })
-            "
+            @click="handleVariantPick(vi)"
           >
             {{ v.label }}
           </button>
         </div>
       </div>
-      <AsNoData v-else :on-edit="() => onToggleOptional?.(true)" />
+      <AsNoData v-else :on-edit="enableOptional" />
     </template>
     <template v-else>
       <!-- Optional clear button -->
-      <button
-        v-if="optional"
-        type="button"
-        class="as-optional-clear"
-        aria-label="Clear value"
-        @click="onToggleOptional?.(false)"
-      >
-        <span class="as-close-icon" aria-hidden="true" />
-      </button>
+      <AsOptionalClear v-if="optional" @clear="onToggleOptional?.(false)" />
       <!-- Inner field — variant picker rendered by consumer via union context -->
       <AsField
         v-if="innerField"

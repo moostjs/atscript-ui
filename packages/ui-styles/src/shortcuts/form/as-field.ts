@@ -5,7 +5,8 @@ export const asFieldShortcuts = defineShortcuts({
   "as-default-field": {
     "": "flex flex-col gap-$xs mb-$m relative",
     "[&_label]:": "font-600",
-    "[&.required_label]:after:": 'content-["_*"] scope-error text-current-hl font-700 ml-[0.1em]',
+    "[&.required_.as-field-label]:after:":
+      'content-["_*"] scope-error text-current-hl font-700 ml-[0.1em]',
     "[&.error_.as-error-slot]:": "scope-error text-current-hl",
 
     // Comma-separated arbitrary-variant selector lists silently break the
@@ -66,13 +67,12 @@ export const asFieldShortcuts = defineShortcuts({
     "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1",
   "as-error-slot": "leading-[1] text-callout text-current/60",
 
-  "as-field-description": "text-callout text-current-muted -mt-[0.2em]",
+  "as-field-description": "text-callout text-current/60 -mt-[0.2em]",
 
   "as-optional-clear": {
-    "": "inline-grid place-items-center size-[1.5em] p-0 border-1 layer-0 text-current/50 rounded-base cursor-pointer leading-none transition-all duration-120",
+    "": "inline-flex items-center h-[1.5em] px-$s border-1 layer-0 text-current/60 rounded-base cursor-pointer text-callout leading-none transition-all duration-120",
     "hover:": "scope-error bg-current-hl/10 text-current-hl",
   },
-  "as-close-icon": "i-as-close w-[0.7em] h-[0.7em]",
   "as-field-remove-btn": {
     "": "inline-grid place-items-center h-[1.5em] px-$s border-0 bg-transparent text-current/50 rounded-base cursor-pointer text-callout leading-none transition-all duration-120 disabled-soft",
     "hover:not-disabled:": "scope-error bg-current-hl/10 text-current-hl",

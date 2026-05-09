@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="13" height="9" rx="1.5"/><rect x="8" y="12" width="13" height="9" rx="1.5"/></svg>
+<svg width="1em" height="1em" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M13 11V12H6V11H13ZM14 10V3C14 2.44772 13.5523 2 13 2H6C5.44772 2 5 2.44772 5 3V10C5 10.5523 5.44772 11 6 11V12C4.96435 12 4.113 11.2128 4.01074 10.2041L4 10V3C4 1.89543 4.89543 1 6 1H13L13.2041 1.01074C14.2128 1.113 15 1.96435 15 3V10L14.9893 10.2041C14.8938 11.1457 14.1457 11.8938 13.2041 11.9893L13 12V11C13.5523 11 14 10.5523 14 10Z" fill="currentColor"/>
+<path d="M11 13V14H4V13H11Z" fill="currentColor"/>
+<path d="M11 13V14L11.2041 13.9893C11.8579 13.923 12.4185 13.542 12.732 13H11Z" fill="currentColor"/>
+<path d="M4 14V13C3.44772 13 3 12.5523 3 12V5V3.26756C2.4022 3.61337 2 4.25972 2 5V12L2.01074 12.2041C2.113 13.2128 2.96435 14 4 14Z" fill="currentColor"/>
+<path d="M14 4V5H4V4H14Z" fill="currentColor"/>
+</svg>

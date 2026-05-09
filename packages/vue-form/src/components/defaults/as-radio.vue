@@ -7,10 +7,14 @@ defineProps<TAsComponentProps>();
 </script>
 
 <template>
-  <AsFieldShell v-bind="$props" field-class="as-radio-field" id-prefix="as-radio">
-    <template #header="{ inputId, descId }">
+  <AsFieldShell
+    v-bind="$props"
+    field-class="as-radio-field"
+    id-prefix="as-radio"
+    :hide-empty-placeholder="true"
+  >
+    <template #header="{ inputId }">
       <span :id="inputId" class="as-field-label">{{ label }}</span>
-      <span v-if="description" :id="descId">{{ description }}</span>
     </template>
     <template #default="{ inputId, errorId, descId }">
       <div

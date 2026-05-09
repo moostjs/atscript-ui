@@ -41,6 +41,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/optional-fields.vue"),
   },
   {
+    path: "/forms-demo/nested-optionals",
+    name: "forms-demo-nested-optionals",
+    component: () => import("./client/pages/forms-demo/nested-optionals.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

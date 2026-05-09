@@ -134,18 +134,20 @@ function maybeComputed<T>(
   return isDynamic ? computed(dynamicFn) : staticVal;
 }
 
-// Helper to build the class object from a raw class value + state flags
+// Optional+required is intentionally treated as not-required here: undefined
+// passes validation, so the `*` marker would mislead the user.
 function buildFieldClasses(
   classValue: unknown,
   isDisabled: boolean,
   isRequired: boolean,
+  isOptional: boolean,
 ): Record<string, boolean> {
   return {
     ...(typeof classValue === "string"
       ? { [classValue]: true }
       : (classValue as Record<string, boolean> | undefined)),
     disabled: isDisabled,
-    required: isRequired,
+    required: isRequired && !isOptional,
   };
 }
 
@@ -254,6 +256,7 @@ if (props.field.allStatic) {
     getFieldMeta(prop, UI_FORM_CLASSES),
     disabled as boolean,
     hasMetaRequired,
+    optional as boolean,
   );
 
   // Phantom value: static
@@ -407,12 +410,14 @@ if (props.field.allStatic) {
               : getFieldMeta(prop, UI_FORM_CLASSES),
             unwrap(disabled),
             hasMetaRequired,
+            optional as boolean,
           ),
         )
       : buildFieldClasses(
           getFieldMeta(prop, UI_FORM_CLASSES),
           disabled as boolean,
           hasMetaRequired,
+          optional as boolean,
         );
 
   // ── Phantom value (paragraph, action display) ──────────────

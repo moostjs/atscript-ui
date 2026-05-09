@@ -22,6 +22,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/nested-optionals",
+    title: "Nested optional structs",
+    description:
+      "Five cascading optional structs — verify the dashed-island placeholder layout and section/island alternation as you drill in.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/arrays-of-primitives",
     title: "Arrays of primitives",
     description: "string[], number[] — add/remove/reorder rendering.",

@@ -6,6 +6,7 @@ import type { TAsComponentProps } from "../types";
 import { useConsumeUnionContext } from "../../composables/use-form-context";
 import { useFormArray } from "../../composables/use-form-array";
 import { useDropdown } from "../../composables/use-dropdown";
+import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
 import AsField from "../as-field.vue";
 import AsNoData from "../internal/as-no-data.vue";
 import AsStructuredHeader from "../internal/as-structured-header.vue";
@@ -39,10 +40,13 @@ const {
 // ── Union add dropdown ──────────────────────────────────────
 const addDropdownRef = ref<HTMLElement | null>(null);
 const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useDropdown(addDropdownRef);
+
+const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 </script>
 
 <template>
   <div
+    ref="rootRef"
     class="as-array"
     :class="{ 'as-array--root': level === 0, 'as-array--nested': (level ?? 0) > 0 }"
     v-show="!hidden"
@@ -61,7 +65,7 @@ const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useDropdown(ad
     />
 
     <template v-if="optional && !optionalEnabled">
-      <AsNoData :on-edit="() => onToggleOptional?.(true)" />
+      <AsNoData :on-edit="enableOptional" />
     </template>
     <template v-else>
       <!-- Items — each rendered as a single AsField -->

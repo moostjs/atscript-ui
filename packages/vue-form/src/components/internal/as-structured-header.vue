@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TAsUnionContext } from "../types";
+import AsOptionalClear from "./as-optional-clear.vue";
 import AsVariantPicker from "./as-variant-picker.vue";
 
 const props = defineProps<{
@@ -33,15 +34,10 @@ const hasVariantPicker = props.unionContext !== undefined && props.unionContext.
       />
     </div>
 
-    <button
+    <AsOptionalClear
       v-if="optional && optionalEnabled"
-      type="button"
-      class="as-optional-clear"
-      aria-label="Clear value"
-      @click="onToggleOptional?.(false)"
-    >
-      <span class="as-close-icon" aria-hidden="true" />
-    </button>
+      @clear="onToggleOptional?.(false)"
+    />
     <button
       v-if="onRemove"
       type="button"

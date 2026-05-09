@@ -2,6 +2,7 @@
 import { ref, watchEffect } from "vue";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "../internal/as-field-shell.vue";
+import AsOptionalClear from "../internal/as-optional-clear.vue";
 
 const props = defineProps<TAsComponentProps<boolean | undefined>>();
 
@@ -29,7 +30,11 @@ function handleChange(e: Event) {
   >
     <template #default="{ inputId, errorId, descId }">
       <div class="as-checkbox-row">
-        <label :for="inputId" :class="{ 'as-checkbox-indeterminate': model.value === undefined }">
+        <label
+          :for="inputId"
+          class="as-field-label"
+          :class="{ 'as-checkbox-indeterminate': model.value === undefined }"
+        >
           <input
             ref="inputRef"
             :id="inputId"
@@ -45,19 +50,14 @@ function handleChange(e: Event) {
           />
           {{ label }}
         </label>
-        <button
+        <AsOptionalClear
           v-if="optional && model.value !== undefined"
-          type="button"
-          class="as-optional-clear"
-          aria-label="Clear value"
-          @click="onToggleOptional?.(false)"
-        >
-          <span class="as-close-icon" aria-hidden="true" />
-        </button>
+          @clear="onToggleOptional?.(false)"
+        />
       </div>
     </template>
     <template #after-input="{ descId }">
-      <span v-if="description" :id="descId">{{ description }}</span>
+      <div v-if="description" :id="descId" class="as-field-description">{{ description }}</div>
     </template>
   </AsFieldShell>
 </template>

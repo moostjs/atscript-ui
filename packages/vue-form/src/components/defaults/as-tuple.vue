@@ -4,6 +4,7 @@ import { isTupleField } from "@atscript/ui";
 import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useConsumeUnionContext } from "../../composables/use-form-context";
+import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
 import AsField from "../as-field.vue";
 import AsNoData from "../internal/as-no-data.vue";
 import AsStructuredHeader from "../internal/as-structured-header.vue";
@@ -16,10 +17,12 @@ const tupleField = isTupleField(props.field!) ? (props.field as FormTupleFieldDe
 const unionCtx = useConsumeUnionContext();
 
 const optionalEnabled = computed(() => props.model?.value !== undefined);
+
+const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 </script>
 
 <template>
-  <div class="as-tuple" v-show="!hidden">
+  <div ref="rootRef" class="as-tuple" v-show="!hidden">
     <AsStructuredHeader
       :title="title"
       :level="level"
@@ -34,7 +37,7 @@ const optionalEnabled = computed(() => props.model?.value !== undefined);
     />
 
     <template v-if="optional && !optionalEnabled">
-      <AsNoData :on-edit="() => onToggleOptional?.(true)" />
+      <AsNoData :on-edit="enableOptional" />
     </template>
     <template v-else>
       <template v-if="tupleField">

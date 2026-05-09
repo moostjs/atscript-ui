@@ -8,7 +8,9 @@ import {
   DESCENDANT_ERROR_COUNTS_KEY,
   useNestedSectionsStore,
 } from "../../composables/use-nested-sections";
+import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
 import AsIterator from "../as-iterator.vue";
+import AsOptionalClear from "../internal/as-optional-clear.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
 
 const props = defineProps<TAsComponentProps>();
@@ -90,6 +92,18 @@ const descendantErrorCounts = inject(DESCENDANT_ERROR_COUNTS_KEY, undefined);
 const descendantErrorCount = computed(() =>
   path.value ? (descendantErrorCounts?.value.get(path.value) ?? 0) : 0,
 );
+
+// rootRef is bound on both the empty placeholder and the populated `<details>` —
+// after the toggle Vue rebinds it to whichever branch renders next.
+const { rootRef, runAndFocus } = useFocusFirstAfter();
+function handleAddData(): void {
+  // Two ticks: one for the optional toggle to render `<details>`, one for the
+  // store-driven `open` flip to expand its body so the focus query finds inputs.
+  runAndFocus(() => {
+    props.onToggleOptional?.(true);
+    if (path.value) store?.setOpen(path.value, true);
+  }, 2);
+}
 </script>
 
 <template>
@@ -99,24 +113,27 @@ const descendantErrorCount = computed(() =>
   </template>
 
   <!-- Optional struct, not yet enabled: dashed island placeholder -->
-  <div v-else-if="optional && !optionalEnabled" class="as-object-empty" v-show="!hidden">
-    <div class="as-object-empty-content">
-      <h3 class="as-object-empty-title">{{ displayTitle }}</h3>
-      <p v-if="description" class="as-object-description">{{ description }}</p>
-    </div>
-    <button type="button" class="as-object-empty-add" @click="onToggleOptional?.(true)">
-      + Add data
+  <div
+    v-else-if="optional && !optionalEnabled"
+    ref="rootRef"
+    class="as-object-empty"
+    v-show="!hidden"
+  >
+    <button type="button" class="as-object-empty-add" @click="handleAddData">
+      <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
+      Add {{ displayTitle }}
     </button>
+    <p v-if="description" class="as-object-description">{{ description }}</p>
   </div>
 
   <!-- Collapsible struct (section L1,L3,L5… or island L2,L4,L6…) -->
   <details
     v-else
+    ref="rootRef"
     v-show="!hidden"
     :open="isOpen"
     :class="containerClass"
     :data-object-level="level"
-    :data-object-path="path"
     @toggle="onNativeToggle"
   >
     <summary class="as-object-summary">
@@ -135,6 +152,11 @@ const descendantErrorCount = computed(() =>
       >
         {{ removeLabel || "Remove" }}
       </button>
+      <AsOptionalClear
+        v-if="optional && optionalEnabled"
+        :label="displayTitle"
+        @clear="onToggleOptional?.(false)"
+      />
       <span
         v-if="!isOpen && descendantErrorCount > 0"
         class="as-object-error-badge"

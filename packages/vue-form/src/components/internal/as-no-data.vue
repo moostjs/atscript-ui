@@ -27,9 +27,9 @@ const rootClass = computed(() =>
     @keydown.enter="onEdit"
     @keydown.space.prevent="onEdit"
   >
-    <span class="as-no-data-plus" aria-hidden="true">
-      <span class="i-as-plus" />
+    <span class="as-no-data-icon" aria-hidden="true">
+      <span :class="hovered ? 'i-as-field-fill' : 'i-as-field-empty'" />
     </span>
-    <span class="as-no-data-text">{{ hovered ? "Edit" : "No Data" }}</span>
+    <span class="as-no-data-text">{{ hovered ? "Click to edit" : "Not defined" }}</span>
   </div>
 </template>

@@ -48,11 +48,12 @@ export const defaultAsIconAliases: Record<string, string> = {
   "pin-filled": "ph:push-pin-fill",
   settings: "ph:gear-six",
   ellipsis: "ph:dots-three",
-  "more-vertical": "ph:dots-three-vertical",
   menu: "heroicons-outline:menu",
   trash: "iconoir:trash",
   loading: "loading",
   warning: "ph:warning-circle",
+  "field-empty": "field-empty",
+  "field-fill": "field-fill",
 };
 
 /**
