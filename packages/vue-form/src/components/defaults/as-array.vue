@@ -3,7 +3,7 @@ import type { FormArrayFieldDef, FormFieldDef } from "@atscript/ui";
 import { resolveSingularLabel } from "@atscript/ui";
 import { computed, inject, ref, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
-import { useConsumeUnionContext } from "../../composables/use-form-context";
+import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";
 import { useFormArray } from "../../composables/use-form-array";
 import { useDropdown } from "../../composables/use-dropdown";
 import { useNestedSectionsStore } from "../../composables/use-nested-sections";
@@ -44,6 +44,12 @@ const {
 } = useFormArray(arrayField, disabled);
 
 const level = computed(() => props.level ?? 0);
+
+// Mirrors AsObject's empty-state heading source so the optional placeholder
+// reads "Add <label>" with the field's @meta.label, not the singular.
+const displayTitle = computed(
+  () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
+);
 
 // `@ui.form.label.singular` lives on the array prop; the item prop is a
 // fallback so structural item types can override their own singular.
@@ -90,7 +96,7 @@ function handleEnableOptional() {
   <AsCollapsible
     ref="collapsibleRef"
     :class="$props.class"
-    :title="title ?? ''"
+    :title="displayTitle"
     :description="description"
     :level="level"
     :optional="!!optional"
@@ -105,7 +111,7 @@ function handleEnableOptional() {
     </template>
 
     <template #actions>
-      <AsArrayClearBtn :label="title" :disabled="disabled || isEmpty" @clear="clear" />
+      <AsArrayClearBtn :label="displayTitle" :disabled="disabled || isEmpty" @clear="clear" />
     </template>
 
     <template #body>
@@ -113,11 +119,7 @@ function handleEnableOptional() {
         <template v-for="(_item, idx) in arrayValue" :key="itemKeys[idx]">
           <div v-if="!isItemStructured" class="as-array-row-bare">
             <AsField :field="fieldFor(idx)" :array-index="idx" />
-            <AsArrayRemoveBtn
-              :singular="singular"
-              :disabled="!canRemove"
-              @click="removeItem(idx)"
-            />
+            <AsArrayRemoveBtn :disabled="!canRemove" @click="removeItem(idx)" />
           </div>
 
           <div v-else class="as-array-row-island">
@@ -125,11 +127,7 @@ function handleEnableOptional() {
               <span class="as-array-row-label">
                 {{ singular }}<span class="as-array-row-label-suffix">#{{ idx + 1 }}</span>
               </span>
-              <AsArrayRemoveBtn
-                :singular="singular"
-                :disabled="!canRemove"
-                @click="removeItem(idx)"
-              />
+              <AsArrayRemoveBtn :disabled="!canRemove" @click="removeItem(idx)" />
             </div>
             <AsField :field="fieldFor(idx)" />
           </div>
@@ -169,7 +167,7 @@ function handleEnableOptional() {
       <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
         <button type="button" class="as-object-empty-add" @click="handleEnableOptional">
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-          Add {{ singular }}
+          Add {{ displayTitle }}
         </button>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>

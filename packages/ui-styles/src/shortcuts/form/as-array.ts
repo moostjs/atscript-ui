@@ -14,16 +14,16 @@ export const asArrayShortcuts = defineShortcuts({
   "as-array-row-label": "font-600 text-body",
   "as-array-row-label-suffix": "text-current/60 text-callout font-mono ml-$xxs",
 
-  // Calm grey badge; `scope-grey` keeps it from competing with the error badge.
+  // Three header controls share `h-[1.5em]`: chip is text-only, Clear is
+  // text + outline, Remove is a square frame around a 1em X glyph.
   "as-array-items-chip":
-    "scope-grey surface-500 inline-flex items-center gap-$xxs px-$xs h-[1.4em] rounded-r0 text-callout font-mono font-600 leading-none shrink-0",
-  "as-array-items-chip-icon": "text-[1.1em] leading-none",
+    "inline-flex items-center h-[1.5em] px-$s rounded-base text-callout font-600 leading-none shrink-0 layer-2 text-current",
 
   "as-array-remove-btn": {
-    "": "inline-grid place-items-center h-fingertip-s w-fingertip-s text-current/50 rounded-base cursor-pointer transition-colors duration-120 disabled-soft",
-    "hover:not-disabled:": "scope-error bg-current-hl/10 text-current-hl",
+    "": "inline-grid place-items-center h-[1.5em] w-[1.5em] text-current/50 rounded-base cursor-pointer transition-colors duration-120 disabled-soft",
+    "hover:not-disabled:": "scope-error text-current-hl",
   },
-  "as-array-remove-btn-icon": "i-as-close text-[1.1em]",
+  "as-array-remove-btn-icon": "i-as-close text-[1em]",
 
   "as-array-clear-btn": {
     "": "inline-flex items-center h-[1.5em] px-$s border-1 layer-0 text-current/60 rounded-base cursor-pointer text-callout leading-none transition-all duration-120 disabled-soft",

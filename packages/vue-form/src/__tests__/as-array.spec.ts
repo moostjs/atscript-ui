@@ -90,6 +90,29 @@ describe("AsArray", () => {
     expect(addBtn.text()).toBe("Add tag");
   });
 
+  it("optional empty placeholder reads 'Add <label>' (uses @meta.label, not singular)", async () => {
+    const { OptionalLabelArrayForm } = await import("./fixtures/array-forms.as");
+    const { wrapper } = mountForm(OptionalLabelArrayForm);
+    await nextTick();
+    // Optional + undefined → AsCollapsible #empty slot → mirrors AsObject's
+    // dashed-island placeholder. Label uses @meta.label, never the singular.
+    const emptyBtn = wrapper.find(".as-object-empty-add");
+    expect(emptyBtn.exists()).toBe(true);
+    expect(emptyBtn.text()).toBe("Add Tags");
+  });
+
+  it("Clear button visible text is just 'Clear' (aria-label includes label)", async () => {
+    const type = objectType({
+      items: arrayType(stringProp(), { "meta.label": "Tags" }),
+    });
+    const { wrapper, formData } = mountForm(type);
+    formData.value.items = ["a"];
+    await nextTick();
+    const clearBtn = wrapper.find(".as-array-clear-btn");
+    expect(clearBtn.text()).toBe("Clear");
+    expect(clearBtn.attributes("aria-label")).toBe("Clear Tags");
+  });
+
   it("items chip shows correct count", async () => {
     const type = objectType({
       items: arrayType(stringProp()),

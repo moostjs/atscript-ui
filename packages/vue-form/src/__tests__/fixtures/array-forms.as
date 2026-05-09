@@ -22,3 +22,9 @@ export interface RequiredArrayForm {
     @expect.minLength 1, 'At least one item required'
     items: string[]
 }
+
+export interface OptionalLabelArrayForm {
+    @meta.label 'Tags'
+    @ui.form.label.singular 'tag'
+    items?: string[]
+}

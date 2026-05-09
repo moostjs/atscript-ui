@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ singular?: string; disabled?: boolean }>();
+defineProps<{ disabled?: boolean }>();
 defineEmits<{ click: [] }>();
 </script>
 
@@ -8,8 +8,8 @@ defineEmits<{ click: [] }>();
     type="button"
     class="as-array-remove-btn"
     :disabled="disabled"
-    :aria-label="`Remove ${singular ?? 'item'}`"
-    :title="`Remove ${singular ?? 'item'}`"
+    aria-label="Remove"
+    title="Remove"
     @click.stop.prevent="$emit('click')"
   >
     <span class="as-array-remove-btn-icon" aria-hidden="true" />

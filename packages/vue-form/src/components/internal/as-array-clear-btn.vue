@@ -1,5 +1,6 @@
 <script setup lang="ts">
-/** `label` is appended to visible text + aria-label, e.g. "Phones" → "Clear Phones". */
+// `label` only feeds the aria-label so screen-readers say "Clear Tags";
+// visible text is always just "Clear" to mirror AsObject's chrome parity.
 defineProps<{ label?: string; disabled?: boolean }>();
 defineEmits<{ clear: [] }>();
 </script>
@@ -12,6 +13,6 @@ defineEmits<{ clear: [] }>();
     :aria-label="label ? `Clear ${label}` : 'Clear'"
     @click.stop.prevent="$emit('clear')"
   >
-    Clear{{ label ? ` ${label}` : "" }}
+    Clear
   </button>
 </template>
