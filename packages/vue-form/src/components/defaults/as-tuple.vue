@@ -22,7 +22,7 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 </script>
 
 <template>
-  <div ref="rootRef" class="as-tuple" v-show="!hidden">
+  <div ref="rootRef" class="as-tuple as-grid-item" v-show="!hidden">
     <AsStructuredHeader
       :title="title"
       :level="level"
@@ -40,9 +40,9 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
       <AsNoData :on-edit="enableOptional" />
     </template>
     <template v-else>
-      <template v-if="tupleField">
+      <div v-if="tupleField" class="as-form-grid">
         <AsField v-for="(itemField, i) in tupleField.itemFields" :key="i" :field="itemField" />
-      </template>
+      </div>
 
       <div v-if="error" class="as-tuple-error" role="alert">{{ error }}</div>
     </template>
@@ -50,10 +50,6 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 </template>
 
 <style>
-.as-tuple {
-  margin: 12px 0;
-}
-
 .as-tuple-error {
   font-size: 12px;
   color: #ef4444;

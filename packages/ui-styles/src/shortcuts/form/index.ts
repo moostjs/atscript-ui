@@ -5,6 +5,7 @@ import { asCheckboxRadioShortcuts } from "./as-checkbox-radio";
 import { asDropdownShortcuts } from "./as-dropdown";
 import { asFieldShortcuts } from "./as-field";
 import { asFormShortcuts } from "./as-form";
+import { asFormGridShortcuts } from "./as-form-grid";
 import { asInputShortcuts } from "./as-input";
 import { asNoDataShortcuts } from "./as-no-data";
 import { asObjectShortcuts } from "./as-object";
@@ -18,6 +19,7 @@ export {
   asDropdownShortcuts,
   asFieldShortcuts,
   asFormShortcuts,
+  asFormGridShortcuts,
   asInputShortcuts,
   asNoDataShortcuts,
   asObjectShortcuts,
@@ -27,6 +29,7 @@ export {
 
 export const formShortcuts = mergeVunorShortcuts([
   asFormShortcuts,
+  asFormGridShortcuts,
   asFieldShortcuts,
   asInputShortcuts,
   asCheckboxRadioShortcuts,

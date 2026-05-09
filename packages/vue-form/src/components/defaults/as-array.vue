@@ -47,7 +47,7 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
 <template>
   <div
     ref="rootRef"
-    class="as-array"
+    class="as-array as-grid-item"
     :class="{ 'as-array--root': level === 0, 'as-array--nested': (level ?? 0) > 0 }"
     v-show="!hidden"
   >
@@ -68,16 +68,18 @@ const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
       <AsNoData :on-edit="enableOptional" />
     </template>
     <template v-else>
-      <!-- Items — each rendered as a single AsField -->
-      <AsField
-        v-for="(_item, i) in arrayValue"
-        :key="itemKeys[i]"
-        :field="getItemField(i)"
-        :on-remove="() => removeItem(i)"
-        :can-remove="canRemove"
-        :remove-label="removeLabel"
-        :array-index="i"
-      />
+      <!-- Items — each rendered as a single AsField inside the array's grid -->
+      <div class="as-form-grid">
+        <AsField
+          v-for="(_item, i) in arrayValue"
+          :key="itemKeys[i]"
+          :field="getItemField(i)"
+          :on-remove="() => removeItem(i)"
+          :can-remove="canRemove"
+          :remove-label="removeLabel"
+          :array-index="i"
+        />
+      </div>
 
       <!-- Add button -->
       <div class="as-array-add">

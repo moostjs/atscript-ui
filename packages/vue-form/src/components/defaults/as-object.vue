@@ -107,16 +107,18 @@ function handleAddData(): void {
 </script>
 
 <template>
-  <!-- L0 root: no chrome, just iterate children -->
+  <!-- L0 root: no chrome, just iterate children inside the form's root grid -->
   <template v-if="variant === 'root'">
-    <AsIterator v-if="objectDef" :def="objectDef" />
+    <div v-if="objectDef" class="as-form-grid">
+      <AsIterator :def="objectDef" />
+    </div>
   </template>
 
   <!-- Optional struct, not yet enabled: dashed island placeholder -->
   <div
     v-else-if="optional && !optionalEnabled"
     ref="rootRef"
-    class="as-object-empty"
+    class="as-object-empty as-grid-item"
     v-show="!hidden"
   >
     <button type="button" class="as-object-empty-add" @click="handleAddData">
@@ -132,7 +134,7 @@ function handleAddData(): void {
     ref="rootRef"
     v-show="!hidden"
     :open="isOpen"
-    :class="containerClass"
+    :class="[containerClass, 'as-grid-item']"
     :data-object-level="level"
     @toggle="onNativeToggle"
   >

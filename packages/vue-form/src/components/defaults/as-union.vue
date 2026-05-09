@@ -34,7 +34,7 @@ function handleVariantPick(vi: number): void {
 </script>
 
 <template>
-  <div ref="rootRef" class="as-union" v-show="!hidden">
+  <div ref="rootRef" class="as-union as-grid-item" v-show="!hidden">
     <!-- Optional N/A state: click opens variant picker when multiple variants -->
     <template v-if="optional && !optionalEnabled">
       <div v-if="hasMultipleVariants" ref="dropdownRef" class="as-dropdown-anchor">

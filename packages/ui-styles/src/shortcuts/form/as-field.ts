@@ -3,7 +3,7 @@ import { inputBase } from "./_shared";
 
 export const asFieldShortcuts = defineShortcuts({
   "as-default-field": {
-    "": "flex flex-col gap-$xs mb-$m relative",
+    "": "as-grid-item flex flex-col gap-$xs relative",
     "[&_label]:": "font-600",
     "[&.required_.as-field-label]:after:":
       'content-["_*"] scope-error text-current-hl font-700 ml-[0.1em]',
