@@ -18,6 +18,7 @@ export const UI_FORM_GRID_COL_SPAN = "ui.form.grid.colSpan" as const;
 export const UI_FORM_GRID_ROW_SPAN = "ui.form.grid.rowSpan" as const;
 export const UI_FORM_ICON = "ui.form.icon" as const;
 export const UI_FORM_SUBMIT_TEXT = "ui.form.submit.text" as const;
+export const UI_FORM_LABEL_SINGULAR = "ui.form.label.singular" as const;
 export const UI_FORM_ACTION = "ui.form.action" as const;
 
 // ── Table static (registered by @atscript/ui plugin) ─────────

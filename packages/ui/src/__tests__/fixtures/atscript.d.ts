@@ -100,6 +100,7 @@ declare global {
     "ui.form.grid.rowSpan": { desktop: string, narrow?: string }
     "ui.form.icon": string
     "ui.form.submit.text": string
+    "ui.form.label.singular": string
     "ui.form.action": { id: string, label?: string }
     "ui.table.width": string
     "ui.table.component": string

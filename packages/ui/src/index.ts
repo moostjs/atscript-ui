@@ -19,6 +19,7 @@ export {
   UI_FORM_GRID_ROW_SPAN,
   UI_FORM_ICON,
   UI_FORM_SUBMIT_TEXT,
+  UI_FORM_LABEL_SINGULAR,
   UI_FORM_ACTION,
   // Table static
   UI_TABLE_WIDTH,
@@ -147,6 +148,9 @@ export {
   buildGridClasses,
 } from "./form/grid";
 export type { GridSpec, GridSpanArgs } from "./form/grid";
+
+// ── Form label helpers (framework-agnostic) ─────────────────
+export { resolveSingularLabel } from "./form/labels";
 
 // ── Table types ─────────────────────────────────────────────
 export type {

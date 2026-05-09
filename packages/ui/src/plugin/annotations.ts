@@ -330,6 +330,27 @@ export const uiAnnotations: TAnnotationsTree = {
         }),
       },
 
+      label: {
+        singular: new AnnotationSpec({
+          description:
+            "Singular label form for an array field. Used by AsArray to render " +
+            '"Add <singular>" / "Remove <singular>" / per-item "#N"-suffixed ' +
+            "labels. When omitted, the array falls back to `'item'`." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            "@meta.label 'Phone numbers'\n" +
+            "@ui.form.label.singular 'phone number'\n" +
+            "phones: string[]\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "singular",
+            type: "string",
+            description: 'Singular label, e.g. "phone number" for a `phones` field.',
+          },
+        }),
+      },
+
       action: new AnnotationSpec({
         description: "Form action button for this field.",
         nodeType: ["prop", "type"],
