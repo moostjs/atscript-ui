@@ -111,7 +111,7 @@ export type TAsTypeComponents = {
 } & Record<string, Component>;
 
 /**
- * Union context provided by `AsUnion` via `__as_union` inject key.
+ * Union context provided by `AsUnion` via `UNION_CONTEXT_KEY`.
  * Consumed by header components (AsStructuredHeader, AsFieldShell) to render
  * the variant picker inline with the item's own header.
  */

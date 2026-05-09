@@ -129,6 +129,13 @@ export type { TFormValueResolver } from "./form/path-utils";
 export { getFormValidator, createFieldValidator } from "./form/validate";
 export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/validate";
 
+// ── Error-map utilities (framework-agnostic) ────────────────
+export {
+  mergeErrorMaps,
+  iteratePathAncestors,
+  buildDescendantErrorCounts,
+} from "./form/error-utils";
+
 // ── Table types ─────────────────────────────────────────────
 export type {
   TableDef,

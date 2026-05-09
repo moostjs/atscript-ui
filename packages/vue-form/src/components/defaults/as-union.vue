@@ -52,9 +52,10 @@ const {
         v-if="optional"
         type="button"
         class="as-optional-clear"
+        aria-label="Clear value"
         @click="onToggleOptional?.(false)"
       >
-        &times;
+        <span class="as-close-icon" aria-hidden="true" />
       </button>
       <!-- Inner field — variant picker rendered by consumer via union context -->
       <AsField

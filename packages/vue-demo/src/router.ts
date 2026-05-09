@@ -26,6 +26,21 @@ const routes = [
     component: () => import("./client/pages/invite-accept.vue"),
   },
   {
+    path: "/forms-demo",
+    name: "forms-demo",
+    component: () => import("./client/pages/forms-demo/index.vue"),
+  },
+  {
+    path: "/forms-demo/nested-collapsible",
+    name: "forms-demo-nested-collapsible",
+    component: () => import("./client/pages/forms-demo/nested-collapsible.vue"),
+  },
+  {
+    path: "/forms-demo/optional-fields",
+    name: "forms-demo-optional-fields",
+    component: () => import("./client/pages/forms-demo/optional-fields.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

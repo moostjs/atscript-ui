@@ -61,5 +61,13 @@ async function onFinished() {
         >
       </p>
     </div>
+    <div class="mt-$l flex flex-col items-center gap-$xs">
+      <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+        Forms Demo · no auth required
+      </p>
+      <RouterLink to="/forms-demo" class="scope-primary text-current-hl underline text-callout">
+        Browse form variations →
+      </RouterLink>
+    </div>
   </div>
 </template>

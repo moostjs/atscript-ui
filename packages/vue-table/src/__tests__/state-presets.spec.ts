@@ -104,10 +104,7 @@ describe("ReactiveTableState — preset surface (no presetsHandle)", () => {
 
   it("expandDefault for columns excludes hidden columns (snapshot expansion path)", () => {
     const { state } = mountTableState({
-      columns: [
-        mockColumn("name"),
-        mockColumn("hidden", { visible: false }),
-      ],
+      columns: [mockColumn("name"), mockColumn("hidden", { visible: false })],
     });
     state.preset.activeId.value = "sys:standard";
     // activeSnapshot expands the empty `{}` system preset via

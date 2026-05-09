@@ -112,9 +112,7 @@ async function cleanupStore(ctx: APIRequestContext, retention?: number): Promise
   return body.deletedCount;
 }
 
-async function listHandles(
-  ctx: APIRequestContext,
-): Promise<
+async function listHandles(ctx: APIRequestContext): Promise<
   Array<{
     handle: string;
     schemaId: string;

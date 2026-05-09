@@ -10,6 +10,13 @@ const props = defineProps<
   TAsComponentProps & {
     fieldClass?: string;
     idPrefix?: string;
+    /**
+     * Suppress the entire default chrome — label, description, optional-clear
+     * button, and empty-state placeholder. Use when the field component
+     * (e.g. checkbox) renders its own header/label/clear inline next to the
+     * input. Vue 3 empty-slot tricks don't reliably suppress the fallback.
+     */
+    chromeless?: boolean;
   }
 >();
 
@@ -34,11 +41,11 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
     <!-- Header row: label/header on left, action buttons on right -->
     <div
       v-if="
-        displayLabel ||
+        $slots.header ||
+        (displayLabel && !chromeless) ||
         onRemove ||
-        (optional && optionalEnabled) ||
-        hasVariantPicker ||
-        $slots.header
+        (optional && optionalEnabled && !chromeless) ||
+        hasVariantPicker
       "
       class="as-field-header-row"
     >
@@ -51,7 +58,7 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
             :optional-enabled="optionalEnabled"
           />
         </template>
-        <template v-else>
+        <template v-else-if="!chromeless">
           <label v-if="displayLabel" :for="inputId">{{ displayLabel }}</label>
         </template>
 
@@ -59,14 +66,18 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
         <AsVariantPicker v-if="hasVariantPicker" :union-context="unionCtx!" :disabled="disabled" />
       </div>
 
-      <div v-if="(optional && optionalEnabled) || onRemove" class="as-field-header-actions">
+      <div
+        v-if="(optional && optionalEnabled && !chromeless) || onRemove"
+        class="as-field-header-actions"
+      >
         <button
-          v-if="optional && optionalEnabled"
+          v-if="optional && optionalEnabled && !chromeless"
           type="button"
           class="as-optional-clear"
+          aria-label="Clear value"
           @click="onToggleOptional?.(false)"
         >
-          &times;
+          <span class="as-close-icon" aria-hidden="true" />
         </button>
         <button
           v-if="onRemove"
@@ -81,12 +92,19 @@ const displayLabel = computed(() => formatIndexedLabel(props.label, props.arrayI
       </div>
     </div>
 
-    <div v-if="description && !$slots.header" :id="descId" class="as-field-description">
+    <div
+      v-if="description && !$slots.header && !chromeless"
+      :id="descId"
+      class="as-field-description"
+    >
       {{ description }}
     </div>
 
-    <template v-if="optional && !optionalEnabled">
-      <AsNoData :on-edit="() => onToggleOptional?.(true)" />
+    <template v-if="optional && !optionalEnabled && !chromeless">
+      <AsNoData
+        :kind="type === 'textarea' ? 'textarea' : 'input'"
+        :on-edit="() => onToggleOptional?.(true)"
+      />
     </template>
     <template v-else>
       <div class="as-field-input-row">

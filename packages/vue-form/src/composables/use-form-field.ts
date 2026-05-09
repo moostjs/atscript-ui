@@ -1,5 +1,6 @@
 import { computed, inject, onUnmounted, ref, watch, type ComputedRef } from "vue";
-import type { TFormRule, TFormState } from "./types";
+import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "./internal-keys";
+import type { TFormRule } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface UseFormFieldOptions<TValue = any, TFormData = any, TContext = any> {
@@ -15,9 +16,9 @@ export interface UseFormFieldOptions<TValue = any, TFormData = any, TContext = a
 export function useFormField<TValue = any, TFormData = any, TContext = any>(
   opts: UseFormFieldOptions<TValue, TFormData, TContext>,
 ) {
-  const formState = inject<TFormState>("__as_form");
-  const formData = inject<ComputedRef<TFormData | undefined>>("__as_form_data");
-  const formContext = inject<ComputedRef<TContext | undefined>>("__as_form_context");
+  const formState = inject(FORM_STATE_KEY);
+  const formData = inject(FORM_DATA_KEY) as ComputedRef<TFormData | undefined> | undefined;
+  const formContext = inject(FORM_CONTEXT_KEY) as ComputedRef<TContext | undefined> | undefined;
 
   const id = Symbol("form-field");
   const submitError = ref<string>();

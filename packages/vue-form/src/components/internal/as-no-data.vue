@@ -1,13 +1,24 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
-defineProps<{ onEdit: () => void }>();
+const props = withDefaults(
+  defineProps<{
+    onEdit: () => void;
+    /** Visual height variant. `'textarea'` uses a taller min-height to match a multi-line input. */
+    kind?: "input" | "textarea";
+  }>(),
+  { kind: "input" },
+);
+
 const hovered = ref(false);
+const rootClass = computed(() =>
+  props.kind === "textarea" ? "as-no-data-textarea" : "as-no-data",
+);
 </script>
 
 <template>
   <div
-    class="as-no-data"
+    :class="rootClass"
     @mouseenter="hovered = true"
     @mouseleave="hovered = false"
     @click="onEdit"

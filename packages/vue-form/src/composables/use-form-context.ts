@@ -2,36 +2,45 @@ import type { TFieldEvaluated, TFnScope } from "@atscript/ui-fns";
 import { getByPath as _getByPath, setByPath as _setByPath } from "@atscript/ui";
 import type { TFormState } from "./types";
 import { computed, inject, provide, type ComputedRef } from "vue";
+import {
+  FORM_CONTEXT_KEY,
+  FORM_STATE_KEY,
+  PATH_PREFIX_KEY,
+  ROOT_DATA_KEY,
+  UNION_CONTEXT_KEY,
+} from "./internal-keys";
 import type { TAsUnionContext } from "../components/types";
 
 const EMPTY_PREFIX = computed(() => "");
 
 /**
- * Unified injection composable for as-* components.
- * Consolidates `__as_form`, `__as_root_data`, and `__as_path_prefix`
- * into a single call with shared helpers.
+ * Unified injection composable for as-* components. Consolidates form
+ * state, root data, and path prefix into a single call with shared
+ * helpers.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function useFormContext<TFormData = any, TFormContext = any>(componentName: string) {
   // ── Form state (with throw guard) ─────────────────────────
-  const _formState = inject<TFormState>("__as_form");
+  const _formState = inject(FORM_STATE_KEY);
   if (!_formState) {
     throw new Error(`${componentName} must be used inside an AsForm component`);
   }
-  const formState = _formState;
+  const formState: TFormState = _formState;
 
   // ── Root form data ─────────────────────────────────────────
-  const rootData = inject<ComputedRef<TFormData>>("__as_root_data");
+  const rootData = inject(ROOT_DATA_KEY) as ComputedRef<TFormData> | undefined;
   if (!rootData) {
     throw new Error(`${componentName} must be used inside an AsForm component (missing root data)`);
   }
   const rootFormData = () => rootData.value as Record<string, unknown>;
 
   // ── Path prefix ───────────────────────────────────────────
-  const pathPrefix = inject<ComputedRef<string>>("__as_path_prefix", EMPTY_PREFIX);
+  const pathPrefix = inject(PATH_PREFIX_KEY, EMPTY_PREFIX);
 
   // ── Form context (separate injection — decoupled from formState) ──
-  const _formContext = inject<ComputedRef<TFormContext | undefined>>("__as_form_context");
+  const _formContext = inject(FORM_CONTEXT_KEY) as
+    | ComputedRef<TFormContext | undefined>
+    | undefined;
   const formContext = computed(() => (_formContext?.value ?? {}) as Record<string, unknown>);
 
   // ── Path-join utility (reactive — returns ComputedRef) ────
@@ -78,15 +87,15 @@ export function useFormContext<TFormData = any, TFormContext = any>(componentNam
 }
 
 /**
- * Consume and clear the `__as_union` injection.
+ * Consume and clear the union context injection.
  *
  * Structured components (object, tuple, array, field-shell) call this to
  * read the union context provided by `AsUnion` and immediately clear it
  * so nested children don't inherit it.
  */
 export function useConsumeUnionContext(): TAsUnionContext | undefined {
-  const unionCtx = inject<TAsUnionContext | undefined>("__as_union", undefined);
-  provide("__as_union", undefined);
+  const unionCtx = inject(UNION_CONTEXT_KEY, undefined);
+  provide(UNION_CONTEXT_KEY, undefined);
   return unionCtx;
 }
 

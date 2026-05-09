@@ -60,8 +60,17 @@ import {
 } from "@atscript/ui";
 import { buildFieldEntry } from "@atscript/ui-fns";
 import { computed, inject, isRef, provide, watch, type Component, type ComputedRef } from "vue";
+import {
+  ACTION_HANDLER_KEY,
+  CHANGE_HANDLER_KEY,
+  COMPONENTS_KEY,
+  ERRORS_KEY,
+  HIDE_ROOT_TITLE_KEY,
+  LEVEL_KEY,
+  PATH_PREFIX_KEY,
+  TYPES_KEY,
+} from "../composables/internal-keys";
 import { useFormContext } from "../composables/use-form-context";
-import type { TAsChangeType } from "./types";
 
 const props = defineProps<{
   field: FormFieldDef;
@@ -73,15 +82,12 @@ const props = defineProps<{
 }>();
 
 // ── Inject types, components, errors, action handler ─────────
-const types = inject<ComputedRef<Record<string, Component>>>("__as_types");
-const components = inject<ComputedRef<Record<string, Component> | undefined>>("__as_components");
-const errors = inject<ComputedRef<Record<string, string | undefined> | undefined>>("__as_errors");
-const hideRootTitle = inject<boolean>("__as_hide_root_title", false);
-const handleAction = inject<(name: string) => void>("__as_action_handler", () => {});
-const handleChange = inject<(type: TAsChangeType, path: string, value: unknown) => void>(
-  "__as_change_handler",
-  () => {},
-);
+const types = inject(TYPES_KEY);
+const components = inject(COMPONENTS_KEY);
+const errors = inject(ERRORS_KEY);
+const hideRootTitle = inject(HIDE_ROOT_TITLE_KEY, false);
+const handleAction = inject(ACTION_HANDLER_KEY, () => {});
+const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
 // ── Form context ────────────────────────────────────────────
 const { rootFormData, formContext, joinPath, buildPath, getByPath, setByPath, buildScope } =
@@ -94,8 +100,8 @@ const isStructured =
 const isUnion = isUnionField(props.field);
 
 // ── Nesting level tracking ──────────────────────────────────
-const parentLevel = inject<ComputedRef<number>>(
-  "__as_level",
+const parentLevel = inject(
+  LEVEL_KEY,
   computed(() => -1),
 );
 const myLevel = isStructured ? parentLevel.value + 1 : -1;
@@ -105,13 +111,13 @@ const myLevel = isStructured ? parentLevel.value + 1 : -1;
 // but do NOT increment level (transparent wrapper — prevents double increment)
 if (isStructured || isUnion) {
   provide(
-    "__as_path_prefix",
+    PATH_PREFIX_KEY,
     computed(() => absolutePath.value),
   );
 }
 if (isStructured) {
   provide(
-    "__as_level",
+    LEVEL_KEY,
     computed(() => myLevel),
   );
 }

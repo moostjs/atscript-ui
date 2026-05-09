@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { computed, defineComponent, h, nextTick, provide, reactive, ref, type Ref } from "vue";
+import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "../composables/internal-keys";
 import { useFormField } from "../composables/use-form-field";
 import type { TFormFieldRegistration, TFormState } from "../composables/types";
 
@@ -55,13 +56,13 @@ function setupFormField(
   // Parent that provides the form injections
   const Parent = defineComponent({
     setup() {
-      provide("__as_form", formState);
+      provide(FORM_STATE_KEY, formState);
       provide(
-        "__as_form_data",
+        FORM_DATA_KEY,
         computed(() => opts.formData ?? {}),
       );
       provide(
-        "__as_form_context",
+        FORM_CONTEXT_KEY,
         computed(() => opts.formContext ?? {}),
       );
       return () => h(Child);

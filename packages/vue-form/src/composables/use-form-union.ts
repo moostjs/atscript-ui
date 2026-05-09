@@ -5,8 +5,9 @@ import {
   createFormValueResolver,
   detectUnionVariant,
 } from "@atscript/ui";
-import { computed, inject, provide, ref, type ComputedRef } from "vue";
-import type { TAsChangeType, TAsComponentProps, TAsUnionContext } from "../components/types";
+import { computed, inject, provide, ref } from "vue";
+import { CHANGE_HANDLER_KEY, PATH_PREFIX_KEY, UNION_CONTEXT_KEY } from "./internal-keys";
+import type { TAsComponentProps, TAsUnionContext } from "../components/types";
 import { useDropdown } from "./use-dropdown";
 import { useFormContext } from "./use-form-context";
 
@@ -19,15 +20,12 @@ import { useFormContext } from "./use-form-context";
  */
 export function useFormUnion(props: TAsComponentProps) {
   // ── Change handler (path comes from AsField's provide for union fields) ──
-  const unionPath = inject<ComputedRef<string>>(
-    "__as_path_prefix",
+  const unionPath = inject(
+    PATH_PREFIX_KEY,
     computed(() => ""),
   );
   const { rootFormData, formContext } = useFormContext("useFormUnion");
-  const handleChange = inject<(type: TAsChangeType, path: string, value: unknown) => void>(
-    "__as_change_handler",
-    () => {},
-  );
+  const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   // ── Union field def ─────────────────────────────────────────
   const unionField = computed(() =>
@@ -99,11 +97,12 @@ export function useFormUnion(props: TAsComponentProps) {
 
   // ── Provide union context for consumers ─────────────────────
   if (unionField.value) {
-    provide<TAsUnionContext>("__as_union", {
+    const ctx: TAsUnionContext = {
       variants: unionField.value.unionVariants,
       currentIndex: localUnionIndex,
       changeVariant,
-    });
+    };
+    provide(UNION_CONTEXT_KEY, ctx);
   }
 
   // ── Dropdown (only for optional N/A variant picker) ─────────

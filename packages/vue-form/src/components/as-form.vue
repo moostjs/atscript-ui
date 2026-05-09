@@ -1,10 +1,28 @@
 <script setup lang="ts" generic="TFormData = any, TFormContext = any">
 import { useFormState } from "../composables/use-form-state";
+import {
+  ACTION_HANDLER_KEY,
+  CHANGE_HANDLER_KEY,
+  COMPONENTS_KEY,
+  ERRORS_KEY,
+  HIDE_ROOT_TITLE_KEY,
+  PATH_PREFIX_KEY,
+  ROOT_DATA_KEY,
+  TYPES_KEY,
+} from "../composables/internal-keys";
+import {
+  DESCENDANT_ERROR_COUNTS_KEY,
+  provideNestedSectionsStore,
+  useNestedSectionsStore,
+} from "../composables/use-nested-sections";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import type { FormDef, ClientFactory } from "@atscript/ui";
 import {
+  buildDescendantErrorCounts,
   getFormValidator,
+  iteratePathAncestors,
+  mergeErrorMaps,
   resolveFormProp,
   getFieldMeta,
   WF_ACTION_WITH_DATA,
@@ -15,7 +33,7 @@ import {
 } from "@atscript/ui";
 import { CLIENT_FACTORY_KEY } from "../composables/use-value-help";
 import type { TFnScope } from "@atscript/ui-fns";
-import { computed, provide, ref, toRaw, type Component } from "vue";
+import { computed, provide, ref, toRaw, watch, type Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
 
 export interface Props<TF, TC> {
@@ -69,7 +87,11 @@ function getDomainData(): Record<string, unknown> {
 }
 
 // ── Full-type validator (created once per def, called per-submit) ──
-const formValidator = computed(() => getFormValidator(props.def));
+// Override the default `errorLimit: 10` from `@atscript/typescript` so
+// AsObject's count badges reflect every nested error on a large form.
+const formValidator = computed(() =>
+  getFormValidator(props.def, { errorLimit: Number.MAX_SAFE_INTEGER }),
+);
 
 // ── Form state composable ────────────────────────────────────
 const { clearErrors, reset, submit, setErrors } = useFormState({
@@ -85,29 +107,57 @@ const { clearErrors, reset, submit, setErrors } = useFormState({
 
 // ── Provides ────────────────────────────────────────────────
 provide(
-  "__as_root_data",
-  computed<TFormData>(() => data.value),
+  ROOT_DATA_KEY,
+  computed(() => data.value),
 );
 provide(
-  "__as_path_prefix",
+  PATH_PREFIX_KEY,
   computed(() => ""),
 );
 provide(
-  "__as_types",
+  TYPES_KEY,
   computed(() => props.types),
 );
 provide(
-  "__as_components",
+  COMPONENTS_KEY,
   computed(() => props.components),
 );
 provide(
-  "__as_errors",
+  ERRORS_KEY,
   computed(() => props.errors),
 );
-provide("__as_hide_root_title", props.hideRootTitle === true);
+provide(HIDE_ROOT_TITLE_KEY, props.hideRootTitle === true);
+
+// Provide the collapsible-section store only if a parent hasn't already
+// supplied one — a page that wants to drive Expand-all / Collapse-all UI
+// calls `provideNestedSectionsStore()` *above* `<AsForm>`, and the form
+// inherits that shared store instead of creating its own.
+const sectionsStore = useNestedSectionsStore() ?? provideNestedSectionsStore();
 if (props.clientFactory) {
   provide(CLIENT_FACTORY_KEY, props.clientFactory);
 }
+
+// External (`props.errors`) + internal validation merged into a single
+// map. Drives both the descendant-count badges and the auto-open watcher.
+const internalErrors = ref<Record<string, string>>({});
+const allErrors = computed(() => mergeErrorMaps(props.errors, internalErrors.value));
+
+const descendantErrorCounts = computed(() => buildDescendantErrorCounts(allErrors.value));
+provide(DESCENDANT_ERROR_COUNTS_KEY, descendantErrorCounts);
+
+// Auto-open every ancestor of an error path so the user sees the invalid
+// field immediately, instead of a collapsed section with a count badge.
+watch(
+  allErrors,
+  (errors) => {
+    for (const errPath of Object.keys(errors)) {
+      for (const ancestor of iteratePathAncestors(errPath)) {
+        sectionsStore.setOpen(ancestor, true);
+      }
+    }
+  },
+  { immediate: true, flush: "post" },
+);
 
 // `__form` = moost-wf convention for form-level (non-field) errors.
 const formError = computed(() => props.errors?.__form);
@@ -162,18 +212,22 @@ function handleAction(name: string) {
   }
 }
 
-provide("__as_action_handler", handleAction);
+provide(ACTION_HANDLER_KEY, handleAction);
 
 function handleChange(type: TAsChangeType, path: string, value: unknown) {
   emit("change", type, path, value, domainData());
 }
-provide("__as_change_handler", handleChange);
+provide(CHANGE_HANDLER_KEY, handleChange);
 
 function onSubmit() {
   const result = submit();
   if (result === true) {
+    internalErrors.value = {};
     emit("submit", domainData());
   } else {
+    const errs: Record<string, string> = {};
+    for (const e of result) errs[e.path] = e.message;
+    internalErrors.value = errs;
     emit("error", result);
   }
 }

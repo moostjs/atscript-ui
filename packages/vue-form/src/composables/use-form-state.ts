@@ -1,4 +1,5 @@
 import { computed, nextTick, provide, reactive, toValue, watchEffect, type MaybeRef } from "vue";
+import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "./internal-keys";
 import type { TFormFieldRegistration, TFormState } from "./types";
 
 /** Custom form-level validator. Returns `Record<path, message>` (empty = passed). */
@@ -37,13 +38,13 @@ export function useFormState<TFormData, TContext>(opts: {
     if (formState.firstValidation !== v) formState.firstValidation = v;
   });
 
-  provide("__as_form", formState);
+  provide(FORM_STATE_KEY, formState);
   provide(
-    "__as_form_data",
+    FORM_DATA_KEY,
     computed(() => toValue(opts.formData)),
   );
   provide(
-    "__as_form_context",
+    FORM_CONTEXT_KEY,
     computed(() => (opts.formContext ? toValue(opts.formContext) : undefined)),
   );
 

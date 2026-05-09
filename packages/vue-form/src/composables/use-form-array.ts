@@ -6,7 +6,7 @@ import type {
 } from "@atscript/ui";
 import { getFieldMeta, createFormData, createFormValueResolver, isUnionField } from "@atscript/ui";
 import { computed, inject, reactive, watch, type ComputedRef } from "vue";
-import type { TAsChangeType } from "../components/types";
+import { CHANGE_HANDLER_KEY } from "./internal-keys";
 import { useFormContext } from "./use-form-context";
 
 /**
@@ -20,10 +20,7 @@ export function useFormArray(field: FormArrayFieldDef, disabled?: ComputedRef<bo
   // ── Context (root data, path, getByPath) ──────────────────────
   const { rootFormData, formContext, pathPrefix, getByPath, setByPath } =
     useFormContext("useFormArray");
-  const handleChange = inject<(type: TAsChangeType, path: string, value: unknown) => void>(
-    "__as_change_handler",
-    () => {},
-  );
+  const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   // ── Array value reference ───────────────────────────────────
   const arrayValue = computed<unknown[]>(() => {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { FormDef } from "@atscript/ui";
-import { computed, inject, provide, type ComputedRef } from "vue";
+import { computed, inject, provide } from "vue";
+import { PATH_PREFIX_KEY } from "../composables/internal-keys";
 import AsField from "./as-field.vue";
 
 const props = defineProps<{
@@ -12,8 +13,8 @@ const props = defineProps<{
 }>();
 
 // Path prefix management
-const parentPrefix = inject<ComputedRef<string>>(
-  "__as_path_prefix",
+const parentPrefix = inject(
+  PATH_PREFIX_KEY,
   computed(() => ""),
 );
 const myPrefix = computed(() => {
@@ -22,7 +23,7 @@ const myPrefix = computed(() => {
   }
   return parentPrefix.value;
 });
-provide("__as_path_prefix", myPrefix);
+provide(PATH_PREFIX_KEY, myPrefix);
 </script>
 
 <template>

@@ -37,9 +37,10 @@ const hasVariantPicker = props.unionContext !== undefined && props.unionContext.
       v-if="optional && optionalEnabled"
       type="button"
       class="as-optional-clear"
+      aria-label="Clear value"
       @click="onToggleOptional?.(false)"
     >
-      &times;
+      <span class="as-close-icon" aria-hidden="true" />
     </button>
     <button
       v-if="onRemove"
