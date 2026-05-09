@@ -46,14 +46,14 @@ const variant = computed<"root" | "section" | "island">(() => {
 });
 
 const containerClass = computed<string | string[]>(() => {
-  if (variant.value === "section") return "as-object-section";
+  if (variant.value === "section") return "as-collapsible-section";
   const layer =
-    ((props.level - 2) / 2) % 2 === 0 ? "as-object-island-even" : "as-object-island-odd";
-  return ["as-object-island", layer];
+    ((props.level - 2) / 2) % 2 === 0 ? "as-collapsible-island-even" : "as-collapsible-island-odd";
+  return ["as-collapsible-island", layer];
 });
 
 const titleClass = computed(() =>
-  props.level <= 1 ? "as-object-title" : "as-object-title-nested",
+  props.level <= 1 ? "as-collapsible-title" : "as-collapsible-title-nested",
 );
 
 const headingTag = computed(() => (props.level <= 1 ? "h3" : "h4"));
@@ -109,29 +109,29 @@ defineExpose({ runAndFocus });
     :data-object-level="level"
     @toggle="onNativeToggle"
   >
-    <summary class="as-object-summary">
-      <div class="as-object-header">
+    <summary class="as-collapsible-summary">
+      <div class="as-collapsible-header">
         <component :is="headingTag" :class="titleClass">{{ title }}</component>
-        <p v-if="description" class="as-object-description">{{ description }}</p>
+        <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>
       <slot name="header-extras" />
       <slot name="badges" />
       <span
         v-if="!isOpen && descendantErrorCount > 0"
-        class="as-object-error-badge"
+        class="as-collapsible-error-badge"
         :aria-label="`${descendantErrorCount} error${descendantErrorCount === 1 ? '' : 's'} inside`"
       >
         {{ descendantErrorCount }}
       </span>
       <slot name="actions" />
       <span
-        class="as-object-chevron"
-        :class="{ 'as-object-chevron-collapsed': !isOpen }"
+        class="as-collapsible-chevron"
+        :class="{ 'as-collapsible-chevron-collapsed': !isOpen }"
         aria-hidden="true"
       />
     </summary>
-    <div class="as-object-body">
-      <div v-if="error" class="as-object-error" role="alert">{{ error }}</div>
+    <div class="as-collapsible-body">
+      <div v-if="error" class="as-collapsible-error" role="alert">{{ error }}</div>
       <slot name="body" />
     </div>
   </details>

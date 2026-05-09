@@ -107,7 +107,7 @@ function handleAddData(): void {
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
           Add {{ displayTitle }}
         </button>
-        <p v-if="description" class="as-object-description">{{ description }}</p>
+        <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>
     </template>
   </AsCollapsible>

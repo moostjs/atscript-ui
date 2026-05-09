@@ -2,6 +2,7 @@ import { mergeVunorShortcuts } from "vunor/theme";
 import { asActionShortcuts } from "./as-action";
 import { asArrayShortcuts } from "./as-array";
 import { asCheckboxRadioShortcuts } from "./as-checkbox-radio";
+import { asCollapsibleShortcuts } from "./as-collapsible";
 import { asDropdownShortcuts } from "./as-dropdown";
 import { asFieldShortcuts } from "./as-field";
 import { asFormShortcuts } from "./as-form";
@@ -16,6 +17,7 @@ export {
   asActionShortcuts,
   asArrayShortcuts,
   asCheckboxRadioShortcuts,
+  asCollapsibleShortcuts,
   asDropdownShortcuts,
   asFieldShortcuts,
   asFormShortcuts,
@@ -34,6 +36,7 @@ export const formShortcuts = mergeVunorShortcuts([
   asInputShortcuts,
   asCheckboxRadioShortcuts,
   asStructuredShortcuts,
+  asCollapsibleShortcuts,
   asObjectShortcuts,
   asArrayShortcuts,
   asNoDataShortcuts,
