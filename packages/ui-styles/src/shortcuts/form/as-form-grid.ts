@@ -18,7 +18,6 @@ import { defineShortcuts } from "vunor/theme";
  * narrow.
  */
 export const asFormGridShortcuts = defineShortcuts({
-  "as-form-grid":
-    "grid grid-cols-12 gap-$m [container-type:inline-size] [container-name:as-grid]",
+  "as-form-grid": "grid grid-cols-12 gap-$m [container-type:inline-size] [container-name:as-grid]",
   "as-grid-item": "col-span-full row-span-1",
 });

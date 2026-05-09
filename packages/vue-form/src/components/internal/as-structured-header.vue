@@ -34,10 +34,7 @@ const hasVariantPicker = props.unionContext !== undefined && props.unionContext.
       />
     </div>
 
-    <AsOptionalClear
-      v-if="optional && optionalEnabled"
-      @clear="onToggleOptional?.(false)"
-    />
+    <AsOptionalClear v-if="optional && optionalEnabled" @clear="onToggleOptional?.(false)" />
     <button
       v-if="onRemove"
       type="button"

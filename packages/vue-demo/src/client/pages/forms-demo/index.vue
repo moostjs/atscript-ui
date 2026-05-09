@@ -31,8 +31,7 @@ const variations: Variation[] = [
   {
     to: "/forms-demo/grid-layout",
     title: "Grid layout",
-    description:
-      "12-col grid with col/row span, aliases, and container-query mobile fallback.",
+    description: "12-col grid with col/row span, aliases, and container-query mobile fallback.",
     status: "ready",
   },
   {

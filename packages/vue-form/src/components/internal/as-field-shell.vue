@@ -68,7 +68,9 @@ const showEmptyPlaceholder = computed(
           />
         </template>
         <template v-else-if="!chromeless">
-          <label v-if="displayLabel" :for="inputId" class="as-field-label">{{ displayLabel }}</label>
+          <label v-if="displayLabel" :for="inputId" class="as-field-label">{{
+            displayLabel
+          }}</label>
         </template>
 
         <!-- Union variant picker — inline next to label -->

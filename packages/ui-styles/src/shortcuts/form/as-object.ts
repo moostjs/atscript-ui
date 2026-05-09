@@ -1,12 +1,13 @@
 import { defineShortcuts } from "vunor/theme";
 
 export const asObjectShortcuts = defineShortcuts({
-  // `border-b-1` closes the section visually when the next sibling isn't
-  // another section (the next section already provides the divider via its
-  // own `border-t-1`). Underscore in `+_` is UnoCSS's space-escape inside
-  // arbitrary selectors.
+  // `pb-$m` and `border-b-1` are both suppressed when the next sibling is
+  // another section: the grid `gap-$m` between cells already provides the
+  // separating space, and the next section's `border-t-1` is the divider.
+  // Stacking pb + gap + pt would over-pad the visual gap. Underscore in
+  // `+_` is UnoCSS's space-escape inside arbitrary selectors.
   "as-object-section":
-    "border-t-1 first:border-t-0 [&:not(:has(+_.as-object-section))]:border-b-1 py-$m [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden",
+    "border-t-1 first:border-t-0 pt-$m [&:not(:has(+_.as-object-section))]:(pb-$m border-b-1) [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden",
   "as-object-island":
     "border-1 rounded-r2 p-$m [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden",
   "as-object-island-even": "layer-0",

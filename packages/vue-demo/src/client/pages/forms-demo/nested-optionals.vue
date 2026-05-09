@@ -19,9 +19,9 @@ function onSubmit(data: unknown) {
         </p>
         <h1 class="text-h3 m-0">Nested Optional Structs</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
-          Five cascading optional structs. Each "Add &lt;label&gt;" reveals the next level —
-          verify the dashed-island placeholder layout, the section/island chrome alternation, and
-          that focus lands inside the newly opened struct.
+          Five cascading optional structs. Each "Add &lt;label&gt;" reveals the next level — verify
+          the dashed-island placeholder layout, the section/island chrome alternation, and that
+          focus lands inside the newly opened struct.
         </p>
         <RouterLink
           to="/forms-demo"

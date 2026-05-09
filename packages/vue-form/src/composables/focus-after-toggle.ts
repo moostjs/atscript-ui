@@ -2,7 +2,7 @@ import { nextTick, ref, type Ref } from "vue";
 
 // Excludes checkbox/radio/buttons/<summary>: those should be reached via Tab, not auto-focused.
 const FOCUSABLE_SELECTOR = [
-  'input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([disabled])',
+  "input:not([type=hidden]):not([type=checkbox]):not([type=radio]):not([disabled])",
   "select:not([disabled])",
   "textarea:not([disabled])",
 ].join(",");

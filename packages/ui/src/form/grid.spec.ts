@@ -17,12 +17,9 @@ describe("parseColSpan", () => {
     expect(parseColSpan("half")).toBe(6);
     expect(parseColSpan("third")).toBe(4);
   });
-  it.each(["", "0", "13", "100", "abc", "-1", "1.5", "ten", "fourth"])(
-    "rejects %p",
-    (raw) => {
-      expect(parseColSpan(raw)).toBeUndefined();
-    },
-  );
+  it.each(["", "0", "13", "100", "abc", "-1", "1.5", "ten", "fourth"])("rejects %p", (raw) => {
+    expect(parseColSpan(raw)).toBeUndefined();
+  });
   it("returns undefined for undefined input", () => {
     expect(parseColSpan(undefined)).toBeUndefined();
   });
@@ -121,9 +118,7 @@ describe("buildGridClasses", () => {
       buildGridClasses(
         resolveGridSpec({ desktop: "6", narrow: "12" }, { desktop: "2", narrow: "1" }),
       ),
-    ).toBe(
-      "col-span-6 row-span-2 as-narrow:col-span-12 as-narrow:row-span-1",
-    );
+    ).toBe("col-span-6 row-span-2 as-narrow:col-span-12 as-narrow:row-span-1");
   });
 
   it("resolves alias colSpan + accepts explicit narrow=full", () => {

@@ -241,7 +241,8 @@ export const uiAnnotations: TAnnotationsTree = {
             {
               name: "desktop",
               type: "string",
-              description: 'Column span for non-narrow containers. "1"-"12", "full", "half", or "third".',
+              description:
+                'Column span for non-narrow containers. "1"-"12", "full", "half", or "third".',
             },
             {
               name: "narrow",
@@ -265,7 +266,8 @@ export const uiAnnotations: TAnnotationsTree = {
             {
               name: "desktop",
               type: "string",
-              description: 'Row span for non-narrow containers. Numeric string, e.g. "1", "2", "3".',
+              description:
+                'Row span for non-narrow containers. Numeric string, e.g. "1", "2", "3".',
             },
             {
               name: "narrow",
