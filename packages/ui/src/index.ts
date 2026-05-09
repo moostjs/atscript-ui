@@ -144,6 +144,7 @@ export {
   parseColSpan,
   parseRowSpan,
   resolveGridSpec,
+  buildGridClasses,
 } from "./form/grid";
 export type { GridSpec, GridSpanArgs } from "./form/grid";
 

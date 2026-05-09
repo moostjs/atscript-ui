@@ -24,6 +24,8 @@ import {
   createFormData,
   createFormValueResolver,
   createFieldValidator,
+  buildGridClasses,
+  resolveGridSpec,
   EXPECT_MAX_LENGTH,
   META_DEFAULT,
   META_DESCRIPTION,
@@ -48,6 +50,8 @@ import {
   UI_FORM_FN_STYLES,
   UI_FORM_FN_TITLE,
   UI_FORM_FN_VALUE,
+  UI_FORM_GRID_COL_SPAN,
+  UI_FORM_GRID_ROW_SPAN,
   UI_FORM_HIDDEN,
   UI_FORM_HINT,
   UI_FORM_ICON,
@@ -168,6 +172,16 @@ const formAction: TFormAction | undefined = formActionMeta
   : wfActionWithData
     ? { id: wfActionWithData, label: getFieldMeta(prop, META_LABEL) ?? props.field.name }
     : undefined;
+
+// ── Grid footprint (static — annotations are read-once) ─────
+// `as-grid-item` already covers the col=12/row=1 default; only emit
+// classes when the spec deviates from default.
+const gridClasses = buildGridClasses(
+  resolveGridSpec(
+    getFieldMeta(prop, UI_FORM_GRID_COL_SPAN),
+    getFieldMeta(prop, UI_FORM_GRID_ROW_SPAN),
+  ),
+);
 
 // ── Cached validator (created once per field) ────────────────
 const formValidate = createFieldValidator(
@@ -545,11 +559,14 @@ const displayProps = computed(() => ({
 }));
 
 // ── Final component props — merges invariant + display + error state ──
+// Grid classes live alongside the base class object: Vue's class binding
+// flattens an array of {object, string} entries. The string is empty for
+// default-footprint fields, which Vue safely skips.
 const componentProps = computed(() => ({
   ...invariantProps,
   ...displayProps.value,
   error: mergedError.value,
-  class: { ...unwrap(classesBase), error: !!mergedError.value },
+  class: [{ ...unwrap(classesBase), error: !!mergedError.value }, gridClasses],
 }));
 </script>
 

@@ -7,12 +7,14 @@ export interface OptionalFieldsForm {
     @meta.description 'Free-form short text. Description should render muted below the label.'
     @ui.form.placeholder 'Hello'
     @meta.required 'Text is required'
+    @ui.form.grid.colSpan '6'
     text?: string
 
     @meta.label 'Email'
     @meta.description 'We will use this for account notifications and password resets.'
     @ui.form.placeholder 'me@example.com'
     @meta.required 'Email is required'
+    @ui.form.grid.colSpan '6'
     email?: string.email
 
     @meta.label 'Password'

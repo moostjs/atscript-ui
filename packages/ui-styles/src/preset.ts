@@ -110,12 +110,67 @@ const shimmerKeyframesPreset: Preset = {
   ],
 };
 
+/**
+ * Form-grid preset.
+ *
+ * 1. Registers the `as-narrow:` variant — `as-narrow:col-span-12` resolves
+ *    to `@container as-grid (max-width: 480px) { .as-narrow\\:col-span-12
+ *    { ... } }`. The parent grid declares `container-name: as-grid` via
+ *    `as-form-grid`, so the rule activates against the grid's inline size,
+ *    not the viewport. Nested grids re-evaluate independently — an inner
+ *    grid inside a half-width slot stacks automatically when the outer
+ *    grid hits narrow.
+ *
+ * 2. Safelists `col-span-N` / `row-span-N` (and their `as-narrow:` flavours)
+ *    so the dynamic classes `AsField` stamps from
+ *    `@ui.form.grid.colSpan|rowSpan` always appear in the consumer's
+ *    generated CSS — the static extractor cannot see them in source.
+ *    Row-span ceiling is 6, which is plenty for any sane form layout
+ *    and keeps the safelist bloat bounded.
+ */
+const FORM_GRID_NARROW_BREAKPOINT = "480px";
+const FORM_GRID_CONTAINER_NAME = "as-grid";
+
+const FORM_GRID_SAFELIST: string[] = (() => {
+  const list: string[] = [];
+  for (let i = 1; i <= 12; i++) {
+    list.push(`col-span-${i}`, `as-narrow:col-span-${i}`);
+  }
+  for (let i = 1; i <= 6; i++) {
+    list.push(`row-span-${i}`, `as-narrow:row-span-${i}`);
+  }
+  return list;
+})();
+
+const formGridSafelistPreset: Preset = {
+  name: "atscript-ui-form-grid",
+  variants: [
+    {
+      name: "as-narrow",
+      match(matcher) {
+        const prefix = "as-narrow:";
+        if (!matcher.startsWith(prefix)) return undefined;
+        return {
+          matcher: matcher.slice(prefix.length),
+          handle: (input, next) =>
+            next({
+              ...input,
+              parent: `${input.parent ? `${input.parent} $$ ` : ""}@container ${FORM_GRID_CONTAINER_NAME} (max-width: ${FORM_GRID_NARROW_BREAKPOINT})`,
+            }),
+        };
+      },
+    },
+  ],
+  safelist: FORM_GRID_SAFELIST,
+};
+
 function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
   const { baseRadius = "4px", iconOverrides } = options;
 
   return [
     bakedIconsPreset(iconOverrides),
     shimmerKeyframesPreset,
+    formGridSafelistPreset,
     presetVunor({
       baseRadius,
       fingertip: {
