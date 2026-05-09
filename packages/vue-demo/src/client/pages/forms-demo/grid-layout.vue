@@ -38,17 +38,6 @@ function onSubmit(data: unknown) {
         first-validation="on-submit"
         @submit="onSubmit"
       >
-        <template #form.submit="{ disabled, text }">
-          <div class="mt-$l flex justify-end">
-            <button
-              type="submit"
-              :disabled="disabled"
-              class="scope-primary c8-filled h-fingertip-m px-$l rounded-base font-600"
-            >
-              {{ text ?? "Save" }}
-            </button>
-          </div>
-        </template>
       </AsForm>
 
       <details class="mt-$l layer-0 border-1 rounded-r2 p-$m text-callout">
