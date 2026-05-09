@@ -5,11 +5,13 @@ export interface RegisterForm {
     @ui.form.placeholder 'Pick a username'
     @meta.required 'Username is required'
     @expect.minLength 3, 'At least 3 characters'
+    @ui.form.grid.colSpan 'half'
     username: string
 
     @meta.label 'Email'
     @ui.form.placeholder 'you@example.com'
     @meta.required 'Email is required'
+    @ui.form.grid.colSpan 'half'
     email: string.email
 
     @meta.label 'Password'

@@ -10,7 +10,13 @@ export interface ProductsTable {
 
     @meta.label 'Name'
     @db.index.fulltext 'products_search'
+    @ui.form.grid.colSpan 'half'
     name: string
+
+    @meta.label 'SKU'
+    @db.index.unique 'products_sku_idx'
+    @ui.form.grid.colSpan 'half'
+    sku: string
 
     @meta.label 'Description'
     @db.index.fulltext 'products_search'
@@ -18,26 +24,26 @@ export interface ProductsTable {
 
     @meta.label 'Category'
     @db.rel.FK
+    @ui.form.grid.colSpan 'half'
     categoryId: CategoriesTable.id
 
     @meta.label 'Created By'
     @db.rel.FK
+    @ui.form.grid.colSpan 'half'
     createdById: UsersTable.id
-
-    @meta.label 'SKU'
-    @db.index.unique 'products_sku_idx'
-    sku: string
 
     @meta.label 'Price'
     @db.amount.currency 'USD'
     @db.column.precision 10, 2
     @db.column.measure
     @db.index.plain 'products_price_idx'
+    @ui.form.grid.colSpan 'half'
     price: decimal
 
     @meta.label 'Weight'
     @db.unit 'kg'
     @db.column.precision 6, 2
+    @ui.form.grid.colSpan 'half'
     weight?: decimal
 
     @meta.label 'Tags'

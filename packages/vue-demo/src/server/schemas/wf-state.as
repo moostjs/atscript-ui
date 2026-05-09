@@ -13,10 +13,12 @@ export interface WfStateRow extends AsWfStateRecord {
     @meta.label 'Invite Email'
     @wf.store.fromContext 'email'
     @db.index.plain 'email_idx'
+    @ui.form.grid.colSpan 'half'
     inviteEmail?: string
 
     @meta.label 'Invite Role'
     @wf.store.fromContext 'roleName'
     @db.index.plain 'role_idx'
+    @ui.form.grid.colSpan 'half'
     inviteRole?: string
 }

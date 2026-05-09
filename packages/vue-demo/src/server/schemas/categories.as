@@ -6,15 +6,17 @@ export interface CategoriesTable {
 
     @meta.label 'Name'
     @db.index.fulltext 'categories_search'
+    @ui.form.grid.colSpan 'half'
     name: string
+
+    @meta.label 'Slug'
+    @db.index.unique 'categories_slug_idx'
+    @ui.form.grid.colSpan 'half'
+    slug: string
 
     @meta.label 'Parent'
     @db.rel.FK
     parentId?: CategoriesTable.id
-
-    @meta.label 'Slug'
-    @db.index.unique 'categories_slug_idx'
-    slug: string
 
     @meta.label 'Created'
     @db.default.now

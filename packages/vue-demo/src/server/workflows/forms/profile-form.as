@@ -7,11 +7,13 @@ export interface ProfileForm {
     @ui.form.placeholder 'username'
     @meta.required 'Username is required'
     @expect.minLength 2, 'At least 2 characters'
+    @ui.form.grid.colSpan 'half'
     username: string
 
     @meta.label 'Email'
     @ui.form.placeholder 'you@example.com'
     @meta.required 'Email is required'
+    @ui.form.grid.colSpan 'half'
     email: string.email
 }
 

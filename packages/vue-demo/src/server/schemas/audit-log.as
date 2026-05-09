@@ -9,10 +9,12 @@ export interface AuditLogTable {
 
     @meta.label 'Entity'
     @db.index.plain 'audit_entity_idx'
+    @ui.form.grid.colSpan 'half'
     entityType: string
 
     @meta.label 'Entity ID'
     @db.index.plain 'audit_entity_idx'
+    @ui.form.grid.colSpan 'half'
     entityId: number
 
     @meta.label 'Action'

@@ -234,7 +234,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <form @submit.prevent="onSubmit">
+  <form class="as-form" @submit.prevent="onSubmit">
     <slot
       name="form.header"
       :clear-errors="clearErrors"

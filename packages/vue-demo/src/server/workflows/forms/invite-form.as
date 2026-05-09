@@ -6,11 +6,13 @@ export interface InviteStartForm {
     @meta.label 'Email'
     @ui.form.placeholder 'newbie@example.com'
     @meta.required 'Email is required'
+    @ui.form.grid.colSpan 'half'
     email: string.email
 
     @meta.label 'Role'
     @ui.form.placeholder 'Pick a role'
     @db.rel.FK
+    @ui.form.grid.colSpan 'half'
     roleId: RolesTable.id
 }
 
@@ -23,6 +25,7 @@ export interface InviteAcceptForm {
     @ui.form.placeholder 'Pick a username'
     @meta.required 'Username is required'
     @expect.minLength 3, 'At least 3 characters'
+    @ui.form.grid.colSpan 'half'
     username: string
 
     @meta.label 'Password'
@@ -30,5 +33,6 @@ export interface InviteAcceptForm {
     @ui.form.placeholder 'At least 6 characters'
     @meta.required 'Password is required'
     @expect.minLength 6, 'At least 6 characters'
+    @ui.form.grid.colSpan 'half'
     password: string
 }
