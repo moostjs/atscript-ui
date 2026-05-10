@@ -71,7 +71,8 @@ export function useFormUnion(props: TAsComponentProps) {
     handleChange("union-switch", unionPath.value, props.model?.value);
   }
 
-  const optionalEnabled = computed(() => props.model?.value !== undefined);
+  // Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) must render the empty-state placeholder, not the variant picker.
+  const optionalEnabled = computed(() => props.model?.value != null);
 
   return {
     unionField,

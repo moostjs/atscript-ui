@@ -51,7 +51,7 @@ function handleChange(e: Event) {
           {{ label }}
         </label>
         <AsOptionalClear
-          v-if="optional && model.value !== undefined"
+          v-if="optional && model.value != null"
           @clear="onToggleOptional?.(false)"
         />
       </div>

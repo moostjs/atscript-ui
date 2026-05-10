@@ -23,7 +23,8 @@ const path = inject(
   PATH_PREFIX_KEY,
   computed(() => ""),
 );
-const optionalEnabled = computed(() => props.model?.value !== undefined);
+// Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) renders empty-state, not the object body.
+const optionalEnabled = computed(() => props.model?.value != null);
 
 // Cleared on consume so nested children don't re-render the picker.
 const unionCtx = useConsumeUnionContext();

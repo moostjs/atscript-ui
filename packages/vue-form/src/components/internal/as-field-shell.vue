@@ -28,7 +28,8 @@ const inputId = `${prefix}-${id}`;
 const errorId = `${prefix}-${id}-err`;
 const descId = `${prefix}-${id}-desc`;
 
-const optionalEnabled = computed(() => props.model?.value !== undefined);
+// Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) renders empty placeholder.
+const optionalEnabled = computed(() => props.model?.value != null);
 
 // ── Union context (optional — present when rendered inside as-union) ──
 const unionCtx = useConsumeUnionContext();

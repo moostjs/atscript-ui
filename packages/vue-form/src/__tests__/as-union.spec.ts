@@ -67,6 +67,20 @@ describe("AsUnion", () => {
     expect("phone" in (formData.value.backupContact as object)).toBe(true);
   });
 
+  it("optional union with null value renders empty-state placeholder, not the picker", async () => {
+    // Regression: DB-roundtripped null (SQL NULL) must be treated as "unset",
+    // matching undefined. Was broken by `!== undefined` gates in 4 sites.
+    const { OptionalObjectUnionForm } = await import("./fixtures/union-forms.as");
+    const { wrapper } = mountForm(OptionalObjectUnionForm, {
+      initialValue: { backupContact: null },
+    });
+    await nextTick();
+    const btn = wrapper.find(".as-object-empty-add");
+    expect(btn.exists()).toBe(true);
+    expect(btn.text()).toContain("Add Backup contact");
+    expect(wrapper.find(".as-variant-trigger").exists()).toBe(false);
+  });
+
   it("optional with value shows X-icon Unset; clicking it clears the value", async () => {
     const { OptionalObjectUnionForm } = await import("./fixtures/union-forms.as");
     const { wrapper, formData } = mountForm(OptionalObjectUnionForm);
