@@ -81,6 +81,13 @@ pnpm build                                  # rebuild all packages
   - **Never run cleanup loops in dialogs** — if applying a dialog feels like it needs a `for (field of removed) state.removeFieldFilter(field)` loop to "synchronize," that's the root-watcher's job, not the dialog's. The dialog just writes the new model array. Move the reaction to the watcher.
   - **Never call `state.query()` to apply a change** — it's reserved for user-initiated refresh (toolbar refresh button, pull-to-refresh). All "I changed some state, please re-fetch" flows go through watchers.
 
+### Scope and reuse
+
+- **DRY-first.** When the same shape repeats 3+ times, extract a reusable piece. Refactors that consolidate duplication and reduce LOC are welcome — even on tasks scoped to a small fix.
+- **Reuse over invent.** Before introducing a new shortcut, component, or composable, scan for existing primitives that can fit with minor enhancements. Extend the existing one when possible.
+- **Extension naming:** `as-<case>-<concept>` extends `as-<concept>` (e.g. `as-form-description` extends `as-description`). Lets consumers restyle every variant by overriding one shortcut.
+- Don't refactor for vanity (cosmetic renames, splitting tiny helpers nobody else calls) and don't sweep the repo as a side-quest unless asked.
+
 ### Tooling
 
 - **Package manager:** pnpm 10 with workspace catalogs (shared dependency versions in `pnpm-workspace.yaml`)
