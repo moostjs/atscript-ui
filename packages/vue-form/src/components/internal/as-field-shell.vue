@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from "vue";
+import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useAsUnionVariant, formatIndexedLabelParts } from "../../composables/use-form-context";
 import { useAsFocusFirstAfter } from "../../composables/focus-after-toggle";
@@ -7,33 +7,18 @@ import AsNoData from "./as-no-data.vue";
 import AsOptionalClear from "./as-optional-clear.vue";
 import AsVariantPicker from "./as-variant-picker.vue";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// AsFieldShell is internal-only and is always mounted as a child of an
+// AsField default — `inputId`, `errorId`, `descId` are populated by
+// AsField (see as-field.vue § "Stable a11y ids"). No fallbacks needed.
 const props = defineProps<
   TAsComponentProps & {
     fieldClass?: string;
-    idPrefix?: string;
     /** Suppress all default chrome (label/description/clear/placeholder) — for fields with inline headers (e.g. checkbox). */
     chromeless?: boolean;
     /** Skip the empty-state placeholder; render the input slot directly (e.g. radio group, where unchecked = empty). */
     hideEmptyPlaceholder?: boolean;
   }
 >();
-
-// Prefer ids resolved upstream by AsField (one trio per field mount),
-// fall back to a locally-generated id when the shell is composed outside
-// AsField (e.g. directly in tests or custom containers).
-const fallbackId = useId();
-const prefix = props.idPrefix ?? "as-field";
-const inputId = computed(() => props.inputId ?? `${prefix}-${fallbackId}`);
-const errorId = computed(() => props.errorId ?? `${inputId.value}-err`);
-const descId = computed(() => props.descId ?? `${inputId.value}-desc`);
-// `props.ariaDescribedBy` is pre-resolved by AsField; fall back to a local
-// computation so the shell still works when mounted standalone.
-const ariaDescribedBy = computed(
-  () =>
-    props.ariaDescribedBy ??
-    (props.error || props.hint ? errorId.value : props.description ? descId.value : undefined),
-);
 
 // Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) renders empty placeholder.
 const optionalEnabled = computed(() => props.model?.value != null);
@@ -115,14 +100,9 @@ const showEmptyPlaceholder = computed(
     </template>
     <template v-else>
       <div class="as-field-input-row">
-        <slot
-          :input-id="inputId"
-          :error-id="errorId"
-          :desc-id="descId"
-          :aria-described-by="ariaDescribedBy"
-        />
+        <slot :input-id="inputId" :error-id="errorId" :desc-id="descId" />
       </div>
-      <slot name="after-input" :desc-id="descId" :aria-described-by="ariaDescribedBy" />
+      <slot name="after-input" :desc-id="descId" />
       <div
         v-if="error || hint"
         :id="errorId"

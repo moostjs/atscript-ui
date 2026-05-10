@@ -39,8 +39,8 @@ function onSearchInput(e: Event) {
 </script>
 
 <template>
-  <AsFieldShell v-bind="$props" id-prefix="as-ref">
-    <template #default="{ inputId, ariaDescribedBy }">
+  <AsFieldShell v-bind="$props">
+    <template #default="{ inputId }">
       <!-- Fallback: plain text input when no ValueHelpInfo or target meta unreachable -->
       <input
         v-if="!info || !vh || status === 'error'"

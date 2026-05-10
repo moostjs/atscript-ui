@@ -3,7 +3,7 @@ import { computed, useTemplateRef } from "vue";
 import { isObjectField, type FormObjectFieldDef } from "@atscript/ui";
 import type { TAsComponentEmits, TAsComponentProps } from "../types";
 import { useAsUnionVariant } from "../../composables/use-form-context";
-import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
+import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import AsIterator from "../as-iterator.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
@@ -28,18 +28,19 @@ const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.varia
 const level = computed(() => props.level ?? 0);
 const isRoot = computed(() => level.value <= 0);
 
-const store = useAsNestedSectionsStore();
 const collapsibleRef = useTemplateRef<{
-  runAndFocus: (action: () => void, ticks?: number) => void;
+  runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
 
+// Two ticks: one for the optional toggle to render `<details>`, one for the
+// store-driven `open` flip to expand its body so the focus query finds inputs.
+const { composeAction } = useAsOptionalAddFlow({ path: () => props.path });
+
 function handleAddData(): void {
-  // Two ticks: one for the optional toggle to render `<details>`, one for the
-  // store-driven `open` flip to expand its body so the focus query finds inputs.
-  collapsibleRef.value?.runAndFocus(() => {
-    props.onToggleOptional?.(true);
-    if (props.path) store?.setOpen(props.path, true);
-  }, 2);
+  collapsibleRef.value?.runAndFocusNew(
+    composeAction(() => props.onToggleOptional?.(true)),
+    2,
+  );
 }
 </script>
 
@@ -56,7 +57,7 @@ function handleAddData(): void {
     v-else
     ref="collapsibleRef"
     :class="$props.class"
-    :title="title ?? ''"
+    :title="displayTitle"
     :array-index="arrayIndex"
     :description="description"
     :level="level"

@@ -4,9 +4,8 @@ import { computed, provide, ref } from "vue";
 import { useAsUnion } from "../../composables/use-as-union";
 import { useAsDropdown } from "../../composables/use-as-dropdown";
 import { useAsTypeMap } from "../../composables/use-as-type-map";
-import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
+import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import { UNION_CONTEXT_KEY } from "../../composables/internal-keys";
-import { focusNewFocusableAfter } from "../../composables/focus-after-toggle";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -57,17 +56,10 @@ const {
 // Pre-set the variant's section open in the store before it mounts so the
 // variant's AsCollapsible reads `open` on first render — without this, picking
 // a variant lands on a closed section and the focus query finds no inputs.
-const store = useAsNestedSectionsStore();
+const { runAndFocusNew } = useAsOptionalAddFlow({ path: () => props.path });
 
 function pickAndFocus(vi: number) {
-  void focusNewFocusableAfter(
-    () => {
-      changeVariant(vi);
-      if (props.path) store?.setOpen(props.path, true);
-    },
-    rootEl,
-    2,
-  );
+  void runAndFocusNew(rootEl, () => changeVariant(vi), 2);
 }
 
 function handleEmptyClick() {

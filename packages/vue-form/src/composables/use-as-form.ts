@@ -248,12 +248,18 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   );
 
   // ── Form-level resolved props ──────────────────────────────
-  const ctx = computed<TFnScope>(() => ({
-    v: undefined,
-    data: getDomainData(),
-    context: (formContext.value ?? {}) as Record<string, unknown>,
-    entry: undefined,
-  }));
+  // Widen `TFnScope` to `Record<string, unknown>` for the resolver boundary —
+  // ui-fns' DynamicFieldResolver does the same cast internally; the static
+  // resolver ignores the scope entirely.
+  const ctx = computed<Record<string, unknown>>(
+    () =>
+      ({
+        v: undefined,
+        data: getDomainData(),
+        context: (formContext.value ?? {}) as Record<string, unknown>,
+        entry: undefined,
+      }) satisfies TFnScope as unknown as Record<string, unknown>,
+  );
 
   const submitText = computed(
     () =>

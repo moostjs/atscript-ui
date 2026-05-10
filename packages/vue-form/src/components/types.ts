@@ -92,13 +92,13 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   valueHelp?: ValueHelpInfo;
   /** Singular label for array fields (`@ui.form.label.singular`) — used in "Add <singular>" affordances. */
   singularLabel?: string;
-  /** Stable input element id, suitable for `<label :for>`. Co-resolved with `errorId` / `descId` so a11y wiring is consistent. */
-  inputId?: string;
-  /** Stable id for the error/hint container. Pair with `aria-describedby` (already resolved as `ariaDescribedBy`). */
-  errorId?: string;
-  /** Stable id for the description container. */
-  descId?: string;
-  /** Pre-resolved `aria-describedby` target — `errorId` when error/hint is present, else `descId`. */
+  /** Stable input element id, suitable for `<label :for>`. Co-resolved with `errorId` / `descId` so a11y wiring is consistent. Always populated by AsField. */
+  inputId: string;
+  /** Stable id for the error/hint container. Pair with `aria-describedby` (already resolved as `ariaDescribedBy`). Always populated by AsField. */
+  errorId: string;
+  /** Stable id for the description container. Always populated by AsField. */
+  descId: string;
+  /** Pre-resolved `aria-describedby` target — `errorId` when error/hint is present, else `descId`, else `undefined`. */
   ariaDescribedBy?: string;
   /** Literal currency code from `@db.amount.currency 'EUR'`. */
   currencyCode?: string;

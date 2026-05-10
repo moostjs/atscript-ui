@@ -79,6 +79,18 @@ export {
   focusNewFocusableAfter,
 } from "./composables/focus-after-toggle";
 
+// Composables — choreography
+export { useAsOptionalAddFlow } from "./composables/use-as-optional-add-flow";
+export type {
+  UseAsOptionalAddFlowOptions,
+  UseAsOptionalAddFlowReturn,
+} from "./composables/use-as-optional-add-flow";
+export { useAsTriStateCheckbox } from "./composables/use-as-tri-state-checkbox";
+export type {
+  UseAsTriStateCheckboxOptions,
+  UseAsTriStateCheckboxReturn,
+} from "./composables/use-as-tri-state-checkbox";
+
 // Composables — read-only context wrappers
 export { useAsPath } from "./composables/use-as-path";
 export type { UseAsPathReturn } from "./composables/use-as-path";

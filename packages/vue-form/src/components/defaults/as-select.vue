@@ -7,8 +7,8 @@ defineProps<TAsComponentProps>();
 </script>
 
 <template>
-  <AsFieldShell v-bind="$props" id-prefix="as-select">
-    <template #default="{ inputId, ariaDescribedBy }">
+  <AsFieldShell v-bind="$props">
+    <template #default="{ inputId }">
       <span class="as-select-wrap">
         <select
           :id="inputId"

@@ -4,7 +4,7 @@ import { computed, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useAsUnionVariant } from "../../composables/use-form-context";
 import { useAsTuple } from "../../composables/use-as-tuple";
-import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
+import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
@@ -30,15 +30,18 @@ const defaultOpen = !isOptional;
 const collapsibleRef = useTemplateRef<{
   runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
-const store = useAsNestedSectionsStore();
+
+const { composeAction } = useAsOptionalAddFlow({ path: () => props.path });
 
 function handleEnableOptional() {
   // Enable + fill in one go so focus lands on the first editable position.
-  collapsibleRef.value?.runAndFocusNew(() => {
-    props.onToggleOptional?.(true);
-    if (props.path) store?.setOpen(props.path, true);
-    fillMissing();
-  }, 2);
+  collapsibleRef.value?.runAndFocusNew(
+    composeAction(() => {
+      props.onToggleOptional?.(true);
+      fillMissing();
+    }),
+    2,
+  );
 }
 </script>
 
@@ -61,12 +64,7 @@ function handleEnableOptional() {
     </template>
 
     <template v-if="isOptional && optionalEnabled" #actions>
-      <AsArrayClearBtn
-        :optional="true"
-        :label="displayTitle"
-        :disabled="disabled"
-        @clear="clear"
-      />
+      <AsArrayClearBtn :optional="true" :label="displayTitle" :disabled="disabled" @clear="clear" />
     </template>
 
     <template #body>

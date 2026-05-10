@@ -2,9 +2,8 @@
 import type { TAsComponentProps } from "../types";
 
 // `inputId` is supplied per-mount by AsFieldShell's slot so the chrome and
-// the input share the same id. `ariaDescribedBy` overrides the prop coming
-// from `TAsComponentProps` so the slot's locally-computed fallback wins
-// when AsField did not pre-resolve it.
+// the input share the same id. Other a11y wiring (`ariaDescribedBy`, etc.)
+// flows through `v-bind="$props"` from AsField — single source of truth.
 defineProps<
   TAsComponentProps & {
     inputId: string;

@@ -5,7 +5,7 @@ import type { TAsComponentProps } from "../types";
 import { useAsUnionVariant } from "../../composables/use-form-context";
 import { useAsArray } from "../../composables/use-as-array";
 import { useAsDropdown } from "../../composables/use-as-dropdown";
-import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
+import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsItemsChip from "../internal/as-items-chip.vue";
@@ -52,27 +52,30 @@ const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useAsDropdown(
 const collapsibleRef = useTemplateRef<{
   runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
-const store = useAsNestedSectionsStore();
+
+const { composeAction } = useAsOptionalAddFlow({ path: () => props.path });
 
 function fieldFor(idx: number): FormFieldDef {
   return getItemField(idx, singular);
 }
 
 function handleAdd(variantIndex = 0) {
-  collapsibleRef.value?.runAndFocusNew(() => {
-    if (props.path) store?.setOpen(props.path, true);
-    addItem(variantIndex);
-  }, 1);
+  collapsibleRef.value?.runAndFocusNew(
+    composeAction(() => addItem(variantIndex)),
+    1,
+  );
 }
 
 function handleEnableOptional() {
   // Enable + add the first item in one go so the user lands directly on
   // an editable row instead of the empty placeholder.
-  collapsibleRef.value?.runAndFocusNew(() => {
-    props.onToggleOptional?.(true);
-    if (props.path) store?.setOpen(props.path, true);
-    addItem(0);
-  }, 2);
+  collapsibleRef.value?.runAndFocusNew(
+    composeAction(() => {
+      props.onToggleOptional?.(true);
+      addItem(0);
+    }),
+    2,
+  );
 }
 </script>
 

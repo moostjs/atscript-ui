@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { mount, type VueWrapper } from "@vue/test-utils";
+import { mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, reactive, ref } from "vue";
 import { createFormDef, createFormData } from "@atscript/ui";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";

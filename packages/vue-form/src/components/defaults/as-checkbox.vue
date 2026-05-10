@@ -1,46 +1,34 @@
 <script setup lang="ts">
-import { ref, watchEffect } from "vue";
 import type { TAsComponentProps } from "../types";
+import { useAsTriStateCheckbox } from "../../composables/use-as-tri-state-checkbox";
 import AsFieldShell from "../internal/as-field-shell.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
 
 const props = defineProps<TAsComponentProps<boolean | undefined>>();
 
-const inputRef = ref<HTMLInputElement | null>(null);
-
-// HTML5 indeterminate is a property, not an attribute — sync via ref.
-watchEffect(
-  () => {
-    if (inputRef.value) inputRef.value.indeterminate = props.model.value === undefined;
+const { checked, indeterminate, inputRef, onChange } = useAsTriStateCheckbox({
+  modelValue: () => props.model.value,
+  onCommit: (v) => {
+    props.model.value = v;
   },
-  { flush: "post" },
-);
-
-function handleChange(e: Event) {
-  props.model.value = (e.target as HTMLInputElement).checked;
-}
+});
 </script>
 
 <template>
-  <AsFieldShell
-    v-bind="$props"
-    field-class="as-checkbox-field"
-    id-prefix="as-checkbox"
-    :chromeless="true"
-  >
-    <template #default="{ inputId, ariaDescribedBy }">
+  <AsFieldShell v-bind="$props" field-class="as-checkbox-field" :chromeless="true">
+    <template #default="{ inputId }">
       <div class="as-checkbox-row">
         <label
           :for="inputId"
           class="as-field-label"
-          :class="{ 'as-checkbox-indeterminate': model.value === undefined }"
+          :class="{ 'as-checkbox-indeterminate': indeterminate }"
         >
           <input
             ref="inputRef"
             :id="inputId"
             type="checkbox"
-            :checked="model.value === true"
-            @change="handleChange"
+            :checked="checked"
+            @change="onChange"
             @blur="onBlur"
             :name="name"
             :disabled="disabled"
