@@ -82,7 +82,7 @@ export const asFieldShortcuts = defineShortcuts({
     "hover:not-disabled:": clearBtnHover,
   },
   "as-field-remove-btn": {
-    "": `inline-grid place-items-center h-[1.5em] w-[1.5em] ${clearBtnChrome}`,
+    "": `inline-grid place-items-center h-[1.5em] w-[1.5em] text-callout ${clearBtnChrome}`,
     "hover:not-disabled:": clearBtnHover,
   },
   "as-field-remove-btn-icon": "i-as-close text-[1em]",
