@@ -54,6 +54,8 @@ function handleAddData(): void {
 
 <template>
   <template v-if="isRoot">
+    <h2 v-if="title" class="as-form-title">{{ title }}</h2>
+    <p v-if="description" class="as-form-description">{{ description }}</p>
     <div v-if="objectDef" class="as-form-grid" :class="$props.class">
       <AsIterator :def="objectDef" />
     </div>
