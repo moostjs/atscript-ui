@@ -111,6 +111,40 @@ const shimmerKeyframesPreset: Preset = {
 };
 
 /**
+ * No-op marker classes referenced by other shortcuts. UnoCSS warns
+ * `unmatched utility "X" in shortcut "Y"` when a shortcut body references
+ * a utility that doesn't resolve to any rule:
+ * - `group` is registered by `presetWind` only as a *variant* (for
+ *   `group-hover:`, `group-data-*:`, …) — not a static rule. Templates
+ *   that put `group` on a parent so children can use `group-hover:foo`
+ *   compile fine at the call site, but referencing `group` inside a
+ *   `defineShortcuts` body trips the warning.
+ * - `btn-square` is a vunor marker class (`{ '': '' }` empty-body
+ *   shortcut). Empty body resolves to nothing, which UnoCSS reports
+ *   the same way — yet it's load-bearing because `btn`'s
+ *   `[&.btn-square]:` variant relies on it being present in the class
+ *   list.
+ *
+ * Both are intentional: the class needs to exist on the element so a
+ * descendant variant or peer shortcut can target it. We register a
+ * dynamic rule whose body function returns `undefined`, which gives
+ * `parseUtil` a successful match but emits no CSS — the warning's
+ * suppressed and the consumer output stays byte-identical.
+ */
+const markerRulesPreset: Preset = {
+  name: "atscript-ui-marker-rules",
+  rules: [
+    // Body uses a `$$`-prefixed entry — UnoCSS' `clearIdenticalEntries`
+    // strips `$$*` keys before serialising, so `parseUtil` succeeds (the
+    // entry-count check passes inside `resolveCSSResult`) but no CSS is
+    // emitted into the shortcut body or the standalone selector. This
+    // suppresses the warning with zero impact on consumer output.
+    ["group", { $$noop: "" }],
+    ["btn-square", { $$noop: "" }],
+  ],
+};
+
+/**
  * Form-grid preset.
  *
  * 1. Registers the `as-narrow:` variant — `as-narrow:col-span-12` resolves
@@ -170,6 +204,7 @@ function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
   return [
     bakedIconsPreset(iconOverrides),
     shimmerKeyframesPreset,
+    markerRulesPreset,
     formGridSafelistPreset,
     presetVunor({
       baseRadius,
