@@ -3,7 +3,6 @@ import {
   buildDialogConfirmVariants,
   dialogBase,
   dialogCancelBtn,
-  dialogClose,
   dialogConfirmBtn,
   dialogOverlay,
 } from "./_shared";
@@ -25,7 +24,7 @@ export const asActionFormShortcuts = defineShortcuts({
     "inline-flex items-center px-$xs h-[1.5em] rounded-base layer-2 text-callout font-500 whitespace-nowrap",
   "as-action-form-id-more":
     "inline-flex items-center px-$xs h-[1.5em] rounded-base layer-2 text-callout text-current/70 italic whitespace-nowrap",
-  "as-action-form-close": dialogClose,
+  "as-action-form-close": "as-dialog-close",
 
   "as-action-form-body": "flex-1 min-h-0 overflow-y-auto px-$l py-$m flex flex-col gap-$m",
   "as-action-form-description": "m-0 text-body text-current/80 whitespace-pre-line",

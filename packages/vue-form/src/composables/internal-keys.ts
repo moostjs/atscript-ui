@@ -31,6 +31,12 @@ export const ACTION_HANDLER_KEY: InjectionKey<(name: string) => void> =
 export const CHANGE_HANDLER_KEY: InjectionKey<
   (type: TAsChangeType, path: string, value: unknown) => void
 > = Symbol("atui.change-handler");
+// Per-keystroke external-error dismissal hook. Separate from
+// CHANGE_HANDLER_KEY so the public `change` event stays a blur-committed
+// signal while dismissal fires on every input/paste.
+export const DISMISS_EXTERNAL_AT_KEY: InjectionKey<(path: string) => void> = Symbol(
+  "atui.dismiss-external-at",
+);
 
 export const UNION_CONTEXT_KEY: InjectionKey<TAsUnionContext | undefined> =
   Symbol("atui.union-context");

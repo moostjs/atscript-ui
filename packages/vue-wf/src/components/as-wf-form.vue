@@ -131,6 +131,7 @@ function onAction(name: string, data: unknown) {
         :first-validation="firstValidation"
         :components="components"
         :client-factory="clientFactory"
+        :loading="wf.loading.value"
         @submit="onSubmit"
         @action="onAction"
         @unsupported-action="onAction"

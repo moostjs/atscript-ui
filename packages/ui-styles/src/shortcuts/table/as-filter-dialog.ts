@@ -19,10 +19,7 @@ export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-dialog-title": "m-0 text-body-l font-600 tracking-[-0.01em] flex items-center gap-$s",
   "as-filter-dialog-title-label": "text-current/60 font-500",
   "as-filter-dialog-title-value": "text-current font-600",
-  "as-filter-dialog-close": {
-    "": "inline-grid place-items-center size-fingertip-s p-0 border-0 bg-transparent text-current/80 cursor-pointer leading-none rounded-base transition-colors duration-120 text-[1.25em]",
-    "hover:": "layer-2 text-current",
-  },
+  "as-filter-dialog-close": "as-close-btn",
   "as-filter-dialog-body": "px-$l py-$m overflow-y-auto flex-1 flex flex-col gap-$m",
   "as-filter-dialog-tabs": "flex flex-col flex-1 min-h-0",
   "as-filter-dialog-tab-content":

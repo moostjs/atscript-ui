@@ -170,6 +170,67 @@ describe("AsWfForm", () => {
     expect(calls[1]!.body).not.toHaveProperty("input");
   });
 
+  it("paints the AsForm loading overlay while a server round-trip is in flight", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    let resolveSecond!: (v: unknown) => void;
+    let callCount = 0;
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return { ok: true, json: async () => mockInputRequired(LoginForm) };
+        }
+        return new Promise((resolve) => {
+          resolveSecond = resolve;
+        });
+      }),
+    );
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+
+    // First request settled — form rendered, no overlay.
+    expect(wrapper.find("form").exists()).toBe(true);
+    expect(wrapper.find(".as-form-overlay").exists()).toBe(false);
+
+    // Submit kicks off the second (pending) request.
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    // Overlay is up while loading and the form is `inert`.
+    expect(wrapper.find(".as-form-overlay").exists()).toBe(true);
+    expect(wrapper.find("form").attributes("inert")).toBeDefined();
+
+    // Resolve the in-flight request (workflow finishes).
+    resolveSecond({ ok: true, json: async () => mockFinished() });
+    await flushPromises();
+
+    // Form is gone (replaced by finished slot), so the overlay must also be gone.
+    expect(wrapper.find(".as-form-overlay").exists()).toBe(false);
+  });
+
+  it("clears the loading overlay after a server response that keeps the form mounted", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    mockFetch([
+      mockInputRequired(LoginForm),
+      mockInputRequired(LoginForm, { errors: { username: "Required" } }),
+    ]);
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+    expect(wrapper.find(".as-form-overlay").exists()).toBe(false);
+
+    await wrapper.find("form").trigger("submit");
+    await flushPromises();
+
+    // Second response landed — same form, new errors. Overlay must be down.
+    expect(wrapper.find("form").exists()).toBe(true);
+    expect(wrapper.find(".as-form-overlay").exists()).toBe(false);
+    expect(wrapper.find("form").attributes("inert")).toBeUndefined();
+  });
+
   it("classifies @wf.action.withData as data action", async () => {
     const { DataActionForm } = await import("./fixtures/action-form.as");
 

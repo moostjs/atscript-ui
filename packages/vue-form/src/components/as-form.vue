@@ -4,6 +4,7 @@ import {
   ACTION_HANDLER_KEY,
   CHANGE_HANDLER_KEY,
   COMPONENTS_KEY,
+  DISMISS_EXTERNAL_AT_KEY,
   ERRORS_KEY,
   HIDE_ROOT_TITLE_KEY,
   PATH_PREFIX_KEY,
@@ -70,6 +71,15 @@ export interface Props<TF, TC> {
    * the default button — this prop is the explicit way to skip it.
    */
   hideSubmit?: boolean;
+  /**
+   * When true, freezes the form: the body becomes `inert` (blocks pointer
+   * events + keyboard focus) and a loading overlay paints over the entire
+   * form area. Used by `<AsWfForm>` to lock interaction during a server
+   * round-trip so the user can't edit a field whose response is racing in.
+   * Visual is shared with `<AsTable>`'s query overlay via vunor
+   * `inner-loading`.
+   */
+  loading?: boolean;
 }
 
 const props = defineProps<Props<TFormData, TFormContext>>();
@@ -122,10 +132,32 @@ provide(
   COMPONENTS_KEY,
   computed(() => props.components),
 );
-provide(
-  ERRORS_KEY,
-  computed(() => props.errors),
+// Leaf paths the user has locally dismissed by editing them. Reset on
+// every fresh `props.errors` identity so the next server round-trip
+// re-arms its errors. Leaf only — `__form` and ancestor errors stay.
+const dismissedExternal = ref<Set<string>>(new Set());
+// `__form` banner dismissal is a separate intent — user clicks X. Same
+// identity-reset rule, but never cleared by leaf edits.
+const formErrorDismissed = ref(false);
+
+const effectiveExternalErrors = computed<Record<string, string | undefined> | undefined>(() => {
+  const dismissed = dismissedExternal.value;
+  const errs = props.errors;
+  if (!errs || dismissed.size === 0) return errs;
+  const out: Record<string, string | undefined> = {};
+  for (const k in errs) if (!dismissed.has(k)) out[k] = errs[k];
+  return out;
+});
+
+watch(
+  () => props.errors,
+  () => {
+    if (dismissedExternal.value.size > 0) dismissedExternal.value = new Set();
+    if (formErrorDismissed.value) formErrorDismissed.value = false;
+  },
 );
+
+provide(ERRORS_KEY, effectiveExternalErrors);
 provide(HIDE_ROOT_TITLE_KEY, props.hideRootTitle === true);
 
 // Provide the collapsible-section store only if a parent hasn't already
@@ -137,10 +169,12 @@ if (props.clientFactory) {
   provide(CLIENT_FACTORY_KEY, props.clientFactory);
 }
 
-// External (`props.errors`) + internal validation merged into a single
+// External (post-dismissal) + internal validation merged into a single
 // map. Drives both the descendant-count badges and the auto-open watcher.
 const internalErrors = ref<Record<string, string>>({});
-const allErrors = computed(() => mergeErrorMaps(props.errors, internalErrors.value));
+const allErrors = computed(() =>
+  mergeErrorMaps(effectiveExternalErrors.value, internalErrors.value),
+);
 
 const descendantErrorCounts = computed(() => buildDescendantErrorCounts(allErrors.value));
 provide(DESCENDANT_ERROR_COUNTS_KEY, descendantErrorCounts);
@@ -161,6 +195,12 @@ watch(
 
 // `__form` = moost-wf convention for form-level (non-field) errors.
 const formError = computed(() => props.errors?.__form);
+const effectiveFormError = computed(() =>
+  formErrorDismissed.value ? undefined : formError.value,
+);
+function dismissFormError() {
+  formErrorDismissed.value = true;
+}
 
 // ── Form-level resolved props ──────────────────────────────
 const ctx = computed<TFnScope>(() => ({
@@ -214,7 +254,21 @@ function handleAction(name: string) {
 
 provide(ACTION_HANDLER_KEY, handleAction);
 
+// Idempotent: skips when already dismissed so per-keystroke calls from
+// the leaf model watcher don't allocate a fresh Set on every input.
+function dismissExternalAt(path: string) {
+  if (!path) return;
+  if (dismissedExternal.value.has(path)) return;
+  const next = new Set(dismissedExternal.value);
+  next.add(path);
+  dismissedExternal.value = next;
+}
+provide(DISMISS_EXTERNAL_AT_KEY, dismissExternalAt);
+
 function handleChange(type: TAsChangeType, path: string, value: unknown) {
+  // Covers programmatic value commits (union-switch, array-add) that
+  // bypass the leaf model watcher's per-keystroke dismissal.
+  dismissExternalAt(path);
   // Field-local watches clear scalar errors on direct edits, but a parent
   // struct/array error never sees a model identity change when a child
   // mutates — so drop the changed path + ancestors here. Next submit
@@ -257,7 +311,7 @@ function onSubmit() {
 </script>
 
 <template>
-  <form class="as-form" @submit.prevent="onSubmit">
+  <form class="as-form" :inert="loading" @submit.prevent="onSubmit">
     <slot
       name="form.header"
       :clear-errors="clearErrors"
@@ -272,6 +326,8 @@ function onSubmit() {
       :clear-errors="clearErrors"
       :reset="reset"
       :set-errors="setErrors"
+      :formContext="formContext"
+      :disabled="_submitDisabled"
     ></slot>
 
     <AsField :field="def.rootField" />
@@ -285,8 +341,18 @@ function onSubmit() {
       :formContext="formContext"
     ></slot>
 
-    <slot v-if="formError" name="form.error" :message="formError">
-      <div role="alert" class="as-form-error">{{ formError }}</div>
+    <slot
+      v-if="effectiveFormError"
+      name="form.error"
+      :message="effectiveFormError"
+      :dismiss="dismissFormError"
+    >
+      <div role="alert" class="as-form-error">
+        <span class="as-form-error-message">{{ effectiveFormError }}</span>
+        <button type="button" class="as-form-error-dismiss" @click="dismissFormError">
+          Dismiss
+        </button>
+      </div>
     </slot>
 
     <slot
@@ -309,5 +375,10 @@ function onSubmit() {
       :set-errors="setErrors"
       :formContext="formContext"
     ></slot>
+    <div v-if="loading" class="as-form-overlay">
+      <slot name="form.loading">
+        <span class="as-form-overlay-icon" aria-hidden="true" />
+      </slot>
+    </div>
   </form>
 </template>

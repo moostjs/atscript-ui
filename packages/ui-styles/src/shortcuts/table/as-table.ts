@@ -96,8 +96,8 @@ export const asTableShortcuts = defineShortcuts({
   "as-table-loading": "flex items-center justify-center p-$xl text-current/60 whitespace-normal",
   "as-table-error":
     "scope-error flex items-center justify-center p-$xl text-current-hl whitespace-normal",
-  "as-table-query-overlay": "inner-loading rounded-r2 text-current-hl pointer-events-none",
-  "as-table-query-overlay-icon": "i-as-loading text-[3em]",
+  "as-table-query-overlay": "as-overlay",
+  "as-table-query-overlay-icon": "as-overlay-icon",
 
   "as-vh-empty": "flex flex-col items-center justify-center gap-$m py-$l px-$m text-center min-w-0",
   "as-vh-empty-icon":

@@ -23,14 +23,6 @@ export const searchIcon =
 
 export const menuItemIconHl = "[&_.as-column-menu-item-icon]:text-current-hl";
 
-export const dialogClose = {
-  "":
-    "inline-grid place-items-center size-fingertip-s p-0 ml-auto border-0 " +
-    "bg-transparent text-current/80 cursor-pointer leading-none rounded-base " +
-    "flex-shrink-0 transition-colors duration-120 text-[1.25em]",
-  "hover:": "layer-2 text-current",
-};
-
 // Cancel/confirm-button base recipes shared by `as-confirm-dialog-*` and
 // `as-action-form-*`. Confirm chrome paints `c8-filled` (bg + contrasting
 // fg derived by vunor) — never override text-color or the contrast disappears

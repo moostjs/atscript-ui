@@ -68,6 +68,7 @@ import {
   ACTION_HANDLER_KEY,
   CHANGE_HANDLER_KEY,
   COMPONENTS_KEY,
+  DISMISS_EXTERNAL_AT_KEY,
   ERRORS_KEY,
   HIDE_ROOT_TITLE_KEY,
   LEVEL_KEY,
@@ -92,6 +93,7 @@ const errors = inject(ERRORS_KEY);
 const hideRootTitle = inject(HIDE_ROOT_TITLE_KEY, false);
 const handleAction = inject(ACTION_HANDLER_KEY, () => {});
 const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
+const dismissExternalAt = inject(DISMISS_EXTERNAL_AT_KEY, () => {});
 
 // ── Form context ────────────────────────────────────────────
 const { rootFormData, formContext, joinPath, buildPath, getByPath, setByPath, buildScope } =
@@ -500,6 +502,16 @@ const onBlur =
           handleChange("update", absolutePath.value, current);
         }
       };
+
+// Leaf-only per-keystroke external-error dismissal. Structured/union
+// containers reach `dismissExternalAt` through `handleChange` instead.
+if (!isStructured && !isUnion) {
+  watch(model, (value, prev) => {
+    if (value === prev) return;
+    const path = absolutePath.value;
+    if (path) dismissExternalAt(path);
+  });
+}
 
 // Merged error: external errors map > prop > form composable error
 const mergedError = computed(() => {

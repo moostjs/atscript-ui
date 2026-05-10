@@ -96,7 +96,7 @@ describe("AsForm", () => {
     });
     const banner = wrapper.find('[role="alert"].as-form-error');
     expect(banner.exists()).toBe(true);
-    expect(banner.text()).toBe("Account is suspended");
+    expect(banner.find(".as-form-error-message").text()).toBe("Account is suspended");
     // Banner sits between the form fields and the submit button.
     const html = wrapper.html();
     const errorIdx = html.indexOf('class="as-form-error"');
