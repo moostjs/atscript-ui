@@ -50,6 +50,7 @@ function handleChange(e: Event) {
           />
           {{ label }}
         </label>
+        <!-- Treat both undefined and null as 'unset' — DB-roundtripped null otherwise renders as "set". -->
         <AsOptionalClear
           v-if="optional && model.value != null"
           @clear="onToggleOptional?.(false)"
