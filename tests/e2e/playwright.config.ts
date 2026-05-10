@@ -60,7 +60,7 @@ export default defineConfig({
       // (e.g. `a-cells/`, `b-filtering/`). Phase-2 batch agents drop their
       // specs into a new dir matching this regex; no config edit required.
       name: "tests",
-      testMatch: /(smoke|[a-l]-[a-z][a-z-]*)\/.*\.spec\.ts$/,
+      testMatch: /(smoke|[a-z]-[a-z][a-z-]*)\/.*\.spec\.ts$/,
       dependencies: ["setup"],
       use: {
         storageState: resolve(E2E_ROOT, "../../playwright/.auth/admin.json"),
