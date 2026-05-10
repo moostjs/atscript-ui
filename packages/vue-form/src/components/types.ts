@@ -1,4 +1,10 @@
-import type { FormFieldDef, FormUnionVariant, TFormAction, TFormEntryOptions } from "@atscript/ui";
+import type {
+  FormFieldDef,
+  FormUnionVariant,
+  TFormAction,
+  TFormEntryOptions,
+  ValueHelpInfo,
+} from "@atscript/ui";
 import type { Component, Ref } from "vue";
 
 /**
@@ -78,6 +84,51 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   removeLabel?: string;
   /** Zero-based index when rendered as a direct array item. `undefined` otherwise. */
   arrayIndex?: number;
+  /** Absolute dotted path to this field inside the form data. Empty string at the root. */
+  path: string;
+  /** Pre-formatted display title — title (or name) capitalized + optional ` #N` suffix. Always populated by AsField. */
+  displayTitle: string;
+  /** Resolved value-help descriptor for FK ref fields (`@db.rel.FK` → `@db.http.path`). */
+  valueHelp?: ValueHelpInfo;
+  /** Singular label for array fields (`@ui.form.label.singular`) — used in "Add <singular>" affordances. */
+  singularLabel?: string;
+  /** Stable input element id, suitable for `<label :for>`. Co-resolved with `errorId` / `descId` so a11y wiring is consistent. */
+  inputId?: string;
+  /** Stable id for the error/hint container. Pair with `aria-describedby` (already resolved as `ariaDescribedBy`). */
+  errorId?: string;
+  /** Stable id for the description container. */
+  descId?: string;
+  /** Pre-resolved `aria-describedby` target — `errorId` when error/hint is present, else `descId`. */
+  ariaDescribedBy?: string;
+  /** Literal currency code from `@db.amount.currency 'EUR'`. */
+  currencyCode?: string;
+  /** Sibling-field path from `@db.amount.currency.ref 'fieldName'` — read with `useAsData().siblingValue`. */
+  currencyRefField?: string;
+  /** Literal unit-of-measure from `@db.unit 'kg'`. */
+  unitCode?: string;
+  /** Sibling-field path from `@db.unit.ref 'fieldName'` — read with `useAsData().siblingValue`. */
+  unitRefField?: string;
+  /** Decimal scale (fraction digits) from the second arg of `@db.column.precision precision, scale`. */
+  precisionScale?: number;
+}
+
+/**
+ * Public emits contract for custom field components used with `AsForm` /
+ * `AsField`. Type your `defineEmits` against this interface so the
+ * action-button surface stays compatible with the framework.
+ *
+ * `_V` is reserved for forward-compat with value-typed emits in Phase 4
+ * (e.g. `(e: 'change-value', value: _V)`); the underscore prefix marks it
+ * as deliberately unused under both biome and eslint conventions.
+ *
+ * @typeParam _V - The field value type (reserved for future emits)
+ */
+export interface TAsComponentEmits<_V = unknown> {
+  /**
+   * Action invocation — emitted by phantom action buttons. The form
+   * routes the named action through its `@action` handler.
+   */
+  (e: "action", name: string): void;
 }
 
 /**

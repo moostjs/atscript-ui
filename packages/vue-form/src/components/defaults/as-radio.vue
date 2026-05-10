@@ -16,14 +16,14 @@ defineProps<TAsComponentProps>();
     <template #header="{ inputId }">
       <span :id="inputId" class="as-field-label">{{ label }}</span>
     </template>
-    <template #default="{ inputId, errorId, descId }">
+    <template #default="{ inputId, ariaDescribedBy }">
       <div
         class="as-radio-group"
         role="radiogroup"
         :aria-labelledby="inputId"
         :aria-required="required || undefined"
         :aria-invalid="!!error || undefined"
-        :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+        :aria-describedby="ariaDescribedBy"
       >
         <label v-for="opt in options" :key="optKey(opt)">
           <input

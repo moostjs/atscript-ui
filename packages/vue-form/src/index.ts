@@ -22,6 +22,7 @@ export {
 export type {
   TAsBaseComponentProps,
   TAsComponentProps,
+  TAsComponentEmits,
   TAsTypeComponents,
   TAsUnionContext,
   TAsChangeType,

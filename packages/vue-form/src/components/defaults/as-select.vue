@@ -8,7 +8,7 @@ defineProps<TAsComponentProps>();
 
 <template>
   <AsFieldShell v-bind="$props" id-prefix="as-select">
-    <template #default="{ inputId, errorId, descId }">
+    <template #default="{ inputId, ariaDescribedBy }">
       <span class="as-select-wrap">
         <select
           :id="inputId"
@@ -20,7 +20,7 @@ defineProps<TAsComponentProps>();
           :readonly="readonly"
           :aria-required="required || undefined"
           :aria-invalid="!!error || undefined"
-          :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+          :aria-describedby="ariaDescribedBy"
           :aria-label="!label ? name : undefined"
         >
           <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>

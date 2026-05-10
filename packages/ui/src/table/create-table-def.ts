@@ -7,11 +7,6 @@ import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typesc
 import type { TDbActionInfo } from "@atscript/db-client";
 import { getFieldMeta } from "../shared/field-resolver";
 import {
-  DB_AMOUNT_CURRENCY,
-  DB_AMOUNT_CURRENCY_REF,
-  DB_COLUMN_PRECISION,
-  DB_UNIT,
-  DB_UNIT_REF,
   EXPECT_MAX_LENGTH,
   META_LABEL,
   UI_TABLE_COMPONENT,
@@ -21,6 +16,7 @@ import {
   UI_TABLE_WIDTH,
   UI_TYPE,
 } from "../shared/annotation-keys";
+import { extractMeasurement } from "../form/measurement";
 import { extractLiteralOptions } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
 import type { ColumnDef, MetaResponse, TableActionsModel, TableDef } from "./types";
@@ -72,9 +68,6 @@ export function createTableDef(
     const tableType = getFieldMeta(prop, UI_TABLE_TYPE) as string | undefined;
     const sharedType = getFieldMeta(prop, UI_TYPE) as string | undefined;
     const tableComponent = getFieldMeta(prop, UI_TABLE_COMPONENT) as string | undefined;
-    const precisionMeta = getFieldMeta(prop, DB_COLUMN_PRECISION) as
-      | { precision: number; scale: number }
-      | undefined;
 
     columns.push({
       path,
@@ -90,11 +83,7 @@ export function createTableDef(
       order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
       options,
       valueHelpInfo,
-      currencyCode: getFieldMeta(prop, DB_AMOUNT_CURRENCY) as string | undefined,
-      currencyRefField: getFieldMeta(prop, DB_AMOUNT_CURRENCY_REF) as string | undefined,
-      unitCode: getFieldMeta(prop, DB_UNIT) as string | undefined,
-      unitRefField: getFieldMeta(prop, DB_UNIT_REF) as string | undefined,
-      precisionScale: precisionMeta?.scale,
+      ...extractMeasurement(prop),
     });
   }
 

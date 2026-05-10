@@ -8,17 +8,16 @@ const props = defineProps<TAsComponentProps>();
 
 <template>
   <AsFieldShell v-bind="$props" id-prefix="as-input">
-    <template #default="{ inputId, errorId, descId }">
+    <template #default="{ inputId, ariaDescribedBy }">
       <div v-if="icon" class="as-input-with-icon">
         <span :class="['as-input-icon', icon]" aria-hidden="true" />
-        <AsInputControl v-bind="props" :input-id="inputId" :error-id="errorId" :desc-id="descId" />
+        <AsInputControl v-bind="props" :input-id="inputId" :aria-described-by="ariaDescribedBy" />
       </div>
       <AsInputControl
         v-else
         v-bind="props"
         :input-id="inputId"
-        :error-id="errorId"
-        :desc-id="descId"
+        :aria-described-by="ariaDescribedBy"
       />
     </template>
   </AsFieldShell>

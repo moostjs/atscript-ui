@@ -20,12 +20,15 @@ import {
   resolveFieldProp,
   resolveOptions,
   resolveAttrs,
+  resolveSingularLabel,
   getFieldMeta,
   createFormData,
   createFormValueResolver,
   createFieldValidator,
   buildGridClasses,
   resolveGridSpec,
+  extractMeasurement,
+  extractValueHelp,
   EXPECT_MAX_LENGTH,
   META_DEFAULT,
   META_DESCRIPTION,
@@ -63,7 +66,17 @@ import {
   type TFormAction,
 } from "@atscript/ui";
 import { buildFieldEntry } from "@atscript/ui-fns";
-import { computed, inject, isRef, provide, watch, type Component, type ComputedRef } from "vue";
+import {
+  computed,
+  inject,
+  isRef,
+  provide,
+  useId,
+  watch,
+  type Component,
+  type ComputedRef,
+} from "vue";
+import { formatIndexedLabel } from "../composables/use-form-context";
 import {
   ACTION_HANDLER_KEY,
   CHANGE_HANDLER_KEY,
@@ -162,6 +175,27 @@ const autocomplete = getFieldMeta(prop, UI_FORM_AUTOCOMPLETE);
 const maxLength = getFieldMeta(prop, EXPECT_MAX_LENGTH)?.length;
 const componentName = getFieldMeta(prop, UI_FORM_COMPONENT);
 const icon = getFieldMeta(prop, UI_FORM_ICON);
+
+// ── Resolved annotation reads — done once at setup, surfaced to defaults ──
+// Defaults read these as plain props instead of touching `field.prop`,
+// so a custom swap component does not need to know about annotations.
+const valueHelp = extractValueHelp(prop);
+const measurement = extractMeasurement(prop);
+// `@ui.form.label.singular` lives on the array prop; fall back to the
+// item prop, then to "item". The fallback chain matches AsArray's prior
+// behaviour — default lookup yields "item" only when both lookups miss.
+let singularLabel: string | undefined;
+if (isArrayField(props.field)) {
+  const fromArray = resolveSingularLabel(prop);
+  singularLabel =
+    fromArray !== "item" ? fromArray : resolveSingularLabel(props.field.itemField.prop);
+}
+
+// ── Stable a11y ids (one trio per AsField mount, shared with defaults) ──
+const _id = useId();
+const inputId = `as-field-${_id}`;
+const errorId = `${inputId}-err`;
+const descId = `${inputId}-desc`;
 const formActionMeta = getFieldMeta(prop, UI_FORM_ACTION);
 const wfActionWithData = getFieldMeta(prop, WF_ACTION_WITH_DATA) as string | undefined;
 const formAction: TFormAction | undefined = formActionMeta
@@ -543,43 +577,68 @@ const invariantProps = {
   autocomplete,
   icon,
   level: isStructured || isUnion ? myLevel : undefined,
+  // Resolved-once props: annotation reads + path/ids
+  path: absolutePath.value,
+  valueHelp,
+  singularLabel,
+  currencyCode: measurement.currencyCode,
+  currencyRefField: measurement.currencyRefField,
+  unitCode: measurement.unitCode,
+  unitRefField: measurement.unitRefField,
+  precisionScale: measurement.precisionScale,
+  inputId,
+  errorId,
+  descId,
 };
 
 // ── Display props — cached separately from error state ────────
 // For allStatic fields this computed has zero reactive deps (evaluated
 // once and cached). Error-only changes skip re-evaluating all unwrap() calls.
-const displayProps = computed(() => ({
-  value: unwrap(phantomValue),
-  label: unwrap(label),
-  description: unwrap(description),
-  hint: unwrap(hint),
-  placeholder: unwrap(placeholder),
-  style: unwrap(styles),
-  optional: unwrap(optional),
-  onToggleOptional: unwrap(optional) ? toggleOptional : undefined,
-  required: required !== undefined ? unwrap(required) : undefined,
-  disabled: unwrap(disabled),
-  hidden: unwrap(hidden),
-  readonly: unwrap(readonly),
-  options: unwrap(options),
-  title: myLevel === 0 && hideRootTitle ? undefined : unwrap(title),
-  onRemove: props.onRemove,
-  canRemove: props.canRemove,
-  removeLabel: props.removeLabel,
-  arrayIndex: props.arrayIndex,
-  ...unwrap(attrs),
-}));
+const displayProps = computed(() => {
+  const titleValue = myLevel === 0 && hideRootTitle ? undefined : unwrap(title);
+  return {
+    value: unwrap(phantomValue),
+    label: unwrap(label),
+    description: unwrap(description),
+    hint: unwrap(hint),
+    placeholder: unwrap(placeholder),
+    style: unwrap(styles),
+    optional: unwrap(optional),
+    onToggleOptional: unwrap(optional) ? toggleOptional : undefined,
+    required: required !== undefined ? unwrap(required) : undefined,
+    disabled: unwrap(disabled),
+    hidden: unwrap(hidden),
+    readonly: unwrap(readonly),
+    options: unwrap(options),
+    title: titleValue,
+    // Pre-formatted indexed title (`Item #1`) — defaults render this directly.
+    displayTitle: formatIndexedLabel(titleValue, props.arrayIndex) ?? props.field.name,
+    onRemove: props.onRemove,
+    canRemove: props.canRemove,
+    removeLabel: props.removeLabel,
+    arrayIndex: props.arrayIndex,
+    ...unwrap(attrs),
+  };
+});
 
 // ── Final component props — merges invariant + display + error state ──
 // Grid classes live alongside the base class object: Vue's class binding
 // flattens an array of {object, string} entries. The string is empty for
 // default-footprint fields, which Vue safely skips.
-const componentProps = computed(() => ({
-  ...invariantProps,
-  ...displayProps.value,
-  error: mergedError.value,
-  class: [{ ...unwrap(classesBase), error: !!mergedError.value }, gridClasses],
-}));
+const componentProps = computed(() => {
+  const dp = displayProps.value;
+  const err = mergedError.value;
+  // `aria-describedby` resolves against the same id trio that defaults
+  // wire onto their inputs — error/hint share `errorId`, description owns `descId`.
+  const ariaDescribedBy = err || dp.hint ? errorId : dp.description ? descId : undefined;
+  return {
+    ...invariantProps,
+    ...dp,
+    error: err,
+    ariaDescribedBy,
+    class: [{ ...unwrap(classesBase), error: !!err }, gridClasses],
+  };
+});
 </script>
 
 <template>

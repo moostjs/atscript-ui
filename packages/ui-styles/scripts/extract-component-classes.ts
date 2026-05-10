@@ -269,7 +269,16 @@ async function main() {
         new Error(`[extract-classes] Decision 17 violation in ${rel}: ${msg}`);
 
       const src = fs.readFileSync(file, "utf8");
+
+      // Decision 17 governs how helpers wire defaults — it has no opinion on
+      // factories that don't reference any default component (e.g. a form-def
+      // builder that returns reactive state). Skip files whose body contains
+      // zero `As*` identifiers; they're not wiring defaults.
       const m = src.match(HELPER_IMPORT_RE);
+      const bodyAfterImports = m ? src.replace(HELPER_IMPORT_RE, "") : src;
+      const referenced = new Set(bodyAfterImports.match(PASCAL_AS_RE) ?? []);
+      if (referenced.size === 0 && !m) continue;
+
       if (!m) {
         throw violation('missing canonical `import { ... } from "../components/defaults"` line.');
       }
@@ -293,8 +302,6 @@ async function main() {
       const importedSet = new Set(importedIds);
       // Sanity: every As* identifier referenced in the file body must appear
       // in the canonical import set.
-      const bodyAfterImports = src.replace(HELPER_IMPORT_RE, "");
-      const referenced = new Set(bodyAfterImports.match(PASCAL_AS_RE) ?? []);
       for (const ref of referenced) {
         if (!importedSet.has(ref)) {
           throw violation(

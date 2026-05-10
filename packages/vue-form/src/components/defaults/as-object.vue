@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, inject, useTemplateRef } from "vue";
+import { computed, useTemplateRef } from "vue";
 import { isObjectField, type FormObjectFieldDef } from "@atscript/ui";
-import type { TAsComponentProps } from "../types";
-import { useAsUnionVariant, formatIndexedLabel } from "../../composables/use-form-context";
-import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
+import type { TAsComponentEmits, TAsComponentProps } from "../types";
+import { useAsUnionVariant } from "../../composables/use-form-context";
 import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
 import AsIterator from "../as-iterator.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
@@ -13,16 +12,12 @@ import AsVariantPicker from "../internal/as-variant-picker.vue";
 const props = defineProps<TAsComponentProps>();
 // Declared so Vue doesn't warn about the framework-bound `@action` listener
 // reaching this component's fragment template.
-defineEmits<{ (e: "action", name: string): void }>();
+defineEmits<TAsComponentEmits>();
 
 const objectDef = computed(() =>
   isObjectField(props.field!) ? (props.field as FormObjectFieldDef).objectDef : undefined,
 );
 
-const path = inject(
-  PATH_PREFIX_KEY,
-  computed(() => ""),
-);
 // Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) renders empty-state, not the object body.
 const optionalEnabled = computed(() => props.model?.value != null);
 
@@ -32,10 +27,6 @@ const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.varia
 
 const level = computed(() => props.level ?? 0);
 const isRoot = computed(() => level.value <= 0);
-
-const displayTitle = computed(
-  () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
-);
 
 const store = useAsNestedSectionsStore();
 const collapsibleRef = useTemplateRef<{
@@ -47,7 +38,7 @@ function handleAddData(): void {
   // store-driven `open` flip to expand its body so the focus query finds inputs.
   collapsibleRef.value?.runAndFocus(() => {
     props.onToggleOptional?.(true);
-    if (path.value) store?.setOpen(path.value, true);
+    if (props.path) store?.setOpen(props.path, true);
   }, 2);
 }
 </script>
@@ -65,7 +56,7 @@ function handleAddData(): void {
     v-else
     ref="collapsibleRef"
     :class="$props.class"
-    :title="title"
+    :title="title ?? ''"
     :array-index="arrayIndex"
     :description="description"
     :level="level"

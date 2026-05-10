@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import type { TAsComponentProps } from "../types";
 
+// `inputId` is supplied per-mount by AsFieldShell's slot so the chrome and
+// the input share the same id. `ariaDescribedBy` overrides the prop coming
+// from `TAsComponentProps` so the slot's locally-computed fallback wins
+// when AsField did not pre-resolve it.
 defineProps<
   TAsComponentProps & {
     inputId: string;
-    errorId: string;
-    descId: string;
   }
 >();
 </script>
@@ -23,7 +25,7 @@ defineProps<
     :maxlength="maxLength"
     :aria-required="required || undefined"
     :aria-invalid="!!error || undefined"
-    :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+    :aria-describedby="ariaDescribedBy"
     :aria-label="!label ? name : undefined"
   />
   <input
@@ -39,7 +41,7 @@ defineProps<
     :readonly="readonly"
     :aria-required="required || undefined"
     :aria-invalid="!!error || undefined"
-    :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+    :aria-describedby="ariaDescribedBy"
     :aria-label="!label ? name : undefined"
   />
 </template>

@@ -28,7 +28,7 @@ function handleChange(e: Event) {
     id-prefix="as-checkbox"
     :chromeless="true"
   >
-    <template #default="{ inputId, errorId, descId }">
+    <template #default="{ inputId, ariaDescribedBy }">
       <div class="as-checkbox-row">
         <label
           :for="inputId"
@@ -46,7 +46,7 @@ function handleChange(e: Event) {
             :disabled="disabled"
             :readonly="readonly"
             :aria-invalid="!!error || undefined"
-            :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+            :aria-describedby="ariaDescribedBy"
           />
           {{ label }}
         </label>

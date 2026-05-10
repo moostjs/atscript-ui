@@ -19,11 +19,21 @@ const props = defineProps<
   }
 >();
 
-const id = useId();
+// Prefer ids resolved upstream by AsField (one trio per field mount),
+// fall back to a locally-generated id when the shell is composed outside
+// AsField (e.g. directly in tests or custom containers).
+const fallbackId = useId();
 const prefix = props.idPrefix ?? "as-field";
-const inputId = `${prefix}-${id}`;
-const errorId = `${prefix}-${id}-err`;
-const descId = `${prefix}-${id}-desc`;
+const inputId = computed(() => props.inputId ?? `${prefix}-${fallbackId}`);
+const errorId = computed(() => props.errorId ?? `${inputId.value}-err`);
+const descId = computed(() => props.descId ?? `${inputId.value}-desc`);
+// `props.ariaDescribedBy` is pre-resolved by AsField; fall back to a local
+// computation so the shell still works when mounted standalone.
+const ariaDescribedBy = computed(
+  () =>
+    props.ariaDescribedBy ??
+    (props.error || props.hint ? errorId.value : props.description ? descId.value : undefined),
+);
 
 // Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) renders empty placeholder.
 const optionalEnabled = computed(() => props.model?.value != null);
@@ -105,9 +115,14 @@ const showEmptyPlaceholder = computed(
     </template>
     <template v-else>
       <div class="as-field-input-row">
-        <slot :input-id="inputId" :error-id="errorId" :desc-id="descId" />
+        <slot
+          :input-id="inputId"
+          :error-id="errorId"
+          :desc-id="descId"
+          :aria-described-by="ariaDescribedBy"
+        />
       </div>
-      <slot name="after-input" :desc-id="descId" />
+      <slot name="after-input" :desc-id="descId" :aria-described-by="ariaDescribedBy" />
       <div
         v-if="error || hint"
         :id="errorId"

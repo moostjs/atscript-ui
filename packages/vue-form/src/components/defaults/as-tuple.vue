@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import type { FormTupleFieldDef } from "@atscript/ui";
-import { computed, inject, useTemplateRef } from "vue";
+import { computed, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
-import { useAsUnionVariant, formatIndexedLabel } from "../../composables/use-form-context";
+import { useAsUnionVariant } from "../../composables/use-form-context";
 import { useAsTuple } from "../../composables/use-as-tuple";
 import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
-import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
 import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
@@ -19,21 +18,12 @@ const tupleField = props.field as FormTupleFieldDef;
 const unionCtx = useAsUnionVariant();
 const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.variants.length > 1);
 
-const path = inject(
-  PATH_PREFIX_KEY,
-  computed(() => ""),
-);
-
 const optionalEnabled = computed(() => Array.isArray(props.model?.value));
 const disabled = computed(() => props.disabled ?? false);
 
 const { itemFields, positionLabeled, isOptional, clear, fillMissing } = useAsTuple(tupleField);
 
 const level = computed(() => props.level ?? 0);
-
-const displayTitle = computed(
-  () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
-);
 
 const defaultOpen = !isOptional;
 
@@ -46,7 +36,7 @@ function handleEnableOptional() {
   // Enable + fill in one go so focus lands on the first editable position.
   collapsibleRef.value?.runAndFocusNew(() => {
     props.onToggleOptional?.(true);
-    if (path.value) store?.setOpen(path.value, true);
+    if (props.path) store?.setOpen(props.path, true);
     fillMissing();
   }, 2);
 }
@@ -71,7 +61,12 @@ function handleEnableOptional() {
     </template>
 
     <template v-if="isOptional && optionalEnabled" #actions>
-      <AsArrayClearBtn :optional="true" :label="displayTitle" :disabled="disabled" @clear="clear" />
+      <AsArrayClearBtn
+        :optional="true"
+        :label="displayTitle"
+        :disabled="disabled"
+        @clear="clear"
+      />
     </template>
 
     <template #body>

@@ -152,6 +152,10 @@ export type { GridSpec, GridSpanArgs } from "./form/grid";
 // ── Form label helpers (framework-agnostic) ─────────────────
 export { resolveSingularLabel } from "./form/labels";
 
+// ── Measurement annotations (framework-agnostic) ────────────
+export { extractMeasurement } from "./form/measurement";
+export type { MeasurementInfo } from "./form/measurement";
+
 // ── Table types ─────────────────────────────────────────────
 export type {
   TableDef,

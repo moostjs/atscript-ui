@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { extractValueHelp } from "@atscript/ui";
 import {
   ComboboxAnchor,
   ComboboxCancel,
@@ -17,7 +16,7 @@ import AsFieldShell from "../internal/as-field-shell.vue";
 
 const props = defineProps<TAsComponentProps>();
 
-const info = props.field ? extractValueHelp(props.field.prop) : undefined;
+const info = props.valueHelp;
 
 const vh = info
   ? useAsValueHelp({
@@ -41,7 +40,7 @@ function onSearchInput(e: Event) {
 
 <template>
   <AsFieldShell v-bind="$props" id-prefix="as-ref">
-    <template #default="{ inputId, errorId, descId }">
+    <template #default="{ inputId, ariaDescribedBy }">
       <!-- Fallback: plain text input when no ValueHelpInfo or target meta unreachable -->
       <input
         v-if="!info || !vh || status === 'error'"
@@ -54,7 +53,7 @@ function onSearchInput(e: Event) {
         :readonly="readonly"
         :aria-required="required || undefined"
         :aria-invalid="!!error || undefined"
-        :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+        :aria-describedby="ariaDescribedBy"
         :aria-label="!label ? name : undefined"
         @blur="onBlur"
       />
@@ -81,7 +80,7 @@ function onSearchInput(e: Event) {
             :readonly="readonly"
             :aria-required="required || undefined"
             :aria-invalid="!!error || undefined"
-            :aria-describedby="error || hint ? errorId : description ? descId : undefined"
+            :aria-describedby="ariaDescribedBy"
             :aria-label="!label ? name : undefined"
             class="as-ref-input"
             @focus="open = true"
