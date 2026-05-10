@@ -10,16 +10,20 @@ atscript-ui is a monorepo for generating automated forms and smart tables driven
 
 ```bash
 # Development
-pnpm dev                    # Run vue-playground dev server
+pnpm dev                    # Run vue-playground dev server (component sandbox)
+pnpm demo:dev               # Run vue-demo dev server on :3200 (full app, server + client)
 pnpm docs:dev               # Run docs dev server (VitePress)
 
 # Testing
-pnpm test                   # Run all tests across workspace (vitest via vite-plus)
+pnpm test                   # Run all unit tests across workspace (vitest via vite-plus)
 pnpm --filter @atscript/vue-form run test   # Run tests for a single package
-npx vitest run src/__tests__/use-form.spec.ts  # Run a single test file (from package dir)
+vp test src/__tests__/use-form.spec.ts      # Run a single test file (from package dir)
+pnpm test:e2e               # Run Playwright e2e suites (tests/e2e/)
+pnpm test:e2e:install       # Install the chromium browser used by e2e
 
 # Building
 pnpm build                  # Build all packages (vp run build -r)
+pnpm --filter @atscript/vue-form run build  # Rebuild a single package
 
 # Linting & formatting
 vp fmt                      # Format (Biome via vite-plus)
@@ -27,7 +31,7 @@ vp lint                     # Lint (Biome via vite-plus, type-aware)
 vp check --fix              # Auto-fix lint+format issues
 
 # Full CI check
-pnpm ready                  # fmt → lint → test → build
+pnpm ready                  # fmt → lint → test → build → e2e
 
 # Release
 pnpm release                # Patch bump all packages, commit, tag
@@ -40,16 +44,23 @@ pnpm release:major          # Major bump
 ### Package dependency graph
 
 ```
-@atscript/ui          ← framework-agnostic: FormDef, TableDef, annotation keys, field resolver, validators
-  ├─ @atscript/ui-fns      ← opt-in plugin: ui.fn.* dynamic computed props (uses new Function)
-  ├─ @atscript/ui-table    ← framework-agnostic: filter model, filter→Uniquery conversion, presets
-  ├─ @atscript/vue-form    ← Vue 3 form components + composables
-  └─ @atscript/vue-table   ← Vue 3 table components + composables (depends on ui-table)
+@atscript/ui                ← framework-agnostic core: FormDef, TableDef, annotation keys, field resolver, validators
+  ├─ @atscript/ui-fns       ← opt-in plugin: ui.fn.* dynamic computed props (uses new Function)
+  ├─ @atscript/ui-table     ← framework-agnostic: filter model, filter→Uniquery conversion, presets
+  ├─ @atscript/ui-styles    ← shared UnoCSS shortcuts + presets + icon loader (consumed by every vue-* pkg)
+  ├─ @atscript/vue-form     ← Vue 3 form components + composables
+  ├─ @atscript/vue-table    ← Vue 3 table components + composables (depends on ui-table)
+  ├─ @atscript/vue-wf       ← Vue 3 workflow form: HTTP round-trip loop driven by atscript metadata
+  ├─ @atscript/moost-wf     ← Moost server-side workflow integration (decorators, interceptors, serialization)
+  └─ @atscript/moost-ui-presets ← Moost controller + atscript schema for table-preset persistence
 ```
 
-`vue-playground` is a private dev app that imports vue-form, vue-table, and vue-wf for manual testing.
+Two private dev apps live in the workspace:
 
-**Important:** vue-playground imports library packages from their built `dist/` files (via `package.json` `main`/`exports`), not from source. After changing code in any library package (vue-form, vue-wf, ui, etc.), you must rebuild before the playground picks up the changes:
+- `vue-playground` — minimal sandbox for component-level manual testing.
+- `@atscript/vue-demo` — full server+client app on **:3200** with feature pages (forms-demo, table-demo, workflows). This is the consumer app the user typically opens to verify behaviour. Run with `pnpm demo:dev`.
+
+**Important:** dev apps import library packages from their built `dist/` files (via `package.json` `main`/`exports`), not from source. After changing code in any library package, rebuild that package AND restart the consumer dev server — HMR alone won't pick up `dist/` changes or cached UnoCSS presets:
 
 ```bash
 pnpm --filter @atscript/vue-wf run build   # rebuild a single package
@@ -77,6 +88,8 @@ pnpm build                                  # rebuild all packages
 - **Test:** Vitest via vite-plus (`vp test`), `happy-dom` environment for Vue packages
 - **Lint/format:** Biome via vite-plus — configured in root `vite.config.ts`
 - **Staged files hook:** `vp check --fix` runs on all staged files
+- **E2E:** Playwright (`tests/e2e/`) — config at `tests/e2e/playwright.config.ts`, suites grouped by feature (a-cells, b-filtering, …)
+- **Skills distribution:** `skills-lock.json` + `scripts/setup-skills.js` pull external skills (atscript, atscript-db, moostjs, vunor, wooksjs) into `.claude/skills/` — do not hand-edit those vendored copies; edit at the upstream source listed in `skills-lock.json`
 
 ### Conventions
 
