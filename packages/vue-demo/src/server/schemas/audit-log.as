@@ -1,3 +1,36 @@
+@meta.label 'Login payload'
+type AuditLoginPayload = {
+    @meta.label 'type'
+    @ui.form.hidden
+    type: 'login'
+
+    @meta.label 'IP address'
+    @meta.required 'IP address required'
+    ip: string
+}
+
+@meta.label 'Logout payload'
+type AuditLogoutPayload = {
+    @meta.label 'type'
+    @ui.form.hidden
+    type: 'logout'
+
+    @meta.label 'Session id'
+    @meta.required 'Session id required'
+    sessionId: string
+}
+
+@meta.label 'Note payload'
+type AuditNotePayload = {
+    @meta.label 'type'
+    @ui.form.hidden
+    type: 'note'
+
+    @meta.label 'Text'
+    @meta.required 'Note text required'
+    text: string
+}
+
 @db.table 'audit_log'
 export interface AuditLogTable {
     @meta.id
@@ -22,6 +55,12 @@ export interface AuditLogTable {
 
     @meta.label 'Changes'
     changes: string
+
+    @meta.label 'Payload'
+    @meta.description 'Optional discriminated union — `type` selects the variant.'
+    @db.json
+    @ui.table.hidden
+    payload?: AuditLoginPayload | AuditLogoutPayload | AuditNotePayload
 
     @meta.label 'At'
     @db.default.now

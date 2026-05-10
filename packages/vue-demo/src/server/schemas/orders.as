@@ -2,6 +2,42 @@ import { CustomersTable } from './customers'
 import { UsersTable } from './users'
 import { ProductsTable } from './products'
 
+@meta.label 'Credit card'
+type OrderPaymentCard = {
+    @meta.label 'kind'
+    @ui.form.hidden
+    kind: 'card'
+
+    @meta.label 'Last 4'
+    @meta.required 'Last-4 digits required'
+    last4: string
+}
+
+@meta.label 'Bank transfer'
+type OrderPaymentBank = {
+    @meta.label 'kind'
+    @ui.form.hidden
+    kind: 'bank'
+
+    @meta.label 'IBAN'
+    @meta.required 'IBAN required'
+    iban: string
+}
+
+@meta.label 'Invoice'
+type OrderPaymentInvoice = {
+    @meta.label 'kind'
+    @ui.form.hidden
+    kind: 'invoice'
+
+    @meta.label 'Invoice #'
+    @meta.required 'Invoice number required'
+    invoiceNumber: string
+
+    @meta.label 'Net days'
+    netDays?: number
+}
+
 @db.table 'orders'
 export interface OrdersTable {
     @meta.id
@@ -55,6 +91,12 @@ export interface OrdersTable {
     @meta.label 'Shipped At'
     @ui.form.grid.colSpan 'half'
     shippedAt?: number.timestamp
+
+    @meta.label 'Payment method'
+    @meta.description 'Optional discriminated union — `kind` selects the variant.'
+    @db.json
+    @ui.table.hidden
+    paymentMethod?: OrderPaymentCard | OrderPaymentBank | OrderPaymentInvoice
 
     @meta.label 'Created'
     @db.default.now

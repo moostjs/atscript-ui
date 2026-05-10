@@ -1,3 +1,31 @@
+@meta.label 'Email contact'
+type CustomerEmailContact = {
+    @meta.label 'Email'
+    @meta.required 'Email is required'
+    email: string
+
+    @meta.label 'HTML newsletter'
+    htmlNewsletter?: boolean
+}
+
+@meta.label 'Phone contact'
+type CustomerPhoneContact = {
+    @meta.label 'Phone'
+    @meta.required 'Phone is required'
+    phone: string
+}
+
+@meta.label 'Postal contact'
+type CustomerPostalContact = {
+    @meta.label 'Street'
+    @meta.required 'Street is required'
+    street: string
+
+    @meta.label 'City'
+    @meta.required 'City is required'
+    city: string
+}
+
 @db.table 'customers'
 export interface CustomersTable {
     @meta.id
@@ -37,6 +65,12 @@ export interface CustomersTable {
         newsletter: boolean
         channel: 'email' | 'sms' | 'none'
     }
+
+    @meta.label 'Primary contact'
+    @meta.description 'Optional fingerprint union — variant detected by required-prop set.'
+    @db.json
+    @ui.table.hidden
+    primaryContact?: CustomerEmailContact | CustomerPhoneContact | CustomerPostalContact
 
     @meta.label 'Created'
     @db.default.now
