@@ -11,7 +11,7 @@ import {
   ComboboxViewport,
 } from "reka-ui";
 import { ref } from "vue";
-import { useValueHelp } from "../../composables/use-value-help";
+import { useAsValueHelp } from "../../composables/use-as-value-help";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "../internal/as-field-shell.vue";
 
@@ -20,7 +20,7 @@ const props = defineProps<TAsComponentProps>();
 const info = props.field ? extractValueHelp(props.field.prop) : undefined;
 
 const vh = info
-  ? useValueHelp({
+  ? useAsValueHelp({
       info,
       model: props.model,
       onBlur: props.onBlur,

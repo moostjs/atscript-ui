@@ -3,10 +3,10 @@ import type { FormArrayFieldDef, FormFieldDef } from "@atscript/ui";
 import { resolveSingularLabel } from "@atscript/ui";
 import { computed, inject, ref, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
-import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";
-import { useFormArray } from "../../composables/use-form-array";
-import { useDropdown } from "../../composables/use-dropdown";
-import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { useAsUnionVariant, formatIndexedLabel } from "../../composables/use-form-context";
+import { useAsArray } from "../../composables/use-as-array";
+import { useAsDropdown } from "../../composables/use-as-dropdown";
+import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
 import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
 import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
@@ -19,7 +19,7 @@ const props = defineProps<TAsComponentProps>();
 const arrayField = props.field as FormArrayFieldDef;
 
 // Cleared on consume so nested children don't re-render the picker.
-const unionCtx = useConsumeUnionContext();
+const unionCtx = useAsUnionVariant();
 const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.variants.length > 1);
 
 const path = inject(
@@ -43,7 +43,7 @@ const {
   clear,
   canAdd,
   canRemove,
-} = useFormArray(arrayField, disabled);
+} = useAsArray(arrayField, disabled);
 
 const level = computed(() => props.level ?? 0);
 
@@ -60,12 +60,12 @@ const singular = fromArray !== "item" ? fromArray : resolveSingularLabel(arrayFi
 const defaultOpen = !isOptional;
 
 const addDropdownRef = ref<HTMLElement | null>(null);
-const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useDropdown(addDropdownRef);
+const { isOpen: addOpen, toggle: toggleAdd, select: selectAdd } = useAsDropdown(addDropdownRef);
 
 const collapsibleRef = useTemplateRef<{
   runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
-const store = useNestedSectionsStore();
+const store = useAsNestedSectionsStore();
 
 function fieldFor(idx: number): FormFieldDef {
   return getItemField(idx, singular);

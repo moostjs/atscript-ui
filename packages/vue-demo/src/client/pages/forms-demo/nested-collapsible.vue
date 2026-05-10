@@ -3,19 +3,19 @@ import { computed } from "vue";
 import {
   AsForm,
   createDefaultTypes,
-  provideNestedSectionsStore,
-  useForm,
+  provideAsNestedSectionsStore,
+  createAsFormDef,
 } from "@atscript/vue-form";
 import { CompanySettings } from "./schemas/company-settings.as";
 import DarkToggle from "./_dark-toggle.vue";
 
-const { def, formData } = useForm(CompanySettings);
+const { def, formData } = createAsFormDef(CompanySettings);
 const types = createDefaultTypes();
 
 // Provide the store at page level so AsForm picks it up (instead of creating
 // its own). That gives the page-level Expand all / Collapse all buttons a
 // shared handle on the same store the form sections register with.
-const sections = provideNestedSectionsStore();
+const sections = provideAsNestedSectionsStore();
 const allOpen = computed(() => sections.allOpen());
 
 function onSubmit(data: unknown) {

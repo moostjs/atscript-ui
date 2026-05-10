@@ -2,9 +2,9 @@
 import type { FormTupleFieldDef } from "@atscript/ui";
 import { computed, inject, useTemplateRef } from "vue";
 import type { TAsComponentProps } from "../types";
-import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";
-import { useFormTuple } from "../../composables/use-form-tuple";
-import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { useAsUnionVariant, formatIndexedLabel } from "../../composables/use-form-context";
+import { useAsTuple } from "../../composables/use-as-tuple";
+import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
 import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
 import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
@@ -16,7 +16,7 @@ const props = defineProps<TAsComponentProps>();
 const tupleField = props.field as FormTupleFieldDef;
 
 // Cleared on consume so nested children don't re-render the picker.
-const unionCtx = useConsumeUnionContext();
+const unionCtx = useAsUnionVariant();
 const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.variants.length > 1);
 
 const path = inject(
@@ -27,7 +27,7 @@ const path = inject(
 const optionalEnabled = computed(() => Array.isArray(props.model?.value));
 const disabled = computed(() => props.disabled ?? false);
 
-const { itemFields, positionLabeled, isOptional, clear, fillMissing } = useFormTuple(tupleField);
+const { itemFields, positionLabeled, isOptional, clear, fillMissing } = useAsTuple(tupleField);
 
 const level = computed(() => props.level ?? 0);
 
@@ -40,7 +40,7 @@ const defaultOpen = !isOptional;
 const collapsibleRef = useTemplateRef<{
   runAndFocusNew: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");
-const store = useNestedSectionsStore();
+const store = useAsNestedSectionsStore();
 
 function handleEnableOptional() {
   // Enable + fill in one go so focus lands on the first editable position.
@@ -71,12 +71,7 @@ function handleEnableOptional() {
     </template>
 
     <template v-if="isOptional && optionalEnabled" #actions>
-      <AsArrayClearBtn
-        :optional="true"
-        :label="displayTitle"
-        :disabled="disabled"
-        @clear="clear"
-      />
+      <AsArrayClearBtn :optional="true" :label="displayTitle" :disabled="disabled" @clear="clear" />
     </template>
 
     <template #body>

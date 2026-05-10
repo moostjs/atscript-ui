@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject } from "vue";
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { SelectRadioForm } from "../../forms/select-radio-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
@@ -15,7 +15,7 @@ const context = {
   ],
 };
 
-const { def, formData } = useForm(SelectRadioForm, context);
+const { def, formData } = createAsFormDef(SelectRadioForm, context);
 
 function onSubmit(data: unknown) {
   console.log("SelectRadioForm submitted:", data);

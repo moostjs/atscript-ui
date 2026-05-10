@@ -8,9 +8,9 @@ export default { inheritAttrs: false };
 import { computed, inject, onBeforeUnmount, onMounted } from "vue";
 import {
   DESCENDANT_ERROR_COUNTS_KEY,
-  useNestedSectionsStore,
-} from "../../composables/use-nested-sections";
-import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
+  useAsNestedSectionsStore,
+} from "../../composables/use-as-nested-sections-store";
+import { useAsFocusFirstAfter } from "../../composables/focus-after-toggle";
 import { formatIndexedLabelParts } from "../../composables/use-form-context";
 
 const props = withDefaults(
@@ -62,7 +62,7 @@ const titleClass = computed(() =>
 
 const headingTag = computed(() => (props.level <= 1 ? "h3" : "h4"));
 
-const store = useNestedSectionsStore();
+const store = useAsNestedSectionsStore();
 
 onMounted(() => {
   if (variant.value !== "root" && props.path) {
@@ -96,7 +96,7 @@ const descendantErrorCount = computed(() =>
 // `rootRef` is null while the empty slot renders; it binds to `<details>`
 // on the next tick after `optionalEnabled` flips, so the deferred focus
 // query lands on the freshly mounted subtree.
-const { rootRef, runAndFocus, runAndFocusNew } = useFocusFirstAfter();
+const { rootRef, runAndFocus, runAndFocusNew } = useAsFocusFirstAfter();
 
 defineExpose({ runAndFocus, runAndFocusNew });
 </script>

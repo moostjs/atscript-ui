@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import type { TAsComponentProps, TAsUnionContext } from "../types";
 import { computed, inject, provide, ref } from "vue";
-import { useFormUnion } from "../../composables/use-form-union";
-import { useDropdown } from "../../composables/use-dropdown";
-import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { useAsUnion } from "../../composables/use-as-union";
+import { useAsDropdown } from "../../composables/use-as-dropdown";
+import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
 import { PATH_PREFIX_KEY, TYPES_KEY, UNION_CONTEXT_KEY } from "../../composables/internal-keys";
 import { focusNewFocusableAfter } from "../../composables/focus-after-toggle";
 
@@ -16,11 +16,11 @@ const {
   innerField,
   changeVariant,
   optionalEnabled,
-} = useFormUnion(props);
+} = useAsUnion(props);
 
 const types = inject(TYPES_KEY);
 
-// Provided so the variant component renders the picker via useConsumeUnionContext()
+// Provided so the variant component renders the picker via useAsUnionVariant()
 // (consume-and-clear so descendants don't double-render).
 const unionCtx: TAsUnionContext | undefined = unionField.value
   ? {
@@ -51,7 +51,7 @@ const {
   isOpen: pickerOpen,
   toggle: togglePicker,
   select: selectPicker,
-} = useDropdown(pickerDropdownRef);
+} = useAsDropdown(pickerDropdownRef);
 
 // Pre-set the variant's section open in the store before it mounts so the
 // variant's AsCollapsible reads `open` on first render — without this, picking
@@ -60,7 +60,7 @@ const path = inject(
   PATH_PREFIX_KEY,
   computed(() => ""),
 );
-const store = useNestedSectionsStore();
+const store = useAsNestedSectionsStore();
 
 function pickAndFocus(vi: number) {
   void focusNewFocusableAfter(

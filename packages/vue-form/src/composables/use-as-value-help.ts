@@ -7,7 +7,9 @@ import {
   type ValueHelpInfo,
 } from "@atscript/ui";
 import {
+  type ComputedRef,
   type InjectionKey,
+  type Ref,
   type ShallowRef,
   computed,
   inject,
@@ -21,17 +23,29 @@ import {
 /** Vue inject key used by `AsForm` to publish a per-form `ClientFactory` override. */
 export const CLIENT_FACTORY_KEY: InjectionKey<ClientFactory> = Symbol("as-client-factory");
 
-export interface UseValueHelpOptions {
+export interface UseAsValueHelpOptions {
   info: ValueHelpInfo;
   model: { value: unknown };
   onBlur: () => void;
 }
 
-export type UseValueHelpStatus = "loading" | "ready" | "error";
+export type UseAsValueHelpStatus = "loading" | "ready" | "error";
+
+export interface UseAsValueHelpReturn {
+  resolved: ShallowRef<ResolvedValueHelp | null>;
+  status: Ref<UseAsValueHelpStatus>;
+  searchText: Ref<string>;
+  results: ShallowRef<Record<string, unknown>[]>;
+  searching: Ref<boolean>;
+  labelIsFkValue: ComputedRef<boolean>;
+  kickoff: () => Promise<void>;
+  selectItem: (item: Record<string, unknown>) => void;
+  clear: () => void;
+}
 
 const DEBOUNCE_MS = 300;
 
-export function useValueHelp(options: UseValueHelpOptions) {
+export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpReturn {
   const { info, model, onBlur } = options;
 
   // Resolution order: nearest-ancestor prop override → app-wide default → built-in `new Client(url)`.
@@ -42,7 +56,7 @@ export function useValueHelp(options: UseValueHelpOptions) {
   const vhClient = new ValueHelpClient(entry.client);
 
   const resolved = shallowRef<ResolvedValueHelp | null>(null);
-  const status = ref<UseValueHelpStatus>("loading");
+  const status = ref<UseAsValueHelpStatus>("loading");
   const searchText = ref("");
   const results: ShallowRef<Record<string, unknown>[]> = shallowRef([]);
   const searching = ref(false);

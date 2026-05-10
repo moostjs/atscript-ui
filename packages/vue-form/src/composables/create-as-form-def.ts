@@ -10,7 +10,7 @@ import { reactive } from "vue";
  *   Only effective when `@atscript/ui-fns` is installed (dynamic resolver).
  * @returns `{ def, formData }` — the FormDef and a Vue reactive data object with defaults applied
  */
-export function useForm<T extends TAtscriptAnnotatedType>(
+export function createAsFormDef<T extends TAtscriptAnnotatedType>(
   type: T,
   context?: Record<string, unknown>,
 ) {

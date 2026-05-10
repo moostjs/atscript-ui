@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { inject } from "vue";
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { DynamicForm } from "../../forms/dynamic-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
@@ -11,7 +11,7 @@ const context = {
   descriptions: { contextDescription: "This label and description come from context" },
 };
 
-const { def, formData } = useForm(DynamicForm, context);
+const { def, formData } = createAsFormDef(DynamicForm, context);
 
 function onSubmit(data: unknown) {
   console.log("DynamicForm submitted:", data);

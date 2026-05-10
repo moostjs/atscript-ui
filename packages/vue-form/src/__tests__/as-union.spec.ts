@@ -23,9 +23,7 @@ describe("AsUnion", () => {
     expect("email" in (formData.value.primaryContact as object)).toBe(true);
     await wrapper.find(".as-variant-trigger").trigger("click");
     await nextTick();
-    const phoneItem = wrapper
-      .findAll(".as-dropdown-item")
-      .find((b) => b.text().includes("Phone"));
+    const phoneItem = wrapper.findAll(".as-dropdown-item").find((b) => b.text().includes("Phone"));
     expect(phoneItem).toBeTruthy();
     await phoneItem!.trigger("click");
     await nextTick();
@@ -58,9 +56,7 @@ describe("AsUnion", () => {
     const { wrapper, formData } = mountForm(OptionalObjectUnionForm);
     await wrapper.find(".as-object-empty-add").trigger("click");
     await nextTick();
-    const phoneItem = wrapper
-      .findAll(".as-dropdown-item")
-      .find((b) => b.text().includes("Phone"));
+    const phoneItem = wrapper.findAll(".as-dropdown-item").find((b) => b.text().includes("Phone"));
     expect(phoneItem).toBeTruthy();
     await phoneItem!.trigger("click");
     await nextTick();

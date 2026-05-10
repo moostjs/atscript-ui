@@ -1,11 +1,8 @@
 <script setup lang="ts">
 import { computed, useId } from "vue";
 import type { TAsComponentProps } from "../types";
-import {
-  useConsumeUnionContext,
-  formatIndexedLabelParts,
-} from "../../composables/use-form-context";
-import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
+import { useAsUnionVariant, formatIndexedLabelParts } from "../../composables/use-form-context";
+import { useAsFocusFirstAfter } from "../../composables/focus-after-toggle";
 import AsNoData from "./as-no-data.vue";
 import AsOptionalClear from "./as-optional-clear.vue";
 import AsVariantPicker from "./as-variant-picker.vue";
@@ -32,12 +29,12 @@ const descId = `${prefix}-${id}-desc`;
 const optionalEnabled = computed(() => props.model?.value != null);
 
 // ── Union context (optional — present when rendered inside as-union) ──
-const unionCtx = useConsumeUnionContext();
+const unionCtx = useAsUnionVariant();
 const hasVariantPicker = unionCtx !== undefined && unionCtx.variants.length > 1;
 
 const labelParts = computed(() => formatIndexedLabelParts(props.label, props.arrayIndex));
 
-const { rootRef, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
+const { rootRef, enableOptional } = useAsFocusFirstAfter(props.onToggleOptional);
 
 const showOptionalClear = computed(
   () => !!props.optional && optionalEnabled.value && !props.chromeless,

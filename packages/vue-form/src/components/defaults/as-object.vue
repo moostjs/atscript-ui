@@ -2,9 +2,9 @@
 import { computed, inject, useTemplateRef } from "vue";
 import { isObjectField, type FormObjectFieldDef } from "@atscript/ui";
 import type { TAsComponentProps } from "../types";
-import { useConsumeUnionContext, formatIndexedLabel } from "../../composables/use-form-context";
+import { useAsUnionVariant, formatIndexedLabel } from "../../composables/use-form-context";
 import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
-import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { useAsNestedSectionsStore } from "../../composables/use-as-nested-sections-store";
 import AsIterator from "../as-iterator.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
@@ -27,7 +27,7 @@ const path = inject(
 const optionalEnabled = computed(() => props.model?.value != null);
 
 // Cleared on consume so nested children don't re-render the picker.
-const unionCtx = useConsumeUnionContext();
+const unionCtx = useAsUnionVariant();
 const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.variants.length > 1);
 
 const level = computed(() => props.level ?? 0);
@@ -37,7 +37,7 @@ const displayTitle = computed(
   () => formatIndexedLabel(props.title, props.arrayIndex) ?? props.name ?? "",
 );
 
-const store = useNestedSectionsStore();
+const store = useAsNestedSectionsStore();
 const collapsibleRef = useTemplateRef<{
   runAndFocus: (action: () => void, ticks?: number) => void;
 }>("collapsibleRef");

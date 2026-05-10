@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import type { TAsUnionContext } from "../types";
-import { useDropdown } from "../../composables/use-dropdown";
+import { useAsDropdown } from "../../composables/use-as-dropdown";
 
 const props = defineProps<{
   unionContext: TAsUnionContext;
@@ -9,7 +9,7 @@ const props = defineProps<{
 }>();
 
 const dropdownRef = ref<HTMLElement | null>(null);
-const { isOpen, toggle, select } = useDropdown(dropdownRef);
+const { isOpen, toggle, select } = useAsDropdown(dropdownRef);
 
 // Variant labels carry a "N. " prefix from buildUnionVariants so the dropdown
 // rows read as a numbered list. The trigger shows just the type name.

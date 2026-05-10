@@ -11,7 +11,7 @@ const emptyScope: TFnScope = {
 </script>
 
 <script setup lang="ts" generic="TFormData = any, TFormContext = any">
-import { useFormField } from "../composables/use-form-field";
+import { useAsField } from "../composables/use-as-field";
 import {
   isObjectField,
   isArrayField,
@@ -263,7 +263,8 @@ if (props.field.allStatic) {
     getFieldMeta(prop, UI_FORM_ATTR) !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
 
   // Title: static (for structure/array/union fields)
-  title = isStructured || isUnion ? (getFieldMeta(prop, META_LABEL) ?? props.field.name) : undefined;
+  title =
+    isStructured || isUnion ? (getFieldMeta(prop, META_LABEL) ?? props.field.name) : undefined;
 
   // Classes: plain object (no computed)
   classesBase = buildFieldClasses(
@@ -403,15 +404,16 @@ if (props.field.allStatic) {
       : undefined;
 
   // ── Title (for structure/array/union fields) ───────────────
-  title = isStructured || isUnion
-    ? maybeComputed(
-        hasFn.has("title"),
-        () =>
-          resolveFieldProp<string>(prop, UI_FORM_FN_TITLE, META_LABEL, fs.value) ??
-          props.field.name,
-        getFieldMeta(prop, META_LABEL) ?? props.field.name,
-      )
-    : undefined;
+  title =
+    isStructured || isUnion
+      ? maybeComputed(
+          hasFn.has("title"),
+          () =>
+            resolveFieldProp<string>(prop, UI_FORM_FN_TITLE, META_LABEL, fs.value) ??
+            props.field.name,
+          getFieldMeta(prop, META_LABEL) ?? props.field.name,
+        )
+      : undefined;
 
   // ── Classes — conditional computed ─────────────────────────
   const hasFnClasses = hasFn.has("classes");
@@ -475,7 +477,7 @@ const {
   model,
   error: formError,
   onBlur: _onBlur,
-} = useFormField({
+} = useAsField({
   getValue: getModel,
   setValue: setModel,
   rules: [formRule],

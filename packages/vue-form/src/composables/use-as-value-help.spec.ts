@@ -10,7 +10,7 @@ import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescrip
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, nextTick, ref } from "vue";
 import { mount } from "@vue/test-utils";
-import { useValueHelp } from "./use-value-help";
+import { useAsValueHelp } from "./use-as-value-help";
 
 function buildAuthorMeta() {
   const author = defineAnnotatedType("object");
@@ -74,7 +74,7 @@ afterEach(() => {
   resetDefaultClientFactory();
 });
 
-describe("useValueHelp (eager-on-mount)", () => {
+describe("useAsValueHelp (eager-on-mount)", () => {
   it("fires a single meta fetch on mount and populates resolved", async () => {
     const meta = buildAuthorMeta();
     const { factory, metaSpy } = makeFactory({ meta: async () => meta });
@@ -84,7 +84,7 @@ describe("useValueHelp (eager-on-mount)", () => {
     const model = ref<{ value: unknown }>({ value: undefined });
 
     const { ret: vh, unmount } = withComposable(() =>
-      useValueHelp({ info, model: model.value, onBlur: () => {} }),
+      useAsValueHelp({ info, model: model.value, onBlur: () => {} }),
     );
 
     await nextTick();
@@ -108,7 +108,7 @@ describe("useValueHelp (eager-on-mount)", () => {
     const model = ref<{ value: unknown }>({ value: undefined });
 
     const { ret: vh, unmount } = withComposable(() =>
-      useValueHelp({ info, model: model.value, onBlur: () => {} }),
+      useAsValueHelp({ info, model: model.value, onBlur: () => {} }),
     );
 
     await vh.kickoff();
@@ -131,7 +131,7 @@ describe("useValueHelp (eager-on-mount)", () => {
     const model = ref<{ value: unknown }>({ value: undefined });
 
     const { ret: vh, unmount } = withComposable(() =>
-      useValueHelp({ info, model: model.value, onBlur: () => {} }),
+      useAsValueHelp({ info, model: model.value, onBlur: () => {} }),
     );
 
     await nextTick();

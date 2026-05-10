@@ -1,9 +1,17 @@
-import { computed, inject, onUnmounted, ref, watch, type ComputedRef } from "vue";
+import {
+  computed,
+  inject,
+  onUnmounted,
+  ref,
+  watch,
+  type ComputedRef,
+  type WritableComputedRef,
+} from "vue";
 import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "./internal-keys";
 import type { TFormRule } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export interface UseFormFieldOptions<TValue = any, TFormData = any, TContext = any> {
+export interface UseAsFieldOptions<TValue = any, TFormData = any, TContext = any> {
   getValue: () => TValue;
   setValue: (v: TValue) => void;
   rules?: TFormRule<TValue, TFormData, TContext>[];
@@ -13,9 +21,16 @@ export interface UseFormFieldOptions<TValue = any, TFormData = any, TContext = a
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function useFormField<TValue = any, TFormData = any, TContext = any>(
-  opts: UseFormFieldOptions<TValue, TFormData, TContext>,
-) {
+export interface UseAsFieldReturn<TValue = any> {
+  model: WritableComputedRef<TValue>;
+  error: ComputedRef<string | undefined>;
+  onBlur: () => void;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function useAsField<TValue = any, TFormData = any, TContext = any>(
+  opts: UseAsFieldOptions<TValue, TFormData, TContext>,
+): UseAsFieldReturn<TValue> {
   const formState = inject(FORM_STATE_KEY);
   const formData = inject(FORM_DATA_KEY) as ComputedRef<TFormData | undefined> | undefined;
   const formContext = inject(FORM_CONTEXT_KEY) as ComputedRef<TContext | undefined> | undefined;

@@ -4,7 +4,7 @@ import { inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } f
  * Reactive open/closed registry for collapsible object sections rendered
  * by `AsObject`. Provided once per `<AsForm>` so the entire form shares a
  * single store; consumers (page chrome, devtools, dialogs) can `inject`
- * the store via `useNestedSectionsStore()` to drive Expand-all /
+ * the store via `useAsNestedSectionsStore()` to drive Expand-all /
  * Collapse-all UI without prop drilling.
  *
  * **Default state is closed.** IDs only enter `open` when explicitly
@@ -13,7 +13,7 @@ import { inject, provide, ref, type ComputedRef, type InjectionKey, type Ref } f
  * back via `setOpen(id, open)` (idempotent, so browser find-in-page
  * auto-opens don't fight the store).
  */
-export interface NestedSectionsStore {
+export interface AsNestedSectionsStore {
   open: Ref<Set<string>>;
   register: (id: string) => void;
   unregister: (id: string) => void;
@@ -25,7 +25,7 @@ export interface NestedSectionsStore {
   allOpen: () => boolean;
 }
 
-const STORE_KEY: InjectionKey<NestedSectionsStore> = Symbol("atui.nested-sections");
+const STORE_KEY: InjectionKey<AsNestedSectionsStore> = Symbol("atui.nested-sections");
 
 /**
  * AsForm provides a `Map<absolutePath, descendantErrorCount>` so each
@@ -38,19 +38,19 @@ export const DESCENDANT_ERROR_COUNTS_KEY: InjectionKey<ComputedRef<Map<string, n
 );
 
 /**
- * Create and provide a `NestedSectionsStore` to the current Vue subtree.
+ * Create and provide a `AsNestedSectionsStore` to the current Vue subtree.
  * Called automatically by `<AsForm>`, but exposed for cases where you
  * want to scope a separate store (e.g. multiple independent forms in one
  * page that should keep their open/closed state independent, or to drive
  * page-level Expand-all / Collapse-all UI from above the form).
  */
-export function provideNestedSectionsStore(): NestedSectionsStore {
+export function provideAsNestedSectionsStore(): AsNestedSectionsStore {
   // `ref(new Set())` proxies the Set so `.add` / `.delete` / `.size` are
   // reactive — no need to reassign with a fresh Set on every mutation.
   const open = ref<Set<string>>(new Set());
   const registered = ref<Set<string>>(new Set());
 
-  const store: NestedSectionsStore = {
+  const store: AsNestedSectionsStore = {
     open,
     register(id) {
       registered.value.add(id);
@@ -89,9 +89,9 @@ export function provideNestedSectionsStore(): NestedSectionsStore {
 
 /**
  * Inject the nested-sections store provided by an ancestor `<AsForm>`
- * (or by an explicit `provideNestedSectionsStore()` call). Returns
+ * (or by an explicit `provideAsNestedSectionsStore()` call). Returns
  * `undefined` if no store is in scope.
  */
-export function useNestedSectionsStore(): NestedSectionsStore | undefined {
+export function useAsNestedSectionsStore(): AsNestedSectionsStore | undefined {
   return inject(STORE_KEY, undefined);
 }

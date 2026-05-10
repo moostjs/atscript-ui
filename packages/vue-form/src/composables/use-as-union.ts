@@ -5,18 +5,27 @@ import {
   createFormValueResolver,
   detectUnionVariant,
 } from "@atscript/ui";
-import { computed, inject, ref } from "vue";
+import { computed, inject, ref, type ComputedRef, type Ref } from "vue";
 import { CHANGE_HANDLER_KEY, PATH_PREFIX_KEY } from "./internal-keys";
 import type { TAsComponentProps } from "../components/types";
 import { useFormContext } from "./use-form-context";
 
+export interface UseAsUnionReturn {
+  unionField: ComputedRef<FormUnionFieldDef | undefined>;
+  hasMultipleVariants: ComputedRef<boolean>;
+  localUnionIndex: Ref<number>;
+  innerField: ComputedRef<FormFieldDef | undefined>;
+  changeVariant: (newIndex: number) => void;
+  optionalEnabled: ComputedRef<boolean>;
+}
+
 /** Composable for union field state. Switching variants stashes per-index data so toggling back restores user's work instead of fresh defaults. */
-export function useFormUnion(props: TAsComponentProps) {
+export function useAsUnion(props: TAsComponentProps): UseAsUnionReturn {
   const unionPath = inject(
     PATH_PREFIX_KEY,
     computed(() => ""),
   );
-  const { rootFormData, formContext } = useFormContext("useFormUnion");
+  const { rootFormData, formContext } = useFormContext("useAsUnion");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const unionField = computed(() =>

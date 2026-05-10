@@ -1,16 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, ref } from "vue";
-import { useFormState } from "../composables/use-form-state";
+import { useAsState } from "../composables/use-as-state";
 import type { TFormFieldRegistration } from "../composables/types";
 
-// Helper to run useFormState inside a component (provide requires setup context)
+// Helper to run useAsState inside a component (provide requires setup context)
 function setupFormState(opts?: Record<string, unknown>) {
-  let result!: ReturnType<typeof useFormState>;
+  let result!: ReturnType<typeof useAsState>;
   const wrapper = mount(
     defineComponent({
       setup() {
-        result = useFormState({
+        result = useAsState({
           formData: ref({ value: {} }),
           formContext: ref({}),
           ...opts,
@@ -42,7 +42,7 @@ function mockField(
   return { id, registration };
 }
 
-describe("useFormState", () => {
+describe("useAsState", () => {
   // ── submit ────────────────────────────────────────────────
 
   it("submit() returns true when no fields are registered", () => {

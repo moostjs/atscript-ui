@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { inject } from "vue";
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { ArrayForm } from "../../forms/array-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();
-const { def, formData } = useForm(ArrayForm);
+const { def, formData } = createAsFormDef(ArrayForm);
 
 function onSubmit(data: unknown) {
   console.log("ArrayForm submitted:", data);

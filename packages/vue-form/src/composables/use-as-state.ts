@@ -5,13 +5,21 @@ import type { TFormFieldRegistration, TFormState } from "./types";
 /** Custom form-level validator. Returns `Record<path, message>` (empty = passed). */
 export type TFormSubmitValidator = () => Record<string, string>;
 
-export function useFormState<TFormData, TContext>(opts: {
+export interface UseAsStateReturn {
+  formState: TFormState;
+  clearErrors: () => void;
+  reset: () => Promise<void>;
+  submit: () => true | { path: string; message: string }[];
+  setErrors: (errors: Record<string, string>) => void;
+}
+
+export function useAsState<TFormData, TContext>(opts: {
   formData: MaybeRef<TFormData>;
   formContext?: MaybeRef<TContext>;
   firstValidation?: MaybeRef<TFormState["firstValidation"] | undefined>;
   /** When provided, replaces per-field iteration on submit. */
   submitValidator?: TFormSubmitValidator;
-}) {
+}): UseAsStateReturn {
   const fieldsById = new Map<symbol, TFormFieldRegistration>();
 
   // Stable functions — outside computed to avoid re-creation on reactivity ticks

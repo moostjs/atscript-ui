@@ -9,12 +9,7 @@ defineEmits<{ clear: [] }>();
 </script>
 
 <template>
-  <AsOptionalClear
-    v-if="optional"
-    :label="label"
-    :disabled="disabled"
-    @clear="$emit('clear')"
-  />
+  <AsOptionalClear v-if="optional" :label="label" :disabled="disabled" @clear="$emit('clear')" />
   <button
     v-else
     type="button"

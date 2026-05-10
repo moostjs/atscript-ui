@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { inject } from "vue";
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { ValidationForm } from "../../forms/validation-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();
-const { def, formData } = useForm(ValidationForm);
+const { def, formData } = createAsFormDef(ValidationForm);
 
 function onSubmit(data: unknown) {
   console.log("ValidationForm submitted:", data);

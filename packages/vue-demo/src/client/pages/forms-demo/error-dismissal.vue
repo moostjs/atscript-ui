@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { ErrorDismissalForm } from "./schemas/error-dismissal.as";
 import DarkToggle from "./_dark-toggle.vue";
 
-const { def, formData } = useForm(ErrorDismissalForm);
+const { def, formData } = createAsFormDef(ErrorDismissalForm);
 const types = createDefaultTypes();
 
 // External errors injected by the buttons below. We always replace the

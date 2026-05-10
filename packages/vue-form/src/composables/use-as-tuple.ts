@@ -1,18 +1,22 @@
 import type { FormFieldDef, FormTupleFieldDef } from "@atscript/ui";
-import {
-  getFieldMeta,
-  createFormData,
-  createFormValueResolver,
-  META_LABEL,
-} from "@atscript/ui";
-import { computed, inject, onMounted } from "vue";
+import { getFieldMeta, createFormData, createFormValueResolver, META_LABEL } from "@atscript/ui";
+import { computed, inject, onMounted, type ComputedRef } from "vue";
 import { CHANGE_HANDLER_KEY } from "./internal-keys";
 import { useFormContext } from "./use-form-context";
 
+export interface UseAsTupleReturn {
+  itemFields: FormFieldDef[];
+  positionLabeled: boolean[];
+  isOptional: boolean;
+  isEmpty: ComputedRef<boolean>;
+  clear: () => void;
+  fillMissing: () => void;
+}
+
 /** Composable for managing tuple field state. Fixed-length, position-typed; auto-fills missing positions on mount unless optional. */
-export function useFormTuple(field: FormTupleFieldDef) {
+export function useAsTuple(field: FormTupleFieldDef): UseAsTupleReturn {
   const { rootFormData, formContext, pathPrefix, getByPath, setByPath } =
-    useFormContext("useFormTuple");
+    useFormContext("useAsTuple");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const isOptional = field.prop.optional ?? false;

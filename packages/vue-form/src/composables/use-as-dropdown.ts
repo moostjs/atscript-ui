@@ -1,6 +1,6 @@
 import { ref, watch, onBeforeUnmount, type Ref } from "vue";
 
-export function useDropdown(containerRef: Ref<HTMLElement | null>) {
+export function useAsDropdown(containerRef: Ref<HTMLElement | null>) {
   const isOpen = ref(false);
 
   function toggle() {

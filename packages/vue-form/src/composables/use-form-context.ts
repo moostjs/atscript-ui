@@ -93,7 +93,7 @@ export function useFormContext<TFormData = any, TFormContext = any>(componentNam
  * read the union context provided by `AsUnion` and immediately clear it
  * so nested children don't inherit it.
  */
-export function useConsumeUnionContext(): TAsUnionContext | undefined {
+export function useAsUnionVariant(): TAsUnionContext | undefined {
   const unionCtx = inject(UNION_CONTEXT_KEY, undefined);
   provide(UNION_CONTEXT_KEY, undefined);
   return unionCtx;

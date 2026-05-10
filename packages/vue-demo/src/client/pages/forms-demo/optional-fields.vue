@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { OptionalFieldsForm } from "./schemas/optional-fields.as";
 import DarkToggle from "./_dark-toggle.vue";
 
-const { def, formData } = useForm(OptionalFieldsForm);
+const { def, formData } = createAsFormDef(OptionalFieldsForm);
 const types = createDefaultTypes();
 
 function onSubmit(data: unknown) {

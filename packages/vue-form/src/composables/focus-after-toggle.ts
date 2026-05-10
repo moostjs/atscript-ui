@@ -34,9 +34,7 @@ export async function focusNewFocusableAfter(
   ticks = 1,
 ): Promise<void> {
   const before = scope();
-  const known = before
-    ? new Set(before.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR))
-    : null;
+  const known = before ? new Set(before.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)) : null;
   action();
   for (let i = 0; i < ticks; i++) await nextTick();
   const after = scope();
@@ -51,7 +49,7 @@ export async function focusNewFocusableAfter(
 }
 
 /** Sugar over `focusFirstAfter` scoped to a template ref. */
-export function useFocusFirstAfter(onToggleOptional?: (enabled: boolean) => void): {
+export function useAsFocusFirstAfter(onToggleOptional?: (enabled: boolean) => void): {
   rootRef: Ref<HTMLElement | null>;
   runAndFocus: (action: () => void, ticks?: number) => void;
   runAndFocusNew: (action: () => void, ticks?: number) => void;

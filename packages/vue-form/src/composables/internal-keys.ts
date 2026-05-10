@@ -11,6 +11,22 @@ import type { TFormState } from "./types";
  * concrete type, so the generic flexibility lives at the consumer.
  */
 
+// Private injection symbols. Do NOT export from src/index.ts.
+//
+// Convention: every key in this file ships with a public useAs* reader.
+// Customer code never imports these symbols. The wrappers are:
+//   PATH_PREFIX_KEY         -> useAsPath
+//   TYPES_KEY               -> useAsTypeMap
+//   ROOT_DATA_KEY           -> useAsData
+//   DISMISS_EXTERNAL_AT_KEY -> useAsErrorDismiss
+//   FORM_STATE_KEY, FORM_DATA_KEY, FORM_CONTEXT_KEY, ERRORS_KEY,
+//     COMPONENTS_KEY, ACTION_HANDLER_KEY, CHANGE_HANDLER_KEY,
+//     UNION_CONTEXT_KEY, LEVEL_KEY, HIDE_ROOT_TITLE_KEY -> consumed via
+//     useAsField / useAsState / useAsUnionVariant (and via the
+//     internal-only useFormContext); no standalone reader yet.
+//
+// When adding a new key here, also add the matching public reader.
+
 export const FORM_STATE_KEY: InjectionKey<TFormState> = Symbol("atui.form-state");
 export const FORM_DATA_KEY: InjectionKey<ComputedRef<unknown>> = Symbol("atui.form-data");
 export const FORM_CONTEXT_KEY: InjectionKey<ComputedRef<unknown>> = Symbol("atui.form-context");

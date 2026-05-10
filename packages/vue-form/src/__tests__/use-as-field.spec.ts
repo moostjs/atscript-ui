@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { computed, defineComponent, h, nextTick, provide, reactive, ref, type Ref } from "vue";
 import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "../composables/internal-keys";
-import { useFormField } from "../composables/use-form-field";
+import { useAsField } from "../composables/use-as-field";
 import type { TFormFieldRegistration, TFormState } from "../composables/types";
 
 /**
- * Sets up useFormField inside a child component whose *parent* provides
+ * Sets up useAsField inside a child component whose *parent* provides
  * the injections, exactly as the real app does (inject reads parent, not self).
  */
 function setupFormField(
@@ -33,12 +33,12 @@ function setupFormField(
     ...formStateOverrides,
   });
 
-  let result!: ReturnType<typeof useFormField>;
+  let result!: ReturnType<typeof useAsField>;
 
-  // Child that calls useFormField (picks up injections from parent)
+  // Child that calls useAsField (picks up injections from parent)
   const Child = defineComponent({
     setup() {
-      result = useFormField({
+      result = useAsField({
         getValue: opts.getValue ?? (() => valueRef.value),
         setValue:
           opts.setValue ??
@@ -87,7 +87,7 @@ function getRegisteredId(formState: TFormState): symbol {
   return mock.mock.calls[0]![0];
 }
 
-describe("useFormField", () => {
+describe("useAsField", () => {
   // ── model ─────────────────────────────────────────────────
 
   it("model.get calls getValue", () => {

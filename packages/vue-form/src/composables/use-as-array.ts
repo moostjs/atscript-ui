@@ -9,6 +9,21 @@ import { computed, inject, reactive, watch, type ComputedRef } from "vue";
 import { CHANGE_HANDLER_KEY } from "./internal-keys";
 import { useFormContext } from "./use-form-context";
 
+export interface UseAsArrayReturn {
+  arrayValue: ComputedRef<unknown[]>;
+  itemKeys: string[];
+  isUnion: boolean;
+  unionVariants: FormUnionVariant[];
+  isOptional: boolean;
+  isEmpty: ComputedRef<boolean>;
+  getItemField: (index: number, name?: string) => FormFieldDef;
+  addItem: (variantIndex?: number) => void;
+  removeItem: (index: number) => void;
+  clear: () => void;
+  canAdd: ComputedRef<boolean>;
+  canRemove: ComputedRef<boolean>;
+}
+
 /**
  * Composable for managing array field state.
  *
@@ -16,9 +31,12 @@ import { useFormContext } from "./use-form-context";
  * Union item types are handled transparently — AsUnion manages variant state locally.
  * Used by the default `AsArray` component and available for custom array components.
  */
-export function useFormArray(field: FormArrayFieldDef, disabled?: ComputedRef<boolean>) {
+export function useAsArray(
+  field: FormArrayFieldDef,
+  disabled?: ComputedRef<boolean>,
+): UseAsArrayReturn {
   const { rootFormData, formContext, pathPrefix, getByPath, setByPath } =
-    useFormContext("useFormArray");
+    useFormContext("useAsArray");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const arrayValue = computed<unknown[]>(() => {

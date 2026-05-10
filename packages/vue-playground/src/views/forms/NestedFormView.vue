@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { inject } from "vue";
-import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { NestedForm } from "../../forms/nested-form.as";
 
 const showToast = inject<(msg: string) => void>("showToast")!;
 const types = createDefaultTypes();
-const { def, formData } = useForm(NestedForm);
+const { def, formData } = createAsFormDef(NestedForm);
 
 function onSubmit(data: unknown) {
   console.log("NestedForm submitted:", data);

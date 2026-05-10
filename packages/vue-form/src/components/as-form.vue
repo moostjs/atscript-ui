@@ -1,40 +1,9 @@
 <script setup lang="ts" generic="TFormData = any, TFormContext = any">
-import { useFormState } from "../composables/use-form-state";
-import {
-  ACTION_HANDLER_KEY,
-  CHANGE_HANDLER_KEY,
-  COMPONENTS_KEY,
-  DISMISS_EXTERNAL_AT_KEY,
-  ERRORS_KEY,
-  HIDE_ROOT_TITLE_KEY,
-  PATH_PREFIX_KEY,
-  ROOT_DATA_KEY,
-  TYPES_KEY,
-} from "../composables/internal-keys";
-import {
-  DESCENDANT_ERROR_COUNTS_KEY,
-  provideNestedSectionsStore,
-  useNestedSectionsStore,
-} from "../composables/use-nested-sections";
+import { useAsForm } from "../composables/use-as-form";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
-import type { FormDef, ClientFactory } from "@atscript/ui";
-import {
-  buildDescendantErrorCounts,
-  getFormValidator,
-  iteratePathAncestors,
-  mergeErrorMaps,
-  resolveFormProp,
-  getFieldMeta,
-  WF_ACTION_WITH_DATA,
-  UI_FORM_ACTION,
-  UI_FORM_FN_SUBMIT_DISABLED,
-  UI_FORM_FN_SUBMIT_TEXT,
-  UI_FORM_SUBMIT_TEXT,
-} from "@atscript/ui";
-import { CLIENT_FACTORY_KEY } from "../composables/use-value-help";
-import type { TFnScope } from "@atscript/ui-fns";
-import { computed, provide, ref, toRaw, watch, type Component } from "vue";
+import type { ClientFactory, FormDef } from "@atscript/ui";
+import type { Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
 
 export interface Props<TF, TC> {
@@ -84,147 +53,6 @@ export interface Props<TF, TC> {
 
 const props = defineProps<Props<TFormData, TFormContext>>();
 
-const _data = ref<TFormData>({} as TFormData);
-const data = computed<TFormData>(() => props.formData || (_data.value as TFormData));
-
-/**
- * Unwraps domain data from the form data container.
- * Form data is `{ value: domainData }` — getByPath/setByPath handle this
- * wrapper automatically, but scope/validator callers need the inner value.
- */
-function getDomainData(): Record<string, unknown> {
-  return (data.value as Record<string, unknown>).value as Record<string, unknown>;
-}
-
-// ── Full-type validator (created once per def, called per-submit) ──
-// Override the default `errorLimit: 10` from `@atscript/typescript` so
-// AsObject's count badges reflect every nested error on a large form.
-const formValidator = computed(() =>
-  getFormValidator(props.def, { errorLimit: Number.MAX_SAFE_INTEGER }),
-);
-
-// ── Form state composable ────────────────────────────────────
-const { clearErrors, reset, submit, setErrors } = useFormState({
-  formData: data,
-  formContext: computed(() => props.formContext),
-  firstValidation: computed(() => props.firstValidation),
-  submitValidator: () =>
-    formValidator.value({
-      data: getDomainData(),
-      context: (props.formContext ?? {}) as Record<string, unknown>,
-    }),
-});
-
-// ── Provides ────────────────────────────────────────────────
-provide(
-  ROOT_DATA_KEY,
-  computed(() => data.value),
-);
-provide(
-  PATH_PREFIX_KEY,
-  computed(() => ""),
-);
-provide(
-  TYPES_KEY,
-  computed(() => props.types),
-);
-provide(
-  COMPONENTS_KEY,
-  computed(() => props.components),
-);
-// Leaf paths the user has locally dismissed by editing them. Reset on
-// every fresh `props.errors` identity so the next server round-trip
-// re-arms its errors. Leaf only — `__form` and ancestor errors stay.
-const dismissedExternal = ref<Set<string>>(new Set());
-// `__form` banner dismissal is a separate intent — user clicks X. Same
-// identity-reset rule, but never cleared by leaf edits.
-const formErrorDismissed = ref(false);
-
-const effectiveExternalErrors = computed<Record<string, string | undefined> | undefined>(() => {
-  const dismissed = dismissedExternal.value;
-  const errs = props.errors;
-  if (!errs || dismissed.size === 0) return errs;
-  const out: Record<string, string | undefined> = {};
-  for (const k in errs) if (!dismissed.has(k)) out[k] = errs[k];
-  return out;
-});
-
-watch(
-  () => props.errors,
-  () => {
-    if (dismissedExternal.value.size > 0) dismissedExternal.value = new Set();
-    if (formErrorDismissed.value) formErrorDismissed.value = false;
-  },
-);
-
-provide(ERRORS_KEY, effectiveExternalErrors);
-provide(HIDE_ROOT_TITLE_KEY, props.hideRootTitle === true);
-
-// Provide the collapsible-section store only if a parent hasn't already
-// supplied one — a page that wants to drive Expand-all / Collapse-all UI
-// calls `provideNestedSectionsStore()` *above* `<AsForm>`, and the form
-// inherits that shared store instead of creating its own.
-const sectionsStore = useNestedSectionsStore() ?? provideNestedSectionsStore();
-if (props.clientFactory) {
-  provide(CLIENT_FACTORY_KEY, props.clientFactory);
-}
-
-// External (post-dismissal) + internal validation merged into a single
-// map. Drives both the descendant-count badges and the auto-open watcher.
-const internalErrors = ref<Record<string, string>>({});
-const allErrors = computed(() =>
-  mergeErrorMaps(effectiveExternalErrors.value, internalErrors.value),
-);
-
-const descendantErrorCounts = computed(() => buildDescendantErrorCounts(allErrors.value));
-provide(DESCENDANT_ERROR_COUNTS_KEY, descendantErrorCounts);
-
-// Auto-open every ancestor of an error path so the user sees the invalid
-// field immediately, instead of a collapsed section with a count badge.
-watch(
-  allErrors,
-  (errors) => {
-    for (const errPath of Object.keys(errors)) {
-      for (const ancestor of iteratePathAncestors(errPath)) {
-        sectionsStore.setOpen(ancestor, true);
-      }
-    }
-  },
-  { immediate: true, flush: "post" },
-);
-
-// `__form` = moost-wf convention for form-level (non-field) errors.
-const formError = computed(() => props.errors?.__form);
-const effectiveFormError = computed(() =>
-  formErrorDismissed.value ? undefined : formError.value,
-);
-function dismissFormError() {
-  formErrorDismissed.value = true;
-}
-
-// ── Form-level resolved props ──────────────────────────────
-const ctx = computed<TFnScope>(() => ({
-  v: undefined,
-  data: getDomainData(),
-  context: (props.formContext ?? {}) as Record<string, unknown>,
-  entry: undefined,
-}));
-
-const _submitText = computed(
-  () =>
-    resolveFormProp<string>(
-      props.def.type,
-      UI_FORM_FN_SUBMIT_TEXT,
-      UI_FORM_SUBMIT_TEXT,
-      ctx.value,
-    ) ?? "Submit",
-);
-const _submitDisabled = computed(
-  () =>
-    resolveFormProp<boolean>(props.def.type, UI_FORM_FN_SUBMIT_DISABLED, undefined, ctx.value) ??
-    false,
-);
-
 const emit = defineEmits<{
   (e: "submit", data: TFormData): void;
   (e: "error", errors: { path: string; message: string }[]): void;
@@ -233,123 +61,66 @@ const emit = defineEmits<{
   (e: "change", type: TAsChangeType, path: string, value: unknown, formData: TFormData): void;
 }>();
 
-// ── Action handler (provided to AsField tree) ──────────────
-const domainData = () => toRaw(getDomainData()) as TFormData;
-
-function supportsAction(def: FormDef, actionId: string): boolean {
-  return def.fields.some((f) => {
-    const a = getFieldMeta(f.prop, UI_FORM_ACTION);
-    if (a?.id === actionId) return true;
-    return getFieldMeta(f.prop, WF_ACTION_WITH_DATA) === actionId;
-  });
-}
-
-function handleAction(name: string) {
-  if (supportsAction(props.def, name)) {
-    emit("action", name, domainData());
-  } else {
-    emit("unsupported-action", name, domainData());
-  }
-}
-
-provide(ACTION_HANDLER_KEY, handleAction);
-
-// Idempotent: skips when already dismissed so per-keystroke calls from
-// the leaf model watcher don't allocate a fresh Set on every input.
-function dismissExternalAt(path: string) {
-  if (!path) return;
-  if (dismissedExternal.value.has(path)) return;
-  const next = new Set(dismissedExternal.value);
-  next.add(path);
-  dismissedExternal.value = next;
-}
-provide(DISMISS_EXTERNAL_AT_KEY, dismissExternalAt);
-
-function handleChange(type: TAsChangeType, path: string, value: unknown) {
-  // Covers programmatic value commits (union-switch, array-add) that
-  // bypass the leaf model watcher's per-keystroke dismissal.
-  dismissExternalAt(path);
-  // Field-local watches clear scalar errors on direct edits, but a parent
-  // struct/array error never sees a model identity change when a child
-  // mutates — so drop the changed path + ancestors here. Next submit
-  // re-validates.
-  const errors = internalErrors.value;
-  let hasAny = false;
-  for (const _ in errors) {
-    hasAny = true;
-    break;
-  }
-  if (hasAny) {
-    const stale = new Set(iteratePathAncestors(path));
-    const next: Record<string, string> = {};
-    let changed = false;
-    for (const key in errors) {
-      if (stale.has(key)) changed = true;
-      else next[key] = errors[key];
-    }
-    if (changed) {
-      internalErrors.value = next;
-      setErrors(next);
-    }
-  }
-  emit("change", type, path, value, domainData());
-}
-provide(CHANGE_HANDLER_KEY, handleChange);
-
-function onSubmit() {
-  const result = submit();
-  if (result === true) {
-    internalErrors.value = {};
-    emit("submit", domainData());
-  } else {
-    const errs: Record<string, string> = {};
-    for (const e of result) errs[e.path] = e.message;
-    internalErrors.value = errs;
-    emit("error", result);
-  }
-}
+const form = useAsForm<TFormData, TFormContext>({
+  def: () => props.def,
+  formData: () => props.formData,
+  formContext: () => props.formContext,
+  firstValidation: () => props.firstValidation,
+  components: () => props.components,
+  types: () => props.types,
+  errors: () => props.errors,
+  clientFactory: () => props.clientFactory,
+  hideRootTitle: () => props.hideRootTitle,
+  emits: {
+    submit: (data) => emit("submit", data),
+    error: (errors) => emit("error", errors),
+    action: (name, data) => emit("action", name, data),
+    unsupportedAction: (name, data) => emit("unsupported-action", name, data),
+    change: (type, path, value, formData) => emit("change", type, path, value, formData),
+  },
+});
 </script>
 
 <template>
-  <form class="as-form" :inert="loading" @submit.prevent="onSubmit">
+  <form class="as-form" :inert="loading" @submit.prevent="form.onSubmit">
     <slot
       name="form.header"
-      :clear-errors="clearErrors"
-      :reset="reset"
-      :set-errors="setErrors"
+      :clear-errors="form.clearErrors"
+      :reset="form.reset"
+      :set-errors="form.setErrors"
       :formContext="formContext"
-      :disabled="_submitDisabled"
+      :disabled="form.submitDisabled.value"
     >
     </slot>
     <slot
       name="form.before"
-      :clear-errors="clearErrors"
-      :reset="reset"
-      :set-errors="setErrors"
+      :clear-errors="form.clearErrors"
+      :reset="form.reset"
+      :set-errors="form.setErrors"
       :formContext="formContext"
-      :disabled="_submitDisabled"
+      :disabled="form.submitDisabled.value"
     ></slot>
 
     <AsField :field="def.rootField" />
 
     <slot
       name="form.after"
-      :clear-errors="clearErrors"
-      :reset="reset"
-      :set-errors="setErrors"
-      :disabled="_submitDisabled"
+      :clear-errors="form.clearErrors"
+      :reset="form.reset"
+      :set-errors="form.setErrors"
+      :disabled="form.submitDisabled.value"
       :formContext="formContext"
     ></slot>
 
     <slot
-      v-if="effectiveFormError"
+      v-if="form.formError.value"
       name="form.error"
-      :message="effectiveFormError"
-      :dismiss="dismissFormError"
+      :message="form.formError.value"
+      :dismiss="form.dismissFormError"
     >
       <div role="alert" class="as-form-error">
-        <span class="as-form-error-message">{{ effectiveFormError }}</span>
-        <button type="button" class="as-form-error-dismiss" @click="dismissFormError">
+        <span class="as-form-error-message">{{ form.formError.value }}</span>
+        <button type="button" class="as-form-error-dismiss" @click="form.dismissFormError">
           Dismiss
         </button>
       </div>
@@ -358,21 +129,23 @@ function onSubmit() {
     <slot
       v-if="!hideSubmit"
       name="form.submit"
-      :disabled="_submitDisabled"
-      :text="_submitText"
-      :clear-errors="clearErrors"
-      :reset="reset"
-      :set-errors="setErrors"
+      :disabled="form.submitDisabled.value"
+      :text="form.submitText.value"
+      :clear-errors="form.clearErrors"
+      :reset="form.reset"
+      :set-errors="form.setErrors"
       :formContext="formContext"
     >
-      <button class="as-submit-btn" :disabled="_submitDisabled">{{ _submitText }}</button>
+      <button class="as-submit-btn" :disabled="form.submitDisabled.value">
+        {{ form.submitText.value }}
+      </button>
     </slot>
     <slot
       name="form.footer"
-      :disabled="_submitDisabled"
-      :clear-errors="clearErrors"
-      :reset="reset"
-      :set-errors="setErrors"
+      :disabled="form.submitDisabled.value"
+      :clear-errors="form.clearErrors"
+      :reset="form.reset"
+      :set-errors="form.setErrors"
       :formContext="formContext"
     ></slot>
     <div v-if="loading" class="as-form-overlay">
