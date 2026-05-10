@@ -124,6 +124,21 @@ export const seedProducts = () => {
   return rows;
 };
 
+// 5-step cycle including a null slot: [Email, Phone, Postal, null, Email].
+const pickPrimaryContact = (i: number): Record<string, unknown> | undefined => {
+  switch ((i - 1) % 5) {
+    case 0:
+    case 4:
+      return { email: `primary-${i}@example.com`, htmlNewsletter: i % 2 === 0 };
+    case 1:
+      return { phone: `+1-555-01${String(i).padStart(2, "0")}` };
+    case 2:
+      return { street: `${i} Oak Street`, city: "Springfield" };
+    default:
+      return undefined;
+  }
+};
+
 export const seedCustomers = () => {
   const rows: Record<string, unknown>[] = [];
   for (let i = 1; i <= 10; i++) {
@@ -141,9 +156,28 @@ export const seedCustomers = () => {
         newsletter: i % 2 === 0,
         channel: i % 3 === 0 ? "sms" : "email",
       },
+      primaryContact: pickPrimaryContact(i),
     });
   }
   return rows;
+};
+
+// 4-step cycle Card -> Bank -> Invoice -> null.
+const pickPaymentMethod = (i: number): Record<string, unknown> | undefined => {
+  switch ((i - 1) % 4) {
+    case 0:
+      return { kind: "card", last4: "4242" };
+    case 1:
+      return { kind: "bank", iban: `DE89370400440532013${String(i).padStart(3, "0")}` };
+    case 2:
+      return {
+        kind: "invoice",
+        invoiceNumber: `INV-${String(i).padStart(4, "0")}`,
+        netDays: 30,
+      };
+    default:
+      return undefined;
+  }
 };
 
 export const seedOrders = () => {
@@ -171,9 +205,25 @@ export const seedOrders = () => {
       lines,
       total,
       shippedAt: i % 2 === 0 ? Date.now() - i * 3_600_000 : null,
+      paymentMethod: pickPaymentMethod(i),
     });
   }
   return rows;
+};
+
+// 4-step cycle Login -> Logout -> Note -> null, indexed by 1-based seeded-row
+// position (= PK, since `insertMany` honours array order).
+const pickAuditPayload = (i: number): Record<string, unknown> | undefined => {
+  switch ((i - 1) % 4) {
+    case 0:
+      return { type: "login", ip: `10.0.0.${(i % 254) + 1}` };
+    case 1:
+      return { type: "logout", sessionId: `sess-${i}` };
+    case 2:
+      return { type: "note", text: `Audit note for row ${i}` };
+    default:
+      return undefined;
+  }
 };
 
 /**
@@ -197,6 +247,7 @@ export const seedAuditLog = () => {
     customers: [],
   };
   const now = Date.now();
+  let rowIndex = 0;
   for (let i = 0; i < 5000; i++) {
     const ent = ENTITIES[i % ENTITIES.length]!;
     const [entityType, max] = ent;
@@ -205,6 +256,7 @@ export const seedAuditLog = () => {
     const action = pool[i % pool.length]!;
     const entityId = ((i * 31) % max) + 1;
     const actorId = (i % 5) + 1;
+    rowIndex++;
     rows.push({
       actorId,
       entityType,
@@ -213,6 +265,8 @@ export const seedAuditLog = () => {
       changes: JSON.stringify({ seed: true, idx: i }),
       // Spread the timestamps across the last ~30 days, descending with i.
       createdAt: now - i * 60_000 - (i % 17) * 1_000,
+      // `rowIndex` (post-`continue`) ≠ `i`; the cycle keys off the seeded-row PK.
+      payload: pickAuditPayload(rowIndex),
     });
   }
   return rows;
