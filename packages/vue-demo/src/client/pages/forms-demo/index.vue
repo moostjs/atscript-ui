@@ -55,6 +55,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/error-dismissal",
+    title: "Error dismissal & loading",
+    description:
+      "External leaf auto-dismiss on edit, dismissable __form banner, and loading overlay. Buttons inject errors so the round-trip behaviours can be exercised without a server.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/dynamic",
     title: "Dynamic (fn-driven)",
     description: "Visibility / labels / options driven by @ui.form.fn.* expressions.",
