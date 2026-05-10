@@ -5,21 +5,13 @@ import {
   createFormValueResolver,
   detectUnionVariant,
 } from "@atscript/ui";
-import { computed, inject, provide, ref } from "vue";
-import { CHANGE_HANDLER_KEY, PATH_PREFIX_KEY, UNION_CONTEXT_KEY } from "./internal-keys";
-import type { TAsComponentProps, TAsUnionContext } from "../components/types";
-import { useDropdown } from "./use-dropdown";
+import { computed, inject, ref } from "vue";
+import { CHANGE_HANDLER_KEY, PATH_PREFIX_KEY } from "./internal-keys";
+import type { TAsComponentProps } from "../components/types";
 import { useFormContext } from "./use-form-context";
 
-/**
- * Composable for managing union field state.
- *
- * Manages variant switching with data stashing — switching away from a variant
- * saves its data, and switching back restores it instead of creating fresh defaults.
- * Used by the default `AsUnion` component and available for custom union components.
- */
+/** Composable for union field state. Switching variants stashes per-index data so toggling back restores user's work instead of fresh defaults. */
 export function useFormUnion(props: TAsComponentProps) {
-  // ── Change handler (path comes from AsField's provide for union fields) ──
   const unionPath = inject(
     PATH_PREFIX_KEY,
     computed(() => ""),
@@ -27,7 +19,6 @@ export function useFormUnion(props: TAsComponentProps) {
   const { rootFormData, formContext } = useFormContext("useFormUnion");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
-  // ── Union field def ─────────────────────────────────────────
   const unionField = computed(() =>
     props.field && isUnionField(props.field) ? (props.field as FormUnionFieldDef) : undefined,
   );
@@ -36,7 +27,6 @@ export function useFormUnion(props: TAsComponentProps) {
     () => unionField.value !== undefined && unionField.value.unionVariants.length > 1,
   );
 
-  // ── Local union state ───────────────────────────────────────
   const localUnionIndex = ref(
     unionField.value ? detectUnionVariant(props.model?.value, unionField.value.unionVariants) : 0,
   );
@@ -47,33 +37,21 @@ export function useFormUnion(props: TAsComponentProps) {
     return variants[localUnionIndex.value] ?? variants[0];
   });
 
-  // ── Inner field def (stable ref — only rebuilt on variant change) ──
-  function buildInnerField(): FormFieldDef | undefined {
+  // Synthesized field for the active variant — AsUnion dispatches it to the
+  // matching component (AsObject for `def`-style, AsField for `itemField`-style).
+  const innerField = computed<FormFieldDef | undefined>(() => {
     const variant = currentVariant.value;
     if (!variant) return undefined;
-
     const fieldName = unionField.value?.name ?? "";
-
-    if (variant.def) {
-      return { ...variant.def.rootField, path: "", name: fieldName };
-    }
-    if (variant.itemField) {
-      return { ...variant.itemField, path: "" };
-    }
-
+    if (variant.def) return { ...variant.def.rootField, path: "", name: fieldName };
+    if (variant.itemField) return { ...variant.itemField, path: "", name: "" };
     return undefined;
-  }
+  });
 
-  const innerField = computed(buildInnerField);
-
-  // ── Per-variant data stash ──────────────────────────────────
-  // Stores previous variant data keyed by variant index so switching back
-  // restores the user's work instead of creating fresh defaults.
+  // Per-variant data stash — switching back restores user's work instead of fresh defaults.
   const variantDataStash = new Map<number, unknown>();
 
-  // ── Change variant handler ──────────────────────────────────
   function changeVariant(newIndex: number) {
-    // Stash current variant's data before switching away
     variantDataStash.set(localUnionIndex.value, props.model?.value);
     localUnionIndex.value = newIndex;
     const variant = unionField.value?.unionVariants[newIndex];
@@ -95,41 +73,12 @@ export function useFormUnion(props: TAsComponentProps) {
 
   const optionalEnabled = computed(() => props.model?.value !== undefined);
 
-  // ── Provide union context for consumers ─────────────────────
-  if (unionField.value) {
-    const ctx: TAsUnionContext = {
-      variants: unionField.value.unionVariants,
-      currentIndex: localUnionIndex,
-      changeVariant,
-    };
-    provide(UNION_CONTEXT_KEY, ctx);
-  }
-
-  // ── Dropdown (only for optional N/A variant picker) ─────────
-  const dropdownRef = ref<HTMLElement | null>(null);
-  const { isOpen, toggle, select } = useDropdown(dropdownRef);
-
-  // For optional union N/A: clicking opens variant picker or just enables
-  function handleNaClick() {
-    if (hasMultipleVariants.value) {
-      toggle();
-    } else {
-      props.onToggleOptional?.(true);
-    }
-  }
-
   return {
     unionField,
     hasMultipleVariants,
     localUnionIndex,
-    currentVariant,
     innerField,
     changeVariant,
     optionalEnabled,
-    dropdownRef,
-    isOpen,
-    toggle,
-    select,
-    handleNaClick,
   };
 }

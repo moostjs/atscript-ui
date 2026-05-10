@@ -71,21 +71,25 @@ describe("AsTuple", () => {
     expect(formData.value.coords).toBeUndefined();
   });
 
-  it("renders position labels — meta.label when set, #N otherwise", async () => {
+  it("renders position labels — meta.label when set, muted #N otherwise", async () => {
     const { LabeledTupleForm } = await import("./fixtures/array-forms.as");
     const { wrapper } = mountForm(LabeledTupleForm);
     const labels = wrapper.findAll(".as-field-label");
     const labelTexts = labels.map((l) => l.text());
     expect(labelTexts.some((t) => t.includes("Latitude"))).toBe(true);
     expect(labelTexts.some((t) => t.includes("Longitude"))).toBe(true);
+    // Labeled positions render only the meta.label — no muted `#N` suffix.
+    for (const label of labels) {
+      expect(label.find(".as-field-label-index").exists()).toBe(false);
+    }
   });
 
-  it("falls back to #N labels when positions have no @meta.label", async () => {
+  it("falls back to muted #N suffix labels when positions have no @meta.label", async () => {
     const { RequiredTupleForm } = await import("./fixtures/array-forms.as");
     const { wrapper } = mountForm(RequiredTupleForm);
-    const labels = wrapper.findAll(".as-field-label");
-    const labelTexts = labels.map((l) => l.text());
-    expect(labelTexts.some((t) => t.includes("#1"))).toBe(true);
-    expect(labelTexts.some((t) => t.includes("#2"))).toBe(true);
+    const indexSuffixes = wrapper.findAll(".as-field-label-index");
+    const suffixTexts = indexSuffixes.map((s) => s.text());
+    expect(suffixTexts.some((t) => t.includes("#1"))).toBe(true);
+    expect(suffixTexts.some((t) => t.includes("#2"))).toBe(true);
   });
 });

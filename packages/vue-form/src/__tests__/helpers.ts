@@ -51,10 +51,13 @@ export function mountForm(
     components?: Record<string, unknown>;
     types?: Record<string, unknown>;
     errors?: Record<string, string>;
+    initialValue?: unknown;
   },
 ) {
   const def = createFormDef(type);
-  const formData = reactive(createFormData(type)) as { value: Record<string, any> };
+  const formData = reactive(
+    opts?.initialValue !== undefined ? { value: opts.initialValue } : createFormData(type),
+  ) as { value: Record<string, any> };
   const types = (opts?.types ?? createDefaultTypes()) as any;
 
   const wrapper = mount(AsForm as any, {

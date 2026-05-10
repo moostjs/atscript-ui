@@ -12,12 +12,15 @@ import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsItemsChip from "../internal/as-items-chip.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
+import AsVariantPicker from "../internal/as-variant-picker.vue";
 
 const props = defineProps<TAsComponentProps>();
 
 const arrayField = props.field as FormArrayFieldDef;
 
-useConsumeUnionContext();
+// Cleared on consume so nested children don't re-render the picker.
+const unionCtx = useConsumeUnionContext();
+const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.variants.length > 1);
 
 const path = inject(
   PATH_PREFIX_KEY,
@@ -100,6 +103,10 @@ function handleEnableOptional() {
     :hidden="hidden"
     :default-open="defaultOpen"
   >
+    <template #title-extras>
+      <AsVariantPicker v-if="hasVariantPicker" :union-context="unionCtx!" :disabled="disabled" />
+    </template>
+
     <template #badges>
       <AsItemsChip :count="arrayValue.length" />
     </template>
@@ -138,7 +145,7 @@ function handleEnableOptional() {
         </button>
         <div v-else ref="addDropdownRef" class="as-dropdown">
           <button type="button" class="as-array-add-btn" :disabled="!canAdd" @click="toggleAdd">
-            Add {{ singular }} &#x25BE;
+            Add {{ singular }}
           </button>
           <div v-if="addOpen" class="as-dropdown-menu">
             <button

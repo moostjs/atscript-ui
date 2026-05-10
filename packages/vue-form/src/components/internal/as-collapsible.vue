@@ -32,7 +32,7 @@ const props = withDefaults(
 const titleParts = computed(() => formatIndexedLabelParts(props.title, props.arrayIndex));
 
 defineSlots<{
-  "header-extras"(): unknown;
+  "title-extras"(): unknown;
   badges(): unknown;
   actions(): unknown;
   body(): unknown;
@@ -115,15 +115,17 @@ defineExpose({ runAndFocus, runAndFocusNew });
   >
     <summary class="as-collapsible-summary">
       <div class="as-collapsible-header">
-        <component :is="headingTag" :class="titleClass">
-          {{ titleParts?.base
-          }}<span v-if="titleParts?.suffix" class="as-collapsible-title-index"
-            >&nbsp;{{ titleParts.suffix }}</span
-          >
-        </component>
+        <div class="as-collapsible-title-row">
+          <component :is="headingTag" :class="titleClass">
+            {{ titleParts?.base
+            }}<span v-if="titleParts?.suffix" class="as-collapsible-title-index"
+              >&nbsp;{{ titleParts.suffix }}</span
+            >
+          </component>
+          <slot name="title-extras" />
+        </div>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>
-      <slot name="header-extras" />
       <slot name="badges" />
       <slot name="actions" />
       <span

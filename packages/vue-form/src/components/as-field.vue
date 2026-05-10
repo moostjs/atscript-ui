@@ -108,18 +108,16 @@ const parentLevel = inject(
   LEVEL_KEY,
   computed(() => -1),
 );
-const myLevel = isStructured ? parentLevel.value + 1 : -1;
+const myLevel = isStructured || isUnion ? parentLevel.value + 1 : -1;
 
-// ── Provide path prefix + level for children (object/array/tuple/union)
-// Union fields provide path prefix (children need correct path)
-// but do NOT increment level (transparent wrapper — prevents double increment)
+// Union fields take a level slot too — AsUnion dispatches the variant's
+// component (AsObject / AsArray / etc.) directly, so the variant's chrome
+// must render at the union's own depth (not as root).
 if (isStructured || isUnion) {
   provide(
     PATH_PREFIX_KEY,
     computed(() => absolutePath.value),
   );
-}
-if (isStructured) {
   provide(
     LEVEL_KEY,
     computed(() => myLevel),
@@ -262,8 +260,8 @@ if (props.field.allStatic) {
   attrs =
     getFieldMeta(prop, UI_FORM_ATTR) !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
 
-  // Title: static (for structure/array fields)
-  title = isStructured ? (getFieldMeta(prop, META_LABEL) ?? props.field.name) : undefined;
+  // Title: static (for structure/array/union fields)
+  title = isStructured || isUnion ? (getFieldMeta(prop, META_LABEL) ?? props.field.name) : undefined;
 
   // Classes: plain object (no computed)
   classesBase = buildFieldClasses(
@@ -402,8 +400,8 @@ if (props.field.allStatic) {
       ? resolveAttrs(prop, emptyScope)
       : undefined;
 
-  // ── Title (for structure/array fields) ─────────────────────
-  title = isStructured
+  // ── Title (for structure/array/union fields) ───────────────
+  title = isStructured || isUnion
     ? maybeComputed(
         hasFn.has("title"),
         () =>
@@ -530,7 +528,7 @@ const invariantProps = {
   maxLength,
   autocomplete,
   icon,
-  level: isStructured ? myLevel : undefined,
+  level: isStructured || isUnion ? myLevel : undefined,
 };
 
 // ── Display props — cached separately from error state ────────

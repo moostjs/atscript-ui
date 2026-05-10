@@ -17,17 +17,16 @@ export function useFormTuple(field: FormTupleFieldDef) {
 
   const isOptional = field.prop.optional ?? false;
 
-  // Pre-build itemFields once — tuple positions are fixed. `name` falls back
-  // to `#N` so AsField's label-resolution chain renders an indexed label when
-  // the position has no `@meta.label`.
-  const itemFields: FormFieldDef[] = field.itemFields.map((itemField, i) => {
-    const metaLabel = getFieldMeta(itemField.prop, META_LABEL) as string | undefined;
-    return {
-      ...itemField,
-      path: String(i),
-      name: metaLabel ?? `#${i + 1}`,
-    };
-  });
+  // Tuple positions are fixed — build itemFields and labeled flags in one pass.
+  // Empty `name` lets AsField fall back to the position's `@meta.label`; when a
+  // position has no label, AsTuple passes `:array-index` for the muted `#N` suffix.
+  const itemFields: FormFieldDef[] = [];
+  const positionLabeled: boolean[] = [];
+  for (let i = 0; i < field.itemFields.length; i++) {
+    const itemField = field.itemFields[i];
+    itemFields.push({ ...itemField, path: String(i), name: "" });
+    positionLabeled.push(getFieldMeta(itemField.prop, META_LABEL) !== undefined);
+  }
 
   const isEmpty = computed(() => {
     const v = getByPath(pathPrefix.value);
@@ -64,6 +63,7 @@ export function useFormTuple(field: FormTupleFieldDef) {
 
   return {
     itemFields,
+    positionLabeled,
     isOptional,
     isEmpty,
     clear,

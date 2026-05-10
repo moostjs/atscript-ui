@@ -9,12 +9,15 @@ import { PATH_PREFIX_KEY } from "../../composables/internal-keys";
 import AsField from "../as-field.vue";
 import AsCollapsible from "../internal/as-collapsible.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
+import AsVariantPicker from "../internal/as-variant-picker.vue";
 
 const props = defineProps<TAsComponentProps>();
 
 const tupleField = props.field as FormTupleFieldDef;
 
-useConsumeUnionContext();
+// Cleared on consume so nested children don't re-render the picker.
+const unionCtx = useConsumeUnionContext();
+const hasVariantPicker = computed(() => unionCtx !== undefined && unionCtx.variants.length > 1);
 
 const path = inject(
   PATH_PREFIX_KEY,
@@ -24,7 +27,7 @@ const path = inject(
 const optionalEnabled = computed(() => Array.isArray(props.model?.value));
 const disabled = computed(() => props.disabled ?? false);
 
-const { itemFields, isOptional, clear, fillMissing } = useFormTuple(tupleField);
+const { itemFields, positionLabeled, isOptional, clear, fillMissing } = useFormTuple(tupleField);
 
 const level = computed(() => props.level ?? 0);
 
@@ -63,6 +66,10 @@ function handleEnableOptional() {
     :hidden="hidden"
     :default-open="defaultOpen"
   >
+    <template #title-extras>
+      <AsVariantPicker v-if="hasVariantPicker" :union-context="unionCtx!" :disabled="disabled" />
+    </template>
+
     <template v-if="isOptional && optionalEnabled" #actions>
       <AsArrayClearBtn
         :optional="true"
@@ -73,7 +80,12 @@ function handleEnableOptional() {
     </template>
 
     <template #body>
-      <AsField v-for="(itemField, i) in itemFields" :key="i" :field="itemField" />
+      <AsField
+        v-for="(itemField, i) in itemFields"
+        :key="i"
+        :field="itemField"
+        :array-index="positionLabeled[i] ? undefined : i"
+      />
     </template>
 
     <template #empty>

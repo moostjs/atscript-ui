@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { TAsComponentProps } from "../types";
-import AsField from "../as-field.vue";
-import AsNoData from "../internal/as-no-data.vue";
-import AsOptionalClear from "../internal/as-optional-clear.vue";
+import type { TAsComponentProps, TAsUnionContext } from "../types";
+import { computed, inject, provide, ref } from "vue";
 import { useFormUnion } from "../../composables/use-form-union";
-import { useFocusFirstAfter } from "../../composables/focus-after-toggle";
+import { useDropdown } from "../../composables/use-dropdown";
+import { useNestedSectionsStore } from "../../composables/use-nested-sections";
+import { PATH_PREFIX_KEY, TYPES_KEY, UNION_CONTEXT_KEY } from "../../composables/internal-keys";
+import { focusNewFocusableAfter } from "../../composables/focus-after-toggle";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -15,63 +16,118 @@ const {
   innerField,
   changeVariant,
   optionalEnabled,
-  dropdownRef,
-  isOpen,
-  toggle,
-  select,
-  handleNaClick,
 } = useFormUnion(props);
 
-const { rootRef, runAndFocus, enableOptional } = useFocusFirstAfter(props.onToggleOptional);
-function handleVariantPick(vi: number): void {
-  runAndFocus(() =>
-    select(() => {
+const types = inject(TYPES_KEY);
+
+// Provided so the variant component renders the picker via useConsumeUnionContext()
+// (consume-and-clear so descendants don't double-render).
+const unionCtx: TAsUnionContext | undefined = unionField.value
+  ? {
+      variants: unionField.value.unionVariants,
+      currentIndex: localUnionIndex,
+      changeVariant,
+    }
+  : undefined;
+if (unionCtx) provide(UNION_CONTEXT_KEY, unionCtx);
+
+const variantComponent = computed(() =>
+  innerField.value ? types?.value?.[innerField.value.type] : undefined,
+);
+
+const fieldLabel = computed(() => props.title ?? props.label ?? props.name ?? "");
+
+// `rootRef` binds to an HTMLElement (empty <div>) OR a Vue instance (active
+// <component :is>). Unwrap to the DOM root for focus-scope querying.
+const rootRef = ref<HTMLElement | { $el: HTMLElement } | null>(null);
+const rootEl = (): HTMLElement | null => {
+  const r = rootRef.value as { querySelectorAll?: unknown; $el?: HTMLElement } | null;
+  if (!r) return null;
+  if (typeof r.querySelectorAll === "function") return r as unknown as HTMLElement;
+  return (r.$el as HTMLElement | undefined) ?? null;
+};
+const pickerDropdownRef = ref<HTMLElement | null>(null);
+const {
+  isOpen: pickerOpen,
+  toggle: togglePicker,
+  select: selectPicker,
+} = useDropdown(pickerDropdownRef);
+
+// Pre-set the variant's section open in the store before it mounts so the
+// variant's AsCollapsible reads `open` on first render — without this, picking
+// a variant lands on a closed section and the focus query finds no inputs.
+const path = inject(
+  PATH_PREFIX_KEY,
+  computed(() => ""),
+);
+const store = useNestedSectionsStore();
+
+function pickAndFocus(vi: number) {
+  void focusNewFocusableAfter(
+    () => {
       changeVariant(vi);
-      props.onToggleOptional?.(true);
-    }),
+      if (path.value) store?.setOpen(path.value, true);
+    },
+    rootEl,
+    2,
   );
+}
+
+function handleEmptyClick() {
+  if (hasMultipleVariants.value) {
+    togglePicker();
+    return;
+  }
+  pickAndFocus(0);
+}
+
+function handleVariantPick(vi: number) {
+  selectPicker(() => pickAndFocus(vi));
 }
 </script>
 
 <template>
-  <div ref="rootRef" class="as-union as-grid-item" :class="$props.class" v-show="!hidden">
-    <!-- Optional N/A state: click opens variant picker when multiple variants -->
-    <template v-if="optional && !optionalEnabled">
-      <div v-if="hasMultipleVariants" ref="dropdownRef" class="as-dropdown-anchor">
-        <AsNoData :on-edit="handleNaClick" />
-        <div v-if="isOpen" class="as-dropdown-menu">
-          <button
-            v-for="(v, vi) in unionField!.unionVariants"
-            :key="vi"
-            type="button"
-            class="as-dropdown-item"
-            @click="handleVariantPick(vi)"
-          >
-            {{ v.label }}
-          </button>
-        </div>
+  <div
+    v-if="optional && !optionalEnabled"
+    ref="rootRef"
+    class="as-object-empty as-grid-item"
+    :class="$props.class"
+    v-show="!hidden"
+  >
+    <div v-if="hasMultipleVariants" ref="pickerDropdownRef" class="as-dropdown">
+      <button type="button" class="as-object-empty-add" @click="handleEmptyClick">
+        <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
+        Add {{ fieldLabel }}
+      </button>
+      <div v-if="pickerOpen" class="as-dropdown-menu">
+        <button
+          v-for="(v, vi) in unionField!.unionVariants"
+          :key="vi"
+          type="button"
+          class="as-dropdown-item"
+          @click="handleVariantPick(vi)"
+        >
+          {{ v.label }}
+        </button>
       </div>
-      <AsNoData v-else :on-edit="enableOptional" />
-    </template>
-    <template v-else>
-      <!-- Optional clear button -->
-      <AsOptionalClear v-if="optional" @clear="onToggleOptional?.(false)" />
-      <!-- Inner field — variant picker rendered by consumer via union context -->
-      <AsField
-        v-if="innerField"
-        :key="localUnionIndex"
-        :field="innerField"
-        :array-index="arrayIndex"
-        :on-remove="onRemove"
-        :can-remove="canRemove"
-        :remove-label="removeLabel"
-      />
-    </template>
+    </div>
+    <button v-else type="button" class="as-object-empty-add" @click="handleEmptyClick">
+      <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
+      Add {{ fieldLabel }}
+    </button>
+    <p v-if="description" class="as-collapsible-description">{{ description }}</p>
   </div>
-</template>
 
-<style>
-.as-union {
-  margin: 0;
-}
-</style>
+  <!-- Active: dispatch to variant's component, forwarding the field's @meta.label
+       as title so the variant's chrome shows it (innerField.type overrides "union"). -->
+  <component
+    v-else-if="variantComponent && innerField"
+    ref="rootRef"
+    :is="variantComponent"
+    v-bind="$props"
+    :field="innerField"
+    :type="innerField.type"
+    :title="fieldLabel"
+    :key="localUnionIndex"
+  />
+</template>

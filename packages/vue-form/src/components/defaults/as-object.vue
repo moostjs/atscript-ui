@@ -73,7 +73,7 @@ function handleAddData(): void {
     :hidden="hidden"
     :default-open="arrayIndex !== undefined"
   >
-    <template #header-extras>
+    <template #title-extras>
       <AsVariantPicker v-if="hasVariantPicker" :union-context="unionCtx!" :disabled="disabled" />
     </template>
 

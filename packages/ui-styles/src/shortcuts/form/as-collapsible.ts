@@ -15,6 +15,7 @@ export const asCollapsibleShortcuts = defineShortcuts({
 
   "as-collapsible-summary": "flex items-center gap-$m text-left cursor-pointer group",
   "as-collapsible-header": "flex-1 flex flex-col gap-$xxs min-w-0",
+  "as-collapsible-title-row": "flex items-center gap-$s min-w-0",
   "as-collapsible-title": "text-body-l font-600 m-0",
   "as-collapsible-title-nested": "text-body font-600 m-0",
   "as-collapsible-title-index": "text-current/60 font-400 font-mono normal-case",

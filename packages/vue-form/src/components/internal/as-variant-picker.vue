@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import type { TAsUnionContext } from "../types";
 import { useDropdown } from "../../composables/use-dropdown";
 
-defineProps<{
+const props = defineProps<{
   unionContext: TAsUnionContext;
   disabled?: boolean;
 }>();
 
 const dropdownRef = ref<HTMLElement | null>(null);
 const { isOpen, toggle, select } = useDropdown(dropdownRef);
+
+// Variant labels carry a "N. " prefix from buildUnionVariants so the dropdown
+// rows read as a numbered list. The trigger shows just the type name.
+const currentLabel = computed(() => {
+  const raw = props.unionContext.variants[props.unionContext.currentIndex.value]?.label ?? "";
+  return raw.replace(/^\d+\.\s+/, "");
+});
 
 function onSelectVariant(ctx: TAsUnionContext, index: number) {
   select(() => ctx.changeVariant(index));
@@ -22,14 +29,10 @@ function onSelectVariant(ctx: TAsUnionContext, index: number) {
       type="button"
       class="as-variant-trigger"
       :disabled="disabled"
-      :title="unionContext.variants[unionContext.currentIndex.value]?.label ?? 'Switch variant'"
+      :title="`Switch type — current: ${currentLabel}`"
       @click="toggle"
     >
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-        <circle cx="3" cy="8" r="1.5" fill="currentColor" />
-        <circle cx="8" cy="8" r="1.5" fill="currentColor" />
-        <circle cx="13" cy="8" r="1.5" fill="currentColor" />
-      </svg>
+      {{ currentLabel || "Switch" }}
     </button>
     <div v-if="isOpen" class="as-dropdown-menu">
       <button
