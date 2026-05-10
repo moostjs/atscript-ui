@@ -1,5 +1,9 @@
-import type { TAtscriptAnnotatedType, TAtscriptDataType } from "@atscript/typescript/utils";
-import { createDataFromAnnotatedType } from "@atscript/typescript/utils";
+import type {
+  TAtscriptAnnotatedType,
+  TAtscriptDataType,
+  TUnionDiscriminator,
+} from "@atscript/typescript/utils";
+import { createDataFromAnnotatedType, detectDiscriminator } from "@atscript/typescript/utils";
 import type { FormUnionVariant } from "./types";
 import { META_DEFAULT, UI_FORM_FN_VALUE } from "../shared/annotation-keys";
 import { resolveFieldProp } from "../shared/field-resolver";
@@ -49,10 +53,6 @@ export function setByPath(obj: Record<string, unknown>, path: string, value: unk
 
 // ── createFormData ──────────────────────────────────────────
 
-/**
- * Coerces a static annotation string to the field's expected type.
- * Strings are returned as-is for string fields; everything else goes through `JSON.parse`.
- */
 function parseStaticDefault(raw: unknown, prop: TAtscriptAnnotatedType): unknown {
   if (typeof raw !== "string") return raw;
   if (prop.type.kind === "" && prop.type.designType === "string") return raw;
@@ -74,25 +74,16 @@ export function createFormValueResolver(
   context: Record<string, unknown> = {},
 ): TFormValueResolver {
   return (prop, _path) => {
-    const result = resolveFieldProp(
+    return resolveFieldProp(
       prop,
       UI_FORM_FN_VALUE,
       META_DEFAULT,
       { v: undefined, data, context, entry: undefined },
       { transform: (raw) => parseStaticDefault(raw, prop) },
     );
-    if (result !== undefined) return result;
-    return undefined;
   };
 }
 
-/**
- * Creates form data from an ATScript type with default values.
- *
- * Uses `createDataFromAnnotatedType` with a custom resolver that checks
- * `meta.default` before falling through to structural defaults.
- * Phantom types (action, paragraph) are skipped automatically.
- */
 export function createFormData<T extends TAtscriptAnnotatedType>(
   type: T,
   resolver?: TFormValueResolver,
@@ -121,20 +112,38 @@ function getVariantValidator(variant: FormUnionVariant) {
   return v;
 }
 
-/**
- * Detects which union variant an existing value matches.
- *
- * @returns Index of the matching variant (0-based), or 0 as fallback
- */
+// Keyed by the array identity that `buildUnionVariants` produces — stable for
+// the form-def's lifetime, so per-array caching is safe.
+const variantsDiscriminatorCache = new WeakMap<
+  FormUnionVariant[],
+  TUnionDiscriminator | null
+>();
+
+function getVariantsDiscriminator(variants: FormUnionVariant[]): TUnionDiscriminator | null {
+  let cached = variantsDiscriminatorCache.get(variants);
+  if (cached === undefined) {
+    cached = detectDiscriminator(variants.map((v) => v.type));
+    variantsDiscriminatorCache.set(variants, cached);
+  }
+  return cached;
+}
+
 export function detectUnionVariant(value: unknown, variants: FormUnionVariant[]): number {
   if (variants.length <= 1) return 0;
+
+  const disc = getVariantsDiscriminator(variants);
+  if (disc && value !== null && typeof value === "object") {
+    const tag = (value as Record<string, unknown>)[disc.propertyName];
+    // `String(undefined) === 'undefined'` and won't match any literal key —
+    // safe to forward without a guard; fall through to validator on miss.
+    const idx = disc.indexMapping[String(tag)];
+    if (idx !== undefined) return idx;
+  }
 
   for (let i = 0; i < variants.length; i++) {
     try {
       if (getVariantValidator(variants[i]!).validate(value, true)) return i;
-    } catch {
-      // Validator threw — skip this variant
-    }
+    } catch {}
   }
 
   return 0;
