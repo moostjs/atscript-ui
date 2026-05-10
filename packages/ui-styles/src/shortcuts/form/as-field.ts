@@ -74,7 +74,6 @@ export const asFieldShortcuts = defineShortcuts({
   "as-field-description": "as-description -mt-[0.2em]",
   "as-field-label-index": "text-current/60 font-400 font-mono normal-case",
 
-
   // Clear/Remove buttons share chrome so they read as one family in
   // headers; only layout (text-pill vs square-icon) differs.
   "as-optional-clear": {

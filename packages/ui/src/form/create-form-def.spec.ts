@@ -1,10 +1,15 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
 import {
+  DB_AMOUNT_CURRENCY,
+  DB_AMOUNT_CURRENCY_REF,
+  DB_UNIT,
+  DB_UNIT_REF,
   META_LABEL,
   UI_FORM_COMPONENT,
   UI_FORM_HIDDEN,
   UI_FORM_ORDER,
+  UI_FORM_TYPE,
   UI_TYPE,
 } from "../shared/annotation-keys";
 import { createFormDef, buildUnionVariants } from "./create-form-def";
@@ -342,6 +347,71 @@ describe("createFormDef", () => {
       const def = createFormDef(type);
 
       expect(def.fields[0]!.type).toBe("custom-select");
+    });
+  });
+
+  describe("measurement & date dispatch", () => {
+    it("number.timestamp tag → 'datetime' type", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number", "timestamp").$type;
+      const type = defineAnnotatedType("object").prop("at", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("datetime");
+    });
+
+    it("@db.amount.currency literal → 'amount' type", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "USD" as never);
+      const type = defineAnnotatedType("object").prop("price", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("amount");
+    });
+
+    it("@db.amount.currency.ref → 'amount' type", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(DB_AMOUNT_CURRENCY_REF as keyof AtscriptMetadata, "currency" as never);
+      const type = defineAnnotatedType("object").prop("total", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("amount");
+    });
+
+    it("@db.unit literal → 'measure' type", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(DB_UNIT as keyof AtscriptMetadata, "kg" as never);
+      const type = defineAnnotatedType("object").prop("weight", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("measure");
+    });
+
+    it("@db.unit.ref → 'measure' type", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(DB_UNIT_REF as keyof AtscriptMetadata, "unitCode" as never);
+      const type = defineAnnotatedType("object").prop("weight", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("measure");
+    });
+
+    it("@ui.form.type wins over measurement annotations", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "USD" as never);
+      prop.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "number" as never);
+      const type = defineAnnotatedType("object").prop("price", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("number");
+    });
+
+    it("@ui.form.type 'date' selects date input", () => {
+      const prop = defineAnnotatedType().designType("string").tags("string").$type;
+      prop.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "date" as never);
+      const type = defineAnnotatedType("object").prop("d", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("date");
     });
   });
 });

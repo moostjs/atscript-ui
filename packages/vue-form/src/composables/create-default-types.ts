@@ -11,6 +11,11 @@ import {
   AsUnion,
   AsTuple,
   AsRef,
+  AsAmount,
+  AsMeasure,
+  AsDate,
+  AsDatetime,
+  AsTime,
 } from "../components/defaults";
 
 /**
@@ -37,5 +42,10 @@ export function createDefaultTypes(): TAsTypeComponents {
     union: AsUnion,
     tuple: AsTuple,
     ref: AsRef,
+    amount: AsAmount,
+    measure: AsMeasure,
+    date: AsDate,
+    datetime: AsDatetime,
+    time: AsTime,
   };
 }

@@ -71,6 +71,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/error-dismissal.vue"),
   },
   {
+    path: "/forms-demo/measurements",
+    name: "forms-demo-measurements",
+    component: () => import("./client/pages/forms-demo/measurements.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

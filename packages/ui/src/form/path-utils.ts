@@ -114,10 +114,7 @@ function getVariantValidator(variant: FormUnionVariant) {
 
 // Keyed by the array identity that `buildUnionVariants` produces — stable for
 // the form-def's lifetime, so per-array caching is safe.
-const variantsDiscriminatorCache = new WeakMap<
-  FormUnionVariant[],
-  TUnionDiscriminator | null
->();
+const variantsDiscriminatorCache = new WeakMap<FormUnionVariant[], TUnionDiscriminator | null>();
 
 function getVariantsDiscriminator(variants: FormUnionVariant[]): TUnionDiscriminator | null {
   let cached = variantsDiscriminatorCache.get(variants);

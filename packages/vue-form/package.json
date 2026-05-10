@@ -20,6 +20,11 @@
       "import": "./dist/as-action.mjs",
       "require": "./dist/as-action.cjs"
     },
+    "./as-amount": {
+      "types": "./dist/as-amount.d.mts",
+      "import": "./dist/as-amount.mjs",
+      "require": "./dist/as-amount.cjs"
+    },
     "./as-array": {
       "types": "./dist/as-array.d.mts",
       "import": "./dist/as-array.mjs",
@@ -29,6 +34,16 @@
       "types": "./dist/as-checkbox.d.mts",
       "import": "./dist/as-checkbox.mjs",
       "require": "./dist/as-checkbox.cjs"
+    },
+    "./as-date": {
+      "types": "./dist/as-date.d.mts",
+      "import": "./dist/as-date.mjs",
+      "require": "./dist/as-date.cjs"
+    },
+    "./as-datetime": {
+      "types": "./dist/as-datetime.d.mts",
+      "import": "./dist/as-datetime.mjs",
+      "require": "./dist/as-datetime.cjs"
     },
     "./as-field": {
       "types": "./dist/as-field.d.mts",
@@ -49,6 +64,11 @@
       "types": "./dist/as-iterator.d.mts",
       "import": "./dist/as-iterator.mjs",
       "require": "./dist/as-iterator.cjs"
+    },
+    "./as-measure": {
+      "types": "./dist/as-measure.d.mts",
+      "import": "./dist/as-measure.mjs",
+      "require": "./dist/as-measure.cjs"
     },
     "./as-object": {
       "types": "./dist/as-object.d.mts",
@@ -74,6 +94,11 @@
       "types": "./dist/as-select.d.mts",
       "import": "./dist/as-select.mjs",
       "require": "./dist/as-select.cjs"
+    },
+    "./as-time": {
+      "types": "./dist/as-time.d.mts",
+      "import": "./dist/as-time.mjs",
+      "require": "./dist/as-time.cjs"
     },
     "./as-tuple": {
       "types": "./dist/as-tuple.d.mts",

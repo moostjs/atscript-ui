@@ -62,6 +62,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/measurements",
+    title: "Measurements & dates",
+    description:
+      "Amount (static + cross-row currency), measure with unit, date / datetime / time inputs.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/dynamic",
     title: "Dynamic (fn-driven)",
     description: "Visibility / labels / options driven by @ui.form.fn.* expressions.",

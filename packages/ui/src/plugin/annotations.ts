@@ -10,6 +10,10 @@ const BUILTIN_TYPES = [
   "checkbox",
   "radio",
   "date",
+  "datetime",
+  "time",
+  "amount",
+  "measure",
   "paragraph",
   "action",
 ] as const;

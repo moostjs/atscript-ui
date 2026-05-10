@@ -16,6 +16,10 @@ import type {
 } from "./types";
 import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
 import {
+  DB_AMOUNT_CURRENCY,
+  DB_AMOUNT_CURRENCY_REF,
+  DB_UNIT,
+  DB_UNIT_REF,
   META_LABEL,
   UI_FORM_COMPONENT,
   UI_FORM_ORDER,
@@ -167,18 +171,43 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
   // Primitive / intersection / fallback
   const tags = kind === "" ? prop.type.tags : undefined;
   let uiTag: string | undefined;
+  let isTimestamp = false;
   if (tags) {
     for (const t of tags) {
-      if (UI_TAGS.has(t)) {
-        uiTag = t;
-        break;
-      }
+      if (uiTag === undefined && UI_TAGS.has(t)) uiTag = t;
+      if (t === "timestamp") isTimestamp = true;
     }
   }
   const dt = kind === "" ? prop.type.designType : undefined;
+  // Measurement-driven types — `@db.amount.currency` / `@db.unit` (literal
+  // or `.ref`) automatically dispatch to amount / measure inputs without
+  // requiring an explicit `@ui.form.type`. Mirrors the table-side cell
+  // dispatch where the same annotations drive currency/unit formatting.
+  let measurementType: string | undefined;
+  if (kind === "") {
+    if (
+      getFieldMeta(prop, DB_AMOUNT_CURRENCY) !== undefined ||
+      getFieldMeta(prop, DB_AMOUNT_CURRENCY_REF) !== undefined
+    ) {
+      measurementType = "amount";
+    } else if (
+      getFieldMeta(prop, DB_UNIT) !== undefined ||
+      getFieldMeta(prop, DB_UNIT_REF) !== undefined
+    ) {
+      measurementType = "measure";
+    }
+  }
+  // `number.timestamp` (epoch-ms primitive) → render as datetime out of
+  // the box, matching the cell-side `inferDisplayType` rule.
+  const tagType = isTimestamp ? "datetime" : undefined;
   return {
     ...base,
-    type: uiType ?? uiTag ?? (dt === "number" ? "number" : dt === "boolean" ? "checkbox" : "text"),
+    type:
+      uiType ??
+      uiTag ??
+      measurementType ??
+      tagType ??
+      (dt === "number" ? "number" : dt === "boolean" ? "checkbox" : "text"),
     phantom: kind === "" && dt === "phantom",
   };
 }

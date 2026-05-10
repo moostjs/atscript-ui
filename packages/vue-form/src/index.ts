@@ -16,6 +16,11 @@ export {
   AsUnion,
   AsTuple,
   AsRef,
+  AsAmount,
+  AsMeasure,
+  AsDate,
+  AsDatetime,
+  AsTime,
 } from "./components/defaults";
 
 // Types
@@ -90,6 +95,14 @@ export type {
   UseAsTriStateCheckboxOptions,
   UseAsTriStateCheckboxReturn,
 } from "./composables/use-as-tri-state-checkbox";
+
+// Composables — measurement & date inputs (companions to defaults)
+export { useAsAmount } from "./composables/use-as-amount";
+export type { UseAsAmountOptions, UseAsAmountReturn } from "./composables/use-as-amount";
+export { useAsMeasure } from "./composables/use-as-measure";
+export type { UseAsMeasureOptions, UseAsMeasureReturn } from "./composables/use-as-measure";
+export { useAsDate } from "./composables/use-as-date";
+export type { UseAsDateOptions, UseAsDateReturn } from "./composables/use-as-date";
 
 // Composables — read-only context wrappers
 export { useAsPath } from "./composables/use-as-path";

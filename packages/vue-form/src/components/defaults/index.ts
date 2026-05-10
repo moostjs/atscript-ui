@@ -9,3 +9,8 @@ export { default as AsArray } from "./as-array.vue";
 export { default as AsUnion } from "./as-union.vue";
 export { default as AsTuple } from "./as-tuple.vue";
 export { default as AsRef } from "./as-ref.vue";
+export { default as AsAmount } from "./as-amount.vue";
+export { default as AsMeasure } from "./as-measure.vue";
+export { default as AsDate } from "./as-date.vue";
+export { default as AsDatetime } from "./as-datetime.vue";
+export { default as AsTime } from "./as-time.vue";

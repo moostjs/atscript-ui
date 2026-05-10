@@ -14,10 +14,15 @@ const REQUIRED_KEYS = [
   "array",
   "union",
   "tuple",
+  "amount",
+  "measure",
+  "date",
+  "datetime",
+  "time",
 ];
 
 describe("createDefaultTypes", () => {
-  it("returns an object with all 12 required field type keys", () => {
+  it("returns an object with all required field type keys", () => {
     const types = createDefaultTypes();
     for (const key of REQUIRED_KEYS) {
       expect(types).toHaveProperty(key);

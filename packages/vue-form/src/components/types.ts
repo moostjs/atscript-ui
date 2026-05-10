@@ -159,6 +159,11 @@ export type TAsTypeComponents = {
   union: Component;
   tuple: Component;
   ref: Component;
+  amount: Component;
+  measure: Component;
+  date: Component;
+  datetime: Component;
+  time: Component;
 } & Record<string, Component>;
 
 /**
