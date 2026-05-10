@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
-import { NestedOptionalsForm } from "./schemas/nested-optionals.as";
+import { UnionsShowcaseForm } from "./schemas/unions.as";
 import DarkToggle from "./_dark-toggle.vue";
 
-const { def, formData } = useForm(NestedOptionalsForm);
+const { def, formData } = useForm(UnionsShowcaseForm);
 const types = createDefaultTypes();
 
 function onSubmit(data: unknown) {
-  console.log("NestedOptionalsForm submitted:", data);
+  console.log("UnionsShowcaseForm submitted:", data);
 }
 </script>
 
@@ -21,11 +21,9 @@ function onSubmit(data: unknown) {
           </p>
           <DarkToggle />
         </div>
-        <h1 class="text-h3 m-0">Nested Optional Structs</h1>
+        <h1 class="text-h3 m-0">Unions / Variants</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
-          Five cascading optional structs. Each "Add &lt;label&gt;" reveals the next level — verify
-          the dashed-island placeholder layout, the section/island chrome alternation, and that
-          focus lands inside the newly opened struct.
+          Pure-literal, primitive, object, optional, discriminated, and array-of-union variations.
         </p>
         <RouterLink
           to="/forms-demo"

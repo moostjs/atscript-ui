@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DarkToggle from "./_dark-toggle.vue";
 type Variation = {
   to: string;
   title: string;
@@ -51,7 +52,7 @@ const variations: Variation[] = [
     to: "/forms-demo/unions",
     title: "Unions / variants",
     description: "Discriminated unions with inline variant picker.",
-    status: "todo",
+    status: "ready",
   },
   {
     to: "/forms-demo/dynamic",
@@ -66,9 +67,12 @@ const variations: Variation[] = [
   <div class="min-h-screen layer-1">
     <div class="max-w-3xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
-        <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
-          atscript-ui · forms demo
-        </p>
+        <div class="flex items-center justify-between gap-$s">
+          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+            atscript-ui · forms demo
+          </p>
+          <DarkToggle />
+        </div>
         <h1 class="text-h1 m-0">Form variations</h1>
         <p class="text-body text-current-muted m-0">
           Stand-alone test pages for every aspect of form rendering — no authentication required.

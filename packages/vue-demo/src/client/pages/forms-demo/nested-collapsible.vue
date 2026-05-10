@@ -7,6 +7,7 @@ import {
   useForm,
 } from "@atscript/vue-form";
 import { CompanySettings } from "./schemas/company-settings.as";
+import DarkToggle from "./_dark-toggle.vue";
 
 const { def, formData } = useForm(CompanySettings);
 const types = createDefaultTypes();
@@ -26,9 +27,12 @@ function onSubmit(data: unknown) {
   <div class="min-h-screen layer-1">
     <div class="max-w-2xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
-        <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
-          atscript-ui · forms demo
-        </p>
+        <div class="flex items-center justify-between gap-$s">
+          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+            atscript-ui · forms demo
+          </p>
+          <DarkToggle />
+        </div>
         <div class="flex items-start gap-$m">
           <div class="flex-1">
             <h1 class="text-h3 m-0">Company Settings</h1>

@@ -61,6 +61,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/tuples.vue"),
   },
   {
+    path: "/forms-demo/unions",
+    name: "forms-demo-unions",
+    component: () => import("./client/pages/forms-demo/unions.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

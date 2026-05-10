@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
 import { TuplesShowcaseForm } from "./schemas/tuples.as";
+import DarkToggle from "./_dark-toggle.vue";
 
 const { def, formData } = useForm(TuplesShowcaseForm);
 const types = createDefaultTypes();
@@ -14,9 +15,12 @@ function onSubmit(data: unknown) {
   <div class="min-h-screen layer-1">
     <div class="max-w-2xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
-        <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
-          atscript-ui · forms demo
-        </p>
+        <div class="flex items-center justify-between gap-$s">
+          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+            atscript-ui · forms demo
+          </p>
+          <DarkToggle />
+        </div>
         <h1 class="text-h3 m-0">Tuples</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
           Fixed-length, position-typed tuples — required auto-fill, optional empty placeholder.

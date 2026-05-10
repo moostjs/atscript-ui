@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { AsForm, createDefaultTypes, useForm } from "@atscript/vue-form";
 import { GridLayoutForm } from "./schemas/grid-layout.as";
+import DarkToggle from "./_dark-toggle.vue";
 
 const { def, formData } = useForm(GridLayoutForm);
 const types = createDefaultTypes();
@@ -14,9 +15,12 @@ function onSubmit(data: unknown) {
   <div class="min-h-screen layer-1">
     <div class="max-w-2xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
-        <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
-          atscript-ui · forms demo
-        </p>
+        <div class="flex items-center justify-between gap-$s">
+          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+            atscript-ui · forms demo
+          </p>
+          <DarkToggle />
+        </div>
         <h1 class="text-h3 m-0">Grid Layout</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
           Mixed col/row spans, aliases, two-arg responsive, and a nested grid that re-stacks below
