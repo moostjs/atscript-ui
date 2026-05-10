@@ -19,7 +19,7 @@ export const asCollapsibleShortcuts = defineShortcuts({
   "as-collapsible-title": "text-body-l font-600 m-0",
   "as-collapsible-title-nested": "text-body font-600 m-0",
   "as-collapsible-title-index": "text-current/60 font-400 font-mono normal-case",
-  "as-collapsible-description": "text-callout text-current/60 m-0",
+  "as-collapsible-description": "as-description",
 
   "as-collapsible-chevron":
     "i-as-chevron-down w-[1.1em] h-[1.1em] shrink-0 text-current-muted group-hover:scope-primary group-hover:text-current-hl [transition:transform_150ms_ease]",

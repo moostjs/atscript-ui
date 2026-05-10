@@ -7,6 +7,10 @@ const baseCommon = defineShortcuts({
   // indicators across the UI share a single visual language.
   "as-kbd":
     "inline-flex items-center justify-center min-w-[1.5em] h-[1.5em] px-$xs rounded-r0 layer-2 text-callout font-mono font-600 text-current/70 leading-none shrink-0",
+  // Single source of truth for descriptive helper text (size + color +
+  // margin reset). Case-specific descriptions extend this so consumers
+  // restyle every description across the UI by overriding one shortcut.
+  "as-description": "text-callout text-current/60 m-0",
 });
 
 export const commonShortcuts = mergeVunorShortcuts([baseCommon]);

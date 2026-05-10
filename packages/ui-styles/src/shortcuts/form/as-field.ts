@@ -71,7 +71,7 @@ export const asFieldShortcuts = defineShortcuts({
     "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1",
   "as-error-slot": "leading-[1] text-callout text-current/60",
 
-  "as-field-description": "text-callout text-current/60 -mt-[0.2em]",
+  "as-field-description": "as-description -mt-[0.2em]",
   "as-field-label-index": "text-current/60 font-400 font-mono normal-case",
 
 
