@@ -22,6 +22,6 @@ export const asRefShortcuts = defineShortcuts({
   },
   "as-ref-item-id": "font-mono text-callout text-current/50 flex-shrink-0 min-w-[2em] text-right",
   "as-ref-item-label": "text-current flex-1",
-  "as-ref-item-descr": "as-description",
+  "as-ref-item-description": "as-description",
   "as-ref-status": "flex items-center justify-center px-$m py-$m text-current/50",
 });

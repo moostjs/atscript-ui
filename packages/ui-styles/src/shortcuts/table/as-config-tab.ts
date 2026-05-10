@@ -12,7 +12,7 @@ export const asConfigTabShortcuts = defineShortcuts({
   "as-config-tab-summary": "flex flex-col gap-[0.15em] px-$l py-$s border-t-1 flex-shrink-0",
   "as-config-tab-summary-count": "text-callout text-current font-500",
   "as-config-tab-summary-count-num": "font-600",
-  "as-config-tab-summary-hint": "text-callout text-current/60",
+  "as-config-tab-summary-hint": "as-description",
 
   "as-config-tab-content": "flex flex-col flex-1 min-h-0 data-[state=inactive]:hidden",
 

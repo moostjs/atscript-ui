@@ -113,7 +113,7 @@ function onSearchInput(e: Event) {
                   {{ item[resolved.labelField] }}
                   <span
                     v-if="resolved.descrField && item[resolved.descrField]"
-                    class="as-ref-item-descr"
+                    class="as-ref-item-description"
                   >
                     — {{ item[resolved.descrField] }}
                   </span>
