@@ -72,6 +72,10 @@ test.describe("Section 15.1 — Edit row via default action", () => {
     // Loading text clears once `record` populates.
     await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0);
 
+    // Nested `<AsObject>` sections default-collapsed; expand the Profile
+    // group so its leaf inputs are visible to `getByLabel`.
+    await page.locator(".as-collapsible-summary", { hasText: "Profile" }).click();
+
     // Form renders. The schema lays out fields in declaration order; we
     // target `First Name` via its label text. `<AsFieldShell>` emits
     // `<label for="as-input-<id>">First Name</label>` so `getByLabel` is
