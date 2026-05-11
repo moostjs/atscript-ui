@@ -18,5 +18,9 @@ export const asDropdownShortcuts = defineShortcuts({
   "as-variant-trigger": {
     "": "inline-flex items-center h-[1.5em] px-$s text-callout font-mono leading-none border-1 layer-0 text-current/60 rounded-base cursor-pointer transition-all duration-120 disabled-soft flex-shrink-0",
     "hover:not-disabled:": "scope-primary bg-current-hl/10 text-current-hl",
+    // Hide the picker when its host collapsible is closed — variant is only
+    // switchable while the body is expanded. Array/leaf-context triggers
+    // (no `<details>` ancestor) are unaffected.
+    "[details:not([open])_&]:": "hidden",
   },
 });
