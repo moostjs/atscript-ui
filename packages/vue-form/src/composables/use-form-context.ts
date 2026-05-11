@@ -103,22 +103,6 @@ function capitalize(s: string): string {
   return s.length === 0 ? s : s[0].toUpperCase() + s.slice(1);
 }
 
-/**
- * Format a label/title for rendering. Capitalizes the first letter and,
- * when in array context, appends a `#N` suffix as a separate piece so
- * callers can render it muted.
- */
-export function formatIndexedLabel(
-  label: string | undefined,
-  arrayIndex: number | undefined,
-): string | undefined {
-  const base = label ? capitalize(label) : undefined;
-  if (arrayIndex !== undefined) {
-    return base ? `${base} #${arrayIndex + 1}` : `#${arrayIndex + 1}`;
-  }
-  return base;
-}
-
 /** Split a label into base + optional `#N` suffix for two-part rendering. */
 export function formatIndexedLabelParts(
   label: string | undefined,

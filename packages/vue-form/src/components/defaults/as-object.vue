@@ -57,7 +57,7 @@ function handleAddData(): void {
     v-else
     ref="collapsibleRef"
     :class="$props.class"
-    :title="displayTitle"
+    :title="title"
     :array-index="arrayIndex"
     :description="description"
     :level="level"
@@ -86,7 +86,7 @@ function handleAddData(): void {
       </button>
       <AsOptionalClear
         v-else-if="optional && optionalEnabled"
-        :label="displayTitle"
+        :label="title"
         @clear="onToggleOptional?.(false)"
       />
     </template>
@@ -99,7 +99,7 @@ function handleAddData(): void {
       <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
         <button type="button" class="as-object-empty-add" @click="handleAddData">
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-          Add {{ displayTitle }}
+          Add {{ title }}
         </button>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>

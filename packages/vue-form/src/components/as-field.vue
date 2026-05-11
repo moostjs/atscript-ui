@@ -76,7 +76,6 @@ import {
   type Component,
   type ComputedRef,
 } from "vue";
-import { formatIndexedLabel } from "../composables/use-form-context";
 import {
   ACTION_HANDLER_KEY,
   CHANGE_HANDLER_KEY,
@@ -611,8 +610,6 @@ const displayProps = computed(() => {
     readonly: unwrap(readonly),
     options: unwrap(options),
     title: titleValue,
-    // Pre-formatted indexed title (`Item #1`) — defaults render this directly.
-    displayTitle: formatIndexedLabel(titleValue, props.arrayIndex) ?? props.field.name,
     onRemove: props.onRemove,
     canRemove: props.canRemove,
     removeLabel: props.removeLabel,

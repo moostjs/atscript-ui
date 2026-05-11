@@ -246,6 +246,36 @@ describe("AsArray", () => {
     expect(wrapper.findAll(".as-error-slot[role='alert']").length).toBe(1);
   });
 
+  // Each object item rendered inside an array gets its own AsCollapsible
+  // title chip. The bold base label must be the singular (or @meta.label)
+  // WITHOUT the `#N` suffix baked in — the muted `.as-collapsible-title-index`
+  // span owns that suffix. Before the fix the index was concatenated into
+  // both pieces, producing `Phone #1 #1`.
+  it("array of objects: collapsible title chip splits base + muted #N (no duplication)", async () => {
+    const { PhonesArrayForm } = await import("./fixtures/array-forms.as");
+    const { wrapper, formData } = mountForm(PhonesArrayForm);
+    formData.value.items = [
+      { label: "a", number: "b" },
+      { label: "c", number: "d" },
+    ];
+    await nextTick();
+    // Two object items → two nested collapsible titles (each h4 within the
+    // array's own collapsible). Filter by the nested title class.
+    const titles = wrapper.findAll(".as-collapsible-title-nested");
+    expect(titles.length).toBe(2);
+    const baseTexts: string[] = [];
+    const suffixTexts: string[] = [];
+    for (const t of titles) {
+      const suffix = t.find(".as-collapsible-title-index");
+      expect(suffix.exists()).toBe(true);
+      suffixTexts.push(suffix.text().trim());
+      baseTexts.push(t.text().replace(suffix.text(), "").trim());
+    }
+    // Base must equal the singular alone — NO baked-in `#N`.
+    expect(baseTexts).toEqual(["Item", "Item"]);
+    expect(suffixTexts).toEqual(["#1", "#2"]);
+  });
+
   // Next submit "promotes" every fresh field — they all light up if invalid.
   it("array item gets validated on next submit even without manual edit", async () => {
     const { PhonesArrayForm } = await import("./fixtures/array-forms.as");

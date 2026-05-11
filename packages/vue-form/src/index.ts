@@ -61,7 +61,6 @@ export { useAsUnion } from "./composables/use-as-union";
 export type { UseAsUnionReturn } from "./composables/use-as-union";
 export {
   useAsUnionVariant,
-  formatIndexedLabel,
   formatIndexedLabelParts,
 } from "./composables/use-form-context";
 

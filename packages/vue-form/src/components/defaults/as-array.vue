@@ -83,7 +83,8 @@ function handleEnableOptional() {
   <AsCollapsible
     ref="collapsibleRef"
     :class="$props.class"
-    :title="displayTitle"
+    :title="title"
+    :array-index="arrayIndex"
     :description="description"
     :level="level"
     :optional="!!optional"
@@ -106,7 +107,7 @@ function handleEnableOptional() {
            so the user can collapse back to undefined. -->
       <AsArrayClearBtn
         v-if="isOptional || !isEmpty"
-        :label="displayTitle"
+        :label="title"
         :optional="isOptional"
         :disabled="disabled"
         @clear="clear"
@@ -156,7 +157,7 @@ function handleEnableOptional() {
       <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
         <button type="button" class="as-object-empty-add" @click="handleEnableOptional">
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-          Add {{ displayTitle }}
+          Add {{ title }}
         </button>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>

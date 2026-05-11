@@ -15,7 +15,7 @@ import { formatIndexedLabelParts } from "../../composables/use-form-context";
 
 const props = withDefaults(
   defineProps<{
-    title: string;
+    title?: string;
     description?: string;
     level: number;
     optional: boolean;

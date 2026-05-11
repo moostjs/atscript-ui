@@ -86,8 +86,6 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   arrayIndex?: number;
   /** Absolute dotted path to this field inside the form data. Empty string at the root. */
   path: string;
-  /** Pre-formatted display title — title (or name) capitalized + optional ` #N` suffix. Always populated by AsField. */
-  displayTitle: string;
   /** Resolved value-help descriptor for FK ref fields (`@db.rel.FK` → `@db.http.path`). */
   valueHelp?: ValueHelpInfo;
   /** Singular label for array fields (`@ui.form.label.singular`) — used in "Add <singular>" affordances. */

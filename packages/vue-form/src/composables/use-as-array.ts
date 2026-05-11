@@ -77,7 +77,8 @@ export function useAsArray(
     : [];
 
   // `name` doubles as AsField label fallback so primitive items read
-  // `<singular> #N` via formatIndexedLabel without a separate decorator.
+  // `<singular> #N` via AsCollapsible's formatIndexedLabelParts without
+  // a separate decorator.
   const itemFieldCache = new Map<number, FormFieldDef>();
 
   function getItemField(index: number, name = ""): FormFieldDef {

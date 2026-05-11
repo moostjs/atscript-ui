@@ -92,4 +92,21 @@ describe("AsTuple", () => {
     expect(suffixTexts.some((t) => t.includes("#1"))).toBe(true);
     expect(suffixTexts.some((t) => t.includes("#2"))).toBe(true);
   });
+
+  // Tuple element labels for unlabeled positions fall back to the capitalized
+  // type name (`number` → `Number`) so the bold base label is non-empty.
+  // Before the fix the label was empty and only the muted `#N` suffix showed.
+  it("unlabeled tuple positions render the type name as the bold base label", async () => {
+    const { RequiredTupleForm } = await import("./fixtures/array-forms.as");
+    const { wrapper } = mountForm(RequiredTupleForm);
+    const labels = wrapper.findAll(".as-field-label");
+    expect(labels.length).toBe(2);
+    // The label element contains the bold base text directly + a child span
+    // with the muted `#N` suffix. Strip the suffix span to read the base.
+    const baseTexts = labels.map((l) => {
+      const suffix = l.find(".as-field-label-index");
+      return suffix.exists() ? l.text().replace(suffix.text(), "").trim() : l.text().trim();
+    });
+    expect(baseTexts).toEqual(["Number", "Number"]);
+  });
 });
