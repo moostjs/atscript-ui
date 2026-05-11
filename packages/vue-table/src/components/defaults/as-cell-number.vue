@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ColumnDef } from "@atscript/ui";
+import { type ColumnDef, formatDecimalForDisplay } from "@atscript/ui";
 import { getCellValue } from "../../utils/get-cell-value";
-import { getNumberFormat } from "../../utils/intl-cache";
 import { useCellLocale } from "../../composables/use-cell-locale";
 
 // Money branch wins over precision — `Intl.NumberFormat` derives currency-
 // specific fraction digits from CLDR, which beats a static `precisionScale`.
+// Single source of truth for decimal formatting lives in
+// `@atscript/ui/decimal-format` so form composables and table cells render
+// identically — see `formatDecimalForDisplay`.
 const props = defineProps<{
   row: Record<string, unknown>;
   column: ColumnDef;
@@ -15,13 +17,6 @@ const props = defineProps<{
 const { locale } = useCellLocale();
 
 const value = computed(() => getCellValue(props.row, props.column.path));
-
-const numericValue = computed(() => {
-  const v = value.value;
-  if (v === null || v === undefined || v === "") return undefined;
-  const n = typeof v === "number" ? v : Number(v);
-  return Number.isFinite(n) ? n : undefined;
-});
 
 const currency = computed(() => {
   const c = props.column.currencyCode;
@@ -46,31 +41,27 @@ const unit = computed(() => {
 });
 
 const formatted = computed(() => {
-  const n = numericValue.value;
-  if (n === undefined) {
-    // Non-finite raw → render the raw string so malformed decimals are visible
-    // instead of silently blanked.
-    const v = value.value;
-    if (v === null || v === undefined || v === "") return "";
-    return String(v);
-  }
+  const v = value.value;
+  if (v === null || v === undefined || v === "") return "";
+
+  // Money wins over precisionScale (currency CLDR digits beat static config).
+  // The helper passes `scale: undefined` when currency is set, so Intl uses
+  // the currency's natural fraction digits.
   const cur = currency.value;
   if (cur) {
-    // `Intl.NumberFormat` throws on a bad currency code; swallow so legacy /
-    // user-injected codes don't break the row.
-    try {
-      return getNumberFormat(locale.value, { style: "currency", currency: cur }).format(n);
-    } catch {
-      // fall through to plain formatting
-    }
+    const out = formatDecimalForDisplay({ value: v, locale: locale.value, currency: cur });
+    if (out !== "") return out;
+    // Non-finite raw → render raw string so malformed decimals stay visible.
+    return typeof v === "string" ? v : String(v);
   }
-  const opts: Intl.NumberFormatOptions = {};
-  if (props.column.precisionScale != null) {
-    opts.minimumFractionDigits = props.column.precisionScale;
-    opts.maximumFractionDigits = props.column.precisionScale;
-  }
-  const base = getNumberFormat(locale.value, opts).format(n);
-  return unit.value ? `${base} ${unit.value}` : base;
+  const out = formatDecimalForDisplay({
+    value: v,
+    scale: props.column.precisionScale,
+    locale: locale.value,
+    unit: unit.value,
+  });
+  if (out !== "") return out;
+  return typeof v === "string" ? v : String(v);
 });
 </script>
 

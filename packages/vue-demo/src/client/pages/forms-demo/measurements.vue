@@ -24,7 +24,10 @@ function onSubmit(data: unknown) {
         <h1 class="text-h3 m-0">Measurements & dates</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
           Amount with static currency, amount with cross-row currency reference, measure with
-          static unit, plus date / datetime / time inputs.
+          static unit, plus date / datetime / time inputs. Order total caps storage at scale=3
+          (DB precision) while display scale follows the chosen currency — JPY drops decimals,
+          BHD keeps three. Switching from a wider currency to a narrower one re-rounds the model
+          in place.
         </p>
         <RouterLink
           to="/forms-demo"

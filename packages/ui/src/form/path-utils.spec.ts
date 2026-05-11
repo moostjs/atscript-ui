@@ -54,7 +54,7 @@ describe("detectUnionVariant", () => {
     it("looks up by discriminator regardless of variant declaration order", () => {
       // Same union as above with the variants reordered — the discriminator
       // hash is computed against the new order, so lookups still resolve.
-      const variants = discriminatedVariants().reverse();
+      const variants = discriminatedVariants().toReversed();
       expect(detectUnionVariant({ kind: "url", url: "https://x" }, variants)).toBe(2);
       expect(detectUnionVariant({ kind: "upload", fileId: "abc" }, variants)).toBe(1);
     });

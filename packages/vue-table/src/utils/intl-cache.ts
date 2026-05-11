@@ -1,22 +1,10 @@
 // Intl formatter constructors are expensive (~50–200μs cached, 0.5–2ms cold).
 // Inside virtual-scroll tables, cells re-format on every recycle, so a single
 // keyed cache shared across renders eliminates the per-row construction cost.
+// Number-format caching lives in `@atscript/ui` (`decimal-format.ts`) so form
+// + table render through one path; this file keeps the date-time cache only.
 
-const numberCache = new Map<string, Intl.NumberFormat>();
 const dateTimeCache = new Map<string, Intl.DateTimeFormat>();
-
-export function getNumberFormat(
-  locale: string,
-  opts: Intl.NumberFormatOptions = {},
-): Intl.NumberFormat {
-  const key = `${locale}|${opts.style ?? ""}|${opts.currency ?? ""}|${opts.minimumFractionDigits ?? ""}|${opts.maximumFractionDigits ?? ""}`;
-  let f = numberCache.get(key);
-  if (!f) {
-    f = new Intl.NumberFormat(locale, opts);
-    numberCache.set(key, f);
-  }
-  return f;
-}
 
 export function getDateTimeFormat(
   locale: string,

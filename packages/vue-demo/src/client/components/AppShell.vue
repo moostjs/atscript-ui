@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount, watch } from "vue";
 import { useRouter } from "vue-router";
+import { provideAsLocale } from "@atscript/vue-form";
 import { provideCellLocale, useAppPrefs } from "@atscript/vue-table";
 import { useMe } from "../api/use-me";
 import { on401 } from "../api/error-bus";
@@ -22,6 +23,8 @@ provideCellLocale(
     timezone: prefs.value.timezone,
   })),
 );
+// Same source feeds the form-side locale (decimal separator, currency symbol).
+provideAsLocale(() => prefs.value.language);
 
 onMounted(() => {
   off401 = on401.on(() => {

@@ -59,10 +59,7 @@ export { useAsTuple } from "./composables/use-as-tuple";
 export type { UseAsTupleReturn } from "./composables/use-as-tuple";
 export { useAsUnion } from "./composables/use-as-union";
 export type { UseAsUnionReturn } from "./composables/use-as-union";
-export {
-  useAsUnionVariant,
-  formatIndexedLabelParts,
-} from "./composables/use-form-context";
+export { useAsUnionVariant, formatIndexedLabelParts } from "./composables/use-form-context";
 
 // Composables — value help / dropdown
 export { useAsValueHelp } from "./composables/use-as-value-help";
@@ -94,6 +91,10 @@ export type {
   UseAsTriStateCheckboxOptions,
   UseAsTriStateCheckboxReturn,
 } from "./composables/use-as-tri-state-checkbox";
+
+// Composables — locale (drives decimal/currency formatting)
+export { provideAsLocale, useAsLocale } from "./composables/use-as-locale";
+export type { UseAsLocaleReturn } from "./composables/use-as-locale";
 
 // Composables — measurement & date inputs (companions to defaults)
 export { useAsAmount } from "./composables/use-as-amount";

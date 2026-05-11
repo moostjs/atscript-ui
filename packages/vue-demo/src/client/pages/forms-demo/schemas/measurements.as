@@ -10,20 +10,21 @@ export interface MeasurementsForm {
     @ui.form.grid.colSpan '6'
     price: decimal
 
-    // ── Cross-row currency ───────────────────────────────────
+    // ── Cross-row currency w/ live re-rounding ───────────────
     @meta.label 'Order currency'
-    @meta.description 'Pick the currency this order is settled in.'
+    @meta.description 'Switch this to watch Order total re-round (JPY drops decimals, BHD keeps three).'
     @ui.form.options 'US Dollar', 'USD'
     @ui.form.options 'Euro', 'EUR'
     @ui.form.options 'British Pound', 'GBP'
     @ui.form.options 'Japanese Yen', 'JPY'
+    @ui.form.options 'Bahraini Dinar', 'BHD'
     @ui.form.grid.colSpan '6'
     currency: ui.select
 
     @meta.label 'Order total'
-    @meta.description 'Currency follows the picker above (`@db.amount.currency.ref currency`).'
+    @meta.description 'Currency follows the picker above. db scale = 3 caps the storage shape; effective scale = min(currencyDecimals, dbScale) drives display.'
     @db.amount.currency.ref 'currency'
-    @db.column.precision 12, 2
+    @db.column.precision 14, 3
     @ui.form.grid.colSpan '6'
     total: decimal
 

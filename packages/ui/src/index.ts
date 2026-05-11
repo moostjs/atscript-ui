@@ -156,6 +156,24 @@ export { resolveSingularLabel } from "./form/labels";
 export { extractMeasurement } from "./form/measurement";
 export type { MeasurementInfo } from "./form/measurement";
 
+// ── Decimal formatting + parsing (framework-agnostic) ───────
+// Shared by `@atscript/vue-table` cells and `@atscript/vue-form` composables;
+// the storage value path is string-only so DB-precision decimals don't bounce
+// through floats.
+export {
+  enforceScale,
+  formatDecimalForDisplay,
+  getCurrencyDecimals,
+  getCurrencyDisplayParts,
+  getDecimalSeparator,
+  getThousandsSeparator,
+  groupInteger,
+  joinDecimalString,
+  parseDecimalInput,
+  splitDecimalString,
+} from "./form/decimal-format";
+export type { CurrencyDisplay, DecimalParts, FormatDecimalOptions } from "./form/decimal-format";
+
 // ── Table types ─────────────────────────────────────────────
 export type {
   TableDef,
