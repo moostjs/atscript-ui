@@ -23,6 +23,10 @@ import {
   META_LABEL,
   UI_FORM_COMPONENT,
   UI_FORM_ORDER,
+  UI_FORM_PREFIX,
+  UI_FORM_PREFIX_REF,
+  UI_FORM_SUFFIX,
+  UI_FORM_SUFFIX_REF,
   UI_FORM_TYPE,
   UI_TYPE,
 } from "../shared/annotation-keys";
@@ -179,22 +183,39 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     }
   }
   const dt = kind === "" ? prop.type.designType : undefined;
-  // Measurement-driven types — `@db.amount.currency` / `@db.unit` (literal
-  // or `.ref`) automatically dispatch to amount / measure inputs without
-  // requiring an explicit `@ui.form.type`. Mirrors the table-side cell
-  // dispatch where the same annotations drive currency/unit formatting.
-  let measurementType: string | undefined;
+  // Numeric dispatcher — `@db.amount.currency` / `@db.unit` / `@ui.form.prefix` /
+  // `@ui.form.suffix` (literal or `.ref`) automatically dispatch the field to
+  // `decimal` (bank-UX two-input chrome) or `number` (single-input with
+  // prefix/suffix adornments). Mirrors the table-side cell dispatch where the
+  // same `@db.amount.*` / `@db.unit.*` annotations drive currency/unit
+  // formatting.
+  //
+  // Precedence chain inside the dispatcher:
+  //   1. Currency present → decimal (forces bank-UX chrome regardless of dt)
+  //   2. Native `decimal` design type → decimal
+  //   3. Native `number` with @db.unit OR @ui.form.prefix OR @ui.form.suffix → number
+  //      (adornment chrome lives in AsNumber; otherwise falls through to plain
+  //       AsInput type=number via the designType branch below)
+  let numericType: "decimal" | "number" | undefined;
   if (kind === "") {
-    if (
+    const hasCurrency =
       getFieldMeta(prop, DB_AMOUNT_CURRENCY) !== undefined ||
-      getFieldMeta(prop, DB_AMOUNT_CURRENCY_REF) !== undefined
-    ) {
-      measurementType = "amount";
-    } else if (
-      getFieldMeta(prop, DB_UNIT) !== undefined ||
-      getFieldMeta(prop, DB_UNIT_REF) !== undefined
-    ) {
-      measurementType = "measure";
+      getFieldMeta(prop, DB_AMOUNT_CURRENCY_REF) !== undefined;
+    const isDecimalDesign = dt === "decimal";
+    if (hasCurrency) {
+      numericType = "decimal";
+    } else if (isDecimalDesign) {
+      numericType = "decimal";
+    } else if (dt === "number") {
+      const hasUnit =
+        getFieldMeta(prop, DB_UNIT) !== undefined || getFieldMeta(prop, DB_UNIT_REF) !== undefined;
+      const hasPrefix =
+        getFieldMeta(prop, UI_FORM_PREFIX) !== undefined ||
+        getFieldMeta(prop, UI_FORM_PREFIX_REF) !== undefined;
+      const hasSuffix =
+        getFieldMeta(prop, UI_FORM_SUFFIX) !== undefined ||
+        getFieldMeta(prop, UI_FORM_SUFFIX_REF) !== undefined;
+      if (hasUnit || hasPrefix || hasSuffix) numericType = "number";
     }
   }
   // `number.timestamp` (epoch-ms primitive) → render as datetime out of
@@ -205,7 +226,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     type:
       uiType ??
       uiTag ??
-      measurementType ??
+      numericType ??
       tagType ??
       (dt === "number" ? "number" : dt === "boolean" ? "checkbox" : "text"),
     phantom: kind === "" && dt === "phantom",

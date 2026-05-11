@@ -1,6 +1,6 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { detectUnionVariant } from "./path-utils";
+import { createFormData, detectUnionVariant } from "./path-utils";
 import type { FormUnionVariant } from "./types";
 
 function literal(value: string) {
@@ -101,5 +101,33 @@ describe("detectUnionVariant", () => {
       const variants = [variant("String", stringProp()), variant("Number", numberProp())];
       expect(detectUnionVariant(undefined, variants)).toBe(0);
     });
+  });
+});
+
+describe("createFormData primitive-init fallback", () => {
+  // atscript's `finalDefault` table handles string/number/boolean/null but
+  // returns `undefined` for `decimal` (and any other primitive added later
+  // without a structural default). `createFormData` is the "make this
+  // value exist" boundary used by the optional-toggle, array-add,
+  // tuple-pad, and union-pick flows — returning `undefined` there leaves
+  // AsFieldShell stuck in the empty-state placeholder.
+  it("returns '' for a bare decimal prop (the structural default in atscript is undefined)", () => {
+    const prop = defineAnnotatedType().designType("decimal").$type;
+    const result = createFormData(prop);
+    expect(result.value).toBe("");
+  });
+
+  it("preserves atscript's existing finalDefault for handled primitive types", () => {
+    expect(createFormData(defineAnnotatedType().designType("string").$type).value).toBe("");
+    expect(createFormData(defineAnnotatedType().designType("number").$type).value).toBe(0);
+    expect(createFormData(defineAnnotatedType().designType("boolean").$type).value).toBe(false);
+  });
+
+  it("resolver value wins over the fallback when @meta.default is set on a number", () => {
+    // The fallback only fires when the resolver returns undefined — a
+    // present default should always take precedence.
+    const prop = defineAnnotatedType().designType("number").annotate("meta.default", "42").$type;
+    const result = createFormData(prop);
+    expect(result.value).toBe(42);
   });
 });

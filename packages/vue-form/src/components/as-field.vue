@@ -27,8 +27,14 @@ import {
   createFieldValidator,
   buildGridClasses,
   resolveGridSpec,
-  extractMeasurement,
   extractValueHelp,
+  getCurrencyDecimals,
+  getCurrencyDisplayParts,
+  DB_AMOUNT_CURRENCY,
+  DB_AMOUNT_CURRENCY_REF,
+  DB_COLUMN_PRECISION,
+  DB_UNIT,
+  DB_UNIT_REF,
   EXPECT_MAX_LENGTH,
   META_DEFAULT,
   META_DESCRIPTION,
@@ -59,12 +65,18 @@ import {
   UI_FORM_HINT,
   UI_FORM_ICON,
   UI_FORM_PLACEHOLDER,
+  UI_FORM_PREFIX,
+  UI_FORM_PREFIX_REF,
   UI_FORM_STYLES,
+  UI_FORM_SUFFIX,
+  UI_FORM_SUFFIX_REF,
   UI_FORM_VALIDATE,
   WF_ACTION_WITH_DATA,
   type FormFieldDef,
   type TFormAction,
 } from "@atscript/ui";
+import { useAsData } from "../composables/use-as-data";
+import { useAsLocale } from "../composables/use-as-locale";
 import { buildFieldEntry } from "@atscript/ui-fns";
 import {
   computed,
@@ -179,7 +191,116 @@ const icon = getFieldMeta(prop, UI_FORM_ICON);
 // Defaults read these as plain props instead of touching `field.prop`,
 // so a custom swap component does not need to know about annotations.
 const valueHelp = extractValueHelp(prop);
-const measurement = extractMeasurement(prop);
+
+// ── Measurement / adornment resolution (sibling-ref aware) ────
+// Raw annotation reads (one-shot — these are static keys).
+const currencyLiteral = getFieldMeta(prop, DB_AMOUNT_CURRENCY) as string | undefined;
+const currencyRefField = getFieldMeta(prop, DB_AMOUNT_CURRENCY_REF) as string | undefined;
+const unitLiteral = getFieldMeta(prop, DB_UNIT) as string | undefined;
+const unitRefField = getFieldMeta(prop, DB_UNIT_REF) as string | undefined;
+const prefixLiteral = getFieldMeta(prop, UI_FORM_PREFIX) as string | undefined;
+const prefixRefField = getFieldMeta(prop, UI_FORM_PREFIX_REF) as string | undefined;
+const suffixLiteral = getFieldMeta(prop, UI_FORM_SUFFIX) as string | undefined;
+const suffixRefField = getFieldMeta(prop, UI_FORM_SUFFIX_REF) as string | undefined;
+const precisionMeta = getFieldMeta(prop, DB_COLUMN_PRECISION) as
+  | { precision: number; scale: number }
+  | undefined;
+const precisionScale = precisionMeta?.scale;
+
+// Whether the field carries ANY adornment-driving annotation. Surfaces as
+// `hasAdornment` on `TAsComponentProps` so AsNumber / AsDecimal can render
+// the merged-chrome shell consistently even when a sibling-ref source is
+// currently empty (otherwise the shell would flicker on/off as the user
+// selected the source value). Static value at AsField setup — never
+// changes for a given mount.
+//
+// Also gates the data + locale wiring below — avoids the reactive
+// subscribe cost on every form field, structured field, or action.
+const hasAdornment =
+  currencyLiteral !== undefined ||
+  currencyRefField !== undefined ||
+  unitLiteral !== undefined ||
+  unitRefField !== undefined ||
+  prefixLiteral !== undefined ||
+  prefixRefField !== undefined ||
+  suffixLiteral !== undefined ||
+  suffixRefField !== undefined;
+
+let resolvedCurrencyCode: string | ComputedRef<string | undefined> | undefined;
+let resolvedUnitCode: string | ComputedRef<string | undefined> | undefined;
+let resolvedPrefix: string | ComputedRef<string | undefined> | undefined;
+let resolvedSuffix: string | ComputedRef<string | undefined> | undefined;
+let resolvedScale: number | ComputedRef<number | undefined> | undefined;
+
+if (hasAdornment) {
+  const _data = useAsData();
+  const { locale: _locale } = useAsLocale();
+
+  // Currency: literal wins; otherwise sibling-ref read.
+  if (currencyLiteral !== undefined) {
+    resolvedCurrencyCode = currencyLiteral;
+  } else if (currencyRefField !== undefined) {
+    const ref = _data.siblingValue<string>(currencyRefField);
+    resolvedCurrencyCode = computed<string | undefined>(() => {
+      const v = ref.value;
+      return typeof v === "string" && v.length > 0 ? v : undefined;
+    });
+  }
+
+  // Unit: literal wins; otherwise sibling-ref read.
+  if (unitLiteral !== undefined) {
+    resolvedUnitCode = unitLiteral;
+  } else if (unitRefField !== undefined) {
+    const ref = _data.siblingValue<string>(unitRefField);
+    resolvedUnitCode = computed<string | undefined>(() => {
+      const v = ref.value;
+      return typeof v === "string" && v.length > 0 ? v : undefined;
+    });
+  }
+
+  // Reads the current resolved currency/unit code through whichever shape
+  // (literal string vs `computed<string | undefined>`) it landed in above.
+  const readCode = (v: string | ComputedRef<string | undefined> | undefined): string | undefined =>
+    isRef(v) ? v.value : v;
+
+  // Prefix: explicit @ui.form.prefix wins → .ref → currency narrow symbol.
+  const prefixRefValue = prefixRefField ? _data.siblingValue<string>(prefixRefField) : undefined;
+  resolvedPrefix = computed<string | undefined>(() => {
+    if (prefixLiteral !== undefined && prefixLiteral.length > 0) return prefixLiteral;
+    if (prefixRefValue) {
+      const v = prefixRefValue.value;
+      if (typeof v === "string" && v.length > 0) return v;
+    }
+    // Fall back to currency symbol when resolved.
+    const code = readCode(resolvedCurrencyCode);
+    if (code) return getCurrencyDisplayParts(code, _locale.value).symbol;
+    return undefined;
+  });
+
+  // Suffix: explicit @ui.form.suffix wins → .ref → unit code.
+  const suffixRefValue = suffixRefField ? _data.siblingValue<string>(suffixRefField) : undefined;
+  resolvedSuffix = computed<string | undefined>(() => {
+    if (suffixLiteral !== undefined && suffixLiteral.length > 0) return suffixLiteral;
+    if (suffixRefValue) {
+      const v = suffixRefValue.value;
+      if (typeof v === "string" && v.length > 0) return v;
+    }
+    return readCode(resolvedUnitCode);
+  });
+
+  // Effective display scale: min(currencyDecimals, precisionScale) when
+  // currency known; else currencyDecimals; else precisionScale; else undef.
+  resolvedScale = computed<number | undefined>(() => {
+    const code = readCode(resolvedCurrencyCode);
+    const currDecimals = code ? getCurrencyDecimals(code, _locale.value) : undefined;
+    if (currDecimals !== undefined && typeof precisionScale === "number") {
+      return Math.min(currDecimals, precisionScale);
+    }
+    if (currDecimals !== undefined) return currDecimals;
+    if (typeof precisionScale === "number") return precisionScale;
+    return undefined;
+  });
+}
 // `@ui.form.label.singular` lives on the array prop; fall back to the
 // item prop, then to "item". The fallback chain matches AsArray's prior
 // behaviour — default lookup yields "item" only when both lookups miss.
@@ -580,11 +701,12 @@ const invariantProps = {
   path: absolutePath.value,
   valueHelp,
   singularLabel,
-  currencyCode: measurement.currencyCode,
-  currencyRefField: measurement.currencyRefField,
-  unitCode: measurement.unitCode,
-  unitRefField: measurement.unitRefField,
-  precisionScale: measurement.precisionScale,
+  // Static literal precision (the storage cap — composables pad to this).
+  precisionScale,
+  // Whether AsField saw at least one adornment-driving annotation on this
+  // field (currency / unit / prefix / suffix, literal or `.ref`). Used by
+  // AsNumber / AsDecimal to pick the chrome path. Static — never changes.
+  hasAdornment,
   inputId,
   errorId,
   descId,
@@ -614,6 +736,12 @@ const displayProps = computed(() => {
     canRemove: props.canRemove,
     removeLabel: props.removeLabel,
     arrayIndex: props.arrayIndex,
+    // Resolved measurement + adornment props (computed when present, else undef).
+    currencyCode: unwrap(resolvedCurrencyCode),
+    unitCode: unwrap(resolvedUnitCode),
+    prefix: unwrap(resolvedPrefix),
+    suffix: unwrap(resolvedSuffix),
+    scale: unwrap(resolvedScale),
     ...unwrap(attrs),
   };
 });

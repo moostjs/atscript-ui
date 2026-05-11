@@ -84,14 +84,46 @@ export function createFormValueResolver(
   };
 }
 
+/**
+ * Type-appropriate "defined-but-empty" fallback for primitive design types
+ * whose structural default in atscript's `finalDefault` table is
+ * `undefined`. Without this, `createFormData` on an optional `decimal`
+ * field (or any other primitive missed by atscript's table) returns
+ * `undefined` — but `createFormData` is called from "explicit add"
+ * contexts (optional-toggle, array-add, tuple-pad, union-pick) where the
+ * caller's intent is "give me a value the renderer can edit", not "no
+ * value yet". Returning `undefined` leaves the empty-state placeholder
+ * stuck in AsFieldShell.
+ *
+ * Mirrors atscript's `finalDefault` for the cases it handles, plus a
+ * `decimal → ""` entry (decimal validates as `string`).
+ */
+function primitiveInitFallback(prop: TAtscriptAnnotatedType): unknown {
+  if (prop.type.kind !== "") return undefined;
+  switch (prop.type.designType) {
+    case "decimal":
+      return "";
+    default:
+      return undefined;
+  }
+}
+
 export function createFormData<T extends TAtscriptAnnotatedType>(
   type: T,
   resolver?: TFormValueResolver,
 ): { value: TAtscriptDataType<T> } {
+  let value = createDataFromAnnotatedType(type, {
+    mode: resolver ?? defaultValueResolver,
+  });
+  // Backfill primitive design types that atscript's `finalDefault` leaves
+  // as `undefined` (notably `decimal`). Form-level callers explicitly want
+  // a defined-but-empty value — `createFormData` is the "make this exist"
+  // boundary, not the "fill if available" one (that's still the resolver).
+  if (value === undefined) {
+    value = primitiveInitFallback(type);
+  }
   return {
-    value: createDataFromAnnotatedType(type, {
-      mode: resolver ?? defaultValueResolver,
-    }) as TAtscriptDataType<T>,
+    value: value as TAtscriptDataType<T>,
   };
 }
 

@@ -20,11 +20,6 @@
       "import": "./dist/as-action.mjs",
       "require": "./dist/as-action.cjs"
     },
-    "./as-amount": {
-      "types": "./dist/as-amount.d.mts",
-      "import": "./dist/as-amount.mjs",
-      "require": "./dist/as-amount.cjs"
-    },
     "./as-array": {
       "types": "./dist/as-array.d.mts",
       "import": "./dist/as-array.mjs",
@@ -44,6 +39,11 @@
       "types": "./dist/as-datetime.d.mts",
       "import": "./dist/as-datetime.mjs",
       "require": "./dist/as-datetime.cjs"
+    },
+    "./as-decimal": {
+      "types": "./dist/as-decimal.d.mts",
+      "import": "./dist/as-decimal.mjs",
+      "require": "./dist/as-decimal.cjs"
     },
     "./as-field": {
       "types": "./dist/as-field.d.mts",
@@ -65,10 +65,10 @@
       "import": "./dist/as-iterator.mjs",
       "require": "./dist/as-iterator.cjs"
     },
-    "./as-measure": {
-      "types": "./dist/as-measure.d.mts",
-      "import": "./dist/as-measure.mjs",
-      "require": "./dist/as-measure.cjs"
+    "./as-number": {
+      "types": "./dist/as-number.d.mts",
+      "import": "./dist/as-number.mjs",
+      "require": "./dist/as-number.cjs"
     },
     "./as-object": {
       "types": "./dist/as-object.d.mts",

@@ -9,6 +9,10 @@ import {
   UI_FORM_COMPONENT,
   UI_FORM_HIDDEN,
   UI_FORM_ORDER,
+  UI_FORM_PREFIX,
+  UI_FORM_PREFIX_REF,
+  UI_FORM_SUFFIX,
+  UI_FORM_SUFFIX_REF,
   UI_FORM_TYPE,
   UI_TYPE,
 } from "../shared/annotation-keys";
@@ -359,50 +363,121 @@ describe("createFormDef", () => {
       expect(def.fields[0]!.type).toBe("datetime");
     });
 
-    it("@db.amount.currency literal → 'amount' type", () => {
+    it("decimal design type alone → 'decimal' type", () => {
+      const prop = defineAnnotatedType().designType("decimal").tags("decimal").$type;
+      const type = defineAnnotatedType("object").prop("score", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("decimal");
+    });
+
+    it("@db.amount.currency on number → 'decimal' type (currency forces decimal chrome)", () => {
       const prop = defineAnnotatedType().designType("number").tags("number").$type;
       prop.metadata.set(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "USD" as never);
       const type = defineAnnotatedType("object").prop("price", prop).$type;
       const def = createFormDef(type);
 
-      expect(def.fields[0]!.type).toBe("amount");
+      expect(def.fields[0]!.type).toBe("decimal");
     });
 
-    it("@db.amount.currency.ref → 'amount' type", () => {
+    it("@db.amount.currency on decimal → 'decimal' type", () => {
+      const prop = defineAnnotatedType().designType("decimal").tags("decimal").$type;
+      prop.metadata.set(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "EUR" as never);
+      const type = defineAnnotatedType("object").prop("total", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("decimal");
+    });
+
+    it("@db.amount.currency.ref → 'decimal' type", () => {
       const prop = defineAnnotatedType().designType("number").tags("number").$type;
       prop.metadata.set(DB_AMOUNT_CURRENCY_REF as keyof AtscriptMetadata, "currency" as never);
       const type = defineAnnotatedType("object").prop("total", prop).$type;
       const def = createFormDef(type);
 
-      expect(def.fields[0]!.type).toBe("amount");
+      expect(def.fields[0]!.type).toBe("decimal");
     });
 
-    it("@db.unit literal → 'measure' type", () => {
+    it("@db.unit on number → 'number' type (single-input with suffix)", () => {
       const prop = defineAnnotatedType().designType("number").tags("number").$type;
       prop.metadata.set(DB_UNIT as keyof AtscriptMetadata, "kg" as never);
       const type = defineAnnotatedType("object").prop("weight", prop).$type;
       const def = createFormDef(type);
 
-      expect(def.fields[0]!.type).toBe("measure");
+      expect(def.fields[0]!.type).toBe("number");
     });
 
-    it("@db.unit.ref → 'measure' type", () => {
+    it("@db.unit on decimal → 'decimal' type (decimal chrome with unit suffix)", () => {
+      const prop = defineAnnotatedType().designType("decimal").tags("decimal").$type;
+      prop.metadata.set(DB_UNIT as keyof AtscriptMetadata, "°C" as never);
+      const type = defineAnnotatedType("object").prop("temperature", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("decimal");
+    });
+
+    it("@db.unit.ref on number → 'number' type", () => {
       const prop = defineAnnotatedType().designType("number").tags("number").$type;
       prop.metadata.set(DB_UNIT_REF as keyof AtscriptMetadata, "unitCode" as never);
       const type = defineAnnotatedType("object").prop("weight", prop).$type;
       const def = createFormDef(type);
 
-      expect(def.fields[0]!.type).toBe("measure");
+      expect(def.fields[0]!.type).toBe("number");
     });
 
-    it("@ui.form.type wins over measurement annotations", () => {
+    it("@ui.form.prefix on number → 'number' type (adornment forces dispatch)", () => {
       const prop = defineAnnotatedType().designType("number").tags("number").$type;
-      prop.metadata.set(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "USD" as never);
-      prop.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "number" as never);
-      const type = defineAnnotatedType("object").prop("price", prop).$type;
+      prop.metadata.set(UI_FORM_PREFIX as keyof AtscriptMetadata, "+1" as never);
+      const type = defineAnnotatedType("object").prop("rate", prop).$type;
       const def = createFormDef(type);
 
       expect(def.fields[0]!.type).toBe("number");
+    });
+
+    it("@ui.form.suffix on decimal → 'decimal' type", () => {
+      const prop = defineAnnotatedType().designType("decimal").tags("decimal").$type;
+      prop.metadata.set(UI_FORM_SUFFIX as keyof AtscriptMetadata, "/100" as never);
+      const type = defineAnnotatedType("object").prop("score", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("decimal");
+    });
+
+    it("@ui.form.suffix.ref on number → 'number' type", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(UI_FORM_SUFFIX_REF as keyof AtscriptMetadata, "unit" as never);
+      const type = defineAnnotatedType("object").prop("quantity", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("number");
+    });
+
+    it("@ui.form.prefix.ref on decimal → 'decimal' type", () => {
+      const prop = defineAnnotatedType().designType("decimal").tags("decimal").$type;
+      prop.metadata.set(UI_FORM_PREFIX_REF as keyof AtscriptMetadata, "currency" as never);
+      const type = defineAnnotatedType("object").prop("amt", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("decimal");
+    });
+
+    it("plain number without any adornment → falls through to designType ('number' from dt branch)", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      const type = defineAnnotatedType("object").prop("count", prop).$type;
+      const def = createFormDef(type);
+
+      // dt === 'number' fallback — single AsInput type=number.
+      expect(def.fields[0]!.type).toBe("number");
+    });
+
+    it("@ui.form.type wins over currency dispatch", () => {
+      const prop = defineAnnotatedType().designType("number").tags("number").$type;
+      prop.metadata.set(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "USD" as never);
+      prop.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "text" as never);
+      const type = defineAnnotatedType("object").prop("price", prop).$type;
+      const def = createFormDef(type);
+
+      expect(def.fields[0]!.type).toBe("text");
     });
 
     it("@ui.form.type 'date' selects date input", () => {

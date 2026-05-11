@@ -98,16 +98,74 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   descId: string;
   /** Pre-resolved `aria-describedby` target — `errorId` when error/hint is present, else `descId`, else `undefined`. */
   ariaDescribedBy?: string;
-  /** Literal currency code from `@db.amount.currency 'EUR'`. */
+  /**
+   * Resolved currency code (post-sibling resolution).
+   *
+   * Resolution chain at AsField: `@db.amount.currency 'EUR'` literal →
+   * `@db.amount.currency.ref 'fieldName'` sibling-field read → `undefined`.
+   * Useful for tooltips/titles (e.g. hovering an AsDecimal shell shows
+   * "USD"). Note: when `prefix` is also resolved from currency, the
+   * `currencyCode` here is the symbolic identifier; `prefix` carries
+   * the locale-aware narrow symbol.
+   */
   currencyCode?: string;
-  /** Sibling-field path from `@db.amount.currency.ref 'fieldName'` — read with `useAsData().siblingValue`. */
-  currencyRefField?: string;
-  /** Literal unit-of-measure from `@db.unit 'kg'`. */
+  /**
+   * Resolved unit-of-measure code (post-sibling resolution).
+   *
+   * Resolution chain at AsField: `@db.unit 'kg'` literal →
+   * `@db.unit.ref 'fieldName'` sibling-field read → `undefined`. Useful
+   * for tooltips. Note: when `suffix` is also resolved from `@db.unit*`,
+   * `unitCode` and `suffix` carry the same string.
+   */
   unitCode?: string;
-  /** Sibling-field path from `@db.unit.ref 'fieldName'` — read with `useAsData().siblingValue`. */
-  unitRefField?: string;
-  /** Decimal scale (fraction digits) from the second arg of `@db.column.precision precision, scale`. */
+  /**
+   * Decimal scale storage cap (the DB column's fractional-digit limit) —
+   * raw second arg of `@db.column.precision precision, scale`. The
+   * composables pad outgoing strings to this; for display, use `scale`
+   * (which may be tighter due to currency natural digits).
+   */
   precisionScale?: number;
+  /**
+   * Resolved input prefix adornment.
+   *
+   * Resolution chain at AsField: explicit `@ui.form.prefix 'value'` →
+   * `@ui.form.prefix.ref 'fieldName'` sibling-field read → currency
+   * symbol (locale-narrow form, when currency is resolved) → `undefined`.
+   * Applied by AsInput, AsNumber, AsDecimal.
+   */
+  prefix?: string;
+  /**
+   * Resolved input suffix adornment.
+   *
+   * Resolution chain at AsField: explicit `@ui.form.suffix 'value'` →
+   * `@ui.form.suffix.ref 'fieldName'` sibling-field read → unit code
+   * (resolved `unitCode`) → `undefined`. Applied by AsInput, AsNumber,
+   * AsDecimal.
+   */
+  suffix?: string;
+  /**
+   * Effective display scale (fractional digits) — composables enforce
+   * this when editing decimals.
+   *
+   * Resolution: `min(currencyDecimals, precisionScale)` when currency is
+   * resolved, else `currencyDecimals` (currency only), else
+   * `precisionScale` (DB only), else `undefined`. Smaller than
+   * `precisionScale` is fine — storage stays at the DB cap, display
+   * truncates to this.
+   */
+  scale?: number;
+  /**
+   * Whether AsField found at least one adornment-driving annotation on
+   * this field (`@db.amount.currency*`, `@db.unit*`, `@ui.form.prefix*`,
+   * `@ui.form.suffix*`). Used by AsNumber / AsDecimal to keep the
+   * merged-chrome shell visible even when a sibling-ref source is
+   * currently empty — without this flag, the shell would flicker as
+   * the user picks a source value.
+   *
+   * Always populated by AsField; defaults to `false` when no adornment
+   * annotation is present on the prop.
+   */
+  hasAdornment?: boolean;
 }
 
 /**
@@ -157,8 +215,8 @@ export type TAsTypeComponents = {
   union: Component;
   tuple: Component;
   ref: Component;
-  amount: Component;
-  measure: Component;
+  decimal: Component;
+  number: Component;
   date: Component;
   datetime: Component;
   time: Component;

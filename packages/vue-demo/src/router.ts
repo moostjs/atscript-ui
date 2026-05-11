@@ -76,6 +76,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/measurements.vue"),
   },
   {
+    path: "/forms-demo/measurements-optional",
+    name: "forms-demo-measurements-optional",
+    component: () => import("./client/pages/forms-demo/measurements-optional.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

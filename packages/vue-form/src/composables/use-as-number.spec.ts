@@ -2,12 +2,12 @@ import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { createFormDef } from "@atscript/ui";
-import { defineComponent, h, nextTick, reactive, ref } from "vue";
+import { defineComponent, h, reactive, ref } from "vue";
 import AsForm from "../components/as-form.vue";
-import { objectType, stringProp } from "../__tests__/helpers";
+import { objectType } from "../__tests__/helpers";
 import { createDefaultTypes } from "./create-default-types";
 import { provideAsLocale } from "./use-as-locale";
-import { useAsMeasure, type UseAsMeasureReturn } from "./use-as-measure";
+import { useAsNumber, type UseAsNumberReturn } from "./use-as-number";
 
 function numberProp() {
   return defineAnnotatedType().designType("number").$type;
@@ -17,23 +17,17 @@ interface MountOpts {
   type: ReturnType<typeof objectType>;
   initialValue?: Record<string, unknown>;
   modelValue: () => string | number | null | undefined;
-  unitCode?: () => string | undefined;
-  unitRefField?: () => string | undefined;
-  precisionScale?: () => number | undefined;
   locale?: string;
   onCommit?: (v: string | number | null) => void;
 }
 
 function mountWithProbe(opts: MountOpts) {
   const commits: (string | number | null)[] = [];
-  let api!: UseAsMeasureReturn;
+  let api!: UseAsNumberReturn;
   const Probe = defineComponent({
     setup() {
-      api = useAsMeasure({
+      api = useAsNumber({
         modelValue: opts.modelValue,
-        unitCode: opts.unitCode,
-        unitRefField: opts.unitRefField,
-        precisionScale: opts.precisionScale,
         onCommit: (v) => {
           commits.push(v);
           opts.onCommit?.(v);
@@ -66,57 +60,29 @@ function mountWithProbe(opts: MountOpts) {
   };
 }
 
-describe("useAsMeasure", () => {
-  it("static unitCode wins over sibling reference", () => {
-    const type = objectType({ unit: stringProp(), weight: numberProp() });
-    const { api } = mountWithProbe({
-      type,
-      initialValue: { unit: "lb", weight: 10 },
-      modelValue: () => 10,
-      unitCode: () => "kg",
-      unitRefField: () => "unit",
-    });
-    expect(api.unit.value).toBe("kg");
-  });
-
-  it("siblingValue() resolves and re-resolves on mutation", async () => {
-    const type = objectType({ unit: stringProp(), weight: numberProp() });
-    const { api, formData } = mountWithProbe({
-      type,
-      initialValue: { unit: "kg", weight: 10 },
-      modelValue: () => 10,
-      unitRefField: () => "unit",
-    });
-    expect(api.unit.value).toBe("kg");
-    formData.value.unit = "lb";
-    await nextTick();
-    expect(api.unit.value).toBe("lb");
-  });
-
-  it("displayValue formats with locale and scale", () => {
+describe("useAsNumber", () => {
+  it("displayValue is separator swap only — no grouping, no padding", () => {
     const type = objectType({ weight: numberProp() });
     const { api } = mountWithProbe({
       type,
       modelValue: () => "1234.5",
-      precisionScale: () => 2,
       locale: "en-US",
     });
-    expect(api.displayValue.value).toBe("1,234.50");
+    expect(api.displayValue.value).toBe("1234.5");
   });
 
-  it("setFromInput parses, truncates to scale, preserves shape", () => {
+  it("setFromInput parses and commits verbatim, preserves shape (string)", () => {
     const type = objectType({ weight: numberProp() });
     const live = ref<string | number | null | undefined>("5.5");
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
-      precisionScale: () => 1,
       onCommit: (v) => {
         live.value = v as string;
       },
     });
     api.setFromInput("9.876");
-    expect(commits).toEqual(["9.8"]); // truncate at scale=1, string in → string out
+    expect(commits).toEqual(["9.876"]);
   });
 
   it("setFromInput number-in → number-out preserves shape", () => {
@@ -125,13 +91,12 @@ describe("useAsMeasure", () => {
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
-      precisionScale: () => 1,
       onCommit: (v) => {
         live.value = v as number;
       },
     });
     api.setFromInput("9.876");
-    expect(commits).toEqual([9.8]);
+    expect(commits).toEqual([9.876]);
   });
 
   it("setFromInput empty → null", () => {
@@ -140,7 +105,6 @@ describe("useAsMeasure", () => {
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
-      precisionScale: () => 1,
       onCommit: (v) => {
         live.value = v as null;
       },
@@ -149,18 +113,9 @@ describe("useAsMeasure", () => {
     expect(commits).toEqual([null]);
   });
 
-  it("returns undefined unit when neither static nor ref resolves", () => {
+  it("setFromInput rejects non-numeric input (no commit)", () => {
     const type = objectType({ weight: numberProp() });
-    const { api } = mountWithProbe({ type, modelValue: () => 1 });
-    expect(api.unit.value).toBeUndefined();
-  });
-
-  it("undefined precisionScale → no padding, raw value committed verbatim", () => {
-    // Measures aren't currency — a weight field with no `@db.column.precision`
-    // and no unit must commit "4" as "4", not pad to "4.00" the way amounts
-    // do. Locks in `storageScale` being absent on the measure side.
-    const type = objectType({ weight: numberProp() });
-    const live = ref<string | number | null | undefined>("0");
+    const live = ref<string | number | null | undefined>("5.5");
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
@@ -168,11 +123,8 @@ describe("useAsMeasure", () => {
         live.value = v as string;
       },
     });
-    api.setFromInput("4");
-    expect(commits).toEqual(["4"]);
-    // rawValue also doesn't pad when scale is undefined.
-    live.value = "9.123";
-    expect(api.rawValue.value).toBe("9.123");
+    api.setFromInput("abc");
+    expect(commits).toEqual([]);
   });
 
   it("locale-aware decimal input (fr-FR)", () => {
@@ -181,7 +133,6 @@ describe("useAsMeasure", () => {
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
-      precisionScale: () => 2,
       locale: "fr-FR",
       onCommit: (v) => {
         live.value = v as string;
@@ -189,5 +140,31 @@ describe("useAsMeasure", () => {
     });
     api.setFromInput("4,25");
     expect(commits).toEqual(["4.25"]);
+  });
+
+  it("no scale enforcement — value committed verbatim", () => {
+    const type = objectType({ weight: numberProp() });
+    const live = ref<string | number | null | undefined>("0");
+    const { api, commits } = mountWithProbe({
+      type,
+      modelValue: () => live.value,
+      onCommit: (v) => {
+        live.value = v as string;
+      },
+    });
+    api.setFromInput("2");
+    expect(commits).toEqual(["2"]); // not padded
+    api.setFromInput("4");
+    expect(commits).toEqual(["2", "4"]);
+  });
+
+  it("displayValue swaps `.` to `,` in fr-FR", () => {
+    const type = objectType({ weight: numberProp() });
+    const { api } = mountWithProbe({
+      type,
+      modelValue: () => "9.5",
+      locale: "fr-FR",
+    });
+    expect(api.displayValue.value).toBe("9,5");
   });
 });

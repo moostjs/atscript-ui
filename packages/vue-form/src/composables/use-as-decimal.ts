@@ -2,8 +2,6 @@ import { type ComputedRef, computed, watch } from "vue";
 import {
   enforceScale,
   formatDecimalForDisplay,
-  getCurrencyDecimals,
-  getCurrencyDisplayParts,
   getDecimalSeparator,
   getThousandsSeparator,
   groupInteger,
@@ -11,55 +9,43 @@ import {
   parseDecimalInput,
   splitDecimalString,
 } from "@atscript/ui";
-import { useAsData } from "./use-as-data";
 import { useAsLocale } from "./use-as-locale";
+import { preserveShape } from "./_shape";
 
-/**
- * Match the input shape on commit: `null`/`undefined` model → write the
- * canonical string (first-ever commit); pre-existing string → string;
- * pre-existing number → number (caller opted into float; the precision loss
- * is on them).
- */
-function preserveShape(
-  original: string | number | null | undefined,
-  normalized: string,
-): string | number {
-  if (original === null || original === undefined) return normalized;
-  if (typeof original === "string") return normalized;
-  return Number(normalized);
-}
-
-export interface UseAsAmountOptions {
-  /** Read the current value. Storage shape is preserved on commit (string in → string out, number in → number out). */
+export interface UseAsDecimalOptions {
+  /** Read the current value. Storage shape is preserved on commit. */
   modelValue: () => string | number | null | undefined;
-  /** Static currency code from `@db.amount.currency 'USD'` (props.currencyCode). */
-  currencyCode?: () => string | undefined;
-  /** Sibling-field path from `@db.amount.currency.ref 'currency'` (props.currencyRefField). */
-  currencyRefField?: () => string | undefined;
-  /** DB-side precision scale. Effective display scale = min(currencyDecimals, this). */
-  precisionScale?: () => number | undefined;
+  /**
+   * Effective display + edit scale. Composables truncate user-typed values
+   * to this so a paste of "10.99" into a JPY field doesn't propagate the
+   * lost ".99". Resolution lives at AsField — see TAsComponentProps.scale.
+   */
+  scale?: () => number | undefined;
+  /**
+   * Storage cap (DB column scale). Outgoing strings are padded to this
+   * regardless of `scale` — display can be tighter than storage. When
+   * absent, falls back to `scale`.
+   */
+  storageScale?: () => number | undefined;
   /** Locale override; defaults to `useAsLocale()` then runtime locale. */
   locale?: () => string | undefined;
-  /** Commit handler — receives the new value in the same shape as `modelValue()` returned. */
+  /** Commit handler — receives the new value in the same shape as `modelValue()`. */
   onCommit: (value: string | number | null) => void;
 }
 
-export interface UseAsAmountReturn {
-  // Resolved data
-  currency: ComputedRef<string | undefined>;
-  currencySymbol: ComputedRef<string | undefined>;
-  /** Effective scale for display + editing: min(currencyDecimals, dbPrecisionScale). */
+export interface UseAsDecimalReturn {
+  /** Effective display + edit scale. Defaults to 2 when neither scale nor storageScale provided. */
   scale: ComputedRef<number>;
-  /** DB scale = storage cap; always populated (falls back to currencyDecimals or 2). */
+  /** Storage cap (always populated; falls back to effective scale, then 2). */
   storageScale: ComputedRef<number>;
   decimalSeparator: ComputedRef<string>;
   thousandsSeparator: ComputedRef<string>;
 
   // Value views — pick one for your render strategy:
-  //   • `displayValue` for SINGLE-input renderers (customer swaps that show
-  //     one editable string).
+  //   • `displayValue` for SINGLE-input renderers (customer swap with one
+  //     editable string).
   //   • `parts` for SPLIT renderers like our default two-input SFC.
-  //   • `rawValue` is the canonical store-shape; used by both for commits.
+  //   • `rawValue` is the canonical store shape — used by both for commits.
   /** Single-input renderers: locale-formatted decimal "1,234.50" / "1 234,50". */
   displayValue: ComputedRef<string>;
   /** Canonical decimal "1234.50": no thousands, "." separator, padded to effective scale. */
@@ -68,74 +54,50 @@ export interface UseAsAmountReturn {
   parts: ComputedRef<{ sign: "" | "-"; integer: string; decimal: string }>;
 
   // Commit paths
-  /** Renderer received a complete typed value (e.g. single-input swap). */
+  /** Renderer received a complete typed value (single-input swap). */
   setFromInput: (raw: string) => void;
-  /** Renderer captured the two halves separately (default two-input SFC uses this). */
+  /** Renderer captured the two halves separately (default two-input SFC). */
   setFromParts: (sign: "" | "-", integer: string, decimal: string) => void;
 }
 
 /**
- * Reactive composable that powers the default `AsAmount` SFC and any
- * customer swap built against the same `TAsComponentProps` contract.
- * Render-choice-agnostic: it resolves currency + scale and exposes value
- * ops (`setFromInput`, `setFromParts`). Two-input UX, keyboard bridging,
- * focus state — none of that lives here.
+ * Reactive composable for decimal-typed inputs (the `AsDecimal` SFC and
+ * customer swaps built against `TAsComponentProps`).
+ *
+ * Currency-agnostic: the SFC owns prefix/suffix render concerns and
+ * resolves the effective scale via the `scale` prop set by AsField. This
+ * composable just operates on the model with the scale given to it.
  *
  * Storage shape is preserved on commit — string `modelValue` commits a
  * string padded to `storageScale`; number `modelValue` commits a number.
- * Currency-change re-rounding fires only when the effective scale
- * shrinks below the model's actual precision (raising scale never adds
- * digits back).
+ * A change to the effective `scale` getter that shrinks it below the
+ * model's actual precision triggers a re-round + re-commit (the same
+ * "currency-change" behaviour as before).
  */
-export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
-  const data = useAsData();
+export function useAsDecimal(opts: UseAsDecimalOptions): UseAsDecimalReturn {
   const localeCtx = useAsLocale();
-
   const locale = computed<string | undefined>(() => {
     const explicit = opts.locale?.();
     if (explicit) return explicit;
     return localeCtx.locale.value;
   });
 
-  const currency = computed<string | undefined>(() => {
-    const literal = opts.currencyCode?.();
-    if (literal) return literal;
-    const ref = opts.currencyRefField?.();
-    if (!ref) return undefined;
-    const v = data.siblingValue<string>(ref).value;
-    return typeof v === "string" && v.length > 0 ? v : undefined;
-  });
-
-  const currencySymbol = computed<string | undefined>(() => {
-    const code = currency.value;
-    if (!code) return undefined;
-    return getCurrencyDisplayParts(code, locale.value).symbol;
-  });
-
-  // Currency-driven natural decimal count (JPY=0, EUR=2, BHD=3).
-  const currencyDecimals = computed<number | undefined>(() => {
-    const code = currency.value;
-    if (!code) return undefined;
-    return getCurrencyDecimals(code, locale.value);
-  });
-
-  // Effective scale used for display + editing: tightest of currency & DB.
-  // When neither is known, default to 2 (most common money case).
+  // Effective display + edit scale.
   const scale = computed<number>(() => {
-    const cd = currencyDecimals.value;
-    const ps = opts.precisionScale?.();
-    if (cd === undefined && ps === undefined) return 2;
-    if (cd === undefined) return ps as number;
-    if (ps === undefined) return cd;
-    return Math.min(cd, ps);
+    const s = opts.scale?.();
+    if (s !== undefined) return s;
+    const storage = opts.storageScale?.();
+    if (storage !== undefined) return storage;
+    // No metadata → default to 2 (most common money case).
+    return 2;
   });
 
-  // Storage cap — what the DB column accepts. Always populated.
+  // Storage cap — what the DB column accepts.
   const storageScale = computed<number>(() => {
-    const ps = opts.precisionScale?.();
-    if (ps !== undefined) return ps;
-    const cd = currencyDecimals.value;
-    if (cd !== undefined) return cd;
+    const storage = opts.storageScale?.();
+    if (storage !== undefined) return storage;
+    const s = opts.scale?.();
+    if (s !== undefined) return s;
     return 2;
   });
 
@@ -143,9 +105,8 @@ export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
   const thousandsSeparator = computed(() => getThousandsSeparator(locale.value));
 
   // rawValue — canonical "." decimal, truncated to the effective scale.
-  // Note: we do NOT auto-re-commit during read. Initial loads stay as-is in
-  // the model; the user gets a truncated display while the model is
-  // untouched.
+  // No auto-re-commit during read; initial loads stay as-is in the model,
+  // user gets a truncated display while the model is untouched.
   const rawValue = computed<string>(() => {
     const v = opts.modelValue();
     if (v === null || v === undefined) return "";
@@ -182,12 +143,11 @@ export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
 
   function setFromInput(raw: string): void {
     if (raw.trim() === "") {
-      // Empty input — commit null (clear). Same semantics as Phase 4.
       opts.onCommit(null);
       return;
     }
     const parsed = parseDecimalInput(raw, locale.value);
-    if (parsed === null) return; // invalid → leave the model untouched
+    if (parsed === null) return;
     // Editing-precision: truncate to the effective scale so a paste of
     // "10.99" into a JPY field doesn't propagate the lost ".99".
     const truncated = enforceScale(parsed, scale.value);
@@ -195,13 +155,10 @@ export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
   }
 
   function setFromParts(sign: "" | "-", integer: string, decimal: string): void {
-    // Both halves empty → clear. Otherwise: an empty integer means "0".
     if (integer === "" && decimal === "") {
       opts.onCommit(null);
       return;
     }
-    // Strip non-digits defensively — the SFC should already do this, but
-    // the composable owns the canonical value path.
     const intDigits = integer.replace(/\D/g, "");
     const decDigits = decimal.replace(/\D/g, "");
     const joined = joinDecimalString({
@@ -213,8 +170,11 @@ export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
     commit(truncated);
   }
 
-  // Currency-change re-rounding watcher. Skips initial mount and only fires
-  // when the effective scale *shrinks* below the model's actual precision.
+  // Scale-shrink re-rounding watcher. Skips initial mount and only fires
+  // when the effective scale *shrinks* below the model's actual precision
+  // (raising scale never adds digits back). This mirrors the previous
+  // useAsAmount currency-change re-round; the trigger is now a scale-prop
+  // change driven by AsField's resolution.
   watch(
     scale,
     (newScale, oldScale) => {
@@ -226,8 +186,6 @@ export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
       if (s === "") return;
       const parts = splitDecimalString(s);
       if (parts.decimal.length <= newScale) return;
-      // Re-round and re-commit using storageScale so the wire shape is
-      // consistent with how user-driven commits land.
       const truncated = enforceScale(s, newScale);
       const padded = enforceScale(truncated, storageScale.value);
       const shaped = preserveShape(v, padded);
@@ -237,8 +195,6 @@ export function useAsAmount(opts: UseAsAmountOptions): UseAsAmountReturn {
   );
 
   return {
-    currency,
-    currencySymbol,
     scale,
     storageScale,
     decimalSeparator,

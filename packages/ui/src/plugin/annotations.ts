@@ -5,6 +5,7 @@ const BUILTIN_TYPES = [
   "text",
   "password",
   "number",
+  "decimal",
   "select",
   "textarea",
   "checkbox",
@@ -12,8 +13,6 @@ const BUILTIN_TYPES = [
   "date",
   "datetime",
   "time",
-  "amount",
-  "measure",
   "paragraph",
   "action",
 ] as const;
@@ -372,6 +371,87 @@ export const uiAnnotations: TAnnotationsTree = {
           },
         ],
       }),
+
+      prefix: {
+        $self: new AnnotationSpec({
+          description:
+            "Literal **prefix adornment** rendered before the input value. " +
+            "Works on all default inputs (`AsInput`, `AsNumber`, `AsDecimal`). " +
+            "When set on a field that also carries `@db.amount.currency*`, the " +
+            "explicit prefix wins — currency only contributes a prefix when " +
+            "no explicit one is present." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.form.prefix "+1"\n' +
+            "phone: string\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "value",
+            type: "string",
+            description: "Literal text to display before the input value.",
+          },
+        }),
+        ref: new AnnotationSpec({
+          description:
+            "**Sibling-field reference** for the prefix adornment. The string " +
+            "argument is the name of another field on the same parent whose " +
+            "value will be displayed as the prefix at runtime. `@ui.form.prefix` " +
+            "wins over `@ui.form.prefix.ref` when both are present." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            "countryCode: string\n" +
+            '@ui.form.prefix.ref "countryCode"\n' +
+            "phone: string\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "field",
+            type: "string",
+            description: "Name of a sibling field whose value drives the prefix.",
+          },
+        }),
+      },
+
+      suffix: {
+        $self: new AnnotationSpec({
+          description:
+            "Literal **suffix adornment** rendered after the input value. " +
+            "Works on all default inputs. When set on a field that also " +
+            "carries `@db.unit*`, the explicit suffix wins — unit code only " +
+            "contributes a suffix when no explicit one is present." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.form.suffix "/hr"\n' +
+            "rate: number\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "value",
+            type: "string",
+            description: "Literal text to display after the input value.",
+          },
+        }),
+        ref: new AnnotationSpec({
+          description:
+            "**Sibling-field reference** for the suffix adornment. The string " +
+            "argument is the name of another field on the same parent whose " +
+            "value will be displayed as the suffix at runtime. `@ui.form.suffix` " +
+            "wins over `@ui.form.suffix.ref` when both are present." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            "unit: 'kg' | 'lb'\n" +
+            '@ui.form.suffix.ref "unit"\n' +
+            "weight: number\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "field",
+            type: "string",
+            description: "Name of a sibling field whose value drives the suffix.",
+          },
+        }),
+      },
     },
 
     // ── Table-side static annotations ─────────────────────────────

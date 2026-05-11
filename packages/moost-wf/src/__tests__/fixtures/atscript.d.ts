@@ -102,6 +102,10 @@ declare global {
     "ui.form.submit.text": string
     "ui.form.label.singular": string
     "ui.form.action": { id: string, label?: string }
+    "ui.form.prefix": string
+    "ui.form.prefix.ref": string
+    "ui.form.suffix": string
+    "ui.form.suffix.ref": string
     "ui.table.width": string
     "ui.table.component": string
     "ui.table.hidden": boolean

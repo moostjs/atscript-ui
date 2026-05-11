@@ -69,6 +69,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/measurements-optional",
+    title: "Optional numeric inputs",
+    description:
+      "Same 10-case adornment matrix as Measurements, but every numeric field is optional — click the empty-state placeholder on each to verify the init flow (the decimal cases regressed without the createFormData primitive-init fallback).",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/dynamic",
     title: "Dynamic (fn-driven)",
     description: "Visibility / labels / options driven by @ui.form.fn.* expressions.",

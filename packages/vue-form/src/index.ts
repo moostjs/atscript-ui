@@ -16,8 +16,8 @@ export {
   AsUnion,
   AsTuple,
   AsRef,
-  AsAmount,
-  AsMeasure,
+  AsDecimal,
+  AsNumber,
   AsDate,
   AsDatetime,
   AsTime,
@@ -97,10 +97,12 @@ export { provideAsLocale, useAsLocale } from "./composables/use-as-locale";
 export type { UseAsLocaleReturn } from "./composables/use-as-locale";
 
 // Composables — measurement & date inputs (companions to defaults)
-export { useAsAmount } from "./composables/use-as-amount";
-export type { UseAsAmountOptions, UseAsAmountReturn } from "./composables/use-as-amount";
-export { useAsMeasure } from "./composables/use-as-measure";
-export type { UseAsMeasureOptions, UseAsMeasureReturn } from "./composables/use-as-measure";
+export { useAsDecimal } from "./composables/use-as-decimal";
+export type { UseAsDecimalOptions, UseAsDecimalReturn } from "./composables/use-as-decimal";
+export { useAsNumber } from "./composables/use-as-number";
+export type { UseAsNumberOptions, UseAsNumberReturn } from "./composables/use-as-number";
+export { useAsDualInput } from "./composables/use-as-dual-input";
+export type { UseAsDualInputOptions, UseAsDualInputReturn } from "./composables/use-as-dual-input";
 export { useAsDate } from "./composables/use-as-date";
 export type { UseAsDateOptions, UseAsDateReturn } from "./composables/use-as-date";
 
