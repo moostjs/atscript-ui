@@ -75,6 +75,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/adornments",
+    title: "Adornments matrix",
+    description:
+      "Every input type (string/number/decimal/date/datetime/time) × every prefix/suffix × icon/text combination. Visual reference for @ui.form.prefix.icon / suffix.icon.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/measurements-optional",
     title: "Optional numeric inputs",
     description:
