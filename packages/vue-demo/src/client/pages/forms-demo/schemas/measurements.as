@@ -19,8 +19,9 @@ export interface MeasurementsForm {
     @ui.form.grid.colSpan '6'
     unit: ui.select
 
-    // ── 1. number with static prefix + suffix (non-currency, non-unit) ──
+    // ── 1. number with static prefix + suffix + prefix.icon (non-currency, non-unit) ──
     @meta.label 'Hourly rate (number + static prefix + suffix)'
+    @ui.form.prefix.icon 'i-as-star-filled'
     @ui.form.prefix '+1'
     @ui.form.suffix '/hr'
     @ui.form.grid.colSpan '6'
@@ -48,9 +49,10 @@ export interface MeasurementsForm {
     @ui.form.grid.colSpan '6'
     orderTotal: decimal
 
-    // ── 5. number with static unit ──
+    // ── 5. number with static unit + suffix.icon ──
     @meta.label 'Weight (number + kg)'
     @db.unit 'kg'
+    @ui.form.suffix.icon 'i-as-pin-filled'
     @ui.form.grid.colSpan '6'
     weight: number
 

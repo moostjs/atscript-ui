@@ -157,6 +157,24 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await expect(page.getByTestId("measurements-preview")).toContainText(/"rate":\s*42(?!")/);
   });
 
+  // ── 1. icon: @ui.form.prefix.icon renders a leading icon span alongside the prefix text ──
+  // The annotation value is dropped onto the span as a class (typically a
+  // UnoCSS preset-icons utility); we assert the class wires through to the
+  // DOM. We deliberately don't probe the rendered glyph — that would require
+  // checking `mask-image`, which is brittle headless and orthogonal to the
+  // binding contract.
+  test("number with @ui.form.prefix.icon paints `.as-prefix-icon` span + carries the icon class", async ({
+    page,
+  }) => {
+    await gotoDemo(page);
+    const rate = page.locator(".as-default-field").filter({ hasText: /Hourly rate/ });
+    const iconSpan = rate.locator(".as-prefix-icon");
+    await expect(iconSpan).toHaveCount(1);
+    await expect(iconSpan).toHaveClass(/i-as-star-filled/);
+    // Sibling text-prefix coexists with the icon — both adornments render.
+    await expect(rate.locator(".as-prefix")).toHaveText("+1");
+  });
+
   // ── ArrowUp / ArrowDown step on the merged-chrome number input ──
   test("ArrowUp / ArrowDown increment and decrement on number+adornment input", async ({
     page,
@@ -189,6 +207,19 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await expect(page.getByTestId("measurements-preview")).toContainText(
       /"weight":\s*4\.25(?!")/,
     );
+  });
+
+  // ── 5. icon: @ui.form.suffix.icon renders a trailing icon span past the unit pill ──
+  test("number with @ui.form.suffix.icon paints `.as-suffix-icon` span past the unit text", async ({
+    page,
+  }) => {
+    await gotoDemo(page);
+    const weight = page.locator(".as-default-field").filter({ hasText: /^Weight/ });
+    const iconSpan = weight.locator(".as-suffix-icon");
+    await expect(iconSpan).toHaveCount(1);
+    await expect(iconSpan).toHaveClass(/i-as-pin-filled/);
+    // Sibling text-suffix (from @db.unit 'kg') coexists with the icon.
+    await expect(weight.locator(".as-suffix")).toHaveText(/kg/i);
   });
 
   // ── 6. Decimal with @db.unit static ──

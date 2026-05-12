@@ -50,4 +50,8 @@ export default defineConfig({
   },
   presets: [...asPresetVunor(), presetIcons()],
   shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, demoShortcuts]))],
+  // `@ui.form.{prefix,suffix}.icon` paints its value verbatim as a class on
+  // the icon span. UnoCSS' static extractor doesn't scan `.as` files, so any
+  // icon referenced from a schema must be safelisted by the consumer.
+  safelist: ["i-as-star-filled", "i-as-pin-filled", "i-as-check-square"],
 });

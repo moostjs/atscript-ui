@@ -16,6 +16,7 @@ export interface DatesShowcaseForm {
     @meta.description 'String storage (YYYY-MM-DD). Required for submit validation.'
     @ui.type 'date'
     @meta.required 'Birth date is required'
+    @ui.form.prefix.icon 'i-as-check-square'
     @ui.form.grid.colSpan '6'
     birthDate: string
 

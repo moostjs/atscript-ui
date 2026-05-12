@@ -171,6 +171,27 @@ test.describe("Section 33 — dates", () => {
     await expect(input).toHaveAttribute("type", "date");
   });
 
+  // ── Icon adornment on a date renderer ───────────────────────────
+  // birthDate carries `@ui.form.prefix.icon "i-as-check-square"`; AsDate
+  // routes through AsAdornmentShell (`.as-input-shell`) whenever any
+  // adornment is present, so the icon span must appear inside the merged
+  // chrome alongside the date input. We assert the wire-up (shell present,
+  // icon class painted on the span) rather than the rendered glyph — the
+  // glyph relies on UnoCSS' `presetIcons` resolving a CSS mask-image, which
+  // is brittle headless.
+  test("birthDate with @ui.form.prefix.icon wraps the date input in `.as-input-shell` + paints the icon span", async ({
+    page,
+  }) => {
+    const wrapper = fieldWrapperByLabel(page, "Birth date");
+    const shell = wrapper.locator(".as-input-shell");
+    await expect(shell).toHaveCount(1);
+    // Date input is the sole control inside the merged shell.
+    await expect(shell.locator('input[type="date"]')).toHaveCount(1);
+    const iconSpan = shell.locator(".as-prefix-icon");
+    await expect(iconSpan).toHaveCount(1);
+    await expect(iconSpan).toHaveClass(/i-as-check-square/);
+  });
+
   test("closingTime (required, @ui.type 'time' on string) renders <input type=time>", async ({
     page,
   }) => {
