@@ -39,13 +39,17 @@ function onSubmit(data: unknown) {
         :types="types"
         hide-root-title
         first-validation="on-submit"
+        data-testid="unions-form"
         @submit="onSubmit"
       >
       </AsForm>
 
       <details class="mt-$l layer-0 border-1 rounded-r2 p-$m text-callout">
         <summary class="cursor-pointer font-600 text-current-muted">Form data preview</summary>
-        <pre class="mt-$s overflow-auto text-callout">{{ JSON.stringify(formData, null, 2) }}</pre>
+        <pre
+          class="mt-$s overflow-auto text-callout"
+          data-testid="unions-preview"
+        >{{ JSON.stringify(formData, null, 2) }}</pre>
       </details>
     </div>
   </div>
