@@ -34,6 +34,7 @@ function onSubmit(data: unknown) {
       </header>
 
       <AsForm
+        data-testid="array-showcase-form"
         :def="def"
         :form-data="formData"
         :types="types"
@@ -45,7 +46,10 @@ function onSubmit(data: unknown) {
 
       <details class="mt-$l layer-0 border-1 rounded-r2 p-$m text-callout">
         <summary class="cursor-pointer font-600 text-current-muted">Form data preview</summary>
-        <pre class="mt-$s overflow-auto text-callout">{{ JSON.stringify(formData, null, 2) }}</pre>
+        <pre
+          data-testid="array-showcase-preview"
+          class="mt-$s overflow-auto text-callout"
+        >{{ JSON.stringify(formData, null, 2) }}</pre>
       </details>
     </div>
   </div>
