@@ -33,24 +33,15 @@ async function gotoDemo(page: Page) {
   ).toHaveCount(2);
 }
 
-function previewA(page: Page): Locator {
-  return page.getByTestId("custom-components-section-a-preview");
-}
-function previewB(page: Page): Locator {
-  return page.getByTestId("custom-components-section-b-preview");
-}
-function sectionA(page: Page): Locator {
-  return page.getByTestId("custom-components-section-a-form");
-}
-function sectionB(page: Page): Locator {
-  return page.getByTestId("custom-components-section-b-form");
-}
+const section = (page: Page, s: "a" | "b"): Locator =>
+  page.getByTestId(`custom-components-section-${s}-form`);
 
-// Reads the <pre> JSON model regardless of whether the surrounding
-// <details> is open — textContent() returns the text either way.
-async function readModel<T = unknown>(preview: Locator): Promise<T> {
-  const txt = (await preview.textContent()) ?? "";
-  return JSON.parse(txt) as T;
+// Reads the <pre> JSON model's `value` payload (form data is wrapped as
+// `{ value }`). textContent() works whether the <details> is open or not.
+async function readValue<T = unknown>(page: Page, s: "a" | "b"): Promise<T> {
+  const txt =
+    (await page.getByTestId(`custom-components-section-${s}-preview`).textContent()) ?? "";
+  return (JSON.parse(txt) as { value: T }).value;
 }
 
 test.describe("Section 24 — custom-components customization mechanisms", () => {
@@ -62,38 +53,38 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   test("Section A renders all string fields via DemoGrowingTextarea (built-in `text` override)", async ({
     page,
   }) => {
-    const section = sectionA(page);
+    const a = section(page, "a");
     // Both `displayName` and `bio` are `string` → both hit the custom
     // renderer. Exactly 2 wrappers, no more, no fewer.
-    await expect(section.locator('[data-testid="demo-growing-textarea"]')).toHaveCount(2);
+    await expect(a.locator('[data-testid="demo-growing-textarea"]')).toHaveCount(2);
 
     // The custom widget renders a `<textarea>`; the default AsInput renders
     // a plain `<input type="text">`. Absence of <input> inside Section A
     // proves the global override actually replaced AsInput rather than
     // rendering alongside it.
-    await expect(section.locator("input")).toHaveCount(0);
-    await expect(section.locator("textarea")).toHaveCount(2);
+    await expect(a.locator("input")).toHaveCount(0);
+    await expect(a.locator("textarea")).toHaveCount(2);
   });
 
   // ── A2. Typing commits to the model for both fields ──────────────
   test("Section A — typing into both textareas commits values to the model", async ({ page }) => {
-    const section = sectionA(page);
-    const displayName = section.getByLabel("Display Name");
-    const bio = section.getByLabel("Short Bio");
+    const a = section(page, "a");
+    const displayName = a.getByLabel("Display Name");
+    const bio = a.getByLabel("Short Bio");
 
     await displayName.fill("Jane Doe\nProduct designer");
     await bio.fill("Line 1\nLine 2\nLine 3");
     // Blur to flush any pending watch reactions before reading.
     await bio.blur();
 
-    const model = await readModel<{ value: { displayName: string; bio: string } }>(previewA(page));
-    expect(model.value.displayName).toBe("Jane Doe\nProduct designer");
-    expect(model.value.bio).toBe("Line 1\nLine 2\nLine 3");
+    const value = await readValue<{ displayName: string; bio: string }>(page, "a");
+    expect(value.displayName).toBe("Jane Doe\nProduct designer");
+    expect(value.bio).toBe("Line 1\nLine 2\nLine 3");
   });
 
   // ── A3. Growing textarea auto-resizes on input ───────────────────
   test("Section A — bio textarea auto-resizes when content grows", async ({ page }) => {
-    const bio = sectionA(page).getByLabel("Short Bio");
+    const bio = section(page, "a").getByLabel("Short Bio");
     const heightOf = async () => {
       const box = await bio.boundingBox();
       return box?.height ?? 0;
@@ -113,15 +104,15 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   test("Section B — `displayName` (no annotation) renders the default AsInput", async ({
     page,
   }) => {
-    const section = sectionB(page);
-    const displayName = section.getByLabel("Display Name");
+    const b = section(page, "b");
+    const displayName = b.getByLabel("Display Name");
     await expect(displayName).toBeVisible();
     // The default AsInput is a plain <input>. The custom growing textarea
     // wraps a <textarea> under a demo-growing-textarea testid. Neither
     // condition below would hold if the global `text` override leaked
     // through, so they're a paired baseline-vs-custom assertion.
     await expect(displayName).toHaveJSProperty("tagName", "INPUT");
-    const displayNameTestid = section
+    const displayNameTestid = b
       .locator('[data-testid="demo-growing-textarea"]')
       .filter({ has: page.getByLabel("Display Name") });
     await expect(displayNameTestid).toHaveCount(0);
@@ -129,21 +120,21 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
 
   // ── B2. `bio` opts-in to DemoGrowingTextarea ─────────────────────
   test("Section B — `bio` (@ui.form.type 'bio') renders DemoGrowingTextarea", async ({ page }) => {
-    const section = sectionB(page);
-    const bioWrapper = section.locator('[data-testid="demo-growing-textarea"]');
+    const b = section(page, "b");
+    const bioWrapper = b.locator('[data-testid="demo-growing-textarea"]');
     await expect(bioWrapper).toHaveCount(1);
 
-    const bio = section.getByLabel("Bio");
+    const bio = b.getByLabel("Bio");
     await bio.fill("Crafting small tools.");
     await bio.blur();
 
-    const model = await readModel<{ value: { bio: string } }>(previewB(page));
-    expect(model.value.bio).toBe("Crafting small tools.");
+    const value = await readValue<{ bio: string }>(page, "b");
+    expect(value.bio).toBe("Crafting small tools.");
   });
 
   // ── B3. `rating` → DemoStarRating ────────────────────────────────
   test("Section B — `rating` (@ui.form.type 'stars') renders DemoStarRating", async ({ page }) => {
-    const stars = sectionB(page).getByTestId("demo-star-rating");
+    const stars = section(page, "b").getByTestId("demo-star-rating");
     const buttons = stars.locator("button.demo-star-btn");
     await expect(buttons).toHaveCount(5);
 
@@ -158,27 +149,26 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
       await btn.dispatchEvent("click");
     }
 
+    const readRating = () => readValue<{ rating: number | null }>(page, "b");
+
     // Pick the 4th star → rating: 4.
     await pickStar(4);
-    let model = await readModel<{ value: { rating: number | null } }>(previewB(page));
-    expect(model.value.rating).toBe(4);
+    expect((await readRating()).rating).toBe(4);
 
     // Re-click the active star clears the model (per component contract).
     await pickStar(4);
-    model = await readModel<{ value: { rating: number | null } }>(previewB(page));
-    expect(model.value.rating).toBeNull();
+    expect((await readRating()).rating).toBeNull();
 
     // Pick the 2nd star → rating: 2.
     await pickStar(2);
-    model = await readModel<{ value: { rating: number | null } }>(previewB(page));
-    expect(model.value.rating).toBe(2);
+    expect((await readRating()).rating).toBe(2);
   });
 
   // ── B4. `quantity` → DemoNumberStepper via @ui.form.component ────
   test("Section B — `quantity` (@ui.form.component 'stepper') renders DemoNumberStepper", async ({
     page,
   }) => {
-    const stepper = sectionB(page).getByTestId("demo-number-stepper");
+    const stepper = section(page, "b").getByTestId("demo-number-stepper");
     const minus = stepper.locator("button", { hasText: "−" });
     const plus = stepper.locator("button", { hasText: "+" });
     const input = stepper.locator("input.demo-stepper-input");
@@ -186,19 +176,19 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     await expect(minus).toHaveCount(1);
     await expect(plus).toHaveCount(1);
 
+    const readQty = () => readValue<{ quantity: number | null }>(page, "b");
+
     // Default is null (no @meta.default). First "+" lands at 1 because
     // commit(current + 1) with current = (value ?? 0) → 1.
     await plus.click();
     await plus.click();
     await plus.click();
-    let model = await readModel<{ value: { quantity: number | null } }>(previewB(page));
-    expect(model.value.quantity).toBe(3);
+    expect((await readQty()).quantity).toBe(3);
 
     // "-" twice → 1.
     await minus.click();
     await minus.click();
-    model = await readModel<{ value: { quantity: number | null } }>(previewB(page));
-    expect(model.value.quantity).toBe(1);
+    expect((await readQty()).quantity).toBe(1);
 
     // Clamp test: keep pressing "-" until disabled. The component disables
     // the button when current <= 0, so we stop on disabled. Final value: 0.
@@ -207,45 +197,40 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
       await minus.click();
     }
     await expect(minus).toBeDisabled();
-    model = await readModel<{ value: { quantity: number | null } }>(previewB(page));
-    expect(model.value.quantity).toBe(0);
+    expect((await readQty()).quantity).toBe(0);
   });
 
   // ── B5. `brandColor` → DemoColorSwatch (palette of 8) ────────────
   test("Section B — `brandColor` (@ui.form.type 'color-swatch') renders DemoColorSwatch", async ({
     page,
   }) => {
-    const swatches = sectionB(page).getByTestId("demo-color-swatch").locator("button.demo-swatch");
+    const swatches = section(page, "b")
+      .getByTestId("demo-color-swatch")
+      .locator("button.demo-swatch");
     await expect(swatches).toHaveCount(8);
+
+    const readColor = () => readValue<{ brandColor: string | null }>(page, "b");
 
     // Component's palette[2] is "#facc15" (yellow).
     await swatches.nth(2).click();
-    let model = await readModel<{ value: { brandColor: string | null } }>(previewB(page));
-    expect(model.value.brandColor).toBe("#facc15");
+    expect((await readColor()).brandColor).toBe("#facc15");
 
     // Pick another swatch → palette[4] = "#0ea5e9" (blue).
     await swatches.nth(4).click();
-    model = await readModel<{ value: { brandColor: string | null } }>(previewB(page));
-    expect(model.value.brandColor).toBe("#0ea5e9");
+    expect((await readColor()).brandColor).toBe("#0ea5e9");
   });
 
+  // ── B6–B9. FIXME: `createFieldDef` in packages/ui/src/form/create-form-def.ts
+  // skips `@ui.form.type` for array/object/tuple/multi-variant-union kinds, so
+  // custom widgets never render. Step 6 addresses; unmark `.fixme` then.
+
   // ── B6. `tags` → DemoTagInput (Enter/comma/× pill/Backspace) ─────
-  // FIXME(step-2/3 bug): `createFieldDef` in
-  // `packages/ui/src/form/create-form-def.ts` only honours the
-  // `@ui.form.type` annotation for primitive / pure-literal-union
-  // fields. For `array`, `object`, multi-variant `union`, and `tuple`
-  // kinds it hard-codes `type: "<kind>"` without consulting
-  // `getFieldMeta(prop, UI_FORM_TYPE)`. As a result, `tags`,
-  // `address`, `logoRgb` and `contact` fall through to the default
-  // AsArray/AsObject/AsTuple/AsUnion renderers — the custom widgets
-  // never render. The spec below is the intended behaviour; unmark
-  // `.fixme` once the resolver consults `uiType` for non-primitive
-  // kinds.
   test.fixme("Section B — `tags` (@ui.form.type 'tag-input') renders DemoTagInput", async ({
     page,
   }) => {
-    const widget = sectionB(page).getByTestId("demo-tag-input");
+    const widget = section(page, "b").getByTestId("demo-tag-input");
     const field = widget.locator("input.demo-tag-input-field");
+    const readTags = () => readValue<{ tags: string[] | null }>(page, "b");
 
     // Add three tags via Enter / comma / Enter.
     await field.click();
@@ -255,32 +240,24 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     await field.press(",");
     await field.pressSequentially("gamma");
     await field.press("Enter");
-
-    let model = await readModel<{ value: { tags: string[] | null } }>(previewB(page));
-    expect(model.value.tags).toEqual(["alpha", "beta", "gamma"]);
+    expect((await readTags()).tags).toEqual(["alpha", "beta", "gamma"]);
 
     // Remove the "beta" pill via its × button (aria-label exposes the tag).
     await widget.getByRole("button", { name: "Remove beta" }).click();
-    model = await readModel<{ value: { tags: string[] | null } }>(previewB(page));
-    expect(model.value.tags).toEqual(["alpha", "gamma"]);
+    expect((await readTags()).tags).toEqual(["alpha", "gamma"]);
 
     // Backspace on the empty input strips the trailing pill ("gamma").
     await field.click();
     await expect(field).toHaveValue("");
     await field.press("Backspace");
-    model = await readModel<{ value: { tags: string[] | null } }>(previewB(page));
-    expect(model.value.tags).toEqual(["alpha"]);
+    expect((await readTags()).tags).toEqual(["alpha"]);
   });
 
   // ── B7. `address` → DemoAddressCard with 4 nested string fields ──
-  // FIXME(step-2/3 bug): see comment on the `tags` test above. Object
-  // fields skip `uiType` resolution in `create-form-def.ts`, so the
-  // address renders as the default AsObject (collapsible card) rather
-  // than DemoAddressCard.
   test.fixme("Section B — `address` (@ui.form.type 'address-card') renders DemoAddressCard", async ({
     page,
   }) => {
-    const card = sectionB(page).getByTestId("demo-address-card");
+    const card = section(page, "b").getByTestId("demo-address-card");
     await expect(card).toBeVisible();
 
     await card.getByLabel("Street").fill("221B Baker St");
@@ -288,10 +265,10 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     await card.getByLabel("ZIP").fill("NW1 6XE");
     await card.getByLabel("Country").fill("UK");
 
-    const model = await readModel<{
-      value: { address: { street: string; city: string; zip: string; country: string } };
-    }>(previewB(page));
-    expect(model.value.address).toEqual({
+    const value = await readValue<{
+      address: { street: string; city: string; zip: string; country: string };
+    }>(page, "b");
+    expect(value.address).toEqual({
       street: "221B Baker St",
       city: "London",
       zip: "NW1 6XE",
@@ -300,14 +277,10 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   });
 
   // ── B8. `logoRgb` → DemoRgbPicker (3 range sliders + live swatch) ─
-  // FIXME(step-2/3 bug): see comment on the `tags` test above. Tuple
-  // fields skip `uiType` resolution in `create-form-def.ts`, so the
-  // logoRgb renders as the default AsTuple (three nested number
-  // spinbuttons inside a collapsible card) rather than DemoRgbPicker.
   test.fixme("Section B — `logoRgb` (@ui.form.type 'rgb-picker') renders DemoRgbPicker", async ({
     page,
   }) => {
-    const picker = sectionB(page).getByTestId("demo-rgb-picker");
+    const picker = section(page, "b").getByTestId("demo-rgb-picker");
     const sliders = picker.locator('input[type="range"]');
     await expect(sliders).toHaveCount(3);
 
@@ -316,10 +289,8 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     await sliders.nth(1).fill("100");
     await sliders.nth(2).fill("150");
 
-    const model = await readModel<{ value: { logoRgb: [number, number, number] | null } }>(
-      previewB(page),
-    );
-    expect(model.value.logoRgb).toEqual([50, 100, 150]);
+    const value = await readValue<{ logoRgb: [number, number, number] | null }>(page, "b");
+    expect(value.logoRgb).toEqual([50, 100, 150]);
 
     // Visual: the live preview swatch's background must follow the model.
     // Browsers normalize `rgb(...)` to `rgb(r, g, b)` (with spaces) in the
@@ -329,15 +300,12 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   });
 
   // ── B9. `contact` → DemoContactCard variant picker ───────────────
-  // FIXME(step-2/3 bug): see comment on the `tags` test above.
-  // Multi-variant union fields skip `uiType` resolution in
-  // `create-form-def.ts`, so `contact` renders as the default AsUnion
-  // (collapsible card) rather than DemoContactCard.
   test.fixme("Section B — `contact` (@ui.form.type 'contact-card') renders DemoContactCard variant picker", async ({
     page,
   }) => {
-    const card = sectionB(page).getByTestId("demo-contact-card");
+    const card = section(page, "b").getByTestId("demo-contact-card");
     const variants = card.locator("button.demo-contact-variant");
+    const readContact = () => readValue<{ contact: Record<string, string> }>(page, "b");
     await expect(variants).toHaveCount(3);
 
     // Pick "Email".
@@ -345,8 +313,7 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     const emailInput = card.getByLabel("Email Address");
     await expect(emailInput).toBeVisible();
     await emailInput.fill("jane@example.com");
-    let model = await readModel<{ value: { contact: Record<string, string> } }>(previewB(page));
-    expect(model.value.contact).toEqual({ email: "jane@example.com" });
+    expect((await readContact()).contact).toEqual({ email: "jane@example.com" });
 
     // Switch to "Phone" — Email input must be gone, phone input must render.
     await variants.filter({ hasText: "Phone" }).click();
@@ -354,8 +321,7 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     const phoneInput = card.getByLabel("Phone");
     await expect(phoneInput).toBeVisible();
     await phoneInput.fill("+1 555 1234");
-    model = await readModel<{ value: { contact: Record<string, string> } }>(previewB(page));
-    expect(model.value.contact).toEqual({ phone: "+1 555 1234" });
+    expect((await readContact()).contact).toEqual({ phone: "+1 555 1234" });
   });
 
   // ── B10. Sanity — page loads without console errors ──────────────
