@@ -58,7 +58,7 @@ export const asDecimalNumberShortcuts = defineShortcuts({
   // tabular digit alignment. Prefix gets `pr-$s` so the glyph doesn't
   // touch the first digit; suffix keeps the shared chrome only (no
   // padding) — break the alias to avoid inheriting prefix's `pr-$s`.
-  "as-prefix": `${adornmentBase} pr-$s`,
+  "as-prefix": `${adornmentBase} pr-$xs`,
   "as-suffix": adornmentBase,
 
   // ── AsDecimal shell ───────────────────────────────────────
