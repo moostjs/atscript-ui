@@ -73,7 +73,7 @@ export const asDecimalNumberShortcuts = defineShortcuts({
   },
   "as-decimal-integer": `${innerInputReset} flex-1 min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
   "as-decimal-sep": "text-current/60 select-none px-0",
-  "as-decimal-decimal": `${innerInputReset} flex-none min-w-0 text-left disabled:!text-current/40 disabled:!cursor-not-allowed`,
+  "as-decimal-decimal": `${innerInputReset} flex-none min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
 
   // ── AsNumber shell ────────────────────────────────────────
   "as-number": {
