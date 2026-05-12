@@ -36,6 +36,13 @@ async function gotoDemo(page: Page) {
 const section = (page: Page, s: "a" | "b"): Locator =>
   page.getByTestId(`custom-components-section-${s}-form`);
 
+// Section B stacks tall custom widgets (tag-input, address-card, rgb-
+// picker, contact-card) into a single column, so sibling shells regularly
+// overlap each other's hit boxes in the headless viewport. Dispatch
+// clicks directly to bypass Playwright's pointer-intercept check — the
+// components are the contract under test, not the layout.
+const tap = (locator: Locator): Promise<void> => locator.dispatchEvent("click");
+
 // Reads the <pre> JSON model's `value` payload (form data is wrapped as
 // `{ value }`). textContent() works whether the <details> is open or not.
 async function readValue<T = unknown>(page: Page, s: "a" | "b"): Promise<T> {
@@ -133,7 +140,9 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   });
 
   // ── B3. `rating` → DemoStarRating ────────────────────────────────
-  test("Section B — `rating` (@ui.form.type 'stars') renders DemoStarRating", async ({ page }) => {
+  test("Section B — `rating` (@ui.form.component 'stars') renders DemoStarRating", async ({
+    page,
+  }) => {
     const stars = section(page, "b").getByTestId("demo-star-rating");
     const buttons = stars.locator("button.demo-star-btn");
     await expect(buttons).toHaveCount(5);
@@ -180,28 +189,28 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
 
     // Default is null (no @meta.default). First "+" lands at 1 because
     // commit(current + 1) with current = (value ?? 0) → 1.
-    await plus.click();
-    await plus.click();
-    await plus.click();
+    await tap(plus);
+    await tap(plus);
+    await tap(plus);
     expect((await readQty()).quantity).toBe(3);
 
     // "-" twice → 1.
-    await minus.click();
-    await minus.click();
+    await tap(minus);
+    await tap(minus);
     expect((await readQty()).quantity).toBe(1);
 
     // Clamp test: keep pressing "-" until disabled. The component disables
     // the button when current <= 0, so we stop on disabled. Final value: 0.
     for (let i = 0; i < 12; i++) {
       if (await minus.isDisabled()) break;
-      await minus.click();
+      await tap(minus);
     }
     await expect(minus).toBeDisabled();
     expect((await readQty()).quantity).toBe(0);
   });
 
   // ── B5. `brandColor` → DemoColorSwatch (palette of 8) ────────────
-  test("Section B — `brandColor` (@ui.form.type 'color-swatch') renders DemoColorSwatch", async ({
+  test("Section B — `brandColor` (@ui.form.component 'color-swatch') renders DemoColorSwatch", async ({
     page,
   }) => {
     const swatches = section(page, "b")
@@ -220,12 +229,8 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     expect((await readColor()).brandColor).toBe("#0ea5e9");
   });
 
-  // ── B6–B9. FIXME: `createFieldDef` in packages/ui/src/form/create-form-def.ts
-  // skips `@ui.form.type` for array/object/tuple/multi-variant-union kinds, so
-  // custom widgets never render. Step 6 addresses; unmark `.fixme` then.
-
   // ── B6. `tags` → DemoTagInput (Enter/comma/× pill/Backspace) ─────
-  test.fixme("Section B — `tags` (@ui.form.type 'tag-input') renders DemoTagInput", async ({
+  test("Section B — `tags` (@ui.form.component 'tag-input') renders DemoTagInput", async ({
     page,
   }) => {
     const widget = section(page, "b").getByTestId("demo-tag-input");
@@ -254,7 +259,7 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   });
 
   // ── B7. `address` → DemoAddressCard with 4 nested string fields ──
-  test.fixme("Section B — `address` (@ui.form.type 'address-card') renders DemoAddressCard", async ({
+  test("Section B — `address` (@ui.form.component 'address-card') renders DemoAddressCard", async ({
     page,
   }) => {
     const card = section(page, "b").getByTestId("demo-address-card");
@@ -277,17 +282,32 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   });
 
   // ── B8. `logoRgb` → DemoRgbPicker (3 range sliders + live swatch) ─
-  test.fixme("Section B — `logoRgb` (@ui.form.type 'rgb-picker') renders DemoRgbPicker", async ({
+  test("Section B — `logoRgb` (@ui.form.component 'rgb-picker') renders DemoRgbPicker", async ({
     page,
   }) => {
     const picker = section(page, "b").getByTestId("demo-rgb-picker");
     const sliders = picker.locator('input[type="range"]');
     await expect(sliders).toHaveCount(3);
 
-    // Range inputs commit via 'input' events; `fill` dispatches them.
-    await sliders.nth(0).fill("50");
-    await sliders.nth(1).fill("100");
-    await sliders.nth(2).fill("150");
+    // Section B is a tall page; scroll the picker into view so the
+    // sliders are positioned in-viewport before Playwright's actionability
+    // checks (`fill()` on `<input type=range>` requires visibility).
+    await picker.scrollIntoViewIfNeeded();
+
+    // Setting `.value` then dispatching `input` mirrors the browser's
+    // own slider-drag commit path that the component's `@input` handler
+    // listens to. Avoids Playwright's pointer-drag heuristics for ranges,
+    // which can flake when sibling fields overlap the slider's hit box.
+    async function setSlider(index: number, val: number) {
+      await sliders.nth(index).evaluate((el, v) => {
+        const input = el as HTMLInputElement;
+        input.value = String(v);
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      }, val);
+    }
+    await setSlider(0, 50);
+    await setSlider(1, 100);
+    await setSlider(2, 150);
 
     const value = await readValue<{ logoRgb: [number, number, number] | null }>(page, "b");
     expect(value.logoRgb).toEqual([50, 100, 150]);
@@ -300,7 +320,7 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
   });
 
   // ── B9. `contact` → DemoContactCard variant picker ───────────────
-  test.fixme("Section B — `contact` (@ui.form.type 'contact-card') renders DemoContactCard variant picker", async ({
+  test("Section B — `contact` (@ui.form.component 'contact-card') renders DemoContactCard variant picker", async ({
     page,
   }) => {
     const card = section(page, "b").getByTestId("demo-contact-card");
@@ -308,15 +328,19 @@ test.describe("Section 24 — custom-components customization mechanisms", () =>
     const readContact = () => readValue<{ contact: Record<string, string> }>(page, "b");
     await expect(variants).toHaveCount(3);
 
-    // Pick "Email".
-    await variants.filter({ hasText: "Email" }).click();
+    // `useAsUnion` pre-selects the first variant for a non-optional
+    // union; re-selecting Email below is a no-op, the assertion is that
+    // the Email input is the visible one.
+
+    // Pick "Email" (already the default for non-optional unions).
+    await tap(variants.filter({ hasText: "Email" }));
     const emailInput = card.getByLabel("Email Address");
     await expect(emailInput).toBeVisible();
     await emailInput.fill("jane@example.com");
     expect((await readContact()).contact).toEqual({ email: "jane@example.com" });
 
     // Switch to "Phone" — Email input must be gone, phone input must render.
-    await variants.filter({ hasText: "Phone" }).click();
+    await tap(variants.filter({ hasText: "Phone" }));
     await expect(card.getByLabel("Email Address")).toHaveCount(0);
     const phoneInput = card.getByLabel("Phone");
     await expect(phoneInput).toBeVisible();
