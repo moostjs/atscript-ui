@@ -3,9 +3,11 @@
 @ui.form.submit.text 'Save'
 export interface BuiltinOverrideForm {
     @meta.label 'Display Name'
+    @ui.form.grid.colSpan '12'
     displayName: string
 
     @meta.label 'Short Bio'
     @ui.form.placeholder 'Write a few sentences about yourself...'
+    @ui.form.grid.colSpan '12'
     bio: string
 }

@@ -1,15 +1,19 @@
 @meta.label 'Studio Address'
 interface Address {
     @meta.label 'Street'
+    @ui.form.grid.colSpan '12'
     street: string
 
     @meta.label 'City'
+    @ui.form.grid.colSpan '12'
     city: string
 
     @meta.label 'ZIP'
+    @ui.form.grid.colSpan '12'
     zip: string
 
     @meta.label 'Country'
+    @ui.form.grid.colSpan '12'
     country: string
 }
 
@@ -32,41 +36,50 @@ interface InPersonContact {
 }
 
 @meta.label 'Builder Profile'
-@meta.description 'Each field below uses a different customization mechanism. The custom widgets are wired in Step 4 — Step 1 renders defaults so you can see the baseline.'
+@meta.description 'Each field uses a different customization mechanism: per-field `@ui.form.type` annotations dispatch through the types map, and one `@ui.form.component` annotation routes through the named-component map. The `Display Name` field has no annotation and uses the default.'
 @ui.form.submit.text 'Save Profile'
 export interface BuilderProfile {
     @meta.label 'Display Name'
+    @ui.form.grid.colSpan '12'
     displayName: string
 
     @meta.label 'Bio'
     @ui.form.type 'bio'
+    @ui.form.grid.colSpan '12'
     bio: string
 
     @meta.label 'Service Rating'
     @ui.form.type 'stars'
+    @ui.form.grid.colSpan '6'
     rating: number
 
     @meta.label 'Quantity Available'
     @ui.form.component 'stepper'
+    @ui.form.grid.colSpan '6'
     quantity: number
 
     @meta.label 'Brand Color'
     @ui.form.type 'color-swatch'
+    @ui.form.grid.colSpan '12'
     brandColor: string
 
     @meta.label 'Tags'
     @ui.form.type 'tag-input'
+    @ui.form.grid.colSpan '12'
     tags: string[]
 
     @meta.label 'Studio Address'
     @ui.form.type 'address-card'
+    @ui.form.grid.colSpan '12'
     address: Address
 
     @meta.label 'Logo Accent (RGB)'
     @ui.form.type 'rgb-picker'
+    @ui.form.grid.colSpan '12'
     logoRgb: [number, number, number]
 
     @meta.label 'Preferred Contact'
     @ui.form.type 'contact-card'
+    @ui.form.grid.colSpan '12'
     contact: EmailContact | PhoneContact | InPersonContact
 }
