@@ -22,14 +22,18 @@ const { def: defA, formData: modelA } = createAsFormDef(BuiltinOverrideForm);
 const typesA = { ...createDefaultTypes(), text: DemoGrowingTextarea };
 
 // ── Section B — annotation-driven customizations ─────────────────
-// Each field opts in via `@ui.form.type "<key>"` (or
-// `@ui.form.component "<name>"` for the named-component path). Map
-// keys must match the annotation values exactly. `displayName` has
-// no annotation → falls back to the built-in `text` renderer.
+// `@ui.form.type "<key>"` is for data-type variants — `bio` is a
+// legitimate long-text variant of `string` and routes through the
+// `types` map. `@ui.form.component "<name>"` is for widget-only
+// overrides and routes through the `components` map. `displayName`
+// has no annotation → falls back to the built-in `text` renderer.
 const { def: defB, formData: modelB } = createAsFormDef(BuilderProfile);
 const typesB = {
   ...createDefaultTypes(),
   bio: DemoGrowingTextarea,
+};
+const componentsB = {
+  stepper: DemoNumberStepper,
   stars: DemoStarRating,
   "color-swatch": DemoColorSwatch,
   "tag-input": DemoTagInput,
@@ -37,7 +41,6 @@ const typesB = {
   "rgb-picker": DemoRgbPicker,
   "contact-card": DemoContactCard,
 };
-const componentsB = { stepper: DemoNumberStepper };
 
 function onSubmitA(data: unknown) {
   console.log("BuiltinOverrideForm submitted:", data);
@@ -108,12 +111,12 @@ function onSubmitB(data: unknown) {
         <div class="flex flex-col gap-$xxs">
           <h2 class="text-h5 m-0">Section B — Annotation-driven customizations</h2>
           <p class="text-callout text-current-muted m-0">
-            Each annotated field opts into a per-field custom renderer via
-            <code>@ui.form.type "&lt;key&gt;"</code> (or
-            <code>@ui.form.component "&lt;name&gt;"</code> for the named-component path).
-            <code>displayName</code> has no annotation, so it falls back to the built-in
-            <code>text</code> renderer (<code>AsInput</code>) — that's the baseline-vs-custom
-            comparison.
+            Use <code>@ui.form.type</code> for data-type variants (here: <code>bio</code> as a
+            long-text variant of <code>string</code>, routed through the <code>types</code> map),
+            and <code>@ui.form.component</code> for widget overrides (the remaining annotated
+            fields, routed through the <code>components</code> map). <code>displayName</code> has no
+            annotation, so it falls back to the built-in <code>text</code> renderer
+            (<code>AsInput</code>).
           </p>
         </div>
         <AsForm

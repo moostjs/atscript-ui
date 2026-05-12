@@ -36,7 +36,7 @@ interface InPersonContact {
 }
 
 @meta.label 'Builder Profile'
-@meta.description 'Each field uses a different customization mechanism: per-field `@ui.form.type` annotations dispatch through the types map, and one `@ui.form.component` annotation routes through the named-component map. The `Display Name` field has no annotation and uses the default.'
+@meta.description 'Each field demonstrates one of two customization mechanisms: `@ui.form.type` (data-type variant — here `bio` as long-text) dispatches through the types map, and `@ui.form.component` (widget override) routes through the components map. The `Display Name` field has no annotation and uses the default.'
 @ui.form.submit.text 'Save Profile'
 export interface BuilderProfile {
     @meta.label 'Display Name'
@@ -49,7 +49,7 @@ export interface BuilderProfile {
     bio: string
 
     @meta.label 'Service Rating'
-    @ui.form.type 'stars'
+    @ui.form.component 'stars'
     @ui.form.grid.colSpan '6'
     rating: number
 
@@ -59,27 +59,27 @@ export interface BuilderProfile {
     quantity: number
 
     @meta.label 'Brand Color'
-    @ui.form.type 'color-swatch'
+    @ui.form.component 'color-swatch'
     @ui.form.grid.colSpan '12'
     brandColor: string
 
     @meta.label 'Tags'
-    @ui.form.type 'tag-input'
+    @ui.form.component 'tag-input'
     @ui.form.grid.colSpan '12'
     tags: string[]
 
     @meta.label 'Studio Address'
-    @ui.form.type 'address-card'
+    @ui.form.component 'address-card'
     @ui.form.grid.colSpan '12'
     address: Address
 
     @meta.label 'Logo Accent (RGB)'
-    @ui.form.type 'rgb-picker'
+    @ui.form.component 'rgb-picker'
     @ui.form.grid.colSpan '12'
     logoRgb: [number, number, number]
 
     @meta.label 'Preferred Contact'
-    @ui.form.type 'contact-card'
+    @ui.form.component 'contact-card'
     @ui.form.grid.colSpan '12'
     contact: EmailContact | PhoneContact | InPersonContact
 }
