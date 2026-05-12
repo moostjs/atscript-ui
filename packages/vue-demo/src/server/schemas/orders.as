@@ -98,6 +98,18 @@ export interface OrdersTable {
     @ui.table.hidden
     paymentMethod?: OrderPaymentCard | OrderPaymentBank | OrderPaymentInvoice
 
+    @meta.label 'Note'
+    @meta.description 'Mixed-shape union — string, string[], or { author, body }. Demonstrates per-row cell dispatch.'
+    @db.json
+    @ui.form.hidden
+    note?: string | string[] | {
+        @meta.label 'Author'
+        author: string
+
+        @meta.label 'Body'
+        body: string
+    }
+
     @meta.label 'Created'
     @db.default.now
     createdAt: number.timestamp

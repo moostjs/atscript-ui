@@ -5,6 +5,7 @@ export { default as AsCellArray } from "./as-cell-array.vue";
 export { default as AsCellDate } from "./as-cell-date.vue";
 export { default as AsCellJson } from "./as-cell-json.vue";
 export { default as AsCellNumber } from "./as-cell-number.vue";
+export { default as AsCellUnion } from "./as-cell-union.vue";
 export { default as AsColumnMenu } from "./as-column-menu.vue";
 export { default as AsConfigDialog } from "./as-config-dialog.vue";
 export { default as AsConfirmDialog } from "./as-confirm-dialog.vue";

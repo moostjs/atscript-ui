@@ -63,6 +63,24 @@ describe("AsUnion", () => {
     expect("phone" in (formData.value.backupContact as object)).toBe(true);
   });
 
+  it("picking the FIRST variant from empty-state menu enables the field (null-seeded)", async () => {
+    // Regression: DB-roundtripped null (SQL NULL) plus picking the
+    // initially-detected variant index used to be stashed and restored as null,
+    // keeping the empty state visible. Reproduction of orders/4/edit bug.
+    const { OptionalObjectUnionForm } = await import("./fixtures/union-forms.as");
+    const { wrapper, formData } = mountForm(OptionalObjectUnionForm, {
+      initialValue: { backupContact: null },
+    });
+    await nextTick();
+    await wrapper.find(".as-object-empty-add").trigger("click");
+    await nextTick();
+    const items = wrapper.findAll(".as-dropdown-item");
+    expect(items[0]!.text()).toMatch(/Email/);
+    await items[0]!.trigger("click");
+    await nextTick();
+    expect("email" in (formData.value.backupContact as object)).toBe(true);
+  });
+
   it("optional union with null value renders empty-state placeholder, not the picker", async () => {
     // Regression: DB-roundtripped null (SQL NULL) must be treated as "unset",
     // matching undefined. Was broken by `!== undefined` gates in 4 sites.

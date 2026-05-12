@@ -61,7 +61,10 @@ export function useAsUnion(props: TAsComponentProps): UseAsUnionReturn {
   const variantDataStash = new Map<number, unknown>();
 
   function changeVariant(newIndex: number) {
-    variantDataStash.set(localUnionIndex.value, props.model?.value);
+    // Only stash real user work — null/undefined would corrupt later restores and break picking the initially-detected variant.
+    if (props.model?.value != null) {
+      variantDataStash.set(localUnionIndex.value, props.model.value);
+    }
     localUnionIndex.value = newIndex;
     const variant = unionField.value?.unionVariants[newIndex];
     if (variant && props.model) {

@@ -1,25 +1,25 @@
 {
   "name": "@atscript/vue-wf",
-  "version": "0.1.72",
+  "version": "0.1.57",
   "description": "Workflow form integration for Vue 3 — HTTP round-trip loop driven by atscript type metadata",
   "keywords": [
     "atscript",
+    "form",
+    "metadata",
+    "moost",
+    "type-driven",
+    "typescript",
     "vue",
     "vue3",
-    "workflow",
     "wf",
-    "form",
-    "moost",
-    "metadata",
-    "type-driven",
-    "typescript"
+    "workflow"
   ],
-  "author": "Artem Maltsev <artem@maltsev.nl>",
-  "license": "MIT",
   "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/vue-wf#readme",
   "bugs": {
     "url": "https://github.com/moostjs/atscript-ui/issues"
   },
+  "license": "MIT",
+  "author": "Artem Maltsev <artem@maltsev.nl>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/atscript-ui.git",

@@ -4,6 +4,7 @@ import {
   AsCellDate,
   AsCellJson,
   AsCellNumber,
+  AsCellUnion,
   AsRowActions,
   AsTableCellValue,
 } from "../components/defaults";
@@ -25,6 +26,7 @@ export function createDefaultCellTypes(): TAsCellTypeComponents {
     relative: AsCellDate,
     array: AsCellArray,
     object: AsCellJson,
+    union: AsCellUnion,
     enum: AsTableCellValue,
     ref: AsTableCellValue,
     /** Synthesised row-actions pseudo-column (`:rowActionsColumn` opt-in). */

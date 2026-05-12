@@ -153,7 +153,7 @@ function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: unknown): 
   const kind = prop.type.kind;
   if (kind === "array") return "array";
   if (kind === "object") return "object";
-  if (kind === "union") return literalOpts !== undefined ? "enum" : "text";
+  if (kind === "union") return literalOpts !== undefined ? "enum" : "union";
   if (kind === "") {
     const final = prop.type as TAtscriptTypeFinal;
     const dt = final.designType;

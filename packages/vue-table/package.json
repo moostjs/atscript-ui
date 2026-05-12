@@ -1,26 +1,26 @@
 {
   "name": "@atscript/vue-table",
-  "version": "0.1.72",
+  "version": "0.1.57",
   "description": "Type-driven table components for Atscript with Vue 3",
   "keywords": [
     "atscript",
-    "vue",
-    "vue3",
-    "table",
+    "components",
     "datatable",
-    "virtualized",
     "filters",
     "metadata",
+    "table",
     "type-driven",
-    "components",
-    "typescript"
+    "typescript",
+    "virtualized",
+    "vue",
+    "vue3"
   ],
-  "author": "Artem Maltsev <artem@maltsev.nl>",
-  "license": "MIT",
   "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/vue-table#readme",
   "bugs": {
     "url": "https://github.com/moostjs/atscript-ui/issues"
   },
+  "license": "MIT",
+  "author": "Artem Maltsev <artem@maltsev.nl>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/atscript-ui.git",
@@ -63,6 +63,11 @@
       "types": "./dist/as-cell-number.d.mts",
       "import": "./dist/as-cell-number.mjs",
       "require": "./dist/as-cell-number.cjs"
+    },
+    "./as-cell-union": {
+      "types": "./dist/as-cell-union.d.mts",
+      "import": "./dist/as-cell-union.mjs",
+      "require": "./dist/as-cell-union.cjs"
     },
     "./as-column-menu": {
       "types": "./dist/as-column-menu.d.mts",

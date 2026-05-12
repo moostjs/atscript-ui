@@ -1,24 +1,24 @@
 {
   "name": "@atscript/vue-form",
-  "version": "0.1.72",
+  "version": "0.1.57",
   "description": "Type-driven form rendering for Atscript with Vue 3",
   "keywords": [
     "atscript",
-    "vue",
-    "vue3",
+    "components",
     "form",
     "form-builder",
     "metadata",
     "type-driven",
-    "components",
-    "typescript"
+    "typescript",
+    "vue",
+    "vue3"
   ],
-  "author": "Artem Maltsev <artem@maltsev.nl>",
-  "license": "MIT",
   "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/vue-form#readme",
   "bugs": {
     "url": "https://github.com/moostjs/atscript-ui/issues"
   },
+  "license": "MIT",
+  "author": "Artem Maltsev <artem@maltsev.nl>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/atscript-ui.git",

@@ -180,6 +180,20 @@ const pickPaymentMethod = (i: number): Record<string, unknown> | undefined => {
   }
 };
 
+// 4-step cycle string -> string[] -> { author, body } -> null.
+const pickNote = (i: number): unknown => {
+  switch ((i - 1) % 4) {
+    case 0:
+      return `Quick note for order ${i}.`;
+    case 1:
+      return [`urgent`, `priority`, `customer-${i}`];
+    case 2:
+      return { author: `agent${i}`, body: `Reviewed order ${i}. All good.` };
+    default:
+      return undefined;
+  }
+};
+
 export const seedOrders = () => {
   const rows: Record<string, unknown>[] = [];
   const statuses = ["pending", "processing", "shipped", "delivered", "cancelled"] as const;
@@ -206,6 +220,7 @@ export const seedOrders = () => {
       total,
       shippedAt: i % 2 === 0 ? Date.now() - i * 3_600_000 : null,
       paymentMethod: pickPaymentMethod(i),
+      note: pickNote(i),
     });
   }
   return rows;

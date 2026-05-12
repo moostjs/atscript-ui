@@ -1,23 +1,23 @@
 {
   "name": "@atscript/ui",
-  "version": "0.1.72",
+  "version": "0.1.57",
   "description": "Framework-agnostic runtime for form and table definitions from atscript annotated types",
   "keywords": [
+    "annotations",
     "atscript",
     "form",
-    "table",
     "metadata",
+    "table",
     "type-driven",
-    "validation",
-    "annotations",
-    "typescript"
+    "typescript",
+    "validation"
   ],
-  "author": "Artem Maltsev <artem@maltsev.nl>",
-  "license": "MIT",
   "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/ui#readme",
   "bugs": {
     "url": "https://github.com/moostjs/atscript-ui/issues"
   },
+  "license": "MIT",
+  "author": "Artem Maltsev <artem@maltsev.nl>",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/moostjs/atscript-ui.git",

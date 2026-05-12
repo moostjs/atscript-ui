@@ -465,6 +465,15 @@ describe("createTableDef", () => {
     expect(paths).not.toContain("address.city");
   });
 
+  it("non-literal union (object variants) infers cell-type 'union'", () => {
+    const cardVariant = defineAnnotatedType("object").prop("card", stringProp()).$type;
+    const bankVariant = defineAnnotatedType("object").prop("iban", stringProp()).$type;
+    const unionProp = defineAnnotatedType("union").item(cardVariant).item(bankVariant).$type;
+    const meta = buildMeta({ paymentMethod: unionProp });
+    const def = createTableDef(meta);
+    expect(def.columns.find((c) => c.path === "paymentMethod")!.type).toBe("union");
+  });
+
   it("non-FK columns have undefined valueHelpInfo", () => {
     const meta = buildMeta({ name: stringProp(), age: numberProp() });
     const def = createTableDef(meta);
