@@ -19,10 +19,7 @@ import DarkToggle from "./_dark-toggle.vue";
 // growing textarea. Every string field on the form picks it up
 // without touching the schema.
 const { def: defA, formData: modelA } = createAsFormDef(BuiltinOverrideForm);
-const typesA = {
-  ...createDefaultTypes(),
-  text: DemoGrowingTextarea,
-};
+const typesA = { ...createDefaultTypes(), text: DemoGrowingTextarea };
 
 // ── Section B — annotation-driven customizations ─────────────────
 // Each field opts in via `@ui.form.type "<key>"` (or
@@ -40,9 +37,7 @@ const typesB = {
   "rgb-picker": DemoRgbPicker,
   "contact-card": DemoContactCard,
 };
-const componentsB = {
-  stepper: DemoNumberStepper,
-};
+const componentsB = { stepper: DemoNumberStepper };
 
 function onSubmitA(data: unknown) {
   console.log("BuiltinOverrideForm submitted:", data);
