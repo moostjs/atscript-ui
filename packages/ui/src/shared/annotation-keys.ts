@@ -16,14 +16,15 @@ export const UI_FORM_HIDDEN = "ui.form.hidden" as const;
 export const UI_FORM_ATTR = "ui.form.attr" as const;
 export const UI_FORM_GRID_COL_SPAN = "ui.form.grid.colSpan" as const;
 export const UI_FORM_GRID_ROW_SPAN = "ui.form.grid.rowSpan" as const;
-export const UI_FORM_ICON = "ui.form.icon" as const;
 export const UI_FORM_SUBMIT_TEXT = "ui.form.submit.text" as const;
 export const UI_FORM_LABEL_SINGULAR = "ui.form.label.singular" as const;
 export const UI_FORM_ACTION = "ui.form.action" as const;
 export const UI_FORM_PREFIX = "ui.form.prefix" as const;
 export const UI_FORM_PREFIX_REF = "ui.form.prefix.ref" as const;
+export const UI_FORM_PREFIX_ICON = "ui.form.prefix.icon" as const;
 export const UI_FORM_SUFFIX = "ui.form.suffix" as const;
 export const UI_FORM_SUFFIX_REF = "ui.form.suffix.ref" as const;
+export const UI_FORM_SUFFIX_ICON = "ui.form.suffix.icon" as const;
 
 // ── Table static (registered by @atscript/ui plugin) ─────────
 export const UI_TABLE_WIDTH = "ui.table.width" as const;

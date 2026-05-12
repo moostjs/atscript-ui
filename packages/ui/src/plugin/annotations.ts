@@ -308,22 +308,6 @@ export const uiAnnotations: TAnnotationsTree = {
         }),
       },
 
-      icon: new AnnotationSpec({
-        description:
-          "Prepended input icon for `<as-field>`. Resolved through the ui-styles icon registry." +
-          "\n\n**Example:**\n" +
-          "```atscript\n" +
-          '@ui.form.icon "mail"\n' +
-          "email: string.email\n" +
-          "```\n",
-        nodeType: ["prop", "type", "interface"],
-        argument: {
-          name: "name",
-          type: "string",
-          description: "Icon name registered with the ui-styles icon registry.",
-        },
-      }),
-
       submit: {
         text: new AnnotationSpec({
           description: "Static submit button text.",
@@ -414,6 +398,21 @@ export const uiAnnotations: TAnnotationsTree = {
             description: "Name of a sibling field whose value drives the prefix.",
           },
         }),
+        icon: new AnnotationSpec({
+          description:
+            "**Icon adornment** rendered to the left of the input (further out than `@ui.form.prefix` text). The argument is a CSS class that paints the glyph — typically a UnoCSS preset-icons utility like `i-mdi-mail` or a custom registry alias. The consumer is responsible for ensuring the class is reachable (safelist / preset / shortcut). Combined order: `[prefix-icon][prefix-text][input]`." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.form.prefix.icon "i-mdi-mail"\n' +
+            "email: string.email\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "class",
+            type: "string",
+            description: "CSS class painting the icon glyph. Consumer manages safelist / preset coverage.",
+          },
+        }),
       },
 
       suffix: {
@@ -452,6 +451,21 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "field",
             type: "string",
             description: "Name of a sibling field whose value drives the suffix.",
+          },
+        }),
+        icon: new AnnotationSpec({
+          description:
+            "**Icon adornment** rendered to the right of the input (further out than `@ui.form.suffix` text). The argument is a CSS class that paints the glyph — typically a UnoCSS preset-icons utility like `i-mdi-mail` or a custom registry alias. The consumer is responsible for ensuring the class is reachable (safelist / preset / shortcut). Combined order: `[input][suffix-text][suffix-icon]`." +
+            "\n\n**Example:**\n" +
+            "```atscript\n" +
+            '@ui.form.suffix.icon "i-mdi-check"\n' +
+            "code: string\n" +
+            "```\n",
+          nodeType: ["prop", "type"],
+          argument: {
+            name: "class",
+            type: "string",
+            description: "CSS class painting the icon glyph. Consumer manages safelist / preset coverage.",
           },
         }),
       },

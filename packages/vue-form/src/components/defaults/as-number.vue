@@ -108,6 +108,7 @@ const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefi
         :class="{ error: !!error, required }"
         :title="shellTitle"
       >
+        <span v-if="prefixIcon" class="as-prefix-icon" :class="prefixIcon" aria-hidden="true" />
         <span v-if="prefix" class="as-prefix" aria-hidden="true">{{ prefix }}</span>
         <input
           :id="inputId"
@@ -130,6 +131,7 @@ const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefi
           :aria-label="!label ? name : undefined"
         />
         <span v-if="suffix" class="as-suffix" aria-hidden="true">{{ suffix }}</span>
+        <span v-if="suffixIcon" class="as-suffix-icon" :class="suffixIcon" aria-hidden="true" />
       </div>
       <!-- Plain-number fallback: defer to AsInputControl (visually unchanged
            from the pre-Phase-6 single <input type="number"> rendering). -->

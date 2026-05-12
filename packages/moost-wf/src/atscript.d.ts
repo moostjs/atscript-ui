@@ -97,7 +97,8 @@ declare global {
     "ui.form.hidden": boolean
     "ui.form.attr": ({ name: string, value: string })[]
     "ui.form.width": string
-    "ui.form.icon": string
+    "ui.form.prefix.icon": string
+    "ui.form.suffix.icon": string
     "ui.form.submit.text": string
     "ui.form.action": { id: string, label?: string }
     "ui.table.width": string

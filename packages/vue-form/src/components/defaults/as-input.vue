@@ -3,52 +3,37 @@ import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import AsInputControl from "../internal/as-input-control.vue";
+import AsAdornmentShell from "../internal/as-adornment-shell.vue";
 
 /**
- * Default text/number/password input renderer. When `prefix` or `suffix`
- * is resolved at AsField (from `@ui.form.prefix*` / `@ui.form.suffix*`),
- * the bordered shell wraps the raw control with adornment pills. With
- * neither set, the chrome is visually unchanged from the plain
- * `AsInputControl` rendering.
- *
- * `icon` and prefix/suffix can coexist — the icon overlay sits inside
- * the same shell as before (left-padded onto the input itself); the
- * prefix/suffix pills paint outside that.
+ * Default text/password/textarea input renderer. When AsField sees ANY
+ * adornment annotation on the field (`@ui.form.prefix*` /
+ * `@ui.form.suffix*` — text or icon), the input renders inside the merged
+ * `AsAdornmentShell` chrome family shared with AsNumber / AsDecimal:
+ * `[prefix-icon][prefix-text][input][suffix-text][suffix-icon]`. Without
+ * any adornment, the plain control renders directly.
  */
 const props = defineProps<TAsComponentProps>();
 
-const hasAdornment = computed(() => !!props.prefix || !!props.suffix);
 const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefined);
 </script>
 
 <template>
   <AsFieldShell v-bind="$props">
     <template #default="{ inputId }">
-      <!-- With prefix/suffix: merged-chrome shell with adornment pills. -->
-      <div
+      <AsAdornmentShell
         v-if="hasAdornment"
-        class="as-input-shell"
-        :class="{ error: !!error, required }"
+        :prefix-icon="prefixIcon"
+        :prefix="prefix"
+        :suffix="suffix"
+        :suffix-icon="suffixIcon"
+        :error="error"
+        :required="required"
         :title="shellTitle"
       >
-        <span v-if="prefix" class="as-prefix" aria-hidden="true">{{ prefix }}</span>
-        <template v-if="icon">
-          <div class="as-input-with-icon as-input-shell-icon-wrap">
-            <span :class="['as-input-icon', icon]" aria-hidden="true" />
-            <AsInputControl v-bind="$props" :input-id="inputId" />
-          </div>
-        </template>
-        <AsInputControl v-else v-bind="$props" :input-id="inputId" />
-        <span v-if="suffix" class="as-suffix" aria-hidden="true">{{ suffix }}</span>
-      </div>
-      <!-- No prefix/suffix — keep the legacy icon-or-plain rendering. -->
-      <template v-else>
-        <div v-if="icon" class="as-input-with-icon">
-          <span :class="['as-input-icon', icon]" aria-hidden="true" />
-          <AsInputControl v-bind="$props" :input-id="inputId" />
-        </div>
-        <AsInputControl v-else v-bind="$props" :input-id="inputId" />
-      </template>
+        <AsInputControl v-bind="$props" :input-id="inputId" />
+      </AsAdornmentShell>
+      <AsInputControl v-else v-bind="$props" :input-id="inputId" />
     </template>
   </AsFieldShell>
 </template>

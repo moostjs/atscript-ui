@@ -44,8 +44,10 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   hint?: string;
   /** Resolved placeholder from `@ui.form.placeholder` or `@ui.form.fn.placeholder`. */
   placeholder?: string;
-  /** Resolved prepend-icon name from `@ui.form.icon`. */
-  icon?: string;
+  /** Resolved CSS class painting the prefix icon glyph from `@ui.form.prefix.icon`. Consumer manages safelist / preset coverage. Rendered as the leftmost adornment, before the `prefix` text. */
+  prefixIcon?: string;
+  /** Resolved CSS class painting the suffix icon glyph from `@ui.form.suffix.icon`. Consumer manages safelist / preset coverage. Rendered as the rightmost adornment, after the `suffix` text. */
+  suffixIcon?: string;
   /** CSS class(es) from `@ui.form.classes` or `@ui.form.fn.classes`. */
   class?: Record<string, boolean> | string;
   /** Inline styles from `@ui.form.styles` or `@ui.form.fn.styles`. */

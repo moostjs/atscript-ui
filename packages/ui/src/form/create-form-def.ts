@@ -24,8 +24,10 @@ import {
   UI_FORM_COMPONENT,
   UI_FORM_ORDER,
   UI_FORM_PREFIX,
+  UI_FORM_PREFIX_ICON,
   UI_FORM_PREFIX_REF,
   UI_FORM_SUFFIX,
+  UI_FORM_SUFFIX_ICON,
   UI_FORM_SUFFIX_REF,
   UI_FORM_TYPE,
   UI_TYPE,
@@ -230,10 +232,12 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
         getFieldMeta(prop, DB_UNIT) !== undefined || getFieldMeta(prop, DB_UNIT_REF) !== undefined;
       const hasPrefix =
         getFieldMeta(prop, UI_FORM_PREFIX) !== undefined ||
-        getFieldMeta(prop, UI_FORM_PREFIX_REF) !== undefined;
+        getFieldMeta(prop, UI_FORM_PREFIX_REF) !== undefined ||
+        getFieldMeta(prop, UI_FORM_PREFIX_ICON) !== undefined;
       const hasSuffix =
         getFieldMeta(prop, UI_FORM_SUFFIX) !== undefined ||
-        getFieldMeta(prop, UI_FORM_SUFFIX_REF) !== undefined;
+        getFieldMeta(prop, UI_FORM_SUFFIX_REF) !== undefined ||
+        getFieldMeta(prop, UI_FORM_SUFFIX_ICON) !== undefined;
       if (hasUnit || hasPrefix || hasSuffix) numericType = "number";
     }
   }

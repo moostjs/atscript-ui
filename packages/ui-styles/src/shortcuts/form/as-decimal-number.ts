@@ -61,6 +61,18 @@ export const asDecimalNumberShortcuts = defineShortcuts({
   "as-prefix": `${adornmentBase} pr-$xs`,
   "as-suffix": `${adornmentBase} pl-$xs`,
 
+  // ── Icon adornments (`@ui.form.prefix.icon` / `@ui.form.suffix.icon`) ──
+  // The annotation argument is dropped onto the span as a CSS class
+  // (typically a UnoCSS preset-icons utility like `i-mdi-mail`); the
+  // consumer is responsible for safelist / preset coverage. Sizing uses
+  // `text-[1.25em]` so the glyph scales with the body font. Side padding
+  // mirrors the text-adornment spacing so a combined `[icon][text]` reads
+  // as one unit when both are set.
+  "as-prefix-icon":
+    "text-current/60 select-none shrink-0 text-[1.25em] inline-flex items-center pr-$xs",
+  "as-suffix-icon":
+    "text-current/60 select-none shrink-0 text-[1.25em] inline-flex items-center pl-$xs",
+
   // ── AsDecimal shell ───────────────────────────────────────
   "as-decimal": {
     "": shellBase,
@@ -86,10 +98,12 @@ export const asDecimalNumberShortcuts = defineShortcuts({
   },
   "as-number-input": `${innerInputReset} flex-1 min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
 
-  // ── AsInput merged shell (when prefix/suffix is present) ──
-  // Same merged-chrome family as AsDecimal/AsNumber so adornment pills
+  // ── AsAdornmentShell merged chrome (any adornment is present) ──
+  // Same merged-chrome family as AsDecimal / AsNumber so adornment pills
   // line up visually across the input family. The inner control is
-  // either AsInputControl (plain) or the `as-input-with-icon` wrapper.
+  // either AsInputControl (plain — no adornment) or AsAdornmentShell-
+  // wrapped AsInputControl (any adornment — text or icon, prefix or
+  // suffix).
   "as-input-shell": {
     "": shellBase,
     "hover:": "border-current/30",
@@ -102,7 +116,4 @@ export const asDecimalNumberShortcuts = defineShortcuts({
     "[&_input,&_textarea]:":
       "!w-auto !bg-transparent !border-0 !outline-0 !ring-0 !shadow-none !h-full !px-0 !layer-0 flex-1 min-w-0",
   },
-  // When AsInput's icon overlay is active inside the merged shell the
-  // wrapper must NOT add its own padding (the shell already owns layout).
-  "as-input-shell-icon-wrap": "flex-1 min-w-0",
 });

@@ -46,18 +46,19 @@ describe("AsField", () => {
     expect(wrapper.text()).toContain("Tell us about yourself");
   });
 
-  it("surfaces @ui.form.icon as an `icon` prop on the rendered field component", async () => {
+  it("surfaces @ui.form.prefix.icon as a `prefixIcon` prop on the rendered field component", async () => {
     const { IconField } = await import("./fixtures/field-annotations.as");
     const { wrapper } = mountForm(IconField);
-    // Default text input forwards the resolved icon onto its root element via
-    // v-bind, so we can probe the attribute on the rendered root.
+    // Default text input forwards the resolved prefixIcon onto its merged
+    // shell via the new AsAdornmentShell wrapper. We assert the underlying
+    // metadata read on the prop.
     const field = wrapper.find(".as-default-field");
     expect(field.exists()).toBe(true);
-    // The slotted component receives `icon` in its props bag — the default
-    // input renders it as a data-attr pass-through; if no consumer reads it,
-    // the attribute simply isn't there. We also assert the underlying scope
-    // by reading the FormFieldDef metadata.
     const { getFieldMeta } = await import("@atscript/ui");
-    expect(getFieldMeta(IconField.type.props.get("email")!, "ui.form.icon")).toBe("mail");
+    expect(getFieldMeta(IconField.type.props.get("email")!, "ui.form.prefix.icon")).toBe("mail");
+    // The icon class is painted onto the span inside the shell.
+    const iconSpan = wrapper.find(".as-prefix-icon");
+    expect(iconSpan.exists()).toBe(true);
+    expect(iconSpan.classes()).toContain("mail");
   });
 });

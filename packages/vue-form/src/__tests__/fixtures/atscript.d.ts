@@ -45,14 +45,15 @@ declare global {
     "ui.form.attr": ({ name: string, value: string })[]
     "ui.form.grid.colSpan": { desktop: string, narrow?: string }
     "ui.form.grid.rowSpan": { desktop: string, narrow?: string }
-    "ui.form.icon": string
     "ui.form.submit.text": string
     "ui.form.label.singular": string
     "ui.form.action": { id: string, label?: string }
     "ui.form.prefix": string
     "ui.form.prefix.ref": string
+    "ui.form.prefix.icon": string
     "ui.form.suffix": string
     "ui.form.suffix.ref": string
+    "ui.form.suffix.icon": string
     "ui.table.width": string
     "ui.table.component": string
     "ui.table.hidden": boolean

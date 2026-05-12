@@ -94,7 +94,8 @@ declare global {
     "ui.form.attr": ({ name: string, value: string })[]
     "ui.form.title": string
     "ui.form.width": string
-    "ui.form.icon": string
+    "ui.form.prefix.icon": string
+    "ui.form.suffix.icon": string
     "ui.form.submit.text": string
     "ui.form.submit.disabled": boolean
     "ui.form.action": { id: string, label?: string }

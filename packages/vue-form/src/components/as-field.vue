@@ -63,12 +63,13 @@ import {
   UI_FORM_GRID_ROW_SPAN,
   UI_FORM_HIDDEN,
   UI_FORM_HINT,
-  UI_FORM_ICON,
   UI_FORM_PLACEHOLDER,
   UI_FORM_PREFIX,
+  UI_FORM_PREFIX_ICON,
   UI_FORM_PREFIX_REF,
   UI_FORM_STYLES,
   UI_FORM_SUFFIX,
+  UI_FORM_SUFFIX_ICON,
   UI_FORM_SUFFIX_REF,
   UI_FORM_VALIDATE,
   WF_ACTION_WITH_DATA,
@@ -185,7 +186,8 @@ const prop = props.field.prop;
 const autocomplete = getFieldMeta(prop, UI_FORM_AUTOCOMPLETE);
 const maxLength = getFieldMeta(prop, EXPECT_MAX_LENGTH)?.length;
 const componentName = getFieldMeta(prop, UI_FORM_COMPONENT);
-const icon = getFieldMeta(prop, UI_FORM_ICON);
+const prefixIcon = getFieldMeta(prop, UI_FORM_PREFIX_ICON);
+const suffixIcon = getFieldMeta(prop, UI_FORM_SUFFIX_ICON);
 
 // ── Resolved annotation reads — done once at setup, surfaced to defaults ──
 // Defaults read these as plain props instead of touching `field.prop`,
@@ -223,8 +225,10 @@ const hasAdornment =
   unitRefField !== undefined ||
   prefixLiteral !== undefined ||
   prefixRefField !== undefined ||
+  prefixIcon !== undefined ||
   suffixLiteral !== undefined ||
-  suffixRefField !== undefined;
+  suffixRefField !== undefined ||
+  suffixIcon !== undefined;
 
 let resolvedCurrencyCode: string | ComputedRef<string | undefined> | undefined;
 let resolvedUnitCode: string | ComputedRef<string | undefined> | undefined;
@@ -704,7 +708,8 @@ const invariantProps = {
   field: props.field,
   maxLength,
   autocomplete,
-  icon,
+  prefixIcon,
+  suffixIcon,
   level: isStructured || isUnion ? myLevel : undefined,
   // Resolved-once props: annotation reads + path/ids
   path: absolutePath.value,

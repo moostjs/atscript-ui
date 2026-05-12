@@ -29,7 +29,7 @@ export interface DescriptionField {
 }
 
 export interface IconField {
-    @ui.form.icon 'mail'
+    @ui.form.prefix.icon 'mail'
     email: string
 }
 
