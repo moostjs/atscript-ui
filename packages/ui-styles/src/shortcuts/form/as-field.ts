@@ -29,6 +29,14 @@ export const asFieldShortcuts = defineShortcuts({
 
     "[&_textarea]:": "resize-y min-h-[80px] py-$s leading-[1.45]",
 
+    // Plain `<input type="number">` (AsNumber's fallback path via
+    // AsInputControl, plus any consumer-side numeric input) is right-aligned
+    // for bank UX. The merged-chrome AsNumber path uses `as-number-input`
+    // which also sets `text-right`; AsDecimal keeps the integer half right
+    // and the decimal half left, so it deliberately renders `type="text"`
+    // and isn't affected by this rule.
+    "[&_input[type=number]]:": "text-right",
+
     // `<select>` element-specific overrides:
     // - `!bg-current` + `!text-scope-dark-0` (light) / `!text-scope-light-0`
     //   (dark) — Chromium ships native form widgets with an internal
