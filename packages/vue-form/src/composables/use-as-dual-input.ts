@@ -94,7 +94,11 @@ export function useAsDualInput(opts: UseAsDualInputOptions): UseAsDualInputRetur
   function onIntegerFocus(e?: FocusEvent): void {
     focusActive.value = true;
     decimalEdit.value = null;
-    selectAllIfZeroShaped(e?.target);
+    // Skip select-all when focus came via the keyboard bridge from the
+    // sibling decimal half: `focusInteger(true)` intentionally lands the
+    // caret at end-of-value mid-typing, and select-all would override
+    // that. Genuine focus (click, Tab from another field) selects.
+    if (e?.relatedTarget !== decimalInput.value) selectAllOnFocus(e?.target);
   }
 
   function onDecimalFocus(e?: FocusEvent): void {
@@ -108,25 +112,24 @@ export function useAsDualInput(opts: UseAsDualInputOptions): UseAsDualInputRetur
     } else {
       decimalEdit.value = d;
     }
-    selectAllIfZeroShaped(e?.target);
+    // See `onIntegerFocus` — bridge focus from integer leaves the caret
+    // at decimal position 0; select-all would override that.
+    if (e?.relatedTarget !== integerInput.value) selectAllOnFocus(e?.target);
   }
 
   /**
-   * UX polish: when an input shows only zeros at focus time (e.g. the
-   * canonical "0" / "-0" of a freshly-initialised optional decimal, or
-   * "00" left over in the decimal half), select the contents so the
-   * first keystroke replaces them. Without this, typing `5` into "0"
-   * produces "05" — confusing for a value already in canonical zero
-   * form. Defer to the next frame so Vue's reactive re-render of the
-   * `:value` binding has a chance to settle before we read the value.
+   * UX polish: numeric inputs always select-all on focus so the next
+   * keystroke replaces the existing value. Without this, typing `5` into
+   * "1" produces "15" / "51" depending on where the caret lands —
+   * confusing for a numeric field where most edits replace rather than
+   * append. Synchronous: selecting the pre-render value is fine because
+   * (a) Vue's :value re-binding preserves the selection range, and
+   * (b) the user only sees one frame either way.
    */
-  function selectAllIfZeroShaped(target: EventTarget | null | undefined): void {
+  function selectAllOnFocus(target: EventTarget | null | undefined): void {
     const el = target as HTMLInputElement | null;
     if (!el || typeof el.select !== "function") return;
-    if (!/^-?0+$/.test(el.value)) return;
-    requestAnimationFrame(() => {
-      if (document.activeElement === el && /^-?0+$/.test(el.value)) el.select();
-    });
+    el.select();
   }
 
   function onBlurAll(e: FocusEvent): void {

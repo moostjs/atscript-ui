@@ -37,15 +37,11 @@ const editValue = computed(() => (focusActive.value ? rawValue.value : displayVa
 
 function onFocus(e: FocusEvent): void {
   focusActive.value = true;
-  // UX polish: select the contents when the field shows only zeros so
-  // the first keystroke replaces them — typing `5` into "0" should yield
-  // 5, not 05/50. Defer to the next frame so Vue's reactive switch from
-  // `displayValue` to `rawValue` has settled before we read `el.value`.
+  // UX polish: numeric inputs always select-all on focus so the next
+  // keystroke replaces the existing value. Synchronous — Vue's :value
+  // re-binding (displayValue → rawValue) preserves the selection range.
   const el = e.target as HTMLInputElement | null;
-  if (!el || !/^-?0+$/.test(el.value)) return;
-  requestAnimationFrame(() => {
-    if (document.activeElement === el && /^-?0+$/.test(el.value)) el.select();
-  });
+  if (el && typeof el.select === "function") el.select();
 }
 
 function onBlurField(): void {
