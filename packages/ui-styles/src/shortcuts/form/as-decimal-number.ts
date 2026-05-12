@@ -48,30 +48,31 @@ const innerInputReset =
 // zero-padding via its shortcut entry.
 const shellBase = `flex w-full min-w-0 items-center gap-0 ${inputBase} px-$xs py-0`;
 
-// Shared adornment chrome — used by both `as-prefix` and `as-suffix`. Padding
-// is applied per-side at the consumer entries (prefix gets `pr-$s`).
+// Shared adornment chrome — used by both `as-prefix` and `as-suffix`. The
+// inter-element gap (pill ↔ value) lives on the value inputs, not on the
+// pills themselves — see the `:has`-based padding rules on `as-input-shell`
+// / `as-number` / `as-decimal` below. Putting the gap on the input keeps
+// it at body font-size (1em), so text adornments (1em) and icon adornments
+// (1.25em) produce an identical visual gap. Pills carry no padding.
 const adornmentBase = "text-current/60 select-none whitespace-nowrap";
 
 export const asDecimalNumberShortcuts = defineShortcuts({
   // ── Shared adornment pills (prefix + suffix) ──────────────
   // Adornments stay on the body font; only inputs use `font-mono` for
-  // tabular digit alignment. Prefix gets `pr-$xs` so the glyph doesn't
-  // touch the first digit; suffix mirrors it with `pl-$xs` on the
-  // opposite side so the trailing glyph doesn't touch the last digit.
-  "as-prefix": `${adornmentBase} pr-$xs`,
-  "as-suffix": `${adornmentBase} pl-$xs`,
+  // tabular digit alignment.
+  "as-prefix": adornmentBase,
+  "as-suffix": adornmentBase,
 
   // ── Icon adornments (`@ui.form.prefix.icon` / `@ui.form.suffix.icon`) ──
   // The annotation argument is dropped onto the span as a CSS class
   // (typically a UnoCSS preset-icons utility like `i-mdi-mail`); the
   // consumer is responsible for safelist / preset coverage. Sizing uses
-  // `text-[1.25em]` so the glyph scales with the body font. Side padding
-  // mirrors the text-adornment spacing so a combined `[icon][text]` reads
-  // as one unit when both are set.
-  "as-prefix-icon":
-    "text-current/60 select-none shrink-0 text-[1.25em] inline-flex items-center pr-$xs",
-  "as-suffix-icon":
-    "text-current/60 select-none shrink-0 text-[1.25em] inline-flex items-center pl-$xs",
+  // `text-[1.25em]` so the glyph scales slightly larger than the body
+  // font. No side padding here — the gap to the value lives on the input
+  // (see the `:has`-based rules on each shell) so text + icon adornments
+  // produce identical visual gaps regardless of their own font-size.
+  "as-prefix-icon": "text-current/60 select-none shrink-0 text-[1.25em] inline-flex items-center",
+  "as-suffix-icon": "text-current/60 select-none shrink-0 text-[1.25em] inline-flex items-center",
 
   // ── AsDecimal shell ───────────────────────────────────────
   "as-decimal": {
@@ -82,6 +83,16 @@ export const asDecimalNumberShortcuts = defineShortcuts({
     "[&.error]:focus-within:":
       "scope-error current-border-hl border-current outline i8-apply-outline",
     "[&.as-decimal-negative_.as-prefix]:": "text-current-hl",
+    // Prefix → integer pl: integer is right-aligned, so pl shifts its
+    // digit content away from the prefix, creating the visual gap.
+    "[&:has(:is(.as-prefix,.as-prefix-icon))_.as-decimal-integer]:": "!pl-$xs",
+    // Suffix → decimal pr when the decimal half exists (scale > 0).
+    "[&:has(:is(.as-suffix,.as-suffix-icon))_.as-decimal-decimal]:": "!pr-$xs",
+    // Suffix → integer pr when no decimal half (scale === 0, e.g. JPY):
+    // integer is the rightmost value; pr shifts its digits left,
+    // creating the gap before the suffix.
+    "[&:has(:is(.as-suffix,.as-suffix-icon)):not(:has(.as-decimal-decimal))_.as-decimal-integer]:":
+      "!pr-$xs",
   },
   "as-decimal-integer": `${innerInputReset} flex-1 min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
   "as-decimal-sep": "text-current/60 select-none px-0",
@@ -95,6 +106,9 @@ export const asDecimalNumberShortcuts = defineShortcuts({
     "[&.error]:": "scope-error current-border-hl border-current",
     "[&.error]:focus-within:":
       "scope-error current-border-hl border-current outline i8-apply-outline",
+    // Gap-to-value lives on the input — see comment on `adornmentBase`.
+    "[&:has(:is(.as-prefix,.as-prefix-icon))_.as-number-input]:": "!pl-$xs",
+    "[&:has(:is(.as-suffix,.as-suffix-icon))_.as-number-input]:": "!pr-$xs",
   },
   "as-number-input": `${innerInputReset} flex-1 min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
 
@@ -115,5 +129,10 @@ export const asDecimalNumberShortcuts = defineShortcuts({
     // decimal/number inputs use, applied to every nested input/textarea.
     "[&_input,&_textarea]:":
       "!w-auto !bg-transparent !border-0 !outline-0 !ring-0 !shadow-none !h-full !px-0 !layer-0 flex-1 min-w-0",
+    // Gap-to-value lives on the input — see comment on `adornmentBase`.
+    "[&:has(:is(.as-prefix,.as-prefix-icon))_input,&:has(:is(.as-prefix,.as-prefix-icon))_textarea]:":
+      "!pl-$xs",
+    "[&:has(:is(.as-suffix,.as-suffix-icon))_input,&:has(:is(.as-suffix,.as-suffix-icon))_textarea]:":
+      "!pr-$xs",
   },
 });
