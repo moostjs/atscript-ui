@@ -50,10 +50,8 @@ const shellBase = `flex w-full min-w-0 items-center gap-0 ${inputBase} px-$xs py
 
 export const asDecimalNumberShortcuts = defineShortcuts({
   // ── Shared adornment pills (prefix + suffix) ──────────────
-  // Adornments are chrome, not digit-bearing surfaces — they inherit the
-  // body font (Inter) and use a muted color so they read as quiet
-  // labels alongside the form's text. Only the inputs themselves keep
-  // `font-mono` for tabular digit alignment.
+  // Adornments stay on the body font; only inputs use `font-mono` for
+  // tabular digit alignment.
   "as-prefix": "text-current/60 select-none whitespace-nowrap",
   "as-suffix": "as-prefix",
 
