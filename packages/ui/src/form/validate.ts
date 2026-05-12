@@ -1,4 +1,8 @@
-import type { TAtscriptAnnotatedType, TValidatorOptions } from "@atscript/typescript/utils";
+import type {
+  TAtscriptAnnotatedType,
+  TValidatorOptions,
+  TValidatorPlugin,
+} from "@atscript/typescript/utils";
 import { Validator } from "@atscript/typescript/utils";
 import type { FormDef } from "./types";
 
@@ -6,6 +10,23 @@ import type { FormDef } from "./types";
 export interface TFormValidatorCallOptions {
   data: Record<string, unknown>;
   context?: Record<string, unknown>;
+}
+
+// ── Default validator plugin registry ────────────────────────
+//
+// Lets ui-fns (or any consumer) install validator plugins globally so
+// `getFormValidator` / `createFieldValidator` pick them up without
+// every caller having to thread plugins through.
+let defaultValidatorPlugins: TValidatorPlugin[] = [];
+
+/** Replace the default validator plugins applied to every form/field validator. */
+export function setDefaultValidatorPlugins(plugins: TValidatorPlugin[]): void {
+  defaultValidatorPlugins = plugins;
+}
+
+/** Get the currently registered default validator plugins. */
+export function getDefaultValidatorPlugins(): TValidatorPlugin[] {
+  return defaultValidatorPlugins;
 }
 
 /**
@@ -22,6 +43,7 @@ export function getFormValidator(
   const validator = new Validator(def.type, {
     unknownProps: "ignore",
     ...opts,
+    plugins: [...defaultValidatorPlugins, ...(opts?.plugins ?? [])],
   });
 
   return (callOpts: TFormValidatorCallOptions) => {
@@ -60,7 +82,7 @@ export function createFieldValidator(
   let cached: InstanceType<typeof Validator> | undefined;
 
   return (value: unknown, externalCtx?: { data: unknown; context: unknown }): true | string => {
-    cached ??= new Validator(prop);
+    cached ??= new Validator(prop, { plugins: defaultValidatorPlugins });
     const isValid = cached.validate(value, true, externalCtx);
     if (!isValid) {
       if (opts?.rootOnly) {

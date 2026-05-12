@@ -82,10 +82,11 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
-    to: "/forms-demo/dynamic",
-    title: "Dynamic (fn-driven)",
-    description: "Visibility / labels / options driven by @ui.form.fn.* expressions.",
-    status: "todo",
+    to: "/forms-demo/dynamic-form",
+    title: "Dynamic fn-driven props",
+    description:
+      "Form title / submit button / per-field label, description, hint, placeholder, visibility, options, value, classes, styles and a custom validate string — every @ui.form.fn.* annotation, end-to-end.",
+    status: "ready",
   },
 ];
 </script>

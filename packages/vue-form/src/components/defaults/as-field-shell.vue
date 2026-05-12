@@ -42,7 +42,13 @@ const showEmptyPlaceholder = computed(
 </script>
 
 <template>
-  <div ref="rootRef" class="as-default-field" :class="[fieldClass, $props.class]" v-show="!hidden">
+  <div
+    ref="rootRef"
+    class="as-default-field"
+    :class="[fieldClass, $props.class]"
+    :style="$props.style"
+    v-show="!hidden"
+  >
     <!-- Header row: label/header on left, action buttons on right -->
     <div
       v-if="

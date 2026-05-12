@@ -1,5 +1,6 @@
-import { setResolver } from "@atscript/ui";
+import { setDefaultValidatorPlugins, setResolver } from "@atscript/ui";
 import { DynamicFieldResolver } from "./runtime/dynamic-resolver";
+import { uiFnsValidatorPlugin } from "./runtime/validator-plugin";
 
 // ── Types ────────────────────────────────────────────────────
 export type { TFnScope, TComputed, TFieldEvaluated } from "./runtime/types";
@@ -20,7 +21,8 @@ export type { TValidatorContext } from "./runtime/validator-plugin";
 
 /**
  * Installs the dynamic field resolver into @atscript/ui.
- * Call this once at app startup to enable `ui.fn.*` annotation resolution.
+ * Call this once at app startup to enable `ui.fn.*` annotation resolution
+ * and `@ui.form.validate` custom validator strings.
  *
  * ```ts
  * import { installDynamicResolver } from '@atscript/ui-fns'
@@ -29,4 +31,5 @@ export type { TValidatorContext } from "./runtime/validator-plugin";
  */
 export function installDynamicResolver(): void {
   setResolver(new DynamicFieldResolver());
+  setDefaultValidatorPlugins([uiFnsValidatorPlugin()]);
 }

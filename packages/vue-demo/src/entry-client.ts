@@ -1,9 +1,15 @@
 import { setDefaultClientFactory } from "@atscript/ui";
+import { installDynamicResolver } from "@atscript/ui-fns";
 import { createApp } from "./app";
 import { clientFactory, setRouterNavigate } from "./client/api/client-factory";
 import "@unocss/reset/tailwind.css";
 import "virtual:uno.css";
 import "./styles/app.css";
+
+// Activate `@ui.form.fn.*` + `@ui.form.validate` resolution. Must run before
+// any `<AsForm>` renders so the dynamic resolver is the one wired into
+// `@atscript/ui` when forms request field metadata.
+installDynamicResolver();
 
 setDefaultClientFactory(clientFactory);
 

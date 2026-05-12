@@ -86,6 +86,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/custom-components.vue"),
   },
   {
+    path: "/forms-demo/dynamic-form",
+    name: "forms-demo-dynamic-form",
+    component: () => import("./client/pages/forms-demo/dynamic-form.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

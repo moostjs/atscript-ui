@@ -132,7 +132,12 @@ export {
 export type { TFormValueResolver } from "./form/path-utils";
 
 // ── Validation ──────────────────────────────────────────────
-export { getFormValidator, createFieldValidator } from "./form/validate";
+export {
+  getFormValidator,
+  createFieldValidator,
+  setDefaultValidatorPlugins,
+  getDefaultValidatorPlugins,
+} from "./form/validate";
 export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/validate";
 
 // ── Error-map utilities (framework-agnostic) ────────────────
