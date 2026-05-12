@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { AsField, type TAsComponentProps } from "@atscript/vue-form";
-import { isObjectField, type FormObjectFieldDef, type FormFieldDef } from "@atscript/ui";
+import { isObjectField, type FormFieldDef } from "@atscript/ui";
 
 /**
  * Custom object renderer — paints a flat card with a 2-row grid (street
@@ -21,9 +21,7 @@ const props = defineProps<TAsComponentProps>();
 // doesn't matter — we render four specific named slots. Missing fields
 // (schema drift) render nothing.
 const objectDef = computed(() =>
-  props.field && isObjectField(props.field)
-    ? (props.field as FormObjectFieldDef).objectDef
-    : undefined,
+  props.field && isObjectField(props.field) ? props.field.objectDef : undefined,
 );
 
 function fieldByName(name: string): FormFieldDef | undefined {

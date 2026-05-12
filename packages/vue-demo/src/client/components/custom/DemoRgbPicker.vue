@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed } from "vue";
 import { type TAsComponentProps, useAsTuple } from "@atscript/vue-form";
 import type { FormTupleFieldDef } from "@atscript/ui";
 
@@ -8,22 +8,14 @@ import type { FormTupleFieldDef } from "@atscript/ui";
  * Opted-in per field via `@ui.form.type 'rgb-picker'`. Used by the
  * custom-components demo's `logoRgb: [number, number, number]`.
  *
- * Uses `useAsTuple` for its `fillMissing` (auto-pads `[0,0,0]` on mount)
- * — the per-position itemFields/clear are not consumed because the
- * UI is a single integrated widget rather than three nested AsField
- * shells.
+ * Uses `useAsTuple` for its `onMounted` `fillMissing` (auto-pads
+ * `[0,0,0]` on mount for non-optional tuples) — the per-position
+ * itemFields/clear are not consumed because the UI is a single
+ * integrated widget rather than three nested AsField shells.
  */
 const props = defineProps<TAsComponentProps<[number, number, number] | null | undefined>>();
 
-const { fillMissing } = useAsTuple(props.field as FormTupleFieldDef);
-
-onMounted(() => {
-  // `fillMissing` runs in useAsTuple too, but only when not optional —
-  // safe to call again as a defensive fallback for this fixed 3-slot case.
-  if (!Array.isArray(props.model.value) || props.model.value.length < 3) {
-    fillMissing();
-  }
-});
+useAsTuple(props.field as FormTupleFieldDef);
 
 function readChannel(idx: number): number {
   const v = props.model.value;

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { AsField, type TAsComponentProps, useAsUnion } from "@atscript/vue-form";
+import { isObjectField } from "@atscript/ui";
 
 /**
  * Custom union renderer — three variant cards across the top (Email,
@@ -24,13 +25,10 @@ const variants = computed(() => unionField.value?.unionVariants ?? []);
 
 const activeFields = computed(() => {
   const inner = innerField.value;
-  if (!inner) return [];
   // Each variant in the demo is an object — `objectDef.fields` is
   // populated. Primitive-itemField variants would slip through with
   // an empty list here; the demo schema does not exercise that.
-  // biome-ignore lint/suspicious/noExplicitAny: structural read off synthesized field
-  const def = (inner as any).objectDef;
-  return def?.fields ?? [];
+  return inner && isObjectField(inner) ? inner.objectDef.fields : [];
 });
 
 // Single-glyph icons matched to the variant labels (Email / Phone /
