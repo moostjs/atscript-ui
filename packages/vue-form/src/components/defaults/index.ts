@@ -1,3 +1,4 @@
+export { default as AsFieldShell } from "./as-field-shell.vue";
 export { default as AsInput } from "./as-input.vue";
 export { default as AsSelect } from "./as-select.vue";
 export { default as AsRadio } from "./as-radio.vue";

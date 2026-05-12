@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TAsComponentProps } from "../types";
-import AsFieldShell from "../internal/as-field-shell.vue";
+import AsFieldShell from "./as-field-shell.vue";
 import { useAsDate } from "../../composables/use-as-date";
 
 const props = defineProps<TAsComponentProps<number | string | null | undefined>>();

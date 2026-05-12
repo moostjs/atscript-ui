@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { optKey, optLabel } from "@atscript/ui";
 import type { TAsComponentProps } from "../types";
-import AsFieldShell from "../internal/as-field-shell.vue";
+import AsFieldShell from "./as-field-shell.vue";
 
 defineProps<TAsComponentProps>();
 </script>

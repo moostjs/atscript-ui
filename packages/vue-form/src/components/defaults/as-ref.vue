@@ -12,7 +12,7 @@ import {
 import { ref } from "vue";
 import { useAsValueHelp } from "../../composables/use-as-value-help";
 import type { TAsComponentProps } from "../types";
-import AsFieldShell from "../internal/as-field-shell.vue";
+import AsFieldShell from "./as-field-shell.vue";
 
 const props = defineProps<TAsComponentProps>();
 

@@ -3,13 +3,14 @@ import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import { useAsUnionVariant, formatIndexedLabelParts } from "../../composables/use-form-context";
 import { useAsFocusFirstAfter } from "../../composables/focus-after-toggle";
-import AsNoData from "./as-no-data.vue";
-import AsOptionalClear from "./as-optional-clear.vue";
-import AsVariantPicker from "./as-variant-picker.vue";
+import AsNoData from "../internal/as-no-data.vue";
+import AsOptionalClear from "../internal/as-optional-clear.vue";
+import AsVariantPicker from "../internal/as-variant-picker.vue";
 
-// AsFieldShell is internal-only and is always mounted as a child of an
-// AsField default — `inputId`, `errorId`, `descId` are populated by
-// AsField (see as-field.vue § "Stable a11y ids"). No fallbacks needed.
+// AsFieldShell is a Tier-2 default — public, importable by consumers,
+// but not auto-resolved. It is always mounted as a child of an AsField
+// default — `inputId`, `errorId`, `descId` are populated by AsField
+// (see as-field.vue § "Stable a11y ids"). No fallbacks needed.
 const props = defineProps<
   TAsComponentProps & {
     fieldClass?: string;

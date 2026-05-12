@@ -50,6 +50,11 @@
       "import": "./dist/as-field.mjs",
       "require": "./dist/as-field.cjs"
     },
+    "./as-field-shell": {
+      "types": "./dist/as-field-shell.d.mts",
+      "import": "./dist/as-field-shell.mjs",
+      "require": "./dist/as-field-shell.cjs"
+    },
     "./as-form": {
       "types": "./dist/as-form.d.mts",
       "import": "./dist/as-form.mjs",

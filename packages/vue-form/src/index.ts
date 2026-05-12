@@ -5,6 +5,7 @@ export { default as AsIterator } from "./components/as-iterator.vue";
 
 // Default type components
 export {
+  AsFieldShell,
   AsInput,
   AsSelect,
   AsRadio,

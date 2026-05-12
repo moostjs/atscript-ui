@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { TAsComponentProps } from "../types";
 import { useAsTriStateCheckbox } from "../../composables/use-as-tri-state-checkbox";
-import AsFieldShell from "../internal/as-field-shell.vue";
+import AsFieldShell from "./as-field-shell.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
 
 const props = defineProps<TAsComponentProps<boolean | undefined>>();

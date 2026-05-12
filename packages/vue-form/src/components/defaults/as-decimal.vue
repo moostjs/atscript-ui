@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
-import AsFieldShell from "../internal/as-field-shell.vue";
+import AsFieldShell from "./as-field-shell.vue";
 import { useAsDecimal } from "../../composables/use-as-decimal";
 import { useAsDualInput } from "../../composables/use-as-dual-input";
 
