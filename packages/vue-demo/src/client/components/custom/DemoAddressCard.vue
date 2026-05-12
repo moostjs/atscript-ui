@@ -35,7 +35,7 @@ const countryField = computed(() => fieldByName("country"));
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden">
+  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-address-card">
     <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
     <section
       class="demo-address-card"

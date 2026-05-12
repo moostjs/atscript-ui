@@ -2,22 +2,47 @@
 import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
 import { BuiltinOverrideForm } from "./schemas/custom-components-builtin.as";
 import { BuilderProfile } from "./schemas/custom-components-annotations.as";
+import {
+  DemoAddressCard,
+  DemoColorSwatch,
+  DemoContactCard,
+  DemoGrowingTextarea,
+  DemoNumberStepper,
+  DemoRgbPicker,
+  DemoStarRating,
+  DemoTagInput,
+} from "@/client/components/custom";
 import DarkToggle from "./_dark-toggle.vue";
 
 // ── Section A — built-in `text` override ─────────────────────────
-// Step 1: defaults only. Step 4 will inject a GrowingTextarea into
-// `typesA` to override the `text` key.
+// Replace the built-in `text` key in the types map with a custom
+// growing textarea. Every string field on the form picks it up
+// without touching the schema.
 const { def: defA, formData: modelA } = createAsFormDef(BuiltinOverrideForm);
-const typesA = createDefaultTypes();
+const typesA = {
+  ...createDefaultTypes(),
+  text: DemoGrowingTextarea,
+};
 
 // ── Section B — annotation-driven customizations ─────────────────
-// Schema carries `@ui.form.type "<key>"` and `@ui.form.component "<name>"`
-// pointing at keys that don't exist in the default types map yet.
-// AsField shows an error placeholder for unknown keys until Step 4 wires
-// real components.
+// Each field opts in via `@ui.form.type "<key>"` (or
+// `@ui.form.component "<name>"` for the named-component path). Map
+// keys must match the annotation values exactly. `displayName` has
+// no annotation → falls back to the built-in `text` renderer.
 const { def: defB, formData: modelB } = createAsFormDef(BuilderProfile);
-const typesB = createDefaultTypes();
-const componentsB = {};
+const typesB = {
+  ...createDefaultTypes(),
+  bio: DemoGrowingTextarea,
+  stars: DemoStarRating,
+  "color-swatch": DemoColorSwatch,
+  "tag-input": DemoTagInput,
+  "address-card": DemoAddressCard,
+  "rgb-picker": DemoRgbPicker,
+  "contact-card": DemoContactCard,
+};
+const componentsB = {
+  stepper: DemoNumberStepper,
+};
 
 function onSubmitA(data: unknown) {
   console.log("BuiltinOverrideForm submitted:", data);
@@ -43,8 +68,7 @@ function onSubmitB(data: unknown) {
         <p class="text-callout text-current-muted m-0 mt-$xxs">
           Two complementary customization mechanisms: overriding a built-in field type globally via
           the <code>types</code> map (Section A), and per-field opt-in via
-          <code>@ui.form.type</code> / <code>@ui.form.component</code> annotations (Section B). Step
-          1 of 6 shows the defaults-only baseline — custom widgets land in later steps.
+          <code>@ui.form.type</code> / <code>@ui.form.component</code> annotations (Section B).
         </p>
         <RouterLink
           to="/forms-demo"
@@ -59,8 +83,8 @@ function onSubmitB(data: unknown) {
           <h2 class="text-h5 m-0">Section A — Built-in type override</h2>
           <p class="text-callout text-current-muted m-0">
             Both fields below have type <code>string</code>. The default <code>text</code> renderer
-            is <code>AsInput</code>. Step 4 will replace the <code>text</code> key in the types map
-            with a <code>GrowingTextarea</code> — every string field on this form will pick that up
+            (<code>AsInput</code>) is replaced with a custom <code>DemoGrowingTextarea</code> via a
+            single <code>types</code>-map override — every string field on this form picks it up
             without touching the schema.
           </p>
         </div>
@@ -70,6 +94,7 @@ function onSubmitB(data: unknown) {
           :types="typesA"
           hide-root-title
           first-validation="on-submit"
+          data-testid="custom-components-section-a-form"
           @submit="onSubmitA"
         />
         <details class="layer-0 border-1 rounded-r2 p-$m text-callout">
@@ -88,12 +113,12 @@ function onSubmitB(data: unknown) {
         <div class="flex flex-col gap-$xxs">
           <h2 class="text-h5 m-0">Section B — Annotation-driven customizations</h2>
           <p class="text-callout text-current-muted m-0">
-            Each field opts into a per-field custom renderer via
+            Each annotated field opts into a per-field custom renderer via
             <code>@ui.form.type "&lt;key&gt;"</code> (or
-            <code>@ui.form.component "&lt;name&gt;"</code> for the named-component path). The keys
-            point at custom widgets that will be registered in the <code>types</code> /
-            <code>components</code> maps in Step 4. For now, AsField falls back to a placeholder
-            where the key is unknown — that's the expected baseline.
+            <code>@ui.form.component "&lt;name&gt;"</code> for the named-component path).
+            <code>displayName</code> has no annotation, so it falls back to the built-in
+            <code>text</code> renderer (<code>AsInput</code>) — that's the baseline-vs-custom
+            comparison.
           </p>
         </div>
         <AsForm
@@ -103,6 +128,7 @@ function onSubmitB(data: unknown) {
           :components="componentsB"
           hide-root-title
           first-validation="on-submit"
+          data-testid="custom-components-section-b-form"
           @submit="onSubmitB"
         />
         <details class="layer-0 border-1 rounded-r2 p-$m text-callout">

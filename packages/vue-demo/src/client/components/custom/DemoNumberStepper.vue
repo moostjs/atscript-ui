@@ -52,7 +52,7 @@ function onGroupBlur(e: FocusEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden">
+  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-number-stepper">
     <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
     <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
     <div class="demo-stepper" @focusout="onGroupBlur">
