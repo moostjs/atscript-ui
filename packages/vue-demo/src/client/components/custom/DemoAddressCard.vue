@@ -82,5 +82,3 @@ const countryField = computed(() => fieldByName("country"));
   gap: 10px;
 }
 </style>
-</content>
-</invoke>

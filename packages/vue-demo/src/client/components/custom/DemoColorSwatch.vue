@@ -138,5 +138,3 @@ function onGroupBlur(e: FocusEvent): void {
   opacity: 0.5;
 }
 </style>
-</content>
-</invoke>

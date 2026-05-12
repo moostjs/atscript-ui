@@ -193,5 +193,3 @@ function onContainerClick(e: MouseEvent): void {
   cursor: not-allowed;
 }
 </style>
-</content>
-</invoke>

@@ -153,5 +153,3 @@ function onGroupBlur(e: FocusEvent): void {
   background: rgba(239, 68, 68, 0.08);
 }
 </style>
-</content>
-</invoke>

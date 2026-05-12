@@ -166,5 +166,3 @@ function onGroupBlur(e: FocusEvent): void {
   padding-top: 10px;
 }
 </style>
-</content>
-</invoke>
