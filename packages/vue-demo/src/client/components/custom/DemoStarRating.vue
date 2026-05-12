@@ -16,13 +16,6 @@ const MAX = 5;
 const stars = Array.from({ length: MAX }, (_, i) => i + 1);
 
 const hoverValue = ref<number | null>(null);
-const buttonRefs = ref<HTMLButtonElement[]>([]);
-
-function setRef(el: Element | null | undefined, index: number): void {
-  if (el instanceof HTMLButtonElement) {
-    buttonRefs.value[index] = el;
-  }
-}
 
 function isFilled(star: number): boolean {
   const display = hoverValue.value ?? props.model.value ?? 0;
@@ -101,7 +94,6 @@ function onGroupBlur(e: FocusEvent): void {
       <button
         v-for="(star, idx) in stars"
         :key="star"
-        :ref="(el) => setRef(el as Element | null, idx)"
         :id="idx === 0 ? inputId : undefined"
         type="button"
         class="demo-star-btn"
@@ -132,32 +124,18 @@ function onGroupBlur(e: FocusEvent): void {
         </svg>
       </button>
     </div>
-    <div v-if="error || hint" :id="errorId" class="demo-field-error" :role="error ? 'alert' : undefined">
+    <div
+      v-if="error || hint"
+      :id="errorId"
+      class="demo-field-error"
+      :role="error ? 'alert' : undefined"
+    >
       {{ error || hint }}
     </div>
   </div>
 </template>
 
 <style scoped>
-.demo-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.demo-field-label {
-  font-size: 13px;
-  font-weight: 500;
-  opacity: 0.85;
-}
-.demo-field-description {
-  font-size: 12px;
-  opacity: 0.6;
-}
-.demo-field-error {
-  font-size: 12px;
-  color: #ef4444;
-  min-height: 1em;
-}
 .demo-star-group {
   display: inline-flex;
   gap: 2px;

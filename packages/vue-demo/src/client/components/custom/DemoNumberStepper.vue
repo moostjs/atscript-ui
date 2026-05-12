@@ -92,32 +92,18 @@ function onGroupBlur(e: FocusEvent): void {
         +
       </button>
     </div>
-    <div v-if="error || hint" :id="errorId" class="demo-field-error" :role="error ? 'alert' : undefined">
+    <div
+      v-if="error || hint"
+      :id="errorId"
+      class="demo-field-error"
+      :role="error ? 'alert' : undefined"
+    >
       {{ error || hint }}
     </div>
   </div>
 </template>
 
 <style scoped>
-.demo-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.demo-field-label {
-  font-size: 13px;
-  font-weight: 500;
-  opacity: 0.85;
-}
-.demo-field-description {
-  font-size: 12px;
-  opacity: 0.6;
-}
-.demo-field-error {
-  font-size: 12px;
-  color: #ef4444;
-  min-height: 1em;
-}
 .demo-stepper {
   display: inline-flex;
   align-items: stretch;

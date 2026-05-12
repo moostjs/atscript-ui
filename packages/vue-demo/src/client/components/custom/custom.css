@@ -1,0 +1,32 @@
+/**
+ * Shared field-shell styles for the custom-components demo.
+ *
+ * `AsFieldShell` is a Tier-3 internal in @atscript/vue-form, so the demo
+ * components paint their own minimal label + description + control + error
+ * scaffolding. The shell *markup* stays inline in each `.vue` template
+ * (that's the wiring pattern the demo teaches), but the shell *styling*
+ * lives here so we don't repeat the same rules in four `<style scoped>`
+ * blocks.
+ *
+ * Imported once from `./index.ts`; the `demo-*` prefix keeps these rules
+ * scoped by naming, not by Vue's style-hashing.
+ */
+.demo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.demo-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0.85;
+}
+.demo-field-description {
+  font-size: 12px;
+  opacity: 0.6;
+}
+.demo-field-error {
+  font-size: 12px;
+  color: #ef4444;
+  min-height: 1em;
+}
