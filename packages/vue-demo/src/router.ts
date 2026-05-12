@@ -81,6 +81,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/measurements-optional.vue"),
   },
   {
+    path: "/forms-demo/dates",
+    name: "forms-demo-dates",
+    component: () => import("./client/pages/forms-demo/dates.vue"),
+  },
+  {
     path: "/forms-demo/custom-components",
     name: "forms-demo-custom-components",
     component: () => import("./client/pages/forms-demo/custom-components.vue"),

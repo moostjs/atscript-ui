@@ -62,9 +62,16 @@ const variations: Variation[] = [
   },
   {
     to: "/forms-demo/measurements",
-    title: "Measurements & dates",
+    title: "Measurements",
     description:
-      "Amount (static + cross-row currency), measure with unit, date / datetime / time inputs.",
+      "Numeric inputs with static + cross-row dynamic adornments: currency-driven decimal chrome, unit suffixes, explicit prefix / suffix.",
+    status: "ready",
+  },
+  {
+    to: "/forms-demo/dates",
+    title: "Dates",
+    description:
+      "Date, datetime, and time inputs — string vs epoch-ms storage, optional/required, tuple range, array of dates.",
     status: "ready",
   },
   {
