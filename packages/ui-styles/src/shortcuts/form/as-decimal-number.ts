@@ -48,12 +48,18 @@ const innerInputReset =
 // zero-padding via its shortcut entry.
 const shellBase = `flex w-full min-w-0 items-center gap-0 ${inputBase} px-$xs py-0`;
 
+// Shared adornment chrome — used by both `as-prefix` and `as-suffix`. Padding
+// is applied per-side at the consumer entries (prefix gets `pr-$s`).
+const adornmentBase = "text-current/60 select-none whitespace-nowrap";
+
 export const asDecimalNumberShortcuts = defineShortcuts({
   // ── Shared adornment pills (prefix + suffix) ──────────────
   // Adornments stay on the body font; only inputs use `font-mono` for
-  // tabular digit alignment.
-  "as-prefix": "text-current/60 select-none whitespace-nowrap",
-  "as-suffix": "as-prefix",
+  // tabular digit alignment. Prefix gets `pr-$s` so the glyph doesn't
+  // touch the first digit; suffix keeps the shared chrome only (no
+  // padding) — break the alias to avoid inheriting prefix's `pr-$s`.
+  "as-prefix": `${adornmentBase} pr-$s`,
+  "as-suffix": adornmentBase,
 
   // ── AsDecimal shell ───────────────────────────────────────
   "as-decimal": {
