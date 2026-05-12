@@ -367,9 +367,18 @@ function toggleOptional(enabled: boolean) {
 }
 
 // ── Component resolution ────────────────────────────────────
+// Precedence: @ui.form.component (named) > @ui.form.type / @ui.type
+// (structured-kind override stored as `customType`) > the field's
+// structural `type`. For primitives `customType` is undefined — the
+// `@ui.form.type` value was folded into `type` directly at create-def
+// time, so the existing single-key lookup still matches.
 const resolvedComponent = computed<Component | undefined>(() => {
   if (componentName) return components?.value?.[componentName];
-  return types?.value?.[props.field.type];
+  const map = types?.value;
+  if (!map) return undefined;
+  return (
+    (props.field.customType ? map[props.field.customType] : undefined) ?? map[props.field.type]
+  );
 });
 
 // ── Declare all field properties ────────────────────────────
@@ -774,7 +783,7 @@ const componentProps = computed(() => {
     @action="handleAction"
   />
   <div v-else>
-    [{{ unwrap(label) }}] No component for type "{{ field.type }}"{{
+    [{{ unwrap(label) }}] No component for type "{{ field.customType ?? field.type }}"{{
       componentName ? ` (component "${componentName}" not supplied)` : ""
     }}
   </div>

@@ -197,6 +197,20 @@ describe("createFormDef", () => {
       const addressField = def.fields.find((f) => f.path === "address");
       expect(addressField).toBeDefined();
     });
+
+    it("@ui.form.type on a structured object surfaces as `customType`, type stays 'object'", () => {
+      const inner = objectType(
+        { street: stringProp() },
+        { [META_LABEL]: "Address", [UI_FORM_TYPE]: "address-card" },
+      );
+      const type = defineAnnotatedType("object").prop("address", inner).$type;
+      const def = createFormDef(type);
+
+      const addressField = def.fields.find((f) => f.path === "address");
+      expect(addressField!.type).toBe("object");
+      expect(isObjectField(addressField!)).toBe(true);
+      expect(addressField!.customType).toBe("address-card");
+    });
   });
 
   describe("array fields", () => {
@@ -214,6 +228,20 @@ describe("createFormDef", () => {
       expect(arrayField.itemType).toBeDefined();
       expect(arrayField.itemField).toBeDefined();
       expect(arrayField.itemField.path).toBe("");
+    });
+
+    it("@ui.form.type on an array field surfaces as `customType`, type stays 'array'", () => {
+      const arrayType = defineAnnotatedType("array").of(stringProp()).$type;
+      arrayType.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "tag-input" as never);
+      const type = defineAnnotatedType("object").prop("tags", arrayType).$type;
+      const def = createFormDef(type);
+
+      const field = def.fields.find((f) => f.path === "tags");
+      // Kind stays — type guards / validator / item recursion keep working.
+      expect(field!.type).toBe("array");
+      expect(isArrayField(field!)).toBe(true);
+      // Override surfaces on `customType` for the renderer's types-map lookup.
+      expect(field!.customType).toBe("tag-input");
     });
   });
 
@@ -279,6 +307,18 @@ describe("createFormDef", () => {
       expect(field!.type).toBe("union");
       expect(isUnionField(field!)).toBe(true);
     });
+
+    it("@ui.form.type on a multi-variant union surfaces as `customType`, type stays 'union'", () => {
+      const unionType = defineAnnotatedType("union").item(stringProp()).item(numberProp()).$type;
+      unionType.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "contact-card" as never);
+      const type = defineAnnotatedType("object").prop("contact", unionType).$type;
+      const def = createFormDef(type);
+
+      const field = def.fields.find((f) => f.path === "contact");
+      expect(field!.type).toBe("union");
+      expect(isUnionField(field!)).toBe(true);
+      expect(field!.customType).toBe("contact-card");
+    });
   });
 
   describe("tuple fields", () => {
@@ -294,6 +334,21 @@ describe("createFormDef", () => {
 
       const tupleField = field as FormTupleFieldDef;
       expect(tupleField.itemFields).toHaveLength(2);
+    });
+
+    it("@ui.form.type on a tuple field surfaces as `customType`, type stays 'tuple'", () => {
+      const tupleType = defineAnnotatedType("tuple")
+        .item(numberProp())
+        .item(numberProp())
+        .item(numberProp()).$type;
+      tupleType.metadata.set(UI_FORM_TYPE as keyof AtscriptMetadata, "rgb-picker" as never);
+      const type = defineAnnotatedType("object").prop("logoRgb", tupleType).$type;
+      const def = createFormDef(type);
+
+      const field = def.fields.find((f) => f.path === "logoRgb");
+      expect(field!.type).toBe("tuple");
+      expect(isTupleField(field!)).toBe(true);
+      expect(field!.customType).toBe("rgb-picker");
     });
   });
 

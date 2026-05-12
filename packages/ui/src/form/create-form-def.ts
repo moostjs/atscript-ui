@@ -116,6 +116,17 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     (getFieldMeta(prop, UI_FORM_TYPE) as string | undefined) ??
     (getFieldMeta(prop, UI_TYPE) as string | undefined);
   const base = { path, prop, phantom: false, name, allStatic };
+  // Structured kinds (array, object, tuple, multi-variant union) need to
+  // keep `type` equal to the kind so the `isArrayField` / `isObjectField`
+  // / `isTupleField` / `isUnionField` guards (and the validator / path-
+  // provide / item-recursion logic that branches on them) stay honest.
+  // The `@ui.form.type` / `@ui.type` override therefore lives on a
+  // separate `customType` field — AsField checks it first when resolving
+  // the types-map entry and falls back to `type` only when there is no
+  // match. Primitives keep the original behaviour (uiType folded into
+  // `type` directly) because they have no structural contract to
+  // preserve.
+  const customType = uiType;
 
   // Array
   if (kind === "array") {
@@ -123,6 +134,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     return {
       ...base,
       type: "array",
+      customType,
       itemType: arrayType.of,
       itemField: createFieldDef("", arrayType.of),
     } as FormArrayFieldDef;
@@ -133,6 +145,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     return {
       ...base,
       type: "object",
+      customType,
       objectDef: createFormDef(prop as TAtscriptAnnotatedType<TAtscriptTypeObject>),
     } as FormObjectFieldDef;
   }
@@ -145,12 +158,17 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
 
     const unionVariants = buildUnionVariants(prop);
     if (unionVariants.length > 1) {
-      return { ...base, type: "union", unionVariants } as FormUnionFieldDef;
+      return { ...base, type: "union", customType, unionVariants } as FormUnionFieldDef;
     }
     const v = unionVariants[0];
     if (v?.itemField) return { ...v.itemField, path, name, allStatic };
     if (v?.def) {
-      return { ...base, type: "object", objectDef: v.def } as FormObjectFieldDef;
+      return {
+        ...base,
+        type: "object",
+        customType,
+        objectDef: v.def,
+      } as FormObjectFieldDef;
     }
   }
 
@@ -160,6 +178,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     return {
       ...base,
       type: "tuple",
+      customType,
       itemFields: tupleType.items.map((item, i) => {
         const field = createFieldDef(String(i), item);
         field.name = "";

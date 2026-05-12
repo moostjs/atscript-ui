@@ -18,7 +18,25 @@ export interface FormFieldDef {
   /** Dot-separated path relative to the parent data context. `''` = root. */
   path: string;
   prop: TAtscriptAnnotatedType;
+  /**
+   * Render-key the renderer dispatches on. For structured kinds (array,
+   * object, tuple, multi-variant union) this stays the kind name so that
+   * `isArrayField`/`isObjectField`/`isUnionField`/`isTupleField` keep
+   * working downstream (validator resetValue, child path provide, AsArray
+   * recursion). Primitives may store an `@ui.form.type`/`@ui.type`
+   * override here directly — for those there is no structural behaviour
+   * to preserve.
+   */
   type: string;
+  /**
+   * Optional `@ui.form.type` (or `@ui.type`) override for structured
+   * kinds. When set, the renderer looks this up in the `types` map FIRST
+   * and falls back to `type` only when the map has no entry. Letting the
+   * override live in a separate field keeps the structural type guards
+   * (`isArrayField` et al.) on `type` honest while still allowing a
+   * consumer to attach a flat custom widget to e.g. a `string[]`.
+   */
+  customType?: string;
   phantom: boolean;
   name: string;
   /** True when no `ui.fn.*` metadata keys exist. Vue perf flag. */
