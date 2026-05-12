@@ -17,7 +17,13 @@ async function mountAsNumber() {
     initialValue: { rate: null },
   });
   await nextTick();
-  return { wrapper, formData };
+  const input = wrapper.find<HTMLInputElement>(".as-number-input");
+  /** Dispatch a cancelable keydown on the input; returns `true` if `preventDefault` was called. */
+  const dispatchKey = (key: string): boolean => {
+    const ev = new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true });
+    return !input.element.dispatchEvent(ev);
+  };
+  return { wrapper, formData, input, dispatchKey };
 }
 
 describe("AsNumber SFC (merged-chrome path)", () => {
@@ -30,8 +36,7 @@ describe("AsNumber SFC (merged-chrome path)", () => {
   });
 
   it("typing a decimal commits a number (not a string) — regression for null-origin shape", async () => {
-    const { wrapper, formData } = await mountAsNumber();
-    const input = wrapper.find<HTMLInputElement>(".as-number-input");
+    const { input, formData } = await mountAsNumber();
     await input.setValue("133.33");
     await input.trigger("blur");
     await nextTick();
@@ -40,14 +45,8 @@ describe("AsNumber SFC (merged-chrome path)", () => {
   });
 
   it("ArrowUp on an empty/null model commits 1 (preventDefault'd)", async () => {
-    const { wrapper, formData } = await mountAsNumber();
-    const input = wrapper.find<HTMLInputElement>(".as-number-input");
-    const ev = new KeyboardEvent("keydown", {
-      key: "ArrowUp",
-      bubbles: true,
-      cancelable: true,
-    });
-    const prevented = !input.element.dispatchEvent(ev);
+    const { formData, dispatchKey } = await mountAsNumber();
+    const prevented = dispatchKey("ArrowUp");
     await nextTick();
     expect(formData.value.rate).toBe(1);
     expect(typeof formData.value.rate).toBe("number");
@@ -55,55 +54,36 @@ describe("AsNumber SFC (merged-chrome path)", () => {
   });
 
   it("ArrowDown on an empty/null model commits -1", async () => {
-    const { wrapper, formData } = await mountAsNumber();
-    const input = wrapper.find<HTMLInputElement>(".as-number-input");
-    const ev = new KeyboardEvent("keydown", {
-      key: "ArrowDown",
-      bubbles: true,
-      cancelable: true,
-    });
-    input.element.dispatchEvent(ev);
+    const { formData, dispatchKey } = await mountAsNumber();
+    dispatchKey("ArrowDown");
     await nextTick();
     expect(formData.value.rate).toBe(-1);
   });
 
   it("ArrowUp increments and ArrowDown decrements the existing value", async () => {
-    const { wrapper, formData } = await mountAsNumber();
+    const { formData, dispatchKey } = await mountAsNumber();
     formData.value.rate = 5;
     await nextTick();
 
-    const input = wrapper.find<HTMLInputElement>(".as-number-input");
-    input.element.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }),
-    );
+    dispatchKey("ArrowUp");
     await nextTick();
     expect(formData.value.rate).toBe(6);
 
-    input.element.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
-    );
+    dispatchKey("ArrowDown");
     await nextTick();
-    input.element.dispatchEvent(
-      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
-    );
+    dispatchKey("ArrowDown");
     await nextTick();
     expect(formData.value.rate).toBe(4);
     expect(typeof formData.value.rate).toBe("number");
   });
 
   it("non-step keys are not intercepted (no preventDefault, no value change)", async () => {
-    const { wrapper, formData } = await mountAsNumber();
+    const { formData, dispatchKey } = await mountAsNumber();
     formData.value.rate = 7;
     await nextTick();
-    const input = wrapper.find<HTMLInputElement>(".as-number-input");
-    const ev = new KeyboardEvent("keydown", {
-      key: "Enter",
-      bubbles: true,
-      cancelable: true,
-    });
-    const notPrevented = input.element.dispatchEvent(ev);
+    const prevented = dispatchKey("Enter");
     await nextTick();
-    expect(notPrevented).toBe(true);
+    expect(prevented).toBe(false);
     expect(formData.value.rate).toBe(7);
   });
 });

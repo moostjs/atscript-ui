@@ -54,7 +54,7 @@ export const asDecimalNumberShortcuts = defineShortcuts({
   // `inputBase` inheritance, `font-mono` here for tabular numeric
   // alignment) — only the color is muted to read as chrome, not value.
   "as-prefix": "text-current/60 select-none whitespace-nowrap font-mono",
-  "as-suffix": "text-current/60 select-none whitespace-nowrap font-mono",
+  "as-suffix": "as-prefix",
 
   // ── AsDecimal shell ───────────────────────────────────────
   "as-decimal": {

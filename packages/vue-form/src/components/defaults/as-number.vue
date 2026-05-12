@@ -83,21 +83,12 @@ function onInput(e: Event): void {
  * minimal +/- 1 step here. Commit goes through `setFromInput` so the
  * composable's null + number-coercion logic is single-sourced.
  */
-function applyStep(delta: number): void {
-  const current = rawValue.value;
-  const base = current === "" ? 0 : Number(current);
-  const next = (Number.isFinite(base) ? base : 0) + delta;
-  setFromInput(String(next));
-}
-
 function onKeyDown(e: KeyboardEvent): void {
-  if (e.key === "ArrowUp") {
-    e.preventDefault();
-    applyStep(1);
-  } else if (e.key === "ArrowDown") {
-    e.preventDefault();
-    applyStep(-1);
-  }
+  const delta = e.key === "ArrowUp" ? 1 : e.key === "ArrowDown" ? -1 : 0;
+  if (!delta) return;
+  e.preventDefault();
+  const base = Number(rawValue.value);
+  setFromInput(String((Number.isFinite(base) ? base : 0) + delta));
 }
 
 const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefined);
