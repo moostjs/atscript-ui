@@ -17,6 +17,11 @@ import { isObjectField, type FormFieldDef } from "@atscript/ui";
  * via <AsField>". AsField has already provided the right
  * PATH_PREFIX_KEY for us (it does that for every structured field),
  * so children compose their paths against `address` automatically.
+ *
+ * Styling: outer card sits on `layer-1` (one shade in from the form's
+ * `layer-0` outer canvas), with the default `border-1` painted from the
+ * active layer's border slot. Error state flips to `scope-error` which
+ * re-tints the border via `current-border-hl`.
  */
 const props = defineProps<TAsComponentProps>();
 
@@ -40,16 +45,19 @@ const countryField = computed(() => fieldByName("country"));
 <template>
   <AsFieldShell v-bind="$props" data-testid="demo-address-card">
     <template #default>
-      <section class="demo-address-card" :class="{ error: !!error }">
-        <div class="demo-address-card-grid">
-          <div class="demo-address-card-row demo-address-card-row-full">
+      <section
+        class="layer-1 border-1 rounded-r2 p-$m flex flex-col gap-$s"
+        :class="{ 'scope-error current-border-hl border-current': !!error }"
+      >
+        <div class="flex flex-col gap-$s">
+          <div>
             <AsField v-if="streetField" :field="streetField" />
           </div>
-          <div class="demo-address-card-row demo-address-card-row-split">
+          <div class="grid grid-cols-[2fr_1fr] gap-$s">
             <AsField v-if="cityField" :field="cityField" />
             <AsField v-if="zipField" :field="zipField" />
           </div>
-          <div class="demo-address-card-row demo-address-card-row-full">
+          <div>
             <AsField v-if="countryField" :field="countryField" />
           </div>
         </div>
@@ -57,28 +65,3 @@ const countryField = computed(() => fieldByName("country"));
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-address-card {
-  border: 1px solid currentColor;
-  border-radius: 6px;
-  padding: 12px 14px;
-  opacity: 0.95;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.demo-address-card.error {
-  border-color: #ef4444;
-}
-.demo-address-card-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.demo-address-card-row-split {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 10px;
-}
-</style>

@@ -13,6 +13,13 @@ import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
  *
  * Wrapped in the library's `<AsFieldShell>` so label, description, and
  * error chrome stay consistent with built-in fields.
+ *
+ * Styling: each swatch is a round button. The swatch background is the
+ * only place an inline `:style` is justified — the hex IS the value.
+ * Selection ring uses vunor's focus-ring primitive (`scope-primary` +
+ * `current-outline-hl outline i8-apply-outline`) so it inherits the
+ * accent across light/dark. Hover scale is preserved as a small
+ * animated affordance.
  */
 const props = defineProps<TAsComponentProps<string | null | undefined>>();
 
@@ -76,7 +83,7 @@ function onGroupBlur(e: FocusEvent): void {
   <AsFieldShell v-bind="$props" data-testid="demo-color-swatch">
     <template #default="{ inputId }">
       <div
-        class="demo-swatch-group"
+        class="inline-flex flex-wrap gap-$s"
         role="radiogroup"
         :aria-label="label || name"
         :aria-describedby="ariaDescribedBy"
@@ -90,8 +97,10 @@ function onGroupBlur(e: FocusEvent): void {
           :ref="(el) => setRef(el as Element | null, idx)"
           :id="idx === 0 ? inputId : undefined"
           type="button"
-          class="demo-swatch"
-          :class="{ selected: model.value === hex }"
+          class="demo-swatch appearance-none size-[2em] rounded-full p-0 cursor-pointer border-1 border-current/10 transition-transform duration-100 hover:not-disabled:scale-110 disabled-soft current-outline-hl focus-visible:outline focus-visible:i8-apply-outline"
+          :class="{
+            'scope-primary outline i8-apply-outline current-outline-hl': model.value === hex,
+          }"
           :style="{ backgroundColor: hex }"
           :aria-label="hex"
           :aria-checked="model.value === hex"
@@ -104,37 +113,3 @@ function onGroupBlur(e: FocusEvent): void {
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-swatch-group {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.demo-swatch {
-  appearance: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: 2px solid transparent;
-  padding: 0;
-  cursor: pointer;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1);
-  transition: transform 0.1s ease;
-}
-.demo-swatch:hover:not(:disabled) {
-  transform: scale(1.1);
-}
-.demo-swatch.selected {
-  border-color: currentColor;
-  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.15);
-}
-.demo-swatch:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-.demo-swatch:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-</style>

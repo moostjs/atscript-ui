@@ -15,6 +15,13 @@ import type { FormTupleFieldDef } from "@atscript/ui";
  * `[0,0,0]` on mount for non-optional tuples) — the per-position
  * itemFields/clear are not consumed because the UI is a single
  * integrated widget rather than three nested AsField shells.
+ *
+ * Styling: outer wrapper sits on `layer-1` (matches the address card).
+ * Preview swatch's background is the only inline `:style` — the
+ * rgb(...) IS the value. Hex readout uses `text-callout` + mono font.
+ * `<input type="range">` is left mostly native because consistent
+ * cross-browser styling of range thumbs requires a fair amount of CSS
+ * that doesn't fit any current vunor primitive — see final report.
  */
 const props = defineProps<TAsComponentProps<[number, number, number] | null | undefined>>();
 
@@ -73,99 +80,47 @@ function onGroupBlur(e: FocusEvent): void {
   <AsFieldShell v-bind="$props" data-testid="demo-rgb-picker">
     <template #default="{ inputId }">
       <div
-        class="demo-rgb-picker"
-        :class="{ error: !!error }"
+        class="layer-1 border-1 rounded-r2 p-$m flex items-center gap-$m"
+        :class="{ 'scope-error current-border-hl border-current': !!error }"
         :aria-describedby="ariaDescribedBy"
         :aria-invalid="!!error || undefined"
         @focusout="onGroupBlur"
       >
-        <div class="demo-rgb-sliders">
-          <div v-for="ch in channels" :key="ch.idx" class="demo-rgb-channel">
-            <span class="demo-rgb-channel-label">{{ ch.label }}</span>
+        <div class="flex-1 flex flex-col gap-$xs">
+          <div
+            v-for="ch in channels"
+            :key="ch.idx"
+            class="grid grid-cols-[1.25em_1fr_2.25em] items-center gap-$s"
+          >
+            <span class="text-callout font-600">{{ ch.label }}</span>
             <input
               :id="ch.idx === 0 ? inputId : undefined"
               type="range"
               min="0"
               max="255"
-              class="demo-rgb-slider"
+              class="w-full cursor-pointer disabled-soft disabled:cursor-not-allowed"
               :value="ch.get.value"
               :disabled="disabled"
               :readonly="readonly"
               :aria-label="`${ch.label} channel`"
               @input="onSliderInput(ch.idx, $event)"
             />
-            <span class="demo-rgb-channel-value">{{ ch.get.value }}</span>
+            <span
+              class="text-right text-callout text-current-muted [font-variant-numeric:tabular-nums]"
+            >
+              {{ ch.get.value }}
+            </span>
           </div>
         </div>
-        <div class="demo-rgb-preview">
-          <div class="demo-rgb-swatch" :style="{ backgroundColor: rgbCss }" aria-hidden="true" />
-          <code class="demo-rgb-hex">{{ hex }}</code>
+        <div class="flex flex-col items-center gap-$xs flex-none w-[5em]">
+          <div
+            class="demo-rgb-swatch size-[4em] rounded-r2 border-1 border-current/20 shadow-popup"
+            :style="{ backgroundColor: rgbCss }"
+            aria-hidden="true"
+          />
+          <code class="text-callout text-current-muted font-mono">{{ hex }}</code>
         </div>
       </div>
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-rgb-picker {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  padding: 10px 12px;
-  border: 1px solid currentColor;
-  border-radius: 6px;
-  opacity: 0.95;
-}
-.demo-rgb-picker.error {
-  border-color: #ef4444;
-}
-.demo-rgb-sliders {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.demo-rgb-channel {
-  display: grid;
-  grid-template-columns: 16px 1fr 32px;
-  align-items: center;
-  gap: 8px;
-}
-.demo-rgb-channel-label {
-  font-weight: 600;
-  font-size: 12px;
-}
-.demo-rgb-channel-value {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  font-size: 12px;
-  opacity: 0.7;
-}
-.demo-rgb-slider {
-  width: 100%;
-  cursor: pointer;
-}
-.demo-rgb-slider:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-.demo-rgb-preview {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  flex: 0 0 80px;
-}
-.demo-rgb-swatch {
-  width: 60px;
-  height: 60px;
-  border-radius: 6px;
-  border: 1px solid currentColor;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-.demo-rgb-hex {
-  font-size: 11px;
-  font-family: ui-monospace, monospace;
-  opacity: 0.75;
-}
-</style>

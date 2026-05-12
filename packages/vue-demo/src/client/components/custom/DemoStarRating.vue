@@ -12,6 +12,11 @@ import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
  *
  * Wrapped in the library's `<AsFieldShell>` so label, description, and
  * error chrome stay consistent with built-in fields.
+ *
+ * Styling: filled stars opt into `scope-warn` so the glow reads as
+ * amber across light/dark; empty stars use the active scope's muted
+ * border/icon slot. The `.demo-star-btn` class is preserved as the
+ * e2e-test hook.
  */
 const props = defineProps<TAsComponentProps<number | null | undefined>>();
 
@@ -84,7 +89,7 @@ function onGroupBlur(e: FocusEvent): void {
   <AsFieldShell v-bind="$props" data-testid="demo-star-rating">
     <template #default="{ inputId }">
       <div
-        class="demo-star-group"
+        class="inline-flex gap-$xxs"
         role="radiogroup"
         :aria-label="label || name"
         :aria-describedby="ariaDescribedBy"
@@ -98,8 +103,8 @@ function onGroupBlur(e: FocusEvent): void {
           :key="star"
           :id="idx === 0 ? inputId : undefined"
           type="button"
-          class="demo-star-btn"
-          :class="{ filled: isFilled(star) }"
+          class="demo-star-btn appearance-none bg-transparent border-0 p-$xxs rounded-base cursor-pointer leading-[0] text-current/30 transition-colors duration-120 disabled-soft current-outline-hl focus-visible:outline focus-visible:i8-apply-outline"
+          :class="{ '!text-current-hl scope-warn': isFilled(star) }"
           :aria-label="`${star} star${star === 1 ? '' : 's'}`"
           :aria-checked="props.model.value === star"
           role="radio"
@@ -115,8 +120,8 @@ function onGroupBlur(e: FocusEvent): void {
             width="24"
             height="24"
             aria-hidden="true"
-            :fill="isFilled(star) ? '#f59e0b' : 'none'"
-            :stroke="isFilled(star) ? '#f59e0b' : '#9ca3af'"
+            :fill="isFilled(star) ? 'currentColor' : 'none'"
+            stroke="currentColor"
             stroke-width="1.5"
             stroke-linejoin="round"
           >
@@ -129,28 +134,3 @@ function onGroupBlur(e: FocusEvent): void {
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-star-group {
-  display: inline-flex;
-  gap: 2px;
-}
-.demo-star-btn {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  padding: 2px;
-  cursor: pointer;
-  line-height: 0;
-  border-radius: 4px;
-  color: inherit;
-}
-.demo-star-btn:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-.demo-star-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-</style>

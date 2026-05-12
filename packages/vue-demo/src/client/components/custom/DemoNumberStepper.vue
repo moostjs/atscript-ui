@@ -18,6 +18,15 @@ import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
  * a single text input with locale-aware decimal parsing; the stepper
  * uses an HTML number input plus +/- buttons committing integers, so
  * direct prop binding stays cleaner.
+ *
+ * Styling: the wrapper paints the merged-chrome border + focus ring
+ * (mirrors `as-decimal`/`as-number`). The inner `<input>` is escaped
+ * from the ambient `as-default-field` descendant chrome (which paints
+ * its own border/height/bg on every `<input>`) via `!`-qualified
+ * resets — same canonical pattern as `innerInputReset` in
+ * `packages/ui-styles/src/shortcuts/form/as-decimal-number.ts`.
+ * +/- buttons use `c8-flat` for proper hover/active feedback in any
+ * scope.
  */
 const props = defineProps<TAsComponentProps<number | null | undefined>>();
 
@@ -57,10 +66,14 @@ function onGroupBlur(e: FocusEvent): void {
 <template>
   <AsFieldShell v-bind="$props" data-testid="demo-number-stepper">
     <template #default="{ inputId }">
-      <div class="demo-stepper" @focusout="onGroupBlur">
+      <div
+        class="inline-flex items-stretch w-fit layer-0 border-1 rounded-base overflow-hidden h-fingertip-m focus-within:current-border-hl focus-within:outline focus-within:i8-apply-outline"
+        :class="{ 'scope-error current-border-hl border-current': !!error }"
+        @focusout="onGroupBlur"
+      >
         <button
           type="button"
-          class="demo-stepper-btn"
+          class="c8-flat appearance-none border-0 px-$m h-full cursor-pointer text-body-l leading-none rounded-none disabled-soft"
           aria-label="Decrement"
           :disabled="disabled || readonly || current <= 0"
           @click="dec"
@@ -70,8 +83,7 @@ function onGroupBlur(e: FocusEvent): void {
         <input
           :id="inputId"
           type="number"
-          class="demo-stepper-input"
-          :class="{ error: !!error }"
+          class="demo-stepper-input !w-[4em] !h-full !bg-transparent !border-0 !rounded-none !outline-none !ring-0 !shadow-none !px-$xs !layer-0 text-center !text-scope-dark-0 dark:!text-scope-light-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:m-0 [&::-webkit-inner-spin-button]:m-0 disabled:!text-current/40 disabled:!cursor-not-allowed border-l-1 border-r-1 border-current/20"
           :value="model.value ?? ''"
           :placeholder="placeholder"
           :name="name"
@@ -86,7 +98,7 @@ function onGroupBlur(e: FocusEvent): void {
         />
         <button
           type="button"
-          class="demo-stepper-btn"
+          class="c8-flat appearance-none border-0 px-$m h-full cursor-pointer text-body-l leading-none rounded-none disabled-soft"
           aria-label="Increment"
           :disabled="disabled || readonly"
           @click="inc"
@@ -97,59 +109,3 @@ function onGroupBlur(e: FocusEvent): void {
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-stepper {
-  display: inline-flex;
-  align-items: stretch;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  overflow: hidden;
-  width: fit-content;
-  opacity: 0.95;
-}
-.demo-stepper-btn {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  padding: 0 12px;
-  font: inherit;
-  font-size: 16px;
-  line-height: 1;
-  color: inherit;
-  cursor: pointer;
-  min-width: 32px;
-}
-.demo-stepper-btn:hover:not(:disabled) {
-  background: currentColor;
-  color: transparent;
-}
-.demo-stepper-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-.demo-stepper-input {
-  width: 64px;
-  padding: 6px 8px;
-  border: 0;
-  border-left: 1px solid currentColor;
-  border-right: 1px solid currentColor;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: center;
-  -moz-appearance: textfield;
-}
-.demo-stepper-input::-webkit-outer-spin-button,
-.demo-stepper-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.demo-stepper-input:focus {
-  outline: none;
-  background: rgba(127, 127, 127, 0.06);
-}
-.demo-stepper-input.error {
-  background: rgba(239, 68, 68, 0.08);
-}
-</style>

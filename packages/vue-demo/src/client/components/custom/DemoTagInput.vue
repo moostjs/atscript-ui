@@ -15,6 +15,12 @@ import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
  * shells with their own labels/errors). A tag input is the wrong fit:
  * the entire UI is a single control over a flat string[], not a list
  * of nested field cards. Direct prop binding keeps the wiring obvious.
+ *
+ * Styling: wrapper paints the merged-chrome border + focus ring; the
+ * inner `<input>` escapes ambient `as-default-field` descendant chrome
+ * with `!`-qualified resets (same canonical pattern as `innerInputReset`
+ * in `packages/ui-styles/src/shortcuts/form/as-decimal-number.ts`).
+ * Pills sit on `layer-2` for a subtle one-level-deeper-than-input feel.
  */
 const props = defineProps<TAsComponentProps<string[] | null | undefined>>();
 
@@ -82,16 +88,23 @@ function onContainerClick(e: MouseEvent): void {
   <AsFieldShell v-bind="$props" data-testid="demo-tag-input">
     <template #default="{ inputId }">
       <div
-        class="demo-tag-input"
-        :class="{ error: !!error, disabled }"
+        class="flex flex-wrap items-center gap-$xs layer-0 border-1 rounded-base px-$xs py-$xs min-h-fingertip-m cursor-text focus-within:current-border-hl focus-within:outline focus-within:i8-apply-outline"
+        :class="{
+          'scope-error current-border-hl border-current': !!error,
+          'disabled-soft cursor-not-allowed': disabled,
+        }"
         @focusout="onGroupBlur"
         @click="onContainerClick"
       >
-        <span v-for="(tag, idx) in currentTags()" :key="`${idx}-${tag}`" class="demo-tag-pill">
-          <span class="demo-tag-pill-text">{{ tag }}</span>
+        <span
+          v-for="(tag, idx) in currentTags()"
+          :key="`${idx}-${tag}`"
+          class="inline-flex items-center gap-$xxs pl-$s pr-$xxs py-$xxs rounded-base layer-2 text-callout whitespace-nowrap"
+        >
+          <span>{{ tag }}</span>
           <button
             type="button"
-            class="demo-tag-pill-remove"
+            class="c8-chrome inline-grid place-items-center size-[1.5em] rounded-full appearance-none border-0 p-0 cursor-pointer text-body-l leading-[1] disabled-soft"
             :aria-label="`Remove ${tag}`"
             :disabled="disabled"
             @click.stop="removeTag(idx)"
@@ -104,7 +117,7 @@ function onContainerClick(e: MouseEvent): void {
           ref="inputRef"
           v-model="draft"
           type="text"
-          class="demo-tag-input-field"
+          class="demo-tag-input-field !flex-1 !min-w-[8em] !w-auto !h-auto !bg-transparent !border-0 !rounded-none !outline-none !ring-0 !shadow-none !px-$xxs !py-$xxs !layer-0 !text-scope-dark-0 dark:!text-scope-light-0"
           :placeholder="currentTags().length === 0 ? (placeholder ?? 'Add a tag…') : ''"
           :name="name"
           :disabled="disabled"
@@ -119,77 +132,3 @@ function onContainerClick(e: MouseEvent): void {
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-tag-input {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 6px;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  min-height: 36px;
-  cursor: text;
-  opacity: 0.95;
-}
-.demo-tag-input:focus-within {
-  outline: 2px solid currentColor;
-  outline-offset: 1px;
-}
-.demo-tag-input.error {
-  border-color: #ef4444;
-}
-.demo-tag-input.disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-.demo-tag-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px 2px 8px;
-  border-radius: 12px;
-  background: rgba(99, 102, 241, 0.15);
-  font-size: 12px;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-.demo-tag-pill-text {
-  color: inherit;
-}
-.demo-tag-pill-remove {
-  appearance: none;
-  background: transparent;
-  border: 0;
-  color: inherit;
-  cursor: pointer;
-  padding: 0 4px;
-  font-size: 14px;
-  line-height: 1;
-  border-radius: 50%;
-  opacity: 0.7;
-}
-.demo-tag-pill-remove:hover:not(:disabled) {
-  opacity: 1;
-  background: rgba(0, 0, 0, 0.08);
-}
-.demo-tag-pill-remove:disabled {
-  cursor: not-allowed;
-  opacity: 0.3;
-}
-.demo-tag-input-field {
-  flex: 1 1 80px;
-  min-width: 80px;
-  appearance: none;
-  background: transparent;
-  border: 0;
-  outline: none;
-  color: inherit;
-  font: inherit;
-  padding: 4px 2px;
-}
-.demo-tag-input-field:disabled {
-  cursor: not-allowed;
-}
-</style>

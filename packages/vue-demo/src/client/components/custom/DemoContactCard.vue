@@ -22,6 +22,10 @@ import { isObjectField } from "@atscript/ui";
  * Opted-in per field via `@ui.form.type 'contact-card'`. Used by the
  * custom-components demo's `contact: EmailContact | PhoneContact |
  * InPersonContact`.
+ *
+ * Styling: card sits on `layer-1`. Variant cards use `c8-outlined` at
+ * rest; the active one opts into `scope-primary c8-filled` for a clear
+ * accent. Dashed divider uses `border-t-1 border-dashed border-current/20`.
  */
 const props = defineProps<TAsComponentProps>();
 
@@ -65,9 +69,13 @@ function onGroupBlur(e: FocusEvent): void {
 <template>
   <AsFieldShell v-bind="$props" data-testid="demo-contact-card">
     <template #default="{ inputId }">
-      <section class="demo-contact-card" :class="{ error: !!error }" @focusout="onGroupBlur">
+      <section
+        class="layer-1 border-1 rounded-r2 p-$m flex flex-col gap-$m"
+        :class="{ 'scope-error current-border-hl border-current': !!error }"
+        @focusout="onGroupBlur"
+      >
         <div
-          class="demo-contact-variants"
+          class="grid grid-cols-3 gap-$s"
           role="radiogroup"
           :aria-label="title || label || 'Contact method'"
         >
@@ -76,93 +84,25 @@ function onGroupBlur(e: FocusEvent): void {
             :key="vi"
             :id="vi === 0 ? inputId : undefined"
             type="button"
-            class="demo-contact-variant"
-            :class="{ selected: localUnionIndex === vi }"
+            class="demo-contact-variant appearance-none flex flex-col items-center justify-center gap-$xs px-$s py-$m min-h-[5em] rounded-r0 cursor-pointer transition-colors duration-120 disabled-soft current-outline-hl focus-visible:outline focus-visible:i8-apply-outline"
+            :class="localUnionIndex === vi ? 'scope-primary c8-filled' : 'c8-outlined'"
             :aria-checked="localUnionIndex === vi"
             role="radio"
             :disabled="disabled"
             @click="pick(vi)"
           >
-            <span class="demo-contact-variant-icon" aria-hidden="true">{{ iconFor(v.label) }}</span>
-            <span class="demo-contact-variant-label">{{ v.label }}</span>
+            <span class="text-h3 leading-[1]" aria-hidden="true">{{ iconFor(v.label) }}</span>
+            <span class="text-callout font-500">{{ v.label }}</span>
           </button>
         </div>
 
-        <div v-if="activeFields.length" class="demo-contact-body">
+        <div
+          v-if="activeFields.length"
+          class="flex flex-col gap-$s border-t-1 border-dashed border-current/20 pt-$m"
+        >
           <AsField v-for="f of activeFields" :key="f.path ?? f.name" :field="f" />
         </div>
       </section>
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-contact-card {
-  border: 1px solid currentColor;
-  border-radius: 6px;
-  padding: 12px 14px;
-  opacity: 0.95;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.demo-contact-card.error {
-  border-color: #ef4444;
-}
-.demo-contact-variants {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-.demo-contact-variant {
-  appearance: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 12px 8px;
-  min-height: 80px;
-  border: 1px solid currentColor;
-  border-radius: 6px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  opacity: 0.7;
-  transition:
-    opacity 0.1s ease,
-    box-shadow 0.1s ease;
-}
-.demo-contact-variant:hover:not(:disabled) {
-  opacity: 0.95;
-}
-.demo-contact-variant.selected {
-  opacity: 1;
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.55);
-  background: rgba(99, 102, 241, 0.1);
-}
-.demo-contact-variant:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: 2px;
-}
-.demo-contact-variant:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-.demo-contact-variant-icon {
-  font-size: 22px;
-  line-height: 1;
-}
-.demo-contact-variant-label {
-  font-size: 12px;
-  font-weight: 500;
-}
-.demo-contact-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  border-top: 1px dashed currentColor;
-  padding-top: 10px;
-}
-</style>

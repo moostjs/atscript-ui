@@ -13,6 +13,12 @@ import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
  * Wraps the widget in the library's public `<AsFieldShell>` (Tier-2
  * default in `@atscript/vue-form`) so label, description, optional
  * clear, and error chrome all stay consistent with the built-in fields.
+ *
+ * The textarea itself sits as a descendant of the shell's
+ * `as-default-field` root, which paints input chrome (border, layer,
+ * focus ring, scope-error reaction) on every nested `<textarea>` via
+ * descendant selectors — so the markup carries no styling, only
+ * height/resize bounds.
  */
 const props = defineProps<TAsComponentProps<string | null | undefined>>();
 
@@ -49,8 +55,7 @@ watch(
       <textarea
         :id="inputId"
         ref="textareaRef"
-        class="demo-growing-textarea"
-        :class="{ error: !!error }"
+        class="min-h-[60px] max-h-[300px] resize-none overflow-y-auto leading-[1.45]"
         :value="model.value ?? ''"
         :placeholder="placeholder"
         :name="name"
@@ -67,33 +72,3 @@ watch(
     </template>
   </AsFieldShell>
 </template>
-
-<style scoped>
-.demo-growing-textarea {
-  width: 100%;
-  min-height: 60px;
-  max-height: 300px;
-  padding: 8px 10px;
-  font: inherit;
-  line-height: 1.4;
-  color: inherit;
-  background: transparent;
-  border: 1px solid currentColor;
-  border-radius: 4px;
-  resize: none;
-  overflow-y: auto;
-  box-sizing: border-box;
-  opacity: 0.95;
-}
-.demo-growing-textarea:focus {
-  outline: 2px solid currentColor;
-  outline-offset: 1px;
-}
-.demo-growing-textarea.error {
-  border-color: #ef4444;
-}
-.demo-growing-textarea:disabled,
-.demo-growing-textarea[readonly] {
-  opacity: 0.5;
-}
-</style>
