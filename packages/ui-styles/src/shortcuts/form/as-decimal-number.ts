@@ -55,11 +55,11 @@ const adornmentBase = "text-current/60 select-none whitespace-nowrap";
 export const asDecimalNumberShortcuts = defineShortcuts({
   // ── Shared adornment pills (prefix + suffix) ──────────────
   // Adornments stay on the body font; only inputs use `font-mono` for
-  // tabular digit alignment. Prefix gets `pr-$s` so the glyph doesn't
-  // touch the first digit; suffix keeps the shared chrome only (no
-  // padding) — break the alias to avoid inheriting prefix's `pr-$s`.
+  // tabular digit alignment. Prefix gets `pr-$xs` so the glyph doesn't
+  // touch the first digit; suffix mirrors it with `pl-$xs` on the
+  // opposite side so the trailing glyph doesn't touch the last digit.
   "as-prefix": `${adornmentBase} pr-$xs`,
-  "as-suffix": adornmentBase,
+  "as-suffix": `${adornmentBase} pl-$xs`,
 
   // ── AsDecimal shell ───────────────────────────────────────
   "as-decimal": {
@@ -84,7 +84,7 @@ export const asDecimalNumberShortcuts = defineShortcuts({
     "[&.error]:focus-within:":
       "scope-error current-border-hl border-current outline i8-apply-outline",
   },
-  "as-number-input": `${innerInputReset} flex-1 min-w-0 disabled:!text-current/40 disabled:!cursor-not-allowed`,
+  "as-number-input": `${innerInputReset} flex-1 min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
 
   // ── AsInput merged shell (when prefix/suffix is present) ──
   // Same merged-chrome family as AsDecimal/AsNumber so adornment pills
