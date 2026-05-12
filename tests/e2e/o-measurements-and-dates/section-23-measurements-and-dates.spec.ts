@@ -336,7 +336,9 @@ test.describe("Section 23 — numeric inputs showcase", () => {
 // type — `createFormData` returned `undefined`, AsFieldShell read that as
 // "still unset", placeholder kept rendering. Fixed in
 // `packages/ui/src/form/path-utils.ts` by backfilling primitive design
-// types whose structural default is undefined (decimal → '').
+// types whose structural default is undefined (decimal → "0" since the
+// atscript runtime validator ≥ 0.1.54 rejects "" for decimal fields;
+// useAsDecimal pads the display to the field's effective scale).
 test.describe("Section 23.opt — optional placeholder-init across all 10 numeric shapes", () => {
   type FieldCase = {
     label: RegExp;

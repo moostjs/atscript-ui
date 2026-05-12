@@ -111,10 +111,10 @@ describe("createFormData primitive-init fallback", () => {
   // value exist" boundary used by the optional-toggle, array-add,
   // tuple-pad, and union-pick flows — returning `undefined` there leaves
   // AsFieldShell stuck in the empty-state placeholder.
-  it("returns '' for a bare decimal prop (the structural default in atscript is undefined)", () => {
+  it("returns '0' for a bare decimal prop — the atscript runtime validator (≥ 0.1.54) rejects '' for decimal, so init must commit the canonical zero", () => {
     const prop = defineAnnotatedType().designType("decimal").$type;
     const result = createFormData(prop);
-    expect(result.value).toBe("");
+    expect(result.value).toBe("0");
   });
 
   it("preserves atscript's existing finalDefault for handled primitive types", () => {

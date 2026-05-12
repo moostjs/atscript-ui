@@ -95,14 +95,17 @@ export function createFormValueResolver(
  * value yet". Returning `undefined` leaves the empty-state placeholder
  * stuck in AsFieldShell.
  *
- * Mirrors atscript's `finalDefault` for the cases it handles, plus a
- * `decimal → ""` entry (decimal validates as `string`).
+ * `decimal → "0"` mirrors the `number → 0` default — the atscript runtime
+ * validator (≥ 0.1.54) rejects `""` for decimal fields, so committing the
+ * canonical zero is the only init that survives a submit-without-edit.
+ * `useAsDecimal` pads the display to the field's effective scale, so the
+ * user sees `0.00` / `0.000` per the `@db.column.precision` annotation.
  */
 function primitiveInitFallback(prop: TAtscriptAnnotatedType): unknown {
   if (prop.type.kind !== "") return undefined;
   switch (prop.type.designType) {
     case "decimal":
-      return "";
+      return "0";
     default:
       return undefined;
   }

@@ -13,7 +13,7 @@ import { mountForm } from "./helpers";
 // the placeholder never went away and the input chrome never appeared.
 
 describe("optional-init: clicking the empty-state placeholder", () => {
-  it("decimal: model goes from undefined → '' (input chrome appears)", async () => {
+  it("decimal: model goes from undefined → '0' (input chrome appears)", async () => {
     const { OptionalDecimalField } = await import("./fixtures/optional-init.as");
     const { wrapper, formData } = mountForm(OptionalDecimalField);
     expect(formData.value.amount).toBeUndefined();
@@ -24,8 +24,9 @@ describe("optional-init: clicking the empty-state placeholder", () => {
 
     // Model must be defined (so AsFieldShell stops painting the placeholder).
     expect(formData.value.amount).toBeDefined();
-    // Decimal validates as string; empty string is the type-appropriate fallback.
-    expect(formData.value.amount).toBe("");
+    // Canonical zero — atscript runtime validator (≥ 0.1.54) rejects ""
+    // for decimal, so init commits "0" and useAsDecimal pads display to scale.
+    expect(formData.value.amount).toBe("0");
     // Placeholder gone — input chrome rendered.
     expect(wrapper.find(".as-no-data").exists()).toBe(false);
     expect(wrapper.find(".as-decimal").exists()).toBe(true);
@@ -66,7 +67,7 @@ describe("optional-init: clicking the empty-state placeholder", () => {
     await wrapper.find(".as-no-data").trigger("click");
     await nextTick();
 
-    expect(formData.value.price).toBe("");
+    expect(formData.value.price).toBe("0");
     // The adornment-driven `.as-decimal` shell paints; prefix + suffix render.
     expect(wrapper.find(".as-decimal").exists()).toBe(true);
     expect(wrapper.find(".as-prefix").text()).toBe("$");
