@@ -206,15 +206,12 @@ export const uiAnnotations: TAnnotationsTree = {
           "Form input type override. Wins over the shared `@ui.type` for this prop's form input. " +
           "Built-in types: " +
           BUILTIN_TYPES.join(", ") +
-          ". The argument is intentionally open-ended — consumers may register additional types in " +
-          "the form `types` map (same extensibility pattern as `@ui.type` / `@ui.table.type`).",
+          ". Consumers may register additional types in the form types map; the argument is " +
+          "intentionally open-ended.",
         nodeType: ["prop", "type"],
         argument: {
           name: "type",
           type: "string",
-          // No `values` constraint: keeping this open-ended is what makes the
-          // `types` map extension contract actually useful — restricting the
-          // argument to BUILTIN_TYPES would block legitimate custom renderers.
           description: "The input type used by `<as-field>` for this prop.",
         },
       }),
