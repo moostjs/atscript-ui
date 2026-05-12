@@ -18,11 +18,11 @@ interface MountOpts {
   initialValue?: Record<string, unknown>;
   modelValue: () => string | number | null | undefined;
   locale?: string;
-  onCommit?: (v: string | number | null) => void;
+  onCommit?: (v: number | null) => void;
 }
 
 function mountWithProbe(opts: MountOpts) {
-  const commits: (string | number | null)[] = [];
+  const commits: (number | null)[] = [];
   let api!: UseAsNumberReturn;
   const Probe = defineComponent({
     setup() {
@@ -71,32 +71,52 @@ describe("useAsNumber", () => {
     expect(api.displayValue.value).toBe("1234.5");
   });
 
-  it("setFromInput parses and commits verbatim, preserves shape (string)", () => {
+  it("setFromInput parses and commits as a number (typeof number)", () => {
     const type = objectType({ weight: numberProp() });
     const live = ref<string | number | null | undefined>("5.5");
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
       onCommit: (v) => {
-        live.value = v as string;
+        live.value = v;
       },
     });
     api.setFromInput("9.876");
-    expect(commits).toEqual(["9.876"]);
+    expect(commits).toEqual([9.876]);
+    expect(typeof commits[0]).toBe("number");
   });
 
-  it("setFromInput number-in → number-out preserves shape", () => {
+  it("setFromInput number-in → number-out", () => {
     const type = objectType({ weight: numberProp() });
     const live = ref<string | number | null | undefined>(5.5);
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
       onCommit: (v) => {
-        live.value = v as number;
+        live.value = v;
       },
     });
     api.setFromInput("9.876");
     expect(commits).toEqual([9.876]);
+  });
+
+  it("setFromInput commits a number even when the prior model was null (regression)", () => {
+    // Pre-fix: `preserveShape(null, "133.33")` returned the canonical
+    // string `"133.33"`, which propagated to the model and tripped
+    // validators expecting a `number`. Now `null`-origin still commits
+    // as `number`.
+    const type = objectType({ weight: numberProp() });
+    const live = ref<string | number | null | undefined>(null);
+    const { api, commits } = mountWithProbe({
+      type,
+      modelValue: () => live.value,
+      onCommit: (v) => {
+        live.value = v;
+      },
+    });
+    api.setFromInput("133.33");
+    expect(commits).toEqual([133.33]);
+    expect(typeof commits[0]).toBe("number");
   });
 
   it("setFromInput empty → null", () => {
@@ -106,7 +126,7 @@ describe("useAsNumber", () => {
       type,
       modelValue: () => live.value,
       onCommit: (v) => {
-        live.value = v as null;
+        live.value = v;
       },
     });
     api.setFromInput("");
@@ -120,7 +140,7 @@ describe("useAsNumber", () => {
       type,
       modelValue: () => live.value,
       onCommit: (v) => {
-        live.value = v as string;
+        live.value = v;
       },
     });
     api.setFromInput("abc");
@@ -135,27 +155,27 @@ describe("useAsNumber", () => {
       modelValue: () => live.value,
       locale: "fr-FR",
       onCommit: (v) => {
-        live.value = v as string;
+        live.value = v;
       },
     });
     api.setFromInput("4,25");
-    expect(commits).toEqual(["4.25"]);
+    expect(commits).toEqual([4.25]);
   });
 
-  it("no scale enforcement — value committed verbatim", () => {
+  it("no scale enforcement — value committed verbatim (as number)", () => {
     const type = objectType({ weight: numberProp() });
     const live = ref<string | number | null | undefined>("0");
     const { api, commits } = mountWithProbe({
       type,
       modelValue: () => live.value,
       onCommit: (v) => {
-        live.value = v as string;
+        live.value = v;
       },
     });
     api.setFromInput("2");
-    expect(commits).toEqual(["2"]); // not padded
+    expect(commits).toEqual([2]); // not padded
     api.setFromInput("4");
-    expect(commits).toEqual(["2", "4"]);
+    expect(commits).toEqual([2, 4]);
   });
 
   it("displayValue swaps `.` to `,` in fr-FR", () => {

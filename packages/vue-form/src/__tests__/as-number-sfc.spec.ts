@@ -1,0 +1,109 @@
+import { describe, it, expect } from "vitest";
+import { nextTick } from "vue";
+import { mountForm } from "./helpers";
+
+/**
+ * SFC-level coverage for the AsNumber merged-chrome path
+ * (`<div class="as-number">` shell, paint when `hasAdornment` is true).
+ *
+ * The plain-number fallback (delegated to AsInputControl with a native
+ * `<input type="number">`) inherits browser arrow-step behaviour and
+ * is out of scope here.
+ */
+
+async function mountAsNumber() {
+  const { NumberAdornedField } = await import("./fixtures/field-annotations.as");
+  const { wrapper, formData } = mountForm(NumberAdornedField, {
+    initialValue: { rate: null },
+  });
+  await nextTick();
+  return { wrapper, formData };
+}
+
+describe("AsNumber SFC (merged-chrome path)", () => {
+  it("renders the merged-chrome shell with prefix + suffix pills", async () => {
+    const { wrapper } = await mountAsNumber();
+    expect(wrapper.find(".as-number").exists()).toBe(true);
+    expect(wrapper.find(".as-number .as-prefix").text()).toBe("+1");
+    expect(wrapper.find(".as-number .as-suffix").text()).toBe("/hr");
+    expect(wrapper.find(".as-number-input").exists()).toBe(true);
+  });
+
+  it("typing a decimal commits a number (not a string) — regression for null-origin shape", async () => {
+    const { wrapper, formData } = await mountAsNumber();
+    const input = wrapper.find<HTMLInputElement>(".as-number-input");
+    await input.setValue("133.33");
+    await input.trigger("blur");
+    await nextTick();
+    expect(formData.value.rate).toBe(133.33);
+    expect(typeof formData.value.rate).toBe("number");
+  });
+
+  it("ArrowUp on an empty/null model commits 1 (preventDefault'd)", async () => {
+    const { wrapper, formData } = await mountAsNumber();
+    const input = wrapper.find<HTMLInputElement>(".as-number-input");
+    const ev = new KeyboardEvent("keydown", {
+      key: "ArrowUp",
+      bubbles: true,
+      cancelable: true,
+    });
+    const prevented = !input.element.dispatchEvent(ev);
+    await nextTick();
+    expect(formData.value.rate).toBe(1);
+    expect(typeof formData.value.rate).toBe("number");
+    expect(prevented).toBe(true);
+  });
+
+  it("ArrowDown on an empty/null model commits -1", async () => {
+    const { wrapper, formData } = await mountAsNumber();
+    const input = wrapper.find<HTMLInputElement>(".as-number-input");
+    const ev = new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    });
+    input.element.dispatchEvent(ev);
+    await nextTick();
+    expect(formData.value.rate).toBe(-1);
+  });
+
+  it("ArrowUp increments and ArrowDown decrements the existing value", async () => {
+    const { wrapper, formData } = await mountAsNumber();
+    formData.value.rate = 5;
+    await nextTick();
+
+    const input = wrapper.find<HTMLInputElement>(".as-number-input");
+    input.element.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowUp", bubbles: true, cancelable: true }),
+    );
+    await nextTick();
+    expect(formData.value.rate).toBe(6);
+
+    input.element.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
+    );
+    await nextTick();
+    input.element.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true, cancelable: true }),
+    );
+    await nextTick();
+    expect(formData.value.rate).toBe(4);
+    expect(typeof formData.value.rate).toBe("number");
+  });
+
+  it("non-step keys are not intercepted (no preventDefault, no value change)", async () => {
+    const { wrapper, formData } = await mountAsNumber();
+    formData.value.rate = 7;
+    await nextTick();
+    const input = wrapper.find<HTMLInputElement>(".as-number-input");
+    const ev = new KeyboardEvent("keydown", {
+      key: "Enter",
+      bubbles: true,
+      cancelable: true,
+    });
+    const notPrevented = input.element.dispatchEvent(ev);
+    await nextTick();
+    expect(notPrevented).toBe(true);
+    expect(formData.value.rate).toBe(7);
+  });
+});

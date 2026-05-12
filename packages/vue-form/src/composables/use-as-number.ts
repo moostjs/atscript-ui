@@ -1,15 +1,14 @@
 import { type ComputedRef, computed } from "vue";
 import { getDecimalSeparator, parseDecimalInput } from "@atscript/ui";
 import { useAsLocale } from "./use-as-locale";
-import { preserveShape } from "./_shape";
 
 export interface UseAsNumberOptions {
-  /** Read the current value. Storage shape is preserved on commit. */
+  /** Read the current value. May be a string when authored externally; commit is always a `number` or `null`. */
   modelValue: () => string | number | null | undefined;
   /** Locale override; defaults to `useAsLocale()` then runtime locale. */
   locale?: () => string | undefined;
-  /** Commit handler — receives the new value in the same shape as `modelValue()` returned. */
-  onCommit: (value: string | number | null) => void;
+  /** Commit handler — receives a parsed `number`, or `null` for empty input. */
+  onCommit: (value: number | null) => void;
 }
 
 export interface UseAsNumberReturn {
@@ -31,9 +30,11 @@ export interface UseAsNumberReturn {
  * input shape — currency-agnostic, scale-agnostic, just a plain number
  * with optional prefix/suffix chrome owned by the SFC.
  *
- * Storage shape is preserved on commit — string `modelValue` commits a
- * string; number `modelValue` commits a number. The SFC owns prefix/
- * suffix render concerns; this composable only knows about the value.
+ * Commit shape is always a `number` (or `null` for empty input).
+ * atscript `number` fields are primitive `number` in the model — there
+ * is no precision-preservation reason to ship a string the way decimals
+ * do. The SFC owns prefix/suffix render concerns; this composable only
+ * knows about the value.
  */
 export function useAsNumber(opts: UseAsNumberOptions): UseAsNumberReturn {
   const localeCtx = useAsLocale();
@@ -65,7 +66,9 @@ export function useAsNumber(opts: UseAsNumberOptions): UseAsNumberReturn {
     }
     const parsed = parseDecimalInput(raw, locale.value);
     if (parsed === null) return;
-    opts.onCommit(preserveShape(opts.modelValue(), parsed));
+    // `parsed` is a canonical decimal string with `.` separator —
+    // `Number()` of it is always a finite number.
+    opts.onCommit(Number(parsed));
   }
 
   return {

@@ -75,6 +75,31 @@ function onInput(e: Event): void {
   setFromInput(cleaned);
 }
 
+/**
+ * Arrow-key step support for the merged-chrome path. The single input
+ * inside the `as-number` shell is `type="text"` (so we can paint
+ * prefix/suffix pills) — that means the browser doesn't ship the
+ * native `<input type="number">` arrow-key behaviour. Re-introduce a
+ * minimal +/- 1 step here. Commit goes through `setFromInput` so the
+ * composable's null + number-coercion logic is single-sourced.
+ */
+function applyStep(delta: number): void {
+  const current = rawValue.value;
+  const base = current === "" ? 0 : Number(current);
+  const next = (Number.isFinite(base) ? base : 0) + delta;
+  setFromInput(String(next));
+}
+
+function onKeyDown(e: KeyboardEvent): void {
+  if (e.key === "ArrowUp") {
+    e.preventDefault();
+    applyStep(1);
+  } else if (e.key === "ArrowDown") {
+    e.preventDefault();
+    applyStep(-1);
+  }
+}
+
 const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefined);
 </script>
 
@@ -101,6 +126,7 @@ const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefi
           autocomplete="off"
           :value="editValue"
           @input="onInput"
+          @keydown="onKeyDown"
           @focus="onFocus"
           @blur="onBlurField"
           :placeholder="placeholder"

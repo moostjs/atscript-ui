@@ -151,9 +151,30 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await expect(rate.suffix).toHaveText("/hr");
     await rate.input.fill("42");
     await rate.input.blur();
-    await expect(page.getByTestId("measurements-preview")).toContainText(
-      /"rate":\s*(42|"42")/,
-    );
+    // Number-typed field must commit a primitive number (no quotes) —
+    // regression for "Expected number, got string" when typing into a
+    // null-origin number field with prefix/suffix.
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"rate":\s*42(?!")/);
+  });
+
+  // ── ArrowUp / ArrowDown step on the merged-chrome number input ──
+  test("ArrowUp / ArrowDown increment and decrement on number+adornment input", async ({
+    page,
+  }) => {
+    await gotoDemo(page);
+    const rate = numberLocator(page, /Hourly rate/);
+    // Empty / null model → ArrowUp lands at 1.
+    await rate.input.focus();
+    await rate.input.press("ArrowUp");
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"rate":\s*1(?!")/);
+    // Step again → 2; commit shape must stay number.
+    await rate.input.press("ArrowUp");
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"rate":\s*2(?!")/);
+    // ArrowDown × 3 → -1.
+    await rate.input.press("ArrowDown");
+    await rate.input.press("ArrowDown");
+    await rate.input.press("ArrowDown");
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"rate":\s*-1(?!")/);
   });
 
   // ── 5. Number with @db.unit (static) ──
@@ -164,8 +185,9 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await expect(weight.suffix).toHaveText(/kg/i);
     await weight.input.fill("4.25");
     await weight.input.blur();
+    // weight is `number`-typed → primitive number (no quotes).
     await expect(page.getByTestId("measurements-preview")).toContainText(
-      /"weight":\s*(4\.25|"4\.25")/,
+      /"weight":\s*4\.25(?!")/,
     );
   });
 

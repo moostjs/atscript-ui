@@ -32,3 +32,10 @@ export interface IconField {
     @ui.form.icon 'mail'
     email: string
 }
+
+export interface NumberAdornedField {
+    @meta.label 'Hourly rate'
+    @ui.form.prefix '+1'
+    @ui.form.suffix '/hr'
+    rate: number
+}

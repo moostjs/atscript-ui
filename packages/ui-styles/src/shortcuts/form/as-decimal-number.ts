@@ -50,10 +50,11 @@ const shellBase = `flex w-full min-w-0 items-center gap-0 ${inputBase} px-$xs py
 
 export const asDecimalNumberShortcuts = defineShortcuts({
   // ── Shared adornment pills (prefix + suffix) ──────────────
-  "as-prefix":
-    "text-callout text-current/60 select-none whitespace-nowrap font-mono",
-  "as-suffix":
-    "text-callout text-current/60 select-none whitespace-nowrap font-mono",
+  // Font size and family match the inner inputs (body size from
+  // `inputBase` inheritance, `font-mono` here for tabular numeric
+  // alignment) — only the color is muted to read as chrome, not value.
+  "as-prefix": "text-current/60 select-none whitespace-nowrap font-mono",
+  "as-suffix": "text-current/60 select-none whitespace-nowrap font-mono",
 
   // ── AsDecimal shell ───────────────────────────────────────
   "as-decimal": {
@@ -66,7 +67,7 @@ export const asDecimalNumberShortcuts = defineShortcuts({
     "[&.as-decimal-negative_.as-prefix]:": "text-current-hl",
   },
   "as-decimal-integer": `${innerInputReset} flex-1 min-w-0 text-right disabled:!text-current/40 disabled:!cursor-not-allowed`,
-  "as-decimal-sep": "text-callout text-current/60 select-none font-mono px-0",
+  "as-decimal-sep": "text-current/60 select-none font-mono px-0",
   "as-decimal-decimal": `${innerInputReset} flex-none min-w-0 text-left disabled:!text-current/40 disabled:!cursor-not-allowed`,
 
   // ── AsNumber shell ────────────────────────────────────────
