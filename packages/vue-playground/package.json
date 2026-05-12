@@ -1,5 +1,6 @@
 {
   "name": "vue-playground",
+  "version": "0.1.72",
   "private": true,
   "type": "module",
   "scripts": {

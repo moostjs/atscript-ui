@@ -1,8 +1,29 @@
 {
   "name": "@atscript/ui-styles",
-  "version": "1.0.0",
+  "version": "0.1.72",
   "private": true,
   "description": "Shared UnoCSS shortcuts, presets, and icon loader for atscript-ui (vue-form, vue-table, vue-wf)",
+  "keywords": [
+    "atscript",
+    "atscript-ui",
+    "unocss",
+    "preset",
+    "shortcuts",
+    "vunor",
+    "styles",
+    "icons"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/ui-styles#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/ui-styles"
+  },
   "files": [
     "dist"
   ],

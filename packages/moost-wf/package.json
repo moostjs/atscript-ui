@@ -1,7 +1,29 @@
 {
   "name": "@atscript/moost-wf",
-  "version": "0.0.1",
+  "version": "0.1.72",
   "description": "Workflow form integration for moost — decorators, interceptors, and serialization driven by atscript type metadata",
+  "keywords": [
+    "atscript",
+    "moost",
+    "workflow",
+    "wf",
+    "decorators",
+    "interceptors",
+    "metadata",
+    "type-driven",
+    "typescript"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/moost-wf#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/moost-wf"
+  },
   "files": [
     "dist",
     "src/store/as-wf-state.as"
@@ -48,9 +70,9 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/core": "^0.1.45",
-    "@atscript/typescript": "^0.1.50",
-    "@moostjs/event-wf": "^0.6.4",
-    "moost": "^0.6.4"
+    "@atscript/core": "catalog:",
+    "@atscript/typescript": "catalog:",
+    "@moostjs/event-wf": "catalog:",
+    "moost": "catalog:"
   }
 }

@@ -1,7 +1,28 @@
 {
   "name": "@atscript/ui-fns",
-  "version": "0.0.1",
+  "version": "0.1.72",
   "description": "Dynamic fn-compiled field properties for @atscript/ui (opt-in, uses new Function)",
+  "keywords": [
+    "atscript",
+    "form",
+    "metadata",
+    "type-driven",
+    "dynamic",
+    "expressions",
+    "annotations",
+    "typescript"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/ui-fns#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/ui-fns"
+  },
   "files": [
     "dist"
   ],
@@ -40,7 +61,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/core": "^0.1.45",
-    "@atscript/typescript": "^0.1.45"
+    "@atscript/core": "catalog:",
+    "@atscript/typescript": "catalog:"
   }
 }

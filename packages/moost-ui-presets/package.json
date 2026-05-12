@@ -1,7 +1,28 @@
 {
   "name": "@atscript/moost-ui-presets",
-  "version": "0.0.1",
+  "version": "0.1.72",
   "description": "Moost controller and atscript schema for table-preset persistence — server-side persistence layer for atscript-ui table presets",
+  "keywords": [
+    "atscript",
+    "moost",
+    "table",
+    "preset",
+    "persistence",
+    "controller",
+    "metadata",
+    "typescript"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/moost-ui-presets#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/moost-ui-presets"
+  },
   "files": [
     "dist"
   ],
@@ -41,12 +62,12 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/core": "^0.1.50",
-    "@atscript/db": "^0.1.60",
-    "@atscript/moost-db": "^0.1.60",
-    "@atscript/typescript": "^0.1.50",
-    "@atscript/ui-table": "workspace:*",
-    "@moostjs/event-http": "^0.6.8",
-    "moost": "^0.6.8"
+    "@atscript/core": "catalog:",
+    "@atscript/db": "catalog:",
+    "@atscript/moost-db": "catalog:",
+    "@atscript/typescript": "catalog:",
+    "@atscript/ui-table": "workspace:^",
+    "@moostjs/event-http": "catalog:",
+    "moost": "catalog:"
   }
 }

@@ -2,6 +2,17 @@
   "name": "atscript-ui",
   "version": "0.0.0",
   "private": true,
+  "description": "Monorepo for automated forms and smart tables driven by atscript type metadata",
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git"
+  },
   "type": "module",
   "scripts": {
     "ready": "vp fmt && vp lint && vp run test -r && vp run build -r && pnpm run test:e2e",

@@ -1,7 +1,28 @@
 {
   "name": "@atscript/ui-table",
-  "version": "0.0.1",
+  "version": "0.1.72",
   "description": "Framework-agnostic filter model, filter-to-Uniquery conversion, and preset serialization for atscript tables",
+  "keywords": [
+    "atscript",
+    "table",
+    "filters",
+    "uniquery",
+    "preset",
+    "metadata",
+    "type-driven",
+    "typescript"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/ui-table#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/ui-table"
+  },
   "files": [
     "dist"
   ],
@@ -35,8 +56,8 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/db-client": "^0.1.61",
-    "@uniqu/core": "^0.1.2",
-    "@uniqu/url": "^0.1.5"
+    "@atscript/db-client": "catalog:",
+    "@uniqu/core": "catalog:",
+    "@uniqu/url": "catalog:"
   }
 }

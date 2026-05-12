@@ -533,7 +533,7 @@ describe("useAppPrefs BroadcastChannel", () => {
 
   afterEach(() => {
     if (originalBC) globalRef.BroadcastChannel = originalBC;
-    else delete globalRef.BroadcastChannel;
+    else Reflect.deleteProperty(globalRef, "BroadcastChannel");
     FakeBroadcastChannel.reset();
   });
 

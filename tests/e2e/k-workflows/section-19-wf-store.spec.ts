@@ -503,7 +503,7 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
       try {
         // Drive the real invite workflow once (admin invites a fresh email)
         // and assert the wf_states row shadows reflect the context.
-        const offset = await serverLogOffset();
+        const offset = serverLogOffset();
         const r1 = await postWf(adminCtx, {
           wfid: "api/users/invite",
           input: { email: "shadow-test@example.com", roleId: 3 },
@@ -570,7 +570,7 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
       const email = `wf-states-ui-${Date.now()}@example.com`;
       const adminCtx = await newRequestContext("admin");
       try {
-        const offset = await serverLogOffset();
+        const offset = serverLogOffset();
         const r = await adminCtx.post("/api/wf", {
           data: { wfid: "api/users/invite", input: { email, roleId: 3 } },
         });

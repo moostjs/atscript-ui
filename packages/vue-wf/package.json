@@ -1,7 +1,30 @@
 {
   "name": "@atscript/vue-wf",
-  "version": "0.0.1",
+  "version": "0.1.72",
   "description": "Workflow form integration for Vue 3 — HTTP round-trip loop driven by atscript type metadata",
+  "keywords": [
+    "atscript",
+    "vue",
+    "vue3",
+    "workflow",
+    "wf",
+    "form",
+    "moost",
+    "metadata",
+    "type-driven",
+    "typescript"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/vue-wf#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/vue-wf"
+  },
   "files": [
     "dist"
   ],
@@ -18,6 +41,9 @@
       "import": "./dist/as-wf-form.mjs"
     },
     "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node ../../scripts/gen-exports.mjs && vp pack",
@@ -42,8 +68,8 @@
     "vue-tsc": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/typescript": "^0.1.45",
-    "@atscript/vue-form": "^0.0.1",
-    "vue": "^3"
+    "@atscript/typescript": "catalog:",
+    "@atscript/vue-form": "workspace:^",
+    "vue": "catalog:"
   }
 }

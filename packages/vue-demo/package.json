@@ -1,5 +1,6 @@
 {
   "name": "@atscript/vue-demo",
+  "version": "0.1.72",
   "private": true,
   "type": "module",
   "scripts": {

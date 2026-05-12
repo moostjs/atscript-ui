@@ -1,7 +1,31 @@
 {
   "name": "@atscript/vue-table",
-  "version": "0.0.1",
+  "version": "0.1.72",
   "description": "Type-driven table components for Atscript with Vue 3",
+  "keywords": [
+    "atscript",
+    "vue",
+    "vue3",
+    "table",
+    "datatable",
+    "virtualized",
+    "filters",
+    "metadata",
+    "type-driven",
+    "components",
+    "typescript"
+  ],
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "license": "MIT",
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/vue-table#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/vue-table"
+  },
   "files": [
     "dist",
     "styles.d.ts"
@@ -157,10 +181,10 @@
     "vunor": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/db-client": "^0.1.62",
-    "@tanstack/vue-virtual": "^3",
-    "@vueuse/core": "^12",
-    "reka-ui": "^2",
-    "vue": "^3"
+    "@atscript/db-client": "catalog:",
+    "@tanstack/vue-virtual": "catalog:",
+    "@vueuse/core": "catalog:",
+    "reka-ui": "catalog:",
+    "vue": "catalog:"
   }
 }
