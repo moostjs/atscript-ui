@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { TAsComponentProps } from "@atscript/vue-form";
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
 /**
  * Palette picker — registers under the `types` map key `'color-swatch'`
@@ -10,6 +10,9 @@ import type { TAsComponentProps } from "@atscript/vue-form";
  * Palette-only (no custom hex entry). Click a swatch to set the model
  * to its hex string. Selected swatch shows a ring. Keyboard: Tab into
  * the first swatch, ArrowLeft/Right cycles, Enter/Space picks.
+ *
+ * Wrapped in the library's `<AsFieldShell>` so label, description, and
+ * error chrome stay consistent with built-in fields.
  */
 const props = defineProps<TAsComponentProps<string | null | undefined>>();
 
@@ -70,44 +73,36 @@ function onGroupBlur(e: FocusEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-color-swatch">
-    <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <div
-      class="demo-swatch-group"
-      role="radiogroup"
-      :aria-label="label || name"
-      :aria-describedby="ariaDescribedBy"
-      :aria-required="required || undefined"
-      :aria-invalid="!!error || undefined"
-      @focusout="onGroupBlur"
-    >
-      <button
-        v-for="(hex, idx) in PALETTE"
-        :key="hex"
-        :ref="(el) => setRef(el as Element | null, idx)"
-        :id="idx === 0 ? inputId : undefined"
-        type="button"
-        class="demo-swatch"
-        :class="{ selected: model.value === hex }"
-        :style="{ backgroundColor: hex }"
-        :aria-label="hex"
-        :aria-checked="model.value === hex"
-        role="radio"
-        :disabled="disabled"
-        @click="pick(hex)"
-        @keydown="onKeyDown($event, idx, hex)"
-      />
-    </div>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+  <AsFieldShell v-bind="$props" data-testid="demo-color-swatch">
+    <template #default="{ inputId }">
+      <div
+        class="demo-swatch-group"
+        role="radiogroup"
+        :aria-label="label || name"
+        :aria-describedby="ariaDescribedBy"
+        :aria-required="required || undefined"
+        :aria-invalid="!!error || undefined"
+        @focusout="onGroupBlur"
+      >
+        <button
+          v-for="(hex, idx) in PALETTE"
+          :key="hex"
+          :ref="(el) => setRef(el as Element | null, idx)"
+          :id="idx === 0 ? inputId : undefined"
+          type="button"
+          class="demo-swatch"
+          :class="{ selected: model.value === hex }"
+          :style="{ backgroundColor: hex }"
+          :aria-label="hex"
+          :aria-checked="model.value === hex"
+          role="radio"
+          :disabled="disabled"
+          @click="pick(hex)"
+          @keydown="onKeyDown($event, idx, hex)"
+        />
+      </div>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -143,3 +138,5 @@ function onGroupBlur(e: FocusEvent): void {
   opacity: 0.5;
 }
 </style>
+</content>
+</invoke>

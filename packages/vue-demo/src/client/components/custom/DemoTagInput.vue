@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { TAsComponentProps } from "@atscript/vue-form";
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
 /**
  * Tag-input — `string[]` rendered as removable pills + a trailing text
  * input. Opted-in per field via `@ui.form.type 'tag-input'`. Used by
  * the custom-components demo's `tags: string[]`.
+ *
+ * Wrapped in the library's `<AsFieldShell>` so label, description, and
+ * error chrome stay consistent with built-in fields.
  *
  * Skipped `useAsArray` here. That composable's contract is built around
  * per-item AsField recursion (stable `itemKeys`, `getItemField`, item
@@ -76,53 +79,45 @@ function onContainerClick(e: MouseEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-tag-input">
-    <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <div
-      class="demo-tag-input"
-      :class="{ error: !!error, disabled }"
-      @focusout="onGroupBlur"
-      @click="onContainerClick"
-    >
-      <span v-for="(tag, idx) in currentTags()" :key="`${idx}-${tag}`" class="demo-tag-pill">
-        <span class="demo-tag-pill-text">{{ tag }}</span>
-        <button
-          type="button"
-          class="demo-tag-pill-remove"
-          :aria-label="`Remove ${tag}`"
+  <AsFieldShell v-bind="$props" data-testid="demo-tag-input">
+    <template #default="{ inputId }">
+      <div
+        class="demo-tag-input"
+        :class="{ error: !!error, disabled }"
+        @focusout="onGroupBlur"
+        @click="onContainerClick"
+      >
+        <span v-for="(tag, idx) in currentTags()" :key="`${idx}-${tag}`" class="demo-tag-pill">
+          <span class="demo-tag-pill-text">{{ tag }}</span>
+          <button
+            type="button"
+            class="demo-tag-pill-remove"
+            :aria-label="`Remove ${tag}`"
+            :disabled="disabled"
+            @click.stop="removeTag(idx)"
+          >
+            ×
+          </button>
+        </span>
+        <input
+          :id="inputId"
+          ref="inputRef"
+          v-model="draft"
+          type="text"
+          class="demo-tag-input-field"
+          :placeholder="currentTags().length === 0 ? (placeholder ?? 'Add a tag…') : ''"
+          :name="name"
           :disabled="disabled"
-          @click.stop="removeTag(idx)"
-        >
-          ×
-        </button>
-      </span>
-      <input
-        :id="inputId"
-        ref="inputRef"
-        v-model="draft"
-        type="text"
-        class="demo-tag-input-field"
-        :placeholder="currentTags().length === 0 ? (placeholder ?? 'Add a tag…') : ''"
-        :name="name"
-        :disabled="disabled"
-        :readonly="readonly"
-        :aria-required="required || undefined"
-        :aria-invalid="!!error || undefined"
-        :aria-describedby="ariaDescribedBy"
-        :aria-label="!label ? name : undefined"
-        @keydown="onKeyDown"
-      />
-    </div>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+          :readonly="readonly"
+          :aria-required="required || undefined"
+          :aria-invalid="!!error || undefined"
+          :aria-describedby="ariaDescribedBy"
+          :aria-label="!label ? name : undefined"
+          @keydown="onKeyDown"
+        />
+      </div>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -198,3 +193,5 @@ function onContainerClick(e: MouseEvent): void {
   cursor: not-allowed;
 }
 </style>
+</content>
+</invoke>

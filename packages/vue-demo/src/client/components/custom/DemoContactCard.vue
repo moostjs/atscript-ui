@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { AsField, type TAsComponentProps, useAsUnion } from "@atscript/vue-form";
+import { AsField, AsFieldShell, type TAsComponentProps, useAsUnion } from "@atscript/vue-form";
 import { isObjectField } from "@atscript/ui";
 
 /**
@@ -12,6 +12,12 @@ import { isObjectField } from "@atscript/ui";
  * (we iterate `innerField.objectDef.fields` directly rather than
  * dispatching to the default AsObject — that would re-render its own
  * collapsible chrome and double the framing inside the card).
+ *
+ * Wrapped in the library's `<AsFieldShell>` so the outer label,
+ * description, and error chrome stay consistent with built-in fields.
+ * `useAsUnion` does not provide `UNION_CONTEXT_KEY` itself (only the
+ * default `as-union.vue` does), so the shell will not paint its own
+ * variant picker on top of our custom one.
  *
  * Opted-in per field via `@ui.form.type 'contact-card'`. Used by the
  * custom-components demo's `contact: EmailContact | PhoneContact |
@@ -40,13 +46,13 @@ function iconFor(label: string): string {
   return "•";
 }
 
+const disabled = computed(() => props.disabled ?? false);
+
 function pick(index: number): void {
   if (disabled.value) return;
   if (localUnionIndex.value === index) return;
   changeVariant(index);
 }
-
-const disabled = computed(() => props.disabled ?? false);
 
 function onGroupBlur(e: FocusEvent): void {
   const next = e.relatedTarget as Node | null;
@@ -57,50 +63,37 @@ function onGroupBlur(e: FocusEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-contact-card">
-    <label v-if="title || label" class="demo-field-label">{{ title ?? label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <section
-      class="demo-contact-card"
-      :class="{ error: !!error }"
-      :aria-describedby="ariaDescribedBy"
-      @focusout="onGroupBlur"
-    >
-      <div
-        class="demo-contact-variants"
-        role="radiogroup"
-        :aria-label="title || label || 'Contact method'"
-      >
-        <button
-          v-for="(v, vi) in variants"
-          :key="vi"
-          :id="vi === 0 ? inputId : undefined"
-          type="button"
-          class="demo-contact-variant"
-          :class="{ selected: localUnionIndex === vi }"
-          :aria-checked="localUnionIndex === vi"
-          role="radio"
-          :disabled="disabled"
-          @click="pick(vi)"
+  <AsFieldShell v-bind="$props" data-testid="demo-contact-card">
+    <template #default="{ inputId }">
+      <section class="demo-contact-card" :class="{ error: !!error }" @focusout="onGroupBlur">
+        <div
+          class="demo-contact-variants"
+          role="radiogroup"
+          :aria-label="title || label || 'Contact method'"
         >
-          <span class="demo-contact-variant-icon" aria-hidden="true">{{ iconFor(v.label) }}</span>
-          <span class="demo-contact-variant-label">{{ v.label }}</span>
-        </button>
-      </div>
+          <button
+            v-for="(v, vi) in variants"
+            :key="vi"
+            :id="vi === 0 ? inputId : undefined"
+            type="button"
+            class="demo-contact-variant"
+            :class="{ selected: localUnionIndex === vi }"
+            :aria-checked="localUnionIndex === vi"
+            role="radio"
+            :disabled="disabled"
+            @click="pick(vi)"
+          >
+            <span class="demo-contact-variant-icon" aria-hidden="true">{{ iconFor(v.label) }}</span>
+            <span class="demo-contact-variant-label">{{ v.label }}</span>
+          </button>
+        </div>
 
-      <div v-if="activeFields.length" class="demo-contact-body">
-        <AsField v-for="f of activeFields" :key="f.path ?? f.name" :field="f" />
-      </div>
-    </section>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+        <div v-if="activeFields.length" class="demo-contact-body">
+          <AsField v-for="f of activeFields" :key="f.path ?? f.name" :field="f" />
+        </div>
+      </section>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -173,3 +166,5 @@ function onGroupBlur(e: FocusEvent): void {
   padding-top: 10px;
 }
 </style>
+</content>
+</invoke>

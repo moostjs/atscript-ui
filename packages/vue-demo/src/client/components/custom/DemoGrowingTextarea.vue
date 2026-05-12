@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from "vue";
-import type { TAsComponentProps } from "@atscript/vue-form";
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
 /**
  * Custom string renderer used by the custom-components demo:
@@ -10,11 +10,9 @@ import type { TAsComponentProps } from "@atscript/vue-form";
  *    string field on the form.
  *  - Section B — opt-in per field via `@ui.form.type 'bio'`.
  *
- * Lives in the consumer (vue-demo), not the library, so it uses plain
- * `demo-*` class names and renders its own minimal label/error/description
- * shell rather than depending on the library's internal `<AsFieldShell>`.
- * Wires the full `inputId` / `ariaDescribedBy` / `error` contract so
- * label-for, error-by, and description-by associations keep working.
+ * Wraps the widget in the library's public `<AsFieldShell>` (Tier-2
+ * default in `@atscript/vue-form`) so label, description, optional
+ * clear, and error chrome all stay consistent with the built-in fields.
  */
 const props = defineProps<TAsComponentProps<string | null | undefined>>();
 
@@ -46,36 +44,28 @@ watch(
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-growing-textarea">
-    <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <textarea
-      :id="inputId"
-      ref="textareaRef"
-      class="demo-growing-textarea"
-      :class="{ error: !!error }"
-      :value="model.value ?? ''"
-      :placeholder="placeholder"
-      :name="name"
-      :disabled="disabled"
-      :readonly="readonly"
-      :aria-required="required || undefined"
-      :aria-invalid="!!error || undefined"
-      :aria-describedby="ariaDescribedBy"
-      :aria-label="!label ? name : undefined"
-      rows="2"
-      @input="onInput"
-      @blur="onBlur"
-    />
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+  <AsFieldShell v-bind="$props" data-testid="demo-growing-textarea">
+    <template #default="{ inputId, ariaDescribedBy }">
+      <textarea
+        :id="inputId"
+        ref="textareaRef"
+        class="demo-growing-textarea"
+        :class="{ error: !!error }"
+        :value="model.value ?? ''"
+        :placeholder="placeholder"
+        :name="name"
+        :disabled="disabled"
+        :readonly="readonly"
+        :aria-required="required || undefined"
+        :aria-invalid="!!error || undefined"
+        :aria-describedby="ariaDescribedBy"
+        :aria-label="!label ? name : undefined"
+        rows="2"
+        @input="onInput"
+        @blur="onBlur"
+      />
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -107,3 +97,5 @@ watch(
   opacity: 0.5;
 }
 </style>
+</content>
+</invoke>

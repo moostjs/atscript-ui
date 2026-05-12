@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { type TAsComponentProps, useAsTuple } from "@atscript/vue-form";
+import { AsFieldShell, type TAsComponentProps, useAsTuple } from "@atscript/vue-form";
 import type { FormTupleFieldDef } from "@atscript/ui";
 
 /**
  * Custom tuple renderer — three R/G/B sliders + a live preview swatch.
  * Opted-in per field via `@ui.form.type 'rgb-picker'`. Used by the
  * custom-components demo's `logoRgb: [number, number, number]`.
+ *
+ * Wrapped in the library's `<AsFieldShell>` so label, description, and
+ * error chrome stay consistent with built-in fields.
  *
  * Uses `useAsTuple` for its `onMounted` `fillMissing` (auto-pads
  * `[0,0,0]` on mount for non-optional tuples) — the per-position
@@ -67,48 +70,40 @@ function onGroupBlur(e: FocusEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-rgb-picker">
-    <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <div
-      class="demo-rgb-picker"
-      :class="{ error: !!error }"
-      :aria-describedby="ariaDescribedBy"
-      :aria-invalid="!!error || undefined"
-      @focusout="onGroupBlur"
-    >
-      <div class="demo-rgb-sliders">
-        <div v-for="ch in channels" :key="ch.idx" class="demo-rgb-channel">
-          <span class="demo-rgb-channel-label">{{ ch.label }}</span>
-          <input
-            :id="ch.idx === 0 ? inputId : undefined"
-            type="range"
-            min="0"
-            max="255"
-            class="demo-rgb-slider"
-            :value="ch.get.value"
-            :disabled="disabled"
-            :readonly="readonly"
-            :aria-label="`${ch.label} channel`"
-            @input="onSliderInput(ch.idx, $event)"
-          />
-          <span class="demo-rgb-channel-value">{{ ch.get.value }}</span>
+  <AsFieldShell v-bind="$props" data-testid="demo-rgb-picker">
+    <template #default="{ inputId }">
+      <div
+        class="demo-rgb-picker"
+        :class="{ error: !!error }"
+        :aria-describedby="ariaDescribedBy"
+        :aria-invalid="!!error || undefined"
+        @focusout="onGroupBlur"
+      >
+        <div class="demo-rgb-sliders">
+          <div v-for="ch in channels" :key="ch.idx" class="demo-rgb-channel">
+            <span class="demo-rgb-channel-label">{{ ch.label }}</span>
+            <input
+              :id="ch.idx === 0 ? inputId : undefined"
+              type="range"
+              min="0"
+              max="255"
+              class="demo-rgb-slider"
+              :value="ch.get.value"
+              :disabled="disabled"
+              :readonly="readonly"
+              :aria-label="`${ch.label} channel`"
+              @input="onSliderInput(ch.idx, $event)"
+            />
+            <span class="demo-rgb-channel-value">{{ ch.get.value }}</span>
+          </div>
+        </div>
+        <div class="demo-rgb-preview">
+          <div class="demo-rgb-swatch" :style="{ backgroundColor: rgbCss }" aria-hidden="true" />
+          <code class="demo-rgb-hex">{{ hex }}</code>
         </div>
       </div>
-      <div class="demo-rgb-preview">
-        <div class="demo-rgb-swatch" :style="{ backgroundColor: rgbCss }" aria-hidden="true" />
-        <code class="demo-rgb-hex">{{ hex }}</code>
-      </div>
-    </div>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -174,3 +169,5 @@ function onGroupBlur(e: FocusEvent): void {
   opacity: 0.75;
 }
 </style>
+</content>
+</invoke>

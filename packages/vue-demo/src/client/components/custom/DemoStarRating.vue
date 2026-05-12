@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { TAsComponentProps } from "@atscript/vue-form";
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
 /**
  * Star-rating widget for a `number` field, opted-in via
@@ -9,6 +9,9 @@ import type { TAsComponentProps } from "@atscript/vue-form";
  * Hard-coded to 5 stars. Click the active star to clear back to null.
  * Keyboard: ArrowLeft/Right adjusts ±1 (below 1 clears), Backspace/Delete
  * clears, Enter/Space sets to the focused star's index.
+ *
+ * Wrapped in the library's `<AsFieldShell>` so label, description, and
+ * error chrome stay consistent with built-in fields.
  */
 const props = defineProps<TAsComponentProps<number | null | undefined>>();
 
@@ -78,61 +81,53 @@ function onGroupBlur(e: FocusEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-star-rating">
-    <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <div
-      class="demo-star-group"
-      role="radiogroup"
-      :aria-label="label || name"
-      :aria-describedby="ariaDescribedBy"
-      :aria-required="required || undefined"
-      :aria-invalid="!!error || undefined"
-      @focusout="onGroupBlur"
-      @mouseleave="hoverValue = null"
-    >
-      <button
-        v-for="(star, idx) in stars"
-        :key="star"
-        :id="idx === 0 ? inputId : undefined"
-        type="button"
-        class="demo-star-btn"
-        :class="{ filled: isFilled(star) }"
-        :aria-label="`${star} star${star === 1 ? '' : 's'}`"
-        :aria-checked="props.model.value === star"
-        role="radio"
-        :disabled="disabled"
-        @click="pick(star)"
-        @mouseenter="hoverValue = star"
-        @focus="hoverValue = star"
-        @blur="hoverValue = null"
-        @keydown="onKeyDown($event, star)"
+  <AsFieldShell v-bind="$props" data-testid="demo-star-rating">
+    <template #default="{ inputId }">
+      <div
+        class="demo-star-group"
+        role="radiogroup"
+        :aria-label="label || name"
+        :aria-describedby="ariaDescribedBy"
+        :aria-required="required || undefined"
+        :aria-invalid="!!error || undefined"
+        @focusout="onGroupBlur"
+        @mouseleave="hoverValue = null"
       >
-        <svg
-          viewBox="0 0 24 24"
-          width="24"
-          height="24"
-          aria-hidden="true"
-          :fill="isFilled(star) ? '#f59e0b' : 'none'"
-          :stroke="isFilled(star) ? '#f59e0b' : '#9ca3af'"
-          stroke-width="1.5"
-          stroke-linejoin="round"
+        <button
+          v-for="(star, idx) in stars"
+          :key="star"
+          :id="idx === 0 ? inputId : undefined"
+          type="button"
+          class="demo-star-btn"
+          :class="{ filled: isFilled(star) }"
+          :aria-label="`${star} star${star === 1 ? '' : 's'}`"
+          :aria-checked="props.model.value === star"
+          role="radio"
+          :disabled="disabled"
+          @click="pick(star)"
+          @mouseenter="hoverValue = star"
+          @focus="hoverValue = star"
+          @blur="hoverValue = null"
+          @keydown="onKeyDown($event, star)"
         >
-          <path
-            d="M12 2.5l2.9 6.55 7.1.6-5.4 4.7 1.65 6.95L12 17.7l-6.25 3.6L7.4 14.35 2 9.65l7.1-.6L12 2.5z"
-          />
-        </svg>
-      </button>
-    </div>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+          <svg
+            viewBox="0 0 24 24"
+            width="24"
+            height="24"
+            aria-hidden="true"
+            :fill="isFilled(star) ? '#f59e0b' : 'none'"
+            :stroke="isFilled(star) ? '#f59e0b' : '#9ca3af'"
+            stroke-width="1.5"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M12 2.5l2.9 6.55 7.1.6-5.4 4.7 1.65 6.95L12 17.7l-6.25 3.6L7.4 14.35 2 9.65l7.1-.6L12 2.5z"
+            />
+          </svg>
+        </button>
+      </div>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -159,3 +154,5 @@ function onGroupBlur(e: FocusEvent): void {
   opacity: 0.5;
 }
 </style>
+</content>
+</invoke>

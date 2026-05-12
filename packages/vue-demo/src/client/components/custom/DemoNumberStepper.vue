@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { TAsComponentProps } from "@atscript/vue-form";
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
 /**
  * Number stepper — `[ - ][ input ][ + ]` — registered via the
@@ -10,6 +10,9 @@ import type { TAsComponentProps } from "@atscript/vue-form";
  *
  * Clamped to `>= 0` (the schema isn't currently marked `@meta.min 0`;
  * Step 2 clamps unconditionally for simplicity).
+ *
+ * Wrapped in the library's `<AsFieldShell>` so label, description, and
+ * error chrome stay consistent with built-in fields.
  *
  * Skipped `useAsNumber` here — the composable's value pipeline assumes
  * a single text input with locale-aware decimal parsing; the stepper
@@ -52,55 +55,47 @@ function onGroupBlur(e: FocusEvent): void {
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-number-stepper">
-    <label v-if="label" :for="inputId" class="demo-field-label">{{ label }}</label>
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <div class="demo-stepper" @focusout="onGroupBlur">
-      <button
-        type="button"
-        class="demo-stepper-btn"
-        aria-label="Decrement"
-        :disabled="disabled || readonly || current <= 0"
-        @click="dec"
-      >
-        −
-      </button>
-      <input
-        :id="inputId"
-        type="number"
-        class="demo-stepper-input"
-        :class="{ error: !!error }"
-        :value="model.value ?? ''"
-        :placeholder="placeholder"
-        :name="name"
-        :disabled="disabled"
-        :readonly="readonly"
-        :aria-required="required || undefined"
-        :aria-invalid="!!error || undefined"
-        :aria-describedby="ariaDescribedBy"
-        :aria-label="!label ? name : undefined"
-        min="0"
-        @input="onInput"
-      />
-      <button
-        type="button"
-        class="demo-stepper-btn"
-        aria-label="Increment"
-        :disabled="disabled || readonly"
-        @click="inc"
-      >
-        +
-      </button>
-    </div>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+  <AsFieldShell v-bind="$props" data-testid="demo-number-stepper">
+    <template #default="{ inputId }">
+      <div class="demo-stepper" @focusout="onGroupBlur">
+        <button
+          type="button"
+          class="demo-stepper-btn"
+          aria-label="Decrement"
+          :disabled="disabled || readonly || current <= 0"
+          @click="dec"
+        >
+          −
+        </button>
+        <input
+          :id="inputId"
+          type="number"
+          class="demo-stepper-input"
+          :class="{ error: !!error }"
+          :value="model.value ?? ''"
+          :placeholder="placeholder"
+          :name="name"
+          :disabled="disabled"
+          :readonly="readonly"
+          :aria-required="required || undefined"
+          :aria-invalid="!!error || undefined"
+          :aria-describedby="ariaDescribedBy"
+          :aria-label="!label ? name : undefined"
+          min="0"
+          @input="onInput"
+        />
+        <button
+          type="button"
+          class="demo-stepper-btn"
+          aria-label="Increment"
+          :disabled="disabled || readonly"
+          @click="inc"
+        >
+          +
+        </button>
+      </div>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -158,3 +153,5 @@ function onGroupBlur(e: FocusEvent): void {
   background: rgba(239, 68, 68, 0.08);
 }
 </style>
+</content>
+</invoke>

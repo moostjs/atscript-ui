@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { AsField, type TAsComponentProps } from "@atscript/vue-form";
+import { AsField, AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 import { isObjectField, type FormFieldDef } from "@atscript/ui";
 
 /**
@@ -8,6 +8,9 @@ import { isObjectField, type FormFieldDef } from "@atscript/ui";
  * full-width, city+zip on one row, country full-width). Opted-in per
  * field via `@ui.form.type 'address-card'`. Used by the
  * custom-components demo's `address: Address`.
+ *
+ * Wrapped in the library's `<AsFieldShell>` so the outer label,
+ * description, and error chrome stay consistent with built-in fields.
  *
  * Skipped `useAsArray` / `useAsObject` (no public `useAsObject` exists
  * anyway) — the object case is just "iterate child fields and recurse
@@ -35,38 +38,24 @@ const countryField = computed(() => fieldByName("country"));
 </script>
 
 <template>
-  <div class="demo-field" :class="{ hidden }" v-show="!hidden" data-testid="demo-address-card">
-    <div v-if="description" :id="descId" class="demo-field-description">{{ description }}</div>
-    <section
-      class="demo-address-card"
-      :class="{ error: !!error }"
-      :aria-describedby="ariaDescribedBy"
-    >
-      <header class="demo-address-card-header">
-        <h3 class="demo-address-card-title">{{ title ?? label ?? "Address" }}</h3>
-      </header>
-      <div class="demo-address-card-grid">
-        <div class="demo-address-card-row demo-address-card-row-full">
-          <AsField v-if="streetField" :field="streetField" />
+  <AsFieldShell v-bind="$props" data-testid="demo-address-card">
+    <template #default>
+      <section class="demo-address-card" :class="{ error: !!error }">
+        <div class="demo-address-card-grid">
+          <div class="demo-address-card-row demo-address-card-row-full">
+            <AsField v-if="streetField" :field="streetField" />
+          </div>
+          <div class="demo-address-card-row demo-address-card-row-split">
+            <AsField v-if="cityField" :field="cityField" />
+            <AsField v-if="zipField" :field="zipField" />
+          </div>
+          <div class="demo-address-card-row demo-address-card-row-full">
+            <AsField v-if="countryField" :field="countryField" />
+          </div>
         </div>
-        <div class="demo-address-card-row demo-address-card-row-split">
-          <AsField v-if="cityField" :field="cityField" />
-          <AsField v-if="zipField" :field="zipField" />
-        </div>
-        <div class="demo-address-card-row demo-address-card-row-full">
-          <AsField v-if="countryField" :field="countryField" />
-        </div>
-      </div>
-    </section>
-    <div
-      v-if="error || hint"
-      :id="errorId"
-      class="demo-field-error"
-      :role="error ? 'alert' : undefined"
-    >
-      {{ error || hint }}
-    </div>
-  </div>
+      </section>
+    </template>
+  </AsFieldShell>
 </template>
 
 <style scoped>
@@ -82,27 +71,10 @@ const countryField = computed(() => fieldByName("country"));
 .demo-address-card.error {
   border-color: #ef4444;
 }
-.demo-address-card-header {
-  display: flex;
-  align-items: center;
-  border-bottom: 1px dashed currentColor;
-  padding-bottom: 6px;
-  opacity: 0.85;
-}
-.demo-address-card-title {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-}
 .demo-address-card-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.demo-address-card-row-full > :deep(.demo-field) {
-  flex: 1 1 100%;
 }
 .demo-address-card-row-split {
   display: grid;
@@ -110,3 +82,5 @@ const countryField = computed(() => fieldByName("country"));
   gap: 10px;
 }
 </style>
+</content>
+</invoke>
