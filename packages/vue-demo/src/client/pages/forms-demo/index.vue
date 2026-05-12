@@ -38,8 +38,7 @@ const variations: Variation[] = [
   {
     to: "/forms-demo/array-showcase",
     title: "Array showcase",
-    description:
-      "Optional and required arrays of primitives and objects, plus a nested array.",
+    description: "Optional and required arrays of primitives and objects, plus a nested array.",
     status: "ready",
   },
   {
@@ -76,6 +75,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/custom-components",
+    title: "Custom components",
+    description:
+      "Two complementary mechanisms: override a built-in type globally via the types map (Section A) or opt fields in per-field via @ui.form.type / @ui.form.component (Section B).",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/dynamic",
     title: "Dynamic (fn-driven)",
     description: "Visibility / labels / options driven by @ui.form.fn.* expressions.",
@@ -89,7 +95,9 @@ const variations: Variation[] = [
     <div class="max-w-3xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
         <div class="flex items-center justify-between gap-$s">
-          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+          <p
+            class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0"
+          >
             atscript-ui · forms demo
           </p>
           <DarkToggle />
