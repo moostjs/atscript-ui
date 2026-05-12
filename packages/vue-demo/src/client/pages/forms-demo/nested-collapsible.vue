@@ -43,6 +43,7 @@ function onSubmit(data: unknown) {
           <div class="flex gap-$xs shrink-0 mt-$xxs">
             <button
               type="button"
+              data-testid="expand-all-btn"
               class="c8-flat h-fingertip-s px-$m rounded-base font-600 text-callout"
               :disabled="allOpen"
               @click="sections.expandAll()"
@@ -51,6 +52,7 @@ function onSubmit(data: unknown) {
             </button>
             <button
               type="button"
+              data-testid="collapse-all-btn"
               class="c8-flat h-fingertip-s px-$m rounded-base font-600 text-callout"
               @click="sections.collapseAll()"
             >
@@ -67,6 +69,7 @@ function onSubmit(data: unknown) {
       </header>
 
       <AsForm
+        data-testid="nested-collapsible-form"
         :def="def"
         :form-data="formData"
         :types="types"
@@ -75,6 +78,14 @@ function onSubmit(data: unknown) {
         @submit="onSubmit"
       >
       </AsForm>
+
+      <details class="mt-$l layer-0 border-1 rounded-r2 p-$m text-callout">
+        <summary class="cursor-pointer font-600 text-current-muted">Form data preview</summary>
+        <pre
+          data-testid="nested-collapsible-preview"
+          class="mt-$s overflow-auto text-callout"
+        >{{ JSON.stringify(formData, null, 2) }}</pre>
+      </details>
     </div>
   </div>
 </template>
