@@ -38,8 +38,8 @@ export interface UseAsDualInputReturn {
   decimalDisplay: ComputedRef<string>;
   /** True while either input has focus. */
   focusActive: Ref<boolean>;
-  onIntegerFocus: () => void;
-  onDecimalFocus: () => void;
+  onIntegerFocus: (e?: FocusEvent) => void;
+  onDecimalFocus: (e?: FocusEvent) => void;
   onBlurAll: (e: FocusEvent) => void;
   onIntegerInput: (e: Event) => void;
   onIntegerKeydown: (e: KeyboardEvent) => void;
@@ -91,12 +91,13 @@ export function useAsDualInput(opts: UseAsDualInputOptions): UseAsDualInputRetur
     return d;
   });
 
-  function onIntegerFocus(): void {
+  function onIntegerFocus(e?: FocusEvent): void {
     focusActive.value = true;
     decimalEdit.value = null;
+    selectAllIfZeroShaped(e?.target);
   }
 
-  function onDecimalFocus(): void {
+  function onDecimalFocus(e?: FocusEvent): void {
     focusActive.value = true;
     const parts = opts.parts();
     const d = parts.decimal;
@@ -107,6 +108,25 @@ export function useAsDualInput(opts: UseAsDualInputOptions): UseAsDualInputRetur
     } else {
       decimalEdit.value = d;
     }
+    selectAllIfZeroShaped(e?.target);
+  }
+
+  /**
+   * UX polish: when an input shows only zeros at focus time (e.g. the
+   * canonical "0" / "-0" of a freshly-initialised optional decimal, or
+   * "00" left over in the decimal half), select the contents so the
+   * first keystroke replaces them. Without this, typing `5` into "0"
+   * produces "05" — confusing for a value already in canonical zero
+   * form. Defer to the next frame so Vue's reactive re-render of the
+   * `:value` binding has a chance to settle before we read the value.
+   */
+  function selectAllIfZeroShaped(target: EventTarget | null | undefined): void {
+    const el = target as HTMLInputElement | null;
+    if (!el || typeof el.select !== "function") return;
+    if (!/^-?0+$/.test(el.value)) return;
+    requestAnimationFrame(() => {
+      if (document.activeElement === el && /^-?0+$/.test(el.value)) el.select();
+    });
   }
 
   function onBlurAll(e: FocusEvent): void {
