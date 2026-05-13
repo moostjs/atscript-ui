@@ -84,7 +84,10 @@ sorters, projection, search and pagination:
 ```
 
 Pagination is passed separately as the `page` and `size` arguments —
-moost-db returns `{ data, total }` (a `PageResult`) for every page.
+moost-db returns a `PageResult<T> = { data, page, itemsPerPage, pages,
+count }` for every page. The table reads `count` for the total row
+count and uses the rest to align block prefetch with the server's
+page math.
 
 Detailed Uniquery semantics, operators and projection rules live in the
 [atscript-db query syntax docs](https://db.atscript.dev/api/queries).
@@ -102,7 +105,10 @@ type QueryFn = (
 
 interface PageResult<T> {
   data: T[];
-  total: number;
+  page: number;
+  itemsPerPage: number;
+  pages: number;
+  count: number;
 }
 ```
 

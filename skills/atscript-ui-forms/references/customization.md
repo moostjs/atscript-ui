@@ -294,7 +294,6 @@ Available from `@atscript/vue-form`:
 | `useAsField(opts)`          | `{ model, error, onBlur }`                                                                     | Build a field that isn't backed by an AsField parent.             |
 | `useAsForm(opts)`           | Full form state (see [forms.md](forms.md))                                                     | Custom form root.                                                 |
 | `useAsState(opts)`          | `{ formState, clearErrors, reset, submit, setErrors }`                                         | Low-level form-state machine without provide/inject.              |
-| `useFormContext(name)`      | `{ rootFormData, pathPrefix, formContext, joinPath, buildPath, getByPath, setByPath, buildScope }` | Walk paths, read/write the data tree, build TFnScope.            |
 | `useAsPath()`               | `{ path: ComputedRef<string> }`                                                                | Read absolute path prefix without other context.                  |
 | `useAsTypeMap()`            | `{ types: ComputedRef<Record<string, Component>> }`                                            | Read the form's `:types` map (for components that compose).        |
 | `useAsData()`               | `{ rootData, getValueAt, siblingValue }`                                                       | Reactive read of any value in the form, by path or sibling name.  |

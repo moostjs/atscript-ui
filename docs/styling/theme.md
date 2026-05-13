@@ -139,7 +139,7 @@ If you set `baseRadius: "0"`, every container goes sharp. If you set `baseRadius
 </html>
 ```
 
-Vunor's `layer-*` / `surface-*` / `c8-*` primitives already include `dark:` rules internally, so most `as-*` shortcuts don't need to spell them out. Where a shortcut does need explicit dark handling (e.g. an input's explicit text color), it uses paired `text-scope-dark-0 dark:text-scope-light-0` — see `_shared.ts` under `shortcuts/form/` for examples.
+Vunor's `layer-*` / `surface-*` / `c8-*` primitives already include `dark:` rules internally, so most `as-*` shortcuts don't need to spell them out. Where a shortcut does need explicit dark handling (e.g. an input's explicit text color or a hand-painted scrollbar), it uses paired `text-scope-dark-0 dark:text-scope-light-0` / `dark:` variant keys — see `as-decimal-number.ts` (`innerInputReset` constant) and `as-window-scrollbar.ts` under `packages/ui-styles/src/shortcuts/{form,table}/` for examples.
 
 To wire up a toggle, drive the class with VueUse:
 

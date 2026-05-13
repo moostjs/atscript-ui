@@ -139,24 +139,19 @@ Source: `packages/vue-form/src/components/as-field.vue:134-152`.
 
 AsField provides `PATH_PREFIX_KEY` (reactive `ComputedRef<string>`) when it's a structured/union container. Children consume it to compute absolute paths.
 
-`useFormContext(componentName)` exposes everything you need to walk paths and read form data:
+For descendants of `<AsForm>`, use the public read-only wrappers:
 
 ```typescript
-const {
-  rootFormData,    // () => Record<string, unknown> — domain data
-  pathPrefix,      // ComputedRef<string>
-  formContext,     // ComputedRef<Record<string, unknown>>
-  joinPath,        // (segment | () => segment) => ComputedRef<string>
-  buildPath,       // (segment: string) => string  (non-reactive)
-  getByPath,       // (path: string) => unknown
-  setByPath,       // (path: string, value: unknown) => void
-  buildScope,      // (v?, entry?) => TFnScope
-} = useFormContext<TFormData, TFormContext>("MyComponent");
+import { useAsPath, useAsData } from "@atscript/vue-form";
+
+const { path } = useAsPath();                        // ComputedRef<string>
+const { rootData, getValueAt, siblingValue } = useAsData();
+
+const country = siblingValue<string>("country");     // sibling on the same parent
+const street = getValueAt("address.street");         // absolute path
 ```
 
-`joinPath('items.0')` returns a reactive ref; use it when the segment can change (e.g. dynamic array index). `buildPath` is the synchronous flavour — cheaper inside a one-shot computed.
-
-Source: `packages/vue-form/src/composables/use-form-context.ts:22-87`.
+`useAsPath()` returns the current dotted prefix. `useAsData()` reads any value in the form by absolute path (`getValueAt`) or relative to the current prefix (`siblingValue`). Inside an array item, `siblingValue` walks up to the same item — the natural shape for "this field depends on its row's sibling".
 
 ## provideAsNestedSectionsStore / useAsNestedSectionsStore
 

@@ -41,7 +41,7 @@ Root component. Renders an HTML `<form>`, owns the form-state machine, wires pro
 | -------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
 | `submit`             | `(data: TFormData)`                                                    | Form submitted; validation passed.                          |
 | `error`              | `(errors: { path: string; message: string }[])`                        | Submit attempted; validation failed.                        |
-| `action`             | `(name: string, data: TFormData)`                                      | A `@ui.form.action` button (or `@ui.form.wf.action`) fires. |
+| `action`             | `(name: string, data: TFormData)`                                      | A `@ui.form.action` button (or `@wf.action.withData`) fires. |
 | `unsupported-action` | `(name: string, data: TFormData)`                                      | Action name dispatched but no field declares it.            |
 | `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur / array add+remove / union switch.                |
 

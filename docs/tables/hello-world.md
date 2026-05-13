@@ -157,15 +157,18 @@ slot. Key props:
 | `queryOnMount`    | Default `true`. Set `false` if you want to defer the first fetch.                                       |
 
 The default slot exposes the full reactive state — `tableDef`,
-`results`, `columns`, `columnNames`, `filterFields`, `filters`,
-`sorters`, `pagination`, `searchTerm`, `selectedRows`, plus the
-loading/error flags (`querying`, `queryingNext`, `loadingMetadata`,
-`queryError`, `metadataError`, `mustRefresh`) and the public methods
-(`query`, `queryNext`, `resetFilters`, `showConfigDialog`,
+`allColumns`, `columns`, `columnNames`, `columnWidths`,
+`filterFields`, `filters`, `sorters`, `results`, `pagination`,
+`searchTerm`, `selectedRows`, `selectedCount`, `totalCount`,
+`loadedCount`, plus the loading/error flags (`querying`,
+`queryingNext`, `loadingMetadata`, `queryError`, `metadataError`,
+`mustRefresh`), the keyboard nav bridge (`navBridge`), and the
+public methods (`query`, `queryNext`, `resetFilters`,
+`showConfigDialog`, `openFilterDialog`, `closeFilterDialog`,
 `setFieldFilter`, `removeFieldFilter`, `addFilterField`,
 `removeFilterField`, `actions`, `prompt`). External `v-model`s are
-supported for `filterFields`, `columnNames`, `columnWidths`, `sorters`,
-`selectedRows` and the URL bridge `urlQuery`.
+supported for `filterFields`, `columnNames`, `columnWidths`,
+`sorters`, `selectedRows` and the URL bridge `urlQuery`.
 
 Underneath, `<AsTableRoot>` also mounts its companion dialogs
 (`AsFilterDialog`, `AsConfigDialog`, `AsConfirmDialog`, and lazily

@@ -104,17 +104,25 @@ See [The as-\* Shortcut System](/styling/shortcuts).
 Generated at build time by walking every `as-*.vue` template. Drives the safelist extractor and the optional component-exclusion knob.
 
 ```typescript
-/** Map: kebab-case component name → array of class names it references. */
-const componentClasses: Record<string, string[]>;
+/** Map: kebab-case component name → list of class names it references. */
+const componentClasses: Record<string, readonly string[]>;
 
 /** Map: kebab-case component name → owning package ("form" | "table" | "wf"). */
 const componentPackages: Record<string, "form" | "table" | "wf">;
 
-function getComponentClasses(name: string): string[] | undefined;
-function getHelperClasses(name: string): string[] | undefined;
+/** Union of every class referenced by the given kebab-case component names. */
+function getComponentClasses(...names: string[]): string[];
 
-/** Map: helper alias → canonical helper name (e.g. "as-form-row" → "as-row"). */
-const helperAliases: Record<string, string>;
+/** Same as `getComponentClasses`, but takes helper-function names and expands them via `helperAliases`. */
+function getHelperClasses(...helpers: string[]): string[];
+
+/**
+ * Map: default-bundle helper function name → list of kebab-case components it wires up.
+ * Keys are `createDefaultCellTypes`, `createDefaultControls`, `createDefaultTypes`.
+ * A call to `createDefaultControls()` in your source pulls in the classes for every default
+ * component it returns.
+ */
+const helperAliases: Record<string, readonly string[]>;
 ```
 
 ## Icons
@@ -169,7 +177,7 @@ export default {
 };
 ```
 
-`AsResolver()` returns a `ComponentResolverObject` that auto-imports the **Tier 1 primary components** (`AsForm`, `AsField`, `AsIterator`, `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsFilters`, `AsPresetPicker`, `AsTableActions`, `AsWfForm`) on first use in a template.
+`AsResolver()` returns a `ComponentResolverObject` that auto-imports the **Tier 1 primary components** — `AsField`, `AsFilters`, `AsForm`, `AsIterator`, `AsPresetPicker`, `AsTable`, `AsTableActions`, `AsTableRoot`, `AsWfForm`, `AsWindowTable` — on first use in a template. (Authoritative source: `primaryComponents` in `packages/ui-styles/src/generated/component-classes.ts`.)
 
 Tier-2 defaults (`AsInput`, `AsFilterDialog`, …) are not auto-resolved — users import them explicitly when composing custom defaults. Composables (`useTable`, …) are never handled by `unplugin-vue-components`.
 
@@ -182,6 +190,7 @@ function AsResolver(): ComponentResolverObject;
 For apps that don't run UnoCSS at all, the package ships pre-baked CSS bundles. Importing one of these subpaths for side-effect injects every class our components need.
 
 ```typescript
+import "@atscript/ui-styles/css";        // alias for /css/all
 import "@atscript/ui-styles/css/all";    // form + table + wf + common
 import "@atscript/ui-styles/css/form";   // form only
 import "@atscript/ui-styles/css/table";  // table only

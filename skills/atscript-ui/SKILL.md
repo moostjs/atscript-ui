@@ -26,9 +26,7 @@ npx skills add moostjs/atscript         # sibling — .as language
 npx skills add moostjs/atscript-db      # sibling — DB layer (often paired with tables / wf)
 ```
 
-One `npx skills add moostjs/atscript-ui` invocation scans the repo and installs all five
-sub-skills (`atscript-ui`, `atscript-ui-forms`, `atscript-ui-tables`, `atscript-ui-wf`,
-`atscript-ui-styles`). The agent loads only the description-matched ones into context per task.
+One install pulls in 5 sub-skills (`atscript-ui`, `atscript-ui-forms`, `-tables`, `-wf`, `-styles`); agent loads only the description-matched ones per task.
 
 ## Packages (UI side)
 
@@ -54,37 +52,33 @@ pnpm add @atscript/ui-table                     # if rendering tables
 ## Quick start (framework-agnostic core)
 
 ```ts
-import { createFormDef, resolveFieldProp, UI_FORM_LABEL } from "@atscript/ui";
+import { createFormDef, createFormData, resolveFieldProp, UI_FORM_FN_LABEL, META_LABEL } from "@atscript/ui";
 import { installDynamicResolver } from "@atscript/ui-fns"; // optional — enables @ui.fn.*
 
-installDynamicResolver(); // call once before any createFormDef / createTableDef
+installDynamicResolver(); // optional — call once at startup, before any createFormDef / createTableDef
 
-// FormDef is the parsed mental model of a .as type
-import { ContactForm } from "./contact.as";
+import { ContactForm } from "./contact.as"; // .as file emits an annotated type
 const def = createFormDef(ContactForm);
+const formData = createFormData(ContactForm); // { value: domainData }
 
-// FieldDefs expose `path`, `prop`, `type`, `customType`, `allStatic`, plus structural
-// helpers (`objectDef`, `unionVariants`, `itemField`, `itemFields`).
 for (const field of def.fields) {
-  const label = resolveFieldProp<string>(
-    field.prop,
-    "ui.form.fn.label",
-    UI_FORM_LABEL,
-    { v: undefined, data: formData.value, context: {}, entry: undefined },
-  );
+  // resolveFieldProp picks fn-key (dynamic) when present, else falls back to staticKey (@meta.label here)
+  const label = resolveFieldProp<string>(field.prop, UI_FORM_FN_LABEL, META_LABEL, {
+    v: undefined, data: formData.value, context: {}, entry: undefined,
+  });
   // render however your framework wants — see vue-form for the Vue 3 binding
 }
 ```
 
-For tables, `createTableDef(meta, type)` merges a `MetaResponse` (server `/meta` payload from
-`moost-db` or your own equivalent) with the atscript type to produce `ColumnDef[]`,
-`primaryKeys[]`, `actions[]`, and CRUD permissions. See [ui-core.md](references/ui-core.md).
+`createTableDef(meta, type)` merges a `MetaResponse` (server `/meta` payload from `moost-db` or your own
+equivalent) with the deserialised atscript type to produce `ColumnDef[]`, `primaryKeys[]`, `actions`, and
+CRUD permissions. See [ui-core.md](references/ui-core.md).
 
 ## Invariants
 
-| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **`@ui.*.type` is reserved for built-in renderer ids.** Forms: `text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `paragraph`, `action`, `date`, `datetime`, `time` (plus structured `object`/`array`/`union`/`tuple`/`ref`). Tables: `text`, `number`, `boolean`, `date`, `datetime`, `relative`, `array`, `object`, `union`, `enum`, `ref`. Use `@ui.form.component` / `@ui.table.component` for **custom** renderers — they look up in `:components` not `:types`. |
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`@ui.type` / `@ui.form.type` / `@ui.table.type` are reserved for built-in renderer ids.** Closed list registered by the `@atscript/ui` plugin (source `packages/ui/src/plugin/annotations.ts`): `text`, `password`, `number`, `decimal`, `select`, `textarea`, `checkbox`, `radio`, `date`, `datetime`, `time`, `paragraph`, `action`. Structured renderer kinds (`array`, `object`, `union`, `tuple`) are exposed by FormDef as `field.type`, never as a `@ui.*.type` argument. Custom renderers always go via `@ui.form.component` / `@ui.table.component`, which look up in the consumer's `:components` map (not `:types`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | 2   | **`@ui.fn.*` requires `installDynamicResolver()` from `@atscript/ui-fns`.** Call once at app startup before constructing any FormDef / TableDef. Without it, dynamic annotations silently behave as undefined. Compiled function strings run via `new Function` in the host's full scope — only safe for compile-time-validated schemas you control.                                                                                                                                |
 | 3   | **Form data is wrapped:** `formData = { value: domainData }`. Path helpers `getByPath` / `setByPath` from `@atscript/ui` handle the unwrap. Structured field paths join with `.` (e.g. `address.street`); array indices are numeric segments (`contacts.0.email`).                                                                                                                                                                                                                  |
 | 4   | **`FieldResolver` is global and singleton.** `setResolver()` replaces the current resolver app-wide; the dynamic resolver from `ui-fns` replaces the static one. Call before any `createFormDef` / `createTableDef`.                                                                                                                                                                                                                                                              |
@@ -117,20 +111,20 @@ import {
   // type guards
   isArrayField, isObjectField, isUnionField, isTupleField,
   // annotation key constants (UI_FORM_*, UI_TABLE_*, UI_DICT_*, UI_TYPE — see annotations.md)
-  UI_TYPE, UI_FORM_LABEL, UI_FORM_PLACEHOLDER, UI_TABLE_WIDTH, UI_DICT_LABEL,
+  UI_TYPE, UI_FORM_FN_LABEL, UI_FORM_LABEL_SINGULAR, UI_FORM_PLACEHOLDER, UI_TABLE_WIDTH, UI_DICT_LABEL,
   // utilities
   asArray, parseStaticAttrs, optKey, optLabel,
 } from "@atscript/ui";
 
-// Atscript build plugin (in atscript.config.ts)
-import { uiPlugin } from "@atscript/ui/plugin";
+// Atscript build plugin (in atscript.config.ts) — default exports
+import uiPlugin from "@atscript/ui/plugin";
 
 // Dynamic resolver (opt-in)
 import { installDynamicResolver, DynamicFieldResolver } from "@atscript/ui-fns";
 import type { TFnScope, TComputed, TFieldEvaluated } from "@atscript/ui-fns";
 
-// Atscript build plugin for @ui.fn.* keys (in atscript.config.ts)
-import { uiFnsPlugin } from "@atscript/ui-fns/plugin";
+// Atscript build plugin for @ui.fn.* keys (in atscript.config.ts) — default export
+import uiFnsPlugin from "@atscript/ui-fns/plugin";
 
 // Framework-agnostic table model
 import {

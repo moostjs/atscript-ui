@@ -75,8 +75,8 @@ defineProps<{
 | --------------------------- | ------------------------------------------------ | ------------------------ |
 | Locale                      | `useCellLocale().locale`                         | —                        |
 | Currency code (fixed)       | `@db.amount.currency 'USD'`                      | `currencyCode`           |
-| Currency code (per-row)     | `@db.amount.currency.field 'currencyField'`      | `currencyRefField`       |
-| Unit (fixed / per-row)      | `@db.unit 'kg'` / `@db.unit.field 'unit'`        | `unitCode` / `unitRefField` |
+| Currency code (per-row)     | `@db.amount.currency.ref 'currencyField'`        | `currencyRefField`       |
+| Unit (fixed / per-row)      | `@db.unit 'kg'` / `@db.unit.ref 'unit'`          | `unitCode` / `unitRefField` |
 | Precision scale             | `@db.column.precision 2`                         | `precisionScale`         |
 
 Money branch wins over precision (CLDR currency fraction digits beat static config). Non-finite raw values render the source string so malformed decimals stay visible. Internally delegates to `formatDecimalForDisplay` from `@atscript/ui`.
@@ -233,7 +233,7 @@ For numeric cells, prefer composing with `useCellLocale()` + `formatDecimalForDi
 | `#empty`               | `{ filters, searchTerm, clearFilters }`                         | Empty-state body when results are empty.                  |
 | `#query-loading`       | —                                                                | Spinner / skeleton during fetch (default is a small icon overlay). |
 | `#error`               | `{ error, kind, retry }`                                        | Error-state body.                                         |
-| `#row-actions`         | `{ row, pk, actions }`                                          | Custom row-actions cell when `rowActionsColumn` is set.   |
+| `#last-row`            | —                                                                | Pseudo-row rendered after the last data row (footer / totals). |
 
 Slot scope-name uses the column path verbatim (dots included): `<template #cell-address.city="...">`. Slots win over the cell-component dispatch for matched columns.
 

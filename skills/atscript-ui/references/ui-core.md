@@ -152,8 +152,16 @@ export interface ValueHelpInfo {
 
 export type TFormEntryOptions = { key: string; label: string } | string;
 
-export interface ResolvedValueHelp extends ValueHelpInfo {
-  tableDef: TableDef;           // added after lazy /meta fetch
+export interface ResolvedValueHelp {
+  url: string;
+  primaryKeys: string[];
+  labelField: string;
+  descrField: string | undefined;
+  attrFields: string[];
+  filterableFields: string[];
+  sortableFields: string[];
+  searchable: boolean;
+  targetType: TAtscriptAnnotatedType;
 }
 ```
 
@@ -282,8 +290,8 @@ extractLiteralOptions(prop: TAtscriptAnnotatedType):
 
 isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 
-valueHelpDictPaths(tableDef: TableDef): { label?: string; descr?: string; attrs: string[] };
-// Reads @ui.dict.label / @ui.dict.descr / @ui.dict.attr on the resolved target.
+valueHelpDictPaths(resolved: ResolvedValueHelp): Set<string>;
+// Returns the dict-view paths: PKs + label + descr + attr fields. Used by filter dialogs.
 
 resolveValueHelp(url: string): Promise<ResolvedValueHelp>;
 // Lazy — fetches the target's /meta once per URL, builds a TableDef, caches.
@@ -292,9 +300,11 @@ resetValueHelpCache(): void;
 // Clear the per-URL cache (e.g. on logout).
 
 class ValueHelpClient {
-  search(query: string, opts?: ValueHelpSearchOptions): Promise<ValueHelpResult>;
-  byKey(key: string | number): Promise<{ key: string; label: string } | undefined>;
+  constructor(client: Client);                                                  // Client from @atscript/db-client
+  search(resolved: ResolvedValueHelp, opts?: ValueHelpSearchOptions): Promise<ValueHelpResult>;
 }
+// ValueHelpSearchOptions = { text?, mode?: 'form' | 'filter', limit?, select?: string[] }
+// ValueHelpResult = { items: Record<string, unknown>[] }
 
 // Static option helpers
 optKey(option: TFormEntryOptions): string;
@@ -389,13 +399,14 @@ str(value: unknown): string;  // safe string coercion (null/undefined → '')
 
 // Client factory (used by tables + value-help so consumers register one HTTP client)
 setDefaultClientFactory(factory: ClientFactory): void;
-getDefaultClientFactory(): ClientFactory | undefined;
+getDefaultClientFactory(): ClientFactory;          // never undefined — falls back to `new Client(url)`
 resetDefaultClientFactory(): void;
-type ClientFactory = (url: string) => unknown;
+type ClientFactory = (url: string) => Client;      // Client from @atscript/db-client
 
-// Meta cache — single /meta fetch per URL shared across tables + value-help
-getMetaEntry(url: string): MetaCacheEntry | undefined;
+// Meta cache — single /meta fetch per URL shared across tables + value-help. Synchronous: returned promises resolve once the underlying fetch settles.
+getMetaEntry(url: string, factory?: ClientFactory): MetaCacheEntry;
 resetMetaCache(): void;
+interface MetaCacheEntry { client: Client; meta: Promise<MetaResponse>; type: Promise<TAtscriptAnnotatedType>; resolved?: Promise<ResolvedValueHelp>; tableDef?: Promise<TableDef>; }
 ```
 
 ## @atscript/ui — Annotation key constants
@@ -521,13 +532,13 @@ hasSecondValue(type: FilterConditionType): boolean;   // 'bw' → true
 isSimpleEq(condition: FilterCondition): boolean;
 conditionLabel(type: FilterConditionType): string;
 filledFilterCount(filters: FieldFilters): number;
-filterTokenLabel(condition: FilterCondition, columnType: ColumnFilterType): string;
+filterTokenLabel(path: string, conditions: FilterCondition[], columnLabel?: string): string;
 
-conditionsForType(columnType: ColumnFilterType, nullable: boolean): FilterConditionType[];
+conditionsForType(columnType: ColumnFilterType, nullable?: boolean): readonly FilterConditionType[];
 columnFilterType(columnType: string): ColumnFilterType;
-defaultCondition(columnType: ColumnFilterType): FilterConditionType;
+defaultCondition(columnType: ColumnFilterType): FilterConditionType;     // text/enum/ref → contains, else eq
 
-parseFilterInput(input: string, columnType: ColumnFilterType): FilterCondition | undefined;
+parseFilterInput(text: string, columnType: ColumnFilterType, nullable?: boolean): FilterCondition | undefined;
 formatFilterCondition(condition: FilterCondition): string;
 
 escapeRegex(input: string): string;
@@ -545,9 +556,9 @@ uniqueryFilterToFieldFilters(expr: FilterExpr): FieldFilters;
 Date shortcuts (relative date filters):
 
 ```typescript
-interface DateShortcut { id: string; label: string; from?: string; to?: string; }
+interface DateShortcut { label: string; dates: [start: string, end: string]; }
 dateShortcuts(now?: Date): DateShortcut[];
-// 'today', 'last-7-days', 'this-month', etc.
+// Last 7/30/90 Days, Last 6/12 Months, Month to Date, Year to Date — ISO date pairs for `bw`
 ```
 
 Source: `packages/ui-table/src/filters/`.
@@ -695,35 +706,32 @@ Source: `packages/ui-table/src/presets/`.
 ```typescript
 class PresetsClient {
   constructor(config: PresetsClientConfig);
-  list(opts?: { app: string; tableKey?: string }): Promise<PresetsListResult>;
-  saveAs(opts: PresetsSaveAsOptions): Promise<PresetsSaveResult>;
-  update(id: string, patch: Partial<AsPresetEntryRow>): Promise<AsPresetEntryRow>;
-  delete(id: string): Promise<void>;
-  capabilities(opts: { app: string; tableKey?: string }): Promise<PresetCapabilities>;
-  // Full method list in packages/ui-table/src/presets/presets-client.ts:88
+  list(opts?: { capabilities?: boolean }): Promise<PresetsListResult>;
+  loadCapabilities(): Promise<PresetCapabilities>;
+  savePreset(id: string, label: string, snapshot: PresetSnapshot): Promise<void>;
+  savePresetAs(label: string, snapshot: PresetSnapshot, opts?: PresetsSaveAsOptions): Promise<PresetsSaveResult>;
+  renamePreset(id: string, label: string): Promise<void>;
+  setPublic(id: string, value: boolean): Promise<void>;
+  deletePreset(id: string): Promise<void>;
+  upsertUserConf(existing: AsPresetEntryRow | null, patch: Partial<UserConfData>, user?: string): Promise<void>;
 }
 
-class PresetsHttpError extends Error {
-  status: number;
-  code?: AsPresetsErrorCode;
-  body?: unknown;
-}
+class PresetsHttpError extends Error { readonly status: number; }
+isAuthError(err: unknown): boolean;   // true for HTTP 401/403 on ClientError or PresetsHttpError
 
-isAuthError(err: unknown): boolean;   // true when err.status is 401 or 403
-
-interface PresetsClientConfig { /* baseUrl + transport hooks */ }
-interface PresetsListResult { rows: AsPresetEntryRow[]; }
-interface PresetsSaveAsOptions { app: string; tableKey?: string; label: string; content: PresetSnapshot; public?: boolean; }
-interface PresetsSaveResult { row: AsPresetEntryRow; }
+interface PresetsClientConfig { url: string; app: string; tableKey: string; client?: Client; clientFactory?: (url: string) => Client; fetch?: typeof globalThis.fetch; }
+interface PresetsListResult { presets: AsPresetEntryRow[]; userConf: AsPresetEntryRow | null; capabilities: PresetCapabilities | null | undefined; denied: boolean; }
+interface PresetsSaveAsOptions { public?: boolean; }
+interface PresetsSaveResult { id: string; }
 
 class AppPrefsClient {
   constructor(config: AppPrefsClientConfig);
   load(): Promise<AppPrefsLoadResult>;
-  save(prefs: AppConfData): Promise<AppConfData>;
+  save(existing: AsPresetEntryRow | null, patch: Partial<AppConfData>, user?: string): Promise<string | null>;
 }
 
-interface AppPrefsClientConfig { /* baseUrl + transport */ }
-interface AppPrefsLoadResult { prefs: AppConfData; row?: AsPresetEntryRow; }
+interface AppPrefsClientConfig { url: string; app: string; client?: Client; clientFactory?: (url: string) => Client; }
+interface AppPrefsLoadResult { row: AsPresetEntryRow | null; prefs: AppConfData | null; denied: boolean; }
 ```
 
 Source: `packages/ui-table/src/presets/presets-client.ts`, `packages/ui-table/src/presets/app-prefs-client.ts`. Translates intent → HTTP; holds **no** reactive state.
@@ -742,9 +750,9 @@ export interface BuildTableQueryOptions {
   includeActions?: boolean;         // → controls.$actions = true
 }
 
-buildTableQuery(opts: BuildTableQueryOptions): Uniquery;   // from @uniqu/core
+buildTableQuery(opts: BuildTableQueryOptions): Uniquery;                  // from @uniqu/core
 mergeSorters(force: SortControl[], user: SortControl[]): SortControl[];
-mergeFilters(force?: FilterExpr, user?: FilterExpr): FilterExpr | undefined;
+mergeFilters(force?: FilterExpr, user?: FilterExpr): FilterExpr | undefined;  // AND-merge, parser-safe
 ```
 
 Source: `packages/ui-table/src/query/build-table-query.ts:40`. Pure function — no framework deps.
@@ -764,16 +772,15 @@ resolveAspectGate(value: boolean | string[] | undefined): AspectGate;
 stateToUrlQueryString(
   state: UrlQueryStateLike,
   defaults: UrlQueryDefaults,
-  gate: AspectGate,
 ): string;
 
 urlQueryStringToState(
-  query: string,
-  opts: UrlQueryParseOptions,
+  urlString: string,
+  opts?: UrlQueryParseOptions,
 ): UrlQueryStateSnapshot;
 ```
 
-`AspectGate` controls which aspects (columns/filters/sorters/...) the bridge writes/reads. Consumers wire this into router-level hydration; a `hydration` flag at the table state suppresses round-trips during initial replay.
+Per-aspect gates live on `UrlQueryDefaults.sync` (encoder) and `UrlQueryParseOptions.sync` (decoder) — pass the same `sync` config to both directions or the echo guard mismatches.
 
 Source: `packages/ui-table/src/query/url-query.ts`.
 
@@ -794,8 +801,8 @@ Source: `packages/ui-table/src/selection/selection-fns.ts`.
 ```typescript
 DEFAULT_ROW_HEIGHT_PX: number;
 
-interface PageAlignedBlock { firstIndex: number; lastIndex: number; }
-pageAlignedBlocksFor(topIndex: number, viewport: number, blockSize: number, total: number): PageAlignedBlock[];
+interface PageAlignedBlock { page: number; firstIndex: number; }
+pageAlignedBlocksFor(skip: number, limit: number, blockSize: number): PageAlignedBlock[];
 blockStartFor(absIdx: number, blockSize: number): number;
 clampTopIndex(topIndex: number, totalCount: number, viewport: number): number;
 
@@ -804,8 +811,8 @@ walkForwardAbsorb(/* ... */): MergeResult;
 walkBackwardAbsorb(/* ... */): MergeResult;
 
 export type FetchPlanMode = 'jump' | 'steady';
-interface FetchPlan { mode: FetchPlanMode; blocks: PageAlignedBlock[]; }
-interface PlanFetchArgs { /* topIndex, viewport, blockSize, cache, totals */ }
+interface FetchPlan { skip: number; limit: number; mode: FetchPlanMode; }
+interface PlanFetchArgs { top: number; viewport: number; totalCount: number; cache: Map<number, unknown>; blockSize: number; buffer: number; }
 planFetch(args: PlanFetchArgs): FetchPlan | null;
 ```
 
@@ -900,11 +907,11 @@ sortersEqual(a: SortControl[], b: SortControl[]): boolean;
 
 export type ColumnReorderPosition = 'before' | 'after';
 reorderColumnNames(
-  current: string[],
-  source: string,
-  target: string,
+  names: string[],
+  fromPath: string,
+  toPath: string,
   position: ColumnReorderPosition,
-): string[];
+): string[];   // pure — returns input unchanged when paths missing or move is no-op
 ```
 
 Source: `packages/ui-table/src/utils/`.

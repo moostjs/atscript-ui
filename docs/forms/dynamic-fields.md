@@ -28,14 +28,15 @@ compile.
 
 ## Scope passed to every function
 
-Every compiled function body sees four variables in scope:
+Every compiled function body sees these variables in scope:
 
-| Variable  | What it is                                                       |
-| --------- | ---------------------------------------------------------------- |
-| `v`       | Current value of the annotated field                             |
-| `data`    | Unwrapped domain data (`formData.value`)                         |
-| `context` | The `:form-context` prop passed to `<AsForm>`, or `{}`           |
-| `entry`   | Per-field evaluated snapshot (name, type, disabled, options, …)  |
+| Variable  | What it is                                                                  |
+| --------- | --------------------------------------------------------------------------- |
+| `v`       | Current value of the annotated field                                        |
+| `data`    | Unwrapped domain data (`formData.value`)                                    |
+| `context` | The `:form-context` prop passed to `<AsForm>`, or `{}`                      |
+| `entry`   | Per-field evaluated snapshot (name, type, disabled, options, …)             |
+| `action`  | Dispatched action id when the evaluation was kicked off by an action click  |
 
 The full type is `TFnScope` from `@atscript/ui-fns/runtime/types.ts`.
 
@@ -45,8 +46,13 @@ interface TFnScope<V = unknown> {
   data: Record<string, unknown>
   context: Record<string, unknown>
   entry?: TFieldEvaluated
+  action?: string
 }
 ```
+
+Top-level functions (`@ui.form.fn.title`, `@ui.form.fn.submit.text`,
+`@ui.form.fn.submit.disabled`) receive only `(data, context)` — there
+is no `v`, `entry`, or `action` at the form-level scope.
 
 ## Every static prop has a dynamic counterpart
 

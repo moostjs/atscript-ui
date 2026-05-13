@@ -507,30 +507,29 @@ function extractLiteralOptions(prop: TAtscriptAnnotatedType): { key: string; lab
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 ```
 
-### `valueHelpDictPaths(prop)`
-
-Returns the dot-paths to dictionary fields surfaced by `@ui.dict.*` annotations on a ref target.
-
 ### `ValueHelpClient`
 
-Class wrapping a value-help search endpoint. Used internally by Vue field components — most consumers route through `resolveValueHelp()` instead.
+Thin wrapper over a pre-built `Client` (from `@atscript/db-client`) that runs FK-flavoured searches against the value-help target. Most consumers stick to `resolveValueHelp()` plus their own `Client`; this class formalises the search semantics (full-text `$search` when the target is searchable, `$or`-regex fallback otherwise) so picker UIs don't reimplement them.
 
 ```typescript
 class ValueHelpClient {
-  constructor(config: { url: string; targetField: string; clientFactory?: ClientFactory });
-  search(opts: ValueHelpSearchOptions): Promise<ValueHelpResult>;
+  constructor(client: Client);
+  search(resolved: ResolvedValueHelp, opts?: ValueHelpSearchOptions): Promise<ValueHelpResult>;
 }
 
 interface ValueHelpSearchOptions {
-  query?: string;
-  filter?: Record<string, unknown>;
-  page?: number;
-  itemsPerPage?: number;
+  /** Search term. Empty / undefined returns all records. */
+  text?: string;
+  /** `"form"` = PK + label + descr; `"filter"` = all dict fields including attrs. Default: `"form"`. */
+  mode?: "form" | "filter";
+  /** Max results. Default: 20. */
+  limit?: number;
+  /** Override the computed `$select` fields. */
+  select?: string[];
 }
 
 interface ValueHelpResult {
   items: Record<string, unknown>[];
-  total: number;
 }
 ```
 
@@ -543,10 +542,24 @@ function resolveValueHelp(url: string): Promise<ResolvedValueHelp>;
 function resetValueHelpCache(): void;
 
 interface ResolvedValueHelp {
-  meta: MetaResponse;
-  type: TAtscriptAnnotatedType;
-  // ... target field metadata
+  url: string;
+  primaryKeys: string[];
+  labelField: string;
+  descrField: string | undefined;
+  attrFields: string[];
+  filterableFields: string[];
+  sortableFields: string[];
+  searchable: boolean;
+  targetType: TAtscriptAnnotatedType;
 }
+```
+
+### `valueHelpDictPaths(resolved)`
+
+Returns the dict-view path set of a resolved value-help target (PKs + label + descr + attr fields). Filter dialogs use it to clamp visible columns to the dictionary subset.
+
+```typescript
+function valueHelpDictPaths(resolved: ResolvedValueHelp): Set<string>;
 ```
 
 See [Forms — References (FK)](/forms/references).
@@ -567,24 +580,35 @@ function resolveOptions(
 
 ## Grid layout
 
-Framework-agnostic helpers for `@ui.form.grid.colSpan` / `@ui.form.grid.rowSpan`.
+Framework-agnostic helpers for `@ui.form.grid.colSpan` / `@ui.form.grid.rowSpan`. Each annotation has the shape `{ desktop, narrow? }` — `getFieldMeta(prop, UI_FORM_GRID_COL_SPAN)` returns a `GridSpanArgs`.
 
 ```typescript
-const DEFAULT_COL_SPAN: number;
-const DEFAULT_ROW_SPAN: number;
+const DEFAULT_COL_SPAN: number; // 12
+const DEFAULT_ROW_SPAN: number; // 1
 
 interface GridSpec {
-  colSpan: number;
-  rowSpan: number;
-}
-interface GridSpanArgs {
-  col?: number | string;
-  row?: number | string;
+  col: { desktop: number; narrow: number };
+  row: { desktop: number; narrow: number };
 }
 
-function parseColSpan(raw: unknown): number;
-function parseRowSpan(raw: unknown): number;
-function resolveGridSpec(prop: TAtscriptAnnotatedType): GridSpec;
+interface GridSpanArgs {
+  desktop: string;
+  narrow?: string;
+}
+
+/** Accepts `"1"`–`"12"` and the aliases `"full"` (12), `"half"` (6), `"third"` (4). */
+function parseColSpan(raw: string | undefined): number | undefined;
+
+/** Accepts numeric strings `"1"`+; rejects `"0"`, negatives, decimals, aliases. */
+function parseRowSpan(raw: string | undefined): number | undefined;
+
+/** Compose a resolved spec from already-extracted `colSpan` / `rowSpan` annotation values. */
+function resolveGridSpec(
+  colSpan: GridSpanArgs | undefined,
+  rowSpan: GridSpanArgs | undefined,
+): GridSpec;
+
+/** Emit `col-span-X` / `row-span-X` + `as-narrow:` variants for the spec. */
 function buildGridClasses(spec: GridSpec): string;
 ```
 
@@ -628,19 +652,21 @@ function getColumn(def: TableDef, path: string): ColumnDef | undefined;
 ## Error map utilities
 
 ```typescript
+/** Merge any number of partial error maps; falsy values are dropped, later maps win when both have a string. */
 function mergeErrorMaps(
-  a: Record<string, string | undefined> | undefined,
-  b: Record<string, string> | undefined,
-): Record<string, string | undefined> | undefined;
+  ...maps: Array<Record<string, string | undefined> | undefined>
+): Record<string, string>;
 
+/** Yields every ancestor prefix longest-first, including the path itself. `"a.b.c"` → `"a.b.c", "a.b", "a"`. */
 function* iteratePathAncestors(path: string): Generator<string>;
 
+/** Build `Map<absolutePath, descendantErrorCount>` so each struct in the tree renders an error-count badge in O(1). */
 function buildDescendantErrorCounts(
-  errors: Record<string, string | undefined> | undefined,
+  errors: Record<string, string | undefined>,
 ): Map<string, number>;
 ```
 
-`iteratePathAncestors("a.b.c")` yields `"a.b"`, `"a"`, `""`. `buildDescendantErrorCounts` powers the count badges on `AsObject` headers.
+`buildDescendantErrorCounts` powers the count badges on `AsObject` headers.
 
 ## Type guards
 
@@ -655,9 +681,14 @@ function isTupleField(field: FormFieldDef): field is FormTupleFieldDef;
 
 ```typescript
 function asArray<T>(x: T | T[]): T[];
-function resolveSingularLabel(prop: TAtscriptAnnotatedType): string | undefined;
-function extractMeasurement(prop: TAtscriptAnnotatedType): MeasurementInfo | undefined;
-function str(...parts: unknown[]): string;
+
+/** `@ui.form.label.singular` for array fields; falls back to `"item"`. */
+function resolveSingularLabel(prop: TAtscriptAnnotatedType | undefined): string;
+
+/** Always returns a `MeasurementInfo` — individual fields are `undefined` when their annotation is absent. */
+function extractMeasurement(prop: TAtscriptAnnotatedType): MeasurementInfo;
+
+function str(value: unknown): string;
 ```
 
 `extractMeasurement` reads `@db.amount.currency*` / `@db.unit*` / `@db.column.precision` and returns a structured info record consumed by AsField for currency/unit adornments.
@@ -667,24 +698,27 @@ function str(...parts: unknown[]): string;
 `ClientFactory` is the contract Vue tables and value-help use to build HTTP clients. Override globally to inject auth headers / retries / interceptors.
 
 ```typescript
-type ClientFactory = (url: string) => DbClient;
+type ClientFactory = (url: string) => Client; // `Client` from `@atscript/db-client`
 
 function setDefaultClientFactory(factory: ClientFactory): void;
-function getDefaultClientFactory(): ClientFactory | undefined;
+function getDefaultClientFactory(): ClientFactory; // never `undefined` — falls back to `(url) => new Client(url)`
 function resetDefaultClientFactory(): void;
 ```
 
 ## Meta cache
 
-A single `/meta` fetch per URL is cached across `useTable` instances and `resolveValueHelp` calls.
+A single `/meta` fetch per URL is cached across `useTable` instances and `resolveValueHelp` calls. `getMetaEntry` is synchronous — the promises on the entry resolve once the underlying fetch settles.
 
 ```typescript
-function getMetaEntry(url: string): Promise<MetaCacheEntry>;
+function getMetaEntry(url: string, factory?: ClientFactory): MetaCacheEntry;
 function resetMetaCache(): void;
 
 interface MetaCacheEntry {
-  meta: MetaResponse;
-  type: TAtscriptAnnotatedType;
+  client: Client;                                       // from `@atscript/db-client`
+  meta: Promise<MetaResponse>;
+  type: Promise<TAtscriptAnnotatedType>;                // pre-deserialized
+  resolved?: Promise<ResolvedValueHelp>;                // populated lazily by `resolveValueHelp`
+  tableDef?: Promise<TableDef>;                         // populated lazily by Vue `useTable`
 }
 ```
 

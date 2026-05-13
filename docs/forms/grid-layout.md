@@ -66,7 +66,7 @@ Both annotations take an optional second argument for the narrow breakpoint:
 discount: number
 ```
 
-- `'4'` = quarter-width on desktop (3 fields per row).
+- `'4'` = one-third on desktop (4 of 12 columns, so 3 fields per row).
 - `'6'` = half-width on narrow containers.
 
 If the narrow argument is omitted, narrow defaults to `'12'` (full-width). You

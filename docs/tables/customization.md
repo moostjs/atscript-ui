@@ -59,9 +59,16 @@ Pick the smallest layer that does the job.
 ```
 
 `<AsTableRoot>` exposes additional top-level slots — its default
-`v-slot` receives `{ tableDef, loadingMetadata, loadedCount,
-totalCount }` so the page chrome (toolbar, pagination, filter bar)
-can read from one source.
+`v-slot` receives the full table-state surface so the page chrome
+(toolbar, pagination, filter bar) reads from one source: `tableDef`,
+`loadingMetadata`, `metadataError`, `allColumns`, `columnNames`,
+`columnWidths`, `columns`, `filterFields`, `filters`, `sorters`,
+`results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`,
+`pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`,
+`selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`,
+`showConfigDialog`, `openFilterDialog`, `closeFilterDialog`,
+`setFieldFilter`, `removeFieldFilter`, `addFilterField`,
+`removeFilterField`, `actions`, `prompt`.
 
 ## Cell-type map (`:types`)
 
@@ -152,10 +159,14 @@ root mounts them only when needed (an action declares an
 pre-seed, import from the package and assign explicitly:
 
 ```ts
-import { AsActionFormDialog } from "@atscript/vue-table";
+import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
 
 const controls = { ...createDefaultControls(), actionFormDialog: AsActionFormDialog };
 ```
+
+`AsActionFormDialog` pulls in the full `@atscript/vue-form` runtime,
+so the main entry doesn't export it — import the dedicated subpath
+above when you need to override or eager-load.
 
 ## Worked example: design-system row actions
 

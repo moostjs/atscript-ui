@@ -124,7 +124,7 @@ Token transports: 'body' (default), 'cookie', 'query' (?wfs=...).
 | 6   | **Outlet pause is "finished" from the HTTP perspective.** Server returns `{ sent: true }` or `{ outlet: '<name>' }` → client fires `@finished`. Actual resume happens out-of-band (email link click → URL with `?wfs=<token>` → mount `<AsWfForm initialToken="...">`). No client-side polling.                                                                                                                                                                       |
 | 7   | **`AsWfStore` is single-use on resume.** `getAndDelete(handle)` is race-safe — the row is deleted atomically when the resume succeeds. Don't call `get()` then `delete()` separately; use `getAndDelete`.                                                                                                                                                                                                                                                            |
 | 8   | **Shadow columns require `string \| number \| boolean`.** `@wf.store.fromContext 'path.in.context'` copies the value at every `set()`. Optional fields → `null` on path miss; required fields without DB defaults → insert may fail. Type mismatches log once per field per store instance, write `null`, continue. Run `store.heal()` after schema or path changes.                                                                                                  |
-| 9   | **`@atscript/moost-wf/store` is ESM-only.** It re-exports atscript-generated classes; the CommonJS build skips the atscript Vite plugin and crashes on `.as` parsing. CJS consumers must use the main entrypoint and forgo the persistent store.                                                                                                                                                                                                                     |
+| 9   | **`@atscript/moost-wf/store` is ESM-only.** Triggered by any import of `@atscript/moost-wf/store` (runtime class) or `@atscript/moost-wf/store.as` (atscript model). Fix: set `"type": "module"` in the consumer's `package.json` and bundle ESM. CJS consumers must drop `AsWfStore` and use the in-memory store from `@moostjs/event-wf`.                                                                                                                            |
 | 10  | **Token transport survives reloads only if persistent.** `body` transport (default) is lost on reload. `cookie` survives until expiry. `query` (`?wfs=token`) is URL-shareable and single-use. Pick the transport that matches your resume story.                                                                                                                                                                                                                    |
 
 ## Key imports
@@ -144,7 +144,7 @@ import {
 import type { TFormInput } from "@atscript/moost-wf";
 
 // Server — atscript build-time plugin (in atscript.config.ts)
-import { wfPlugin } from "@atscript/moost-wf/plugin"; // registers @wf.context.pass, @wf.action.withData, @wf.store.fromContext
+import wfPlugin from "@atscript/moost-wf/plugin"; // default export — registers @wf.context.pass, @wf.action.withData, @wf.store.fromContext
 
 // Server — persistent state store
 import { AsWfStore, AsWfStateRecord } from "@atscript/moost-wf/store";

@@ -76,6 +76,9 @@ See `atscript-db` skill for the `@db.*` annotation surface used here.
 
 ```atscript
 // src/wf/wf-state.as
+//
+// Subpath duality: `.as` files import the model from `/store.as` (raw atscript
+// source); `.ts` files import the runtime class from `/store` (compiled module).
 import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
 
 @db.table 'wf_states'
@@ -161,7 +164,7 @@ All async. All operate on `handle`.
 | `get(handle)` | `Promise<{ state, expiresAt? } \| null>` | reads + auto-deletes if expired (fire-and-forget delete). Returns `null` past expiry. |
 | `getAndDelete(handle)` | `Promise<{ state, expiresAt? } \| null>` | **race-safe single-use consume.** Use this on resume — never `get()` then `delete()`. |
 | `delete(handle)` | `Promise<void>` | explicit removal |
-| `cleanup({ retention?, dryRun? })` | `Promise<number>` | delete rows with `expiresAt <= now - retention`. No retention → delete past-expiry. `Number.POSITIVE_INFINITY` → no-op. Returns `deletedCount`. |
+| `cleanup({ retention? })` | `Promise<number>` | delete rows with `expiresAt <= now - retention`. No retention → delete past-expiry. `Number.POSITIVE_INFINITY` → no-op. Returns `deletedCount`. |
 | `heal({ filter?, batchSize? })` | `Promise<number>` | re-apply shadow columns to existing rows. Batches at `batchSize ?? 100`. Returns count of rows updated. |
 
 ### getAndDelete contract
@@ -197,30 +200,70 @@ Source: `packages/moost-wf/src/store/wf-store.ts:197-329`.
 
 ## CJS limitation
 
-`@atscript/moost-wf/store` is **ESM-only**. Reason: the subpath re-exports `AsWfStateRecord` from a `.as` file (`packages/moost-wf/package.json:38` — `./store.as: ./src/store/as-wf-state.as`). The CJS build path does not run the atscript Vite plugin, so `.as` parsing crashes.
+`@atscript/moost-wf/store` ships ESM only. **Triggered by:** any `import` of `@atscript/moost-wf/store` or `@atscript/moost-wf/store.as` in your server code. **Fix:** set `"type": "module"` in the consumer's `package.json` and bundle ESM. CJS consumers must drop `AsWfStore` and use the in-memory store from `@moostjs/event-wf` (no persistence).
 
-| Consumer bundle | Result |
-| --------------- | ------ |
-| ESM | full persistence — `AsWfStore` works |
-| CJS | use main entrypoint (`@atscript/moost-wf`) and the in-memory store from `@moostjs/event-wf` — no persistence |
-
-This is SKILL.md invariant 9. If you must run CJS, plan for non-persistent flows (or migrate to ESM).
+This is SKILL.md invariant 9.
 
 ## Wiring AsWfStore into the workflow engine
 
-The store binding lives in `@moostjs/event-wf` / `@prostojs/wf`. Pattern:
+`MoostWf` takes no store option. The store is plugged in **per request** via `HandleStateStrategy` from `@moostjs/event-wf`, passed into `handleWfOutletRequest({ state })`. Pattern:
 
 ```typescript
-import { MoostWf } from "@moostjs/event-wf";
+import { Controller } from "moost";
+import { Post } from "@moostjs/event-http";
+import {
+  MoostWf,
+  HandleStateStrategy,
+  EncapsulatedStateStrategy,
+  createHttpOutlet,
+  createEmailOutlet,
+  handleWfOutletRequest,
+  type WfOutletTriggerDeps,
+} from "@moostjs/event-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 
-const wfStore = new AsWfStore({ table: wfStatesTable, actor: () => useSession().userId });
+const wfStore = new AsWfStore({
+  table: wfStatesTable,
+  actor: () => useSession()?.userId,
+});
 
-const wfAdapter = new MoostWf({ store: wfStore });
-app.adapter(wfAdapter);
+const handleStrategy = new HandleStateStrategy({ store: wfStore });
+
+@Controller()
+export class WorkflowsController {
+  constructor(private readonly wf: MoostWf) {}
+
+  @Post("wf")
+  async handle() {
+    const wfApp = this.wf.getWfApp();
+    const deps: WfOutletTriggerDeps = {
+      start: (schemaId, ctx, opts) =>
+        wfApp.start(schemaId, ctx as never, {
+          input: opts?.input,
+          eventContext: opts?.eventContext as never,
+        }),
+      resume: (state, opts) =>
+        wfApp.resume(state as never, {
+          input: opts?.input,
+          eventContext: opts?.eventContext as never,
+        }),
+    };
+    return handleWfOutletRequest(
+      {
+        allow: ["auth/invite", /* ... */],
+        // Per-call strategy selection. Return the same `handleStrategy` to use
+        // AsWfStore on every flow, or branch by `wfid` for mixed persistence.
+        state: () => handleStrategy,
+        outlets: [createHttpOutlet(), createEmailOutlet(sendEmail)],
+        token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
+      },
+      deps,
+    );
+  }
+}
 ```
 
-The exact constructor option name depends on the `@moostjs/event-wf` version — see the `wooksjs` skill (or `@moostjs/event-wf` docs) for the current API. The contract `AsWfStore` implements is `WfStateStore` from `@prostojs/wf/outlets`, so any adapter accepting that interface accepts `AsWfStore`.
+The `state` callback fires for every request; return one strategy instance for all flows or pick by `wfid` (e.g. `HandleStateStrategy` for outlet-resumable flows, `EncapsulatedStateStrategy` for stateless ones). `AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`; `HandleStateStrategy` accepts any `WfStateStore` implementation. Adapter bootstrap stays vanilla: `app.adapter(new MoostWf())` with no options.
 
 ## Recipe — invite + register flow with shadow column lookup
 

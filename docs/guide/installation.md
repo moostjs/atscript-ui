@@ -111,9 +111,9 @@ Components({ resolvers: [AsResolver()] });
 
 What auto-resolves:
 
-| Auto-imported (Tier 1)                                                                          | NOT auto-imported (Tier 2)                                                          |
-| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `<AsForm>` `<AsField>` `<AsIterator>` `<AsTable>` `<AsTableRoot>` `<AsWindowTable>` `<AsFilters>` `<AsPresetPicker>` `<AsWfForm>` | Default field components (`AsInput`, `AsSelect`, `AsCheckbox`, …), default cells, default dialogs |
+| Auto-imported (Tier 1)                                                                                                                                | NOT auto-imported (Tier 2)                                                                        |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `<AsForm>` `<AsField>` `<AsIterator>` `<AsTable>` `<AsTableRoot>` `<AsWindowTable>` `<AsTableActions>` `<AsFilters>` `<AsPresetPicker>` `<AsWfForm>` | Default field components (`AsInput`, `AsSelect`, `AsCheckbox`, …), default cells, default dialogs |
 
 Tier-2 defaults are swap targets you compose through `:types` / `:components` prop maps, not template tags — so the resolver intentionally skips them. Composables (`useForm`, `useTable`, `useWfForm`) are not components and always need an explicit import. See [Styling: AsResolver](/styling/installation#asresolver-auto-import) for the full pattern.
 

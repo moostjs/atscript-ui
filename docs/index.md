@@ -14,15 +14,22 @@ actions:
     link: https://github.com/moostjs/atscript-ui
 ---
 
-## The atscript ecosystem
+## AI Agent Skill
 
-- **[atscript.dev](https://atscript.dev)** — the `.as` language: types, `@meta.*`/`@expect.*` annotations, codegen, validation.
-- **[db.atscript.dev](https://db.atscript.dev)** — database adapters, `@db.*` annotations, schema sync, REST surface.
-- **ui.atscript.dev** (you are here) — UI components driven by the same annotated types.
+Atscript UI ships a bundle of skills for AI coding agents (Claude Code, Cursor, Windsurf, Codex, etc.). One command installs all five sub-skills — covering forms, tables, workflows, styling, and the framework-agnostic core:
 
-## What's inside
+```bash
+npx skills add moostjs/atscript-ui
+```
 
-- **[Forms](/forms/)** — `<AsForm>` renders any annotated type as a working form, with validation, arrays, nested objects, unions, and tuples.
-- **[Tables](/tables/)** — `<AsTableRoot>` + `<AsTable>` reads `@ui.table.*` and `@db.*` metadata to render searchable, filterable, sortable, paginated (or virtualized) tables.
-- **[Workflows](/workflows/)** — `<AsWfForm>` + `@atscript/moost-wf` implement HTTP round-trip multi-step forms driven by atscript types on both sides.
-- **[Styling](/styling/)** — UnoCSS preset, `as-*` shortcut tree, semantic icons, and vunor-driven theming.
+Includes `atscript-ui` (core + `@ui.*` annotations), `atscript-ui-forms` (`<AsForm>`), `atscript-ui-tables` (`<AsTableRoot>` + `<AsTable>`), `atscript-ui-wf` (`<AsWfForm>` + `moost-wf`), and `atscript-ui-styles` (UnoCSS preset, `as-*` shortcuts, icons, theming).
+
+You will likely also want the companion skills:
+
+```bash
+npx skills add moostjs/atscript      # .as syntax, @meta.* / @expect.*, asc, Validator
+npx skills add moostjs/atscript-db   # @db.* annotations, adapters, moost-db REST, browser client
+npx skills add moostjs/moostjs       # Moost framework (controllers, DI, interceptors) — needed for moost-wf
+```
+
+Learn more about AI agent skills at [skills.sh](https://skills.sh).

@@ -10,7 +10,7 @@ description: >-
   defaults via `:types` (built-in renderers) or `:components` (custom widgets);
   when implementing custom field components against `TAsComponentProps` /
   `AsFieldShell`; or when calling `useAsForm` / `useAsField` / `useAsArray` /
-  `useAsUnion` / `useAsTuple` / `useAsLocale` / `useFormContext`. Out of scope:
+  `useAsUnion` / `useAsTuple` / `useAsLocale` / `useAsData`. Out of scope:
   tables (use `atscript-ui-tables`), HTTP workflow forms (use `atscript-ui-wf`),
   styling and `as-*` shortcuts (use `atscript-ui-styles`), framework-agnostic
   primitives like `createFormDef` (use the general `atscript-ui` skill).
@@ -111,7 +111,7 @@ import {
   useAsValueHelp, useAsDropdown, useAsOptionalAddFlow, useAsTriStateCheckbox,
   useAsDate, useAsDecimal, useAsNumber, useAsDualInput,
   useAsLocale, useAsPath, useAsTypeMap, useAsData, useAsErrorDismiss,
-  useAsNestedSectionsStore, useAsExternalErrors, useFormContext, useAsUnionVariant,
+  useAsNestedSectionsStore, useAsExternalErrors, useAsUnionVariant,
 } from "@atscript/vue-form";
 
 // Factories + providers

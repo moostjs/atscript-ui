@@ -126,7 +126,7 @@ automatically when the live snapshot matches the active preset's
 claimed aspects (so the URL bar stays clean once you're "done"
 editing).
 
-Wired automatically when `<AsTableRoot :persist-local-drafts="true">`
+Wired automatically when `<AsTableRoot :preset="{ ..., persistDrafts: true }">`
 is set; direct use is for headless setups.
 
 ### `useAppPrefs(opts)`
@@ -188,8 +188,12 @@ A typical table page shows the whole flow:
   v-model:url-query="urlQuery"
   :url="`/api/db/tables/${apiPath}`"
   :controls="controls"
-  :preset="{ url: '/api/db/_presets', tableKey: path, systemPresets }"
-  :persist-local-drafts="true"
+  :preset="{
+    url: '/api/db/_presets',
+    tableKey: path,
+    systemPresets,
+    persistDrafts: true,
+  }"
 >
   <AsTableActions>
     <AsPresetPicker />

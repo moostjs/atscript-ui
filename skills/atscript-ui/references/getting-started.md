@@ -58,7 +58,7 @@ Add the atscript unplugin and (Vue only) the auto-import resolver from `@atscrip
 ```typescript
 import { defineConfig } from "vite-plus";
 import vue from "@vitejs/plugin-vue";
-import atscript from "@atscript/unplugin/vite";
+import atscript from "unplugin-atscript/vite";
 import Components from "unplugin-vue-components/vite";
 import { AsResolver } from "@atscript/ui-styles/vite";
 
@@ -75,7 +75,7 @@ export default defineConfig({
 
 `AsResolver()` source: `packages/ui-styles/src/vite.ts:24`.
 
-`unplugin-atscript` triggers `.as` recompilation on file change so updated annotations flow through to FormDef / TableDef without a manual rebuild step. If a `.as` edit isn't showing up at runtime, a stale Vite/rolldown cache or out-of-date `.as.d.ts` is the usual cause.
+`unplugin-atscript/vite` triggers `.as` recompilation on file change so updated annotations flow through to FormDef / TableDef without a manual rebuild step. If a `.as` edit isn't showing up at runtime, a stale Vite/rolldown cache or out-of-date `.as.d.ts` is the usual cause.
 
 ## installDynamicResolver
 

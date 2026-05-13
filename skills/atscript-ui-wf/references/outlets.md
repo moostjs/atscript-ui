@@ -128,23 +128,22 @@ collectEmail(
 
 ### Step 2 — send link and pause
 
-The engine generates a `handle` for this flow when it pauses. Use that as the magic-link token.
+`outletEmail(to, template, data)` pauses the flow and emits the email. The engine persists state via the configured `HandleStateStrategy` and mints the token; the `createEmailOutlet(sender)` adapter (registered in `handleWfOutletRequest({ outlets })`) receives the rendered token through the sender callback and injects it into the template's `url`.
 
 ```typescript
-import { outletEmail, useWfHandle } from "@moostjs/event-wf";
+import { outletEmail } from "@moostjs/event-wf";
 
 @Step("send-link")
 async sendLink(@WorkflowParam("context") ctx: { email?: string }) {
-  const handle = useWfHandle();   // engine's current state handle
-  await mailer.send(ctx.email!, "magic-link", {
-    url: `https://app.com/resume?wfs=${handle}`,
+  return outletEmail(ctx.email!, "magic-link", {
+    // Template renders the URL using whichever variable the sender exposes
+    // (e.g. `{{wfs}}` → resume token). See `createEmailOutlet(sender)` in
+    // @moostjs/event-wf for the sender contract.
   });
-  return outletEmail(ctx.email!, "magic-link", { url: ... });
-  // The flow is now persisted in AsWfStore with handle = <token>.
 }
 ```
 
-(`useWfHandle` is illustrative — the actual engine API for retrieving the current handle lives in `@moostjs/event-wf` / `@prostojs/wf`.)
+Sender callback (passed to `createEmailOutlet(sender)` in the outlet-trigger config) receives the resume token and the rendered template — your sender builds the URL (`https://app.com/resume?wfs=${token}`) and ships the email.
 
 ### Step 3 — post-resume step
 
@@ -197,12 +196,15 @@ For server-to-server resume (payment gateway, third-party API):
 ```typescript
 @Step("charge")
 async charge(@WorkflowParam("context") ctx: { orderId: string; token?: string }) {
-  const handle = useWfHandle();
+  // The gateway will POST back to /api/wf/callback once the charge clears.
+  // Carry your own correlation id (orderId) in the URL and look the flow up
+  // by an indexed shadow column on the wf-state row (see state.md —
+  // @wf.store.fromContext). On the callback, resume by the wfs token you
+  // persisted alongside it, not by extracting one from the engine here.
   await gateway.charge(ctx.orderId, {
-    callback_url: `https://app.com/api/wf/callback/${handle}`,
+    callback_url: `https://app.com/api/wf/callback/${ctx.orderId}`,
   });
   return outletHttp({ outlet: "awaiting-payment" });
-  // or return outletEmail / a custom outlet
 }
 ```
 

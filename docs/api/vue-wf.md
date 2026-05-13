@@ -99,7 +99,8 @@ interface AsWfFormProps {
 
 ```vue
 <script setup lang="ts">
-import { AsWfForm, createDefaultTypes } from "@atscript/vue-wf";
+import { AsWfForm } from "@atscript/vue-wf";
+import { createDefaultTypes } from "@atscript/vue-form";
 
 const types = createDefaultTypes();
 </script>

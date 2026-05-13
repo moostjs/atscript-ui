@@ -48,8 +48,6 @@ Whitelist a key from `wfContext` into `inputRequired.context` of the wire respon
 **Applied to the FORM type** (interface or type), not to the context type itself.
 
 ```atscript
-import { CONTEXT_PASS } from '@atscript/moost-wf/plugin'  // not required; annotation key string
-
 @wf.context.pass 'email'
 @wf.context.pass 'mfaEnabled'
 export interface MfaPincodeForm {
@@ -126,7 +124,7 @@ const wf = useWfForm({ path: "/wf/trigger", name: "auth/login" });
 The strongest pattern: drive form rendering from context inside the `.as` schema itself, with no template changes per step.
 
 ```atscript
-@ui.form.fn.title '(_, _data, ctx) => "Verify code sent to " + ctx.email'
+@ui.form.fn.title '(data, ctx) => "Verify code sent to " + ctx.email'
 @wf.context.pass 'email'
 export interface MfaPincodeForm {
     @meta.label 'Code'
@@ -134,7 +132,7 @@ export interface MfaPincodeForm {
 }
 ```
 
-The `@ui.form.fn.title` callback receives `(_, _data, ctx)` where `ctx` is the form's `formContext`. See `atscript-ui-forms` skill's `dynamic-fields.md` for the full `@ui.form.fn.*` surface.
+The `@ui.form.fn.title` callback is form-level — it receives `(data, ctx)` where `data` is the form's current values and `ctx` is the form's `formContext`. See `atscript-ui-forms` skill's `dynamic-fields.md` for the full `@ui.form.fn.*` surface.
 
 ## Recipe — dynamic step title from context
 
@@ -143,7 +141,7 @@ End-to-end: server stamps email into ctx → client renders MFA form with the em
 ### Form schema
 
 ```atscript
-@ui.form.fn.title '(_, _data, ctx) => "Verify code sent to " + ctx.email'
+@ui.form.fn.title '(data, ctx) => "Verify code sent to " + ctx.email'
 @wf.context.pass 'email'
 export interface MfaPincodeForm {
     @meta.label 'Verification code'
@@ -182,7 +180,7 @@ Server → client:
   }
 ```
 
-The client's `AsForm` runs the `@ui.form.fn.title` callback with `ctx = { email: "u@x.io" }` and renders `"Verify code sent to u@x.io"` as the title.
+The client's `AsForm` runs the `@ui.form.fn.title` callback with `(data, ctx)` where `ctx = { email: "u@x.io" }` and renders `"Verify code sent to u@x.io"` as the title.
 
 ### Why this works
 

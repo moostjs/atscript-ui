@@ -33,22 +33,28 @@ interface AsTableRootProps {
   selectionPersistence?: "clear" | "trim" | "persist";
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
+  queryFn?: (query: Uniquery, page: number, size: number) => Promise<PageResult<Record<string, unknown>>>;
+  queryOnMount?: boolean;
+  blockQuery?: boolean;
+  blockSize?: number;
+  dragReleaseDebounceMs?: number;
+  clientFactory?: ClientFactory;
   controls?: TAsTableControls;
   types?: TAsCellTypeComponents;
   components?: Record<string, Component>;
   formTypes?: TAsTypeComponents;
   formComponents?: Record<string, Component>;
   preset?: PresetConfig;
-  rowDelete?: boolean | RowDeleteOpt;
-  rowActionsColumn?: boolean;
   refreshOnAction?: boolean;
-  urlQuery?: string;
+  urlQuerySync?: UrlQuerySync;
 }
 ```
 
-**Emits**: `update:urlQuery(value)`, `update:filterFields`, `update:columnNames`, `update:columnWidths`, `update:sorters`, `update:selectedRows`, `action(payload)`, `main-action(payload)`, `error(payload)`.
+**v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]).
 
-**Slots**: default (table body), `actions` (toolbar), `filter-bar`, plus per-dialog slots (`confirmDialog`, `actionForm`).
+**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`.
+
+**Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
 
 ### `AsTable`
 
@@ -56,14 +62,30 @@ Paginated table renderer. Subscribes to `useTableContext()`. Use inside `<AsTabl
 
 ```typescript
 interface AsTableProps {
+  rows?: Record<string, unknown>[];
+  columns?: ColumnDef[];
+  stickyHeader?: boolean;
+  virtualRowHeight?: number;
+  virtualOverscan?: number;
+  columnMenu?: ColumnMenuConfig;
+  reorderable?: boolean;
+  resizable?: boolean;
+  columnMinWidth?: number;
   /** Selection mode: "none" | "single" | "multi". */
   select?: SelectionMode;
   /** Row-delete opt-in. */
   rowDelete?: boolean | RowDeleteOpt;
-  /** Show a per-row actions column. */
-  rowActionsColumn?: boolean;
+  /**
+   * Synthesised row-actions pseudo-column. `'first'` / `'last'` prepend or
+   * append a fixed `__actions` column; `'merge-select'` only renders when
+   * `select === 'none'` so the row gutter shares space with the multi-select
+   * checkbox column. `false` (default) hides the column entirely.
+   */
+  rowActionsColumn?: "first" | "last" | "merge-select" | false;
 }
 ```
+
+**Emits**: `row-click(row, event)`, `row-dblclick(row, event)`, `main-action(row, absIndex, event)`.
 
 ### `AsWindowTable`
 
@@ -127,7 +149,11 @@ Pure confirm dialog driven by `state.prompt(message, opts?)`. Replaces `window.c
 
 ### `AsActionFormDialog`
 
-Dialog for actions that declare an `@InputForm` schema. Opens via `state.requestActionInput(action, ctx)`.
+Dialog for actions that declare an `@InputForm` schema. Opens via `state.requestActionInput(action, ctx)`. Pulls in the full `@atscript/vue-form` runtime, so it is **not** exported from the main entry — `<AsTableRoot>` lazy-mounts it only when an `@InputForm` action is detected. Import from the dedicated subpath when you need to override or eager-load:
+
+```typescript
+import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
+```
 
 ## Tier 2 — Filter UI
 
@@ -285,48 +311,66 @@ Search-term composable — reads/writes `state.searchTerm`, applies debouncing.
 
 ### `useTableActions()`
 
-Subscribes to `state.actions`. Returns the same shape as `state.actions` plus convenience getters.
+Returns `state.actions` (the full `TableActionsState`) from the closest `<AsTableRoot>` ancestor. Throws when called outside the provider tree.
 
-### `useTableUrlQuery(options)`
+```typescript
+function useTableActions(): TableActionsState;
+```
 
-Two-way URL sync helper.
+### `useTableUrlQuery(route, router, opts?)`
+
+Bridge `<AsTableRoot v-model:url-query>` to vue-router. Owns the whole query string. Uses type-only imports of `Router` / `RouteLocationNormalizedLoaded` — no runtime dependency on `vue-router` is added to `@atscript/vue-table`.
 
 ```typescript
 interface UseTableUrlQueryOptions {
-  /** Provide an alternative router hook; defaults to `window.history`. */
-  router?: { push: (url: string) => void; current: () => string };
-  /** Per-aspect opt-in/out. */
-  sync?: UrlQuerySync;
+  /** `"replace"` (default) or `"push"`. */
+  mode?: "replace" | "push";
 }
 
-function useTableUrlQuery(options?: UseTableUrlQueryOptions): {
-  urlQuery: Ref<string>;
-  ready: Ref<boolean>;
-};
+function useTableUrlQuery(
+  route: RouteLocationNormalizedLoaded,
+  router: Router,
+  opts?: UseTableUrlQueryOptions,
+): WritableComputedRef<string>;
 ```
 
-### `useTableComponent(name, type)`
+```vue
+<script setup>
+import { useRoute, useRouter } from "vue-router";
+import { useTableUrlQuery } from "@atscript/vue-table";
+const urlQuery = useTableUrlQuery(useRoute(), useRouter());
+</script>
+<template>
+  <AsTableRoot v-model:url-query="urlQuery" url="/db/products" />
+</template>
+```
 
-Resolve a cell or header component by name. Falls back through `components` → `types[type]` → built-in defaults.
+### `useTableComponent(key, fallback)`
+
+Resolve a single chrome skin-slot from the injected `controls` map, falling back to the supplied component when the consumer left that entry unset. `key` is one of the `TAsTableControls` keys (`headerCell`, `columnMenu`, `filterDialog`, etc.) — this is for chrome, not cell-type dispatch.
 
 ```typescript
-function useTableComponent(name: string | undefined, type: string): Component | undefined;
+function useTableComponent<K extends keyof TAsTableControls>(
+  key: K,
+  fallback: Component,
+): Component;
 ```
 
-### `provideCellLocale(value)` / `useCellLocale()`
+### `provideCellLocale(source)` / `useCellLocale()`
 
-Locale source for date/decimal cells.
+Locale source for date / number cells. The provider takes a `MaybeRefOrGetter` so apps can wire it to `useAppPrefs` or to a global store without re-providing. The consumer side returns computed `locale` (falls back to `navigator.language`, then `"en-US"`) and `timezone` (`undefined` lets `Intl` pick the browser TZ).
 
 ```typescript
 interface CellLocale {
-  locale: string;
+  language?: string;
   timezone?: string;
-  dateFormat?: "iso" | "us" | "eu";
-  firstDayOfWeek?: 0 | 1 | 6;
 }
 
-function provideCellLocale(value: () => CellLocale): void;
-function useCellLocale(): CellLocale;
+function provideCellLocale(source: MaybeRefOrGetter<CellLocale | undefined>): void;
+function useCellLocale(): {
+  locale: ComputedRef<string>;
+  timezone: ComputedRef<string | undefined>;
+};
 ```
 
 ## Composables — presets
@@ -350,7 +394,6 @@ interface UsePresetsReturn {
   capabilities: Ref<PresetCapabilities | null>;
   systemPresets: ComputedRef<SystemPreset[]>;
   available: ComputedRef<boolean>;
-  apply: (idOrSnapshot: string | PresetSnapshot) => void;
   saveActive: () => Promise<void>;
   saveAs: (label: string, opts?: { aspects?: AspectMask; public?: boolean }) => Promise<string>;
   rename: (id: string, label: string) => Promise<void>;
@@ -361,49 +404,69 @@ interface UsePresetsReturn {
   setFavorites: (ids: string[]) => Promise<void>;
   batch: <T>(fn: () => Promise<T>) => Promise<T>;
 }
-
-interface ActivePresetView {
-  id: string | null;
-  preset: AsPresetEntryRow | SystemPreset | null;
-  snapshot: PresetSnapshot;
-}
 ```
+
+`apply` is not on `usePresets` — it lives on the wired `state.preset` surface (`PresetSurface`) and accepts a system id (`sys:*`), a stored row id, or a raw `PresetSnapshot`. Bypassing it and writing the underlying model arrays directly works too — the root watcher reacts either way.
 
 ### `useAppPrefs(options)`
 
-Manages the `appConf` row (app-wide user prefs: appearance, density, locale).
+Manages the `appConf` row (app-wide user prefs: appearance, density, locale). Calls with the same `(app, url)` share a single underlying instance — duplicate widgets make one `/query?type=appConf` request total. Cross-tab sync rides BroadcastChannel; in-window sync rides a `useEventBus`.
 
 ```typescript
 interface UseAppPrefsOptions {
-  url: string;
+  /** App namespace; defaults to `inject(AS_PRESETS_APP)`. */
   app?: string;
+  /** Presets controller URL, e.g. `"/db/_presets"`. */
+  url: string;
   clientFactory?: ClientFactory;
+  /** Auto-load on setup. Default `true`. */
+  autoLoad?: boolean;
+  /** Cache most recent prefs in `localStorage` keyed by app. Default `true`. */
+  cache?: boolean;
 }
 
 interface UseAppPrefsReturn {
-  data: ShallowRef<AppConfData>;
+  /** Reactive prefs. Always non-null; defaults to `{}` until first load resolves. */
+  prefs: WritableComputedRef<AppConfData>;
   loading: Ref<boolean>;
-  save: (patch: Partial<AppConfData>) => Promise<void>;
+  /** Last non-auth error, or `null`. Auth errors flip `available` instead. */
+  error: Ref<unknown>;
+  /** False on 401/403 from initial load — hide pref-bound controls. */
+  available: ComputedRef<boolean>;
+  reload(): Promise<void>;
+  /** Optimistic shallow-merge save; rolls back on error. */
+  save(patch: Partial<AppConfData>): Promise<void>;
+  reset(): void;
 }
 ```
 
 ### `useLocalDraft(options)`
 
-Backs the optional localStorage draft overlay. Returns helpers to read/write the current draft for `(app, tableKey)`.
+localStorage overlay manager for table preset drafts. One overlay per `(app, tableKey)`; switching presets clears it (the caller decides when to call `clear()`).
 
 ```typescript
 interface UseLocalDraftOptions {
   app: string;
   tableKey: string;
-  enabled: boolean;
-  availableAspects: PresetAspect[];
-  storage?: StorageLike;
+  enabled: Ref<boolean> | boolean;
+  availableAspects: readonly PresetAspect[];
+  debounceMs?: number;
+  storage?: StorageLike | null;
 }
 
 interface UseLocalDraftReturn {
-  draft: Ref<PresetDraft | null>;
-  write: (snapshot: PresetSnapshot, presetId: string) => void;
-  clear: () => void;
+  /** Layer the persisted draft (if any) on top of `applied`. */
+  hydrate(applied: PresetSnapshot): PresetSnapshot;
+  /**
+   * Wire a debounced watcher that mirrors persisted aspects to localStorage.
+   * Returns the unwatch handle.
+   */
+  watchAndPersist(
+    currentSnapshot: () => PresetSnapshot,
+    activePresetSnapshot: () => PresetSnapshot,
+  ): () => void;
+  clear(): void;
+  readDraft(): PresetDraft | null;
 }
 
 interface StorageLike {
@@ -426,10 +489,15 @@ function injectPresetsApp(override?: string): string;
 
 ### `createDefaultControls()`
 
-Returns a pre-built `TAsTableControls` seeded with every Tier-2 default — header cell, column menu, row actions, filter input/dialog/field, config dialog, fields selector, sorters config, confirm dialog, action-form dialog, preset picker, preset dialog.
+Returns a fresh `TAsTableControls` map pre-filled with the eight always-on Tier-2 defaults: `headerCell`, `columnMenu`, `rowActions`, `filterInput`, `filterDialog`, `filterField`, `configDialog`, `confirmDialog`. The other six slots — `fieldsSelector`, `sortersConfig`, `filterValueHelp`, `presetPicker`, `presetDialog`, `actionFormDialog` — are intentionally **not** seeded: the table root mounts the first five lazily on first open, and `actionFormDialog` is lazy-loaded so it only pulls in `@atscript/vue-form` when an `@InputForm` action is detected. Override a slot by spreading and assigning:
 
 ```typescript
 function createDefaultControls(): TAsTableControls;
+
+const controls = {
+  ...createDefaultControls(),
+  filterDialog: MyFilterDialog,
+};
 ```
 
 ### `createDefaultCellTypes()`

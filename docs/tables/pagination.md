@@ -176,7 +176,7 @@ state merges them into `results` so existing UI bindings stay stable.
 | Prop                       | Default | Purpose                                                                                   |
 | -------------------------- | ------- | ----------------------------------------------------------------------------------------- |
 | `:limit`                   | 25      | Default page size + block size for `loadRange`.                                           |
-| `:block-size`              | `:limit` | Override the page-alignment unit independently of `:limit`.                              |
+| `:block-size`              | 100     | Override the page-alignment unit independently of `:limit`.                              |
 | `:drag-release-debounce-ms` | 300     | How long the viewport watcher waits after the user stops scrolling before issuing fetches. |
 
 ## State changes that invalidate

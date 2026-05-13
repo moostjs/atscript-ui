@@ -38,7 +38,7 @@ export default defineConfig({
 });
 ```
 
-`AsResolver()` auto-imports Tier-1 components — the ones you tag directly in templates: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsFilters>`, `<AsWfForm>`. Tier-2 default implementations (`AsInput`, `AsSelect`, `AsFilterDialog`, …) are public and importable but **not** auto-resolved — you import them explicitly when you compose custom `:types` / `:components` maps. Composables (`useTable`, `useFormState`, …) always require an explicit `import`.
+`AsResolver()` auto-imports Tier-1 components — the ones you tag directly in templates: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsWindowTable>`, `<AsFilters>`, `<AsPresetPicker>`, `<AsTableActions>`, `<AsWfForm>`. Tier-2 default implementations (`AsInput`, `AsSelect`, `AsFilterDialog`, …) are public and importable but **not** auto-resolved — you import them explicitly when you compose custom `:types` / `:components` maps. Composables (`useTable`, `useFormState`, …) always require an explicit `import`.
 
 ## `uno.config.ts`
 

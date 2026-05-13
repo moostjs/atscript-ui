@@ -112,17 +112,25 @@ export class PresetsController extends AsPresetsController {
     return String(session.userId);
   }
 
-  protected async canPublishPresets(): Promise<boolean> {
+  protected async canPublishPresets(
+    _app: string,
+    _tableKey: string,
+    _user: string,
+  ): Promise<boolean> {
     return useSession()?.roleName === "admin";
   }
 
-  protected async getMaxPresetsPerUser(): Promise<number> {
+  protected async getMaxPresetsPerUser(
+    _app: string,
+    _tableKey: string,
+    _user: string,
+  ): Promise<number> {
     const role = useSession()?.roleName;
     if (role === "admin") return 100;
     return 10;
   }
 
-  protected async getUserLabel(): Promise<string | undefined> {
+  protected async getUserLabel(_user: string): Promise<string | undefined> {
     return useSession()?.username;
   }
 }
@@ -130,12 +138,12 @@ export class PresetsController extends AsPresetsController {
 
 Hookable methods:
 
-| Method                  | Default                          | Purpose                              |
-| ----------------------- | -------------------------------- | ------------------------------------ |
-| `getCurrentUser()`      | abstract — **required**          | Resolve the caller's user id         |
-| `getMaxPresetsPerUser()`| returns `this.maxPresetsPerUser` (10) | Per-user cap on preset creation |
-| `canPublishPresets()`   | returns `true`                   | Gate for `private → public` writes   |
-| `getUserLabel()`        | returns `undefined`              | "by alice" attribution on public rows |
+| Method                                    | Default                               | Purpose                              |
+| ----------------------------------------- | ------------------------------------- | ------------------------------------ |
+| `getCurrentUser()`                        | abstract — **required**               | Resolve the caller's user id         |
+| `getMaxPresetsPerUser(app, tableKey, user)` | returns `this.maxPresetsPerUser` (10) | Per-user cap on preset creation     |
+| `canPublishPresets(app, tableKey, user)`  | returns `true`                        | Gate for `private → public` writes   |
+| `getUserLabel(user)`                      | returns `undefined`                   | "by alice" attribution on public rows |
 
 `getUserLabel()` exists so the controller doesn't need a join to
 the users table on every preset write — read straight from the
@@ -155,9 +163,9 @@ from `AsDbController`:
 | DELETE | `/:id`          | Remove row                                       |
 
 `/capabilities` is the only bespoke endpoint. It runs both hooks
-(`canPublishPresets`, `getMaxPresetsPerUser`) and returns the
-result for the client to gate its UI without guessing. The client
-calls it once on mount.
+(`canPublishPresets`, `getMaxPresetsPerUser`) with the caller's
+`(app, tableKey, user)` and returns the result for the client to
+gate its UI without guessing. The client calls it once on mount.
 
 ## Permission model
 
@@ -184,8 +192,9 @@ in their `(app, tableKey)`.
   the same public name produces a 409 instead of slipping past a
   read-then-write window.
 - **Per-user cap** is enforced on every create. `getMaxPresetsPerUser()`
-  is called inside the transaction; over-cap requests get
-  `presetLimitReached` (422 with `{ limit }`).
+  is called inside the transaction; over-cap requests get HTTP `409`
+  with `code: "preset_limit_reached"`, plus `limit` and `count` in
+  the payload so the client can render an accurate message.
 - **`canPublishPresets()` gates the `private → public` transition**.
   Already-public rows are grandfathered — revoking publish
   permission doesn't unpublish existing preset rows. This is

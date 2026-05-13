@@ -114,11 +114,12 @@ and the same state arrays as the default. Anchor your dialog to
 arrays on Apply — every other reaction (re-query, URL sync, preset
 dirty-check) flows automatically from those writes.
 
-If you only want to override one tab, look at the internals the
-default uses: `<AsFieldsSelector>` (Columns and Filters tabs) and
-`<AsSortersConfig>` (Sorters tab). Both ship as Tier-3 internals;
-you can build a hybrid dialog from one or two of them and one of
-your own.
+If you only want a different look on one tab, keep the swap at the
+dialog level: your replacement reads the same state arrays
+(`columnNames`, `filterFields`, `sorters`) and writes them back —
+build the inner tab UI however your design system prefers. The
+default's per-tab building blocks are package internals and not part
+of the public surface.
 
 ## Next steps
 

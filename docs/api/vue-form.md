@@ -58,19 +58,29 @@ Renders a single field given a `FormFieldDef`. Use when laying out form fields m
 ```typescript
 interface AsFieldProps {
   field: FormFieldDef;
-  /** Optional override of the parent data context. */
-  data?: { value: unknown };
+  /** External validation error to surface on this field. */
+  error?: string;
+  /** Wires the array-item remove affordance when rendered inside an array. */
+  onRemove?: () => void;
+  canRemove?: boolean;
+  removeLabel?: string;
+  /** Index of this field within a parent array — drives the `#N` suffix on labels. */
+  arrayIndex?: number;
 }
 ```
 
 ### `AsIterator`
 
-Iterates over a `FormObjectFieldDef`'s child fields and renders each through `AsField`. Used internally by `AsObject` and exposed for advanced compositions.
+Iterates the fields of a `FormDef` and renders each through `AsField`. Used by `AsObject` for nested objects and exposed for advanced compositions.
 
 ```typescript
 interface AsIteratorProps {
-  fields: FormFieldDef[];
-  prefix?: string;
+  def: FormDef;
+  /** Optional dotted segment to prepend to every child field's path. */
+  pathPrefix?: string;
+  onRemove?: () => void;
+  canRemove?: boolean;
+  removeLabel?: string;
 }
 ```
 
@@ -125,20 +135,26 @@ const types = createDefaultTypes();
 types.text = MyCustomTextInput; // swap one entry
 ```
 
-### `createAsFormDef(type)`
+### `createAsFormDef(type, context?)`
 
-Thin wrapper over `createFormDef(type)` from `@atscript/ui`. Caches by type identity so re-rendering doesn't rebuild the def.
+Builds a `FormDef` from an `.as` annotated type and a fresh reactive `formData` container with `@meta.default` values applied. When `context` is provided and `@atscript/ui-fns` is installed, `@ui.form.fn.value` annotations evaluate against it during default-value resolution.
 
 ```typescript
-function createAsFormDef(type: TAtscriptAnnotatedType): FormDef;
+function createAsFormDef<T extends TAtscriptAnnotatedType>(
+  type: T,
+  context?: Record<string, unknown>,
+): { def: FormDef; formData: { value: unknown } };
 ```
 
-### `formatIndexedLabelParts(parts)`
+### `formatIndexedLabelParts(label, arrayIndex)`
 
-Helper for union/array variant labels. Joins `["Item", "2"]` → `"Item · 2"` with the framework's separator. Re-exported from `use-form-context.ts`.
+Splits a label into base + optional `#N` suffix for two-part rendering by `AsCollapsible` / `AsFieldShell`. Returns `undefined` when both the base and suffix are absent.
 
 ```typescript
-function formatIndexedLabelParts(parts: string[]): string;
+function formatIndexedLabelParts(
+  label: string | undefined,
+  arrayIndex: number | undefined,
+): { base: string; suffix?: string } | undefined;
 ```
 
 ## Composables — form / state
@@ -236,7 +252,7 @@ interface UseAsExternalErrorsReturn {
 
 ### `useAsField(opts)`
 
-Field-level state machine (model, error, blur). Custom field components call this when building their own validator pipeline outside `AsField`.
+Field-level state machine — model wrapper, validator pipeline, error resolution, blur tracking, and registration with the parent form. Call from a custom field that owns its own commit path instead of routing through `AsField`.
 
 ```typescript
 interface UseAsFieldOptions<TValue, TFormData, TContext> {
@@ -244,6 +260,7 @@ interface UseAsFieldOptions<TValue, TFormData, TContext> {
   setValue: (v: TValue) => void;
   rules?: TFormRule<TValue, TFormData, TContext>[];
   path: () => string;
+  /** Value to set on form reset. Defaults to `''`. Use `[]` for arrays, `{}` for objects. */
   resetValue?: TValue;
 }
 
@@ -258,28 +275,64 @@ function useAsField<TValue, TFormData, TContext>(
 ): UseAsFieldReturn<TValue>;
 ```
 
-### `useAsArray()`
+### `useAsArray(field, disabled?)`
 
-Powers `AsArray`. Returns add / remove / canRemove / minItems / itemSingularLabel + the iteration helpers.
+Powers `AsArray`. Manages stable item keys, add/remove respecting `@expect.minLength` / `@expect.maxLength`, and union-item variant resolution.
 
 ```typescript
-function useAsArray(): UseAsArrayReturn;
+function useAsArray(
+  field: FormArrayFieldDef,
+  disabled?: ComputedRef<boolean>,
+): UseAsArrayReturn;
+
+interface UseAsArrayReturn {
+  arrayValue: ComputedRef<unknown[]>;
+  itemKeys: string[];
+  isUnion: boolean;
+  unionVariants: FormUnionVariant[];
+  isOptional: boolean;
+  isEmpty: ComputedRef<boolean>;
+  getItemField: (index: number, name?: string) => FormFieldDef;
+  addItem: (variantIndex?: number) => void;
+  removeItem: (index: number) => void;
+  clear: () => void;
+  canAdd: ComputedRef<boolean>;
+  canRemove: ComputedRef<boolean>;
+}
 ```
 
-### `useAsTuple()`
+### `useAsTuple(field)`
 
-Powers `AsTuple`. Exposes per-position fields and validator hooks.
+Powers `AsTuple`. Fixed-length positional fields; auto-fills missing positions on mount unless the tuple is optional.
 
 ```typescript
-function useAsTuple(): UseAsTupleReturn;
+function useAsTuple(field: FormTupleFieldDef): UseAsTupleReturn;
+
+interface UseAsTupleReturn {
+  itemFields: FormFieldDef[];
+  positionLabeled: boolean[];
+  isOptional: boolean;
+  isEmpty: ComputedRef<boolean>;
+  clear: () => void;
+  fillMissing: () => void;
+}
 ```
 
-### `useAsUnion()`
+### `useAsUnion(props)`
 
-Powers `AsUnion`. Exposes `variants`, the reactive selected index, and `changeVariant(index)`.
+Powers `AsUnion`. Owns the locally-selected variant index and stashes per-variant data so toggling back restores prior input. Pass the component's resolved `TAsComponentProps` (`AsUnion` reads `props.field` + `props.model`).
 
 ```typescript
-function useAsUnion(): UseAsUnionReturn;
+function useAsUnion(props: TAsComponentProps): UseAsUnionReturn;
+
+interface UseAsUnionReturn {
+  unionField: ComputedRef<FormUnionFieldDef | undefined>;
+  hasMultipleVariants: ComputedRef<boolean>;
+  localUnionIndex: Ref<number>;
+  innerField: ComputedRef<FormFieldDef | undefined>;
+  changeVariant: (newIndex: number) => void;
+  optionalEnabled: ComputedRef<boolean>;
+}
 ```
 
 ### `useAsUnionVariant()`
@@ -294,41 +347,44 @@ function useAsUnionVariant(): TAsUnionContext | undefined;
 
 ### `useAsValueHelp(options)`
 
-Lazily resolves `ValueHelpInfo` and exposes a paginated search API for FK inputs.
+Lazily resolves a `ValueHelpInfo` descriptor on mount, then exposes a debounced search API for FK pickers. Reads the active `ClientFactory` from the nearest `<AsForm :client-factory>` (or the global default) automatically.
 
 ```typescript
 interface UseAsValueHelpOptions {
-  /** Resolved value-help descriptor. */
-  valueHelp: () => ValueHelpInfo | undefined;
-  /** Per-form override of the global ClientFactory. */
-  clientFactory?: () => ClientFactory | undefined;
-  /** Initial query/filter applied on open. */
-  initialQuery?: () => string | undefined;
+  /** Resolved value-help descriptor (read from `props.valueHelp`). */
+  info: ValueHelpInfo;
+  /** The model whose `.value` the picker writes to on select. */
+  model: { value: unknown };
+  /** Called after a selection commits so AsField can run blur-time validation. */
+  onBlur: () => void;
 }
 
 interface UseAsValueHelpReturn {
-  items: Ref<Record<string, unknown>[]>;
-  total: Ref<number>;
-  loading: Ref<boolean>;
-  error: Ref<unknown>;
-  query: Ref<string>;
-  load: (opts?: { page?: number; itemsPerPage?: number }) => Promise<void>;
+  resolved: ShallowRef<ResolvedValueHelp | null>;
+  status: Ref<"loading" | "ready" | "error">;
+  searchText: Ref<string>;
+  results: ShallowRef<Record<string, unknown>[]>;
+  searching: Ref<boolean>;
+  labelIsFkValue: ComputedRef<boolean>;
+  kickoff: () => Promise<void>;
+  selectItem: (item: Record<string, unknown>) => void;
+  clear: () => void;
 }
 
 function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpReturn;
 ```
 
-### `useAsDropdown()`
+### `useAsDropdown(containerRef)`
 
-Headless dropdown state machine — open/close, anchor positioning, keyboard nav, focus trap. Powers `AsSelect` and the value-help popover.
+Click-outside-aware dropdown state. The listener is lazy — attached only while open.
 
 ```typescript
-function useAsDropdown(options?: { onOpen?: () => void; onClose?: () => void }): {
-  open: Ref<boolean>;
+function useAsDropdown(containerRef: Ref<HTMLElement | null>): {
+  isOpen: Ref<boolean>;
   toggle: () => void;
   close: () => void;
-  triggerRef: Ref<HTMLElement | undefined>;
-  popoverRef: Ref<HTMLElement | undefined>;
+  /** Run the callback and close immediately — convenience for option-click handlers. */
+  select: (callback: () => void) => void;
 };
 ```
 
@@ -396,23 +452,39 @@ function useAsDualInput(options: UseAsDualInputOptions): UseAsDualInputReturn;
 
 ## Composables — context / utility
 
-### `useAsLocale()` / `provideAsLocale(value)`
+### `useAsLocale()` / `provideAsLocale(getter)`
 
-Provide/inject the active locale used by date and decimal composables.
+Provide / inject the BCP-47 locale used by date and decimal composables. The getter shape lets reactive sources flow through without an extra `computed()` at the call site.
 
 ```typescript
-function provideAsLocale(value: () => UseAsLocaleReturn): void;
+function provideAsLocale(getter: () => string | undefined): void;
+
+interface UseAsLocaleReturn {
+  /** Resolved locale; `undefined` when no provider is mounted. */
+  locale: ComputedRef<string | undefined>;
+}
+
 function useAsLocale(): UseAsLocaleReturn;
 ```
 
 ### `useAsPath()` / `useAsTypeMap()` / `useAsData()`
 
-Read-only context wrappers exposing the current field path, type map, and form data container respectively. Useful in deeply nested custom components.
+Read-only context wrappers. Useful in deeply nested custom components that need the current field path, the form's `:types` map, or reactive read access to form data.
 
 ```typescript
-function useAsPath(): UseAsPathReturn;     // { path: ComputedRef<string> }
-function useAsTypeMap(): UseAsTypeMapReturn; // { types: ComputedRef<TAsTypeComponents>, ... }
-function useAsData(): UseAsDataReturn;     // { data: ComputedRef<unknown> }
+function useAsPath(): UseAsPathReturn;       // { path: ComputedRef<string> }
+function useAsTypeMap(): UseAsTypeMapReturn; // { types: ComputedRef<TAsTypeComponents> }
+
+interface UseAsDataReturn {
+  /** Domain data — the unwrapped inner value of the form's `{ value }` container. */
+  rootData: ComputedRef<unknown>;
+  /** Read the value at an absolute dotted path inside the form. */
+  getValueAt: (path: string) => ComputedRef<unknown>;
+  /** Read a sibling field relative to the current `useAsPath()` prefix. */
+  siblingValue: <T = unknown>(name: string) => ComputedRef<T | undefined>;
+}
+
+function useAsData(): UseAsDataReturn;
 ```
 
 ### `useAsErrorDismiss()`
@@ -439,10 +511,6 @@ interface AsNestedSectionsStore {
 function provideAsNestedSectionsStore(): AsNestedSectionsStore;
 function useAsNestedSectionsStore(): AsNestedSectionsStore | undefined;
 ```
-
-### `useFormContext()`
-
-Internal-ish helper that exposes the closest `<AsForm>`'s combined state (data, context, types, components). Re-exported via the `use-form-context.ts` module for advanced wrappers — most code should reach for the more specific composables.
 
 ## Component prop & emit types
 

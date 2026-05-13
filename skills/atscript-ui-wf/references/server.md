@@ -60,6 +60,10 @@ flow() {}
 | Conditional skip | `[{ id: 'verify', condition: (ctx) => ctx.needsVerify }]` — false → step skipped |
 | Optional final step | `[{ id: 'cleanup', condition: (ctx) => ctx.dirty }]` |
 
+### Moost globalPrefix applies to workflow IDs
+
+`new Moost({ globalPrefix: "api" })` prepends the prefix to every `@Workflow("auth/login")` registration → the live wfid becomes `api/auth/login`. The `allow:` whitelist in `handleWfOutletRequest({ allow })` and the client's `name` prop on `<AsWfForm>` must match the prefixed id. See `packages/vue-demo/src/server/controllers/workflows.controller.ts:29-35` for the demo's allow-list.
+
 ### Branching semantics
 
 - `condition` is called with the current context.

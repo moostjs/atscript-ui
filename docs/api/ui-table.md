@@ -27,24 +27,23 @@ Framework-agnostic table model. Filter conditions, filter→Uniquery conversion,
 
 ### `FilterConditionType`
 
-Canonical operator names used in filter conditions and `columnFilterType` output.
+Canonical operator names used in filter conditions. `bw` ("between") is the range operator — there is no separate `between` alias.
 
 ```typescript
 type FilterConditionType =
   | "eq" | "ne" | "gt" | "gte" | "lt" | "lte"
-  | "contains" | "starts" | "ends" | "bw" | "between"
+  | "contains" | "starts" | "ends" | "bw"
   | "null" | "notNull" | "regex";
 ```
 
 ### `FilterCondition`
 
-A single per-field condition. `value` and `valueTo` carry the operands; `valueTo` is only used for the `bw` / `between` range operators.
+A single per-field condition. Operands live in a positional array — most operators read `value[0]`; `bw` reads `value[0]` (low) + `value[1]` (high); `null` / `notNull` ignore `value`.
 
 ```typescript
 interface FilterCondition {
   type: FilterConditionType;
-  value?: string | number | boolean | null;
-  valueTo?: string | number | boolean | null;
+  value: (string | number | boolean)[];
 }
 ```
 
@@ -60,42 +59,59 @@ type FieldFilters = Record<string, FilterCondition[]>;
 
 ```typescript
 function isFilled(cond: FilterCondition): boolean;
-function hasSecondValue(type: FilterConditionType): boolean;
+function hasSecondValue(type: FilterConditionType): boolean;        // `true` only for `"bw"`
 function isSimpleEq(cond: FilterCondition): boolean;
-function conditionLabel(cond: FilterCondition): string;
+function conditionLabel(type: FilterConditionType): string;
 function filledFilterCount(filters: FieldFilters): number;
-function filterTokenLabel(cond: FilterCondition): string;
+function filterTokenLabel(
+  path: string,
+  conditions: FilterCondition[],
+  columnLabel?: string,
+): string;
 
-const NULL_OPS: ReadonlySet<FilterConditionType>; // "null" | "notNull"
+const NULL_OPS: ReadonlySet<FilterConditionType>; // { "null", "notNull" }
 ```
 
-`isFilled` returns true when the condition has at least one operand bound (or uses a NULL_OPS operator). `filledFilterCount` is used by toolbar badges. `filterTokenLabel` formats one condition into a chip-friendly token.
+`isFilled` returns true when the condition has at least one operand bound (or uses a `NULL_OPS` operator). `filledFilterCount` is used by toolbar badges. `filterTokenLabel` summarises a field's filled conditions into a chip-friendly token.
 
 ### Conditions per type
 
 ```typescript
 type ColumnFilterType = "text" | "number" | "boolean" | "date" | "enum" | "ref";
 
-function conditionsForType(type: ColumnFilterType, opts?: { nullable?: boolean }): FilterConditionType[];
-function columnFilterType(column: ColumnDef): ColumnFilterType;
+/** Drops `"null"` / `"notNull"` when `nullable === false`. */
+function conditionsForType(
+  type: ColumnFilterType,
+  nullable?: boolean,
+): readonly FilterConditionType[];
+
+/** Map a `ColumnDef.type` string to its filter-type bucket. */
+function columnFilterType(columnType: string): ColumnFilterType;
 ```
 
-`conditionsForType` returns the operator set the filter picker should offer for a given column type, dropping `null` / `notNull` for non-nullable columns.
+`conditionsForType` returns the operator set the filter picker should offer for a given column type.
 
 ## Filter input format
 
 Tools for parsing and formatting filter values typed by the user.
 
 ```typescript
-function parseFilterInput(raw: string, column: ColumnDef): FilterCondition | undefined;
-function formatFilterCondition(cond: FilterCondition, column: ColumnDef): string;
-function defaultCondition(column: ColumnDef): FilterCondition;
+/** Parses operator shorthand (`>100`, `*foo*`, `lo...hi`, `<empty>`, `!<empty>`, `/regex/`). */
+function parseFilterInput(
+  raw: string,
+  columnType: ColumnFilterType,
+  nullable?: boolean,
+): FilterCondition | undefined;
+
+/** Format a condition back into the same operator-shorthand string. Round-trips with `parseFilterInput`. */
+function formatFilterCondition(cond: FilterCondition): string;
+
+/** Default operator for a fresh filter picker: `"contains"` for `text`/`enum`/`ref`, else `"eq"`. */
+function defaultCondition(columnType: ColumnFilterType): FilterConditionType;
 
 function escapeRegex(value: string): string;
 function unescapeRegex(value: string): string;
 ```
-
-`parseFilterInput` accepts shorthand like `> 100`, `not null`, `2025-01-01..2025-12-31`, and produces a normalised `FilterCondition`. `defaultCondition` is what the filter picker pre-fills when a user opens the dialog on a fresh column.
 
 See [Filtering](/tables/filtering).
 
@@ -117,30 +133,38 @@ function uniqueryFilterToFieldFilters(
 
 ## Date shortcuts
 
-Pre-built date-range presets used by the date filter picker.
+Pre-built date-range presets used by the date filter picker. Each shortcut produces an ISO date pair (`YYYY-MM-DD`) intended for a `bw` (between) condition.
 
 ```typescript
 interface DateShortcut {
-  key: string;
   label: string;
-  resolve(now: Date): { from: Date; to: Date };
+  dates: [start: string, end: string];
 }
 
-const dateShortcuts: DateShortcut[]; // today, yesterday, last 7 days, this month, …
+/** Returns the canonical shortcut list relative to `now` (defaults to current date). */
+function dateShortcuts(now?: Date): DateShortcut[];
+// → Last 7 Days, Last 30 Days, Month to Date, Last 90 Days, Last 6 Months,
+//   Last 12 Months, Year to Date
 ```
 
 ## Presets — wire types
 
 ### `PresetSnapshot`
 
-Application-layer snapshot captured by `state.preset.captureSnapshot()`.
+In-memory snapshot of table state for preset persistence. Dict-shaped — aspects mirror the runtime state, not the wire format. The wire form (entries-arrays for atscript validation) is `PresetSnapshotWire`. Each top-level key is opt-in: a key's presence claims that aspect; absent keys are left untouched on apply.
 
 ```typescript
 interface PresetSnapshot {
-  columns?: { columnNames: string[]; columnWidths?: ColumnWidthEntry[] };
+  columns?: {
+    columnNames: string[];
+    /** Override-only diff against column defaults — never serialise the default itself. */
+    columnWidths?: Record<string, string>;
+  };
+  /** Displayed filter field paths (the visible-input list). */
   filters?: string[];
-  filterOps?: PresetFilterOpEntry[];
-  sorters?: PresetSorterEntry[];
+  /** Applied filter conditions keyed by field path. */
+  filterOps?: FieldFilters;
+  sorters?: SortControl[];
   itemsPerPage?: number;
 }
 ```
@@ -205,31 +229,40 @@ interface AppConfData {
 }
 
 interface PresetCapabilities {
+  /** Whether the current user may set `public: true` on presets in this scope. */
   canPublish: boolean;
+  /** Per-`(app, tableKey, user)` preset cap. */
   presetLimit: number;
-  user: string;
-  userLabel?: string;
+  /** Server-known opaque identity for the current user. */
+  userId: string;
 }
 
 interface PresetLimitReachedBody {
-  code: "preset-limit-reached";
+  code: "preset_limit_reached";
   limit: number;
-  current: number;
+  count: number;
 }
 
 type AsPresetsErrorCode =
-  | "preset-limit-reached"
-  | "public-label-conflict"
-  | "forbidden"
-  | "not-found";
+  | "preset_limit_reached"
+  | "reserved_id"
+  | "public_name_conflict"
+  | "missing_scope"
+  | "missing_id"
+  | "invalid_type"
+  | "type_immutable"
+  | "identity_immutable"
+  | "preset_not_found"
+  | "publish_forbidden"
+  | "action_unsupported";
 ```
 
 ## Presets — id helpers
 
 ```typescript
 const SYSTEM_PRESET_PREFIX: "sys:";
-const USER_CONF_PREFIX: "user:";
-const APP_CONF_PREFIX: "appconf:";
+const USER_CONF_PREFIX: "uc:";
+const APP_CONF_PREFIX: "ac:";
 const RESERVED_ID_PREFIXES: readonly string[];
 const STANDARD_PRESET_ID: "sys:standard";
 
@@ -302,43 +335,69 @@ function draftMatchesPreset(draft: PresetDraft, snapshot: PresetSnapshot): boole
 
 ### `PresetsClient`
 
-Wraps the [`AsPresetsController`](/api/moost-ui-presets) endpoint. Owns preset CRUD, userConf updates, and capability probing.
+Framework-agnostic wrapper over `@atscript/db-client`'s `Client` for the [`AsPresetsController`](/api/moost-ui-presets) endpoint. Owns preset CRUD, userConf upserts, and capability probing. Stateless — every method is a fresh request.
 
 ```typescript
 interface PresetsClientConfig {
+  /** Controller mount URL, e.g. `"/db/_presets"`. */
   url: string;
   app: string;
   tableKey: string;
-  user?: string;
-  fetch?: typeof fetch;
+  /** Pre-built `Client` (auth-configured by the host). Wins over `clientFactory`. */
+  client?: Client;
+  /** Builds a `Client` for the given URL. Defaults to `getDefaultClientFactory()`. */
+  clientFactory?: (url: string) => Client;
+  /** Fetch impl for the `GET /capabilities` side-channel. Defaults to `globalThis.fetch`. */
+  fetch?: typeof globalThis.fetch;
 }
 
 interface PresetsListResult {
   presets: AsPresetEntryRow[];
+  /** type='userConf' row for this `(user, app, tableKey)`, or null. */
   userConf: AsPresetEntryRow | null;
-  capabilities: PresetCapabilities | null;
+  /** `null` when the capabilities load failed; `undefined` when the call skipped capabilities. */
+  capabilities: PresetCapabilities | null | undefined;
+  /** True when the controller responded 401/403 — UI silently hides. */
+  denied: boolean;
 }
 
 interface PresetsSaveAsOptions {
-  aspects?: AspectMask;
   public?: boolean;
 }
 
 interface PresetsSaveResult {
   id: string;
-  row: AsPresetEntryRow;
 }
 
 class PresetsClient {
   constructor(config: PresetsClientConfig);
-  list(): Promise<PresetsListResult>;
-  saveActive(row: AsPresetEntryRow, snapshot: PresetSnapshot): Promise<void>;
-  saveAs(label: string, snapshot: PresetSnapshot, opts?: PresetsSaveAsOptions): Promise<PresetsSaveResult>;
-  rename(id: string, label: string): Promise<void>;
-  remove(id: string): Promise<void>;
-  togglePublic(id: string): Promise<void>;
-  setDefault(id: string | null): Promise<void>;
-  setFavorites(ids: string[]): Promise<void>;
+
+  /** Lists owned + public preset rows AND the user's userConf row. `{ capabilities: false }` skips the capabilities fetch. */
+  list(opts?: { capabilities?: boolean }): Promise<PresetsListResult>;
+
+  /** `GET ${url}/capabilities?app=...&tableKey=...` — out-of-band of the CRUD plumbing. */
+  loadCapabilities(): Promise<PresetCapabilities>;
+
+  /** Overwrite the active preset's content (label preserved). */
+  savePreset(id: string, label: string, snapshot: PresetSnapshot): Promise<void>;
+
+  /** Create a new preset row. Server stamps `user`, generates `id`, derives `aspects`. */
+  savePresetAs(
+    label: string,
+    snapshot: PresetSnapshot,
+    opts?: PresetsSaveAsOptions,
+  ): Promise<PresetsSaveResult>;
+
+  renamePreset(id: string, label: string): Promise<void>;
+  setPublic(id: string, value: boolean): Promise<void>;
+  deletePreset(id: string): Promise<void>;
+
+  /** Upsert the userConf row keyed on `${USER_CONF_PREFIX}${user}:${app}:${tableKey}`. */
+  upsertUserConf(
+    existing: AsPresetEntryRow | null,
+    patch: Partial<UserConfData>,
+    user?: string,
+  ): Promise<void>;
 }
 ```
 
@@ -346,35 +405,44 @@ class PresetsClient {
 
 ```typescript
 class PresetsHttpError extends Error {
-  status: number;
-  code?: AsPresetsErrorCode;
-  body?: unknown;
+  readonly status: number;
+  constructor(status: number, message: string);
 }
 
-function isAuthError(err: unknown): boolean; // status === 401 | 403
+function isAuthError(err: unknown): boolean; // true for HTTP 401/403 on `ClientError` or `PresetsHttpError`
 ```
 
 ### `AppPrefsClient`
 
-Loads the `appConf` row for `(user, app)` — app-wide preferences like density, locale, appearance.
+Loads the `appConf` row for `(user, app)` — app-wide preferences like density, locale, appearance. Independent of any table; devs may use this standalone.
 
 ```typescript
 interface AppPrefsClientConfig {
+  /** Same controller URL the presets table is mounted on. */
   url: string;
   app: string;
-  user?: string;
-  fetch?: typeof fetch;
+  client?: Client;
+  clientFactory?: (url: string) => Client;
 }
 
 interface AppPrefsLoadResult {
+  /** Full row (server-stamped id, user, timestamps), or `null`. */
   row: AsPresetEntryRow | null;
-  data: AppConfData;
+  /** Convenience accessor for `row.data`, or `null`. */
+  prefs: AppConfData | null;
+  /** True when the controller responded 401/403. */
+  denied: boolean;
 }
 
 class AppPrefsClient {
   constructor(config: AppPrefsClientConfig);
   load(): Promise<AppPrefsLoadResult>;
-  save(data: Partial<AppConfData>): Promise<void>;
+  /** Upsert the appConf row. `existing` comes from a prior `load()` so the verb is correct. Returns the row id on success. */
+  save(
+    existing: AsPresetEntryRow | null,
+    patch: Partial<AppConfData>,
+    user?: string,
+  ): Promise<string | null>;
 }
 ```
 
@@ -382,74 +450,106 @@ See [Server-Side Presets](/tables/server-presets).
 
 ## Query builder
 
-### `buildTableQuery(state, opts?)`
+### `buildTableQuery(opts)`
 
-Translates a `TableStateData` snapshot into a Uniquery request the server consumes.
+Pure function that translates table UI state into a `Uniquery` request. Merges user filters with force filters, prepends force sorters, projects `$select`, applies search and the `$actions` flag.
 
 ```typescript
 interface BuildTableQueryOptions {
+  /** Paths of visible columns — emitted as `controls.$select`. */
+  visibleColumnPaths: string[];
+  /** User-configured sorters. */
+  sorters: SortControl[];
+  /** Always-applied sorters (prepended before user sorters). */
+  forceSorters?: SortControl[];
+  /** User-configured field filters. */
+  filters: FieldFilters;
+  /** Always-applied Uniquery filter (AND'd with user filters). */
+  forceFilters?: FilterExpr;
+  /** Full-text search term. */
+  search?: string;
+  /** Search index name for `$search:<index>`. */
+  searchIndex?: string;
+  /** Set `controls.$actions = true` to receive per-row `$actions: string[]`. */
   includeActions?: boolean;
 }
 
-function buildTableQuery(
-  state: TableStateData,
-  opts?: BuildTableQueryOptions,
-): Record<string, unknown>;
+function buildTableQuery(opts: BuildTableQueryOptions): Uniquery; // `Uniquery` from `@uniqu/core`
 ```
 
 ### `mergeSorters` / `mergeFilters`
 
-Used when applying presets or URL state — combine the incoming aspect with the user's current state under aspect-aware rules.
+Used by `buildTableQuery` to combine force + user controls; safe to call directly when composing presets / URL state.
 
 ```typescript
-function mergeSorters(current: SortControl[], incoming?: SortControl[]): SortControl[];
+function mergeSorters(force: SortControl[], user: SortControl[]): SortControl[];
+
+/** AND-merge two `FilterExpr` trees, producing a wire shape that survives the Uniquery parser collapse. */
 function mergeFilters(
-  current: FieldFilters,
-  incoming?: FieldFilters,
-  fields?: { current: string[]; incoming?: string[] },
-): { filters: FieldFilters; filterFields: string[] };
+  force?: FilterExpr,
+  user?: FilterExpr,
+): FilterExpr | undefined;
 ```
 
 ## URL query bridge
 
-Two-way bridge between table state and URL search strings — feature-gated by `availableAspects` so apps that don't use, say, `itemsPerPage` don't see it in the URL.
+Two-way bridge between table state and URL query strings. Per-aspect gates (`filters` / `sorters` / `search` / `pagination`) are honoured symmetrically by encoder and decoder — pass the same `sync` config to both so the round-trip matches.
 
 ```typescript
 interface UrlQueryStateLike {
-  columnNames?: string[];
-  filterFields?: string[];
-  filters?: FieldFilters;
-  sorters?: SortControl[];
-  searchTerm?: string;
-  pagination?: { page: number; itemsPerPage: number };
-}
-
-interface UrlQueryStateSnapshot extends UrlQueryStateLike { /* ... */ }
-
-interface UrlQueryDefaults {
-  columnNames?: string[];
+  filters: FieldFilters;
+  sorters: SortControl[];
+  /** 1-based page number; `1` is the default and is omitted from the URL. */
+  page?: number;
+  /** Per-page size; omitted from the URL when equal to `defaultItemsPerPage`. */
   itemsPerPage?: number;
+  /** Full-text search term; omitted when empty. */
+  searchTerm?: string;
 }
 
-interface UrlQueryParseOptions {
-  defaults?: UrlQueryDefaults;
-  aspects?: AspectMask;
-}
-
-interface AspectGate {
-  /** Aspects that this app accepts from the URL. */
-  enabled: ReadonlySet<PresetAspect>;
+interface UrlQueryStateSnapshot {
+  filters: FieldFilters;
+  sorters: SortControl[];
+  /** Raw `$skip` offset when present (no page math — recipients divide by their own `itemsPerPage`). */
+  skip?: number;
+  searchTerm: string;
 }
 
 interface UrlQuerySync {
-  /** Read-only contract for the renderer's URL bridge. */
-  push: (snapshot: UrlQueryStateSnapshot) => void;
-  pull: () => UrlQueryStateSnapshot | undefined;
+  /** `true` / `undefined` (default): all filters. `false` / `[]`: no filters in URL. `string[]`: allowlist of field paths. */
+  filters?: boolean | string[];
+  /** Same `boolean | string[]` semantics; allowlist matches `SortControl.field`. */
+  sorters?: boolean | string[];
+  /** Round-trip `searchTerm` as `$search`. Default `true`. */
+  search?: boolean;
+  /** Round-trip pagination (`$skip`). Default `true`. */
+  pagination?: boolean;
 }
 
-function resolveAspectGate(aspects?: AspectMask): AspectGate;
-function stateToUrlQueryString(state: UrlQueryStateLike, opts?: UrlQueryParseOptions): string;
-function urlQueryStringToState(query: string, opts?: UrlQueryParseOptions): UrlQueryStateSnapshot;
+interface UrlQueryDefaults {
+  /** Consumer's `:limit` prop. Used to compute `$skip` and to suppress `$limit` writes. */
+  defaultItemsPerPage: number;
+  /** Per-aspect sync gates. Omitted = full sync. */
+  sync?: UrlQuerySync;
+}
+
+interface UrlQueryParseOptions {
+  /** Field paths the table knows about. Conditions on fields outside this set are silently dropped. */
+  knownFields?: Iterable<string>;
+  /** Per-aspect sync gates — must match the encoder's config. */
+  sync?: UrlQuerySync;
+}
+
+/** Tri-state resolution of a per-aspect gate: `"all"` (pass-through), `"none"` (off), or an allowlist Set. */
+type AspectGate = "all" | "none" | Set<string>;
+
+function resolveAspectGate(value: boolean | string[] | undefined): AspectGate;
+
+/** Returns the URL query string (no leading `?`). Returns `""` for the default view. */
+function stateToUrlQueryString(state: UrlQueryStateLike, defaults: UrlQueryDefaults): string;
+
+/** Robust by design — schema drift never breaks the recipient's view. */
+function urlQueryStringToState(urlString: string, opts?: UrlQueryParseOptions): UrlQueryStateSnapshot;
 ```
 
 See [URL State](/tables/url-state).
@@ -517,32 +617,47 @@ Used by `<AsWindowTable>` to compute page-aligned fetch ranges and merge incomin
 const DEFAULT_ROW_HEIGHT_PX: number;
 
 interface PageAlignedBlock {
+  /** 1-based page number, ready to pass to a server pagination param. */
+  page: number;
+  /** Index of the first row in the block. */
   firstIndex: number;
-  size: number;
 }
 
-function pageAlignedBlocksFor(topIndex: number, viewportRows: number, pageSize: number, totalCount: number): PageAlignedBlock[];
-function blockStartFor(absIndex: number, pageSize: number): number;
-function clampTopIndex(top: number, viewportRows: number, totalCount: number): number;
+function pageAlignedBlocksFor(
+  skip: number,
+  limit: number,
+  blockSize: number,
+): PageAlignedBlock[];
+function blockStartFor(absIdx: number, blockSize: number): number;
+function clampTopIndex(topIndex: number, totalCount: number, viewport: number): number;
 
 interface MergeResult { /* ... */ }
 function walkForwardAbsorb(results: MergeResult): void;
 function walkBackwardAbsorb(results: MergeResult): void;
 
-type FetchPlanMode = "results" | "cache" | "loading";
-interface FetchPlan { firstIndex: number; mode: FetchPlanMode; }
-interface PlanFetchArgs {
-  topIndex: number;
-  viewportRows: number;
-  pageSize: number;
-  totalCount: number;
-  windowCache: Map<number, unknown>;
-  windowLoading: Set<number>;
+/** `"jump"` — viewport sits in uncached territory; centre a fetch around it. `"steady"` — fetch one block at the edge that's running out. */
+type FetchPlanMode = "jump" | "steady";
+
+interface FetchPlan {
+  skip: number;
+  limit: number;
+  mode: FetchPlanMode;
 }
-function planFetch(args: PlanFetchArgs): FetchPlan[];
+
+interface PlanFetchArgs {
+  top: number;
+  viewport: number;
+  totalCount: number;
+  cache: Map<number, unknown>;
+  blockSize: number;
+  /** Threshold below which a steady prefetch fires. Typically `blockSize / 4`. */
+  buffer: number;
+}
+
+function planFetch(args: PlanFetchArgs): FetchPlan | null;
 ```
 
-`planFetch` is the centerpiece: given the viewport and the universal-cache state, it returns the minimal set of block fetches to satisfy the visible range without redundant overlap.
+`planFetch` is the centerpiece: given the viewport and the universal-cache state, it returns the single fetch the renderer should issue next (or `null` when the cache already satisfies the visible range).
 
 ## Column widths
 
@@ -573,11 +688,13 @@ function sameColumnSet(a: readonly string[], b: readonly string[]): boolean;
 function setsEqual<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean;
 function sortersEqual(a: readonly SortControl[], b: readonly SortControl[]): boolean;
 
-type ColumnReorderPosition = "before" | "after" | "start" | "end";
+type ColumnReorderPosition = "before" | "after";
+
+/** Pure — returns a new array. Returns input unchanged when paths are missing or the move is a no-op. */
 function reorderColumnNames(
   names: string[],
-  source: string,
-  target: string | null,
+  fromPath: string,
+  toPath: string,
   position: ColumnReorderPosition,
 ): string[];
 ```

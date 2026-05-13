@@ -116,7 +116,7 @@ export default defineConfig({
 });
 ```
 
-The `as-*` shortcut tree uses explicit `dark:` selectors only where the layer/scope system can't auto-flip (e.g. text on Chromium's native `<select>` widget — see `packages/ui-styles/src/shortcuts/form/as-field.ts:42-54`). For your own shortcuts, prefer `layer-0` / `surface-50` / `scope-*` tokens — they flip with the theme automatically.
+The `as-*` shortcut tree uses explicit `dark:` selectors only where the layer/scope system can't auto-flip (e.g. paired text colors on inputs, or hand-painted scrollbar tones). See `packages/ui-styles/src/shortcuts/form/as-decimal-number.ts:41` (paired `text-scope-dark-0 dark:text-scope-light-0`) and `packages/ui-styles/src/shortcuts/table/as-window-scrollbar.ts:11-21` (`"dark:"` variant keys) for examples. For your own shortcuts, prefer `layer-0` / `surface-50` / `scope-*` tokens — they flip with the theme automatically.
 
 ## Scope tints (scope-*)
 

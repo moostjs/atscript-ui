@@ -87,7 +87,8 @@ entirely, swap `controls.actionFormDialog` (Tier 2).
 keys (or composite-PK objects) of selected rows. The selection
 mode is set on `<AsTable :select="...">`:
 
-- `"none"` — no checkboxes; row clicks fire the default action.
+- `"none"` (default) — no checkboxes; row clicks fire the default action.
+- `"single"` — radio-style: row clicks replace the selection with that row's PK.
 - `"multi"` — checkbox column; clicks toggle selection.
 
 ```vue

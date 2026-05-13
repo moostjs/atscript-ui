@@ -127,45 +127,28 @@ field rendered as a descendant of `<AsForm>`.
 
 ### `useAsField`
 
-Returns the field's validation rules and a `blur` helper. Use it when you need
-direct access to the validator pipeline:
+The field-level state machine — model wrapper, validator pipeline, error
+resolution, blur tracking. Use it when your component owns its own commit
+path instead of routing through `<AsField>`:
 
 ```typescript
 import { useAsField } from '@atscript/vue-form'
 
-const { rules, error, registerBlur } = useAsField(field)
+const props = defineProps<{ field: FormFieldDef; path: string }>()
+
+const { model, error, onBlur } = useAsField<string>({
+  getValue: () => /* read your value */,
+  setValue: (v) => /* write your value */,
+  rules: [(v) => !!v || 'Required'],
+  path: () => props.path,
+  resetValue: '',
+})
 ```
 
-See `packages/vue-form/src/composables/use-as-field.ts` for the full return
-type.
-
-### `useAsForm`
-
-Read-only access to root form state — submit text, submit-disabled, dispatch
-actions, clear/set errors:
-
-```typescript
-import { useAsForm } from '@atscript/vue-form'
-
-// Inside any descendant of <AsForm>:
-const form = useAsForm()
-form.submitText.value
-form.invokeAction('save-draft')
-```
-
-### `useFormContext`
-
-Lower-level path helpers — works on the wrapped `{ value: domainData }`
-container:
-
-```typescript
-import { useFormContext } from '@atscript/vue-form'
-
-const { getByPath, setByPath } = useFormContext('MyCustomField')
-
-const country = getByPath('country')
-setByPath('shipping.address.city', 'Paris')
-```
+Returns `{ model, error, onBlur }`. The composable registers with the parent
+`<AsForm>` so the field participates in submit-time validation, reset, and
+external-error wiring. See `packages/vue-form/src/composables/use-as-field.ts`
+for the full options shape.
 
 ### `useAsData`
 

@@ -153,7 +153,7 @@ export interface AsPresetEntry {
 - `label` is mirrored from `data.label` on every `type='preset'` write.
 - `publicLabel` is stamped equal to `label` on `type='preset' AND public=true` writes, NULL otherwise. The composite unique index `preset_public_label_idx (app, tableKey, publicLabel)` relies on NULL ≠ NULL semantics so private / userConf / appConf rows never collide.
 - `user` is stamped from `getCurrentUser()` on every write — clients can't author rows under another user.
-- Per-user quota is checked on insert; exceeding it returns `preset-limit-reached` with status 409.
+- Per-user quota is checked on insert; exceeding it returns HTTP `409` with `code: "preset_limit_reached"` and `{ limit, count }` in the body.
 
 ## Re-exports
 

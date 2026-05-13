@@ -25,7 +25,7 @@ export interface Order {
     status: string
 
     @ui.form.action 'cancel', 'Cancel order'
-    cancel?: never
+    cancel: ui.action
 }
 ```
 
@@ -102,13 +102,13 @@ export interface Item {
     name: string
 
     @ui.form.action 'duplicate', 'Duplicate'
-    duplicate?: never
+    duplicate: ui.action
 
     @ui.form.action 'archive', 'Archive'
-    archive?: never
+    archive: ui.action
 
     @ui.form.action 'delete', 'Delete'
-    delete?: never
+    delete: ui.action
 }
 ```
 
@@ -247,11 +247,11 @@ Annotations on the target type control how it renders inside an FK picker.
 | Annotation                | Effect                                                                             |
 | ------------------------- | ---------------------------------------------------------------------------------- |
 | `@ui.dict.label`          | Mark the field whose value is shown as the row's display label.                    |
-| `@ui.dict.description`    | Secondary text under the label.                                                    |
+| `@ui.dict.descr`          | Secondary text under the label.                                                    |
 | `@ui.dict.searchable`     | Include in the picker's free-text search (`?$search=`).                            |
 | `@ui.dict.filterable`     | Available as a filter dropdown in the picker UI.                                   |
 | `@ui.dict.sortable`       | Sortable in the picker.                                                            |
-| `@ui.dict.attr 'key'`     | Carry extra attributes (used by themes / custom pickers).                          |
+| `@ui.dict.attr`           | Mark the field as an additional attribute column shown in table-mode value help. Repeatable. |
 
 Example — a target type optimized for picker UX:
 
@@ -268,7 +268,7 @@ export interface User {
     email: string
 
     @meta.label 'Name'
-    @ui.dict.description
+    @ui.dict.descr
     @ui.dict.searchable
     name: string
 

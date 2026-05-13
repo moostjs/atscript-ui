@@ -140,7 +140,15 @@ See [Field Types](/forms/field-types) for the full map.
 | ------------ | ------------------- | ------------------------------------------------------------ |
 | `def`        | `FormDef`           | What to render — produced by `createAsFormDef`.              |
 | `types`      | `TAsTypeComponents` | Type-to-component map. Use `createDefaultTypes()` to start.  |
-| `form-data`  | reactive object     | Container `{ value: domainData }`. Optional — AsForm creates an internal one when omitted. |
+| `form-data`  | reactive object     | Container `{ value: domainData }`. Recommended — see below.  |
+
+If `form-data` is omitted, `useAsForm` falls back to a bare
+`ref<{}>` with **no `{ value }` wrapper and no `@meta.default`
+values applied**. For anything but the most trivial throwaway form,
+always pass `formData = createAsFormDef(MyType).formData` (or a
+manually-wrapped `ref({ value: { ... } })`). That keeps the wrapper
+invariant intact and ensures declared defaults are in place at first
+render.
 
 The full prop surface is in
 `packages/vue-form/src/components/as-form.vue` (e.g. `errors`,

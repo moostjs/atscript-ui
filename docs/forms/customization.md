@@ -192,6 +192,8 @@ and renders the field tree however you want.
 ```vue
 <script setup lang="ts">
 import { useAsForm, AsField } from '@atscript/vue-form'
+import { getFieldMeta, META_LABEL } from '@atscript/ui'
+import { computed } from 'vue'
 
 const props = defineProps<{ def, formData, types }>()
 
@@ -200,18 +202,25 @@ const form = useAsForm({
   formData: () => props.formData,
   types: () => props.types,
 })
+
+// Resolve the root form title from the type's `@meta.label`.
+const title = computed(() => getFieldMeta(props.def.type, META_LABEL) as string | undefined)
 </script>
 
 <template>
   <form @submit.prevent="form.onSubmit">
-    <MyCustomHeader :title="def.rootField.title" />
-    <AsField v-for="field in def.rootField.fields" :key="field.prop.name" :field="field" />
+    <MyCustomHeader :title="title" />
+    <AsField v-for="field in def.fields" :key="field.path" :field="field" />
     <MySubmitFooter :disabled="form.submitDisabled.value">
       {{ form.submitText.value }}
     </MySubmitFooter>
   </form>
 </template>
 ```
+
+`def.fields` is the flat list of root-level child fields; for the
+header label you can also render `<AsField :field="def.rootField" />`
+and let `AsForm`'s default chrome resolve the title for you.
 
 For lower-level access — replacing `<AsField>` itself with your own per-field
 component that calls `useAsField()` — see

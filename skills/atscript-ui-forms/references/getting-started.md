@@ -126,7 +126,7 @@ If you bring your own container, match the shape:
 const formData = reactive({ value: { name: "Existing", email: "x@y.z" } });
 ```
 
-If you omit `:form-data` entirely, `useAsForm` creates an internal `ref<{}>` and the wrapper is enforced from inside.
+If you omit `:form-data`, `useAsForm` falls back to a bare `ref<{}>` — no `{ value }` wrapper, no `@meta.default` values applied. Always pass `createAsFormDef(MyType).formData` (or a manually-wrapped `ref({ value: { ... } })`) so the wrapper invariant holds and defaults reach the first render.
 
 ## AsForm props summary
 
@@ -152,7 +152,7 @@ Source: `packages/vue-form/src/components/as-form.vue:9-52`.
 | -------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
 | `submit`             | `(data: TFormData)`                                                      | `<form>` submit, validation passed. `data` is the unwrapped domain object.                                              |
 | `error`              | `(errors: { path: string; message: string }[])`                          | `<form>` submit, validation failed. One entry per invalid field.                                                        |
-| `action`             | `(name: string, data: TFormData)`                                        | Phantom `@ui.form.action` field invoked, OR `@ui.form.wf.action` field clicked. `name` is the action id.                |
+| `action`             | `(name: string, data: TFormData)`                                        | Phantom `@ui.form.action` field invoked, OR `@wf.action.withData` field clicked. `name` is the action id.                |
 | `unsupported-action` | `(name: string, data: TFormData)`                                        | An action name was dispatched that no field declares. Useful for shared chrome to detect mismatch.                      |
 | `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)`   | Leaf blur commit, array add/remove, union switch. `type` discriminates: `'update'` `'array-add'` `'array-remove'` `'union-switch'`. |
 

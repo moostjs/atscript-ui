@@ -206,7 +206,9 @@ if (!ok) {
 The base atscript interface defining the columns the store reads/writes. Consumers extend it with their own `@meta.id`-bearing primary-key column.
 
 ```atscript
-import { AsWfStateRecord } from '@atscript/moost-wf/store'
+// .as files import the model from `/store.as` (raw atscript source).
+// .ts files import the runtime class from `/store` (compiled module).
+import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
 
 @db.table 'wf_state'
 interface WfStateRow extends AsWfStateRecord {

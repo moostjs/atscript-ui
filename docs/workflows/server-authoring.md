@@ -281,6 +281,13 @@ export class WorkflowsController {
 
 A few things to know:
 
+- **Moost `globalPrefix` applies to workflow IDs too.** If your app
+  is constructed with `new Moost({ globalPrefix: "api" })`, every
+  `@Workflow("auth/login")` registers as `api/auth/login`. The
+  `allow` whitelist and the client's `name` prop on `<AsWfForm>` must
+  match the prefixed id. The demo handles this by listing `api/auth/login`
+  etc. in its allow-list (see
+  `packages/vue-demo/src/server/controllers/workflows.controller.ts:29-35`).
 - **`allow`** — the whitelist of workflow IDs the endpoint accepts.
   Without this, anyone with the URL could trigger any registered
   workflow.

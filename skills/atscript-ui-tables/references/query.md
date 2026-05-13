@@ -118,22 +118,19 @@ Use these for tenancy filters, soft-delete gates, role-derived defaults — the 
 ```typescript
 interface MetaResponse {
   searchable: boolean;
+  vectorSearchable: boolean;
+  searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
-  crud: { query: string[]; pages: string[]; one: string[] };
-  actions: {
-    table: TDbActionInfo[];
-    row: TDbActionInfo[];
-    rows: TDbActionInfo[];
-    default: { table?: name; row?: name; rows?: name };
-  };
+  crud: TCrudPermissions;       // per-op booleans from @atscript/db-client
+  actions: TDbActionInfo[];     // flat list — grouping happens client-side
   relations: RelationInfo[];
-  fields: FieldInfo[];
-  type: TAtscriptAnnotatedType;
+  fields: Record<string, FieldMeta>; // FieldMeta = { sortable, filterable }
+  type: TSerializedAnnotatedType;
 }
 ```
 
-The composed `TableDef` (`@atscript/ui`'s `createTableDef`) widens this with cell-resolution metadata (`flatMap`, `canRemove`, `searchIndexes`, …). Per invariant 11, `preferredId` is guaranteed populated for every row-returning read so identity is available in every cell / action.
+`actions` is a **flat array** on the wire — grouping by level (`default.table` / `default.row` / `default.rows` + `others.*`) is computed client-side by `createTableDef` into the `TableActionsModel` (`TableDef.actions`). The composed `TableDef` widens the response with cell-resolution metadata (`flatMap`, `canRemove`, …). Per invariant 11, `preferredId` is guaranteed populated for every row-returning read so identity is available in every cell / action.
 
 Meta is fetched **once** per URL+factory pair and cached. Remount of `<AsTableRoot>` with the same URL reuses the cache. Use `clearTableCache()` from `@atscript/vue-table` (alias of `resetMetaCache` in `@atscript/ui`) to flush during HMR / tests.
 

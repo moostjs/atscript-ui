@@ -112,10 +112,14 @@ import {
   // cells
   AsCellArray, AsCellDate, AsCellJson, AsCellNumber, AsCellUnion, AsTableCellValue,
   // dialogs
-  AsConfigDialog, AsFilterDialog, AsPresetDialog, AsConfirmDialog, AsActionFormDialog,
+  AsConfigDialog, AsFilterDialog, AsPresetDialog, AsConfirmDialog,
   // filter ui + headers + rows
   AsFilterField, AsFilterInput, AsTableHeaderCell, AsRowActions, AsColumnMenu,
 } from "@atscript/vue-table";
+
+// AsActionFormDialog is on a dedicated subpath — it pulls in @atscript/vue-form,
+// so the table root lazy-mounts it. Import this only to override / eager-load.
+import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
 
 // Composables
 import {
@@ -157,7 +161,7 @@ import { AsPresetsController, AsPresetEntry } from "@atscript/moost-ui-presets";
 | Sorting + pagination    | [sorting-pagination.md](references/sorting-pagination.md)             | Sort model + multi-sort, header click semantics, `<AsConfigDialog>` sorters tab, paginated `<AsTable>` vs virtualized `<AsWindowTable>`, block-aligned `loadRange`, `dragReleaseDebounceMs` tuning                                                                              |
 | Cells                   | [cells.md](references/cells.md)                                       | Built-in cell components + default type map, `provideCellLocale` (language + timezone), custom cells via `@ui.table.component` + `:components`, slot API (`#header-<path>`, `#cell-<path>`, `#empty`, `#query-loading`, `#error`), per-cell styling via `@ui.table.{classes,styles,attr}` |
 | State persistence       | [state-persistence.md](references/state-persistence.md)               | `<AsConfigDialog>` tabs (columns/sorters/filters), `useTableUrlQuery` (router two-way bind), client presets (`PresetSnapshot`, `useLocalDraft`, `usePresets`, `useAppPrefs`, `<AsPresetPicker>`, system/user/public, `dateShortcuts`), server presets via `AsPresetsController` |
-| Actions + selection     | [actions-selection.md](references/actions-selection.md)               | Row / table actions on the `.as` type, `<AsActionFormDialog>` (action input form via vue-form), `state.selectedRows` (`Set<PK>`), `togglePk` / `trimSelection` / `rowsToPks`, `state.actions.invoke(id, rows?)`, the `__actions` synthetic column                              |
+| Actions + selection     | [actions-selection.md](references/actions-selection.md)               | Row / table actions on the `.as` type, `<AsActionFormDialog>` (action input form via vue-form), `state.selectedRows` (`Set<PK>`), `togglePk` / `trimSelection` / `rowsToPks`, `state.actions.invoke(action, pk?, opts?)`, the `__actions` synthetic column                     |
 
 ## See also
 

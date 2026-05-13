@@ -125,9 +125,12 @@ props. For values that depend on other field data, use the matching
 | ---------------------------- | ------ | -------------------------------------------------------------- |
 | `@ui.form.placeholder 'X'`   | string | input placeholder                                              |
 | `@ui.form.hint 'X'`          | string | inline hint below the input (overrides `meta.description` when both present and the field is in error state) |
-| `@ui.form.description 'X'`   | string | alternative to `@meta.description` for UI-only descriptions    |
 | `@ui.form.label.singular 'tag'` | string | item-noun for arrays — drives "Add tag" / "Remove tag" buttons |
 | `@ui.form.submit.text 'X'`   | string | submit button text (on the type, not on a field)               |
+
+Field descriptions come from `@meta.description` — there is no
+`@ui.form.description` static counterpart. For dynamic descriptions
+use `@ui.form.fn.description` (see [Dynamic Fields](/forms/dynamic-fields)).
 
 ### Behaviour
 
@@ -135,25 +138,25 @@ props. For values that depend on other field data, use the matching
 | ---------------------- | ------------------------------------------------------------------------- |
 | `@ui.form.hidden`      | hide field — phantom-renders, never visible                               |
 | `@ui.form.disabled`    | disable input                                                             |
-| `@ui.form.readonly`    | render as read-only                                                       |
 | `@ui.form.autocomplete 'email'` | sets HTML `autocomplete=` attribute                              |
 
-Note: `@meta.readonly` and `@ui.form.readonly` are aliased — both
-land in the same metadata key when read.
+For read-only, use `@meta.readonly` — it is the single source of truth
+that both forms and other surfaces read. For the dynamic counterpart
+use `@ui.form.fn.readonly`.
 
 ### Layout
 
 | Annotation                  | Controls                                                            |
 | --------------------------- | ------------------------------------------------------------------- |
 | `@ui.form.order N`          | sort order within siblings                                          |
-| `@ui.form.grid.colSpan 'half' \| 'third' \| 'quarter' \| '1'..'12'` | grid column width (12-col grid)  |
+| `@ui.form.grid.colSpan 'full' \| 'half' \| 'third' \| '1'..'12'` | grid column width (12-col grid)  |
 | `@ui.form.grid.rowSpan '1'..'4'` | grid row span                                                  |
 | `@ui.form.classes 'a b'`    | extra classes on the field wrapper                                  |
 | `@ui.form.styles { ... }`   | inline style object                                                 |
 | `@ui.form.attr { ... }`     | extra HTML attributes forwarded to the input element                |
 
 See [Grid Layout](/forms/grid-layout) for the 12-column grid and the
-`half`/`third`/`quarter` aliases.
+`full`/`half`/`third` aliases.
 
 ### Adornments
 
@@ -247,6 +250,8 @@ type TFnScope = {
 };
 ```
 
+Field-level (declared on a prop):
+
 | Annotation                          | Computes                                                |
 | ----------------------------------- | ------------------------------------------------------- |
 | `@ui.form.fn.label`                 | label string                                            |
@@ -261,7 +266,12 @@ type TFnScope = {
 | `@ui.form.fn.attr`                  | HTML attribute map                                      |
 | `@ui.form.fn.options`               | dynamic option list                                     |
 | `@ui.form.fn.value`                 | derived value (readonly fields are auto-synced; phantom paragraph/action display) |
-| `@ui.form.fn.title`                 | dynamic title for structured / array / union sections   |
+
+Top-level (declared on the root `interface` / `type`, receives `(data, context)`):
+
+| Annotation                          | Computes                                                |
+| ----------------------------------- | ------------------------------------------------------- |
+| `@ui.form.fn.title`                 | dynamic form title                                      |
 | `@ui.form.fn.submit.text`           | dynamic submit button text                              |
 | `@ui.form.fn.submit.disabled`       | dynamic submit-disabled boolean                         |
 

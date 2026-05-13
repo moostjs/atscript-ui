@@ -82,7 +82,7 @@ Every `as-*` shortcut that renders an icon sizes it with `em`, not pixels:
 
 ```typescript
 "as-overlay-icon": "i-as-loading text-[3em]",
-"as-cell-json-trigger-glyph": "font-700 text-[1em]",
+"as-cell-json-trigger-glyph": "font-700",
 "as-field-remove-btn-icon": "i-as-close text-[1em]",
 ```
 
