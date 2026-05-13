@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, nextTick, watch } from "vue";
+import { onMounted, nextTick, ref, watch } from "vue";
 import { useData, useRoute } from "vitepress";
 import DefaultTheme from "vitepress/theme";
 import VPButton from "vitepress/dist/client/theme-default/components/VPButton.vue";
@@ -10,6 +10,21 @@ import SnippetWorkflow from "./snippets/snippet-workflow.md";
 const { Layout } = DefaultTheme;
 const { frontmatter } = useData();
 const route = useRoute();
+
+const copiedCmd = ref("");
+let copyTimer;
+async function copyCmd(cmd) {
+  try {
+    await navigator.clipboard.writeText(cmd);
+    copiedCmd.value = cmd;
+    clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
+      copiedCmd.value = "";
+    }, 1400);
+  } catch {
+    // ignore
+  }
+}
 
 function setupScrollAnimations() {
   nextTick(() => {
@@ -409,52 +424,155 @@ watch(() => route.path, setupScrollAnimations);
       </section>
 
       <!-- ═══════════════════ 5. AI Skills ═══════════════════ -->
-      <section class="section-story bg-diagonal">
+      <section class="section-skill">
         <div class="section-inner">
-          <div class="skills-block animate-in">
-            <div class="skills-head">
-              <span class="story-eyebrow">05 · AI agent skills</span>
-              <h2 class="section-heading">Your AI knows it already.</h2>
-              <p class="story-desc">
-                One command teaches Claude Code, Cursor, Windsurf and Codex the entire stack —
-                forms, tables, workflows, styling, and the framework-agnostic core.
+          <div class="skill-block animate-in">
+            <div class="skill-head">
+              <span class="story-eyebrow">05 · AI agent skill</span>
+              <h2 class="section-heading section-heading-center">Your AI already speaks it.</h2>
+              <p class="story-desc story-desc-center skill-desc">
+                One command teaches Claude Code, Cursor, Windsurf, and Codex the entire UI stack —
+                <code>&lt;AsForm&gt;</code>, <code>&lt;AsTable&gt;</code>,
+                <code>&lt;AsWfForm&gt;</code>, theming, and the framework-agnostic core.
               </p>
             </div>
 
-            <div class="skills-terminal">
-              <div class="terminal-bar">
-                <span class="terminal-dot"></span>
-                <span class="terminal-dot"></span>
-                <span class="terminal-dot"></span>
-              </div>
-              <div class="terminal-body">
-                <div class="terminal-line">
-                  <span class="t-prompt">$</span> npx skills add moostjs/atscript-ui
-                </div>
-                <div class="terminal-line t-muted">Installing 5 sub-skills...</div>
-                <div class="terminal-line t-add">+ atscript-ui (core + @ui.*)</div>
-                <div class="terminal-line t-add">+ atscript-ui-forms (&lt;AsForm&gt;)</div>
-                <div class="terminal-line t-add">
-                  + atscript-ui-tables (&lt;AsTableRoot&gt; + &lt;AsTable&gt;)
-                </div>
-                <div class="terminal-line t-add">
-                  + atscript-ui-wf (&lt;AsWfForm&gt; + moost-wf)
-                </div>
-                <div class="terminal-line t-add">+ atscript-ui-styles (UnoCSS preset, theming)</div>
-                <div class="terminal-line t-ok">All set. Agent ready.</div>
-              </div>
-            </div>
+            <button
+              type="button"
+              class="install-card"
+              :class="{ copied: copiedCmd === 'npx skills add moostjs/atscript-ui' }"
+              @click="copyCmd('npx skills add moostjs/atscript-ui')"
+              aria-label="Copy install command: npx skills add moostjs/atscript-ui"
+            >
+              <span class="install-prompt">$</span>
+              <span class="install-cmd">npx skills add <strong>moostjs/atscript-ui</strong></span>
+              <span class="install-action" aria-hidden="true">
+                <span class="install-action-icon">
+                  <svg
+                    v-if="copiedCmd !== 'npx skills add moostjs/atscript-ui'"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <rect x="9" y="9" width="11" height="11" rx="2" />
+                    <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                  </svg>
+                  <svg
+                    v-else
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M5 12.5l4.5 4.5L19 7.5" />
+                  </svg>
+                </span>
+                <span class="install-action-label">
+                  {{
+                    copiedCmd === "npx skills add moostjs/atscript-ui" ? "Copied!" : "Click to copy"
+                  }}
+                </span>
+              </span>
+            </button>
 
-            <div class="skills-companions">
+            <ul class="install-bullets">
+              <li>
+                <span class="bullet-dot"></span><code>@ui.*</code> annotations &amp; field resolver
+              </li>
+              <li>
+                <span class="bullet-dot"></span><code>&lt;AsForm&gt;</code> ·
+                <code>&lt;AsTable&gt;</code> · <code>&lt;AsWfForm&gt;</code>
+              </li>
+              <li>
+                <span class="bullet-dot"></span><code>moost-wf</code> server workflows &amp; presets
+              </li>
+              <li><span class="bullet-dot"></span>UnoCSS preset, vunor theming, icons</li>
+            </ul>
+
+            <div class="skill-companions">
               <span class="companions-label">Companions</span>
-              <code class="companions-cmd">npx skills add moostjs/atscript</code>
-              <code class="companions-cmd">npx skills add moostjs/atscript-db</code>
-              <code class="companions-cmd">npx skills add moostjs/moostjs</code>
+              <div class="companions-list">
+                <button
+                  type="button"
+                  class="companions-pill"
+                  :class="{ copied: copiedCmd === 'npx skills add moostjs/atscript' }"
+                  @click="copyCmd('npx skills add moostjs/atscript')"
+                  aria-label="Copy: npx skills add moostjs/atscript"
+                >
+                  <span class="pill-tag">DSL</span>
+                  <code>npx skills add moostjs/atscript</code>
+                  <span class="pill-icon" aria-hidden="true">
+                    <svg
+                      v-if="copiedCmd !== 'npx skills add moostjs/atscript'"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                    </svg>
+                    <svg
+                      v-else
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M5 12.5l4.5 4.5L19 7.5" />
+                    </svg>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  class="companions-pill"
+                  :class="{ copied: copiedCmd === 'npx skills add moostjs/atscript-db' }"
+                  @click="copyCmd('npx skills add moostjs/atscript-db')"
+                  aria-label="Copy: npx skills add moostjs/atscript-db"
+                >
+                  <span class="pill-tag">DATA</span>
+                  <code>npx skills add moostjs/atscript-db</code>
+                  <span class="pill-icon" aria-hidden="true">
+                    <svg
+                      v-if="copiedCmd !== 'npx skills add moostjs/atscript-db'"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <rect x="9" y="9" width="11" height="11" rx="2" />
+                      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+                    </svg>
+                    <svg
+                      v-else
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2.4"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                    >
+                      <path d="M5 12.5l4.5 4.5L19 7.5" />
+                    </svg>
+                  </span>
+                </button>
+              </div>
             </div>
 
-            <div class="story-links" style="justify-content: flex-start">
-              <a href="https://skills.sh" class="story-link">skills.sh</a>
-            </div>
+            <a href="https://skills.sh" class="story-link skill-link"
+              >Learn about AI agent skills</a
+            >
           </div>
         </div>
       </section>
@@ -470,7 +588,7 @@ watch(() => route.path, setupScrollAnimations);
             </p>
             <div class="stack-grid">
               <a href="https://atscript.dev" class="stack-card">
-                <div class="stack-card-tag">language</div>
+                <div class="stack-card-tag">DSL</div>
                 <div class="stack-card-name">Atscript</div>
                 <div class="stack-card-note">
                   Types, metadata and validation from a single <code>.as</code> model.
@@ -1658,93 +1776,320 @@ watch(() => route.path, setupScrollAnimations);
   color: var(--vp-c-brand-1);
 }
 
-/* ════════════════════ Section 5 — Skills ════════════════════ */
-.skills-block {
-  max-width: 920px;
+/* ════════════════════ Section 5 — AI Agent Skill ════════════════════ */
+.section-skill {
+  position: relative;
+  padding: 56px 24px 64px;
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(in srgb, var(--vp-c-brand-1) 8%, transparent),
+      transparent 60%
+    ),
+    var(--vp-c-bg);
+}
+:global(.dark) .section-skill {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      color-mix(in srgb, var(--vp-c-brand-1) 14%, transparent),
+      transparent 65%
+    ),
+    var(--vp-c-bg);
+}
+@media (min-width: 640px) {
+  .section-skill {
+    padding: 72px 48px 80px;
+  }
+}
+@media (min-width: 960px) {
+  .section-skill {
+    padding: 80px 64px 88px;
+  }
+}
+.skill-block {
+  max-width: 760px;
   margin: 0 auto;
-}
-.skills-head {
-  text-align: left;
-  margin-bottom: 24px;
-}
-.skills-terminal {
-  margin: 0 0 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1px solid rgba(174, 153, 252, 0.25);
-  background: #1a1a2e;
-  font-family: var(--vp-font-family-mono);
-  font-size: 13px;
-  box-shadow:
-    0 0 40px rgba(71, 26, 236, 0.1),
-    0 0 80px rgba(71, 26, 236, 0.05);
-}
-:global(.dark) .skills-terminal {
-  background: #0d0d1a;
-  border-color: rgba(255, 255, 255, 0.08);
-}
-.terminal-bar {
   display: flex;
-  gap: 6px;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.04);
+  flex-direction: column;
+  align-items: center;
 }
-.terminal-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+.skill-head {
+  text-align: center;
+  margin-bottom: 28px;
 }
-.terminal-body {
-  padding: 12px 16px;
+.skill-desc {
+  margin-bottom: 0;
 }
-.terminal-line {
-  color: rgba(255, 255, 255, 0.7);
-  line-height: 1.8;
-  white-space: pre;
+.skill-desc code {
+  font-size: 13px;
+  color: var(--vp-c-brand-1);
+  background: rgba(71, 26, 236, 0.08);
+  padding: 1px 6px;
+  border-radius: 5px;
+  font-family: var(--vp-font-family-mono);
 }
-.t-prompt {
-  color: #ae99fc;
+:global(.dark) .skill-desc code {
+  background: rgba(174, 153, 252, 0.14);
+}
+
+/* Install card */
+.install-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 520px;
+  padding: 12px 12px 12px 18px;
+  border-radius: 12px;
+  border: 1px solid rgba(71, 26, 236, 0.28);
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-1);
+  font-family: var(--vp-font-family-mono);
+  cursor: pointer;
+  text-align: left;
+  box-shadow:
+    0 12px 32px rgba(71, 26, 236, 0.12),
+    0 0 0 4px rgba(71, 26, 236, 0.05);
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    background 0.18s ease;
+}
+:global(.dark) .install-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: rgba(174, 153, 252, 0.32);
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.4),
+    0 0 0 4px rgba(174, 153, 252, 0.06);
+}
+.install-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--vp-c-brand-1);
+  box-shadow:
+    0 18px 40px rgba(71, 26, 236, 0.18),
+    0 0 0 4px rgba(71, 26, 236, 0.08);
+}
+.install-card.copied {
+  border-color: #18a674;
+  box-shadow:
+    0 12px 32px rgba(24, 166, 116, 0.18),
+    0 0 0 4px rgba(24, 166, 116, 0.08);
+}
+.install-prompt {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--vp-c-brand-1);
+  line-height: 1;
+}
+.install-cmd {
+  flex: 1;
+  font-size: 14px;
+  letter-spacing: -0.1px;
+  color: var(--vp-c-text-1);
+  overflow-x: auto;
+  white-space: nowrap;
+}
+.install-cmd strong {
+  color: var(--vp-c-brand-1);
   font-weight: 700;
-  margin-right: 8px;
 }
-.t-muted {
-  color: rgba(255, 255, 255, 0.4);
+@media (min-width: 640px) {
+  .install-cmd {
+    font-size: 15px;
+  }
 }
-.t-add {
-  color: #7ee787;
+.install-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 8px;
+  border-radius: 999px;
+  background: rgba(71, 26, 236, 0.08);
+  color: var(--vp-c-brand-1);
+  font-family: var(--vp-font-family-sans);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
-.t-ok {
-  color: #58d68d;
-  font-weight: 600;
+:global(.dark) .install-action {
+  background: rgba(174, 153, 252, 0.14);
 }
-.skills-companions {
+.install-card.copied .install-action {
+  background: rgba(24, 166, 116, 0.12);
+  color: #18a674;
+}
+.install-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+}
+.install-action-icon svg {
+  width: 13px;
+  height: 13px;
+}
+@media (max-width: 520px) {
+  .install-action-label {
+    display: none;
+  }
+}
+
+/* Install bullets */
+.install-bullets {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px 22px;
+  margin: 18px 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.install-bullets li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+}
+.install-bullets li code {
+  font-size: 12.5px;
+  color: var(--vp-c-brand-1);
+  background: rgba(71, 26, 236, 0.08);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--vp-font-family-mono);
+}
+:global(.dark) .install-bullets li code {
+  background: rgba(174, 153, 252, 0.14);
+}
+.bullet-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vp-c-brand-1);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+/* Companions */
+.skill-companions {
+  display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 10px;
-  margin-bottom: 6px;
+  margin: 28px 0 8px;
+  width: 100%;
 }
 .companions-label {
   font-family: var(--vp-font-family-mono);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--vp-c-text-3);
 }
-.companions-cmd {
-  display: inline-block;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: var(--vp-c-bg);
+.companions-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.companions-pill {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 10px;
   border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg);
   color: var(--vp-c-text-2);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease,
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+.companions-pill:hover {
+  border-color: var(--vp-c-brand-1);
+  color: var(--vp-c-text-1);
+  transform: translateY(-1px);
+}
+.companions-pill:active {
+  transform: translateY(0);
+}
+.companions-pill.copied {
+  border-color: #18a674;
+  background: color-mix(in srgb, #18a674 6%, transparent);
+}
+:global(.dark) .companions-pill {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+.pill-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 6px;
+  background: rgba(71, 26, 236, 0.1);
+  color: var(--vp-c-brand-1);
+  font-family: var(--vp-font-family-mono);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+:global(.dark) .pill-tag {
+  background: rgba(174, 153, 252, 0.18);
+}
+.companions-pill code {
   font-family: var(--vp-font-family-mono);
   font-size: 12px;
+  background: transparent;
+  padding: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-:global(.dark) .companions-cmd {
-  border-color: rgba(255, 255, 255, 0.06);
+.pill-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--vp-c-text-3);
+  background: transparent;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+.pill-icon svg {
+  width: 14px;
+  height: 14px;
+}
+.companions-pill:hover .pill-icon {
+  color: var(--vp-c-brand-1);
+  background: rgba(71, 26, 236, 0.08);
+}
+.companions-pill.copied .pill-icon {
+  color: #18a674;
+  background: rgba(24, 166, 116, 0.12);
+}
+.skill-link {
+  margin-top: 18px;
 }
 
 /* ════════════════════ Section 6 — Stack ════════════════════ */
