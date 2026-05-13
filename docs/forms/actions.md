@@ -135,7 +135,7 @@ controllers refactor action ids.
 
 ## Workflow actions
 
-In a workflow form (`<AsWfForm>`, see [Workflow basics](/workflows/basics)),
+In a workflow form (`<AsWfForm>`, see [Workflows](/workflows/)),
 `@wf.action.withData` is a workflow-aware variant of `@ui.form.action` that
 includes the form data with the action invocation. It's recognised by the same
 action-routing pipeline — see [Workflow actions](/workflows/actions) for the

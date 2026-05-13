@@ -272,7 +272,7 @@ The pattern: define an `outletX(args)` helper that returns
 on the controller; the engine routes requests to your sender and
 emits `{ outlet: "name" }` (or `{ sent: true }`) to the client.
 
-See [@moostjs/event-wf docs](https://moostjs.dev) for the full outlet
+See [@moostjs/event-wf docs](https://moost.org) for the full outlet
 contract.
 
 ## Where to go next
@@ -282,5 +282,5 @@ contract.
   restart.
 - [Recipes](/workflows/recipes) — the invite + register pattern
   end-to-end.
-- [moostjs.dev](https://moostjs.dev) — the underlying workflow
+- [moost.org](https://moost.org) — the underlying workflow
   engine and outlet primitives.

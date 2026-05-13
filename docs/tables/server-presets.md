@@ -266,5 +266,5 @@ Mount once in your Moost app, pass the same URL to every
 - [Presets](/tables/presets) — the client-side model.
 - [db.atscript.dev](https://db.atscript.dev) — DB adapter wiring,
   `AsDbController` reference, schema sync.
-- [moostjs](https://moostjs.org) — controller decorators, guards,
+- [moost](https://moost.org) — controller decorators, guards,
   interceptors.

@@ -11,7 +11,7 @@ the *server* decides which screen comes next.
 A single workflow is one long-lived conversation: the server pauses,
 asks the client for a form, validates the answer, optionally branches,
 and resumes — all over plain HTTP, no sockets, no client-side state
-machine. Built on top of [`@moostjs/event-wf`](https://moostjs.dev).
+machine. Built on top of [`@moostjs/event-wf`](https://moost.org).
 
 ## What it solves
 
@@ -91,7 +91,7 @@ See [Client: AsWfForm](/workflows/client) for the full API.
 
 ### `@atscript/moost-wf` — the server
 
-A thin layer on top of [`@moostjs/event-wf`](https://moostjs.dev)
+A thin layer on top of [`@moostjs/event-wf`](https://moost.org)
 that:
 
 - Wraps each step's input/output in the wire format the Vue client
@@ -129,7 +129,7 @@ See [Server-Side Authoring](/workflows/server-authoring).
 - [Forms](/forms/) — single-step forms (the rendering layer the
   workflow client reuses for each step).
 - [Tables](/tables/) — annotation-driven smart tables.
-- [moostjs.dev](https://moostjs.dev) — the moost framework + the
+- [moost.org](https://moost.org) — the moost framework + the
   underlying `@moostjs/event-wf` workflow engine.
 - [atscript.dev](https://atscript.dev) — `.as` files, annotations,
   the type system used to declare every form.
