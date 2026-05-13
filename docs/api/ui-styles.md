@@ -1,0 +1,203 @@
+# @atscript/ui-styles
+
+The vunor-powered UnoCSS preset, the safelist extractor that drives our as-component class collection, the `as-*` shortcut tree, the baked-icon collection, and the `unplugin-vue-components` resolver. Spread `asPresetVunor()` into UnoCSS, register `AsResolver()` in Vite, and every `as-*` class used by `@atscript/vue-form` / `@atscript/vue-table` / `@atscript/vue-wf` resolves correctly.
+
+## Contents
+
+- [Preset](#preset)
+- [Extractor](#extractor)
+- [Base UnoCSS config](#base-unocss-config)
+- [Shortcuts](#shortcuts)
+- [Component class maps](#component-class-maps)
+- [Icons](#icons)
+- [vunor re-exports](#vunor-re-exports)
+- [Vite subpath — AsResolver](#vite-subpath-asresolver)
+- [Pre-built CSS subpaths](#pre-built-css-subpaths)
+
+## Preset
+
+### `asPresetVunor(options?)`
+
+Returns an array of UnoCSS presets + rules + safelist entries spreadable into `unocss.config.ts`. Bundles vunor (palette / scope / layer / surface / c8 / i8), the `as-*` shortcut tree, the baked icon collection (`i-as-*`), and the safelist extractor.
+
+```typescript
+interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
+  /** Drop a kebab-case component's classes from the safelist when the consumer has replaced it. */
+  excludeComponents?: string[];
+  /** Replace built-in `i-as-<name>` icons with custom SVG strings. Unknown keys ignored. */
+  iconOverrides?: Record<string, string>;
+}
+
+interface AsBaseUnoConfigOptions {
+  /** Forwarded to vunor's `baseRadius`. Drives `rounded-base` and the `r0..r4` ladder. */
+  baseRadius?: string;
+}
+
+function asPresetVunor(options?: AsPresetVunorOptions): Preset[];
+```
+
+```typescript
+import { defineConfig } from "unocss";
+import { asPresetVunor } from "@atscript/ui-styles";
+
+export default defineConfig({
+  presets: [
+    ...asPresetVunor({
+      baseRadius: "0.5rem",
+      excludeComponents: ["as-input"],
+    }),
+  ],
+});
+```
+
+See [Styling — Installation](/styling/installation) and [Theme & Palette](/styling/theme).
+
+## Extractor
+
+### `createAsExtractor(opts)`
+
+Builds the UnoCSS source-code extractor that pre-seeds the safelist with every class our components reference. Used internally by `asPresetVunor`; expose your own for advanced setups (e.g. running the safelist build inside a different bundler).
+
+```typescript
+interface AsExtractorOptions {
+  /** Kebab-case component names to drop from the safelist. */
+  excludeComponents?: string[];
+}
+
+function createAsExtractor(opts?: AsExtractorOptions): {
+  name: string;
+  extract(ctx: { code: string; id?: string }): Set<string>;
+};
+```
+
+## Base UnoCSS config
+
+### `createAsBaseUnoConfig(opts?)`
+
+Returns the minimal UnoCSS base config (vunor + presets + safelist) the demo apps use. Most consumers spread `asPresetVunor()` directly; reach for `createAsBaseUnoConfig` only when you want the entire opinionated config object pre-assembled.
+
+```typescript
+function createAsBaseUnoConfig(opts?: AsBaseUnoConfigOptions): UserConfig;
+```
+
+## Shortcuts
+
+The shortcut tree is split per package so consumers can opt in. Each export is a `TVunorShortcut[]` ready to spread into a vunor config.
+
+```typescript
+import { commonShortcuts, formShortcuts, tableShortcuts, wfShortcuts, allShortcuts } from "@atscript/ui-styles";
+
+const commonShortcuts: TVunorShortcut[];
+const formShortcuts:  TVunorShortcut[];
+const tableShortcuts: TVunorShortcut[];
+const wfShortcuts:    TVunorShortcut[];
+
+const allShortcuts:   TVunorShortcut[]; // mergeVunorShortcuts of the four above
+```
+
+`asPresetVunor()` already injects `allShortcuts`. Spread individual shortcut sets only when assembling a custom preset for a subset of the libraries.
+
+See [The as-\* Shortcut System](/styling/shortcuts).
+
+## Component class maps
+
+Generated at build time by walking every `as-*.vue` template. Drives the safelist extractor and the optional component-exclusion knob.
+
+```typescript
+/** Map: kebab-case component name → array of class names it references. */
+const componentClasses: Record<string, string[]>;
+
+/** Map: kebab-case component name → owning package ("form" | "table" | "wf"). */
+const componentPackages: Record<string, "form" | "table" | "wf">;
+
+function getComponentClasses(name: string): string[] | undefined;
+function getHelperClasses(name: string): string[] | undefined;
+
+/** Map: helper alias → canonical helper name (e.g. "as-form-row" → "as-row"). */
+const helperAliases: Record<string, string>;
+```
+
+## Icons
+
+### `bakedIcons`
+
+```typescript
+const bakedIcons: Record<string, string>;
+```
+
+Map of semantic icon name → Iconify id or inline SVG string. Baked at publish time so the preset works offline and inside CSP-restricted environments. Override individual entries via `asPresetVunor({ iconOverrides })`.
+
+Built-in semantic names include: `search`, `close`, `plus`, `chevron-{up,down,left,right}`, `chevron-double-*`, `arrow-{up,down}`, `grip`, `filter`, `filter-ops`, `sort-asc`, `value-help`, `sun`, `moon`, `check`, `check-square`, `sorters`, `refresh`, `columns`, `eye`, `eye-off`, `eye-slash`, `star`, `star-filled`, `pin`, `pin-filled`, `settings`, `ellipsis`, `menu`, `trash`, `loading`, `warning`, `field-empty`, `field-fill`.
+
+Reference an icon in your own shortcut with `i-as-<name>`:
+
+```typescript
+defineShortcuts({
+  "my-button": "i-as-plus c8-filled scope-primary",
+});
+```
+
+See [Styling — Icons](/styling/icons).
+
+## vunor re-exports
+
+For convenience, the package re-exports the vunor shortcut authoring helpers and the `TVunorShortcut` type so consumers don't need a second import.
+
+```typescript
+import { defineShortcuts, mergeVunorShortcuts, toUnoShortcut } from "@atscript/ui-styles";
+import type { TVunorShortcut } from "@atscript/ui-styles";
+
+function defineShortcuts(map: Record<string, string>): TVunorShortcut[];
+function mergeVunorShortcuts(sets: TVunorShortcut[][]): TVunorShortcut[];
+function toUnoShortcut(shortcut: TVunorShortcut): readonly [string | RegExp, string];
+```
+
+## Vite subpath — AsResolver
+
+### `@atscript/ui-styles/vite`
+
+```typescript
+import { AsResolver } from "@atscript/ui-styles/vite";
+import Components from "unplugin-vue-components/vite";
+
+export default {
+  plugins: [
+    Components({
+      resolvers: [AsResolver()],
+    }),
+  ],
+};
+```
+
+`AsResolver()` returns a `ComponentResolverObject` that auto-imports the **Tier 1 primary components** (`AsForm`, `AsField`, `AsIterator`, `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsFilters`, `AsPresetPicker`, `AsTableActions`, `AsWfForm`) on first use in a template.
+
+Tier-2 defaults (`AsInput`, `AsFilterDialog`, …) are not auto-resolved — users import them explicitly when composing custom defaults. Composables (`useTable`, …) are never handled by `unplugin-vue-components`.
+
+```typescript
+function AsResolver(): ComponentResolverObject;
+```
+
+## Pre-built CSS subpaths
+
+For apps that don't run UnoCSS at all, the package ships pre-baked CSS bundles. Importing one of these subpaths for side-effect injects every class our components need.
+
+```typescript
+import "@atscript/ui-styles/css/all";    // form + table + wf + common
+import "@atscript/ui-styles/css/form";   // form only
+import "@atscript/ui-styles/css/table";  // table only
+import "@atscript/ui-styles/css/wf";     // wf only
+```
+
+Caveat: pre-built CSS skips theme tuning. Use `asPresetVunor()` if you want to change the palette, base radius, fingertip ladder, or icon set.
+
+See [Pre-built CSS](/styling/prebuilt-css).
+
+## Cross-links
+
+- [Styling — Overview](/styling/)
+- [Styling — Installation](/styling/installation)
+- [Styling — Theme & Palette](/styling/theme)
+- [Styling — Icons](/styling/icons)
+- [Styling — The as-\* Shortcut System](/styling/shortcuts)
+- [Styling — Pre-built CSS](/styling/prebuilt-css)
+- vunor — upstream design system (`vunor`, `vunor/theme`, `vunor/utils`)

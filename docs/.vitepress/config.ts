@@ -184,39 +184,135 @@ const guideSidebar = [
     items: [
       { text: "Overview", link: "/guide/" },
       { text: "Quick Start", link: "/guide/quick-start" },
-      { text: "Styling", link: "/guide/styling" },
+      { text: "Installation", link: "/guide/installation" },
+      { text: "The .as File", link: "/guide/the-as-file" },
+      { text: "Ecosystem Map", link: "/guide/ecosystem" },
     ],
   },
 ];
 
-const formSidebar = [
+const formsSidebar = [
   {
     text: "Forms",
     items: [
       { text: "Overview", link: "/forms/" },
-      { text: "Schema Annotations", link: "/forms/annotations" },
-      { text: "Field Types", link: "/forms/field-types" },
+      { text: "Hello World", link: "/forms/hello-world" },
+      { text: "Annotations Reference", link: "/forms/annotations" },
+      { text: "Field Types & Type Map", link: "/forms/field-types" },
       { text: "Validation", link: "/forms/validation" },
-      { text: "Arrays & Nested", link: "/forms/arrays" },
+      { text: "Arrays", link: "/forms/arrays" },
+      { text: "Nested Objects", link: "/forms/nested-objects" },
+      { text: "Unions", link: "/forms/unions" },
+      { text: "Tuples", link: "/forms/tuples" },
+      { text: "Dynamic Fields", link: "/forms/dynamic-fields" },
+      { text: "Grid Layout", link: "/forms/grid-layout" },
+      { text: "Actions", link: "/forms/actions" },
+      { text: "References (FK)", link: "/forms/references" },
     ],
   },
   {
-    text: "Vue Components",
+    text: "Customization",
     items: [
-      { text: "AsForm", link: "/forms/as-form" },
-      { text: "AsField", link: "/forms/as-field" },
-      { text: "Customization", link: "/forms/customization" },
+      { text: "Three Levels of Override", link: "/forms/customization" },
+      { text: "Custom Components", link: "/forms/custom-components" },
+      { text: "Locale & Currency", link: "/forms/locale" },
+    ],
+  },
+];
+
+const tablesSidebar = [
+  {
+    text: "Tables",
+    items: [
+      { text: "Overview", link: "/tables/" },
+      { text: "Hello World", link: "/tables/hello-world" },
+      { text: "Annotations Reference", link: "/tables/annotations" },
+      { text: "Query Function", link: "/tables/query-function" },
+      { text: "Filtering", link: "/tables/filtering" },
+      { text: "Sorting", link: "/tables/sorting" },
+      { text: "Pagination & Virtualization", link: "/tables/pagination" },
+      { text: "Cells", link: "/tables/cells" },
+      { text: "Custom Cells", link: "/tables/custom-cells" },
+      { text: "Config Dialog", link: "/tables/config-dialog" },
+      { text: "URL State", link: "/tables/url-state" },
+      { text: "Presets", link: "/tables/presets" },
+      { text: "Actions & Selection", link: "/tables/actions" },
+    ],
+  },
+  {
+    text: "Customization",
+    items: [
+      { text: "Slot Overrides & Swaps", link: "/tables/customization" },
+      { text: "Server-Side Presets", link: "/tables/server-presets" },
+    ],
+  },
+];
+
+const workflowsSidebar = [
+  {
+    text: "Workflows",
+    items: [
+      { text: "Overview", link: "/workflows/" },
+      { text: "Hello World", link: "/workflows/hello-world" },
+    ],
+  },
+  {
+    text: "Server (moost-wf)",
+    items: [
+      { text: "Authoring Flows", link: "/workflows/server-authoring" },
+      { text: "Form Input", link: "/workflows/form-input" },
+      { text: "Actions", link: "/workflows/actions" },
+      { text: "Context Passing", link: "/workflows/context" },
+      { text: "State Persistence", link: "/workflows/state-persistence" },
+      { text: "Outlets & Resume", link: "/workflows/outlets-resume" },
+    ],
+  },
+  {
+    text: "Client (vue-wf)",
+    items: [
+      { text: "AsWfForm", link: "/workflows/client" },
+      { text: "Recipes", link: "/workflows/recipes" },
+    ],
+  },
+];
+
+const stylingSidebar = [
+  {
+    text: "Styling",
+    items: [
+      { text: "Overview", link: "/styling/" },
+      { text: "Installation", link: "/styling/installation" },
+      { text: "Theme & Palette", link: "/styling/theme" },
+      { text: "Icons", link: "/styling/icons" },
+      { text: "The as-* Shortcut System", link: "/styling/shortcuts" },
+      { text: "Pre-built CSS", link: "/styling/prebuilt-css" },
     ],
   },
 ];
 
 const apiSidebar = [
   {
-    text: "Packages",
+    text: "Framework-Agnostic Core",
     items: [
-      { text: "ui", link: "/api/ui" },
-      { text: "ui-fns", link: "/api/ui-fns" },
-      { text: "vue-form", link: "/api/vue-form" },
+      { text: "@atscript/ui", link: "/api/ui" },
+      { text: "@atscript/ui-fns", link: "/api/ui-fns" },
+      { text: "@atscript/ui-table", link: "/api/ui-table" },
+      { text: "@atscript/ui-styles", link: "/api/ui-styles" },
+    ],
+  },
+  {
+    text: "Vue 3",
+    items: [
+      { text: "@atscript/vue-form", link: "/api/vue-form" },
+      { text: "@atscript/vue-table", link: "/api/vue-table" },
+      { text: "@atscript/vue-wf", link: "/api/vue-wf" },
+    ],
+  },
+  {
+    text: "Server (Moost)",
+    items: [
+      { text: "@atscript/moost-wf", link: "/api/moost-wf" },
+      { text: "@atscript/moost-ui-presets", link: "/api/moost-ui-presets" },
     ],
   },
 ];
@@ -224,7 +320,7 @@ const apiSidebar = [
 export default defineConfig({
   title: "Atscript UI",
   description:
-    "Type-driven UI components for Atscript — automated forms and smart tables from annotated types",
+    "Type-driven UI components for Atscript — automated forms, smart tables, and HTTP workflow forms from annotated types",
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
@@ -248,7 +344,7 @@ export default defineConfig({
       {
         property: "og:description",
         content:
-          "Type-driven UI components for Atscript — automated forms and smart tables from annotated types",
+          "Type-driven UI components for Atscript — automated forms, smart tables, and HTTP workflow forms from annotated types",
       },
     ],
   ],
@@ -266,12 +362,18 @@ export default defineConfig({
     nav: [
       { text: "Guide", link: "/guide/" },
       { text: "Forms", link: "/forms/" },
-      { text: "API", link: "/api/ui-core" },
+      { text: "Tables", link: "/tables/" },
+      { text: "Workflows", link: "/workflows/" },
+      { text: "Styling", link: "/styling/" },
+      { text: "API", link: "/api/ui" },
     ],
 
     sidebar: {
       "/guide/": guideSidebar,
-      "/forms/": formSidebar,
+      "/forms/": formsSidebar,
+      "/tables/": tablesSidebar,
+      "/workflows/": workflowsSidebar,
+      "/styling/": stylingSidebar,
       "/api/": apiSidebar,
     },
 

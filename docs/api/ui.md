@@ -1,27 +1,698 @@
 # @atscript/ui
 
-Framework-agnostic runtime for form and table definitions from Atscript annotated types.
+Framework-agnostic core for type-driven UIs. Reads compiled Atscript metadata, builds form and table definitions, exposes a pluggable field resolver, validators, value-help, and a battery of pure utilities consumed by every Vue package. No Vue, no React — plain TypeScript.
 
-## Installation
+## Contents
 
-```bash
-pnpm add @atscript/ui
-```
-
-## Overview
-
-`@atscript/ui` reads compiled Atscript type metadata and produces structured form and table definitions. It is the foundation that framework-specific packages (like `vue-form`) build upon.
-
-This package has no dependency on Vue or any other UI framework.
+- [Plugin](#plugin)
+- [Form types](#form-types)
+- [Form factories](#form-factories)
+- [Table types](#table-types)
+- [Table factory](#table-factory)
+- [Field resolver](#field-resolver)
+- [Annotation key constants](#annotation-key-constants)
+- [Validators](#validators)
+- [Path utilities](#path-utilities)
+- [Value-help](#value-help)
+- [Grid layout](#grid-layout)
+- [Decimal helpers](#decimal-helpers)
+- [Column helpers](#column-helpers)
+- [Error map utilities](#error-map-utilities)
+- [Type guards](#type-guards)
+- [Misc utilities](#misc-utilities)
+- [Client factory](#client-factory)
+- [Meta cache](#meta-cache)
 
 ## Plugin
 
-`@atscript/ui/plugin` exports a plugin that registers all static `@ui.*` annotations and UI primitives (`ui.select`, `ui.radio`, `ui.checkbox`, `ui.paragraph`, `ui.action`).
+`@atscript/ui/plugin` exposes the build-time plugin that registers every static `@ui.*` annotation key. Wire it in `atscript.config.ts`:
 
-```ts
+```typescript
 import uiPlugin from "@atscript/ui/plugin";
 
 export default {
   plugins: [uiPlugin()],
 };
 ```
+
+For dynamic `@ui.fn.*` and `@ui.form.validate`, also register [`@atscript/ui-fns/plugin`](/api/ui-fns).
+
+## Form types
+
+### `FormDef`
+
+Complete form definition produced by `createFormDef(type)`.
+
+```typescript
+interface FormDef {
+  type: TAtscriptAnnotatedType;
+  rootField: FormFieldDef;
+  fields: FormFieldDef[];
+  flatMap: Map<string, TAtscriptAnnotatedType>;
+}
+```
+
+### `FormFieldDef`
+
+Thin pointer to one atscript prop. Metadata lives on `prop.metadata` and is resolved on demand.
+
+```typescript
+interface FormFieldDef {
+  /** Dot-separated path relative to the parent data container. `""` = root. */
+  path: string;
+  prop: TAtscriptAnnotatedType;
+  /** Render-kind: structural names (`array`, `object`, `union`, `tuple`) or primitive override from `@ui.form.type`. */
+  type: string;
+  /**
+   * Optional `@ui.form.type` / `@ui.type` override that lets a structured kind
+   * (`array`, `object`, `union`, `tuple`) dispatch to a different built-in
+   * renderer in the `:types` map. Reserved for built-in ids — custom
+   * components are wired via `@ui.form.component` + `:components`.
+   */
+  customType?: string;
+  phantom: boolean;
+  name: string;
+  /** True when no `ui.fn.*` keys exist on the prop — perf flag. */
+  allStatic: boolean;
+}
+```
+
+### `FormArrayFieldDef`, `FormObjectFieldDef`, `FormUnionFieldDef`, `FormTupleFieldDef`
+
+Extended field defs for structural kinds.
+
+```typescript
+interface FormArrayFieldDef extends FormFieldDef {
+  itemType: TAtscriptAnnotatedType;
+  itemField: FormFieldDef;
+}
+
+interface FormObjectFieldDef extends FormFieldDef {
+  objectDef: FormDef;
+}
+
+interface FormUnionFieldDef extends FormFieldDef {
+  unionVariants: FormUnionVariant[];
+}
+
+interface FormTupleFieldDef extends FormFieldDef {
+  itemFields: FormFieldDef[];
+}
+```
+
+### `FormUnionVariant`
+
+One branch of a union.
+
+```typescript
+interface FormUnionVariant {
+  label: string;
+  type: TAtscriptAnnotatedType;
+  /** Pre-built FormDef for object variants. */
+  def?: FormDef;
+  /** Pre-built field def for primitive variants. */
+  itemField?: FormFieldDef;
+  /** "string" | "number" | "boolean" for primitive variants. */
+  designType?: string;
+}
+```
+
+### `TFormAction`
+
+```typescript
+interface TFormAction {
+  id: string;
+  label: string;
+}
+```
+
+### `TFormEntryOptions`
+
+A select/radio option — plain string or `{ key, label }` pair.
+
+```typescript
+type TFormEntryOptions = { key: string; label: string } | string;
+```
+
+## Form factories
+
+### `createFormDef(type)`
+
+Builds a `FormDef` from an annotated type. Walks props, pre-resolves structural sub-defs, and caches the flat map.
+
+```typescript
+function createFormDef(type: TAtscriptAnnotatedType): FormDef;
+```
+
+### `buildUnionVariants(type)`
+
+Returns the variant list for a union prop — used internally by `createFormDef` for union fields and union array items.
+
+```typescript
+function buildUnionVariants(type: TAtscriptAnnotatedType): FormUnionVariant[];
+```
+
+### `createFormData(type, resolver?)`
+
+Creates the wrapped data container `{ value: domainData }` populated from atscript defaults and `@meta.default`. The optional `resolver` (`TFormValueResolver`) overrides the per-field defaulting strategy.
+
+```typescript
+function createFormData<T extends TAtscriptAnnotatedType>(
+  type: T,
+  resolver?: TFormValueResolver,
+): { value: TAtscriptDataType<T> };
+```
+
+### `createFormValueResolver(data?, context?)`
+
+Returns a value resolver that reads `@meta.default` or `@ui.form.fn.value`, given a scope.
+
+```typescript
+type TFormValueResolver = (prop: TAtscriptAnnotatedType, path: string) => unknown;
+
+function createFormValueResolver(
+  data?: Record<string, unknown>,
+  context?: Record<string, unknown>,
+): TFormValueResolver;
+```
+
+## Table types
+
+### `TableDef`
+
+Complete table definition built by `createTableDef(meta, type)`.
+
+```typescript
+interface TableDef {
+  type: TAtscriptAnnotatedType;
+  columns: ColumnDef[];
+  flatMap: Map<string, TAtscriptAnnotatedType>;
+  primaryKeys: string[];
+  /** Preferred row identifier for URL/wire addressing. */
+  preferredId: string[];
+  crud: TCrudPermissions;
+  canRemove: boolean;
+  actions: TableActionsModel;
+  searchable: boolean;
+  vectorSearchable: boolean;
+  searchIndexes: SearchIndexInfo[];
+  relations: RelationInfo[];
+}
+```
+
+### `ColumnDef`
+
+A single column definition built from field metadata + annotations.
+
+```typescript
+interface ColumnDef {
+  path: string;
+  label: string;
+  type: string;
+  component?: string;
+  sortable: boolean;
+  filterable: boolean;
+  nullable: boolean;
+  visible: boolean;
+  width?: string;
+  maxLen?: number;
+  order: number;
+  options?: { key: string; label: string }[];
+  valueHelpInfo?: ValueHelpInfo;
+  currencyCode?: string;
+  currencyRefField?: string;
+  unitCode?: string;
+  unitRefField?: string;
+  precisionScale?: number;
+  /** Synthesised columns (e.g. row-actions) — locked chrome, excluded from `columnNames`. */
+  fixed?: boolean;
+}
+```
+
+### `MetaResponse`
+
+The payload returned by the `moost-db` `/meta` endpoint.
+
+```typescript
+interface MetaResponse {
+  searchable: boolean;
+  vectorSearchable: boolean;
+  searchIndexes: SearchIndexInfo[];
+  primaryKeys: string[];
+  preferredId: string[];
+  crud: TCrudPermissions;
+  actions: TDbActionInfo[];
+  relations: RelationInfo[];
+  fields: Record<string, FieldMeta>;
+  type: TSerializedAnnotatedType;
+}
+
+interface FieldMeta {
+  sortable: boolean;
+  filterable: boolean;
+}
+
+interface SearchIndexInfo {
+  name: string;
+  description?: string;
+  type?: "text" | "vector";
+}
+
+interface RelationInfo {
+  name: string;
+  direction: "to" | "from" | "via";
+  isArray: boolean;
+}
+```
+
+### `TableActionsModel`
+
+Server-declared actions grouped by `level`.
+
+```typescript
+interface TableActionsModel {
+  table: TDbActionInfo[];
+  row: TDbActionInfo[];
+  rows: TDbActionInfo[];
+  default: {
+    table?: TDbActionInfo;
+    row?: TDbActionInfo;
+    rows?: TDbActionInfo;
+  };
+}
+```
+
+### `TableQueryState`, `SortControl`, `PaginationControl`
+
+```typescript
+interface SortControl { field: string; direction: "asc" | "desc"; }
+interface PaginationControl { page: number; itemsPerPage: number; }
+
+interface TableQueryState {
+  sort?: SortControl[];
+  pagination?: PaginationControl;
+  search?: string;
+  filters?: Record<string, unknown>;
+}
+```
+
+## Table factory
+
+### `createTableDef(meta, type)`
+
+Builds a `TableDef` from a `MetaResponse` plus the deserialized atscript type.
+
+```typescript
+function createTableDef(
+  meta: MetaResponse,
+  type: TAtscriptAnnotatedType,
+): TableDef;
+```
+
+See [Annotations Reference](/tables/annotations) for how `@ui.table.*` and `@db.*` annotations populate `ColumnDef`.
+
+## Field resolver
+
+The resolver is pluggable so static-only consumers ship with zero `new Function` overhead and dynamic consumers (`@atscript/ui-fns`) opt in by replacing the global instance.
+
+### `FieldResolver`
+
+```typescript
+interface FieldResolver {
+  resolveFieldProp<T>(
+    prop: TAtscriptAnnotatedType,
+    fnKey: string,
+    staticKey: string | undefined,
+    scope: Record<string, unknown>,
+    opts?: TResolveOptions<T>,
+  ): T | undefined;
+
+  resolveFormProp<T>(
+    type: TAtscriptAnnotatedType,
+    fnKey: string,
+    staticKey: string | undefined,
+    scope: Record<string, unknown>,
+    opts?: TResolveOptions<T>,
+  ): T | undefined;
+
+  hasComputedAnnotations(prop: TAtscriptAnnotatedType): boolean;
+}
+
+interface TResolveOptions<T> {
+  staticAsBoolean?: boolean;
+  transform?: (raw: unknown) => T;
+}
+```
+
+### `StaticFieldResolver`
+
+Class implementing `FieldResolver` with static-only semantics — fn keys are ignored.
+
+### `setResolver(resolver)` / `getResolver()` / `defaultResolver`
+
+```typescript
+function setResolver(resolver: FieldResolver): void;
+function getResolver(): FieldResolver;
+const defaultResolver: StaticFieldResolver;
+```
+
+### Standalone helpers
+
+```typescript
+function resolveFieldProp<T>(prop, fnKey, staticKey, scope, opts?): T | undefined;
+function resolveFormProp<T>(type, fnKey, staticKey, scope, opts?): T | undefined;
+function resolveStatic<T>(metadata, staticKey, opts?): T | undefined;
+function hasComputedAnnotations(prop: TAtscriptAnnotatedType): boolean;
+function getFieldMeta<K extends keyof AtscriptMetadata>(
+  prop: TAtscriptAnnotatedType,
+  key: K,
+): AtscriptMetadata[K] | undefined;
+```
+
+`resolveStatic` is exposed so dynamic resolvers (in `ui-fns`) can fall back to it without duplicating logic.
+
+### `parseStaticAttrs(value)` / `resolveAttrs(prop, scope, keys?)`
+
+Resolve `@ui.form.attr` and the dynamic `@ui.form.fn.attr` counterpart into a single record. `keys` overrides the static/fn key pair for `@ui.table.attr` and friends.
+
+```typescript
+function parseStaticAttrs(value: unknown): Record<string, unknown> | undefined;
+function resolveAttrs(
+  prop: TAtscriptAnnotatedType,
+  scope: Record<string, unknown>,
+  keys?: { staticKey?: string; fnKey?: string },
+): Record<string, unknown> | undefined;
+```
+
+## Annotation key constants
+
+Every supported annotation has a stringly-typed constant exported from `@atscript/ui` so consumers can build resolvers, mappers, or codegen against named keys instead of magic strings.
+
+### Cross-surface
+
+| Name | Value |
+| --- | --- |
+| `UI_TYPE` | `"ui.type"` |
+
+### Form static keys
+
+`UI_FORM_PLACEHOLDER`, `UI_FORM_HINT`, `UI_FORM_CLASSES`, `UI_FORM_STYLES`, `UI_FORM_AUTOCOMPLETE`, `UI_FORM_DISABLED`, `UI_FORM_OPTIONS`, `UI_FORM_ORDER`, `UI_FORM_TYPE`, `UI_FORM_COMPONENT`, `UI_FORM_HIDDEN`, `UI_FORM_ATTR`, `UI_FORM_GRID_COL_SPAN`, `UI_FORM_GRID_ROW_SPAN`, `UI_FORM_SUBMIT_TEXT`, `UI_FORM_LABEL_SINGULAR`, `UI_FORM_ACTION`, `UI_FORM_PREFIX`, `UI_FORM_PREFIX_REF`, `UI_FORM_PREFIX_ICON`, `UI_FORM_SUFFIX`, `UI_FORM_SUFFIX_REF`, `UI_FORM_SUFFIX_ICON`, `UI_FORM_VALIDATE`.
+
+### Form dynamic keys
+
+`UI_FORM_FN_PREFIX`, `UI_FORM_FN_LABEL`, `UI_FORM_FN_PLACEHOLDER`, `UI_FORM_FN_DESCRIPTION`, `UI_FORM_FN_HINT`, `UI_FORM_FN_HIDDEN`, `UI_FORM_FN_DISABLED`, `UI_FORM_FN_READONLY`, `UI_FORM_FN_OPTIONS`, `UI_FORM_FN_ATTR`, `UI_FORM_FN_VALUE`, `UI_FORM_FN_CLASSES`, `UI_FORM_FN_STYLES`, `UI_FORM_FN_TITLE`, `UI_FORM_FN_SUBMIT_TEXT`, `UI_FORM_FN_SUBMIT_DISABLED`.
+
+### Table static keys
+
+`UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_HIDDEN`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER`.
+
+### Table dynamic keys
+
+`UI_TABLE_FN_PREFIX`, `UI_TABLE_FN_ATTR`, `UI_TABLE_FN_CLASSES`, `UI_TABLE_FN_STYLES`.
+
+### Dictionary
+
+`UI_DICT_LABEL`, `UI_DICT_DESCR`, `UI_DICT_ATTR`, `UI_DICT_FILTERABLE`, `UI_DICT_SORTABLE`, `UI_DICT_SEARCHABLE`.
+
+### DB-aware
+
+`DB_REL_FK`, `DB_HTTP_PATH`, `DB_AMOUNT_CURRENCY`, `DB_AMOUNT_CURRENCY_REF`, `DB_UNIT`, `DB_UNIT_REF`, `DB_COLUMN_PRECISION`.
+
+### Workflow
+
+`WF_ACTION_WITH_DATA`.
+
+### Meta / expect
+
+`META_LABEL`, `META_ID`, `META_DESCRIPTION`, `META_READONLY`, `META_REQUIRED`, `META_DEFAULT`, `META_SENSITIVE`, `EXPECT_MAX_LENGTH`.
+
+## Validators
+
+### `getFormValidator(def, opts?)`
+
+Returns a reusable validator function bound to a `FormDef`. Built once, called per submit.
+
+```typescript
+function getFormValidator(
+  def: FormDef,
+  opts?: Partial<TValidatorOptions>,
+): (callOpts: { data: Record<string, unknown>; context?: Record<string, unknown> }) => Record<string, string>;
+```
+
+Returns an errors record keyed by dot-separated field path (empty when valid).
+
+### `createFieldValidator(prop, opts?)`
+
+Field-level validator with internal `Validator` caching. Returns `true` on success or the first error message string.
+
+```typescript
+function createFieldValidator(
+  prop: TAtscriptAnnotatedType,
+  opts?: { rootOnly?: boolean },
+): (value: unknown, externalCtx?: { data: unknown; context: unknown }) => true | string;
+```
+
+### Default validator plugins
+
+`setDefaultValidatorPlugins(plugins)` installs validator plugins globally; both `getFormValidator` and `createFieldValidator` apply them. `getDefaultValidatorPlugins()` returns the current list. `@atscript/ui-fns` uses this to wire its `uiFnsValidatorPlugin()`.
+
+```typescript
+function setDefaultValidatorPlugins(plugins: TValidatorPlugin[]): void;
+function getDefaultValidatorPlugins(): TValidatorPlugin[];
+```
+
+See the [Validation guide](/forms/validation) for end-to-end usage.
+
+## Path utilities
+
+Form data is wrapped: `{ value: domainData }`. These helpers de-reference the wrapper automatically.
+
+### `getByPath(data, path)` / `setByPath(data, path, value)`
+
+```typescript
+function getByPath(obj: Record<string, unknown>, path: string): unknown;
+function setByPath(obj: Record<string, unknown>, path: string, value: unknown): void;
+```
+
+`path === ""` returns or replaces the entire `obj.value`. Intermediate objects are auto-created on set.
+
+### `detectUnionVariant(value, variants)`
+
+Returns the index of the variant matching `value`. Uses a discriminator when atscript detects one, otherwise probes each variant's validator. Falls back to `0`.
+
+```typescript
+function detectUnionVariant(value: unknown, variants: FormUnionVariant[]): number;
+```
+
+## Value-help
+
+### `ValueHelpInfo`
+
+Sync probe for a value-help-eligible prop (FK or ref).
+
+```typescript
+interface ValueHelpInfo {
+  /** HTTP path of the value-help target. */
+  url: string;
+  /** Field on the target that this FK references. */
+  targetField: string;
+}
+```
+
+### `extractValueHelp(prop)` / `extractLiteralOptions(prop)` / `isPureLiteralUnion(prop)`
+
+```typescript
+function extractValueHelp(prop: TAtscriptAnnotatedType): ValueHelpInfo | undefined;
+function extractLiteralOptions(prop: TAtscriptAnnotatedType): { key: string; label: string }[] | undefined;
+function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
+```
+
+### `valueHelpDictPaths(prop)`
+
+Returns the dot-paths to dictionary fields surfaced by `@ui.dict.*` annotations on a ref target.
+
+### `ValueHelpClient`
+
+Class wrapping a value-help search endpoint. Used internally by Vue field components — most consumers route through `resolveValueHelp()` instead.
+
+```typescript
+class ValueHelpClient {
+  constructor(config: { url: string; targetField: string; clientFactory?: ClientFactory });
+  search(opts: ValueHelpSearchOptions): Promise<ValueHelpResult>;
+}
+
+interface ValueHelpSearchOptions {
+  query?: string;
+  filter?: Record<string, unknown>;
+  page?: number;
+  itemsPerPage?: number;
+}
+
+interface ValueHelpResult {
+  items: Record<string, unknown>[];
+  total: number;
+}
+```
+
+### `resolveValueHelp(url)` / `resetValueHelpCache()`
+
+Globally caches resolved value-help endpoints by URL so multiple fields pointing at the same target share one `/meta` fetch.
+
+```typescript
+function resolveValueHelp(url: string): Promise<ResolvedValueHelp>;
+function resetValueHelpCache(): void;
+
+interface ResolvedValueHelp {
+  meta: MetaResponse;
+  type: TAtscriptAnnotatedType;
+  // ... target field metadata
+}
+```
+
+See [Forms — References (FK)](/forms/references).
+
+### Option helpers
+
+```typescript
+function optKey(opt: TFormEntryOptions): string;
+function optLabel(opt: TFormEntryOptions): string;
+function parseStaticOptions(value: unknown): TFormEntryOptions[] | undefined;
+function resolveOptions(
+  prop: TAtscriptAnnotatedType,
+  scope: Record<string, unknown>,
+): TFormEntryOptions[] | undefined;
+```
+
+`resolveOptions` checks `@ui.form.options`, then `@ui.form.fn.options` via the active resolver, then literal-union extraction.
+
+## Grid layout
+
+Framework-agnostic helpers for `@ui.form.grid.colSpan` / `@ui.form.grid.rowSpan`.
+
+```typescript
+const DEFAULT_COL_SPAN: number;
+const DEFAULT_ROW_SPAN: number;
+
+interface GridSpec {
+  colSpan: number;
+  rowSpan: number;
+}
+interface GridSpanArgs {
+  col?: number | string;
+  row?: number | string;
+}
+
+function parseColSpan(raw: unknown): number;
+function parseRowSpan(raw: unknown): number;
+function resolveGridSpec(prop: TAtscriptAnnotatedType): GridSpec;
+function buildGridClasses(spec: GridSpec): string;
+```
+
+See [Grid Layout](/forms/grid-layout).
+
+## Decimal helpers
+
+Framework-agnostic decimal-string formatting and parsing — shared by `@atscript/vue-form` AsDecimal and `@atscript/vue-table` cells. Storage is string-only so DB-precision decimals never bounce through floats.
+
+```typescript
+interface CurrencyDisplay { decimals: number; symbol: string; }
+interface DecimalParts { integer: string; fraction: string; sign: "+" | "-"; }
+interface FormatDecimalOptions {
+  currency?: string;
+  locale?: string;
+  /** Number of fractional digits to display. */
+  scale?: number;
+}
+
+function enforceScale(value: string, scale: number): string;
+function formatDecimalForDisplay(value: string, opts?: FormatDecimalOptions): string;
+function parseDecimalInput(input: string, opts?: FormatDecimalOptions): string | undefined;
+function getCurrencyDecimals(currency: string, locale?: string): number;
+function getCurrencyDisplayParts(currency: string, locale?: string): CurrencyDisplay;
+function getDecimalSeparator(locale?: string): string;
+function getThousandsSeparator(locale?: string): string;
+function groupInteger(integer: string, locale?: string): string;
+function joinDecimalString(parts: DecimalParts): string;
+function splitDecimalString(value: string): DecimalParts;
+```
+
+## Column helpers
+
+```typescript
+function getVisibleColumns(def: TableDef, hidden?: Set<string>): ColumnDef[];
+function getSortableColumns(def: TableDef): ColumnDef[];
+function getFilterableColumns(def: TableDef): ColumnDef[];
+function getColumn(def: TableDef, path: string): ColumnDef | undefined;
+```
+
+## Error map utilities
+
+```typescript
+function mergeErrorMaps(
+  a: Record<string, string | undefined> | undefined,
+  b: Record<string, string> | undefined,
+): Record<string, string | undefined> | undefined;
+
+function* iteratePathAncestors(path: string): Generator<string>;
+
+function buildDescendantErrorCounts(
+  errors: Record<string, string | undefined> | undefined,
+): Map<string, number>;
+```
+
+`iteratePathAncestors("a.b.c")` yields `"a.b"`, `"a"`, `""`. `buildDescendantErrorCounts` powers the count badges on `AsObject` headers.
+
+## Type guards
+
+```typescript
+function isArrayField(field: FormFieldDef): field is FormArrayFieldDef;
+function isObjectField(field: FormFieldDef): field is FormObjectFieldDef;
+function isUnionField(field: FormFieldDef): field is FormUnionFieldDef;
+function isTupleField(field: FormFieldDef): field is FormTupleFieldDef;
+```
+
+## Misc utilities
+
+```typescript
+function asArray<T>(x: T | T[]): T[];
+function resolveSingularLabel(prop: TAtscriptAnnotatedType): string | undefined;
+function extractMeasurement(prop: TAtscriptAnnotatedType): MeasurementInfo | undefined;
+function str(...parts: unknown[]): string;
+```
+
+`extractMeasurement` reads `@db.amount.currency*` / `@db.unit*` / `@db.column.precision` and returns a structured info record consumed by AsField for currency/unit adornments.
+
+## Client factory
+
+`ClientFactory` is the contract Vue tables and value-help use to build HTTP clients. Override globally to inject auth headers / retries / interceptors.
+
+```typescript
+type ClientFactory = (url: string) => DbClient;
+
+function setDefaultClientFactory(factory: ClientFactory): void;
+function getDefaultClientFactory(): ClientFactory | undefined;
+function resetDefaultClientFactory(): void;
+```
+
+## Meta cache
+
+A single `/meta` fetch per URL is cached across `useTable` instances and `resolveValueHelp` calls.
+
+```typescript
+function getMetaEntry(url: string): Promise<MetaCacheEntry>;
+function resetMetaCache(): void;
+
+interface MetaCacheEntry {
+  meta: MetaResponse;
+  type: TAtscriptAnnotatedType;
+}
+```
+
+## Cross-links
+
+- [Forms — Annotations Reference](/forms/annotations)
+- [Forms — Validation](/forms/validation)
+- [Forms — References (FK)](/forms/references)
+- [Tables — Annotations Reference](/tables/annotations)
+- [@atscript/ui-fns](/api/ui-fns) — dynamic resolver
+- atscript.dev — `.as` syntax and `Validator`
