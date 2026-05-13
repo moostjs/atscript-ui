@@ -1,4 +1,4 @@
-import { outletHttp, type WfOutletRequest } from "@moostjs/event-wf";
+import { outletHttp } from "@moostjs/event-wf";
 import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 
@@ -14,10 +14,10 @@ export function httpInputRequired(
   type: TAtscriptAnnotatedType,
   wfContext: object,
   errors?: Record<string, string>,
-): WfOutletRequest {
+) {
   const context: Record<string, unknown> = {
     ...extractPassContext(type, wfContext as Record<string, unknown>),
   };
   if (errors) context.errors = errors;
-  return outletHttp(serializeFormSchema(type), context) as WfOutletRequest;
+  return outletHttp(serializeFormSchema(type), context);
 }
