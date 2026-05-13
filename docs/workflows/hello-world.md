@@ -66,7 +66,6 @@ import {
   WorkflowSchema,
   WorkflowParam,
   useWfFinished,
-  createHttpOutlet,
   outletHttp,
 } from "@moostjs/event-wf";
 import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
@@ -88,13 +87,7 @@ export class HelloWorkflow {
     @WorkflowParam("context") ctx: HelloCtx,
   ) {
     if (!input?.name) {
-      return outletHttp({
-        inputRequired: {
-          payload: serializeFormSchema(HelloForm),
-          transport: "http" as const,
-          context: extractPassContext(HelloForm, ctx),
-        },
-      });
+      return outletHttp(serializeFormSchema(HelloForm), extractPassContext(HelloForm, ctx));
     }
     ctx.name = input.name;
     return;
@@ -111,8 +104,10 @@ export class HelloWorkflow {
 }
 ```
 
-A small helper keeps the `inputRequired` envelope out of the step
-body. Most production code uses one — see `httpInputRequired` in
+`createAsHttpOutlet()` (registered below) wraps the `inputRequired`
+envelope automatically, so the step body stays at one line:
+`outletHttp(schema, context)`. A thin helper that also merges
+field-level errors into the context is shown in
 [Server-Side Authoring](/workflows/server-authoring).
 
 ### Mount the workflow on a Moost app
@@ -126,9 +121,9 @@ import {
   MoostWf,
   handleWfOutletRequest,
   EncapsulatedStateStrategy,
-  createHttpOutlet,
   type WfOutletTriggerDeps,
 } from "@moostjs/event-wf";
+import { createAsHttpOutlet } from "@atscript/moost-wf";
 import { Controller } from "moost";
 import { HelloWorkflow } from "./workflows/hello.workflow";
 
@@ -150,7 +145,7 @@ class WfController {
           new EncapsulatedStateStrategy({
             secret: Buffer.from(process.env.WF_SECRET!, "hex"),
           }),
-        outlets: [createHttpOutlet()],
+        outlets: [createAsHttpOutlet()],
         token: { read: ["body"], write: "body", name: "wfs" },
       },
       deps,

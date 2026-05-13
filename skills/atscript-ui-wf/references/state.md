@@ -215,11 +215,11 @@ import {
   MoostWf,
   HandleStateStrategy,
   EncapsulatedStateStrategy,
-  createHttpOutlet,
   createEmailOutlet,
   handleWfOutletRequest,
   type WfOutletTriggerDeps,
 } from "@moostjs/event-wf";
+import { createAsHttpOutlet } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 
 const wfStore = new AsWfStore({
@@ -254,7 +254,7 @@ export class WorkflowsController {
         // Per-call strategy selection. Return the same `handleStrategy` to use
         // AsWfStore on every flow, or branch by `wfid` for mixed persistence.
         state: () => handleStrategy,
-        outlets: [createHttpOutlet(), createEmailOutlet(sendEmail)],
+        outlets: [createAsHttpOutlet(), createEmailOutlet(sendEmail)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },
       deps,

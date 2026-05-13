@@ -96,8 +96,11 @@ Three things a step can do:
 
 ### 1. Request input (pause)
 
-Return `outletHttp({...})` (or the `httpInputRequired` helper most
-real code uses):
+Return `outletHttp(payload, context)`. With `createAsHttpOutlet()`
+mounted in the controller (see [App wiring](#app-wiring) below), the
+outlet wraps the response in the `{ inputRequired: { payload,
+transport, context } }` envelope the client expects, so the step body
+stays declarative:
 
 ```ts
 import { outletHttp } from "@moostjs/event-wf";
@@ -109,20 +112,15 @@ async enterCredentials(
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
   if (!input?.username || !input?.password) {
-    return outletHttp({
-      inputRequired: {
-        payload: serializeFormSchema(LoginForm),
-        transport: "http" as const,
-        context: extractPassContext(LoginForm, ctx),
-      },
-    });
+    return outletHttp(serializeFormSchema(LoginForm), extractPassContext(LoginForm, ctx));
   }
   // ... validate credentials ...
 }
 ```
 
-In practice every codebase ends up with a one-line helper. A common
-shape is `httpInputRequired`:
+When the same step also wants to surface field-level errors, a tiny
+helper that merges `errors` into the passed context keeps the call
+sites tidy:
 
 ```ts
 // shared/wf-helpers.ts
@@ -134,18 +132,12 @@ export function httpInputRequired(
   type: TAtscriptAnnotatedType,
   wfContext: object,
   errors?: Record<string, string>,
-): { inputRequired: WfOutletRequest } {
+): WfOutletRequest {
   const context: Record<string, unknown> = {
     ...extractPassContext(type, wfContext as Record<string, unknown>),
   };
   if (errors) context.errors = errors;
-  return outletHttp({
-    inputRequired: {
-      payload: serializeFormSchema(type),
-      transport: "http",
-      context,
-    },
-  }) as { inputRequired: WfOutletRequest };
+  return outletHttp(serializeFormSchema(type), context) as WfOutletRequest;
 }
 ```
 
@@ -236,10 +228,10 @@ import {
   MoostWf,
   handleWfOutletRequest,
   EncapsulatedStateStrategy,
-  createHttpOutlet,
   createEmailOutlet,
   type WfOutletTriggerDeps,
 } from "@moostjs/event-wf";
+import { createAsHttpOutlet } from "@atscript/moost-wf";
 
 @Controller()
 export class WorkflowsController {
@@ -264,7 +256,7 @@ export class WorkflowsController {
       {
         allow: ["auth/login", "auth/register"],
         state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
-        outlets: [createHttpOutlet(), createEmailOutlet(sendEmail)],
+        outlets: [createAsHttpOutlet(), createEmailOutlet(sendEmail)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },
       deps,
@@ -291,8 +283,10 @@ A few things to know:
   the store). See [State Persistence](/workflows/state-persistence)
   for swapping in `AsWfStore`.
 - **`outlets`** — register HTTP (always) and any other outlet the
-  workflows use (email magic links, webhooks). See
-  [Outlets & Resume](/workflows/outlets-resume).
+  workflows use (email magic links, webhooks). Use
+  `createAsHttpOutlet()` from `@atscript/moost-wf` so HTTP responses
+  carry the `inputRequired` envelope the `<AsWfForm>` client expects.
+  See [Outlets & Resume](/workflows/outlets-resume).
 - **`token`** — where to read/write the state token. `body` is the
   default; `cookie` persists across reloads; `query` enables magic
   links (`?wfs=token` in URLs).

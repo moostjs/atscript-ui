@@ -129,6 +129,7 @@ Token transports: 'body' (default), 'cookie', 'query' (?wfs=...).
 | 8   | **Shadow columns require `string \| number \| boolean`.** `@wf.store.fromContext 'path.in.context'` copies the value at every `set()`. Optional fields → `null` on path miss; required fields without DB defaults → insert may fail. Type mismatches log once per field per store instance, write `null`, continue. Run `store.heal()` after schema or path changes.                                                                                                         |
 | 9   | **`@atscript/moost-wf/store` is ESM-only.** Triggered by any import of `@atscript/moost-wf/store` (runtime class) or `@atscript/moost-wf/store.as` (atscript model). Fix: set `"type": "module"` in the consumer's `package.json` and bundle ESM. CJS consumers must drop `AsWfStore` and use the in-memory store from `@moostjs/event-wf`.                                                                                                                                  |
 | 10  | **Token transport survives reloads only if persistent.** `body` transport (default) is lost on reload. `cookie` survives until expiry. `query` (`?wfs=token`) is URL-shareable and single-use. Pick the transport that matches your resume story.                                                                                                                                                                                                                            |
+| 11  | **HTTP outlet wraps `inputRequired` — conditionally.** Mount `createAsHttpOutlet()` from `@atscript/moost-wf` (not bare `createHttpOutlet`) in `handleWfOutletRequest`. It wraps generic form payloads in `{ inputRequired: { payload, transport: 'http', context } }` so `<AsWfForm>` decodes them. **Pass-through:** payloads already carrying a root-level routing key — `finished`, `sent`, `outlet`, `error` — flow through at the response root (merged with `context` if any), so `outletHttp({ outlet: 'awaiting-payment' })` and `outletHttp({ error: { message } })` keep working without a separate outlet. Bare `createHttpOutlet` flattens everything and crashes `<AsWfForm>` on form payloads with "Unexpected response format". |
 
 ## Key imports
 
@@ -148,6 +149,7 @@ import {
   getFormActions,
   useFormInput,
   useWfAction,
+  createAsHttpOutlet,
 } from "@atscript/moost-wf";
 import type { TFormInput } from "@atscript/moost-wf";
 

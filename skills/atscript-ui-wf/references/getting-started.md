@@ -61,41 +61,12 @@ import {
   WorkflowParam,
   useWfFinished,
   outletHttp,
-  type WfOutletRequest,
 } from "@moostjs/event-wf";
-import {
-  FormInput,
-  type TFormInput,
-  serializeFormSchema,
-  extractPassContext,
-} from "@atscript/moost-wf";
-import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
 import { HelloName } from "./forms.as";
 
 interface Ctx {
   name?: string;
-}
-
-/**
- * Helper: build the `inputRequired` outlet response that `<AsWfForm>` expects.
- * Pattern, not a public export — copy into your own `wf-helpers.ts`.
- */
-function httpInputRequired(
-  type: TAtscriptAnnotatedType,
-  wfContext: object,
-  errors?: Record<string, string>,
-): { inputRequired: WfOutletRequest } {
-  const context: Record<string, unknown> = {
-    ...extractPassContext(type, wfContext as Record<string, unknown>),
-  };
-  if (errors) context.errors = errors;
-  return outletHttp({
-    inputRequired: {
-      payload: serializeFormSchema(type),
-      transport: "http",
-      context,
-    },
-  }) as { inputRequired: WfOutletRequest };
 }
 
 @Controller()
@@ -109,7 +80,11 @@ export class HelloWorkflow {
     @WorkflowParam("input") input: { name?: string } | undefined,
     @WorkflowParam("context") ctx: Ctx,
   ) {
-    if (!input?.name) return httpInputRequired(HelloName, ctx);
+    if (!input?.name) {
+      // `createAsHttpOutlet()` (mounted in the trigger, step 4 below) wraps
+      // this in `{ inputRequired: { payload, transport, context } }`.
+      return outletHttp(serializeFormSchema(HelloName), extractPassContext(HelloName, ctx));
+    }
     ctx.name = input.name;
   }
 
@@ -123,10 +98,10 @@ export class HelloWorkflow {
 }
 ```
 
-Key shapes (`packages/moost-wf/src/form-input/decorator.ts:21-29` for `@FormInput()` flavour; `packages/vue-demo/src/server/workflows/wf-helpers.ts` for the `httpInputRequired` pattern):
+Key shapes (`packages/moost-wf/src/form-input/decorator.ts:21-29` for the higher-level `@FormInput()` flavour):
 
 - `Workflow`, `Step`, `WorkflowSchema`, `WorkflowParam`, `useWfFinished`, `outletHttp` come from **`@moostjs/event-wf`**, not from `moost`. Only `@Controller()` comes from `moost`.
-- `@FormInput()` and friends come from **`@atscript/moost-wf`**.
+- `serializeFormSchema`, `extractPassContext`, `createAsHttpOutlet`, `@FormInput()` and friends come from **`@atscript/moost-wf`**.
 
 ### 3. App bootstrap — mount the global interceptor
 
@@ -152,7 +127,25 @@ await app.registerControllers(HelloWorkflow).init();
 
 ### 4. HTTP trigger
 
-Expose `POST /wf/trigger` that forwards the request body to the workflow engine (start by `wfid`, resume by `wfs`). The exact route lives in your Moost app; the contract is the wire protocol from `SKILL.md`.
+Expose `POST /wf/trigger` that forwards the request body to the workflow engine (start by `wfid`, resume by `wfs`). Register `createAsHttpOutlet()` in the outlet list so `outletHttp(...)` returns the `inputRequired` envelope `<AsWfForm>` expects:
+
+```typescript
+import { handleWfOutletRequest, EncapsulatedStateStrategy } from "@moostjs/event-wf";
+import { createAsHttpOutlet } from "@atscript/moost-wf";
+
+// inside the @Post('wf/trigger') handler:
+return handleWfOutletRequest(
+  {
+    allow: ["hello"],
+    state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
+    outlets: [createAsHttpOutlet()],
+    token: { read: ["body"], write: "body", name: "wfs" },
+  },
+  deps,
+);
+```
+
+See `outlets.md` for the bare-`createHttpOutlet` alternative and SKILL.md invariant 11.
 
 ### 5. Client mount
 

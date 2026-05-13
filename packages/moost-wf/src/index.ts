@@ -7,3 +7,4 @@ export { serializeFormSchema } from "./form-input/serialize";
 export { extractPassContext, getFormActions } from "./form-input/context";
 export { useFormInput } from "./form-input/use";
 export { useWfAction } from "./form-input/use-wf-action";
+export { createAsHttpOutlet } from "./outlet";

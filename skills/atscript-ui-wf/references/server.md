@@ -107,7 +107,7 @@ async enterCredentials(
 
 ## httpInputRequired pattern
 
-`httpInputRequired(type, wfContext, errors?)` is the canonical helper for "pause and render this form". It is **not** a public export of `@atscript/moost-wf` — copy this helper into your project (e.g. `src/wf/wf-helpers.ts`):
+`httpInputRequired(type, wfContext, errors?)` is a one-line helper for "pause and render this form, optionally with field errors merged into the context". It's sugar over `outletHttp(serializeFormSchema(type), {...extractPassContext(type, ctx), errors?})`. Not a public export — copy into your project (e.g. `src/wf/wf-helpers.ts`):
 
 ```typescript
 import { outletHttp, type WfOutletRequest } from "@moostjs/event-wf";
@@ -118,18 +118,12 @@ export function httpInputRequired(
   type: TAtscriptAnnotatedType,
   wfContext: object,
   errors?: Record<string, string>,
-): { inputRequired: WfOutletRequest } {
+): WfOutletRequest {
   const context: Record<string, unknown> = {
     ...extractPassContext(type, wfContext as Record<string, unknown>),
   };
   if (errors) context.errors = errors;
-  return outletHttp({
-    inputRequired: {
-      payload: serializeFormSchema(type),
-      transport: "http",
-      context,
-    },
-  }) as { inputRequired: WfOutletRequest };
+  return outletHttp(serializeFormSchema(type), context) as WfOutletRequest;
 }
 ```
 
@@ -137,7 +131,7 @@ Three responsibilities:
 
 1. `serializeFormSchema(type)` — strip `@wf.context.pass` and produce wire-safe payload (cached per type identity).
 2. `extractPassContext(type, wfContext)` — copy only whitelisted keys from `wfContext` into the response.
-3. `outletHttp({...})` — wrap in the http-outlet envelope so the trigger emits `{ inputRequired: {...}, wfs: '<token>' }`.
+3. Return as the HTTP outlet payload — `createAsHttpOutlet()` (registered in the trigger) wraps it in the `inputRequired` envelope so the trigger emits `{ inputRequired: {...}, wfs: '<token>' }`.
 
 `errors` keys are field paths. Special key `__form` is a top-level form error (e.g. "Invalid credentials"). The client renders these via `AsForm`'s error map.
 

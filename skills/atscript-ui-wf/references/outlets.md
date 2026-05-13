@@ -20,12 +20,16 @@ An **outlet** is a workflow pause that hands control to an external channel (ema
 
 Two outlet flavours from `@moostjs/event-wf`:
 
-| Outlet                            | Use                                                                                                                                    |
-| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `outletHttp({...})`               | embeds payload in the HTTP response (`inputRequired` lives in here). The flow continues on the next HTTP request from the same client. |
-| `outletEmail(to, template, data)` | sends an email, returns `{ sent: true }` (or `{ outlet: '<name>' }`), client closes the loop. Resume comes from the link in the email. |
+| Outlet                                | Use                                                                                                                                                                                                                                                                          |
+| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `outletHttp(payload, context?)`       | embeds payload in the HTTP response. With `createAsHttpOutlet()` mounted in `handleWfOutletRequest`, the outlet wraps the return value as `{ inputRequired: { payload, transport: 'http', context } }` — what `<AsWfForm>` decodes. The flow continues on the next request. |
+| `outletEmail(to, template, data)`     | sends an email, returns `{ sent: true }` (or `{ outlet: '<name>' }`), client closes the loop. Resume comes from the link in the email.                                                                                                                                       |
 
 You can also write custom outlets (SMS, push, webhook). The runtime treats them all the same way: pause + persist + return a response shape that the client recognizes.
+
+### Why two HTTP outlets?
+
+`createHttpOutlet` (from `@moostjs/event-wf`) is the generic primitive — it flattens `outletHttp(payload, context)` onto the response root unconditionally. `createAsHttpOutlet` (from `@atscript/moost-wf`) pre-configures the `transform` to wrap generic form payloads in the `{ inputRequired: {...} }` envelope `<AsWfForm>` decodes, while letting signal payloads (`finished`/`sent`/`outlet`/`error`) flow through unwrapped. Use `createAsHttpOutlet()` for every trigger fronting `<AsWfForm>`; reach for bare `createHttpOutlet()` only for non-`<AsWfForm>` consumers. See SKILL.md invariant 11 for the pass-through detail.
 
 ## Outlet response shapes
 
@@ -207,6 +211,8 @@ async charge(@WorkflowParam("context") ctx: { orderId: string; token?: string })
   return outletHttp({ outlet: "awaiting-payment" });
 }
 ```
+
+Works without a separate outlet registration: `createAsHttpOutlet()` recognises `outlet` as a top-level routing key and passes the payload through at the response root. The client routes it via the `typeof data.outlet === 'string'` branch (`packages/vue-wf/src/use-wf-form.ts:146`) and fires `@finished`.
 
 ### Step 2 — webhook receiver
 

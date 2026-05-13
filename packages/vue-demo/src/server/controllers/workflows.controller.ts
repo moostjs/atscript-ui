@@ -3,7 +3,6 @@ import { Controller } from "moost";
 import { Post } from "@moostjs/event-http";
 import {
   MoostWf,
-  createHttpOutlet,
   createEmailOutlet,
   EncapsulatedStateStrategy,
   HandleStateStrategy,
@@ -11,6 +10,7 @@ import {
   type WfOutletTriggerDeps,
   type WfStateStrategy,
 } from "@moostjs/event-wf";
+import { createAsHttpOutlet } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 // Keep the email outlet registered for future magic-link flows (user invite, password-reset);
 // current P6 workflows dispatch OTP inline so they can pause on a form in the same response.
@@ -116,7 +116,7 @@ export class WorkflowsController {
               ? handleStrategy
               : encapsulatedStrategy
             : dispatchingStrategy,
-        outlets: [createHttpOutlet(), createEmailOutlet(consoleEmailSender)],
+        outlets: [createAsHttpOutlet(), createEmailOutlet(consoleEmailSender)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },
       deps,

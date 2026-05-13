@@ -95,19 +95,34 @@ request returns an error.
 The HTTP dispatcher registers every outlet your flows use:
 
 ```ts
-import { createHttpOutlet, createEmailOutlet, handleWfOutletRequest } from "@moostjs/event-wf";
+import { createEmailOutlet, handleWfOutletRequest } from "@moostjs/event-wf";
+import { createAsHttpOutlet } from "@atscript/moost-wf";
 import { consoleEmailSender } from "../workflows/email-sender";
 
 return handleWfOutletRequest(
   {
     allow: ALLOWED_WORKFLOWS,
     state: () => handleStrategy,
-    outlets: [createHttpOutlet(), createEmailOutlet(consoleEmailSender)],
+    outlets: [createAsHttpOutlet(), createEmailOutlet(consoleEmailSender)],
     token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
   },
   deps,
 );
 ```
+
+`createAsHttpOutlet()` is the canonical HTTP outlet for atscript-ui
+workflows — it wraps generic form payloads in the
+`{ inputRequired: { payload, transport, context } }` envelope the
+`<AsWfForm>` client decodes. Payloads that already carry one of the
+client's root-level routing keys — `finished`, `sent`, `outlet`, or
+`error` — pass through at the response root (merged with `context`
+if any), so `outletHttp({ outlet: "awaiting-payment" })` for a
+webhook pause, `outletHttp({ error: { message } })`, etc. continue
+to work without registering a separate outlet. If you need a bare
+HTTP outlet for non-`<AsWfForm>` consumers (a custom JS client, an
+inline-data response, …), use `createHttpOutlet` from
+`@moostjs/event-wf` directly — it flattens payload + context onto
+the response root unconditionally and leaves the shape to you.
 
 `createEmailOutlet(sender)` takes a sender — your function that
 actually composes + dispatches the email. A `consoleEmailSender` that
