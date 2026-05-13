@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/vue-wf
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Vue 3 client for the atscript-ui workflow form — HTTP round-trip loop driven by metadata exchanged with a [`@atscript/moost-wf`](../moost-wf) server.
 

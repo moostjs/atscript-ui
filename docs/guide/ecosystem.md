@@ -81,7 +81,7 @@ A one-line definition of every term that recurs in the docs. Click through for t
 - **AsWfStore** — server-side workflow state container. Tracks current step, persisted form data, context, outlets. [API](/api/moost-wf).
 - **`@InputForm` / `@OutputForm`** — Moost decorators on a workflow handler. The atscript types they reference are what `<AsWfForm>` renders. [API](/api/moost-wf).
 - **AsResolver** — the `unplugin-vue-components` resolver that auto-imports Tier-1 atscript-ui components. Shipped from `@atscript/ui-styles/vite`. [API](/api/ui-styles).
-- **`asPresetVunor`** — the UnoCSS preset that bundles vunor + the `as-*` shortcut tree + the baked icon set. [Styling](/styling/).
+- **`asPresetVunor`** — the UnoCSS preset that wires up the vunor shortcuts engine + the `as-*` shortcut tree + the baked icon set. [Styling](/styling/).
 - **Uniquery** — the URL-encoded query format `moost-db` understands. `<AsTableRoot>` serialises filter/sort/page state into it. [db.atscript.dev](https://db.atscript.dev).
 
 ## What's next

@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/ui-styles
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Shared UnoCSS preset, shortcuts, icon loader, per-component class safelist, and pre-built CSS for [`@atscript/vue-form`](../vue-form), [`@atscript/vue-table`](../vue-table), and [`@atscript/vue-wf`](../vue-wf).
 

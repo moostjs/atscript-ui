@@ -18,7 +18,7 @@ You only need the packages whose components you actually render.
 | Server-side preset persistence | + `@atscript/moost-ui-presets` on the server                                                         |
 | Dynamic annotations            | + `@atscript/ui-fns` (opt-in: enables `@ui.fn.*` and `@ui.form.validate`)                            |
 
-Every flavour also wants `vunor`, `unocss`, `unplugin-atscript`, `unplugin-vue-components`, and `@atscript/typescript` as dev deps:
+Every flavour also wants `vunor` (the internal shortcuts engine atscript-ui composes against), `unocss`, `unplugin-atscript`, `unplugin-vue-components`, and `@atscript/typescript` as dev deps:
 
 ```bash
 pnpm add vunor
@@ -89,7 +89,7 @@ export default defineConfig({
 
 What the preset does:
 
-- Registers vunor (the theme system: scopes, layers, surfaces, `c8-*` clickables, `i8-*` inputs, fingertip-\* heights, spacing tokens `$xxs..$xxl`).
+- Registers the vunor shortcuts engine atscript-ui depends on internally (scopes, layers, surfaces, `c8-*` clickables, `i8-*` inputs, fingertip-\* heights, spacing tokens `$xxs..$xxl`).
 - Registers the `as-*` shortcut tree from `@atscript/ui-styles` (every component's styles live here, not in `.vue` templates).
 - Registers a custom extractor that scans your sources for `<AsForm>` / `useForm` / `createDefaultTypes` / etc. and pulls in the matching pre-computed class lists. **You don't have to add `node_modules` to `content.filesystem`.**
 - Bakes in an icon set under the `as` collection (`i-as-search`, `i-as-close`, `i-as-loading`, …).

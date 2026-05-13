@@ -161,9 +161,9 @@ component swap (Pattern A or B) when the cell repeats across tables.
 
 ## Worked example: status badge
 
-A reusable cell that paints a coloured pill using vunor's
-`scope-good` / `scope-error` palettes. Works on any column whose
-value is a discriminator string.
+A reusable cell that paints a coloured pill using the `scope-good` /
+`scope-error` tokens from vunor's shortcuts engine. Works on any
+column whose value is a discriminator string.
 
 ```vue
 <!-- cells/StatusBadgeCell.vue -->

@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/vue-table
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Type-driven table components for Vue 3 — virtualized tables, filter dialogs, column config, preset persistence, all wired from an atscript-annotated `.as` type.
 

@@ -215,4 +215,4 @@ See [Pre-built CSS](/styling/prebuilt-css).
 - [Styling — Icons](/styling/icons)
 - [Styling — The as-\* Shortcut System](/styling/shortcuts)
 - [Styling — Pre-built CSS](/styling/prebuilt-css)
-- vunor — upstream design system (`vunor`, `vunor/theme`, `vunor/utils`)
+- vunor — internal shortcuts engine atscript-ui composes against (`vunor`, `vunor/theme`, `vunor/utils`)

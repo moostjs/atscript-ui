@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/ui-fns
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Opt-in plugin for [`@atscript/ui`](../ui) that adds **dynamic** field properties driven by `@ui.fn.*` annotations.
 

@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/ui-table
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Framework-agnostic table model for atscript-driven UIs — filter conditions, filter→Uniquery conversion, and preset serialization.
 

@@ -175,7 +175,7 @@ export default defineConfig({
 });
 ```
 
-For deeper customization of the vunor palette/typography see the [vunor documentation](https://vunor.dev).
+For deeper palette/typography tweaks, drop down to `presetVunor()` directly as shown in the [Minimal palette override](#minimal-palette-override) section above.
 
 ## Next steps
 

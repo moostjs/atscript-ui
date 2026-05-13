@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/moost-ui-presets
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Moost controller + `.as` schema for persisting [`@atscript/vue-table`](../vue-table) presets on the server.
 

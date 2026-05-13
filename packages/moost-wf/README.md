@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/moost-wf
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Server-side workflow integration for [Moost](https://github.com/moostjs/moost) — decorators, interceptors, and serialization that pair with [`@atscript/vue-wf`](../vue-wf) to drive multi-step forms from atscript-annotated `.as` types.
 

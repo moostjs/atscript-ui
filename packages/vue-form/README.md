@@ -1,4 +1,12 @@
+<p align="center">
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
+</p>
+
 # @atscript/vue-form
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 Type-driven form rendering for Vue 3 — components and composables that turn an atscript-annotated `.as` type into a fully wired form.
 

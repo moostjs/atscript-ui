@@ -90,7 +90,7 @@ app.mount("#app");
 
 ## Brand-color overrides without UnoCSS
 
-Vunor's runtime emits CSS custom properties (the `--current-*`, `--surface-*`, `--scope-*` ladder) into the cascade. Even with the pre-built CSS, you can shift the brand color by overriding those custom properties on `:root` or on a scoped ancestor:
+The vunor shortcuts engine atscript-ui uses internally emits CSS custom properties (the `--current-*`, `--surface-*`, `--scope-*` ladder) into the cascade. Even with the pre-built CSS, you can shift the brand color by overriding those custom properties on `:root` or on a scoped ancestor:
 
 ```css
 :root {
@@ -101,7 +101,7 @@ Vunor's runtime emits CSS custom properties (the `--current-*`, `--surface-*`, `
 }
 ```
 
-The exact property names and the supported set live in the [vunor documentation](https://vunor.dev). This works at runtime — flip a class on `<html>` to pivot the whole palette without rebuilding CSS.
+This works at runtime — flip a class on `<html>` to pivot the whole palette without rebuilding CSS.
 
 This trick lets you keep the pre-built workflow while still shipping a few brand tones. For anything deeper than primary-color tuning, switch to the UnoCSS path.
 

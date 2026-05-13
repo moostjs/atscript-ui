@@ -1,8 +1,12 @@
 <p align="center">
-  <img src="https://ui.atscript.dev/logo.svg" alt="Atscript" width="120" />
+  <a href="https://ui.atscript.dev" target="_blank" rel="noopener">
+    <img src="https://ui.atscript.dev/logo.svg" alt="Atscript UI" height="96" />
+  </a>
 </p>
 
 <h1 align="center">Atscript UI</h1>
+
+📚 **Documentation:** [ui.atscript.dev](https://ui.atscript.dev)
 
 <p align="center">
   Automated forms and smart tables for <a href="https://github.com/moostjs/atscript">Atscript</a> — define your models once in <code>.as</code> files, get fully wired UI from the same metadata.

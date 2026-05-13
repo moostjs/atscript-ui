@@ -2,13 +2,13 @@
 
 `@atscript/ui-styles` is the styling layer that powers every `@atscript/vue-*` package. It ships a UnoCSS preset, a Vite component resolver, a tree of `as-*` shortcut classes, baked icons, and pre-built CSS bundles. Forms, tables, and workflow forms all emit `as-*` class names and inherit the same theme from a single source of truth.
 
-## The vunor middleware story
+## How styling is layered
 
-atscript-ui ships generic on purpose. The UI components emit semantic `as-*` class names like `as-form`, `as-cell-decimal`, `as-filter-dialog` — never colors, pixel values, or design-system specifics. The translation from `as-*` to actual CSS rules happens inside `@atscript/ui-styles`, which composes those classes from **vunor** primitives (`scope-*`, `layer-*`, `surface-*`, `c8-*`, `i8-*`, spacing tokens, fingertip heights, typography).
+atscript-ui ships generic on purpose. The UI components emit semantic `as-*` class names like `as-form`, `as-cell-decimal`, `as-filter-dialog` — never colors, pixel values, or design-system specifics. The translation from `as-*` to actual CSS rules happens inside `@atscript/ui-styles`, which composes those classes from the `vunor` shortcuts engine it depends on internally (`scope-*`, `layer-*`, `surface-*`, `c8-*`, `i8-*`, spacing tokens, fingertip heights, typography).
 
-[Vunor](https://vunor.dev) is the customization middleware. It is published as a separate npm package and owns the palette generator, the layer/surface ladder, the button chromium primitives, and the icon-fill helpers. The intended path: override vunor's theme — palette colors, radius, fingertip heights, typography — and the entire `as-*` tree restyles itself automatically. From there you can layer your own `as-*` shortcuts on top of `allShortcuts` to extend or repaint individual concepts.
+Because `as-*` shortcuts resolve through vunor's primitives, tuning vunor's palette/tokens at preset registration time restyles every atscript-ui component without touching component source. From there you can layer your own `as-*` shortcuts on top of `allShortcuts` to extend or repaint individual concepts.
 
-The supported customization path: **components emit `as-*` class names; tune vunor primitives or merge your own `as-*` shortcuts on top of `allShortcuts` and your brand color set in `asPresetVunor({ palette })` propagates into every form input, table cell, filter pill, and dialog.** You can also write app-level CSS that targets `as-*` selectors directly — see the trade-offs below.
+The supported customization path: **components emit `as-*` class names; tune the vunor primitives or merge your own `as-*` shortcuts on top of `allShortcuts` and your brand color set in `asPresetVunor({ palette })` propagates into every form input, table cell, filter pill, and dialog.** You can also write app-level CSS that targets `as-*` selectors directly — see the trade-offs below.
 
 ## Two ways to use it
 

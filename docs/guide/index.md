@@ -22,7 +22,7 @@ The split is deliberate:
 
 ### Forms — `@atscript/vue-form`
 
-You annotate fields. The form renders inputs, labels, descriptions, validators, error messages, the submit button, and any nested objects / arrays / unions in the schema. Swap a default field component for your own (vunor, your design system, whatever) via the `:types` map.
+You annotate fields. The form renders inputs, labels, descriptions, validators, error messages, the submit button, and any nested objects / arrays / unions in the schema. Swap a default field component for your own design system via the `:types` map.
 
 ```atscript
 @meta.label 'Sign up'

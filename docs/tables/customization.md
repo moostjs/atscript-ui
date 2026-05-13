@@ -229,7 +229,7 @@ change. `state.actions.invoke()` returns the discriminated
 resolves so the page chrome can toast.
 
 The default `AsRowActions` does the same thing with vunor's
-buttons and reka-ui's dropdown. The swap above replaces only the
+`c8-*` button primitives and reka-ui's dropdown. The swap above replaces only the
 chrome — the table's reactivity, confirm dialog, input form
 dialog, and `@action` emit all keep working.
 

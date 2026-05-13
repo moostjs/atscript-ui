@@ -26,7 +26,7 @@ What each package does:
 - **`@atscript/ui`** — framework-agnostic core (FieldResolver, FormDef, TableDef, validators).
 - **`@atscript/ui-styles`** — UnoCSS preset, `AsResolver`, baked icon set.
 - **`@atscript/vue-form` / `@atscript/vue-table`** — Vue 3 components.
-- **`vunor`** — the styling base atscript-ui is themed against.
+- **`vunor`** — the internal shortcuts/styling engine atscript-ui composes its `as-*` classes on top of.
 - **`@atscript/typescript`** + **`unplugin-atscript`** — compile `.as` files to `.as.d.ts` and `.as.js` (the bundler does this in-memory at dev time).
 - **`@atscript/ui-fns`** — opt-in dynamic resolver (we'll use it for `@ui.fn.*` and `@ui.form.validate`).
 - **`unplugin-vue-components`** — auto-imports `<AsForm>` / `<AsTable>` etc. via `AsResolver()`.
@@ -87,7 +87,7 @@ export default defineConfig({
 });
 ```
 
-`asPresetVunor()` returns a `Preset[]` — **do not wrap it in another array**. The preset bundles vunor + an extractor that scans your sources for atscript-ui imports and pulls in the matching per-component class lists from the safelist. See [Styling](/styling/installation) for theme tuning, icon overrides, and `excludeComponents`.
+`asPresetVunor()` returns a `Preset[]` — **do not wrap it in another array**. The preset bundles the vunor shortcuts engine + an extractor that scans your sources for atscript-ui imports and pulls in the matching per-component class lists from the safelist. See [Styling](/styling/installation) for theme tuning, icon overrides, and `excludeComponents`.
 
 ## 5. App entry
 
