@@ -362,9 +362,9 @@ watch(() => route.path, setupScrollAnimations);
               <span class="story-eyebrow">04 · Theme</span>
               <h2 class="section-heading section-heading-center">One theme. Every pixel.</h2>
               <p class="story-desc story-desc-center">
-                Override <strong>vunor</strong>'s palette,
-                radius, fingertip heights, or icons once — every form input, table cell, dialog and
-                step indicator inherits it. No per-component restyles.
+                Override <strong>vunor</strong>'s palette, radius, fingertip heights, or icons once
+                — every form input, table cell, dialog and step indicator inherits it. No
+                per-component restyles.
               </p>
             </div>
 
