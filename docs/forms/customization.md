@@ -4,12 +4,12 @@ Every aspect of how a field renders is replaceable. Pick the smallest hammer
 that fits — atscript-ui exposes four layered override mechanisms, from a
 one-line global swap to a fully custom field render.
 
-| Level | Scope                         | Use when                                                            |
-| ----- | ----------------------------- | ------------------------------------------------------------------- |
-| 1     | Global type swap              | Every field of a given type should use your component               |
-| 2     | Per-field named component     | One specific field needs a different widget                         |
-| 3     | Wrap with `AsFieldShell`      | Custom control, standard label/error chrome                         |
-| 4     | Full `AsForm` default slot    | Take over the entire field-rendering loop                           |
+| Level | Scope                      | Use when                                              |
+| ----- | -------------------------- | ----------------------------------------------------- |
+| 1     | Global type swap           | Every field of a given type should use your component |
+| 2     | Per-field named component  | One specific field needs a different widget           |
+| 3     | Wrap with `AsFieldShell`   | Custom control, standard label/error chrome           |
+| 4     | Full `AsForm` default slot | Take over the entire field-rendering loop             |
 
 Mix as needed: a global swap for `text` plus a single per-field `'colorSwatch'`
 override is normal.
@@ -24,16 +24,16 @@ type ids** resolved by `<AsField>`:
 
 ```vue
 <script setup lang="ts">
-import { AsForm, createDefaultTypes, createAsFormDef } from '@atscript/vue-form'
-import { ContactForm } from './ContactForm.as'
-import GrowingTextarea from '@/components/GrowingTextarea.vue'
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
+import { ContactForm } from "./ContactForm.as";
+import GrowingTextarea from "@/components/GrowingTextarea.vue";
 
-const { def, formData } = createAsFormDef(ContactForm)
+const { def, formData } = createAsFormDef(ContactForm);
 
 const types = {
   ...createDefaultTypes(),
   text: GrowingTextarea,
-}
+};
 </script>
 
 <template>
@@ -51,7 +51,7 @@ types are untouched.
 To **flip one specific field** to a different built-in renderer without
 replacing the whole types map, use `@ui.form.type` (or the cross-cutting
 `@ui.type`). The value must be one of the built-in ids above — `@ui.form.type`
-is a *built-in renderer dispatcher*, not a place to wire custom components.
+is a _built-in renderer dispatcher_, not a place to wire custom components.
 
 ```atscript
 @meta.label 'Bio'
@@ -88,25 +88,17 @@ tags: string[]
 
 ```vue
 <script setup lang="ts">
-import {
-  StarRating,
-  ColorSwatch,
-  TagInput,
-} from '@/components/custom'
+import { StarRating, ColorSwatch, TagInput } from "@/components/custom";
 
 const components = {
   stars: StarRating,
-  'color-swatch': ColorSwatch,
-  'tag-input': TagInput,
-}
+  "color-swatch": ColorSwatch,
+  "tag-input": TagInput,
+};
 </script>
 
 <template>
-  <AsForm
-    :def="def"
-    :form-data="formData"
-    :components="components"
-  />
+  <AsForm :def="def" :form-data="formData" :components="components" />
 </template>
 ```
 
@@ -136,14 +128,14 @@ built-in defaults use; it consumes the full `TAsComponentProps` contract via
 
 ```vue
 <script setup lang="ts">
-import { AsFieldShell, type TAsComponentProps } from '@atscript/vue-form'
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
-const props = defineProps<TAsComponentProps<string | null | undefined>>()
+const props = defineProps<TAsComponentProps<string | null | undefined>>();
 
-const PALETTE = ['#ef4444', '#f97316', '#facc15', '#22c55e', '#0ea5e9']
+const PALETTE = ["#ef4444", "#f97316", "#facc15", "#22c55e", "#0ea5e9"];
 
 function pick(hex: string): void {
-  props.model.value = hex
+  props.model.value = hex;
 }
 </script>
 
@@ -191,20 +183,20 @@ and renders the field tree however you want.
 
 ```vue
 <script setup lang="ts">
-import { useAsForm, AsField } from '@atscript/vue-form'
-import { getFieldMeta, META_LABEL } from '@atscript/ui'
-import { computed } from 'vue'
+import { useAsForm, AsField } from "@atscript/vue-form";
+import { getFieldMeta, META_LABEL } from "@atscript/ui";
+import { computed } from "vue";
 
-const props = defineProps<{ def, formData, types }>()
+const props = defineProps<{ def; formData; types }>();
 
 const form = useAsForm({
   def: () => props.def,
   formData: () => props.formData,
   types: () => props.types,
-})
+});
 
 // Resolve the root form title from the type's `@meta.label`.
-const title = computed(() => getFieldMeta(props.def.type, META_LABEL) as string | undefined)
+const title = computed(() => getFieldMeta(props.def.type, META_LABEL) as string | undefined);
 </script>
 
 <template>
@@ -235,7 +227,7 @@ mechanisms.
 `GrowingTextarea` via the types map:
 
 ```typescript
-const typesA = { ...createDefaultTypes(), text: GrowingTextarea }
+const typesA = { ...createDefaultTypes(), text: GrowingTextarea };
 ```
 
 **Section B** uses Levels 1 + 2 — `bio` is flipped to the built-in `textarea`
@@ -247,20 +239,20 @@ annotation and falls back to the default `text` renderer:
 const componentsB = {
   stepper: NumberStepper,
   stars: StarRating,
-  'color-swatch': ColorSwatch,
-  'tag-input': TagInput,
-  'address-card': AddressCard,
-  'rgb-picker': RgbPicker,
-  'contact-card': ContactCard,
-}
+  "color-swatch": ColorSwatch,
+  "tag-input": TagInput,
+  "address-card": AddressCard,
+  "rgb-picker": RgbPicker,
+  "contact-card": ContactCard,
+};
 ```
 
 ## Picking between `@ui.form.type` and `@ui.form.component`
 
-| Annotation              | Looks up in   | Value space                                  |
-| ----------------------- | ------------- | -------------------------------------------- |
-| `@ui.form.type`         | `:types`      | Built-in ids only (`text`, `textarea`, …)    |
-| `@ui.form.component`    | `:components` | Any custom name you register                 |
+| Annotation           | Looks up in   | Value space                               |
+| -------------------- | ------------- | ----------------------------------------- |
+| `@ui.form.type`      | `:types`      | Built-in ids only (`text`, `textarea`, …) |
+| `@ui.form.component` | `:components` | Any custom name you register              |
 
 Rule of thumb:
 
@@ -271,7 +263,7 @@ Rule of thumb:
   date range picker, a domain-specific color swatch, a tag input, an
   address card.
 
-The runtime resolver itself is open-ended — you *can* stuff a custom name
+The runtime resolver itself is open-ended — you _can_ stuff a custom name
 into `@ui.form.type` and it will be looked up in `:types`. Reserving the
 types map for built-ins is the convention: schemas read more predictably and
 a future cleanup of unused custom entries is less likely to accidentally

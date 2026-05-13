@@ -21,15 +21,15 @@ Authoring server-side workflow controllers with `@atscript/moost-wf` on top of `
 
 ## Decorator stack
 
-| Decorator | Package | Where | Purpose |
-| --------- | ------- | ----- | ------- |
-| `@Controller()` | `moost` | class | declare a DI-managed controller |
-| `@Workflow('<id>')` | `@moostjs/event-wf` | method | mark the flow root; `<id>` is the `wfid` clients pass |
-| `@WorkflowSchema<Ctx>([{ id, condition? }, ...])` | `@moostjs/event-wf` | method (same as `@Workflow`) | declare step graph + branching |
-| `@Step('<id>')` | `@moostjs/event-wf` | method | implement one step |
-| `@WorkflowParam('input' \| 'context')` | `@moostjs/event-wf` | param | inject current input or context |
-| `@FormInput()` | `@atscript/moost-wf` | param | inject `TFormInput<T>` and auto-validate before the handler body runs |
-| `@AltAction()` | `@atscript/moost-wf` | param | inject `string \| undefined` — the action name the client sent |
+| Decorator                                         | Package              | Where                        | Purpose                                                               |
+| ------------------------------------------------- | -------------------- | ---------------------------- | --------------------------------------------------------------------- |
+| `@Controller()`                                   | `moost`              | class                        | declare a DI-managed controller                                       |
+| `@Workflow('<id>')`                               | `@moostjs/event-wf`  | method                       | mark the flow root; `<id>` is the `wfid` clients pass                 |
+| `@WorkflowSchema<Ctx>([{ id, condition? }, ...])` | `@moostjs/event-wf`  | method (same as `@Workflow`) | declare step graph + branching                                        |
+| `@Step('<id>')`                                   | `@moostjs/event-wf`  | method                       | implement one step                                                    |
+| `@WorkflowParam('input' \| 'context')`            | `@moostjs/event-wf`  | param                        | inject current input or context                                       |
+| `@FormInput()`                                    | `@atscript/moost-wf` | param                        | inject `TFormInput<T>` and auto-validate before the handler body runs |
+| `@AltAction()`                                    | `@atscript/moost-wf` | param                        | inject `string \| undefined` — the action name the client sent        |
 
 The `moost` controller itself is the DI surface (`packages/vue-demo/src/server/workflows/auth/login.workflow.ts:1-2`):
 
@@ -54,11 +54,11 @@ flow() {}
 
 ### Patterns
 
-| Pattern | Schema |
-| ------- | ------ |
-| Linear | `[{ id: 'a' }, { id: 'b' }, { id: 'c' }]` |
-| Conditional skip | `[{ id: 'verify', condition: (ctx) => ctx.needsVerify }]` — false → step skipped |
-| Optional final step | `[{ id: 'cleanup', condition: (ctx) => ctx.dirty }]` |
+| Pattern             | Schema                                                                           |
+| ------------------- | -------------------------------------------------------------------------------- |
+| Linear              | `[{ id: 'a' }, { id: 'b' }, { id: 'c' }]`                                        |
+| Conditional skip    | `[{ id: 'verify', condition: (ctx) => ctx.needsVerify }]` — false → step skipped |
+| Optional final step | `[{ id: 'cleanup', condition: (ctx) => ctx.dirty }]`                             |
 
 ### Moost globalPrefix applies to workflow IDs
 
@@ -77,12 +77,12 @@ The condition function lives on the schema decorator, **not** on the step. Step 
 
 Each step is an async (or sync) method on the controller. Four possible terminations:
 
-| Termination | Signal |
-| ----------- | ------ |
-| **Advance** to next step | return `undefined` (or any non-outlet value) |
-| **Pause** and ask client for input | return `httpInputRequired(FormType, ctx)` — uses `outletHttp` outlet |
-| **Pause** and outlet (email / webhook) | return `outletEmail(...)` / custom outlet — see [outlets.md](outlets.md) |
-| **Complete** the flow | `useWfFinished().set({ type: 'data', value })` then `return` |
+| Termination                                     | Signal                                                                           |
+| ----------------------------------------------- | -------------------------------------------------------------------------------- |
+| **Advance** to next step                        | return `undefined` (or any non-outlet value)                                     |
+| **Pause** and ask client for input              | return `httpInputRequired(FormType, ctx)` — uses `outletHttp` outlet             |
+| **Pause** and outlet (email / webhook)          | return `outletEmail(...)` / custom outlet — see [outlets.md](outlets.md)         |
+| **Complete** the flow                           | `useWfFinished().set({ type: 'data', value })` then `return`                     |
 | **Re-pause** mid-handler with validation errors | `throw form.requireInput({ field: 'msg' })` — caught by `formInputInterceptor()` |
 
 ```typescript
@@ -185,11 +185,11 @@ Two key effects:
 
 ### Validation modes
 
-| Mode | Trigger | Options |
-| ---- | ------- | ------- |
-| Full | plain submit (no action) | `{ unknownProps: "strip" }` |
-| Partial (deep) | action present in `@wf.action.withData` list | `{ partial: "deep", unknownProps: "strip" }` |
-| None | action present in plain `@ui.form.action` list | handler receives raw context, no input |
+| Mode           | Trigger                                        | Options                                      |
+| -------------- | ---------------------------------------------- | -------------------------------------------- |
+| Full           | plain submit (no action)                       | `{ unknownProps: "strip" }`                  |
+| Partial (deep) | action present in `@wf.action.withData` list   | `{ partial: "deep", unknownProps: "strip" }` |
+| None           | action present in plain `@ui.form.action` list | handler receives raw context, no input       |
 
 Source: `packages/moost-wf/src/form-input/decorator.ts:82-106`.
 
@@ -239,10 +239,10 @@ import { useWfAction } from "@atscript/moost-wf";
 const { getAction, setAction } = useWfAction();
 ```
 
-| Method | Purpose | Where to call |
-| ------ | ------- | ------------- |
-| `getAction()` | read the action name the client sent (or `undefined`) | step handlers (prefer `@AltAction()`) |
-| `setAction(action)` | write the action name into event context | **HTTP trigger** — call before invoking the workflow engine, so step handlers see it |
+| Method              | Purpose                                               | Where to call                                                                        |
+| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `getAction()`       | read the action name the client sent (or `undefined`) | step handlers (prefer `@AltAction()`)                                                |
+| `setAction(action)` | write the action name into event context              | **HTTP trigger** — call before invoking the workflow engine, so step handlers see it |
 
 The HTTP trigger should pull `action` from the request body and call `setAction(body.action)`. After that, `@AltAction()` and the `@FormInput()` interceptor read it from event context via the `actionKey` slot (`packages/moost-wf/src/form-input/wf-keys.ts:15`).
 
@@ -294,11 +294,11 @@ async login(
 
 Action validation modes recap:
 
-| Action source | Validation |
-| ------------- | ---------- |
-| `@ui.form.action 'id'` | none — handler receives whatever the client sent |
-| `@wf.action.withData 'id'` | deep-partial — filled fields validated, missing OK |
-| Unknown action | `formInputInterceptor` auto-replies `{ __form: 'Action "..." is not supported' }` |
+| Action source              | Validation                                                                        |
+| -------------------------- | --------------------------------------------------------------------------------- |
+| `@ui.form.action 'id'`     | none — handler receives whatever the client sent                                  |
+| `@wf.action.withData 'id'` | deep-partial — filled fields validated, missing OK                                |
+| Unknown action             | `formInputInterceptor` auto-replies `{ __form: 'Action "..." is not supported' }` |
 
 Action discovery: `getFormActions(type)` returns `{ actions, actionsWithData }` (`packages/moost-wf/src/form-input/context.ts:39-81`). The interceptor uses this to classify the incoming action.
 
@@ -347,13 +347,13 @@ Source: `packages/moost-wf/src/form-input/context.ts:39-81`.
 
 ## Error handling
 
-| Failure | Effect |
-| ------- | ------ |
-| Step throws non-`FormInputRequired` error | bubbles to Moost's normal error handler → HTTP 500 + `@error` on client |
-| Step throws `form.requireInput({...})` | `formInputInterceptor` catches → same-form re-render with errors |
-| `@FormInput()` validator rejects | interceptor auto-pauses with field errors → handler body never runs |
-| Unknown action | `formInputInterceptor` auto-replies `{ __form: 'Action "..." is not supported' }` |
-| HTTP failure (non-2xx) | client `useWfForm` sets `error = { message, status }` → `@error` |
+| Failure                                   | Effect                                                                            |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| Step throws non-`FormInputRequired` error | bubbles to Moost's normal error handler → HTTP 500 + `@error` on client           |
+| Step throws `form.requireInput({...})`    | `formInputInterceptor` catches → same-form re-render with errors                  |
+| `@FormInput()` validator rejects          | interceptor auto-pauses with field errors → handler body never runs               |
+| Unknown action                            | `formInputInterceptor` auto-replies `{ __form: 'Action "..." is not supported' }` |
+| HTTP failure (non-2xx)                    | client `useWfForm` sets `error = { message, status }` → `@error`                  |
 
 ### Auth
 
@@ -373,13 +373,7 @@ Schema with conditional MFA step (`packages/vue-demo/src/server/workflows/auth/l
 
 ```typescript
 import { Controller } from "moost";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-} from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
 import { LoginForm, MfaPincodeForm } from "./forms.as";
 import { httpInputRequired } from "./wf-helpers";
 

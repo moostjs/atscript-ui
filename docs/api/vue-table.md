@@ -33,7 +33,11 @@ interface AsTableRootProps {
   selectionPersistence?: "clear" | "trim" | "persist";
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
-  queryFn?: (query: Uniquery, page: number, size: number) => Promise<PageResult<Record<string, unknown>>>;
+  queryFn?: (
+    query: Uniquery,
+    page: number,
+    size: number,
+  ) => Promise<PageResult<Record<string, unknown>>>;
   queryOnMount?: boolean;
   blockQuery?: boolean;
   blockSize?: number;
@@ -107,14 +111,14 @@ Dropdown picker showing the active preset, the system presets, the user's saved 
 
 Default cell renderers — all implement the standard cell-props contract (path, value, row, column, locale).
 
-| Component | Default cell type | Notes |
-| --- | --- | --- |
-| `AsTableCellValue` | `text`, `number`, `boolean`, `enum`, `ref` | Generic value renderer with locale + value-help labels. |
-| `AsCellNumber` | `number` (when used explicitly) | Decimal-aware numeric cell. |
-| `AsCellDate` | `date`, `datetime`, `relative` | Locale-aware date renderer. |
-| `AsCellArray` | `array` | Pill chips for array values. |
-| `AsCellJson` | `object` | Collapsible JSON renderer. |
-| `AsCellUnion` | unions | Per-row dispatcher that renders the active union variant. |
+| Component          | Default cell type                          | Notes                                                     |
+| ------------------ | ------------------------------------------ | --------------------------------------------------------- |
+| `AsTableCellValue` | `text`, `number`, `boolean`, `enum`, `ref` | Generic value renderer with locale + value-help labels.   |
+| `AsCellNumber`     | `number` (when used explicitly)            | Decimal-aware numeric cell.                               |
+| `AsCellDate`       | `date`, `datetime`, `relative`             | Locale-aware date renderer.                               |
+| `AsCellArray`      | `array`                                    | Pill chips for array values.                              |
+| `AsCellJson`       | `object`                                   | Collapsible JSON renderer.                                |
+| `AsCellUnion`      | unions                                     | Per-row dispatcher that renders the active union variant. |
 
 Imports:
 
@@ -280,10 +284,7 @@ Wires the selection persistence policy onto an existing `state`. Called automati
 ```typescript
 type SelectionPersistence = "clear" | "trim" | "persist";
 
-function useTableSelection(
-  state: ReactiveTableState,
-  opts?: { mode?: SelectionPersistence },
-): void;
+function useTableSelection(state: ReactiveTableState, opts?: { mode?: SelectionPersistence }): void;
 ```
 
 ### `useTableNavBridge()`
@@ -668,7 +669,10 @@ type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
 function getColumnWidth(column: ColumnDef, widths: ColumnWidthsMap): string;
 function getCellValue(row: Record<string, unknown>, path: string): unknown;
 function formatCellValue(value: unknown, column: ColumnDef, opts?: { locale?: CellLocale }): string;
-function extractIdentifier(row: Record<string, unknown>, preferredId: readonly string[]): Record<string, unknown>;
+function extractIdentifier(
+  row: Record<string, unknown>,
+  preferredId: readonly string[],
+): Record<string, unknown>;
 ```
 
 `extractIdentifier` builds the identifier object sent with action invocations and URL `$1` substitution. Per `@atscript/db-client` invariant #11 the server rejects bare scalars — even single-field PK tables send `{ id: '...' }`.

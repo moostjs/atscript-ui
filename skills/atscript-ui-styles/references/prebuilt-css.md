@@ -12,34 +12,34 @@ Ship `@atscript/vue-*` components into an app that doesn't run UnoCSS — Tailwi
 
 ## When to use
 
-| Scenario                                                                | Pre-built CSS? | UnoCSS path? |
-| ----------------------------------------------------------------------- | -------------- | ------------ |
-| New Vue 3 app, brand palette tuning required                            | no             | yes          |
-| Existing Tailwind project, want to drop `@atscript/vue-form` in         | yes            | no           |
-| Existing CSS-Modules / Sass project, no Tailwind / no UnoCSS            | yes            | no           |
-| Storybook / pure HTML demo                                              | yes            | no           |
-| You need `iconOverrides`, `excludeComponents`, or `palette` overrides   | no             | yes          |
+| Scenario                                                              | Pre-built CSS? | UnoCSS path? |
+| --------------------------------------------------------------------- | -------------- | ------------ |
+| New Vue 3 app, brand palette tuning required                          | no             | yes          |
+| Existing Tailwind project, want to drop `@atscript/vue-form` in       | yes            | no           |
+| Existing CSS-Modules / Sass project, no Tailwind / no UnoCSS          | yes            | no           |
+| Storybook / pure HTML demo                                            | yes            | no           |
+| You need `iconOverrides`, `excludeComponents`, or `palette` overrides | no             | yes          |
 
 The pre-built path ships the default vunor palette baked into the CSS file. You cannot retune `palette.colors.primary` at build time when using pre-built CSS — only at runtime via CSS custom properties (next section).
 
 ## Subpaths
 
 ```typescript
-import "@atscript/ui-styles/css";        // alias for /all
-import "@atscript/ui-styles/css/all";    // form + table + wf + common
-import "@atscript/ui-styles/css/form";   // form + common
-import "@atscript/ui-styles/css/table";  // table + common
-import "@atscript/ui-styles/css/wf";     // wf + common
+import "@atscript/ui-styles/css"; // alias for /all
+import "@atscript/ui-styles/css/all"; // form + table + wf + common
+import "@atscript/ui-styles/css/form"; // form + common
+import "@atscript/ui-styles/css/table"; // table + common
+import "@atscript/ui-styles/css/wf"; // wf + common
 ```
 
 Sizes (approximate, current `dist/css/`):
 
-| Subpath           | LOC   | Bundles                                    |
-| ----------------- | ----- | ------------------------------------------ |
-| `/css/all`        | ~1600 | all icons, all `as-*` rules, preflights    |
-| `/css/table`      | ~1600 | table is the heaviest — virtual scroll, filter pills, dialogs |
-| `/css/form`       | ~440  | form + common                              |
-| `/css/wf`         | ~440  | wf + common                                |
+| Subpath      | LOC   | Bundles                                                       |
+| ------------ | ----- | ------------------------------------------------------------- |
+| `/css/all`   | ~1600 | all icons, all `as-*` rules, preflights                       |
+| `/css/table` | ~1600 | table is the heaviest — virtual scroll, filter pills, dialogs |
+| `/css/form`  | ~440  | form + common                                                 |
+| `/css/wf`    | ~440  | wf + common                                                   |
 
 Cherry-pick the narrowest subpath that matches your usage. A forms-only app should import `/css/form` — saves ~75% over `/css/all`.
 
@@ -63,16 +63,16 @@ Order matters: import the CSS BEFORE component modules so the styles attach to t
 
 ## Trade-offs vs UnoCSS path
 
-| Aspect                 | Pre-built CSS                                                              | UnoCSS path                                                          |
-| ---------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| Bundle size            | Full safelist baked in — larger                                            | Extractor + safelist-prune — smaller, scales with usage              |
-| Palette tuning         | Runtime only — override `--scope-color-*` / `--scope-light-*` / `--scope-dark-*` CSS vars | Build-time — pass `palette` to `asPresetVunor()`                     |
-| `iconOverrides`        | Not available                                                              | Build-time — pass `iconOverrides`                                    |
-| `excludeComponents`    | Not available                                                              | Build-time — drop unused defaults from safelist                      |
-| Adding new icons       | Not via this package (use a separate `<style>` block or your own CSS)      | Compose `@unocss/preset-icons` under a different prefix              |
-| Adding new shortcuts   | Not via this package (write plain CSS by hand)                             | `mergeVunorShortcuts(allShortcuts, defineShortcuts({...}))`           |
-| Dark mode              | Auto via media query (vunor emits `:root` + `.dark` rules in the CSS file) | Same, plus customizable via UnoCSS `dark: 'class'` strategy           |
-| Vue 3 + atscript still required | Yes                                                                | Yes                                                                  |
+| Aspect                          | Pre-built CSS                                                                             | UnoCSS path                                                 |
+| ------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Bundle size                     | Full safelist baked in — larger                                                           | Extractor + safelist-prune — smaller, scales with usage     |
+| Palette tuning                  | Runtime only — override `--scope-color-*` / `--scope-light-*` / `--scope-dark-*` CSS vars | Build-time — pass `palette` to `asPresetVunor()`            |
+| `iconOverrides`                 | Not available                                                                             | Build-time — pass `iconOverrides`                           |
+| `excludeComponents`             | Not available                                                                             | Build-time — drop unused defaults from safelist             |
+| Adding new icons                | Not via this package (use a separate `<style>` block or your own CSS)                     | Compose `@unocss/preset-icons` under a different prefix     |
+| Adding new shortcuts            | Not via this package (write plain CSS by hand)                                            | `mergeVunorShortcuts(allShortcuts, defineShortcuts({...}))` |
+| Dark mode                       | Auto via media query (vunor emits `:root` + `.dark` rules in the CSS file)                | Same, plus customizable via UnoCSS `dark: 'class'` strategy |
+| Vue 3 + atscript still required | Yes                                                                                       | Yes                                                         |
 
 The vue components require Vue 3 and `@atscript/*` regardless of the styling path — pre-built CSS only replaces the build-time UnoCSS dependency.
 
@@ -82,33 +82,33 @@ vunor exposes its palette ramp as CSS variables on `:root`. Override them at the
 
 Variables emitted by the bundled vunor preset:
 
-| Variable                  | Purpose                                                       |
-| ------------------------- | ------------------------------------------------------------- |
-| `--scope-color`           | Active scope's mid-tone (R G B triplet, space-separated)      |
-| `--scope-color-50`..`-900` | Full 50-900 ramp of the active scope                          |
-| `--scope-light-0`..`-4`   | Light-mode foreground / background ladder                     |
-| `--scope-dark-0`..`-4`    | Dark-mode foreground / background ladder                      |
-| `--scope-hl`              | Active scope's highlight tone                                 |
-| `--current-hl`            | `current-hl` resolved against active scope                    |
-| `--current-text`          | Default text color in active surface/layer                    |
-| `--current-bg`            | Default bg color in active surface/layer                      |
-| `--current-border`        | Default border color in active surface/layer                  |
-| `--current-outline`       | Focus-ring outline color in active scope                      |
+| Variable                   | Purpose                                                  |
+| -------------------------- | -------------------------------------------------------- |
+| `--scope-color`            | Active scope's mid-tone (R G B triplet, space-separated) |
+| `--scope-color-50`..`-900` | Full 50-900 ramp of the active scope                     |
+| `--scope-light-0`..`-4`    | Light-mode foreground / background ladder                |
+| `--scope-dark-0`..`-4`     | Dark-mode foreground / background ladder                 |
+| `--scope-hl`               | Active scope's highlight tone                            |
+| `--current-hl`             | `current-hl` resolved against active scope               |
+| `--current-text`           | Default text color in active surface/layer               |
+| `--current-bg`             | Default bg color in active surface/layer                 |
+| `--current-border`         | Default border color in active surface/layer             |
+| `--current-outline`        | Focus-ring outline color in active scope                 |
 
 Values are space-separated R G B triplets — vunor composes `rgb(var(--scope-color-500) / <opacity>)` internally so `bg-current-hl/15` works.
 
 ```css
 /* Override at :root for app-wide brand swap. */
 :root {
-  --scope-color-500: 59 130 246;   /* tailwind blue-500 */
-  --scope-color-400: 96 165 250;   /* blue-400 */
-  --scope-color-600: 37  99 235;   /* blue-600 */
+  --scope-color-500: 59 130 246; /* tailwind blue-500 */
+  --scope-color-400: 96 165 250; /* blue-400 */
+  --scope-color-600: 37 99 235; /* blue-600 */
   /* …match the full ramp if you want clean hover/active transitions */
 }
 
 /* Or limit the override to a branded section. */
 .brand-section {
-  --scope-color-500: 16 185 129;   /* emerald */
+  --scope-color-500: 16 185 129; /* emerald */
 }
 ```
 
@@ -118,7 +118,7 @@ For complex palette tuning (re-deriving `lightest` / `darkest` / `layersDepth`),
 
 ## Plain HTML mount
 
-The vue-* components require Vue 3 and `@atscript/*` runtime regardless of how you load the CSS. Minimal example:
+The vue-_ components require Vue 3 and `@atscript/_` runtime regardless of how you load the CSS. Minimal example:
 
 ```html
 <!DOCTYPE html>
@@ -162,7 +162,7 @@ export default defineConfig({
 
 ```typescript
 // main.ts
-import "@atscript/ui-styles/css/all";  // CSS side-effect — FIRST
+import "@atscript/ui-styles/css/all"; // CSS side-effect — FIRST
 
 import { createApp } from "vue";
 import App from "./App.vue";

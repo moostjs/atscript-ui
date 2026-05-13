@@ -13,12 +13,12 @@ Install matrix, end-to-end hello flow, global interceptor wiring, atscript confi
 
 ## Install matrix
 
-| Scenario | Packages |
-| -------- | -------- |
-| **Client only** (forms-only flows, separate backend) | `vue`, `@atscript/core`, `@atscript/typescript`, `@atscript/ui`, `@atscript/vue-form`, `@atscript/vue-wf` |
-| **Server only** (HTTP service, no Vue) | `moost`, `@moostjs/event-http`, `@moostjs/event-wf`, `@prostojs/wf`, `@atscript/core`, `@atscript/typescript`, `@atscript/moost-wf` |
+| Scenario                                              | Packages                                                                                                                                                     |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Client only** (forms-only flows, separate backend)  | `vue`, `@atscript/core`, `@atscript/typescript`, `@atscript/ui`, `@atscript/vue-form`, `@atscript/vue-wf`                                                    |
+| **Server only** (HTTP service, no Vue)                | `moost`, `@moostjs/event-http`, `@moostjs/event-wf`, `@prostojs/wf`, `@atscript/core`, `@atscript/typescript`, `@atscript/moost-wf`                          |
 | **Server + persistence** (multi-tenant durable state) | add `@atscript/db` and one adapter (`@atscript/db-sqlite` / `@atscript/db-postgres` / `@atscript/db-mysql` / `@atscript/db-mongo`) — see `atscript-db` skill |
-| **Both ends** | union of the above |
+| **Both ends**                                         | union of the above                                                                                                                                           |
 
 ```bash
 # Client
@@ -170,12 +170,7 @@ function onFinished(r: unknown) {
 </script>
 
 <template>
-  <AsWfForm
-    path="/wf/trigger"
-    name="hello"
-    :types
-    @finished="onFinished"
-  />
+  <AsWfForm path="/wf/trigger" name="hello" :types @finished="onFinished" />
 </template>
 ```
 
@@ -202,11 +197,11 @@ If you also use `@atscript/db` (for `AsWfStore`), add `dbPlugin()` too — see `
 
 `wfPlugin()` registers (`packages/moost-wf/src/plugin.ts:24-87`):
 
-| Annotation | Node | Argument | Notes |
-| ---------- | ---- | -------- | ----- |
-| `@wf.context.pass 'key'` | `interface` / `type` | string key | `multiple: true`, `mergeStrategy: 'append'` — declare once per key |
-| `@wf.action.withData 'id'` | `prop` / `type` | action id | partial-validation action |
-| `@wf.store.fromContext 'path.a.b'` | `prop` | dot-path | string/number/boolean fields only; must be optional or have a default |
+| Annotation                         | Node                 | Argument   | Notes                                                                 |
+| ---------------------------------- | -------------------- | ---------- | --------------------------------------------------------------------- |
+| `@wf.context.pass 'key'`           | `interface` / `type` | string key | `multiple: true`, `mergeStrategy: 'append'` — declare once per key    |
+| `@wf.action.withData 'id'`         | `prop` / `type`      | action id  | partial-validation action                                             |
+| `@wf.store.fromContext 'path.a.b'` | `prop`               | dot-path   | string/number/boolean fields only; must be optional or have a default |
 
 ## Vite config note (server)
 
@@ -226,10 +221,10 @@ See `client.md` for the full props/emits/slots reference.
 
 ## Reading list
 
-| File | When |
-| ---- | ---- |
-| [server.md](server.md) | authoring controllers, branching, action handlers, `@FormInput()` validation flow |
-| [context.md](context.md) | `@wf.context.pass` whitelist, `extractPassContext`, consuming `formContext` |
-| [state.md](state.md) | `AsWfStore`, `@wf.store.fromContext` shadow columns, `cleanup` / `heal` / `getAndDelete` |
-| [outlets.md](outlets.md) | outlet response shapes, magic-link / webhook resume, token transports |
-| [client.md](client.md) | `<AsWfForm>` props/emits/slots, `useWfForm()` composable, auth via custom `fetch` |
+| File                     | When                                                                                     |
+| ------------------------ | ---------------------------------------------------------------------------------------- |
+| [server.md](server.md)   | authoring controllers, branching, action handlers, `@FormInput()` validation flow        |
+| [context.md](context.md) | `@wf.context.pass` whitelist, `extractPassContext`, consuming `formContext`              |
+| [state.md](state.md)     | `AsWfStore`, `@wf.store.fromContext` shadow columns, `cleanup` / `heal` / `getAndDelete` |
+| [outlets.md](outlets.md) | outlet response shapes, magic-link / webhook resume, token transports                    |
+| [client.md](client.md)   | `<AsWfForm>` props/emits/slots, `useWfForm()` composable, auth via custom `fetch`        |

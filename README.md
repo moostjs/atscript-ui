@@ -10,16 +10,16 @@
 
 ## Packages
 
-| Package                                                       | Description                                                                                  |
-| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| [`@atscript/ui`](packages/ui)                                 | Framework-agnostic runtime — `FormDef`, `TableDef`, field resolver, validators               |
-| [`@atscript/ui-fns`](packages/ui-fns)                         | Opt-in plugin adding dynamic `@ui.fn.*` field properties (uses `new Function`)               |
-| [`@atscript/ui-table`](packages/ui-table)                     | Framework-agnostic filter model, filter → Uniquery conversion, preset serialization          |
-| [`@atscript/vue-form`](packages/vue-form)                     | Vue 3 form components and composables                                                        |
-| [`@atscript/vue-table`](packages/vue-table)                   | Vue 3 table components, filter dialogs, virtualized rendering                                |
-| [`@atscript/vue-wf`](packages/vue-wf)                         | Vue 3 workflow form — HTTP round-trip loop driven by atscript metadata                       |
-| [`@atscript/moost-wf`](packages/moost-wf)                     | Server-side workflow integration for Moost — decorators, interceptors, state persistence     |
-| [`@atscript/moost-ui-presets`](packages/moost-ui-presets)     | Moost controller and `.as` schema for table-preset persistence                               |
+| Package                                                   | Description                                                                              |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [`@atscript/ui`](packages/ui)                             | Framework-agnostic runtime — `FormDef`, `TableDef`, field resolver, validators           |
+| [`@atscript/ui-fns`](packages/ui-fns)                     | Opt-in plugin adding dynamic `@ui.fn.*` field properties (uses `new Function`)           |
+| [`@atscript/ui-table`](packages/ui-table)                 | Framework-agnostic filter model, filter → Uniquery conversion, preset serialization      |
+| [`@atscript/vue-form`](packages/vue-form)                 | Vue 3 form components and composables                                                    |
+| [`@atscript/vue-table`](packages/vue-table)               | Vue 3 table components, filter dialogs, virtualized rendering                            |
+| [`@atscript/vue-wf`](packages/vue-wf)                     | Vue 3 workflow form — HTTP round-trip loop driven by atscript metadata                   |
+| [`@atscript/moost-wf`](packages/moost-wf)                 | Server-side workflow integration for Moost — decorators, interceptors, state persistence |
+| [`@atscript/moost-ui-presets`](packages/moost-ui-presets) | Moost controller and `.as` schema for table-preset persistence                           |
 
 ## Architecture
 

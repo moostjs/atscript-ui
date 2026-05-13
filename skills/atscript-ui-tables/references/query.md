@@ -19,11 +19,7 @@ Query wiring, state contract, mutators, watchers.
 ### Path A — moost-db (default)
 
 ```vue
-<AsTableRoot
-  url="/api/db/tables/products"
-  :types="types"
-  :controls="controls"
-/>
+<AsTableRoot url="/api/db/tables/products" :types="types" :controls="controls" />
 ```
 
 `useTable(url, opts)` resolves a cached `MetaEntry` for the URL (`composables/use-table.ts:143-149`). The entry holds:
@@ -44,13 +40,19 @@ See the atscript-db skill for the moost-db URL syntax and `Client` API.
 ### Path B — custom
 
 ```vue
-<AsTableRoot :query-fn="qf" url="/api/db/tables/products" .../>
+<AsTableRoot :query-fn="qf" url="/api/db/tables/products" ... />
 ```
 
 ```typescript
 const qf: QueryFn = async (query, page, size) => {
   const res = await myBackend(query, page, size);
-  return { data: res.rows, count: res.total, page, itemsPerPage: size, pages: Math.ceil(res.total / size) };
+  return {
+    data: res.rows,
+    count: res.total,
+    page,
+    itemsPerPage: size,
+    pages: Math.ceil(res.total / size),
+  };
 };
 ```
 
@@ -76,13 +78,13 @@ interface PageResult<T> {
 
 The Uniquery object (`packages/ui-table/src/query/build-table-query.ts:40-76`) carries:
 
-| Key                        | Origin                                                                          |
-| -------------------------- | ------------------------------------------------------------------------------- |
-| `filter`                   | `mergeFilters(forceFilters, filtersToUniqueryFilter(state.filters))`            |
-| `controls.$select`         | `state.columnNames` (visible columns)                                            |
-| `controls.$sort`           | `mergeSorters(forceSorters, state.sorters)` → `{ field: 1\|-1 }` map           |
-| `controls.$search` or `$search:<index>` | `state.searchTerm` (omitted when empty)                              |
-| `controls.$actions`        | `true` when at least one row-actions column is rendered AND row/rows actions exist |
+| Key                                     | Origin                                                                             |
+| --------------------------------------- | ---------------------------------------------------------------------------------- |
+| `filter`                                | `mergeFilters(forceFilters, filtersToUniqueryFilter(state.filters))`               |
+| `controls.$select`                      | `state.columnNames` (visible columns)                                              |
+| `controls.$sort`                        | `mergeSorters(forceSorters, state.sorters)` → `{ field: 1\|-1 }` map               |
+| `controls.$search` or `$search:<index>` | `state.searchTerm` (omitted when empty)                                            |
+| `controls.$actions`                     | `true` when at least one row-actions column is rendered AND row/rows actions exist |
 
 `page` is 1-based. Window mode rounds `page` against `blockSize` (`use-table-state.ts:524-526`). Cross-link the atscript-db skill for the `Uniquery` shape and `$with` / relation expansion.
 
@@ -122,8 +124,8 @@ interface MetaResponse {
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
-  crud: TCrudPermissions;       // per-op booleans from @atscript/db-client
-  actions: TDbActionInfo[];     // flat list — grouping happens client-side
+  crud: TCrudPermissions; // per-op booleans from @atscript/db-client
+  actions: TDbActionInfo[]; // flat list — grouping happens client-side
   relations: RelationInfo[];
   fields: Record<string, FieldMeta>; // FieldMeta = { sortable, filterable }
   type: TSerializedAnnotatedType;
@@ -140,88 +142,88 @@ The full public state surface exposed via the default slot, `useTableContext().s
 
 ### Data refs
 
-| Name               | Type                                          | Notes                                                                              |
-| ------------------ | --------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `tableDef`         | `ShallowRef<TableDef \| null>`                | Composed once on metadata load.                                                    |
-| `loadingMetadata`  | `Ref<boolean>`                                | True until `/meta` resolves or fails.                                              |
-| `columnNames`      | `ShallowRef<string[]>`                        | Visible columns, in render order.                                                  |
-| `columns`          | `ComputedRef<ColumnDef[]>`                    | Derived from `columnNames` × `allColumns`.                                         |
-| `allColumns`       | `ShallowRef<ColumnDef[]>`                     | Every column from the `TableDef`.                                                  |
-| `columnWidths`    | `Ref<ColumnWidthsMap>`                        | `{ [path]: { w: current, d: default } }`, deep-reactive.                          |
-| `filterFields`     | `ShallowRef<string[]>`                        | Visible filter input list (display state).                                         |
-| `filters`          | `ShallowRef<FieldFilters>`                    | Applied filter conditions (applied state). See [filtering.md](filtering.md).        |
-| `sorters`          | `ShallowRef<SortControl[]>`                   | Multi-sort supported.                                                              |
-| `pagination`       | `Ref<{ page, itemsPerPage }>`                 | Window mode keeps `page=1`.                                                        |
-| `searchTerm`       | `Ref<string>`                                 | Empty disables `$search`.                                                          |
-| `results`          | `ShallowRef<Row[]>`                           | Current page or window island.                                                     |
-| `resultsStart`     | `Ref<number>`                                 | Absolute offset of `results[0]`.                                                   |
-| `windowCache`      | `ShallowRef<Map<number, Row>>`                | Window-mode universal cache by absolute index.                                     |
-| `windowLoading`    | `ShallowRef<Set<number>>`                     | Block firstIndex values in flight via `loadRange`.                                 |
-| `topIndex`         | `Ref<number>`                                 | Absolute index at top of the windowed viewport.                                    |
-| `viewportRowCount` | `Ref<number>`                                 | Fixed-pool row count a windowed renderer is displaying.                            |
-| `querying`         | `Ref<boolean>`                                | Set synchronously by `scheduleQuery`; cleared in `runQuery` finally.               |
-| `queryingNext`     | `Ref<boolean>`                                | Set while `queryNext` is fetching extension blocks.                                |
-| `totalCount`       | `Ref<number>`                                 | From the last `data.count`.                                                        |
-| `loadedCount`      | `ComputedRef<number>`                         | `results.value.length`.                                                            |
-| `queryError`       | `Ref<Error \| null>`                          | Current data fetch error; cleared on success.                                      |
-| `metadataError`    | `Ref<Error \| null>`                          | `/meta` fetch error.                                                               |
-| `lastError`        | `Ref<{ error, kind } \| null>`                | Latest error of any kind. Fresh wrapper per write so watchers fire.                |
-| `mustRefresh`      | `Ref<boolean>`                                | Sentinel — set when state changed mid-flight; cleared at next `runQuery` start.    |
-| `selectedRows`     | `ShallowRef<unknown[]>`                       | PKs per `rowValueFn`.                                                              |
-| `rowDelete`        | `Ref<boolean \| RowDeleteOpt>`                | Renderer-owned; controls the synthesized `__remove` row action.                    |
-| `includeActions`   | `Ref<boolean>`                                | Renderer-owned; controls `?$actions=true` augmentation.                            |
-| `configDialogOpen` | `Ref<boolean>`                                | Bound by `<AsConfigDialog>`.                                                       |
-| `configTab`        | `Ref<ConfigTab>`                              | `"columns" \| "sorters" \| "filters"`.                                            |
-| `filterDialogColumn` | `Ref<ColumnDef \| null>`                    | `null` = closed.                                                                   |
-| `activeIndex`      | `Ref<number>`                                 | Keyboard-active row absolute index; `-1` = none.                                   |
-| `navMode`          | `Ref<"pagination" \| "window">`              | Caps `activeIndex` against loaded rows or total.                                   |
-| `preset`           | `PresetSurface`                               | See [state-persistence.md](state-persistence.md).                                  |
-| `actions`          | `TableActionsState`                           | See [actions-selection.md](actions-selection.md).                                  |
+| Name                 | Type                            | Notes                                                                           |
+| -------------------- | ------------------------------- | ------------------------------------------------------------------------------- |
+| `tableDef`           | `ShallowRef<TableDef \| null>`  | Composed once on metadata load.                                                 |
+| `loadingMetadata`    | `Ref<boolean>`                  | True until `/meta` resolves or fails.                                           |
+| `columnNames`        | `ShallowRef<string[]>`          | Visible columns, in render order.                                               |
+| `columns`            | `ComputedRef<ColumnDef[]>`      | Derived from `columnNames` × `allColumns`.                                      |
+| `allColumns`         | `ShallowRef<ColumnDef[]>`       | Every column from the `TableDef`.                                               |
+| `columnWidths`       | `Ref<ColumnWidthsMap>`          | `{ [path]: { w: current, d: default } }`, deep-reactive.                        |
+| `filterFields`       | `ShallowRef<string[]>`          | Visible filter input list (display state).                                      |
+| `filters`            | `ShallowRef<FieldFilters>`      | Applied filter conditions (applied state). See [filtering.md](filtering.md).    |
+| `sorters`            | `ShallowRef<SortControl[]>`     | Multi-sort supported.                                                           |
+| `pagination`         | `Ref<{ page, itemsPerPage }>`   | Window mode keeps `page=1`.                                                     |
+| `searchTerm`         | `Ref<string>`                   | Empty disables `$search`.                                                       |
+| `results`            | `ShallowRef<Row[]>`             | Current page or window island.                                                  |
+| `resultsStart`       | `Ref<number>`                   | Absolute offset of `results[0]`.                                                |
+| `windowCache`        | `ShallowRef<Map<number, Row>>`  | Window-mode universal cache by absolute index.                                  |
+| `windowLoading`      | `ShallowRef<Set<number>>`       | Block firstIndex values in flight via `loadRange`.                              |
+| `topIndex`           | `Ref<number>`                   | Absolute index at top of the windowed viewport.                                 |
+| `viewportRowCount`   | `Ref<number>`                   | Fixed-pool row count a windowed renderer is displaying.                         |
+| `querying`           | `Ref<boolean>`                  | Set synchronously by `scheduleQuery`; cleared in `runQuery` finally.            |
+| `queryingNext`       | `Ref<boolean>`                  | Set while `queryNext` is fetching extension blocks.                             |
+| `totalCount`         | `Ref<number>`                   | From the last `data.count`.                                                     |
+| `loadedCount`        | `ComputedRef<number>`           | `results.value.length`.                                                         |
+| `queryError`         | `Ref<Error \| null>`            | Current data fetch error; cleared on success.                                   |
+| `metadataError`      | `Ref<Error \| null>`            | `/meta` fetch error.                                                            |
+| `lastError`          | `Ref<{ error, kind } \| null>`  | Latest error of any kind. Fresh wrapper per write so watchers fire.             |
+| `mustRefresh`        | `Ref<boolean>`                  | Sentinel — set when state changed mid-flight; cleared at next `runQuery` start. |
+| `selectedRows`       | `ShallowRef<unknown[]>`         | PKs per `rowValueFn`.                                                           |
+| `rowDelete`          | `Ref<boolean \| RowDeleteOpt>`  | Renderer-owned; controls the synthesized `__remove` row action.                 |
+| `includeActions`     | `Ref<boolean>`                  | Renderer-owned; controls `?$actions=true` augmentation.                         |
+| `configDialogOpen`   | `Ref<boolean>`                  | Bound by `<AsConfigDialog>`.                                                    |
+| `configTab`          | `Ref<ConfigTab>`                | `"columns" \| "sorters" \| "filters"`.                                          |
+| `filterDialogColumn` | `Ref<ColumnDef \| null>`        | `null` = closed.                                                                |
+| `activeIndex`        | `Ref<number>`                   | Keyboard-active row absolute index; `-1` = none.                                |
+| `navMode`            | `Ref<"pagination" \| "window">` | Caps `activeIndex` against loaded rows or total.                                |
+| `preset`             | `PresetSurface`                 | See [state-persistence.md](state-persistence.md).                               |
+| `actions`            | `TableActionsState`             | See [actions-selection.md](actions-selection.md).                               |
 
 ### Methods
 
-| Method                                    | Effect                                                                                            |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `query()`                                 | User-initiated refresh. Schedules a query through the same scheduler watchers use.                |
-| `queryImmediate()`                        | Awaitable; bypasses the microtask coalescer.                                                      |
-| `queryNext()`                             | Window-mode: extend by one block.                                                                 |
-| `loadRange(skip, limit)`                  | Window-mode: fetch a specific block; populates `windowCache`.                                     |
-| `invalidate()`                            | Bump generation, drop results + window cache, recompute `resultsStart` from current page.         |
-| `resetFilters()`                          | Set `state.filters = {}`. Watcher re-fetches.                                                     |
-| `setFieldFilter(path, conditions)`        | Replace conditions for one field; empty array removes the entry.                                  |
-| `removeFieldFilter(path)`                 | Remove conditions key entirely.                                                                   |
-| `addFilterField(path)` / `removeFilterField(path)` | Mutate display list `filterFields`. Independent of `filters`.                            |
-| `setColumnWidth(path, width)`             | Update `columnWidths[path].w`.                                                                    |
-| `resetColumnWidth(path)`                  | `columnWidths[path].w = columnWidths[path].d`.                                                    |
-| `showConfigDialog(tab?)`                  | Open `<AsConfigDialog>` on a tab. Tab default `"columns"`.                                        |
-| `openFilterDialog(column)` / `closeFilterDialog()` | Drive `<AsFilterDialog>`.                                                                |
-| `setActive(absIndex)` / `clearActive()`   | Keyboard-active row.                                                                              |
-| `toggleActiveSelection(mode)`             | Selection toggle helper.                                                                          |
-| `registerMainActionListener(cb)`          | Returns disposer.                                                                                 |
-| `handleNavKey(event, opts?)`              | Translate keyboard events.                                                                        |
-| `applyUrlQuery(urlString)`                | Hydrate state from URL string (echo-guarded).                                                     |
-| `prompt(message, opts?)`                  | Open the in-app confirm dialog. Resolves `boolean`.                                               |
-| `requestActionInput(action, ctx)`         | Open action-form dialog. Resolves with form payload or `null`.                                    |
-| `dataAt(absIndex)` / `loadingAt(absIndex)` / `errorAt(absIndex)` | Window-mode row accessors.                                                  |
-| `actions.invoke(action, pk?, opts?)`      | See [actions-selection.md](actions-selection.md).                                                  |
-| `preset.*`                                | See [state-persistence.md](state-persistence.md).                                                  |
+| Method                                                           | Effect                                                                                    |
+| ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `query()`                                                        | User-initiated refresh. Schedules a query through the same scheduler watchers use.        |
+| `queryImmediate()`                                               | Awaitable; bypasses the microtask coalescer.                                              |
+| `queryNext()`                                                    | Window-mode: extend by one block.                                                         |
+| `loadRange(skip, limit)`                                         | Window-mode: fetch a specific block; populates `windowCache`.                             |
+| `invalidate()`                                                   | Bump generation, drop results + window cache, recompute `resultsStart` from current page. |
+| `resetFilters()`                                                 | Set `state.filters = {}`. Watcher re-fetches.                                             |
+| `setFieldFilter(path, conditions)`                               | Replace conditions for one field; empty array removes the entry.                          |
+| `removeFieldFilter(path)`                                        | Remove conditions key entirely.                                                           |
+| `addFilterField(path)` / `removeFilterField(path)`               | Mutate display list `filterFields`. Independent of `filters`.                             |
+| `setColumnWidth(path, width)`                                    | Update `columnWidths[path].w`.                                                            |
+| `resetColumnWidth(path)`                                         | `columnWidths[path].w = columnWidths[path].d`.                                            |
+| `showConfigDialog(tab?)`                                         | Open `<AsConfigDialog>` on a tab. Tab default `"columns"`.                                |
+| `openFilterDialog(column)` / `closeFilterDialog()`               | Drive `<AsFilterDialog>`.                                                                 |
+| `setActive(absIndex)` / `clearActive()`                          | Keyboard-active row.                                                                      |
+| `toggleActiveSelection(mode)`                                    | Selection toggle helper.                                                                  |
+| `registerMainActionListener(cb)`                                 | Returns disposer.                                                                         |
+| `handleNavKey(event, opts?)`                                     | Translate keyboard events.                                                                |
+| `applyUrlQuery(urlString)`                                       | Hydrate state from URL string (echo-guarded).                                             |
+| `prompt(message, opts?)`                                         | Open the in-app confirm dialog. Resolves `boolean`.                                       |
+| `requestActionInput(action, ctx)`                                | Open action-form dialog. Resolves with form payload or `null`.                            |
+| `dataAt(absIndex)` / `loadingAt(absIndex)` / `errorAt(absIndex)` | Window-mode row accessors.                                                                |
+| `actions.invoke(action, pk?, opts?)`                             | See [actions-selection.md](actions-selection.md).                                         |
+| `preset.*`                                                       | See [state-persistence.md](state-persistence.md).                                         |
 
 ## Mutators are pure
 
 Every mutator touches exactly one entity. Re-querying is a watcher reaction, never inline.
 
-| Mutator                          | Touches                              | Watcher reacts                                |
-| -------------------------------- | ------------------------------------ | --------------------------------------------- |
-| `setFieldFilter`                 | `filters[path]`                      | `[filters, searchTerm]` (debounced 500ms)     |
-| `removeFieldFilter`              | `filters[path]` (delete)              | same                                          |
-| `resetFilters`                   | `filters = {}`                       | same                                          |
-| `addFilterField` / `removeFilterField` | `filterFields`                  | (none — display state)                        |
-| `setColumnWidth` / `resetColumnWidth` | `columnWidths[path]`            | (none — visual only)                          |
-| `state.sorters.value = next`     | `sorters`                            | `sorters` → `requestRefresh()`                |
-| `state.columnNames.value = next` | `columnNames`                        | `columnNames` (set change) → `requestRefresh()` |
-| `state.pagination.value = next`  | `pagination`                         | `pagination` → `scheduleQuery()`              |
-| `state.searchTerm.value = "..."` | `searchTerm`                         | `[filters, searchTerm]` (debounced 500ms)     |
-| `state.includeActions.value = on`| `includeActions`                     | `includeActions` → `requestRefresh()`         |
+| Mutator                                | Touches                  | Watcher reacts                                  |
+| -------------------------------------- | ------------------------ | ----------------------------------------------- |
+| `setFieldFilter`                       | `filters[path]`          | `[filters, searchTerm]` (debounced 500ms)       |
+| `removeFieldFilter`                    | `filters[path]` (delete) | same                                            |
+| `resetFilters`                         | `filters = {}`           | same                                            |
+| `addFilterField` / `removeFilterField` | `filterFields`           | (none — display state)                          |
+| `setColumnWidth` / `resetColumnWidth`  | `columnWidths[path]`     | (none — visual only)                            |
+| `state.sorters.value = next`           | `sorters`                | `sorters` → `requestRefresh()`                  |
+| `state.columnNames.value = next`       | `columnNames`            | `columnNames` (set change) → `requestRefresh()` |
+| `state.pagination.value = next`        | `pagination`             | `pagination` → `scheduleQuery()`                |
+| `state.searchTerm.value = "..."`       | `searchTerm`             | `[filters, searchTerm]` (debounced 500ms)       |
+| `state.includeActions.value = on`      | `includeActions`         | `includeActions` → `requestRefresh()`           |
 
 Contract (invariants 1, 2, 3):
 
@@ -233,15 +235,15 @@ Contract (invariants 1, 2, 3):
 
 Source: `composables/use-table-state.ts:858-937`.
 
-| Watch source                                          | Reaction                                                  | Notes                                       |
-| ----------------------------------------------------- | --------------------------------------------------------- | ------------------------------------------- |
-| `[filters, searchTerm]`                               | `mustRefresh=true`; `resetPagination()`; debounce 500ms → `scheduleQuery()` | Debounces noisy keystroke flows.  |
-| `sorters`                                             | `requestRefresh()` when not equal                         | Skips `hydratingFromUrl`, skips pre-init.   |
-| `columnNames` (set change)                            | `requestRefresh()`                                        | Set-equal change is a no-op.                |
-| `pagination` (page or itemsPerPage)                   | `scheduleQuery()`                                         | `skipPaginationWatch` masks one tick after `resetPagination`. |
-| `[filters, sorters, searchTerm, pagination]`          | `emitUrlIfChanged()`                                      | URL bridge emitter; gated by `urlQueryReady` + echo guard. |
-| `includeActions`                                      | `requestRefresh()`                                        |                                              |
-| `[tableDef, urlQueryReady, presetGateOpen]`           | first-time `scheduleQuery("initial")`                     | All three gates open + results empty → fire one composed initial query. |
+| Watch source                                 | Reaction                                                                    | Notes                                                                   |
+| -------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `[filters, searchTerm]`                      | `mustRefresh=true`; `resetPagination()`; debounce 500ms → `scheduleQuery()` | Debounces noisy keystroke flows.                                        |
+| `sorters`                                    | `requestRefresh()` when not equal                                           | Skips `hydratingFromUrl`, skips pre-init.                               |
+| `columnNames` (set change)                   | `requestRefresh()`                                                          | Set-equal change is a no-op.                                            |
+| `pagination` (page or itemsPerPage)          | `scheduleQuery()`                                                           | `skipPaginationWatch` masks one tick after `resetPagination`.           |
+| `[filters, sorters, searchTerm, pagination]` | `emitUrlIfChanged()`                                                        | URL bridge emitter; gated by `urlQueryReady` + echo guard.              |
+| `includeActions`                             | `requestRefresh()`                                                          |                                                                         |
+| `[tableDef, urlQueryReady, presetGateOpen]`  | first-time `scheduleQuery("initial")`                                       | All three gates open + results empty → fire one composed initial query. |
 
 ## scheduleQuery vs runQuery vs queryImmediate
 

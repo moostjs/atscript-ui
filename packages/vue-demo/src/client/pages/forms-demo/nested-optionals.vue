@@ -16,7 +16,9 @@ function onSubmit(data: unknown) {
     <div class="max-w-2xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
         <div class="flex items-center justify-between gap-$s">
-          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+          <p
+            class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0"
+          >
             atscript-ui · forms demo
           </p>
           <DarkToggle />
@@ -48,10 +50,9 @@ function onSubmit(data: unknown) {
 
       <details class="mt-$l layer-0 border-1 rounded-r2 p-$m text-callout">
         <summary class="cursor-pointer font-600 text-current-muted">Form data preview</summary>
-        <pre
-          class="mt-$s overflow-auto text-callout"
-          data-testid="nested-optionals-preview"
-        >{{ JSON.stringify(formData, null, 2) }}</pre>
+        <pre class="mt-$s overflow-auto text-callout" data-testid="nested-optionals-preview">{{
+          JSON.stringify(formData, null, 2)
+        }}</pre>
       </details>
     </div>
   </div>

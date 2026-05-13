@@ -24,30 +24,24 @@ fieldName: ui.action
 
 ```vue
 <script setup lang="ts">
-import { AsForm, createDefaultTypes, createAsFormDef } from '@atscript/vue-form'
-import { OrderForm } from './order-form.as'
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
+import { OrderForm } from "./order-form.as";
 
-const { def, formData } = createAsFormDef(OrderForm)
-const types = createDefaultTypes()
+const { def, formData } = createAsFormDef(OrderForm);
+const types = createDefaultTypes();
 
 function onAction(name: string, data: unknown) {
-  if (name === 'save-draft') saveDraft(data)
-  if (name === 'discard') resetForm()
+  if (name === "save-draft") saveDraft(data);
+  if (name === "discard") resetForm();
 }
 
 function onSubmit(data: unknown) {
-  submitOrder(data)
+  submitOrder(data);
 }
 </script>
 
 <template>
-  <AsForm
-    :def="def"
-    :form-data="formData"
-    :types="types"
-    @submit="onSubmit"
-    @action="onAction"
-  />
+  <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @action="onAction" />
 </template>
 ```
 
@@ -127,10 +121,7 @@ When the emitted action id doesn't match any `@ui.form.action` (or
 controllers refactor action ids.
 
 ```vue
-<AsForm
-  @action="onAction"
-  @unsupported-action="(name) => console.warn('Unknown action:', name)"
-/>
+<AsForm @action="onAction" @unsupported-action="(name) => console.warn('Unknown action:', name)" />
 ```
 
 ## Workflow actions
@@ -149,10 +140,10 @@ through the `:types` map to use your design system's button:
 
 ```vue
 <script setup lang="ts">
-import { createDefaultTypes } from '@atscript/vue-form'
-import MyActionButton from './MyActionButton.vue'
+import { createDefaultTypes } from "@atscript/vue-form";
+import MyActionButton from "./MyActionButton.vue";
 
-const types = { ...createDefaultTypes(), action: MyActionButton }
+const types = { ...createDefaultTypes(), action: MyActionButton };
 </script>
 ```
 
@@ -161,18 +152,14 @@ inspect `formAction` for the id and label, and emit `'action'` with the id:
 
 ```vue
 <script setup lang="ts">
-import type { TAsComponentProps, TAsComponentEmits } from '@atscript/vue-form'
+import type { TAsComponentProps, TAsComponentEmits } from "@atscript/vue-form";
 
-defineProps<TAsComponentProps>()
-const emit = defineEmits<TAsComponentEmits>()
+defineProps<TAsComponentProps>();
+const emit = defineEmits<TAsComponentEmits>();
 </script>
 
 <template>
-  <button
-    type="button"
-    class="c8-light"
-    @click="formAction && emit('action', formAction.id)"
-  >
+  <button type="button" class="c8-light" @click="formAction && emit('action', formAction.id)">
     {{ formAction?.label }}
   </button>
 </template>

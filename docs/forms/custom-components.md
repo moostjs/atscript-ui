@@ -15,50 +15,50 @@ Every field component receives a `TAsComponentProps<T>` interface (declared in
 `string`, `number`, `string[]`, etc.
 
 ```typescript
-import type { TAsComponentProps, TAsComponentEmits } from '@atscript/vue-form'
+import type { TAsComponentProps, TAsComponentEmits } from "@atscript/vue-form";
 
-defineProps<TAsComponentProps<string | null | undefined>>()
-defineEmits<TAsComponentEmits>()
+defineProps<TAsComponentProps<string | null | undefined>>();
+defineEmits<TAsComponentEmits>();
 ```
 
 Annotated breakdown of the props you'll touch most:
 
-| Prop                  | Meaning                                                                    |
-| --------------------- | -------------------------------------------------------------------------- |
-| `model`               | `{ value: T }` — bind with `v-model="model.value"`                         |
-| `label`               | Resolved label (`@meta.label` / `@ui.form.fn.label`)                       |
-| `description`         | Resolved description                                                       |
-| `hint`                | Resolved hint                                                              |
-| `placeholder`         | Resolved placeholder                                                       |
-| `disabled`            | Resolved `@ui.form.disabled` / `@ui.form.fn.disabled`                      |
-| `hidden`              | Resolved `@ui.form.hidden` / `@ui.form.fn.hidden`                          |
-| `readonly`            | Resolved `@meta.readonly` / `@ui.form.fn.readonly`                         |
-| `required` / `optional` | Mirror each other; true/false for required-status                        |
-| `onToggleOptional`    | Callable when `optional` is true — `true` sets default, `false` sets undef |
-| `error`               | Current validation error message                                           |
-| `errorId` / `descId`  | Stable ids for `aria-describedby` wiring                                   |
-| `inputId`             | Stable id for `<label :for>` on your inner control                         |
-| `ariaDescribedBy`     | Pre-resolved — bind directly to `aria-describedby`                         |
-| `type`                | Resolved field type string                                                 |
-| `name`                | Last segment of the field's dotted path                                    |
-| `path`                | Absolute dotted path inside form data                                      |
-| `field`               | Full `FormFieldDef` for advanced inspection                                |
-| `formAction`          | For phantom action fields — `{ id, label }`                                |
-| `options`             | Resolved options for select/radio/checkbox                                 |
-| `valueHelp`           | FK ref descriptor (`ValueHelpInfo`)                                        |
-| `singularLabel`       | From `@ui.form.label.singular` — used by arrays                            |
-| `prefix` / `suffix`   | Resolved adornment text                                                    |
-| `prefixIcon` / `suffixIcon` | Resolved adornment icon class                                        |
-| `currencyCode`        | Resolved currency code (post sibling-ref)                                  |
-| `unitCode`            | Resolved unit code (post sibling-ref)                                      |
-| `scale`               | Effective display scale for decimals                                       |
-| `hasAdornment`        | True when at least one adornment annotation is set                         |
-| `arrayIndex`          | Index when rendered as a direct array item                                 |
-| `onRemove`            | Callback to remove this array item (only present inside arrays)            |
-| `canRemove`           | Whether removal respects `minLength` constraints                           |
-| `removeLabel`         | Label for the remove button (`@ui.array.remove.label`)                     |
-| `level`               | Nesting depth (0 at root, increments per nested object/array)              |
-| `onBlur`              | Call when your control blurs — triggers field validation                   |
+| Prop                        | Meaning                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `model`                     | `{ value: T }` — bind with `v-model="model.value"`                         |
+| `label`                     | Resolved label (`@meta.label` / `@ui.form.fn.label`)                       |
+| `description`               | Resolved description                                                       |
+| `hint`                      | Resolved hint                                                              |
+| `placeholder`               | Resolved placeholder                                                       |
+| `disabled`                  | Resolved `@ui.form.disabled` / `@ui.form.fn.disabled`                      |
+| `hidden`                    | Resolved `@ui.form.hidden` / `@ui.form.fn.hidden`                          |
+| `readonly`                  | Resolved `@meta.readonly` / `@ui.form.fn.readonly`                         |
+| `required` / `optional`     | Mirror each other; true/false for required-status                          |
+| `onToggleOptional`          | Callable when `optional` is true — `true` sets default, `false` sets undef |
+| `error`                     | Current validation error message                                           |
+| `errorId` / `descId`        | Stable ids for `aria-describedby` wiring                                   |
+| `inputId`                   | Stable id for `<label :for>` on your inner control                         |
+| `ariaDescribedBy`           | Pre-resolved — bind directly to `aria-describedby`                         |
+| `type`                      | Resolved field type string                                                 |
+| `name`                      | Last segment of the field's dotted path                                    |
+| `path`                      | Absolute dotted path inside form data                                      |
+| `field`                     | Full `FormFieldDef` for advanced inspection                                |
+| `formAction`                | For phantom action fields — `{ id, label }`                                |
+| `options`                   | Resolved options for select/radio/checkbox                                 |
+| `valueHelp`                 | FK ref descriptor (`ValueHelpInfo`)                                        |
+| `singularLabel`             | From `@ui.form.label.singular` — used by arrays                            |
+| `prefix` / `suffix`         | Resolved adornment text                                                    |
+| `prefixIcon` / `suffixIcon` | Resolved adornment icon class                                              |
+| `currencyCode`              | Resolved currency code (post sibling-ref)                                  |
+| `unitCode`                  | Resolved unit code (post sibling-ref)                                      |
+| `scale`                     | Effective display scale for decimals                                       |
+| `hasAdornment`              | True when at least one adornment annotation is set                         |
+| `arrayIndex`                | Index when rendered as a direct array item                                 |
+| `onRemove`                  | Callback to remove this array item (only present inside arrays)            |
+| `canRemove`                 | Whether removal respects `minLength` constraints                           |
+| `removeLabel`               | Label for the remove button (`@ui.array.remove.label`)                     |
+| `level`                     | Nesting depth (0 at root, increments per nested object/array)              |
+| `onBlur`                    | Call when your control blurs — triggers field validation                   |
 
 The complete list (and forward-compat fields) is in
 `packages/vue-form/src/components/types.ts`.
@@ -67,7 +67,7 @@ The complete list (and forward-compat fields) is in
 
 ```typescript
 interface TAsComponentEmits<_V = unknown> {
-  (e: 'action', name: string): void
+  (e: "action", name: string): void;
 }
 ```
 
@@ -82,12 +82,12 @@ inherit standard label/error chrome:
 
 ```vue
 <script setup lang="ts" generic="T">
-import { AsFieldShell, type TAsComponentProps } from '@atscript/vue-form'
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
-const props = defineProps<TAsComponentProps<T>>()
+const props = defineProps<TAsComponentProps<T>>();
 
 function commit(next: T): void {
-  props.model.value = next
+  props.model.value = next;
 }
 </script>
 
@@ -156,11 +156,11 @@ Reactive read-only access to the same data, including a relative-sibling
 helper:
 
 ```typescript
-import { useAsData } from '@atscript/vue-form'
+import { useAsData } from "@atscript/vue-form";
 
-const { rootData, getValueAt, siblingValue } = useAsData()
+const { rootData, getValueAt, siblingValue } = useAsData();
 
-const country = siblingValue<string>('country')
+const country = siblingValue<string>("country");
 // Inside an array item, this resolves to the sibling on the same item.
 ```
 
@@ -172,10 +172,10 @@ i.e. it walks up to the nearest parent object and reads `name` on it.
 Read the BCP-47 locale provided by `provideAsLocale` at the app root:
 
 ```typescript
-import { useAsLocale } from '@atscript/vue-form'
+import { useAsLocale } from "@atscript/vue-form";
 
-const { locale } = useAsLocale()
-const fmt = new Intl.NumberFormat(locale.value ?? 'en-US')
+const { locale } = useAsLocale();
+const fmt = new Intl.NumberFormat(locale.value ?? "en-US");
 ```
 
 See [Locale & currency](/forms/locale).
@@ -192,52 +192,58 @@ A `ColorSwatch.vue` custom field component:
 
 ```vue
 <script setup lang="ts">
-import { ref } from 'vue'
-import { AsFieldShell, type TAsComponentProps } from '@atscript/vue-form'
+import { ref } from "vue";
+import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 
-const props = defineProps<TAsComponentProps<string | null | undefined>>()
+const props = defineProps<TAsComponentProps<string | null | undefined>>();
 
 const PALETTE = [
-  '#ef4444', '#f97316', '#facc15', '#22c55e',
-  '#0ea5e9', '#6366f1', '#a855f7', '#64748b',
-] as const
+  "#ef4444",
+  "#f97316",
+  "#facc15",
+  "#22c55e",
+  "#0ea5e9",
+  "#6366f1",
+  "#a855f7",
+  "#64748b",
+] as const;
 
-const buttonRefs = ref<HTMLButtonElement[]>([])
+const buttonRefs = ref<HTMLButtonElement[]>([]);
 
 function pick(hex: string): void {
-  props.model.value = hex
+  props.model.value = hex;
 }
 
 function focusIndex(idx: number): void {
-  const clamped = (idx + PALETTE.length) % PALETTE.length
-  buttonRefs.value[clamped]?.focus()
+  const clamped = (idx + PALETTE.length) % PALETTE.length;
+  buttonRefs.value[clamped]?.focus();
 }
 
 function onKeyDown(e: KeyboardEvent, idx: number, hex: string): void {
   switch (e.key) {
-    case 'ArrowRight':
-    case 'ArrowDown':
-      e.preventDefault()
-      focusIndex(idx + 1)
-      break
-    case 'ArrowLeft':
-    case 'ArrowUp':
-      e.preventDefault()
-      focusIndex(idx - 1)
-      break
-    case 'Enter':
-    case ' ':
-      e.preventDefault()
-      pick(hex)
-      break
+    case "ArrowRight":
+    case "ArrowDown":
+      e.preventDefault();
+      focusIndex(idx + 1);
+      break;
+    case "ArrowLeft":
+    case "ArrowUp":
+      e.preventDefault();
+      focusIndex(idx - 1);
+      break;
+    case "Enter":
+    case " ":
+      e.preventDefault();
+      pick(hex);
+      break;
   }
 }
 
 function onGroupBlur(e: FocusEvent): void {
-  const next = e.relatedTarget as Node | null
-  const group = e.currentTarget as HTMLElement
-  if (group && next && group.contains(next)) return
-  props.onBlur()
+  const next = e.relatedTarget as Node | null;
+  const group = e.currentTarget as HTMLElement;
+  if (group && next && group.contains(next)) return;
+  props.onBlur();
 }
 </script>
 
@@ -255,7 +261,7 @@ function onGroupBlur(e: FocusEvent): void {
         <button
           v-for="(hex, idx) in PALETTE"
           :key="hex"
-          :ref="(el) => buttonRefs[idx] = el as HTMLButtonElement"
+          :ref="(el) => (buttonRefs[idx] = el as HTMLButtonElement)"
           :id="idx === 0 ? inputId : undefined"
           type="button"
           :style="{ backgroundColor: hex }"

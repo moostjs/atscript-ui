@@ -56,11 +56,7 @@ import Components from "unplugin-vue-components/vite";
 import { AsResolver } from "@atscript/ui-styles/vite";
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    Components({ resolvers: [AsResolver()] }),
-    unocss(),
-  ],
+  plugins: [vue(), Components({ resolvers: [AsResolver()] }), unocss()],
 });
 ```
 
@@ -76,7 +72,7 @@ import "virtual:uno.css";
 ## Quick start (no UnoCSS)
 
 ```ts
-import "@atscript/ui-styles/css/all";   // form + table + wf + common
+import "@atscript/ui-styles/css/all"; // form + table + wf + common
 // or per-package:
 // import "@atscript/ui-styles/css/form";
 // import "@atscript/ui-styles/css/table";
@@ -88,35 +84,44 @@ tuning. Override individual CSS custom properties for brand colors.
 
 ## Invariants
 
-| #   | Rule                                                                                                                                                                                                                                                                                                                                                                            |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **Components emit only `as-*` class names.** Two recommended customization paths: (a) tune vunor primitives (palette / scope / layer / surface / c8 / i8 / fingertip / spacing / typography) so all `as-*` shortcuts re-derive; (b) extend the shortcut tree via `mergeVunorShortcuts`. Direct CSS overrides of `as-*` rules also work, but they don't inherit palette / dark-mode tinting — pick what fits your project.              |
-| 2   | **`asPresetVunor()` already injects `allShortcuts`.** Spread individual shortcut groups (`formShortcuts`, `tableShortcuts`, `wfShortcuts`, `commonShortcuts`) only when building a subset preset.                                                                                                                                                                              |
-| 3   | **`AsResolver()` is Tier-1 only.** Auto-imports root components used in templates (`AsForm`, `AsField`, `AsIterator`, `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsFilters`, `AsPresetPicker`, `AsTableActions`, `AsWfForm`). Tier-2 defaults (`AsInput`, `AsFilterDialog`, …) are imported explicitly; composables are never handled by `unplugin-vue-components`.                |
-| 4   | **`iconOverrides` only replaces existing aliases.** Unknown keys are ignored silently. To add brand-new icons compose your own `presetIcons` alongside ours under a different collection prefix (e.g. `lucide`, `brand`). See [icons.md](references/icons.md).                                                                                                                  |
-| 5   | **For override SVGs to inherit color/sizing, use `currentColor` and let `width`/`height` default to `1em`.** Icons inherit text color via vunor's `scope-*` / `layer-*` system through `currentColor`; a hardcoded `fill="#000"` will stay black across dark mode + `scope-error`. Likewise, pinned pixel `width`/`height` lock the icon to that size — `as-*` shortcuts size via `em`, so the em default tracks surrounding text.                                                                                                          |
-| 6   | **Pre-built CSS skips theme tuning.** `@atscript/ui-styles/css/*` ships the default vunor palette baked in. Use `asPresetVunor()` if you want to change the palette, base radius, fingertip ladder, or icon set at build time.                                                                                                                                                  |
-| 7   | **Class extractor is build-time, not runtime.** `createAsExtractor()` walks library subpath imports / tag names / helper calls in your source and pre-seeds the safelist. The pre-computed class map (`componentClasses`, `helperAliases`) is generated at our publish time — you don't run it.                                                                                  |
-| 8   | **`createIconsLoader` is internal.** It runs only inside `pnpm bake-icons` at our publish time and is not exported. User-facing icon customization is exclusively `asPresetVunor({ iconOverrides })` + standard `presetIcons` for new icons.                                                                                                                                     |
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Components emit only `as-*` class names.** Two recommended customization paths: (a) tune vunor primitives (palette / scope / layer / surface / c8 / i8 / fingertip / spacing / typography) so all `as-*` shortcuts re-derive; (b) extend the shortcut tree via `mergeVunorShortcuts`. Direct CSS overrides of `as-*` rules also work, but they don't inherit palette / dark-mode tinting — pick what fits your project.          |
+| 2   | **`asPresetVunor()` already injects `allShortcuts`.** Spread individual shortcut groups (`formShortcuts`, `tableShortcuts`, `wfShortcuts`, `commonShortcuts`) only when building a subset preset.                                                                                                                                                                                                                                  |
+| 3   | **`AsResolver()` is Tier-1 only.** Auto-imports root components used in templates (`AsForm`, `AsField`, `AsIterator`, `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsFilters`, `AsPresetPicker`, `AsTableActions`, `AsWfForm`). Tier-2 defaults (`AsInput`, `AsFilterDialog`, …) are imported explicitly; composables are never handled by `unplugin-vue-components`.                                                               |
+| 4   | **`iconOverrides` only replaces existing aliases.** Unknown keys are ignored silently. To add brand-new icons compose your own `presetIcons` alongside ours under a different collection prefix (e.g. `lucide`, `brand`). See [icons.md](references/icons.md).                                                                                                                                                                     |
+| 5   | **For override SVGs to inherit color/sizing, use `currentColor` and let `width`/`height` default to `1em`.** Icons inherit text color via vunor's `scope-*` / `layer-*` system through `currentColor`; a hardcoded `fill="#000"` will stay black across dark mode + `scope-error`. Likewise, pinned pixel `width`/`height` lock the icon to that size — `as-*` shortcuts size via `em`, so the em default tracks surrounding text. |
+| 6   | **Pre-built CSS skips theme tuning.** `@atscript/ui-styles/css/*` ships the default vunor palette baked in. Use `asPresetVunor()` if you want to change the palette, base radius, fingertip ladder, or icon set at build time.                                                                                                                                                                                                     |
+| 7   | **Class extractor is build-time, not runtime.** `createAsExtractor()` walks library subpath imports / tag names / helper calls in your source and pre-seeds the safelist. The pre-computed class map (`componentClasses`, `helperAliases`) is generated at our publish time — you don't run it.                                                                                                                                    |
+| 8   | **`createIconsLoader` is internal.** It runs only inside `pnpm bake-icons` at our publish time and is not exported. User-facing icon customization is exclusively `asPresetVunor({ iconOverrides })` + standard `presetIcons` for new icons.                                                                                                                                                                                       |
 
 ## Key imports
 
 ```ts
 // Preset + extractor
-import {
-  asPresetVunor, createAsBaseUnoConfig, createAsExtractor,
+import { asPresetVunor, createAsBaseUnoConfig, createAsExtractor } from "@atscript/ui-styles";
+import type {
+  AsPresetVunorOptions,
+  AsBaseUnoConfigOptions,
+  AsExtractorOptions,
 } from "@atscript/ui-styles";
-import type { AsPresetVunorOptions, AsBaseUnoConfigOptions, AsExtractorOptions } from "@atscript/ui-styles";
 
 // Shortcuts
 import {
-  commonShortcuts, formShortcuts, tableShortcuts, wfShortcuts, allShortcuts,
+  commonShortcuts,
+  formShortcuts,
+  tableShortcuts,
+  wfShortcuts,
+  allShortcuts,
 } from "@atscript/ui-styles";
 
 // Class / helper maps (generated, mostly for advanced build setups)
 import {
-  componentClasses, componentPackages,
-  getComponentClasses, getHelperClasses, helperAliases,
+  componentClasses,
+  componentPackages,
+  getComponentClasses,
+  getHelperClasses,
+  helperAliases,
 } from "@atscript/ui-styles";
 
 // Baked icon map (read-only)
@@ -136,13 +141,13 @@ import { AsResolver } from "@atscript/ui-styles/vite";
 
 ## References — load only what's needed
 
-| Domain          | File                                                  | When                                                                                                                                                                                                                                                                  |
-| --------------- | ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| First contact   | [getting-started.md](references/getting-started.md)   | Install matrix, full `uno.config.ts` + `vite.config.ts` (`asPresetVunor`, `AsResolver`), Tier-1 vs Tier-2 auto-import boundary, virtual `uno.css` entry                                                                                                                |
-| Theming         | [theming.md](references/theming.md)                   | vunor palette overrides (`palette.colors`, `lightest`, `darkest`, `layersDepth`), `baseRadius`, dark mode, scope tints, layer / surface tones, deriving brand colors                                                                                                  |
-| Icons           | [icons.md](references/icons.md)                       | Default semantic alias set (what ships out of the box), `iconOverrides` shape + the `currentColor` / `1em` rules, adding new icons via `@unocss/preset-icons` (separate prefix), `bakedIcons` constant                                                                |
-| Shortcut tree   | [shortcuts.md](references/shortcuts.md)               | `as-*` naming convention (variant suffix), four shortcut groups (form / table / wf / common), extending with `mergeVunorShortcuts` + `defineShortcuts`, composing from vunor primitives for inherited theming, when to extend vs sibling, `excludeComponents` to drop unused classes              |
-| Pre-built CSS   | [prebuilt-css.md](references/prebuilt-css.md)         | The four subpaths (`/css/{all,form,table,wf}`), trade-offs vs UnoCSS path, brand color tuning via CSS custom properties, HTML and Vite usage                                                                                                                          |
+| Domain        | File                                                | When                                                                                                                                                                                                                                                                                 |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| First contact | [getting-started.md](references/getting-started.md) | Install matrix, full `uno.config.ts` + `vite.config.ts` (`asPresetVunor`, `AsResolver`), Tier-1 vs Tier-2 auto-import boundary, virtual `uno.css` entry                                                                                                                              |
+| Theming       | [theming.md](references/theming.md)                 | vunor palette overrides (`palette.colors`, `lightest`, `darkest`, `layersDepth`), `baseRadius`, dark mode, scope tints, layer / surface tones, deriving brand colors                                                                                                                 |
+| Icons         | [icons.md](references/icons.md)                     | Default semantic alias set (what ships out of the box), `iconOverrides` shape + the `currentColor` / `1em` rules, adding new icons via `@unocss/preset-icons` (separate prefix), `bakedIcons` constant                                                                               |
+| Shortcut tree | [shortcuts.md](references/shortcuts.md)             | `as-*` naming convention (variant suffix), four shortcut groups (form / table / wf / common), extending with `mergeVunorShortcuts` + `defineShortcuts`, composing from vunor primitives for inherited theming, when to extend vs sibling, `excludeComponents` to drop unused classes |
+| Pre-built CSS | [prebuilt-css.md](references/prebuilt-css.md)       | The four subpaths (`/css/{all,form,table,wf}`), trade-offs vs UnoCSS path, brand color tuning via CSS custom properties, HTML and Vite usage                                                                                                                                         |
 
 ## See also
 

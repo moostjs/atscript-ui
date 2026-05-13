@@ -17,7 +17,7 @@ runs only if the user has MFA enabled.
 - One `condition: needsMfa` on a single step changes the flow shape
   without touching the other steps.
 - The OTP code is dispatched **inline** (`console.log` in the demo;
-  email/SMS in production) — *not* via the email outlet — because
+  email/SMS in production) — _not_ via the email outlet — because
   emitting an outlet would pause the workflow and prevent the next
   form from rendering in the same response.
 - The OTP form whitelists `email` via `@wf.context.pass` so the

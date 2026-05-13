@@ -22,11 +22,18 @@ interface FilterCondition {
 }
 
 type FilterConditionType =
-  | "eq" | "ne"
-  | "gt" | "gte" | "lt" | "lte"
-  | "contains" | "starts" | "ends"
-  | "bw"            // between (value[0]..value[1])
-  | "null" | "notNull"
+  | "eq"
+  | "ne"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "contains"
+  | "starts"
+  | "ends"
+  | "bw" // between (value[0]..value[1])
+  | "null"
+  | "notNull"
   | "regex";
 ```
 
@@ -71,16 +78,16 @@ translation:
 ::: details Condition types and their Uniquery shape
 | UI condition | Uniquery emission |
 | ------------ | ----------------- |
-| `eq`         | `{ field: value }` |
-| `ne`         | `{ field: { $ne: value } }` |
+| `eq` | `{ field: value }` |
+| `ne` | `{ field: { $ne: value } }` |
 | `gt`/`gte`/`lt`/`lte` | `{ field: { $gt: value } }` (etc.) |
-| `contains`   | `{ field: { $regex: "/<value>/i" } }` (escaped) |
-| `starts`     | `{ field: { $regex: "/^<value>/i" } }` |
-| `ends`       | `{ field: { $regex: "/<value>$/i" } }` |
-| `bw`         | `{ field: { $gte: lo, $lte: hi } }` |
-| `null`       | `{ field: { $exists: false } }` |
-| `notNull`    | `{ field: { $exists: true } }` |
-| `regex`      | `{ field: { $regex: <value> } }` |
+| `contains` | `{ field: { $regex: "/<value>/i" } }` (escaped) |
+| `starts` | `{ field: { $regex: "/^<value>/i" } }` |
+| `ends` | `{ field: { $regex: "/<value>$/i" } }` |
+| `bw` | `{ field: { $gte: lo, $lte: hi } }` |
+| `null` | `{ field: { $exists: false } }` |
+| `notNull` | `{ field: { $exists: true } }` |
+| `regex` | `{ field: { $regex: <value> } }` |
 :::
 
 ## Display state vs applied state
@@ -129,7 +136,7 @@ The Tier-2 default for a single inline filter chip / input. Reads
 ### `<AsFilterDialog>` — per-column condition builder
 
 Mounted automatically by `<AsTableRoot>`. Opens when the user picks
-*Filter* from a column-menu, or when you call
+_Filter_ from a column-menu, or when you call
 `state.openFilterDialog(column)` directly. Lets the user compose
 multiple conditions per column (e.g. `> 100` AND `<= 1000`) and pick
 operators from the full `FilterConditionType` palette. The dialog
@@ -173,11 +180,7 @@ Initial filters flow through whichever channel makes sense:
 For one-off programmatic application from the parent component:
 
 ```vue
-<AsTableRoot
-  url="/db/tables/orders"
-  ref="root"
-  v-slot="{ setFieldFilter }"
->
+<AsTableRoot url="/db/tables/orders" ref="root" v-slot="{ setFieldFilter }">
   <button @click="setFieldFilter('status', [{ type: 'eq', value: ['open'] }])">
     Show open orders
   </button>

@@ -20,9 +20,9 @@ An **outlet** is a workflow pause that hands control to an external channel (ema
 
 Two outlet flavours from `@moostjs/event-wf`:
 
-| Outlet | Use |
-| ------ | --- |
-| `outletHttp({...})` | embeds payload in the HTTP response (`inputRequired` lives in here). The flow continues on the next HTTP request from the same client. |
+| Outlet                            | Use                                                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `outletHttp({...})`               | embeds payload in the HTTP response (`inputRequired` lives in here). The flow continues on the next HTTP request from the same client. |
 | `outletEmail(to, template, data)` | sends an email, returns `{ sent: true }` (or `{ outlet: '<name>' }`), client closes the loop. Resume comes from the link in the email. |
 
 You can also write custom outlets (SMS, push, webhook). The runtime treats them all the same way: pause + persist + return a response shape that the client recognizes.
@@ -31,14 +31,14 @@ You can also write custom outlets (SMS, push, webhook). The runtime treats them 
 
 The wire-level shape `<AsWfForm>` recognizes (`packages/vue-wf/src/use-wf-form.ts:128-153`):
 
-| Body | Client behavior |
-| ---- | --------------- |
-| `{ inputRequired: { payload, transport, context }, wfs }` | render the form, wait for next user action |
-| `{ finished: true, ...response }` | fire `@finished`, set `wf.response.value`, stop |
-| `{ sent: true }` | treat as "finished from HTTP perspective" — fire `@finished` with the body as response |
-| `{ outlet: '<name>' }` | same as `sent: true` — fire `@finished` |
-| `{ error: { message, status? } }` | set `wf.error.value`, fire `@error` |
-| anything else | set `error.value = { message: 'Unexpected response format' }` |
+| Body                                                      | Client behavior                                                                        |
+| --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `{ inputRequired: { payload, transport, context }, wfs }` | render the form, wait for next user action                                             |
+| `{ finished: true, ...response }`                         | fire `@finished`, set `wf.response.value`, stop                                        |
+| `{ sent: true }`                                          | treat as "finished from HTTP perspective" — fire `@finished` with the body as response |
+| `{ outlet: '<name>' }`                                    | same as `sent: true` — fire `@finished`                                                |
+| `{ error: { message, status? } }`                         | set `wf.error.value`, fire `@error`                                                    |
+| anything else                                             | set `error.value = { message: 'Unexpected response format' }`                          |
 
 The `{ sent: true }` / `{ outlet: '<name>' }` branch was added so the client gets a **clean `@finished`** instead of falling into the "unexpected response" branch and re-submitting. The user closes the tab; the actual resume happens later via a token.
 
@@ -83,11 +83,11 @@ tokenTransport?: 'body' | 'cookie' | 'query'   // default: 'body'
 tokenName?: string                              // default: 'wfs'
 ```
 
-| Transport | Where the token lives | Default name | Survives reload? | Cross-browser? |
-| --------- | --------------------- | ------------ | ----------------- | -------------- |
-| `body` | request / response JSON `wfs` field | `wfs` | **no** — held in JS memory only | no |
-| `cookie` | `Set-Cookie` / `Cookie` headers, server-controlled | `wfs` | yes, until expiry | no (same-origin) |
-| `query` | URL `?wfs=<token>` | `wfs` | yes (URL bookmarkable) | yes — URL is shareable |
+| Transport | Where the token lives                              | Default name | Survives reload?                | Cross-browser?         |
+| --------- | -------------------------------------------------- | ------------ | ------------------------------- | ---------------------- |
+| `body`    | request / response JSON `wfs` field                | `wfs`        | **no** — held in JS memory only | no                     |
+| `cookie`  | `Set-Cookie` / `Cookie` headers, server-controlled | `wfs`        | yes, until expiry               | no (same-origin)       |
+| `query`   | URL `?wfs=<token>`                                 | `wfs`        | yes (URL bookmarkable)          | yes — URL is shareable |
 
 Behaviour detail (`packages/vue-wf/src/use-wf-form.ts:114-126`):
 
@@ -97,13 +97,13 @@ Behaviour detail (`packages/vue-wf/src/use-wf-form.ts:114-126`):
 
 ## Picking a transport
 
-| Story | Transport |
-| ----- | --------- |
-| Single-session flow that finishes in one go (login, simple multi-step form) | `body` |
-| Long flow with potential reload but same browser (multi-day wizard, approval queue) | `cookie` |
-| Magic-link or webhook resume (email confirm, payment redirect, admin link) | `query` |
-| Multi-device handoff (start on desktop, finish on phone) | `query` (URL shareable) |
-| API-driven flow (mobile app, no browser) | `body` (carry token in app state) |
+| Story                                                                               | Transport                         |
+| ----------------------------------------------------------------------------------- | --------------------------------- |
+| Single-session flow that finishes in one go (login, simple multi-step form)         | `body`                            |
+| Long flow with potential reload but same browser (multi-day wizard, approval queue) | `cookie`                          |
+| Magic-link or webhook resume (email confirm, payment redirect, admin link)          | `query`                           |
+| Multi-device handoff (start on desktop, finish on phone)                            | `query` (URL shareable)           |
+| API-driven flow (mobile app, no browser)                                            | `body` (carry token in app state) |
 
 `cookie` requires server-side cookie handling on the trigger endpoint — set `Set-Cookie: wfs=<token>; HttpOnly; SameSite=Lax` on each response. The vue-wf client only enables `credentials: 'include'`; it does not parse cookies itself.
 

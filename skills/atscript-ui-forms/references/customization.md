@@ -19,10 +19,10 @@ Four levels of customization, the `TAsComponentProps` contract for custom compon
 
 `<AsForm>` accepts two maps:
 
-| Prop          | Type                                     | Keys                                          | Purpose                                                                                |
-| ------------- | ---------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `:types`      | `TAsTypeComponents`                      | Built-in renderer ids (`text`, `select`, ...) | Replace the default component for every field of that type.                            |
-| `:components` | `Record<string, Component>`              | Arbitrary custom names                        | Targeted by `@ui.form.component 'name'` on individual fields.                          |
+| Prop          | Type                        | Keys                                          | Purpose                                                       |
+| ------------- | --------------------------- | --------------------------------------------- | ------------------------------------------------------------- |
+| `:types`      | `TAsTypeComponents`         | Built-in renderer ids (`text`, `select`, ...) | Replace the default component for every field of that type.   |
+| `:components` | `Record<string, Component>` | Arbitrary custom names                        | Targeted by `@ui.form.component 'name'` on individual fields. |
 
 API contract:
 
@@ -119,7 +119,13 @@ defineProps<TAsComponentProps<number>>();
   <AsFieldShell v-bind="$props">
     <template #default="{ inputId }">
       <!-- Your custom control. Bind `:id="inputId"` so the shell label points at it. -->
-      <input :id="inputId" type="range" :value="model.value" @input="model.value = +($event.target as HTMLInputElement).value" @blur="onBlur" />
+      <input
+        :id="inputId"
+        type="range"
+        :value="model.value"
+        @input="model.value = +($event.target as HTMLInputElement).value"
+        @blur="onBlur"
+      />
     </template>
   </AsFieldShell>
 </template>
@@ -127,11 +133,11 @@ defineProps<TAsComponentProps<number>>();
 
 `AsFieldShell` props (extends `TAsComponentProps`):
 
-| Prop                    | Purpose                                                                                          |
-| ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `fieldClass`            | Extra CSS class on the wrapper element.                                                          |
-| `chromeless`            | Hide all default chrome (label, description, optional clear). Inline-header fields like checkbox use this. |
-| `hideEmptyPlaceholder`  | Skip the empty-state placeholder when the optional field is unset (e.g. radio group).            |
+| Prop                   | Purpose                                                                                                    |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `fieldClass`           | Extra CSS class on the wrapper element.                                                                    |
+| `chromeless`           | Hide all default chrome (label, description, optional clear). Inline-header fields like checkbox use this. |
+| `hideEmptyPlaceholder` | Skip the empty-state placeholder when the optional field is unset (e.g. radio group).                      |
 
 Slot `#header` overrides the default label + actions row. Slot `#default` receives `{ inputId, descId, optionalEnabled }`.
 
@@ -184,53 +190,53 @@ Implement this interface in your custom component (or use it via `defineProps<TA
 export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps { ... }
 ```
 
-| Prop                | Type                                       | Source                                                                                                                       |
-| ------------------- | ------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- |
-| `model`             | `{ value: V }`                             | Reactive wrapper. Bind `v-model="model.value"`.                                                                              |
-| `value`             | `unknown`                                  | Phantom field display value (`@meta.default` / `@ui.form.fn.value`). `undefined` for data fields.                            |
-| `label`             | `string`                                   | `@meta.label` or `@ui.form.fn.label`.                                                                                        |
-| `description`       | `string`                                   | `@meta.description` or `@ui.form.fn.description`.                                                                            |
-| `hint`              | `string`                                   | `@ui.form.hint` or `@ui.form.fn.hint`.                                                                                       |
-| `placeholder`       | `string`                                   | `@ui.form.placeholder` or `@ui.form.fn.placeholder`.                                                                         |
-| `disabled`          | `boolean`                                  | `@ui.form.disabled` or `@ui.form.fn.disabled`.                                                                               |
-| `hidden`            | `boolean`                                  | `@ui.form.hidden` or `@ui.form.fn.hidden`. AsField passes through `v-show`; some defaults also honor it.                     |
-| `readonly`          | `boolean`                                  | `@meta.readonly` or `@ui.form.fn.readonly`.                                                                                  |
-| `required`          | `boolean`                                  | `true` when `@meta.required` is present and field is not optional. `undefined` for phantom (action/paragraph).                |
-| `optional`          | `boolean`                                  | `true` when the field is declared `optional?`.                                                                               |
-| `onToggleOptional`  | `(enabled: boolean) => void`               | Present only when `optional === true`. `true` → set default; `false` → set `undefined`.                                       |
-| `error`             | `string`                                   | Merged external + props + form-composable error.                                                                             |
-| `onBlur`            | `() => void`                               | Activates `firstValidation` on-blur strategies + dismisses external error.                                                   |
-| `type`              | `string`                                   | Resolved input type (e.g. `'text'`, `'select'`, `'checkbox'`).                                                               |
-| `field`             | `FormFieldDef`                             | Full field def — escape hatch when you need metadata that isn't pre-resolved.                                                |
-| `formAction`        | `TFormAction`                              | `{ id, label }` for phantom action buttons. Set via `@ui.form.action 'id', 'label'`.                                          |
-| `name`              | `string`                                   | Last path segment.                                                                                                           |
-| `options`           | `TFormEntryOptions[]`                      | For select/radio/checkbox. Resolved from `@expect.values` / `@ui.form.options` / `@ui.form.fn.options`.                       |
-| `class`             | `Record<string, boolean> \| string`        | Forwarded by AsField (vue's class-binding flattens grid + dynamic classes).                                                  |
-| `style`             | `Record<string, string> \| string`         | From `@ui.form.styles` / `@ui.form.fn.styles`.                                                                               |
-| `path`              | `string`                                   | Absolute dotted path. Empty string at root.                                                                                  |
-| `level`             | `number`                                   | Nesting level (0 = root structured; -1 = leaf). Set on structured/union fields only.                                         |
-| `inputId`           | `string`                                   | Stable id for `<input>` / `<label :for>`. Always populated.                                                                  |
-| `errorId`           | `string`                                   | Stable id for error/hint container.                                                                                          |
-| `descId`            | `string`                                   | Stable id for description container.                                                                                         |
-| `ariaDescribedBy`   | `string`                                   | Pre-resolved — `errorId` when error/hint present, else `descId`, else `undefined`.                                            |
-| `maxLength`         | `number`                                   | `@expect.maxLength`.                                                                                                         |
-| `autocomplete`      | `string`                                   | `@ui.form.autocomplete`.                                                                                                     |
-| `prefixIcon`        | `string`                                   | CSS class to paint the left adornment glyph.                                                                                 |
-| `suffixIcon`        | `string`                                   | CSS class to paint the right adornment glyph.                                                                                |
-| `prefix`            | `string`                                   | Resolved left adornment text (currency symbol / `@ui.form.prefix` / `@ui.form.prefix.ref`).                                  |
-| `suffix`            | `string`                                   | Resolved right adornment text (`@db.unit` / `@ui.form.suffix` / `@ui.form.suffix.ref`).                                      |
-| `currencyCode`      | `string`                                   | Resolved currency code (`@db.amount.currency` literal or `.ref`). Useful for tooltips.                                       |
-| `unitCode`          | `string`                                   | Resolved unit-of-measure code (`@db.unit` / `.ref`).                                                                         |
-| `scale`             | `number`                                   | Effective display scale (`min(currencyDecimals, precisionScale)`).                                                            |
-| `precisionScale`    | `number`                                   | DB column scale cap (`@db.column.precision`).                                                                                |
-| `hasAdornment`      | `boolean`                                  | `true` when AsField saw any adornment-driving annotation. Keeps shell visible while ref-source is empty.                     |
-| `valueHelp`         | `ValueHelpInfo`                            | FK value-help descriptor (`@db.rel.FK` + `@db.http.path`).                                                                   |
-| `singularLabel`     | `string`                                   | `@ui.form.label.singular` — drives "Add X" buttons in arrays.                                                                |
-| `arrayIndex`        | `number`                                   | Zero-based index when rendered as a direct array item.                                                                       |
-| `onRemove`          | `() => void`                               | Remove-this-item callback (array context).                                                                                   |
-| `canRemove`         | `boolean`                                  | Whether removal is allowed (respects `@expect.minLength`).                                                                   |
-| `removeLabel`       | `string`                                   | Label for the remove affordance.                                                                                             |
-| `title`             | `string`                                   | For structured fields (object/array/union) — title in the collapsible header.                                                |
+| Prop               | Type                                | Source                                                                                                         |
+| ------------------ | ----------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `model`            | `{ value: V }`                      | Reactive wrapper. Bind `v-model="model.value"`.                                                                |
+| `value`            | `unknown`                           | Phantom field display value (`@meta.default` / `@ui.form.fn.value`). `undefined` for data fields.              |
+| `label`            | `string`                            | `@meta.label` or `@ui.form.fn.label`.                                                                          |
+| `description`      | `string`                            | `@meta.description` or `@ui.form.fn.description`.                                                              |
+| `hint`             | `string`                            | `@ui.form.hint` or `@ui.form.fn.hint`.                                                                         |
+| `placeholder`      | `string`                            | `@ui.form.placeholder` or `@ui.form.fn.placeholder`.                                                           |
+| `disabled`         | `boolean`                           | `@ui.form.disabled` or `@ui.form.fn.disabled`.                                                                 |
+| `hidden`           | `boolean`                           | `@ui.form.hidden` or `@ui.form.fn.hidden`. AsField passes through `v-show`; some defaults also honor it.       |
+| `readonly`         | `boolean`                           | `@meta.readonly` or `@ui.form.fn.readonly`.                                                                    |
+| `required`         | `boolean`                           | `true` when `@meta.required` is present and field is not optional. `undefined` for phantom (action/paragraph). |
+| `optional`         | `boolean`                           | `true` when the field is declared `optional?`.                                                                 |
+| `onToggleOptional` | `(enabled: boolean) => void`        | Present only when `optional === true`. `true` → set default; `false` → set `undefined`.                        |
+| `error`            | `string`                            | Merged external + props + form-composable error.                                                               |
+| `onBlur`           | `() => void`                        | Activates `firstValidation` on-blur strategies + dismisses external error.                                     |
+| `type`             | `string`                            | Resolved input type (e.g. `'text'`, `'select'`, `'checkbox'`).                                                 |
+| `field`            | `FormFieldDef`                      | Full field def — escape hatch when you need metadata that isn't pre-resolved.                                  |
+| `formAction`       | `TFormAction`                       | `{ id, label }` for phantom action buttons. Set via `@ui.form.action 'id', 'label'`.                           |
+| `name`             | `string`                            | Last path segment.                                                                                             |
+| `options`          | `TFormEntryOptions[]`               | For select/radio/checkbox. Resolved from `@expect.values` / `@ui.form.options` / `@ui.form.fn.options`.        |
+| `class`            | `Record<string, boolean> \| string` | Forwarded by AsField (vue's class-binding flattens grid + dynamic classes).                                    |
+| `style`            | `Record<string, string> \| string`  | From `@ui.form.styles` / `@ui.form.fn.styles`.                                                                 |
+| `path`             | `string`                            | Absolute dotted path. Empty string at root.                                                                    |
+| `level`            | `number`                            | Nesting level (0 = root structured; -1 = leaf). Set on structured/union fields only.                           |
+| `inputId`          | `string`                            | Stable id for `<input>` / `<label :for>`. Always populated.                                                    |
+| `errorId`          | `string`                            | Stable id for error/hint container.                                                                            |
+| `descId`           | `string`                            | Stable id for description container.                                                                           |
+| `ariaDescribedBy`  | `string`                            | Pre-resolved — `errorId` when error/hint present, else `descId`, else `undefined`.                             |
+| `maxLength`        | `number`                            | `@expect.maxLength`.                                                                                           |
+| `autocomplete`     | `string`                            | `@ui.form.autocomplete`.                                                                                       |
+| `prefixIcon`       | `string`                            | CSS class to paint the left adornment glyph.                                                                   |
+| `suffixIcon`       | `string`                            | CSS class to paint the right adornment glyph.                                                                  |
+| `prefix`           | `string`                            | Resolved left adornment text (currency symbol / `@ui.form.prefix` / `@ui.form.prefix.ref`).                    |
+| `suffix`           | `string`                            | Resolved right adornment text (`@db.unit` / `@ui.form.suffix` / `@ui.form.suffix.ref`).                        |
+| `currencyCode`     | `string`                            | Resolved currency code (`@db.amount.currency` literal or `.ref`). Useful for tooltips.                         |
+| `unitCode`         | `string`                            | Resolved unit-of-measure code (`@db.unit` / `.ref`).                                                           |
+| `scale`            | `number`                            | Effective display scale (`min(currencyDecimals, precisionScale)`).                                             |
+| `precisionScale`   | `number`                            | DB column scale cap (`@db.column.precision`).                                                                  |
+| `hasAdornment`     | `boolean`                           | `true` when AsField saw any adornment-driving annotation. Keeps shell visible while ref-source is empty.       |
+| `valueHelp`        | `ValueHelpInfo`                     | FK value-help descriptor (`@db.rel.FK` + `@db.http.path`).                                                     |
+| `singularLabel`    | `string`                            | `@ui.form.label.singular` — drives "Add X" buttons in arrays.                                                  |
+| `arrayIndex`       | `number`                            | Zero-based index when rendered as a direct array item.                                                         |
+| `onRemove`         | `() => void`                        | Remove-this-item callback (array context).                                                                     |
+| `canRemove`        | `boolean`                           | Whether removal is allowed (respects `@expect.minLength`).                                                     |
+| `removeLabel`      | `string`                            | Label for the remove affordance.                                                                               |
+| `title`            | `string`                            | For structured fields (object/array/union) — title in the collapsible header.                                  |
 
 Source: `packages/vue-form/src/components/types.ts:30-171`.
 
@@ -289,27 +295,27 @@ Notes:
 
 Available from `@atscript/vue-form`:
 
-| Composable                  | Returns                                                                                        | Use case                                                          |
-| --------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `useAsField(opts)`          | `{ model, error, onBlur }`                                                                     | Build a field that isn't backed by an AsField parent.             |
-| `useAsForm(opts)`           | Full form state (see [forms.md](forms.md))                                                     | Custom form root.                                                 |
-| `useAsState(opts)`          | `{ formState, clearErrors, reset, submit, setErrors }`                                         | Low-level form-state machine without provide/inject.              |
-| `useAsPath()`               | `{ path: ComputedRef<string> }`                                                                | Read absolute path prefix without other context.                  |
-| `useAsTypeMap()`            | `{ types: ComputedRef<Record<string, Component>> }`                                            | Read the form's `:types` map (for components that compose).        |
-| `useAsData()`               | `{ rootData, getValueAt, siblingValue }`                                                       | Reactive read of any value in the form, by path or sibling name.  |
-| `useAsLocale()`             | `{ locale: ComputedRef<string \| undefined> }`                                                 | Read provided locale for formatting.                              |
-| `useAsErrorDismiss()`       | `(path: string) => void`                                                                       | Dismiss a server error from a custom commit path.                 |
-| `useAsValueHelp(opts)`      | FK picker state (resolved, status, searchText, results, kickoff, selectItem, clear)            | Build a custom FK picker.                                         |
-| `useAsDropdown(containerRef)` | `{ isOpen, toggle, close, select }`                                                          | Click-outside-aware dropdown state.                               |
-| `useAsOptionalAddFlow(opts)`| `{ composeAction, runAndFocusNew }`                                                            | Choreograph "enable optional + add + focus first new field".      |
-| `useAsTriStateCheckbox(opts)` | `{ checked, indeterminate, inputRef, onChange }`                                             | Boolean field whose model may be `undefined`.                     |
-| `useAsDate(opts)`           | `{ inputType, displayValue, setFromInput }`                                                    | HTML5 date / datetime / time mechanics.                           |
-| `useAsNumber(opts)`         | `{ decimalSeparator, displayValue, rawValue, setFromInput }`                                   | Locale-aware single-input number control.                         |
-| `useAsDecimal(opts)`        | `{ scale, storageScale, decimalSeparator, thousandsSeparator, displayValue, rawValue, parts, setFromInput, setFromParts }` | Decimal mechanics with scale + currency awareness. |
-| `useAsDualInput(opts)`      | Integer/decimal half input refs + handlers                                                     | Bank-UX two-input pattern (integer + decimal halves).             |
-| `useAsExternalErrors(opts)` | `{ effective, formError, isFormDismissed, dismissAt, dismissForm, reset }`                     | Manage server errors with local dismissal (used internally by useAsForm). |
-| `useAsNestedSectionsStore()`| `AsNestedSectionsStore \| undefined`                                                           | Read the open/closed registry for collapsible sections.           |
-| `useAsUnionVariant()`       | `TAsUnionContext \| undefined`                                                                 | Consume and clear the union variant picker injection inside a custom variant renderer. |
+| Composable                    | Returns                                                                                                                    | Use case                                                                               |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `useAsField(opts)`            | `{ model, error, onBlur }`                                                                                                 | Build a field that isn't backed by an AsField parent.                                  |
+| `useAsForm(opts)`             | Full form state (see [forms.md](forms.md))                                                                                 | Custom form root.                                                                      |
+| `useAsState(opts)`            | `{ formState, clearErrors, reset, submit, setErrors }`                                                                     | Low-level form-state machine without provide/inject.                                   |
+| `useAsPath()`                 | `{ path: ComputedRef<string> }`                                                                                            | Read absolute path prefix without other context.                                       |
+| `useAsTypeMap()`              | `{ types: ComputedRef<Record<string, Component>> }`                                                                        | Read the form's `:types` map (for components that compose).                            |
+| `useAsData()`                 | `{ rootData, getValueAt, siblingValue }`                                                                                   | Reactive read of any value in the form, by path or sibling name.                       |
+| `useAsLocale()`               | `{ locale: ComputedRef<string \| undefined> }`                                                                             | Read provided locale for formatting.                                                   |
+| `useAsErrorDismiss()`         | `(path: string) => void`                                                                                                   | Dismiss a server error from a custom commit path.                                      |
+| `useAsValueHelp(opts)`        | FK picker state (resolved, status, searchText, results, kickoff, selectItem, clear)                                        | Build a custom FK picker.                                                              |
+| `useAsDropdown(containerRef)` | `{ isOpen, toggle, close, select }`                                                                                        | Click-outside-aware dropdown state.                                                    |
+| `useAsOptionalAddFlow(opts)`  | `{ composeAction, runAndFocusNew }`                                                                                        | Choreograph "enable optional + add + focus first new field".                           |
+| `useAsTriStateCheckbox(opts)` | `{ checked, indeterminate, inputRef, onChange }`                                                                           | Boolean field whose model may be `undefined`.                                          |
+| `useAsDate(opts)`             | `{ inputType, displayValue, setFromInput }`                                                                                | HTML5 date / datetime / time mechanics.                                                |
+| `useAsNumber(opts)`           | `{ decimalSeparator, displayValue, rawValue, setFromInput }`                                                               | Locale-aware single-input number control.                                              |
+| `useAsDecimal(opts)`          | `{ scale, storageScale, decimalSeparator, thousandsSeparator, displayValue, rawValue, parts, setFromInput, setFromParts }` | Decimal mechanics with scale + currency awareness.                                     |
+| `useAsDualInput(opts)`        | Integer/decimal half input refs + handlers                                                                                 | Bank-UX two-input pattern (integer + decimal halves).                                  |
+| `useAsExternalErrors(opts)`   | `{ effective, formError, isFormDismissed, dismissAt, dismissForm, reset }`                                                 | Manage server errors with local dismissal (used internally by useAsForm).              |
+| `useAsNestedSectionsStore()`  | `AsNestedSectionsStore \| undefined`                                                                                       | Read the open/closed registry for collapsible sections.                                |
+| `useAsUnionVariant()`         | `TAsUnionContext \| undefined`                                                                                             | Consume and clear the union variant picker injection inside a custom variant renderer. |
 
 Sources: each `packages/vue-form/src/composables/use-as-*.ts`.
 
@@ -320,7 +326,7 @@ Provide the locale once at the root of your app (or inside a layout above forms)
 ```typescript
 import { provideAsLocale } from "@atscript/vue-form";
 
-provideAsLocale(() => userPrefs.value?.language);   // BCP-47, e.g. "en-GB", "de-DE"
+provideAsLocale(() => userPrefs.value?.language); // BCP-47, e.g. "en-GB", "de-DE"
 ```
 
 The signature accepts a getter so reactive sources don't need wrapping in computeds.

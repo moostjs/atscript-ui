@@ -42,14 +42,7 @@
 
 import { expect, test, type Locator, type Page } from "../fixtures";
 
-const SECTION_TITLES = [
-  "Strings",
-  "Numbers",
-  "Decimals",
-  "Dates",
-  "Datetimes",
-  "Times",
-] as const;
+const SECTION_TITLES = ["Strings", "Numbers", "Decimals", "Dates", "Datetimes", "Times"] as const;
 type SectionTitle = (typeof SECTION_TITLES)[number];
 
 const VARIANT_LABELS = [

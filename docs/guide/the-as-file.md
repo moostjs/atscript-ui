@@ -36,15 +36,15 @@ You import from `'./contact.as'` and both halves are wired up. See the [atscript
 
 The portable, framework-agnostic metadata. Every atscript-aware tool understands these.
 
-| Key                  | Purpose                                                                  |
-| -------------------- | ------------------------------------------------------------------------ |
-| `@meta.label`        | Human-readable label for a type or field.                                |
-| `@meta.description`  | Long-form description (used as form hint / column tooltip).              |
-| `@meta.required`     | Mark a field as required, with the error message as the argument.       |
-| `@meta.default`      | Static default value (typed as a string literal; coerced at runtime).   |
-| `@meta.id`           | Mark the primary-id field of a record.                                   |
-| `@meta.readonly`     | Field is read-only at the metadata level (forms render disabled).       |
-| `@meta.sensitive`    | Field should be redacted in logs / dev tools.                            |
+| Key                 | Purpose                                                               |
+| ------------------- | --------------------------------------------------------------------- |
+| `@meta.label`       | Human-readable label for a type or field.                             |
+| `@meta.description` | Long-form description (used as form hint / column tooltip).           |
+| `@meta.required`    | Mark a field as required, with the error message as the argument.     |
+| `@meta.default`     | Static default value (typed as a string literal; coerced at runtime). |
+| `@meta.id`          | Mark the primary-id field of a record.                                |
+| `@meta.readonly`    | Field is read-only at the metadata level (forms render disabled).     |
+| `@meta.sensitive`   | Field should be redacted in logs / dev tools.                         |
 
 Full reference: [atscript.dev/api/meta](https://atscript.dev).
 
@@ -52,15 +52,15 @@ Full reference: [atscript.dev/api/meta](https://atscript.dev).
 
 Validation rules. Run by the `Validator` in `@atscript/ui` and reused server-side by [`@atscript/moost-validator`](https://atscript.dev).
 
-| Key                                | Purpose                                          |
-| ---------------------------------- | ------------------------------------------------ |
-| `@expect.minLength n, 'msg'`       | Minimum string / array length.                   |
-| `@expect.maxLength n, 'msg'`       | Maximum string / array length.                   |
-| `@expect.min n, 'msg'`             | Minimum numeric value.                           |
-| `@expect.max n, 'msg'`             | Maximum numeric value.                           |
-| `@expect.pattern '/re/', 'msg'`    | Regex pattern.                                   |
-| `@expect.email 'msg'`              | Email format.                                    |
-| `@expect.url 'msg'`                | URL format.                                      |
+| Key                             | Purpose                        |
+| ------------------------------- | ------------------------------ |
+| `@expect.minLength n, 'msg'`    | Minimum string / array length. |
+| `@expect.maxLength n, 'msg'`    | Maximum string / array length. |
+| `@expect.min n, 'msg'`          | Minimum numeric value.         |
+| `@expect.max n, 'msg'`          | Maximum numeric value.         |
+| `@expect.pattern '/re/', 'msg'` | Regex pattern.                 |
+| `@expect.email 'msg'`           | Email format.                  |
+| `@expect.url 'msg'`             | URL format.                    |
 
 Full list: [atscript.dev](https://atscript.dev).
 
@@ -70,12 +70,12 @@ UI-specific configuration. The `@atscript/ui/plugin` registers the namespace; ev
 
 Three sub-namespaces show up most:
 
-| Sub-namespace      | Used by                       | Common keys                                                                 |
-| ------------------ | ----------------------------- | --------------------------------------------------------------------------- |
-| `@ui.form.*`       | `<AsForm>`, `<AsField>`       | `placeholder`, `hint`, `order`, `hidden`, `disabled`, `grid.colSpan`, `submit.text`, `label.singular` |
-| `@ui.table.*`      | `<AsTable>`, `<AsFilters>`    | `hidden`, `order`, `width`, `align`, `cell`, `headerCell`                   |
-| `@ui.type`         | both                          | The UI type id: `text`, `password`, `number`, `textarea`, `select`, `radio`, `checkbox`, … |
-| `@ui.fn.*`         | both (with `ui-fns` installed) | Dynamic computed properties: function-string body that reads `{ formData, row, … }`. |
+| Sub-namespace | Used by                        | Common keys                                                                                           |
+| ------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `@ui.form.*`  | `<AsForm>`, `<AsField>`        | `placeholder`, `hint`, `order`, `hidden`, `disabled`, `grid.colSpan`, `submit.text`, `label.singular` |
+| `@ui.table.*` | `<AsTable>`, `<AsFilters>`     | `hidden`, `order`, `width`, `align`, `cell`, `headerCell`                                             |
+| `@ui.type`    | both                           | The UI type id: `text`, `password`, `number`, `textarea`, `select`, `radio`, `checkbox`, …            |
+| `@ui.fn.*`    | both (with `ui-fns` installed) | Dynamic computed properties: function-string body that reads `{ formData, row, … }`.                  |
 
 The full list per-component lives in the [Forms annotations](/forms/annotations) and [Tables annotations](/tables/annotations) guides.
 
@@ -83,19 +83,19 @@ The full list per-component lives in the [Forms annotations](/forms/annotations)
 
 Database semantics. The `dbPlugin()` registers the namespace; `DbSpace` and `moost-db` read these. atscript-ui doesn't read `@db.*` directly, but the same `.as` file is what your form / table renders against.
 
-| Key                            | Purpose                                                          |
-| ------------------------------ | ---------------------------------------------------------------- |
-| `@db.table 'name'`             | This interface backs a database table.                           |
-| `@db.json`                     | Field is stored as a JSON column (nested objects, unions).      |
-| `@db.index.fulltext 'idxName'` | Add field to a fulltext index.                                  |
-| `@db.index.unique 'idxName'`   | Add field to a unique index.                                    |
-| `@db.default.increment`        | Auto-increment (primary key).                                   |
-| `@db.default.now`              | Default to "now" timestamp.                                     |
-| `@db.default.uuid`             | Default to a UUID.                                              |
-| `@db.rel.FK`                   | Foreign-key field (typed as `OtherTable.id`).                   |
-| `@db.column.precision p, s`    | Decimal precision/scale.                                        |
-| `@db.amount.currency 'USD'`    | Treat as currency.                                              |
-| `@db.http.path '/api/things'`  | The REST path `moost-db` exposes this table at.                 |
+| Key                            | Purpose                                                    |
+| ------------------------------ | ---------------------------------------------------------- |
+| `@db.table 'name'`             | This interface backs a database table.                     |
+| `@db.json`                     | Field is stored as a JSON column (nested objects, unions). |
+| `@db.index.fulltext 'idxName'` | Add field to a fulltext index.                             |
+| `@db.index.unique 'idxName'`   | Add field to a unique index.                               |
+| `@db.default.increment`        | Auto-increment (primary key).                              |
+| `@db.default.now`              | Default to "now" timestamp.                                |
+| `@db.default.uuid`             | Default to a UUID.                                         |
+| `@db.rel.FK`                   | Foreign-key field (typed as `OtherTable.id`).              |
+| `@db.column.precision p, s`    | Decimal precision/scale.                                   |
+| `@db.amount.currency 'USD'`    | Treat as currency.                                         |
+| `@db.http.path '/api/things'`  | The REST path `moost-db` exposes this table at.            |
 
 Full reference: [db.atscript.dev](https://db.atscript.dev/api/tables).
 
@@ -103,11 +103,11 @@ Full reference: [db.atscript.dev](https://db.atscript.dev/api/tables).
 
 The `@atscript/moost-wf/plugin` registers this namespace. You'll use it when building HTTP workflows (see the [Workflows guide](/workflows/)).
 
-| Key                          | Purpose                                                            |
-| ---------------------------- | ------------------------------------------------------------------ |
-| `@wf.context.pass`           | Pass this field's value to the next step via the workflow context. |
-| `@wf.action.withData`        | The action submits with form data.                                 |
-| `@wf.store.fromContext`      | Hydrate this field from the workflow's persisted store.            |
+| Key                     | Purpose                                                            |
+| ----------------------- | ------------------------------------------------------------------ |
+| `@wf.context.pass`      | Pass this field's value to the next step via the workflow context. |
+| `@wf.action.withData`   | The action submits with form data.                                 |
+| `@wf.store.fromContext` | Hydrate this field from the workflow's persisted store.            |
 
 Full reference: [Workflows: Server authoring](/workflows/server-authoring).
 
@@ -173,9 +173,10 @@ That's the payoff of the model: annotate once, render everywhere.
 
 ::: tip Run-able schemas
 The dedicated guides below cover the same shapes in focused examples:
+
 - [Forms](/forms/) — focused one-page form examples (arrays, nested, unions, refs, dynamic, validation).
 - [Tables](/tables/) — filters, sorters, custom cells, presets, value-help.
-:::
+  :::
 
 ## Codegen quick reference
 

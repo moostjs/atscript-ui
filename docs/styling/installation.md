@@ -92,10 +92,7 @@ export default defineConfig({
 For SSR setups, UnoCSS still works the same way, but make sure `unocss/vite` runs in both client and server passes so the safelist matches. You may also want to add an extra `presetIcons()` for icons referenced from `.as` schemas (annotation values that emit `i-as-*` class names statically). You only need that escape hatch when `@ui.form.prefix.icon` or similar paints a class name our extractor can't see in `.vue` / `.ts` sources:
 
 ```typescript
-safelist: [
-  "i-as-star-filled",
-  "i-as-search",
-];
+safelist: ["i-as-star-filled", "i-as-search"];
 ```
 
 ## CSS hookup

@@ -37,7 +37,8 @@ import { expect, test, type Locator, type Page } from "../fixtures";
 // Selectors — kept as named consts so the "magic" strings have one source
 // of truth (and so a vunor rename only requires one edit here).
 const SEL_SECTION = "details.as-collapsible-section";
-const SEL_OPEN_SECTION_OR_ISLAND = "details:is(.as-collapsible-section, .as-collapsible-island)[open]";
+const SEL_OPEN_SECTION_OR_ISLAND =
+  "details:is(.as-collapsible-section, .as-collapsible-island)[open]";
 const SEL_SUMMARY = ".as-collapsible-summary";
 const SEL_TITLE = ":is(.as-collapsible-title, .as-collapsible-title-nested)";
 const SEL_SUBMIT = ".as-submit-btn";

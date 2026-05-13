@@ -144,7 +144,10 @@ function buildFieldEntry(
 ): TFnScope;
 
 type TBuildFieldEntryOpts = Partial<
-  Pick<TFieldEvaluated, "name" | "type" | "component" | "optional" | "disabled" | "hidden" | "readonly">
+  Pick<
+    TFieldEvaluated,
+    "name" | "type" | "component" | "optional" | "disabled" | "hidden" | "readonly"
+  >
 >;
 ```
 
@@ -157,11 +160,7 @@ The returned scope is the full evaluation scope (with `entry` populated). Use it
 The eval scope passed to every compiled function. Properties become positional arguments inside the wrapping shim:
 
 ```typescript
-interface TFnScope<
-  V = unknown,
-  D = Record<string, unknown>,
-  C = Record<string, unknown>,
-> {
+interface TFnScope<V = unknown, D = Record<string, unknown>, C = Record<string, unknown>> {
   /** Current field value (leaf). Undefined for form-level fns. */
   v?: V;
   /** Whole form's domain data. */

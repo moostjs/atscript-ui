@@ -13,15 +13,15 @@ Cross-cutting install + config for atscript-ui. Domain-specific topics (forms, t
 
 Pick the row that matches your goal — the additional packages on the right are layered on top of the shared base (`@atscript/core`, `@atscript/typescript`, `@atscript/ui`).
 
-| Goal | Install |
-| --- | --- |
-| Forms only (Vue) | `pnpm add @atscript/ui @atscript/vue-form @atscript/ui-styles` |
-| Forms with dynamic `@ui.fn.*` | `pnpm add @atscript/ui @atscript/ui-fns @atscript/vue-form @atscript/ui-styles` |
-| Forms + tables (Vue) | `pnpm add @atscript/ui @atscript/ui-table @atscript/vue-form @atscript/vue-table @atscript/ui-styles` |
-| Forms + tables + workflow forms (Vue) | `pnpm add @atscript/ui @atscript/ui-table @atscript/vue-form @atscript/vue-table @atscript/vue-wf @atscript/ui-styles` |
-| Server-side preset persistence (Moost) | `pnpm add @atscript/moost-ui-presets` (in addition to the table client) |
-| Server-side workflow runtime (Moost) | `pnpm add @atscript/moost-wf` |
-| Non-Vue (React/Svelte/Solid port) | `pnpm add @atscript/ui @atscript/ui-table @atscript/ui-fns` — framework-agnostic core only. Bring your own renderer. See [ui-core.md](ui-core.md). |
+| Goal                                   | Install                                                                                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Forms only (Vue)                       | `pnpm add @atscript/ui @atscript/vue-form @atscript/ui-styles`                                                                                     |
+| Forms with dynamic `@ui.fn.*`          | `pnpm add @atscript/ui @atscript/ui-fns @atscript/vue-form @atscript/ui-styles`                                                                    |
+| Forms + tables (Vue)                   | `pnpm add @atscript/ui @atscript/ui-table @atscript/vue-form @atscript/vue-table @atscript/ui-styles`                                              |
+| Forms + tables + workflow forms (Vue)  | `pnpm add @atscript/ui @atscript/ui-table @atscript/vue-form @atscript/vue-table @atscript/vue-wf @atscript/ui-styles`                             |
+| Server-side preset persistence (Moost) | `pnpm add @atscript/moost-ui-presets` (in addition to the table client)                                                                            |
+| Server-side workflow runtime (Moost)   | `pnpm add @atscript/moost-wf`                                                                                                                      |
+| Non-Vue (React/Svelte/Solid port)      | `pnpm add @atscript/ui @atscript/ui-table @atscript/ui-fns` — framework-agnostic core only. Bring your own renderer. See [ui-core.md](ui-core.md). |
 
 The atscript compiler (`asc`) and unplugin are required at build time — see the `atscript` skill for installing those.
 
@@ -37,12 +37,7 @@ import dbPlugin from "@atscript/db/plugin"; // optional — when using @db.*
 import type { TAtscriptUserConfig } from "@atscript/core";
 
 const config: TAtscriptUserConfig = {
-  plugins: [
-    uiPlugin(),
-    uiFnsPlugin(),
-    wfPlugin(),
-    dbPlugin(),
-  ],
+  plugins: [uiPlugin(), uiFnsPlugin(), wfPlugin(), dbPlugin()],
   files: ["src/**/*.as"],
 };
 
@@ -129,13 +124,13 @@ Currency comes from `@db.amount.currency` (literal) or `@db.amount.currency.ref`
 
 ## Reading list
 
-| I want to build... | Skill | Reference file |
-| --- | --- | --- |
-| Forms (`<AsForm>`, `<AsField>`, custom inputs/components) | `atscript-ui-forms` | `forms.md` |
-| Tables (`<AsTable>`, filters, presets, virtualization) | `atscript-ui-tables` | `tables.md` |
-| Multi-step workflow forms over HTTP | `atscript-ui-wf` | `wf.md` |
-| Custom theming / `as-*` shortcuts / vunor integration | `atscript-ui-styles` | `styles.md` |
-| React/Svelte/Solid port — no framework wrapper | `atscript-ui` (this skill) | [ui-core.md](ui-core.md) |
-| `.as` syntax, `@meta.*`, `@expect.*` | `atscript` | (external) |
-| `@db.*`, DbSpace, moost-db CRUD, Client | `atscript-db` | (external) |
-| Theme palette, c8-/i8-/layer-/scope- primitives | `vunor` | (external) |
+| I want to build...                                        | Skill                      | Reference file           |
+| --------------------------------------------------------- | -------------------------- | ------------------------ |
+| Forms (`<AsForm>`, `<AsField>`, custom inputs/components) | `atscript-ui-forms`        | `forms.md`               |
+| Tables (`<AsTable>`, filters, presets, virtualization)    | `atscript-ui-tables`       | `tables.md`              |
+| Multi-step workflow forms over HTTP                       | `atscript-ui-wf`           | `wf.md`                  |
+| Custom theming / `as-*` shortcuts / vunor integration     | `atscript-ui-styles`       | `styles.md`              |
+| React/Svelte/Solid port — no framework wrapper            | `atscript-ui` (this skill) | [ui-core.md](ui-core.md) |
+| `.as` syntax, `@meta.*`, `@expect.*`                      | `atscript`                 | (external)               |
+| `@db.*`, DbSpace, moost-db CRUD, Client                   | `atscript-db`              | (external)               |
+| Theme palette, c8-/i8-/layer-/scope- primitives           | `vunor`                    | (external)               |

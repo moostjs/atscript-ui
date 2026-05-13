@@ -46,11 +46,11 @@ interface MetaResponse {
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
-  crud: TCrudPermissions;          // canCreate / canUpdate / canRemove
-  actions: TDbActionInfo[];        // declarative server actions
-  relations: RelationInfo[];       // to / from / via summaries
+  crud: TCrudPermissions; // canCreate / canUpdate / canRemove
+  actions: TDbActionInfo[]; // declarative server actions
+  relations: RelationInfo[]; // to / from / via summaries
   fields: Record<string, FieldMeta>; // per-field { sortable, filterable }
-  type: TSerializedAnnotatedType;  // serialized .as type tree
+  type: TSerializedAnnotatedType; // serialized .as type tree
 }
 ```
 
@@ -125,11 +125,13 @@ import type { Uniquery } from "@uniqu/core";
 const types = createDefaultCellTypes();
 
 async function queryFn(query: Uniquery, page: number, size: number) {
-  const res = await fetch(`/api/my-rows?${new URLSearchParams({
-    page: String(page),
-    size: String(size),
-    q: JSON.stringify(query),
-  })}`);
+  const res = await fetch(
+    `/api/my-rows?${new URLSearchParams({
+      page: String(page),
+      size: String(size),
+      q: JSON.stringify(query),
+    })}`,
+  );
   const json = await res.json();
   return { data: json.rows, total: json.total };
 }

@@ -32,12 +32,12 @@ Consumers can repaint every description in the UI by overriding `as-description`
 
 Shortcuts are split into four logical groups. They merge into `allShortcuts` (what `asPresetVunor` registers by default), but you can mount them individually if you only use one package.
 
-| Export             | What it covers                                                                                                 |
-| ------------------ | -------------------------------------------------------------------------------------------------------------- |
-| `commonShortcuts`  | Cross-package primitives: `as-description`, `as-overlay`, `as-kbd`, `as-close-btn`, `as-dialog-close`.         |
-| `formShortcuts`    | Form chrome: `as-form*`, `as-field*`, `as-default-field`, `as-checkbox-radio*`, `as-array*`, `as-object*`, `as-collapsible*`, `as-decimal-number*`, `as-dropdown*`, `as-ref*`, `as-action*`, `as-no-data*`, `as-form-grid*`. |
-| `tableShortcuts`   | Table chrome: `as-table*`, `as-cell-*`, `as-column-menu*`, `as-filter-dialog*`, `as-config-dialog*`, `as-filter-field*`, `as-fpill*`, `as-orderable-list*`, `as-preset-picker*`, `as-window-table*`, `as-window-skeleton*`, `as-row-actions*`, `as-sorter*`, `as-page*`, `as-confirm-dialog*`. |
-| `wfShortcuts`      | Workflow form chrome: `as-wf-form*`.                                                                           |
+| Export            | What it covers                                                                                                                                                                                                                                                                                 |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commonShortcuts` | Cross-package primitives: `as-description`, `as-overlay`, `as-kbd`, `as-close-btn`, `as-dialog-close`.                                                                                                                                                                                         |
+| `formShortcuts`   | Form chrome: `as-form*`, `as-field*`, `as-default-field`, `as-checkbox-radio*`, `as-array*`, `as-object*`, `as-collapsible*`, `as-decimal-number*`, `as-dropdown*`, `as-ref*`, `as-action*`, `as-no-data*`, `as-form-grid*`.                                                                   |
+| `tableShortcuts`  | Table chrome: `as-table*`, `as-cell-*`, `as-column-menu*`, `as-filter-dialog*`, `as-config-dialog*`, `as-filter-field*`, `as-fpill*`, `as-orderable-list*`, `as-preset-picker*`, `as-window-table*`, `as-window-skeleton*`, `as-row-actions*`, `as-sorter*`, `as-page*`, `as-confirm-dialog*`. |
+| `wfShortcuts`     | Workflow form chrome: `as-wf-form*`.                                                                                                                                                                                                                                                           |
 
 Import them directly when you only need one:
 
@@ -69,8 +69,7 @@ import { vunorShortcuts } from "vunor/theme";
 
 const appShortcuts = defineShortcuts({
   // New concept — sibling of the existing `as-*` tree
-  "as-foo-extra":
-    "scope-primary border-1 layer-0 px-$m py-$s rounded-r2 text-body",
+  "as-foo-extra": "scope-primary border-1 layer-0 px-$m py-$s rounded-r2 text-body",
 
   // Existing concept — paint over a state without forking the body
   "as-form": {
@@ -80,9 +79,7 @@ const appShortcuts = defineShortcuts({
 
 export default defineConfig({
   presets: asPresetVunor(),
-  shortcuts: [
-    vunorShortcuts(mergeVunorShortcuts([allShortcuts, appShortcuts])),
-  ],
+  shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, appShortcuts]))],
 });
 ```
 
@@ -97,17 +94,17 @@ Two patterns and when to reach for each:
 
 When you add a new `as-*` shortcut and want it to inherit palette, dark mode, and scope tinting, compose its body from vunor primitives instead of pixel literals or hex colors. The library's own shortcut tree follows the same approach — that's what lets a single `palette.colors.primary` change in `presetVunor()` repaint everything downstream. If you'd rather hardcode values in a particular shortcut, that's fine too; just know that shortcut won't follow palette changes.
 
-| Intent                                      | vunor primitive                                                     | Hardcoded equivalent                                   |
-| ------------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
-| Gap / padding / margin                      | spacing tokens `$xxs..$xxl`                                         | `gap-[8px]`, `px-[12px]`                               |
-| Control heights / touch targets             | `h-fingertip-xs/s/m/l/xl`                                           | `h-[32px]`                                             |
-| Body / secondary / title text               | `text-body`, `text-callout`, `text-body-l`                          | `text-[length:13px]`                                   |
-| Icon-glyph sizing                           | em-based `text-[1em]`, `text-[1.25em]`                              | `w-[16px] h-[16px]`                                    |
-| Elevated surfaces                           | `shadow-popup`, `popup-card`                                        | custom box-shadow                                      |
-| Borders (default)                           | `border-1` alone — color comes from active surface/layer            | `border-grey-200 dark:border-grey-800`                 |
-| Focus rings                                 | `current-outline-hl outline i8-apply-outline`                       | `[box-shadow:0_0_0_3px_...]`                           |
-| Button / clickable surfaces                 | `c8-filled / c8-flat / c8-outlined / c8-light / c8-chrome`          | custom hover/active rules                              |
-| Inputs (bordered)                           | `border-1 layer-0 current-outline-hl` + `i8-apply-outline` on focus | `i8-input i8-apply-border` (leaks scope color as fill) |
+| Intent                          | vunor primitive                                                     | Hardcoded equivalent                                   |
+| ------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------ |
+| Gap / padding / margin          | spacing tokens `$xxs..$xxl`                                         | `gap-[8px]`, `px-[12px]`                               |
+| Control heights / touch targets | `h-fingertip-xs/s/m/l/xl`                                           | `h-[32px]`                                             |
+| Body / secondary / title text   | `text-body`, `text-callout`, `text-body-l`                          | `text-[length:13px]`                                   |
+| Icon-glyph sizing               | em-based `text-[1em]`, `text-[1.25em]`                              | `w-[16px] h-[16px]`                                    |
+| Elevated surfaces               | `shadow-popup`, `popup-card`                                        | custom box-shadow                                      |
+| Borders (default)               | `border-1` alone — color comes from active surface/layer            | `border-grey-200 dark:border-grey-800`                 |
+| Focus rings                     | `current-outline-hl outline i8-apply-outline`                       | `[box-shadow:0_0_0_3px_...]`                           |
+| Button / clickable surfaces     | `c8-filled / c8-flat / c8-outlined / c8-light / c8-chrome`          | custom hover/active rules                              |
+| Inputs (bordered)               | `border-1 layer-0 current-outline-hl` + `i8-apply-outline` on focus | `i8-input i8-apply-border` (leaks scope color as fill) |
 
 The benefit of routing through these primitives is that a single `palette.colors.primary` change in `presetVunor()` repaints everything downstream. Pick whichever side of the table fits the level of theme-awareness you want for that particular shortcut.
 

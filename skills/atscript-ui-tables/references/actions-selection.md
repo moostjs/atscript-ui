@@ -28,25 +28,25 @@ Minimal example:
 export interface Order { ... }
 ```
 
-| Annotation               | Effect                                                        |
-| ------------------------ | ------------------------------------------------------------- |
-| `@db.action.row 'name'`  | Per-row action.                                                |
-| `@db.action.rows 'name'` | Multi-row (selection-driven).                                 |
-| `@db.action.table 'name'`| Table-level (no rows, "create" style).                        |
-| `@db.action.default.<level> 'name'` | The action that fires on default trigger at that level. |
-| `@ui.action.label`       | Display label.                                                 |
-| `@ui.action.icon`        | UnoCSS icon class.                                             |
-| `@ui.action.intent`      | `'positive' \| 'negative' \| 'warning' \| 'primary' \| 'secondary'` — drives confirm-dialog scope and button colour. |
-| `@ui.action.confirm`     | Prompt text. `string` (always) or `[singular, plural]` tuple. `$1` → primary key, `$N` → row count. |
-| `@db.action.input.<name>` `@InputForm` | Structured input — opens `<AsActionFormDialog>` rendering the input type with vue-form. |
+| Annotation                             | Effect                                                                                                               |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `@db.action.row 'name'`                | Per-row action.                                                                                                      |
+| `@db.action.rows 'name'`               | Multi-row (selection-driven).                                                                                        |
+| `@db.action.table 'name'`              | Table-level (no rows, "create" style).                                                                               |
+| `@db.action.default.<level> 'name'`    | The action that fires on default trigger at that level.                                                              |
+| `@ui.action.label`                     | Display label.                                                                                                       |
+| `@ui.action.icon`                      | UnoCSS icon class.                                                                                                   |
+| `@ui.action.intent`                    | `'positive' \| 'negative' \| 'warning' \| 'primary' \| 'secondary'` — drives confirm-dialog scope and button colour. |
+| `@ui.action.confirm`                   | Prompt text. `string` (always) or `[singular, plural]` tuple. `$1` → primary key, `$N` → row count.                  |
+| `@db.action.input.<name>` `@InputForm` | Structured input — opens `<AsActionFormDialog>` rendering the input type with vue-form.                              |
 
 ## Action levels
 
-| Level   | When triggered                                                                  | `pk` arg to `invoke`                                |
-| ------- | ------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `table` | No selection, no row context. Toolbar "New record" style.                       | `undefined`                                          |
+| Level   | When triggered                                                                                   | `pk` arg to `invoke`                         |
+| ------- | ------------------------------------------------------------------------------------------------ | -------------------------------------------- |
+| `table` | No selection, no row context. Toolbar "New record" style.                                        | `undefined`                                  |
 | `row`   | Per-row dropdown OR keyboard main-action OR selection-aware level=`auto` and exactly 1 selected. | identifier object `{ <preferredId>: value }` |
-| `rows`  | Multi-row selection (`level=auto` with ≥2 selected).                            | array of identifier objects                          |
+| `rows`  | Multi-row selection (`level=auto` with ≥2 selected).                                             | array of identifier objects                  |
 
 Identifier objects are object-only (never bare scalars) — cross-link atscript-db skill invariant #11. Built via `extractIdentifier(row, preferredId)` from `composables/state/intent-scope.ts:95`.
 
@@ -74,24 +74,24 @@ Override the cell renderer via `controls.rowActions`.
 
 `packages/vue-table/src/components/as-table-actions.vue`. Tier-1 toolbar component. Selection-aware level resolution:
 
-| `level` prop | `selectedCount` | Effective level | Reads from                                       |
-| ------------ | --------------- | --------------- | ------------------------------------------------ |
-| `"auto"`     | 0               | `table`         | `state.actions.default.table`, `actions.others.table` |
+| `level` prop | `selectedCount` | Effective level | Reads from                                                                                                 |
+| ------------ | --------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
+| `"auto"`     | 0               | `table`         | `state.actions.default.table`, `actions.others.table`                                                      |
 | `"auto"`     | 1               | `row`           | `actions.default.row`, `actions.others.row`. Bulk `actions.rows` appended after separator in the `…` menu. |
-| `"auto"`     | ≥2              | `rows`          | `actions.default.rows`, `actions.others.rows`     |
-| `"table"`    | any             | `table`         | (forced)                                          |
-| `"rows"`     | any             | `rows`          | (forced)                                          |
-| `"row"`      | any             | `row`           | (forced) — falls back to active row if selection is empty |
+| `"auto"`     | ≥2              | `rows`          | `actions.default.rows`, `actions.others.rows`                                                              |
+| `"table"`    | any             | `table`         | (forced)                                                                                                   |
+| `"rows"`     | any             | `rows`          | (forced)                                                                                                   |
+| `"row"`      | any             | `row`           | (forced) — falls back to active row if selection is empty                                                  |
 
 Renders nothing when no actions are visible. Single-action collapse: a sole non-default entry promotes into the labelled button rather than hiding behind `…`.
 
 Slots:
 
-| Slot                     | Slot props                                                                                          |
-| ------------------------ | --------------------------------------------------------------------------------------------------- |
-| default (full layout)    | `{ defaultAction, otherActions, trailingRowActions, level, ids, invoke }`                            |
-| `#button` (default CTA)  | `{ action }`                                                                                         |
-| `#menu-item` (per item)  | `{ action }`                                                                                         |
+| Slot                    | Slot props                                                                |
+| ----------------------- | ------------------------------------------------------------------------- |
+| default (full layout)   | `{ defaultAction, otherActions, trailingRowActions, level, ids, invoke }` |
+| `#button` (default CTA) | `{ action }`                                                              |
+| `#menu-item` (per item) | `{ action }`                                                              |
 
 ## AsActionFormDialog
 
@@ -118,8 +118,10 @@ On submit, the dialog calls `state.acceptActionForm(input)`, the promise resolve
 
 ```json
 {
-  "ids": { "id": 42 },               // singular `pk`
-  "input": { /* form payload */ }
+  "ids": { "id": 42 }, // singular `pk`
+  "input": {
+    /* form payload */
+  }
 }
 ```
 
@@ -137,19 +139,19 @@ Form-type and form-component dispatch maps for the dialog interior come from `<A
 
 `state.actions: TableActionsState` (`packages/vue-table/src/types.ts:49-91`):
 
-| Field             | Type                                                          | Notes                                                                      |
-| ----------------- | ------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `table`           | `TVueTableActionInfo[]`                                       | Every table-level action.                                                  |
-| `row`             | `TVueTableActionInfo[]`                                       | Every row-level action; includes synthesized `__remove` when opted in.    |
-| `rows`            | `TVueTableActionInfo[]`                                       | Every rows-level (bulk) action.                                            |
-| `default.table`   | `TVueTableActionInfo \| undefined`                            | The declared default at that level.                                        |
-| `default.row`     | `TVueTableActionInfo \| undefined`                            | Never the synthesized `__remove`.                                          |
-| `default.rows`    | `TVueTableActionInfo \| undefined`                            |                                                                            |
-| `others.<level>`  | `TVueTableActionInfo[]`                                       | The per-level list with the declared default removed.                      |
-| `cellRow`         | `TVueTableActionInfo[]`                                       | `[default?, ...others.row, ...rows]` — pre-flattened for `<AsRowActions>`. |
-| `invoke`          | see below                                                     | Dispatcher.                                                                 |
-| `invoking`        | `ShallowRef<Set<string>>`                                     | Action names with in-flight invokes.                                        |
-| `lastResult`      | `ShallowRef<Map<string, ActionResult>>`                       | Latest result per action name.                                              |
+| Field            | Type                                    | Notes                                                                      |
+| ---------------- | --------------------------------------- | -------------------------------------------------------------------------- |
+| `table`          | `TVueTableActionInfo[]`                 | Every table-level action.                                                  |
+| `row`            | `TVueTableActionInfo[]`                 | Every row-level action; includes synthesized `__remove` when opted in.     |
+| `rows`           | `TVueTableActionInfo[]`                 | Every rows-level (bulk) action.                                            |
+| `default.table`  | `TVueTableActionInfo \| undefined`      | The declared default at that level.                                        |
+| `default.row`    | `TVueTableActionInfo \| undefined`      | Never the synthesized `__remove`.                                          |
+| `default.rows`   | `TVueTableActionInfo \| undefined`      |                                                                            |
+| `others.<level>` | `TVueTableActionInfo[]`                 | The per-level list with the declared default removed.                      |
+| `cellRow`        | `TVueTableActionInfo[]`                 | `[default?, ...others.row, ...rows]` — pre-flattened for `<AsRowActions>`. |
+| `invoke`         | see below                               | Dispatcher.                                                                |
+| `invoking`       | `ShallowRef<Set<string>>`               | Action names with in-flight invokes.                                       |
+| `lastResult`     | `ShallowRef<Map<string, ActionResult>>` | Latest result per action name.                                             |
 
 Invoke signature:
 
@@ -163,11 +165,11 @@ state.actions.invoke(
 
 Per invariant on level: `pk = pkForLevel(action.level, identifiers)`:
 
-| `action.level` | `pk` shape                                |
-| -------------- | ----------------------------------------- |
-| `'table'`      | `undefined`                                |
-| `'row'`        | `identifiers[0]` (single id object)        |
-| `'rows'`       | full identifier array                      |
+| `action.level` | `pk` shape                          |
+| -------------- | ----------------------------------- |
+| `'table'`      | `undefined`                         |
+| `'row'`        | `identifiers[0]` (single id object) |
+| `'rows'`       | full identifier array               |
 
 The convenience helper `triggerAction(state, action, ctx, event)` (`composables/state/intent-scope.ts:208-224`) routes through `requestActionInput` (form actions) or `confirmAction` (prompt-text actions) before calling `invoke`. Use it when wiring custom action triggers; `<AsRowActions>` and `<AsTableActions>` use it internally.
 
@@ -184,12 +186,12 @@ type ActionResult =
 
 Source: `packages/vue-table/src/types.ts:41-46`. Processor → result mapping (`composables/state/create-actions.ts:102-148`):
 
-| `action.processor` | Behavior                                                                                          |
-| ------------------ | ------------------------------------------------------------------------------------------------- |
-| `'backend'` (default) | `client.action(name, pk, opts.input)` → `{ ok: true, kind: 'backend', data, message? }`         |
-| `'navigate'`       | `client.action(name, pk)` (server emits redirect) → `{ ok: true, kind: 'navigate' }`             |
-| `'__remove'`       | `client.remove(pk)` → `{ ok: true, kind: 'remove', data }`                                       |
-| `'custom'`         | Bypasses HTTP. `{ ok: true, kind: 'custom', dispatched: true }` — caller writes the side effect via the `@action` emit. |
+| `action.processor`    | Behavior                                                                                                                |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `'backend'` (default) | `client.action(name, pk, opts.input)` → `{ ok: true, kind: 'backend', data, message? }`                                 |
+| `'navigate'`          | `client.action(name, pk)` (server emits redirect) → `{ ok: true, kind: 'navigate' }`                                    |
+| `'__remove'`          | `client.remove(pk)` → `{ ok: true, kind: 'remove', data }`                                                              |
+| `'custom'`            | Bypasses HTTP. `{ ok: true, kind: 'custom', dispatched: true }` — caller writes the side effect via the `@action` emit. |
 
 Refetch policy: post-success refetch only fires for `'backend'` / `'__remove'` and only when:
 
@@ -200,23 +202,23 @@ The `<AsTableRoot @action="(action, ids, result, event) => …">` emit settles *
 
 ## Selection model
 
-| Field / fn             | Source                                                                                    |
-| ---------------------- | ----------------------------------------------------------------------------------------- |
-| `state.selectedRows`   | `ShallowRef<unknown[]>` — PKs derived via `rowValueFn(row)`.                              |
-| `state.selectedCount`  | `ComputedRef<number>`.                                                                    |
-| `state.isPkSelected(pk)` | Quick membership check.                                                                  |
-| `state.rowValueFn(row)`| Default extracts `preferredId` field(s); consumer can override via `<AsTableRoot :row-value-fn>`. |
-| `togglePk(sel, pk, mode)` | `@atscript/ui-table` helper. `"none"` no-op; `"single"` replaces; `"multi"` toggles. |
-| `trimSelection(sel, presentPks)` | Drops PKs not in the result set. Identity-stable on no-op.                       |
-| `rowsToPks(rows, rowValueFn)` | Map a row array → PK array.                                                          |
+| Field / fn                       | Source                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `state.selectedRows`             | `ShallowRef<unknown[]>` — PKs derived via `rowValueFn(row)`.                                      |
+| `state.selectedCount`            | `ComputedRef<number>`.                                                                            |
+| `state.isPkSelected(pk)`         | Quick membership check.                                                                           |
+| `state.rowValueFn(row)`          | Default extracts `preferredId` field(s); consumer can override via `<AsTableRoot :row-value-fn>`. |
+| `togglePk(sel, pk, mode)`        | `@atscript/ui-table` helper. `"none"` no-op; `"single"` replaces; `"multi"` toggles.              |
+| `trimSelection(sel, presentPks)` | Drops PKs not in the result set. Identity-stable on no-op.                                        |
+| `rowsToPks(rows, rowValueFn)`    | Map a row array → PK array.                                                                       |
 
 Selection persistence policy on every results-replacement (`<AsTableRoot :selection-persistence>`):
 
-| Mode      | Effect on `selectedRows`                                                                 |
-| --------- | ---------------------------------------------------------------------------------------- |
-| `"trim"`  | Default. Drop PKs missing from new results; keep the rest. Survives sort / filter changes when PK still matches. |
-| `"clear"` | Drop everything.                                                                         |
-| `"persist"` | Never write to `selectedRows`; full consumer ownership.                                |
+| Mode        | Effect on `selectedRows`                                                                                         |
+| ----------- | ---------------------------------------------------------------------------------------------------------------- |
+| `"trim"`    | Default. Drop PKs missing from new results; keep the rest. Survives sort / filter changes when PK still matches. |
+| `"clear"`   | Drop everything.                                                                                                 |
+| `"persist"` | Never write to `selectedRows`; full consumer ownership.                                                          |
 
 `useTableSelection` (`composables/use-table-selection.ts`) distinguishes **results-replacement** (query / invalidate / pagination jump) from **results-extension** (queryNext / forward or backward `loadRange`) via first/last-row reference identity. Extensions don't trigger reconciliation.
 
@@ -234,7 +236,8 @@ Selection persistence policy on every results-replacement (`<AsTableRoot :select
 
 ```vue
 <template>
-  <AsTableActions level="auto" />  <!-- level=auto picks rows when ≥2 selected -->
+  <AsTableActions level="auto" />
+  <!-- level=auto picks rows when ≥2 selected -->
   <AsTable select="multi" />
 </template>
 ```
@@ -256,19 +259,14 @@ function onAction(action, ids, result) {
   if (action.processor !== "custom") return;
 
   // Read current page or window cache; export to CSV.
-  const rows = state.results.value.filter(r => state.isPkSelected(state.rowValueFn(r)));
+  const rows = state.results.value.filter((r) => state.isPkSelected(state.rowValueFn(r)));
   const csv = rowsToCsv(rows);
   download(csv, `export-${Date.now()}.csv`);
 }
 </script>
 
 <template>
-  <AsTableRoot
-    url="/api/db/tables/orders"
-    @action="onAction"
-  >
-    ...
-  </AsTableRoot>
+  <AsTableRoot url="/api/db/tables/orders" @action="onAction"> ... </AsTableRoot>
 </template>
 ```
 
@@ -279,10 +277,10 @@ function onAction(action, ids, result) {
 import { useTableActions, useTableContext } from "@atscript/vue-table";
 
 const { state } = useTableContext();
-const actions = useTableActions();   // == state.actions
+const actions = useTableActions(); // == state.actions
 
 async function archiveSelected() {
-  const archive = actions.rows.find(a => a.name === "archive");
+  const archive = actions.rows.find((a) => a.name === "archive");
   if (!archive) return;
   const identifiers = state.selectedRows.value.map(/* … */);
   await actions.invoke(archive, identifiers);
@@ -303,11 +301,11 @@ const ok = await state.prompt("Discard your changes?", { scope: "error" });
 if (ok) discard();
 ```
 
-| Field           | Default      | Notes                                                                                    |
-| --------------- | ------------ | ---------------------------------------------------------------------------------------- |
-| `confirmButton` | `"Confirm"`  | Override label.                                                                          |
-| `cancelButton`  | `"Cancel"`   |                                                                                          |
-| `scope`         | `"primary"`  | Vunor scope: `"primary" \| "secondary" \| "good" \| "warn" \| "error" \| "neutral"`.    |
+| Field           | Default     | Notes                                                                                |
+| --------------- | ----------- | ------------------------------------------------------------------------------------ |
+| `confirmButton` | `"Confirm"` | Override label.                                                                      |
+| `cancelButton`  | `"Cancel"`  |                                                                                      |
+| `scope`         | `"primary"` | Vunor scope: `"primary" \| "secondary" \| "good" \| "warn" \| "error" \| "neutral"`. |
 
 `<AsConfirmDialog>` renders the prompt; override via `controls.confirmDialog`.
 

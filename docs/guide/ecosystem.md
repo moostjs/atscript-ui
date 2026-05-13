@@ -8,11 +8,11 @@ atscript-ui sits inside a three-site family. They share one source-of-truth (the
 
 ## The three sibling sites
 
-| Site                                              | What it covers                                                                                                             |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| [**atscript.dev**](https://atscript.dev)          | The `.as` language: `@meta.*`, `@expect.*`, primitives, `asc` codegen, `unplugin-atscript`, the `Validator`, JSON Schema export, VSCode LSP, plugin authoring. |
-| [**db.atscript.dev**](https://db.atscript.dev)    | The DB layer: `@db.*` annotations, adapters (sqlite / postgres / mysql / mongo), `DbSpace`, `BaseDbAdapter`, schema sync, relations, queries, `moost-db` REST, browser Client. |
-| **ui.atscript.dev** (this site)                   | The UI layer: forms, tables, workflows, styling. The `@ui.*` and `@wf.*` annotation families. Vue 3 today; framework-agnostic core ready for React / Solid bindings tomorrow. |
+| Site                                           | What it covers                                                                                                                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [**atscript.dev**](https://atscript.dev)       | The `.as` language: `@meta.*`, `@expect.*`, primitives, `asc` codegen, `unplugin-atscript`, the `Validator`, JSON Schema export, VSCode LSP, plugin authoring.                 |
+| [**db.atscript.dev**](https://db.atscript.dev) | The DB layer: `@db.*` annotations, adapters (sqlite / postgres / mysql / mongo), `DbSpace`, `BaseDbAdapter`, schema sync, relations, queries, `moost-db` REST, browser Client. |
+| **ui.atscript.dev** (this site)                | The UI layer: forms, tables, workflows, styling. The `@ui.*` and `@wf.*` annotation families. Vue 3 today; framework-agnostic core ready for React / Solid bindings tomorrow.  |
 
 The boundary is clean — atscript doesn't know about HTTP, atscript-db doesn't know about Vue, atscript-ui doesn't know about your SQL dialect. A `.as` file flows through all three.
 
@@ -55,15 +55,15 @@ External deps each package leans on:
 
 ## When to use which package
 
-| I want…                                                  | Install                                                                                                                                         |
-| -------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Just forms (no tables, no workflows)                     | `@atscript/ui` `@atscript/ui-styles` `@atscript/vue-form`                                                                                       |
-| Forms + tables                                           | + `@atscript/ui-table` `@atscript/vue-table`                                                                                                    |
-| Forms + tables + HTTP workflows                          | + `@atscript/vue-wf` (client), `@atscript/moost-wf` (server)                                                                                    |
-| Server-side preset persistence (saved-views per user)    | + `@atscript/moost-ui-presets`                                                                                                                  |
-| Dynamic, schema-defined computed props (`@ui.fn.*`)      | + `@atscript/ui-fns` (and call `installDynamicResolver()`)                                                                                      |
-| My own framework binding (React / Solid / Svelte)        | Port from `@atscript/ui` + `@atscript/ui-table`. Re-use `@atscript/ui-styles`' pre-built CSS (`@atscript/ui-styles/css/all`) or the UnoCSS preset. |
-| To author a new annotation namespace                     | Read the plugin guide on [atscript.dev](https://atscript.dev). atscript-ui's plugins (`@atscript/ui/plugin`, `@atscript/ui-fns/plugin`) are reference implementations. |
+| I want…                                               | Install                                                                                                                                                                |
+| ----------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Just forms (no tables, no workflows)                  | `@atscript/ui` `@atscript/ui-styles` `@atscript/vue-form`                                                                                                              |
+| Forms + tables                                        | + `@atscript/ui-table` `@atscript/vue-table`                                                                                                                           |
+| Forms + tables + HTTP workflows                       | + `@atscript/vue-wf` (client), `@atscript/moost-wf` (server)                                                                                                           |
+| Server-side preset persistence (saved-views per user) | + `@atscript/moost-ui-presets`                                                                                                                                         |
+| Dynamic, schema-defined computed props (`@ui.fn.*`)   | + `@atscript/ui-fns` (and call `installDynamicResolver()`)                                                                                                             |
+| My own framework binding (React / Solid / Svelte)     | Port from `@atscript/ui` + `@atscript/ui-table`. Re-use `@atscript/ui-styles`' pre-built CSS (`@atscript/ui-styles/css/all`) or the UnoCSS preset.                     |
+| To author a new annotation namespace                  | Read the plugin guide on [atscript.dev](https://atscript.dev). atscript-ui's plugins (`@atscript/ui/plugin`, `@atscript/ui-fns/plugin`) are reference implementations. |
 
 The Vue split (`vue-form` / `vue-table` / `vue-wf`) intentionally mirrors the agnostic split (`ui` / `ui-table`). Every reactive primitive, default component, and resolver wrapper in a `vue-*` package has a corresponding pure-TS piece in the agnostic core. That's what makes the React / Solid port path realistic.
 
@@ -75,7 +75,7 @@ A one-line definition of every term that recurs in the docs. Click through for t
 - **TableDef** — the materialised table descriptor `<AsTableRoot>` builds. Columns, filterable fields, sortable fields, default sort, value-help wiring. [API](/api/ui).
 - **FieldResolver** — the indirection layer between annotations and rendered components. Reads `@ui.*` from the `.as` runtime descriptor; `ui-fns` swaps in a dynamic version that also evaluates `@ui.fn.*`. [API](/api/ui).
 - **FilterCondition** — a single applied filter (`{ field, op, value }`). Mutated by filter chips / dialogs. [API](/api/ui-table).
-- **FieldFilters** — the *display* list of which filter inputs are visible. Independent of which filters are applied. [API](/api/ui-table).
+- **FieldFilters** — the _display_ list of which filter inputs are visible. Independent of which filters are applied. [API](/api/ui-table).
 - **PresetSnapshot** — a frozen `{ filters, sorters, columns, search, pagination }` blob users save as a "saved view". Persisted by `moost-ui-presets`. [API](/api/ui-table).
 - **TFnScope** — the `{ formData, row, def, locale }` object `@ui.fn.*` function-strings run inside. [API](/api/ui-fns).
 - **AsWfStore** — server-side workflow state container. Tracks current step, persisted form data, context, outlets. [API](/api/moost-wf).

@@ -31,15 +31,15 @@ you can grep the source.
 Defined by the atscript core (`@atscript/typescript`). These describe
 **what the field means**, independent of how it's rendered.
 
-| Annotation                  | Arg            | Effect in vue-form                                                              |
-| --------------------------- | -------------- | ------------------------------------------------------------------------------- |
-| `@meta.label 'X'`           | string         | Field title / structured-section title; on the type itself it titles the form. |
-| `@meta.description 'X'`     | string         | Help text rendered below the field label.                                       |
-| `@meta.default 'X'`         | string         | Default value applied by `createFormData` at form mount.                        |
-| `@meta.required 'msg'`      | string         | Marks the field required + supplies the validation error message.               |
-| `@meta.readonly`            | flag           | Renders read-only; value can still be set programmatically.                     |
-| `@meta.id`                  | flag           | Marks the identity field (used by atscript-db and AsRef pickers).               |
-| `@meta.sensitive`           | flag           | Hint to consumers that the value is sensitive (passwords, tokens).              |
+| Annotation              | Arg    | Effect in vue-form                                                             |
+| ----------------------- | ------ | ------------------------------------------------------------------------------ |
+| `@meta.label 'X'`       | string | Field title / structured-section title; on the type itself it titles the form. |
+| `@meta.description 'X'` | string | Help text rendered below the field label.                                      |
+| `@meta.default 'X'`     | string | Default value applied by `createFormData` at form mount.                       |
+| `@meta.required 'msg'`  | string | Marks the field required + supplies the validation error message.              |
+| `@meta.readonly`        | flag   | Renders read-only; value can still be set programmatically.                    |
+| `@meta.id`              | flag   | Marks the identity field (used by atscript-db and AsRef pickers).              |
+| `@meta.sensitive`       | flag   | Hint to consumers that the value is sensitive (passwords, tokens).             |
 
 Example:
 
@@ -59,13 +59,13 @@ Defined by atscript core. `vue-form` runs them through the standard
 atscript validator (`getFormValidator(def)`) — no extra wiring on the
 Vue side.
 
-| Annotation                     | Effect                                       |
-| ------------------------------ | -------------------------------------------- |
-| `@expect.min N, 'msg'`         | numeric lower bound                          |
-| `@expect.max N, 'msg'`         | numeric upper bound                          |
-| `@expect.minLength N, 'msg'`   | string / array length lower bound            |
-| `@expect.maxLength N, 'msg'`   | string / array length upper bound            |
-| `@expect.pattern '/re/', 'msg'`| regex match                                  |
+| Annotation                      | Effect                            |
+| ------------------------------- | --------------------------------- |
+| `@expect.min N, 'msg'`          | numeric lower bound               |
+| `@expect.max N, 'msg'`          | numeric upper bound               |
+| `@expect.minLength N, 'msg'`    | string / array length lower bound |
+| `@expect.maxLength N, 'msg'`    | string / array length upper bound |
+| `@expect.pattern '/re/', 'msg'` | regex match                       |
 
 On arrays, `@expect.minLength` and `@expect.maxLength` also drive the
 `canAdd` / `canRemove` toggles on the rendered `AsArray` — see
@@ -121,12 +121,12 @@ props. For values that depend on other field data, use the matching
 
 ### Display
 
-| Annotation                   | Type   | Controls                                                       |
-| ---------------------------- | ------ | -------------------------------------------------------------- |
-| `@ui.form.placeholder 'X'`   | string | input placeholder                                              |
-| `@ui.form.hint 'X'`          | string | inline hint below the input (overrides `meta.description` when both present and the field is in error state) |
-| `@ui.form.label.singular 'tag'` | string | item-noun for arrays — drives "Add tag" / "Remove tag" buttons |
-| `@ui.form.submit.text 'X'`   | string | submit button text (on the type, not on a field)               |
+| Annotation                      | Type   | Controls                                                                                                     |
+| ------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------ |
+| `@ui.form.placeholder 'X'`      | string | input placeholder                                                                                            |
+| `@ui.form.hint 'X'`             | string | inline hint below the input (overrides `meta.description` when both present and the field is in error state) |
+| `@ui.form.label.singular 'tag'` | string | item-noun for arrays — drives "Add tag" / "Remove tag" buttons                                               |
+| `@ui.form.submit.text 'X'`      | string | submit button text (on the type, not on a field)                                                             |
 
 Field descriptions come from `@meta.description` — there is no
 `@ui.form.description` static counterpart. For dynamic descriptions
@@ -134,11 +134,11 @@ use `@ui.form.fn.description` (see [Dynamic Fields](/forms/dynamic-fields)).
 
 ### Behaviour
 
-| Annotation             | Controls                                                                  |
-| ---------------------- | ------------------------------------------------------------------------- |
-| `@ui.form.hidden`      | hide field — phantom-renders, never visible                               |
-| `@ui.form.disabled`    | disable input                                                             |
-| `@ui.form.autocomplete 'email'` | sets HTML `autocomplete=` attribute                              |
+| Annotation                      | Controls                                    |
+| ------------------------------- | ------------------------------------------- |
+| `@ui.form.hidden`               | hide field — phantom-renders, never visible |
+| `@ui.form.disabled`             | disable input                               |
+| `@ui.form.autocomplete 'email'` | sets HTML `autocomplete=` attribute         |
 
 For read-only, use `@meta.readonly` — it is the single source of truth
 that both forms and other surfaces read. For the dynamic counterpart
@@ -146,14 +146,14 @@ use `@ui.form.fn.readonly`.
 
 ### Layout
 
-| Annotation                  | Controls                                                            |
-| --------------------------- | ------------------------------------------------------------------- |
-| `@ui.form.order N`          | sort order within siblings                                          |
-| `@ui.form.grid.colSpan 'full' \| 'half' \| 'third' \| '1'..'12'` | grid column width (12-col grid)  |
-| `@ui.form.grid.rowSpan '1'..'4'` | grid row span                                                  |
-| `@ui.form.classes 'a b'`    | extra classes on the field wrapper                                  |
-| `@ui.form.styles { ... }`   | inline style object                                                 |
-| `@ui.form.attr { ... }`     | extra HTML attributes forwarded to the input element                |
+| Annotation                                                       | Controls                                             |
+| ---------------------------------------------------------------- | ---------------------------------------------------- |
+| `@ui.form.order N`                                               | sort order within siblings                           |
+| `@ui.form.grid.colSpan 'full' \| 'half' \| 'third' \| '1'..'12'` | grid column width (12-col grid)                      |
+| `@ui.form.grid.rowSpan '1'..'4'`                                 | grid row span                                        |
+| `@ui.form.classes 'a b'`                                         | extra classes on the field wrapper                   |
+| `@ui.form.styles { ... }`                                        | inline style object                                  |
+| `@ui.form.attr { ... }`                                          | extra HTML attributes forwarded to the input element |
 
 See [Grid Layout](/forms/grid-layout) for the 12-column grid and the
 `full`/`half`/`third` aliases.
@@ -164,14 +164,14 @@ Read together to drive the merged prefix / suffix chrome inside
 numeric and decimal inputs. See `as-field.vue:199-307` for the full
 resolution chain.
 
-| Annotation                   | Effect                                                            |
-| ---------------------------- | ----------------------------------------------------------------- |
-| `@ui.form.prefix '$'`        | literal prefix string                                             |
-| `@ui.form.prefix.ref 'currency'` | resolve prefix from a sibling field's current value           |
-| `@ui.form.prefix.icon 'icon-credit-card'` | render an icon glyph as the prefix                   |
-| `@ui.form.suffix '%'`        | literal suffix string                                             |
-| `@ui.form.suffix.ref 'unit'` | resolve suffix from a sibling field                               |
-| `@ui.form.suffix.icon 'icon-percent'` | suffix icon glyph                                        |
+| Annotation                                | Effect                                              |
+| ----------------------------------------- | --------------------------------------------------- |
+| `@ui.form.prefix '$'`                     | literal prefix string                               |
+| `@ui.form.prefix.ref 'currency'`          | resolve prefix from a sibling field's current value |
+| `@ui.form.prefix.icon 'icon-credit-card'` | render an icon glyph as the prefix                  |
+| `@ui.form.suffix '%'`                     | literal suffix string                               |
+| `@ui.form.suffix.ref 'unit'`              | resolve suffix from a sibling field                 |
+| `@ui.form.suffix.icon 'icon-percent'`     | suffix icon glyph                                   |
 
 Currency and unit values are also pulled from `@db.amount.currency*`
 and `@db.unit*` — see [DB annotations](#db-annotations-cross-cutting)
@@ -179,22 +179,22 @@ below.
 
 ### Actions
 
-| Annotation                      | Effect                                                                                          |
-| ------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `@ui.type 'action'`             | renders the field as an action button (uses `AsAction`)                                         |
-| `@ui.form.action { id, label }` | declares the action's id + label; `AsForm` emits `action` with the form data when fired         |
-| `@ui.form.submit.text 'Save'`   | on the type itself — submit button text                                                         |
+| Annotation                      | Effect                                                                                  |
+| ------------------------------- | --------------------------------------------------------------------------------------- |
+| `@ui.type 'action'`             | renders the field as an action button (uses `AsAction`)                                 |
+| `@ui.form.action { id, label }` | declares the action's id + label; `AsForm` emits `action` with the form data when fired |
+| `@ui.form.submit.text 'Save'`   | on the type itself — submit button text                                                 |
 
 See [Actions](/forms/actions) for the action lifecycle and how
 `AsWfForm` extends this with workflow round-trips.
 
 ### Choice fields
 
-| Annotation                            | Effect                                                  |
-| ------------------------------------- | ------------------------------------------------------- |
-| `@ui.form.options 'a' \| 'b' \| 'c'` | static option list for `select` / `radio`                |
-| `@ui.form.options [{ value, label }]` | richer static option list (objects)                    |
-| `@ui.form.fn.options '(v, data) => [...]'` | dynamic options (requires `@atscript/ui-fns`)      |
+| Annotation                                 | Effect                                        |
+| ------------------------------------------ | --------------------------------------------- |
+| `@ui.form.options 'a' \| 'b' \| 'c'`       | static option list for `select` / `radio`     |
+| `@ui.form.options [{ value, label }]`      | richer static option list (objects)           |
+| `@ui.form.fn.options '(v, data) => [...]'` | dynamic options (requires `@atscript/ui-fns`) |
 
 `@ui.form.options` accepts either a string-literal-union shorthand or
 an explicit array. Inline string unions (`'admin' | 'user'` directly
@@ -207,19 +207,19 @@ role: 'admin' | 'user' | 'guest'
 
 ### Custom validation
 
-| Annotation                                    | Effect                                                                                                    |
-| --------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `@ui.form.validate '(v) => !!v \|\| "required"'` | custom validator expression (requires `@atscript/ui-fns`). Returns `true` on pass or a string error.   |
+| Annotation                                       | Effect                                                                                               |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `@ui.form.validate '(v) => !!v \|\| "required"'` | custom validator expression (requires `@atscript/ui-fns`). Returns `true` on pass or a string error. |
 
 The validator receives `(value, data, context)`. See
 [Validation](/forms/validation).
 
 ### Component swap
 
-| Annotation                       | Effect                                                                                  |
-| -------------------------------- | --------------------------------------------------------------------------------------- |
-| `@ui.form.type 'textarea'`       | Flips to a different **built-in** renderer (`text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `date`, `datetime`, `time`, `paragraph`, `action`). Reserved for built-ins. |
-| `@ui.form.component 'MyInput'`   | Resolves a **named** component from the `:components` map (highest precedence). The dedicated mechanism for custom renderers. |
+| Annotation                     | Effect                                                                                                                                                                                                      |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.form.type 'textarea'`     | Flips to a different **built-in** renderer (`text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `date`, `datetime`, `time`, `paragraph`, `action`). Reserved for built-ins. |
+| `@ui.form.component 'MyInput'` | Resolves a **named** component from the `:components` map (highest precedence). The dedicated mechanism for custom renderers.                                                                               |
 
 Resolution precedence (see `as-field.vue:373-386`):
 
@@ -243,37 +243,37 @@ function expression. The expression is parsed and evaluated through
 
 ```ts
 type TFnScope = {
-  v: unknown;              // current field value
-  data: Record<string, unknown>;  // entire form domain data
+  v: unknown; // current field value
+  data: Record<string, unknown>; // entire form domain data
   context: Record<string, unknown>; // form-level context
-  entry: { type, component, name, optional, disabled, hidden, readonly };
+  entry: { type; component; name; optional; disabled; hidden; readonly };
 };
 ```
 
 Field-level (declared on a prop):
 
-| Annotation                          | Computes                                                |
-| ----------------------------------- | ------------------------------------------------------- |
-| `@ui.form.fn.label`                 | label string                                            |
-| `@ui.form.fn.description`           | description string                                      |
-| `@ui.form.fn.hint`                  | hint string                                             |
-| `@ui.form.fn.placeholder`           | placeholder string                                      |
-| `@ui.form.fn.hidden`                | boolean                                                 |
-| `@ui.form.fn.disabled`              | boolean                                                 |
-| `@ui.form.fn.readonly`              | boolean                                                 |
-| `@ui.form.fn.classes`               | class object / string                                   |
-| `@ui.form.fn.styles`                | style object                                            |
-| `@ui.form.fn.attr`                  | HTML attribute map                                      |
-| `@ui.form.fn.options`               | dynamic option list                                     |
-| `@ui.form.fn.value`                 | derived value (readonly fields are auto-synced; phantom paragraph/action display) |
+| Annotation                | Computes                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------- |
+| `@ui.form.fn.label`       | label string                                                                      |
+| `@ui.form.fn.description` | description string                                                                |
+| `@ui.form.fn.hint`        | hint string                                                                       |
+| `@ui.form.fn.placeholder` | placeholder string                                                                |
+| `@ui.form.fn.hidden`      | boolean                                                                           |
+| `@ui.form.fn.disabled`    | boolean                                                                           |
+| `@ui.form.fn.readonly`    | boolean                                                                           |
+| `@ui.form.fn.classes`     | class object / string                                                             |
+| `@ui.form.fn.styles`      | style object                                                                      |
+| `@ui.form.fn.attr`        | HTML attribute map                                                                |
+| `@ui.form.fn.options`     | dynamic option list                                                               |
+| `@ui.form.fn.value`       | derived value (readonly fields are auto-synced; phantom paragraph/action display) |
 
 Top-level (declared on the root `interface` / `type`, receives `(data, context)`):
 
-| Annotation                          | Computes                                                |
-| ----------------------------------- | ------------------------------------------------------- |
-| `@ui.form.fn.title`                 | dynamic form title                                      |
-| `@ui.form.fn.submit.text`           | dynamic submit button text                              |
-| `@ui.form.fn.submit.disabled`       | dynamic submit-disabled boolean                         |
+| Annotation                    | Computes                        |
+| ----------------------------- | ------------------------------- |
+| `@ui.form.fn.title`           | dynamic form title              |
+| `@ui.form.fn.submit.text`     | dynamic submit button text      |
+| `@ui.form.fn.submit.disabled` | dynamic submit-disabled boolean |
 
 Example — hide a "Room" field when no Floor has been picked:
 
@@ -302,20 +302,20 @@ up. Full coverage at [db.atscript.dev](https://db.atscript.dev).
 
 ### Currency & units
 
-| Annotation                      | Effect on form                                                                              |
-| ------------------------------- | ------------------------------------------------------------------------------------------- |
-| `@db.amount.currency 'USD'`     | hard-code the currency — drives `AsDecimal`'s prefix glyph + `Intl.NumberFormat` decimals    |
-| `@db.amount.currency.ref 'cur'` | resolve currency from a sibling field at runtime                                            |
-| `@db.unit 'kg'`                 | hard-code a measurement unit — drives suffix                                                |
-| `@db.unit.ref 'unit'`           | resolve unit from a sibling                                                                 |
-| `@db.column.precision { precision, scale }` | numeric precision/scale; `scale` caps the displayed decimals               |
+| Annotation                                  | Effect on form                                                                            |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `@db.amount.currency 'USD'`                 | hard-code the currency — drives `AsDecimal`'s prefix glyph + `Intl.NumberFormat` decimals |
+| `@db.amount.currency.ref 'cur'`             | resolve currency from a sibling field at runtime                                          |
+| `@db.unit 'kg'`                             | hard-code a measurement unit — drives suffix                                              |
+| `@db.unit.ref 'unit'`                       | resolve unit from a sibling                                                               |
+| `@db.column.precision { precision, scale }` | numeric precision/scale; `scale` caps the displayed decimals                              |
 
 ### Foreign keys (AsRef value-help)
 
-| Annotation                       | Effect                                                                                       |
-| -------------------------------- | -------------------------------------------------------------------------------------------- |
-| `@db.rel.FK 'OtherTable'`        | declares a foreign-key relation                                                              |
-| `@db.http.path '/api/customers'` | URL the `AsRef` picker queries for options                                                   |
+| Annotation                       | Effect                                     |
+| -------------------------------- | ------------------------------------------ |
+| `@db.rel.FK 'OtherTable'`        | declares a foreign-key relation            |
+| `@db.http.path '/api/customers'` | URL the `AsRef` picker queries for options |
 
 When both are present the field renders an `AsRef` picker by default
 (searchable, paged, server-driven). See [References](/forms/references).

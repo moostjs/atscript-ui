@@ -12,15 +12,15 @@ ancestor — typically the app shell.
 
 ```vue
 <script setup lang="ts">
-import { computed } from 'vue'
-import { provideAsLocale } from '@atscript/vue-form'
-import { provideCellLocale, useAppPrefs } from '@atscript/vue-table'
-import { clientFactory } from '@/api/client-factory'
+import { computed } from "vue";
+import { provideAsLocale } from "@atscript/vue-form";
+import { provideCellLocale, useAppPrefs } from "@atscript/vue-table";
+import { clientFactory } from "@/api/client-factory";
 
-const { prefs } = useAppPrefs({ url: '/api/db/_presets', clientFactory })
+const { prefs } = useAppPrefs({ url: "/api/db/_presets", clientFactory });
 
 // Forms — drives decimal separator, currency symbol, AsDate/AsDatetime formatting.
-provideAsLocale(() => prefs.value.language)
+provideAsLocale(() => prefs.value.language);
 
 // Tables — same source, separate provider for the table side.
 provideCellLocale(
@@ -28,7 +28,7 @@ provideCellLocale(
     language: prefs.value.language,
     timezone: prefs.value.timezone,
   })),
-)
+);
 </script>
 
 <template>
@@ -50,16 +50,16 @@ browser's runtime locale via `new Intl.NumberFormat(undefined, ...)`.
 
 ```vue
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useAsLocale, type TAsComponentProps } from '@atscript/vue-form'
+import { computed } from "vue";
+import { useAsLocale, type TAsComponentProps } from "@atscript/vue-form";
 
-const props = defineProps<TAsComponentProps<number | null | undefined>>()
-const { locale } = useAsLocale()
+const props = defineProps<TAsComponentProps<number | null | undefined>>();
+const { locale } = useAsLocale();
 
 const formatted = computed(() => {
-  if (props.model.value == null) return ''
-  return new Intl.NumberFormat(locale.value ?? undefined).format(props.model.value)
-})
+  if (props.model.value == null) return "";
+  return new Intl.NumberFormat(locale.value ?? undefined).format(props.model.value);
+});
 </script>
 ```
 
@@ -101,11 +101,11 @@ invoices.
 
 The resolved `currencyCode` and `prefix` flow through `TAsComponentProps`:
 
-| Prop           | Holds                                                  |
-| -------------- | ------------------------------------------------------ |
-| `currencyCode` | The symbolic identifier (`'USD'`, `'EUR'`, …)          |
-| `prefix`       | The locale-aware narrow symbol (`'$'`, `'€'`, `'¥'`)   |
-| `scale`        | Effective fractional digits (currency-clamped)         |
+| Prop           | Holds                                                |
+| -------------- | ---------------------------------------------------- |
+| `currencyCode` | The symbolic identifier (`'USD'`, `'EUR'`, …)        |
+| `prefix`       | The locale-aware narrow symbol (`'$'`, `'€'`, `'¥'`) |
+| `scale`        | Effective fractional digits (currency-clamped)       |
 
 Both are reactive — flip the sibling's value and the prefix updates.
 

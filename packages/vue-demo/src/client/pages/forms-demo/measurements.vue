@@ -16,23 +16,23 @@ function onSubmit(data: unknown) {
     <div class="max-w-2xl mx-auto p-$l flex flex-col gap-$l">
       <header class="flex flex-col gap-$xs">
         <div class="flex items-center justify-between gap-$s">
-          <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+          <p
+            class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0"
+          >
             atscript-ui · forms demo
           </p>
           <DarkToggle />
         </div>
         <h1 class="text-h3 m-0">Numeric inputs showcase</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
-          Ten-case matrix exercising the AsDecimal + AsNumber default renderers across
-          static and dynamic adornments: explicit
+          Ten-case matrix exercising the AsDecimal + AsNumber default renderers across static and
+          dynamic adornments: explicit
           <code>@ui.form.prefix</code> / <code>@ui.form.suffix</code> literals,
           <code>@db.amount.currency</code> / <code>@db.amount.currency.ref</code> for
-          currency-driven decimal chrome, and <code>@db.unit</code> /
-          <code>@db.unit.ref</code> for unit suffixes. Change the
-          <strong>Currency</strong> picker to watch the dynamic-currency rows re-render
-          their prefix and re-round (JPY drops decimals, BHD keeps three). Change the
-          <strong>Unit</strong> picker to watch the dynamic-unit rows update their
-          trailing pill.
+          currency-driven decimal chrome, and <code>@db.unit</code> / <code>@db.unit.ref</code> for
+          unit suffixes. Change the <strong>Currency</strong> picker to watch the dynamic-currency
+          rows re-render their prefix and re-round (JPY drops decimals, BHD keeps three). Change the
+          <strong>Unit</strong> picker to watch the dynamic-unit rows update their trailing pill.
         </p>
         <RouterLink
           to="/forms-demo"
@@ -54,9 +54,9 @@ function onSubmit(data: unknown) {
 
       <details class="mt-$l layer-0 border-1 rounded-r2 p-$m text-callout">
         <summary class="cursor-pointer font-600 text-current-muted">Form data preview</summary>
-        <pre class="mt-$s overflow-auto text-callout"
-          data-testid="measurements-preview"
-        >{{ JSON.stringify(formData, null, 2) }}</pre>
+        <pre class="mt-$s overflow-auto text-callout" data-testid="measurements-preview">{{
+          JSON.stringify(formData, null, 2)
+        }}</pre>
       </details>
     </div>
   </div>

@@ -124,22 +124,22 @@ const { def, formData } = createAsFormDef(ArrayShowcaseForm);
 (`packages/vue-form/src/composables/use-as-array.ts:92-98`):
 
 ```ts
-const canAdd    = !disabled && length < maxLength
-const canRemove = !disabled && length > minLength
+const canAdd = !disabled && length < maxLength;
+const canRemove = !disabled && length > minLength;
 ```
 
-| Annotation                            | Effect                                                      |
-| ------------------------------------- | ----------------------------------------------------------- |
-| `@expect.minLength N, 'msg'`          | Add starts enabled; Remove hides once length === N          |
-| `@expect.maxLength N, 'msg'`          | Add hides once length === N                                 |
-| `@ui.form.disabled` on the array prop | Both Add and Remove disable                                 |
+| Annotation                            | Effect                                             |
+| ------------------------------------- | -------------------------------------------------- |
+| `@expect.minLength N, 'msg'`          | Add starts enabled; Remove hides once length === N |
+| `@expect.maxLength N, 'msg'`          | Add hides once length === N                        |
+| `@ui.form.disabled` on the array prop | Both Add and Remove disable                        |
 
 Validation runs at submit (and live, depending on
 `firstValidation`) — exceeding `maxLength` is gated by the UI, but
 `minLength` is enforced by both the UI (Remove disabled) and the
 submit-time validator.
 
-## The "Add ___" button text
+## The "Add \_\_\_" button text
 
 `@ui.form.label.singular 'tag'` controls the noun used in the Add
 button: "Add tag", "Add tag", "Add tag". Without it the default is

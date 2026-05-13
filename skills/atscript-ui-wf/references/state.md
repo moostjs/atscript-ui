@@ -45,11 +45,11 @@ new AsWfStore({
 })
 ```
 
-| Option | Default | Purpose |
-| ------ | ------- | ------- |
-| `table` | (required) | `AtscriptDbTable<TRow>` from `@atscript/db` — your schema extension. See [Extending AsWfStateRecord](#extending-aswfstaterecord). |
-| `clock` | `{ now: () => Date.now() }` | testability — override for deterministic expiry tests |
-| `actor` | `undefined` | callback returning the current user / service id. Stamps `createdBy` on insert, `lastUpdatedBy` on update. Invoked **at write time** — wire to your session composable. |
+| Option  | Default                     | Purpose                                                                                                                                                                 |
+| ------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `table` | (required)                  | `AtscriptDbTable<TRow>` from `@atscript/db` — your schema extension. See [Extending AsWfStateRecord](#extending-aswfstaterecord).                                       |
+| `clock` | `{ now: () => Date.now() }` | testability — override for deterministic expiry tests                                                                                                                   |
+| `actor` | `undefined`                 | callback returning the current user / service id. Stamps `createdBy` on insert, `lastUpdatedBy` on update. Invoked **at write time** — wire to your session composable. |
 
 Source: `packages/moost-wf/src/store/wf-store.ts:33-85`.
 
@@ -57,16 +57,16 @@ Source: `packages/moost-wf/src/store/wf-store.ts:33-85`.
 
 Defined in `packages/moost-wf/src/store/as-wf-state.as`. Exported as an interface — extend it in your project.
 
-| Column | Type | Annotations | Notes |
-| ------ | ---- | ----------- | ----- |
-| `handle` | `string` | `@db.index.unique 'handle_idx'`, `@expect.maxLength 256`, `@ui.table.hidden` | engine's state token; primary correlation key |
-| `schemaId` | `string` | `@db.index.plain 'schema_idx'`, `@expect.maxLength 256` | workflow id (e.g. `'auth/login'`) |
-| `state` | object | `@db.json`, `@ui.table.hidden` | `{ context: JsonValue, indexes: number[], meta?: ... }` — opaque snapshot |
-| `expiresAt?` | `number.timestamp` | `@db.index.plain 'expires_idx'` | optional expiry; `cleanup()` deletes past this |
-| `updatedAt` | `number.timestamp` | `@db.default.now`, `@db.index.plain 'updated_idx'` | bumped on every `set()` |
-| `createdAt` | `number.timestamp` | — | set once on insert |
-| `createdBy?` | `string` | `@expect.maxLength 128`, `@ui.table.hidden` | actor at insert |
-| `lastUpdatedBy?` | `string` | `@expect.maxLength 128`, `@ui.table.hidden` | actor on each update |
+| Column           | Type               | Annotations                                                                  | Notes                                                                     |
+| ---------------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `handle`         | `string`           | `@db.index.unique 'handle_idx'`, `@expect.maxLength 256`, `@ui.table.hidden` | engine's state token; primary correlation key                             |
+| `schemaId`       | `string`           | `@db.index.plain 'schema_idx'`, `@expect.maxLength 256`                      | workflow id (e.g. `'auth/login'`)                                         |
+| `state`          | object             | `@db.json`, `@ui.table.hidden`                                               | `{ context: JsonValue, indexes: number[], meta?: ... }` — opaque snapshot |
+| `expiresAt?`     | `number.timestamp` | `@db.index.plain 'expires_idx'`                                              | optional expiry; `cleanup()` deletes past this                            |
+| `updatedAt`      | `number.timestamp` | `@db.default.now`, `@db.index.plain 'updated_idx'`                           | bumped on every `set()`                                                   |
+| `createdAt`      | `number.timestamp` | —                                                                            | set once on insert                                                        |
+| `createdBy?`     | `string`           | `@expect.maxLength 128`, `@ui.table.hidden`                                  | actor at insert                                                           |
+| `lastUpdatedBy?` | `string`           | `@expect.maxLength 128`, `@ui.table.hidden`                                  | actor on each update                                                      |
 
 The schema deliberately **does not declare a primary key**. The consumer's extension adds `@meta.id` on whichever column they choose (`id` UUID is the typical default). The store reads/writes by `handle`, not by `@meta.id`.
 
@@ -142,13 +142,13 @@ Source: `packages/moost-wf/src/store/wf-store.ts:246-259`.
 
 ## Shadow column constraints
 
-| Rule | Why | Enforced |
-| ---- | --- | -------- |
-| Field type must be `string \| number \| boolean` | shadow copy is by value; no nested JSON | plugin validator (`packages/moost-wf/src/plugin.ts:128-155`) |
-| Field must be **optional** (`?:`) OR carry `@meta.default` / `@db.default.*` | context shape varies between steps → path-miss writes `null` (optional) or relies on default (required) | plugin validator (`packages/moost-wf/src/plugin.ts:117-127`) |
-| Cannot apply to `@meta.id` (PK) | shadow must not overwrite the row identifier | plugin validator (`packages/moost-wf/src/plugin.ts:108-115`) |
-| Path-miss on optional field → writes `null` | clears stale value if context changes between pauses | runtime (`packages/moost-wf/src/store/wf-store.ts:253-257`) |
-| Type mismatch (e.g. ctx value is an object) | logs **once per field per store instance**, writes `null`, continues | `onShadowTypeMismatch` (`packages/moost-wf/src/store/wf-store.ts:282-289`) |
+| Rule                                                                         | Why                                                                                                     | Enforced                                                                   |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Field type must be `string \| number \| boolean`                             | shadow copy is by value; no nested JSON                                                                 | plugin validator (`packages/moost-wf/src/plugin.ts:128-155`)               |
+| Field must be **optional** (`?:`) OR carry `@meta.default` / `@db.default.*` | context shape varies between steps → path-miss writes `null` (optional) or relies on default (required) | plugin validator (`packages/moost-wf/src/plugin.ts:117-127`)               |
+| Cannot apply to `@meta.id` (PK)                                              | shadow must not overwrite the row identifier                                                            | plugin validator (`packages/moost-wf/src/plugin.ts:108-115`)               |
+| Path-miss on optional field → writes `null`                                  | clears stale value if context changes between pauses                                                    | runtime (`packages/moost-wf/src/store/wf-store.ts:253-257`)                |
+| Type mismatch (e.g. ctx value is an object)                                  | logs **once per field per store instance**, writes `null`, continues                                    | `onShadowTypeMismatch` (`packages/moost-wf/src/store/wf-store.ts:282-289`) |
 
 Required fields without DB defaults will fail the insert on first `set()` where the context path misses. Make the column optional (or give it `@db.default.*`) unless you can guarantee the path is set in every step.
 
@@ -158,14 +158,14 @@ Annotation supports only one path per field (`multiple: false` in the spec — `
 
 All async. All operate on `handle`.
 
-| Method | Returns | Notes |
-| ------ | ------- | ----- |
-| `set(handle, state, expiresAt?)` | `Promise<void>` | upserts. On insert, stamps `createdAt` + `createdBy` (actor). On update, `replaceMany` + bumps `updatedAt` + `lastUpdatedBy`. Applies shadows. |
-| `get(handle)` | `Promise<{ state, expiresAt? } \| null>` | reads + auto-deletes if expired (fire-and-forget delete). Returns `null` past expiry. |
-| `getAndDelete(handle)` | `Promise<{ state, expiresAt? } \| null>` | **race-safe single-use consume.** Use this on resume — never `get()` then `delete()`. |
-| `delete(handle)` | `Promise<void>` | explicit removal |
-| `cleanup({ retention? })` | `Promise<number>` | delete rows with `expiresAt <= now - retention`. No retention → delete past-expiry. `Number.POSITIVE_INFINITY` → no-op. Returns `deletedCount`. |
-| `heal({ filter?, batchSize? })` | `Promise<number>` | re-apply shadow columns to existing rows. Batches at `batchSize ?? 100`. Returns count of rows updated. |
+| Method                           | Returns                                  | Notes                                                                                                                                           |
+| -------------------------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `set(handle, state, expiresAt?)` | `Promise<void>`                          | upserts. On insert, stamps `createdAt` + `createdBy` (actor). On update, `replaceMany` + bumps `updatedAt` + `lastUpdatedBy`. Applies shadows.  |
+| `get(handle)`                    | `Promise<{ state, expiresAt? } \| null>` | reads + auto-deletes if expired (fire-and-forget delete). Returns `null` past expiry.                                                           |
+| `getAndDelete(handle)`           | `Promise<{ state, expiresAt? } \| null>` | **race-safe single-use consume.** Use this on resume — never `get()` then `delete()`.                                                           |
+| `delete(handle)`                 | `Promise<void>`                          | explicit removal                                                                                                                                |
+| `cleanup({ retention? })`        | `Promise<number>`                        | delete rows with `expiresAt <= now - retention`. No retention → delete past-expiry. `Number.POSITIVE_INFINITY` → no-op. Returns `deletedCount`. |
+| `heal({ filter?, batchSize? })`  | `Promise<number>`                        | re-apply shadow columns to existing rows. Batches at `batchSize ?? 100`. Returns count of rows updated.                                         |
 
 ### getAndDelete contract
 
@@ -177,15 +177,15 @@ This is why "use `getAndDelete` not `get` + `delete`": separate calls are not at
 
 Override these to customize without rewriting the public surface:
 
-| `protected` method | Purpose |
-| ------------------ | ------- |
-| `getActor()` | resolve actor at write time (default: call `opts.actor?.()`) |
-| `findRow(handle)` | sharded / multi-tenant lookup |
-| `assembleResult(row)` | reattach `schemaId` to JSON blob |
-| `buildSetPayload(handle, state, opts)` | add custom columns on write |
-| `applyShadows(payload, state)` | customize shadow copy |
-| `scanShadowFields()` | use a different annotation as the source |
-| `resolveFieldPrimitive(fieldType)` | extend supported primitives |
+| `protected` method                     | Purpose                                                      |
+| -------------------------------------- | ------------------------------------------------------------ |
+| `getActor()`                           | resolve actor at write time (default: call `opts.actor?.()`) |
+| `findRow(handle)`                      | sharded / multi-tenant lookup                                |
+| `assembleResult(row)`                  | reattach `schemaId` to JSON blob                             |
+| `buildSetPayload(handle, state, opts)` | add custom columns on write                                  |
+| `applyShadows(payload, state)`         | customize shadow copy                                        |
+| `scanShadowFields()`                   | use a different annotation as the source                     |
+| `resolveFieldPrimitive(fieldType)`     | extend supported primitives                                  |
 
 Source: `packages/moost-wf/src/store/wf-store.ts:197-329`.
 
@@ -250,7 +250,7 @@ export class WorkflowsController {
     };
     return handleWfOutletRequest(
       {
-        allow: ["auth/invite", /* ... */],
+        allow: ["auth/invite" /* ... */],
         // Per-call strategy selection. Return the same `handleStrategy` to use
         // AsWfStore on every flow, or branch by `wfid` for mixed persistence.
         state: () => handleStrategy,

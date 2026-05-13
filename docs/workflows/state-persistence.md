@@ -37,7 +37,7 @@ step reads/writes the row.
 - Smaller tokens (just the UUID).
 - Indexable: shadow columns expose context values as real DB
   columns, so an admin UI can `SELECT FROM wf_states WHERE
-  inviteEmail = 'a@b.com'`.
+inviteEmail = 'a@b.com'`.
 - Needs cleanup of expired rows.
 
 Good for: email magic links (invite + finish-account), multi-day
@@ -69,7 +69,7 @@ async handle() {
 }
 ```
 
-The `state` callback runs per request. On *resume* (no `wfid` in the
+The `state` callback runs per request. On _resume_ (no `wfid` in the
 body — only the token) it's called with `""`; if your two strategies
 mint visibly different tokens (UUID vs base64url) you can dispatch
 by shape.
@@ -111,16 +111,16 @@ export interface WfStateRow extends AsWfStateRecord {
 
 The base `AsWfStateRecord` already declares:
 
-| Column           | Type                | Notes                                                                                                       |
-| ---------------- | ------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `handle`         | `string`            | Opaque correlation token; uniquely indexed (`handle_idx`).                                                  |
-| `schemaId`       | `string`            | The workflow ID (`auth/login`, `users/invite`); indexed (`schema_idx`).                                     |
-| `state`          | JSON                | `{ context, indexes, meta? }` — the full state blob. `@db.json`, hidden from list views.                    |
-| `expiresAt?`     | `number.timestamp`  | Optional expiry; indexed (`expires_idx`).                                                                   |
-| `updatedAt`      | `number.timestamp`  | Set on every write; indexed (`updated_idx`).                                                                |
-| `createdAt`      | `number.timestamp`  |                                                                                                             |
-| `createdBy?`     | `string`            | Stamped by the `actor` resolver.                                                                            |
-| `lastUpdatedBy?` | `string`            |                                                                                                             |
+| Column           | Type               | Notes                                                                                    |
+| ---------------- | ------------------ | ---------------------------------------------------------------------------------------- |
+| `handle`         | `string`           | Opaque correlation token; uniquely indexed (`handle_idx`).                               |
+| `schemaId`       | `string`           | The workflow ID (`auth/login`, `users/invite`); indexed (`schema_idx`).                  |
+| `state`          | JSON               | `{ context, indexes, meta? }` — the full state blob. `@db.json`, hidden from list views. |
+| `expiresAt?`     | `number.timestamp` | Optional expiry; indexed (`expires_idx`).                                                |
+| `updatedAt`      | `number.timestamp` | Set on every write; indexed (`updated_idx`).                                             |
+| `createdAt`      | `number.timestamp` |                                                                                          |
+| `createdBy?`     | `string`           | Stamped by the `actor` resolver.                                                         |
+| `lastUpdatedBy?` | `string`           |                                                                                          |
 
 ### 2. Register the table with your db space
 
@@ -154,9 +154,9 @@ Three options:
   generic because the subtype is structurally a different annotated
   type than the base; the store only touches base columns +
   shadow columns.
-- **`clock`** *(optional)* — `{ now(): number }`. Default is
+- **`clock`** _(optional)_ — `{ now(): number }`. Default is
   `Date.now`. Inject a fake clock in tests.
-- **`actor`** *(optional)* — returns the username/principal stamped
+- **`actor`** _(optional)_ — returns the username/principal stamped
   onto `createdBy` / `lastUpdatedBy`. Called per write. Returning
   `undefined` leaves the columns null.
 
@@ -299,7 +299,10 @@ extension. The two most common overrides:
 
 ```ts
 class TenantedAsWfStore extends AsWfStore {
-  constructor(private tenantId: string, opts: AsWfStoreOptions) {
+  constructor(
+    private tenantId: string,
+    opts: AsWfStoreOptions,
+  ) {
     super(opts);
   }
 

@@ -85,14 +85,20 @@ function createAsBaseUnoConfig(opts?: AsBaseUnoConfigOptions): UserConfig;
 The shortcut tree is split per package so consumers can opt in. Each export is a `TVunorShortcut[]` ready to spread into a vunor config.
 
 ```typescript
-import { commonShortcuts, formShortcuts, tableShortcuts, wfShortcuts, allShortcuts } from "@atscript/ui-styles";
+import {
+  commonShortcuts,
+  formShortcuts,
+  tableShortcuts,
+  wfShortcuts,
+  allShortcuts,
+} from "@atscript/ui-styles";
 
 const commonShortcuts: TVunorShortcut[];
-const formShortcuts:  TVunorShortcut[];
+const formShortcuts: TVunorShortcut[];
 const tableShortcuts: TVunorShortcut[];
-const wfShortcuts:    TVunorShortcut[];
+const wfShortcuts: TVunorShortcut[];
 
-const allShortcuts:   TVunorShortcut[]; // mergeVunorShortcuts of the four above
+const allShortcuts: TVunorShortcut[]; // mergeVunorShortcuts of the four above
 ```
 
 `asPresetVunor()` already injects `allShortcuts`. Spread individual shortcut sets only when assembling a custom preset for a subset of the libraries.
@@ -190,11 +196,11 @@ function AsResolver(): ComponentResolverObject;
 For apps that don't run UnoCSS at all, the package ships pre-baked CSS bundles. Importing one of these subpaths for side-effect injects every class our components need.
 
 ```typescript
-import "@atscript/ui-styles/css";        // alias for /css/all
-import "@atscript/ui-styles/css/all";    // form + table + wf + common
-import "@atscript/ui-styles/css/form";   // form only
-import "@atscript/ui-styles/css/table";  // table only
-import "@atscript/ui-styles/css/wf";     // wf only
+import "@atscript/ui-styles/css"; // alias for /css/all
+import "@atscript/ui-styles/css/all"; // form + table + wf + common
+import "@atscript/ui-styles/css/form"; // form only
+import "@atscript/ui-styles/css/table"; // table only
+import "@atscript/ui-styles/css/wf"; // wf only
 ```
 
 Caveat: pre-built CSS skips theme tuning. Use `asPresetVunor()` if you want to change the palette, base radius, fingertip ladder, or icon set.

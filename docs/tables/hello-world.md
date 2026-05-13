@@ -143,18 +143,18 @@ That's the whole client.
 builds the `TableDef`, owns reactive state and exposes everything via a
 slot. Key props:
 
-| Prop              | Purpose                                                                                                 |
-| ----------------- | ------------------------------------------------------------------------------------------------------- |
-| `url`             | The data endpoint. moost-db serves `/meta` and `/q` (paged data) under the same path.                   |
-| `limit`           | Default page size. Also the block size for `<AsWindowTable>` fetches.                                   |
-| `types`           | Cell-type → component dispatch map. Seed with `createDefaultCellTypes()`, override entries as you go.   |
-| `components`      | Named component overrides looked up via `@ui.table.component "name"`.                                   |
-| `controls`        | Skin-slot map — header cell, column menu, filter dialog, config dialog, etc.                            |
-| `queryFn`         | Replace the built-in moost-db data fetcher with your own. See [Query Function](/tables/query-function). |
-| `forceFilters`    | Always-applied `FilterExpr` (Uniquery shape), AND-merged with user filters.                             |
-| `forceSorters`    | Always-applied `SortControl[]`, prepended before user sorters; user can't remove them.                  |
-| `preset`          | Opt-in preset configuration. Omit to disable presets.                                                   |
-| `queryOnMount`    | Default `true`. Set `false` if you want to defer the first fetch.                                       |
+| Prop           | Purpose                                                                                                 |
+| -------------- | ------------------------------------------------------------------------------------------------------- |
+| `url`          | The data endpoint. moost-db serves `/meta` and `/q` (paged data) under the same path.                   |
+| `limit`        | Default page size. Also the block size for `<AsWindowTable>` fetches.                                   |
+| `types`        | Cell-type → component dispatch map. Seed with `createDefaultCellTypes()`, override entries as you go.   |
+| `components`   | Named component overrides looked up via `@ui.table.component "name"`.                                   |
+| `controls`     | Skin-slot map — header cell, column menu, filter dialog, config dialog, etc.                            |
+| `queryFn`      | Replace the built-in moost-db data fetcher with your own. See [Query Function](/tables/query-function). |
+| `forceFilters` | Always-applied `FilterExpr` (Uniquery shape), AND-merged with user filters.                             |
+| `forceSorters` | Always-applied `SortControl[]`, prepended before user sorters; user can't remove them.                  |
+| `preset`       | Opt-in preset configuration. Omit to disable presets.                                                   |
+| `queryOnMount` | Default `true`. Set `false` if you want to defer the first fetch.                                       |
 
 The default slot exposes the full reactive state — `tableDef`,
 `allColumns`, `columns`, `columnNames`, `columnWidths`,
@@ -214,20 +214,20 @@ const controls = {
 
 The default cell-type map:
 
-| Cell type   | Default component   |
-| ----------- | ------------------- |
-| `text`      | `AsTableCellValue`  |
-| `number`    | `AsCellNumber`      |
-| `boolean`   | `AsTableCellValue`  |
-| `date`      | `AsCellDate`        |
-| `datetime`  | `AsCellDate`        |
-| `relative`  | `AsCellDate`        |
-| `array`     | `AsCellArray`       |
-| `object`    | `AsCellJson`        |
-| `union`     | `AsCellUnion`       |
-| `enum`      | `AsTableCellValue`  |
-| `ref`       | `AsTableCellValue`  |
-| `__actions` | `AsRowActions`      |
+| Cell type   | Default component  |
+| ----------- | ------------------ |
+| `text`      | `AsTableCellValue` |
+| `number`    | `AsCellNumber`     |
+| `boolean`   | `AsTableCellValue` |
+| `date`      | `AsCellDate`       |
+| `datetime`  | `AsCellDate`       |
+| `relative`  | `AsCellDate`       |
+| `array`     | `AsCellArray`      |
+| `object`    | `AsCellJson`       |
+| `union`     | `AsCellUnion`      |
+| `enum`      | `AsTableCellValue` |
+| `ref`       | `AsTableCellValue` |
+| `__actions` | `AsRowActions`     |
 
 ## Next steps
 

@@ -25,15 +25,15 @@ const types = {
 
 The seeded entries:
 
-| Column type                       | Component             |
-| --------------------------------- | --------------------- |
-| `text`, `boolean`, `enum`, `ref`  | `AsTableCellValue`    |
-| `number`                          | `AsCellNumber`        |
-| `date`, `datetime`, `relative`    | `AsCellDate`          |
-| `array`                           | `AsCellArray`         |
-| `object`                          | `AsCellJson`          |
-| `union`                           | `AsCellUnion`         |
-| `__actions` (synthesised pseudo)  | `AsRowActions`        |
+| Column type                      | Component          |
+| -------------------------------- | ------------------ |
+| `text`, `boolean`, `enum`, `ref` | `AsTableCellValue` |
+| `number`                         | `AsCellNumber`     |
+| `date`, `datetime`, `relative`   | `AsCellDate`       |
+| `array`                          | `AsCellArray`      |
+| `object`                         | `AsCellJson`       |
+| `union`                          | `AsCellUnion`      |
+| `__actions` (synthesised pseudo) | `AsRowActions`     |
 
 Pass the map to the table root:
 
@@ -93,7 +93,7 @@ Locale-formatted, right-aligned, tabular-nums. Reads four pieces of
   digits when no currency is set.
 - `@db.unit 'kg'` / `@db.unit.ref 'unit'` → `column.unitCode` /
   `column.unitRefField`. Renders as `Intl.NumberFormat({ style:
-  "unit", unit })`.
+"unit", unit })`.
 
 Shares `formatDecimalForDisplay` with `<AsNumber>` so form input and
 table cell render identically.
@@ -173,6 +173,7 @@ Pass it through `<AsTableRoot :components="components">` (or the
 controls/options object that consumes it).
 
 :::tip Convention
+
 - `:types` map — **built-in** cell renderer ids (`text`, `number`,
   `date`, `array`, …). Touched by `@ui.table.type` / `@ui.type`.
 - `:components` map — your custom cells. Touched by
@@ -181,7 +182,7 @@ controls/options object that consumes it).
 The TS type for the cells map is `TAsCellTypeComponents`, exported
 from `@atscript/vue-table`. It declares every built-in slot plus an
 open `Record<string, Component>` index — but reserve that open slot
-for renderers you genuinely want to dispatch by *type id* across many
+for renderers you genuinely want to dispatch by _type id_ across many
 fields (e.g. a project-wide `currency` cell). One-off cells belong in
 `:components`.
 :::

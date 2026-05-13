@@ -77,7 +77,7 @@ Three notable design points:
 - **`publicLabel` enforces public-name uniqueness** at the DB layer.
   Stamped equal to `label` only when `type='preset' AND public=true`,
   `NULL` otherwise. The composite unique index over `(app, tableKey,
-  publicLabel)` relies on `NULL ≠ NULL` semantics so private rows
+publicLabel)` relies on `NULL ≠ NULL` semantics so private rows
   don't collide.
 - **`aspects[]` is derived** by the controller from `data.content`
   keys on every write. The picker projects this without loading
@@ -138,12 +138,12 @@ export class PresetsController extends AsPresetsController {
 
 Hookable methods:
 
-| Method                                    | Default                               | Purpose                              |
-| ----------------------------------------- | ------------------------------------- | ------------------------------------ |
-| `getCurrentUser()`                        | abstract — **required**               | Resolve the caller's user id         |
-| `getMaxPresetsPerUser(app, tableKey, user)` | returns `this.maxPresetsPerUser` (10) | Per-user cap on preset creation     |
-| `canPublishPresets(app, tableKey, user)`  | returns `true`                        | Gate for `private → public` writes   |
-| `getUserLabel(user)`                      | returns `undefined`                   | "by alice" attribution on public rows |
+| Method                                      | Default                               | Purpose                               |
+| ------------------------------------------- | ------------------------------------- | ------------------------------------- |
+| `getCurrentUser()`                          | abstract — **required**               | Resolve the caller's user id          |
+| `getMaxPresetsPerUser(app, tableKey, user)` | returns `this.maxPresetsPerUser` (10) | Per-user cap on preset creation       |
+| `canPublishPresets(app, tableKey, user)`    | returns `true`                        | Gate for `private → public` writes    |
+| `getUserLabel(user)`                        | returns `undefined`                   | "by alice" attribution on public rows |
 
 `getUserLabel()` exists so the controller doesn't need a join to
 the users table on every preset write — read straight from the
@@ -154,13 +154,13 @@ session.
 The controller exposes one custom endpoint plus the four inherited
 from `AsDbController`:
 
-| Method | Path            | Purpose                                          |
-| ------ | --------------- | ------------------------------------------------ |
-| GET    | `/capabilities` | `{ canPublish, presetLimit, userId }`            |
-| GET    | `/`             | List rows (gated by read-rule, optional filter)  |
-| POST   | `/`             | Create row                                       |
-| PATCH  | `/:id`          | Partial update                                   |
-| DELETE | `/:id`          | Remove row                                       |
+| Method | Path            | Purpose                                         |
+| ------ | --------------- | ----------------------------------------------- |
+| GET    | `/capabilities` | `{ canPublish, presetLimit, userId }`           |
+| GET    | `/`             | List rows (gated by read-rule, optional filter) |
+| POST   | `/`             | Create row                                      |
+| PATCH  | `/:id`          | Partial update                                  |
+| DELETE | `/:id`          | Remove row                                      |
 
 `/capabilities` is the only bespoke endpoint. It runs both hooks
 (`canPublishPresets`, `getMaxPresetsPerUser`) with the caller's
@@ -228,7 +228,15 @@ The client points at the controller's URL via the table root's
   :preset="{
     url: '/api/db/_presets',
     tableKey: 'orders',
-    systemPresets: [{ id: 'open', label: 'Open', content: { /* ... */ } }],
+    systemPresets: [
+      {
+        id: 'open',
+        label: 'Open',
+        content: {
+          /* ... */
+        },
+      },
+    ],
   }"
 >
   <AsTableActions>

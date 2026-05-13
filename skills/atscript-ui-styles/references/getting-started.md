@@ -67,12 +67,12 @@ export default defineConfig({
 
 `asPresetVunor()` already injects the class extractor and the icon collection (under prefix `as`). Avoid registering a second `presetIcons({ collections: { as: ... } })` with the same `as` prefix — it would overwrite the bundled mapping. Use a different prefix for your own icons (see [icons.md](icons.md)). See `packages/ui-styles/src/preset.ts` (lines 236-245).
 
-| Knob              | Type                       | Default         | Purpose                                                                       |
-| ----------------- | -------------------------- | --------------- | ----------------------------------------------------------------------------- |
-| `baseRadius`      | `string`                   | `"4px"`         | Forwarded to vunor `baseRadius`; drives `rounded-base` + `r0..r4` ladder      |
-| `iconOverrides`   | `Record<string, string>`   | `undefined`     | Per-alias SVG override merged on top of `bakedIcons`                          |
-| `excludeComponents` | `string[]`                 | `undefined`     | Kebab component names dropped from the extractor's safelist                   |
-| `palette`         | vunor palette config       | design defaults | Forwarded to `presetVunor({ palette })` — see [theming.md](theming.md)        |
+| Knob                | Type                     | Default         | Purpose                                                                  |
+| ------------------- | ------------------------ | --------------- | ------------------------------------------------------------------------ |
+| `baseRadius`        | `string`                 | `"4px"`         | Forwarded to vunor `baseRadius`; drives `rounded-base` + `r0..r4` ladder |
+| `iconOverrides`     | `Record<string, string>` | `undefined`     | Per-alias SVG override merged on top of `bakedIcons`                     |
+| `excludeComponents` | `string[]`               | `undefined`     | Kebab component names dropped from the extractor's safelist              |
+| `palette`           | vunor palette config     | design defaults | Forwarded to `presetVunor({ palette })` — see [theming.md](theming.md)   |
 
 ## main.ts
 
@@ -97,12 +97,12 @@ Fonts are NOT shipped by `@atscript/ui-styles`. Add your own font stack to `app.
 
 `AsResolver()` resolves Tier-1 root components only — what end users tag in templates. Tier-2 defaults (swap targets for `:types` / `:components` prop maps) and composables are imported explicitly.
 
-| Tier                          | Examples                                                                                                                                                                       | How to import                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| **Tier 1 — primary (auto)**   | `AsForm`, `AsField`, `AsIterator`, `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsFilters`, `AsPresetPicker`, `AsTableActions`, `AsWfForm`                                       | Type the tag in a `<template>` — `AsResolver()` injects import |
-| **Tier 2 — defaults (manual)**| `AsInput`, `AsSelect`, `AsCheckbox`, `AsRadio`, `AsTextarea`, `AsFilterDialog`, `AsConfigDialog`, `AsCellNumber`, `AsCellDate`, `AsCellJson`, ...                              | `import { AsInput } from "@atscript/vue-form"`                 |
-| **Composables**               | `useAsForm`, `useTable`, `useAsField`, ...                                                                                                                                     | `import { useAsForm } from "@atscript/vue-form"`               |
-| **Tier 3 — internals**        | `AsTableBase`, `AsTableVirtualizer`, `AsOrderableList`, `AsFilterConditions`, ...                                                                                              | Not exported. Not importable.                                  |
+| Tier                           | Examples                                                                                                                                          | How to import                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| **Tier 1 — primary (auto)**    | `AsForm`, `AsField`, `AsIterator`, `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsFilters`, `AsPresetPicker`, `AsTableActions`, `AsWfForm`         | Type the tag in a `<template>` — `AsResolver()` injects import |
+| **Tier 2 — defaults (manual)** | `AsInput`, `AsSelect`, `AsCheckbox`, `AsRadio`, `AsTextarea`, `AsFilterDialog`, `AsConfigDialog`, `AsCellNumber`, `AsCellDate`, `AsCellJson`, ... | `import { AsInput } from "@atscript/vue-form"`                 |
+| **Composables**                | `useAsForm`, `useTable`, `useAsField`, ...                                                                                                        | `import { useAsForm } from "@atscript/vue-form"`               |
+| **Tier 3 — internals**         | `AsTableBase`, `AsTableVirtualizer`, `AsOrderableList`, `AsFilterConditions`, ...                                                                 | Not exported. Not importable.                                  |
 
 Tag-name + helper-call + subpath-import detection drives the extractor's safelist; see `packages/ui-styles/src/extractor.ts` (lines 49-70). If you import a Tier-2 default with `import { AsInput } from "@atscript/vue-form"`, its classes are added to the safelist automatically.
 

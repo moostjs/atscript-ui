@@ -23,20 +23,20 @@ const props = defineProps<TAsComponentProps>();
 const arr = useAsArray(props.field as FormArrayFieldDef, disabledRef);
 ```
 
-| Return                       | Type                                            | Notes                                                                                                                                    |
-| ---------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `arrayValue`                 | `ComputedRef<unknown[]>`                        | The current array. Empty array when the model is `undefined` or non-array.                                                                |
-| `itemKeys`                   | `string[]` (reactive)                           | Stable per-item keys (`as-item-0`, `as-item-1`, ...). Use as `<template v-for :key>` to avoid remounting siblings on splice.              |
-| `getItemField(index, name?)` | `(index, name?) => FormFieldDef`                | Cloned item field with `path: String(index)`. Caches by index; invalidated on splice ≥ index.                                            |
-| `addItem(variantIndex?)`     | `(variantIndex = 0) => void`                    | Appends a new item created via `createFormData`. For union-item arrays, picks variant by index.                                          |
-| `removeItem(index)`          | `(index) => void`                               | Splices at `index`. Respects `canRemove`.                                                                                                |
-| `clear()`                    | `() => void`                                    | Optional array → set `undefined`; required array → `length = 0`.                                                                         |
-| `canAdd`                     | `ComputedRef<boolean>`                          | `false` when disabled OR `length >= @expect.maxLength`.                                                                                  |
-| `canRemove`                  | `ComputedRef<boolean>`                          | `false` when disabled OR `length <= @expect.minLength`.                                                                                  |
-| `isOptional`                 | `boolean`                                       | Captured from `field.prop.optional` at setup.                                                                                            |
-| `isEmpty`                    | `ComputedRef<boolean>`                          | `arrayValue.length === 0`.                                                                                                               |
-| `isUnion`                    | `boolean`                                       | Whether the item type is a discriminated union.                                                                                          |
-| `unionVariants`              | `FormUnionVariant[]`                            | Variant list when `isUnion`; empty array otherwise.                                                                                      |
+| Return                       | Type                             | Notes                                                                                                                        |
+| ---------------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `arrayValue`                 | `ComputedRef<unknown[]>`         | The current array. Empty array when the model is `undefined` or non-array.                                                   |
+| `itemKeys`                   | `string[]` (reactive)            | Stable per-item keys (`as-item-0`, `as-item-1`, ...). Use as `<template v-for :key>` to avoid remounting siblings on splice. |
+| `getItemField(index, name?)` | `(index, name?) => FormFieldDef` | Cloned item field with `path: String(index)`. Caches by index; invalidated on splice ≥ index.                                |
+| `addItem(variantIndex?)`     | `(variantIndex = 0) => void`     | Appends a new item created via `createFormData`. For union-item arrays, picks variant by index.                              |
+| `removeItem(index)`          | `(index) => void`                | Splices at `index`. Respects `canRemove`.                                                                                    |
+| `clear()`                    | `() => void`                     | Optional array → set `undefined`; required array → `length = 0`.                                                             |
+| `canAdd`                     | `ComputedRef<boolean>`           | `false` when disabled OR `length >= @expect.maxLength`.                                                                      |
+| `canRemove`                  | `ComputedRef<boolean>`           | `false` when disabled OR `length <= @expect.minLength`.                                                                      |
+| `isOptional`                 | `boolean`                        | Captured from `field.prop.optional` at setup.                                                                                |
+| `isEmpty`                    | `ComputedRef<boolean>`           | `arrayValue.length === 0`.                                                                                                   |
+| `isUnion`                    | `boolean`                        | Whether the item type is a discriminated union.                                                                              |
+| `unionVariants`              | `FormUnionVariant[]`             | Variant list when `isUnion`; empty array otherwise.                                                                          |
 
 The composable dispatches the same change types the form emits: `'array-add'` on `addItem`, `'array-remove'` on `removeItem` and `clear`.
 
@@ -126,10 +126,10 @@ Swap it via `:types="{ ...createDefaultTypes(), array: MyDnDList }"` for drag-re
 
 `AsObject` renders the fields of a nested structure. Two modes:
 
-| Position           | Mode                                       | Chrome                                                                       |
-| ------------------ | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| Root (`level === 0`) | Flat grid via `AsIterator`                | No collapsible wrapper. `hideRootTitle` prop on AsForm suppresses the title. |
-| Nested (`level > 0`) | Wrapped in `AsCollapsible`                | Click to expand/collapse. Open state shared via `useAsNestedSectionsStore`. |
+| Position             | Mode                       | Chrome                                                                       |
+| -------------------- | -------------------------- | ---------------------------------------------------------------------------- |
+| Root (`level === 0`) | Flat grid via `AsIterator` | No collapsible wrapper. `hideRootTitle` prop on AsForm suppresses the title. |
+| Nested (`level > 0`) | Wrapped in `AsCollapsible` | Click to expand/collapse. Open state shared via `useAsNestedSectionsStore`.  |
 
 The nesting level is provided downward by AsField via `LEVEL_KEY` — incremented for every nested structured field or union.
 
@@ -144,11 +144,11 @@ For descendants of `<AsForm>`, use the public read-only wrappers:
 ```typescript
 import { useAsPath, useAsData } from "@atscript/vue-form";
 
-const { path } = useAsPath();                        // ComputedRef<string>
+const { path } = useAsPath(); // ComputedRef<string>
 const { rootData, getValueAt, siblingValue } = useAsData();
 
-const country = siblingValue<string>("country");     // sibling on the same parent
-const street = getValueAt("address.street");         // absolute path
+const country = siblingValue<string>("country"); // sibling on the same parent
+const street = getValueAt("address.street"); // absolute path
 ```
 
 `useAsPath()` returns the current dotted prefix. `useAsData()` reads any value in the form by absolute path (`getValueAt`) or relative to the current prefix (`siblingValue`). Inside an array item, `siblingValue` walks up to the same item — the natural shape for "this field depends on its row's sibling".
@@ -230,9 +230,8 @@ function changeVariant(newIndex: number) {
   const variant = unionField.value?.unionVariants[newIndex];
   if (variant && props.model) {
     const stashed = variantDataStash.get(newIndex);
-    props.model.value = stashed !== undefined
-      ? stashed
-      : createFormData(variant.type, resolver).value;
+    props.model.value =
+      stashed !== undefined ? stashed : createFormData(variant.type, resolver).value;
   }
   handleChange("union-switch", unionPath.value, props.model?.value);
 }

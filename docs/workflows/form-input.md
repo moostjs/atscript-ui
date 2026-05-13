@@ -118,10 +118,10 @@ unaffected.
 
 The same flow handles both kinds of errors uniformly:
 
-| Error source                  | What the framework does                                                                          |
-| ----------------------------- | ------------------------------------------------------------------------------------------------ |
-| Type-level (`@expect.*`, etc.)| `@FormInput()`'s `before` interceptor validates the input. On fail, re-pauses with field errors. |
-| Business-level                | Handler calls `throw form.requireInput({ field: 'message' })`. Interceptor re-pauses.            |
+| Error source                   | What the framework does                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| Type-level (`@expect.*`, etc.) | `@FormInput()`'s `before` interceptor validates the input. On fail, re-pauses with field errors. |
+| Business-level                 | Handler calls `throw form.requireInput({ field: 'message' })`. Interceptor re-pauses.            |
 
 Both produce the same wire response — `{ inputRequired: { payload,
 transport, context: { errors: {...} } } }` — and the client renders
@@ -184,7 +184,7 @@ re-pausing — the client:
 - Keeps the existing `FormDef` and `formData` (no remount, no
   blanking).
 - Updates `errors` to the new error map.
-- Bumps `formKey` only when the schema *actually changes*.
+- Bumps `formKey` only when the schema _actually changes_.
 
 User-typed values stay put. Only the errors flip.
 
@@ -216,7 +216,7 @@ arg is optional in that case.
 
 ## Action validation differs
 
-Form data sent with an *action* (see [Actions](/workflows/actions))
+Form data sent with an _action_ (see [Actions](/workflows/actions))
 validates with `partial: "deep"` — the framework only checks the
 fields that are present, so a "save draft" action with half a form
 filled in passes. Plain form submits validate the whole shape.

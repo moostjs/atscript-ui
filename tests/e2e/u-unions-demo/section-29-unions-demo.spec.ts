@@ -123,7 +123,9 @@ function variantTrigger(page: Page, fieldLabel: string): Locator {
 
 // Resolve the whole wrapper (collapsible OR field-shell) for a union field.
 function variantSection(page: Page, fieldLabel: string): Locator {
-  return section(page).locator(wrapperSel(escapeQuotes(fieldLabel))).first();
+  return section(page)
+    .locator(wrapperSel(escapeQuotes(fieldLabel)))
+    .first();
 }
 
 // Click a variant inside an OPEN .as-dropdown-menu scoped to `scope`. The

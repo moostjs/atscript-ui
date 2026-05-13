@@ -132,7 +132,9 @@ async function openFullChain(page: Page): Promise<void> {
 // Click the optional clear button for a struct (AsObject forwards `title`
 // so `aria-label="Unset <Label>"` is exact).
 async function unsetOptional(page: Page, label: string): Promise<void> {
-  await form(page).getByRole("button", { name: `Unset ${label}`, exact: true }).click();
+  await form(page)
+    .getByRole("button", { name: `Unset ${label}`, exact: true })
+    .click();
 }
 
 // Assert a labelled input is NOT mounted (used to verify chain collapse
@@ -256,9 +258,7 @@ test.describe("Section 32 — nested-optionals", () => {
     // Created is required → input visible.
     await expect(fieldByLabel(page, "Created \\(ISO\\)")).toBeVisible();
     // Updated is optional → no-data placeholder.
-    await expect(
-      fieldWrapperByLabel(page, "Updated \\(ISO\\)").locator(SEL_NO_DATA),
-    ).toBeVisible();
+    await expect(fieldWrapperByLabel(page, "Updated \\(ISO\\)").locator(SEL_NO_DATA)).toBeVisible();
     // No more "Add X" beyond timestamps inside the address chain.
     await expect(sectionByTitle(page, "Timestamps").locator(SEL_EMPTY_ADD)).toHaveCount(0);
   });

@@ -24,12 +24,7 @@ function onFinished(response: unknown) {
 </script>
 
 <template>
-  <AsWfForm
-    path="/api/wf"
-    name="auth/login"
-    :types="types"
-    @finished="onFinished"
-  />
+  <AsWfForm path="/api/wf" name="auth/login" :types="types" @finished="onFinished" />
 </template>
 ```
 
@@ -107,7 +102,7 @@ defineEmits<{
 - **`@form`** — fires whenever a new `FormDef` arrives (initial
   step, or schema change between steps). Useful for analytics /
   step transitions.
-- **`@submit`** — fires *just before* a form submit hits the wire.
+- **`@submit`** — fires _just before_ a form submit hits the wire.
   Fires for normal submits only — actions fire `wf.action(...)`
   internally and don't trigger this event.
 - **`@loading`** — fires on every transition into / out of the
@@ -131,17 +126,17 @@ When the default slot is **not** overridden (the usual case), the
 component renders one of these named slots based on the current
 state, with sensible fallbacks:
 
-| Slot            | When                             | Slot props                                             |
-| --------------- | -------------------------------- | ------------------------------------------------------ |
-| `wf.loading`    | First load (no formDef yet)      | —                                                      |
-| `wf.error`      | Top-level error, no formDef      | `{ error, retry }`                                     |
-| `wf.finished`   | `finished === true`              | `{ response }`                                         |
-| `form.error`    | Mid-flow error (formDef exists)  | `{ error, retry }`                                     |
-| `form.header`   | Above the rendered form          | Forwarded from `AsForm` + `{ loading }`                |
-| `form.before`   | Inside the form, above fields    | "                                                      |
-| `form.after`    | Inside the form, below fields    | "                                                      |
-| `form.submit`   | Replace the submit button        | `{ text, disabled, loading }`                          |
-| `form.footer`   | Below the form                   | "                                                      |
+| Slot          | When                            | Slot props                              |
+| ------------- | ------------------------------- | --------------------------------------- |
+| `wf.loading`  | First load (no formDef yet)     | —                                       |
+| `wf.error`    | Top-level error, no formDef     | `{ error, retry }`                      |
+| `wf.finished` | `finished === true`             | `{ response }`                          |
+| `form.error`  | Mid-flow error (formDef exists) | `{ error, retry }`                      |
+| `form.header` | Above the rendered form         | Forwarded from `AsForm` + `{ loading }` |
+| `form.before` | Inside the form, above fields   | "                                       |
+| `form.after`  | Inside the form, below fields   | "                                       |
+| `form.submit` | Replace the submit button       | `{ text, disabled, loading }`           |
+| `form.footer` | Below the form                  | "                                       |
 
 Example: custom loading + finished states:
 
@@ -189,7 +184,9 @@ const wf = useWfForm({
 
 // Programmatic kick-off.
 async function login() {
-  await wf.start({ /* optional initial input */ });
+  await wf.start({
+    /* optional initial input */
+  });
 }
 ```
 
@@ -202,7 +199,7 @@ interface UseWfFormReturn {
   formData: ShallowRef<Record<string, unknown> | null>;
   formContext: ShallowRef<Record<string, unknown>>;
   errors: ShallowRef<Record<string, string>>;
-  formKey: Ref<number>;   // bump :key on AsForm to force remount
+  formKey: Ref<number>; // bump :key on AsForm to force remount
   loading: Ref<boolean>;
   finished: Ref<boolean>;
   response: ShallowRef<unknown>;
@@ -253,7 +250,7 @@ new schema. The default `<AsWfForm>` does this for you.
 ## Custom fetch: auth headers, interceptors, status buses
 
 The `fetch` prop swaps the function used for every request. The most
-common reason: forward an Authorization header *and* react to 401s
+common reason: forward an Authorization header _and_ react to 401s
 in a global app banner:
 
 ```ts
@@ -272,12 +269,7 @@ async function authedFetch(url: string, init?: RequestInit): Promise<Response> {
 ```
 
 ```vue
-<AsWfForm
-  path="/api/wf"
-  name="auth/login"
-  :types="types"
-  :fetch="authedFetch"
-/>
+<AsWfForm path="/api/wf" name="auth/login" :types="types" :fetch="authedFetch" />
 ```
 
 A wrapper-friendly status bus typically wraps the global `fetch`

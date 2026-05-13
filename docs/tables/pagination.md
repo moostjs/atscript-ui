@@ -11,14 +11,14 @@ contract is identical — only the chrome and the fetch strategy differ.
 
 ## Choosing a mode
 
-| | `<AsTable>` (paginated) | `<AsWindowTable>` (virtual) |
-| --- | --- | --- |
-| Row count it scales to | hundreds to low thousands per page | tens of thousands or unbounded |
-| Visible rows | the whole page is in the DOM | only the viewport window (+ overscan) |
-| Fetch unit | one page at a time | block-aligned slices of `:limit` rows |
-| Pagination control | external (you pair `state.pagination`) | none — scroll is the controller |
-| Best for | CRUD admin, value-help, lists you act on row-by-row | logs, ledgers, analytics drilldowns, infinite-scroll feels |
-| Mounts the loading overlay | yes (`querying`) | yes (`querying`) + per-row skeleton (`windowLoading`) |
+|                            | `<AsTable>` (paginated)                             | `<AsWindowTable>` (virtual)                                |
+| -------------------------- | --------------------------------------------------- | ---------------------------------------------------------- |
+| Row count it scales to     | hundreds to low thousands per page                  | tens of thousands or unbounded                             |
+| Visible rows               | the whole page is in the DOM                        | only the viewport window (+ overscan)                      |
+| Fetch unit                 | one page at a time                                  | block-aligned slices of `:limit` rows                      |
+| Pagination control         | external (you pair `state.pagination`)              | none — scroll is the controller                            |
+| Best for                   | CRUD admin, value-help, lists you act on row-by-row | logs, ledgers, analytics drilldowns, infinite-scroll feels |
+| Mounts the loading overlay | yes (`querying`)                                    | yes (`querying`) + per-row skeleton (`windowLoading`)      |
 
 If you're not sure, start with `<AsTable>`. Swap to `<AsWindowTable>`
 once you actually hit row counts where loading every page is wasteful.
@@ -39,7 +39,7 @@ with whatever UI you like, bound to `state.pagination`.
 
 ```typescript
 interface PaginationControl {
-  page: number;          // 1-based
+  page: number; // 1-based
   itemsPerPage: number;
 }
 ```
@@ -54,12 +54,8 @@ A `TablePagination.vue` that wraps Reka UI's `PaginationRoot` +
 page-size selector is a one-pager:
 
 ```vue
-const currentPage = computed({
-  get: () => state.pagination.value.page,
-  set: (page) => {
-    state.pagination.value = { ...state.pagination.value, page };
-  },
-});
+const currentPage = computed({ get: () => state.pagination.value.page, set: (page) => {
+state.pagination.value = { ...state.pagination.value, page }; }, });
 ```
 
 Use any pagination component; you only need to write to
@@ -160,23 +156,23 @@ state merges them into `results` so existing UI bindings stay stable.
 
 ### Tunables on `<AsWindowTable>`
 
-| Prop                 | Default                       | Purpose                                                          |
-| -------------------- | ----------------------------- | ---------------------------------------------------------------- |
-| `:row-height`        | `DEFAULT_ROW_HEIGHT_PX` (32)  | Fixed row height in pixels. Virtual scroll requires this.       |
-| `:rows`              | undefined                     | Force exactly N rows of height (overrides min/max).             |
-| `:min-rows`          | undefined                     | Floor; useful for value-help dialogs that should never collapse. |
-| `:max-rows`          | undefined                     | Cap; useful for embedded tables on dashboard cards.             |
-| `:select="multi"`    | `"none"`                      | Multi-select checkbox column.                                    |
-| `:row-delete`        | `false`                       | Synthesised `__remove` action.                                  |
-| `:column-menu`       | (full set)                    | Column-menu entries.                                             |
-| `:enter-action`      | `"main-action"`               | `"toggle-select"` for value-help tables where Enter shouldn't fire main action. |
+| Prop              | Default                      | Purpose                                                                         |
+| ----------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| `:row-height`     | `DEFAULT_ROW_HEIGHT_PX` (32) | Fixed row height in pixels. Virtual scroll requires this.                       |
+| `:rows`           | undefined                    | Force exactly N rows of height (overrides min/max).                             |
+| `:min-rows`       | undefined                    | Floor; useful for value-help dialogs that should never collapse.                |
+| `:max-rows`       | undefined                    | Cap; useful for embedded tables on dashboard cards.                             |
+| `:select="multi"` | `"none"`                     | Multi-select checkbox column.                                                   |
+| `:row-delete`     | `false`                      | Synthesised `__remove` action.                                                  |
+| `:column-menu`    | (full set)                   | Column-menu entries.                                                            |
+| `:enter-action`   | `"main-action"`              | `"toggle-select"` for value-help tables where Enter shouldn't fire main action. |
 
 ### Tunables on `<AsTableRoot>` for windowed mode
 
-| Prop                       | Default | Purpose                                                                                   |
-| -------------------------- | ------- | ----------------------------------------------------------------------------------------- |
-| `:limit`                   | 25      | Default page size + block size for `loadRange`.                                           |
-| `:block-size`              | 100     | Override the page-alignment unit independently of `:limit`.                              |
+| Prop                        | Default | Purpose                                                                                    |
+| --------------------------- | ------- | ------------------------------------------------------------------------------------------ |
+| `:limit`                    | 25      | Default page size + block size for `loadRange`.                                            |
+| `:block-size`               | 100     | Override the page-alignment unit independently of `:limit`.                                |
 | `:drag-release-debounce-ms` | 300     | How long the viewport watcher waits after the user stops scrolling before issuing fetches. |
 
 ## State changes that invalidate

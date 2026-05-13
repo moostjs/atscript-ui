@@ -48,7 +48,10 @@ to be the correct length before the user sees them
 ```ts
 function fillMissing() {
   let arr = getByPath(pathPrefix.value);
-  if (!Array.isArray(arr)) { arr = []; setByPath(pathPrefix.value, arr); }
+  if (!Array.isArray(arr)) {
+    arr = [];
+    setByPath(pathPrefix.value, arr);
+  }
   if (arr.length >= itemFields.length) return;
   for (let i = arr.length; i < itemFields.length; i++) {
     arr.push(createFormData(field.itemFields[i].prop, resolver).value);
@@ -101,9 +104,27 @@ const rgbCss = computed(() => `rgb(${r.value}, ${g.value}, ${b.value})`);
 <template>
   <AsFieldShell v-bind="$props">
     <template #default>
-      <input type="range" min="0" max="255" :value="r" @input="(e) => setChannel(0, +e.target.value)" />
-      <input type="range" min="0" max="255" :value="g" @input="(e) => setChannel(1, +e.target.value)" />
-      <input type="range" min="0" max="255" :value="b" @input="(e) => setChannel(2, +e.target.value)" />
+      <input
+        type="range"
+        min="0"
+        max="255"
+        :value="r"
+        @input="(e) => setChannel(0, +e.target.value)"
+      />
+      <input
+        type="range"
+        min="0"
+        max="255"
+        :value="g"
+        @input="(e) => setChannel(1, +e.target.value)"
+      />
+      <input
+        type="range"
+        min="0"
+        max="255"
+        :value="b"
+        @input="(e) => setChannel(2, +e.target.value)"
+      />
       <div :style="{ backgroundColor: rgbCss }" />
     </template>
   </AsFieldShell>
@@ -136,12 +157,12 @@ const components = { "rgb-picker": RgbPicker };
 
 ```ts
 const {
-  itemFields,        // FormFieldDef[] — one per position, with index path
-  positionLabeled,   // boolean[] — whether each position carries @meta.label
-  isOptional,        // boolean — from prop.optional
-  isEmpty,           // ComputedRef<boolean> — value is missing / empty array
-  clear,             // () => void — optional tuples only; resets to undefined
-  fillMissing,       // () => void — pad to declared length
+  itemFields, // FormFieldDef[] — one per position, with index path
+  positionLabeled, // boolean[] — whether each position carries @meta.label
+  isOptional, // boolean — from prop.optional
+  isEmpty, // ComputedRef<boolean> — value is missing / empty array
+  clear, // () => void — optional tuples only; resets to undefined
+  fillMissing, // () => void — pad to declared length
 } = useAsTuple(field as FormTupleFieldDef);
 ```
 
@@ -175,12 +196,12 @@ hsl: [number, number, number]
 
 ## Tuples vs arrays vs unions
 
-| Need                                   | Use      |
-| -------------------------------------- | -------- |
-| Fixed-length positional, typed slots   | `tuple`  |
-| Variable-length, homogeneous items     | `array`  |
-| One-of-N shapes, with detection        | `union`  |
-| Variable-length, heterogeneous items   | `union[]` |
+| Need                                 | Use       |
+| ------------------------------------ | --------- |
+| Fixed-length positional, typed slots | `tuple`   |
+| Variable-length, homogeneous items   | `array`   |
+| One-of-N shapes, with detection      | `union`   |
+| Variable-length, heterogeneous items | `union[]` |
 
 A tuple is **not** the right shape for "two of the same thing"
 (use `string[]` with `minLength: 2`, `maxLength: 2`) or for a

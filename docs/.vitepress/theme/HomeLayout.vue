@@ -148,9 +148,9 @@ watch(() => route.path, setupScrollAnimations);
                 Tables that filter, sort, paginate, scale.
               </h2>
               <p class="story-desc story-desc-center">
-                Server-driven queries, full-text search, sorting, pagination, virtualised
-                scrolling, column resize and reorder — wired up automatically from the same
-                annotated type your DB uses.
+                Server-driven queries, full-text search, sorting, pagination, virtualised scrolling,
+                column resize and reorder — wired up automatically from the same annotated type your
+                DB uses.
               </p>
               <div class="story-tags story-tags-center">
                 <span class="story-tag">@ui.table.*</span>
@@ -348,8 +348,8 @@ watch(() => route.path, setupScrollAnimations);
               <h2 class="section-heading section-heading-center">One theme. Every pixel.</h2>
               <p class="story-desc story-desc-center">
                 Override <a href="https://vunor.dev" class="story-desc-link">vunor</a>'s palette,
-                radius, fingertip heights, or icons once — every form input, table cell, dialog
-                and step indicator inherits it. No per-component restyles.
+                radius, fingertip heights, or icons once — every form input, table cell, dialog and
+                step indicator inherits it. No per-component restyles.
               </p>
             </div>
 
@@ -432,11 +432,15 @@ watch(() => route.path, setupScrollAnimations);
                   <span class="t-prompt">$</span> npx skills add moostjs/atscript-ui
                 </div>
                 <div class="terminal-line t-muted">Installing 5 sub-skills...</div>
-                <div class="terminal-line t-add">+ atscript-ui          (core + @ui.*)</div>
-                <div class="terminal-line t-add">+ atscript-ui-forms    (&lt;AsForm&gt;)</div>
-                <div class="terminal-line t-add">+ atscript-ui-tables   (&lt;AsTableRoot&gt; + &lt;AsTable&gt;)</div>
-                <div class="terminal-line t-add">+ atscript-ui-wf       (&lt;AsWfForm&gt; + moost-wf)</div>
-                <div class="terminal-line t-add">+ atscript-ui-styles   (UnoCSS preset, theming)</div>
+                <div class="terminal-line t-add">+ atscript-ui (core + @ui.*)</div>
+                <div class="terminal-line t-add">+ atscript-ui-forms (&lt;AsForm&gt;)</div>
+                <div class="terminal-line t-add">
+                  + atscript-ui-tables (&lt;AsTableRoot&gt; + &lt;AsTable&gt;)
+                </div>
+                <div class="terminal-line t-add">
+                  + atscript-ui-wf (&lt;AsWfForm&gt; + moost-wf)
+                </div>
+                <div class="terminal-line t-add">+ atscript-ui-styles (UnoCSS preset, theming)</div>
                 <div class="terminal-line t-ok">All set. Agent ready.</div>
               </div>
             </div>
@@ -461,8 +465,8 @@ watch(() => route.path, setupScrollAnimations);
           <div class="stack-block animate-in">
             <h2 class="section-heading section-heading-center">Part of a model-driven stack.</h2>
             <p class="story-desc story-desc-center">
-              One <code>.as</code> file powers TypeScript types, runtime validation, DB schema,
-              REST routes, forms and tables. Three sites, one source of truth.
+              One <code>.as</code> file powers TypeScript types, runtime validation, DB schema, REST
+              routes, forms and tables. Three sites, one source of truth.
             </p>
             <div class="stack-grid">
               <a href="https://atscript.dev" class="stack-card">

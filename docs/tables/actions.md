@@ -15,11 +15,11 @@ table opens a form dialog before submitting.
 
 Three scopes, picked by the annotation on the `.as`:
 
-| Scope          | Where it renders            | Operates on        |
-| -------------- | --------------------------- | ------------------ |
-| `row`          | per-row dropdown            | one row            |
-| `rows`         | toolbar (bulk button)       | selected rows      |
-| `table`        | toolbar                     | the table itself   |
+| Scope   | Where it renders      | Operates on      |
+| ------- | --------------------- | ---------------- |
+| `row`   | per-row dropdown      | one row          |
+| `rows`  | toolbar (bulk button) | selected rows    |
+| `table` | toolbar               | the table itself |
 
 Row actions render through `<AsRowActions>` — a single button when
 the row has exactly one action, a `…` dropdown when it has more.
@@ -145,11 +145,7 @@ This is where apps wire **custom processors** — actions whose
 client code:
 
 ```ts
-function onAction(
-  action: TVueTableActionInfo,
-  ids: unknown[],
-  result: ActionResult,
-) {
+function onAction(action: TVueTableActionInfo, ids: unknown[], result: ActionResult) {
   if (action.processor === "custom" && action.name === "export-csv") {
     void downloadCsv(apiPath, ids);
     return;

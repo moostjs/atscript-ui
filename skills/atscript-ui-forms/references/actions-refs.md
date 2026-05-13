@@ -43,12 +43,7 @@ function handleAction(name: string, data: Order) {
 </script>
 
 <template>
-  <AsForm
-    :def="def"
-    :form-data="formData"
-    :types="types"
-    @action="handleAction"
-  />
+  <AsForm :def="def" :form-data="formData" :types="types" @action="handleAction" />
 </template>
 ```
 
@@ -118,11 +113,13 @@ export interface Item {
   :form-data="formData"
   :types="types"
   @submit="save"
-  @action="(name, data) => {
-    if (name === 'duplicate') duplicate(data);
-    if (name === 'archive') archive(data);
-    if (name === 'delete') remove(data);
-  }"
+  @action="
+    (name, data) => {
+      if (name === 'duplicate') duplicate(data);
+      if (name === 'archive') archive(data);
+      if (name === 'delete') remove(data);
+    }
+  "
 />
 ```
 
@@ -145,13 +142,13 @@ Useful when shared chrome (e.g. a workflow root) dispatches actions through the 
 
 ## Submit button controls
 
-| Mechanism                        | Effect                                                                                       |
-| -------------------------------- | -------------------------------------------------------------------------------------------- |
-| `@ui.form.submit.text 'Send'`    | Static text. (Default: `"Submit"`.)                                                          |
-| `@ui.form.fn.submit.text '...'`  | Computed text — `(data, context) => string`. Requires `@atscript/ui-fns`.                    |
-| `@ui.form.fn.submit.disabled '...'` | Computed disabled state — `(data, context) => boolean`. Requires `@atscript/ui-fns`.      |
-| `hide-submit` prop on AsForm     | Hide the default button entirely. (Empty `<template #form.submit />` does NOT suppress.)     |
-| `#form.submit` slot              | Replace the button entirely. Receives `{ disabled, text, clearErrors, reset, setErrors, formContext }`. |
+| Mechanism                           | Effect                                                                                                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `@ui.form.submit.text 'Send'`       | Static text. (Default: `"Submit"`.)                                                                     |
+| `@ui.form.fn.submit.text '...'`     | Computed text — `(data, context) => string`. Requires `@atscript/ui-fns`.                               |
+| `@ui.form.fn.submit.disabled '...'` | Computed disabled state — `(data, context) => boolean`. Requires `@atscript/ui-fns`.                    |
+| `hide-submit` prop on AsForm        | Hide the default button entirely. (Empty `<template #form.submit />` does NOT suppress.)                |
+| `#form.submit` slot                 | Replace the button entirely. Receives `{ disabled, text, clearErrors, reset, setErrors, formContext }`. |
 
 ```atscript
 @meta.label 'User'
@@ -222,8 +219,8 @@ Source: `packages/vue-form/src/components/defaults/as-ref.vue:1-60`.
 ```typescript
 // packages/vue-form/src/composables/use-as-value-help.ts:48-152
 const vh = useAsValueHelp({
-  info,                  // ValueHelpInfo: { url, targetField }
-  model: props.model,    // bind the FK value
+  info, // ValueHelpInfo: { url, targetField }
+  model: props.model, // bind the FK value
   onBlur: props.onBlur,
 });
 
@@ -244,14 +241,14 @@ For the underlying contract (`ValueHelpClient`, `resolveValueHelp`, the on-the-w
 
 Annotations on the target type control how it renders inside an FK picker.
 
-| Annotation                | Effect                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------- |
-| `@ui.dict.label`          | Mark the field whose value is shown as the row's display label.                    |
-| `@ui.dict.descr`          | Secondary text under the label.                                                    |
-| `@ui.dict.searchable`     | Include in the picker's free-text search (`?$search=`).                            |
-| `@ui.dict.filterable`     | Available as a filter dropdown in the picker UI.                                   |
-| `@ui.dict.sortable`       | Sortable in the picker.                                                            |
-| `@ui.dict.attr`           | Mark the field as an additional attribute column shown in table-mode value help. Repeatable. |
+| Annotation            | Effect                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `@ui.dict.label`      | Mark the field whose value is shown as the row's display label.                              |
+| `@ui.dict.descr`      | Secondary text under the label.                                                              |
+| `@ui.dict.searchable` | Include in the picker's free-text search (`?$search=`).                                      |
+| `@ui.dict.filterable` | Available as a filter dropdown in the picker UI.                                             |
+| `@ui.dict.sortable`   | Sortable in the picker.                                                                      |
+| `@ui.dict.attr`       | Mark the field as an additional attribute column shown in table-mode value help. Repeatable. |
 
 Example — a target type optimized for picker UX:
 

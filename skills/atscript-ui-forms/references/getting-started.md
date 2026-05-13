@@ -36,12 +36,7 @@ import UnoCSS from "unocss/vite";
 import { AsResolver } from "@atscript/ui-styles/vite";
 
 export default defineConfig({
-  plugins: [
-    UnoCSS(),
-    Atscript(),
-    vue(),
-    Components({ resolvers: [AsResolver()] }),
-  ],
+  plugins: [UnoCSS(), Atscript(), vue(), Components({ resolvers: [AsResolver()] })],
 });
 ```
 
@@ -94,13 +89,7 @@ function onError(errors: { path: string; message: string }[]) {
 </script>
 
 <template>
-  <AsForm
-    :def="def"
-    :form-data="formData"
-    :types="types"
-    @submit="onSubmit"
-    @error="onError"
-  />
+  <AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @error="onError" />
 </template>
 ```
 
@@ -130,31 +119,31 @@ If you omit `:form-data`, `useAsForm` falls back to a bare `ref<{}>` — no `{ v
 
 ## AsForm props summary
 
-| Prop              | Type                                      | Purpose                                                                                          |
-| ----------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `def`             | `FormDef`                                 | Required. From `createAsFormDef(type).def`.                                                      |
-| `formData`        | `{ value: TFormData }`                    | External reactive container. Omit to let the form own one.                                       |
-| `formContext`     | `TFormContext`                            | App-wide context object. Visible to `@ui.form.fn.*` scope (`context`), custom validators, slots. |
-| `types`           | `TAsTypeComponents`                       | Required. Map of built-in renderer ids → components. Use `createDefaultTypes()`.                 |
-| `components`      | `Record<string, Component>`               | Custom-name → component map; targeted by `@ui.form.component 'name'`.                            |
-| `errors`          | `Record<string, string \| undefined>`     | External errors keyed by absolute dotted path; `__form` for top-level banner.                    |
-| `firstValidation` | `'on-change'` `'on-blur'` `'touched-on-blur'` `'on-submit'` `'none'` | When live field validation first activates. Defaults to `'on-change'`. |
-| `hideRootTitle`   | `boolean`                                 | Suppress the root field's `@meta.label`. Use when chrome (dialog header) already shows it.       |
-| `hideSubmit`      | `boolean`                                 | Suppress the default submit button. Empty `<template #form.submit />` does NOT suppress.         |
-| `loading`         | `boolean`                                 | Freeze form: `inert` body + overlay. Used by `<AsWfForm>` during round-trips.                    |
-| `clientFactory`   | `ClientFactory`                           | Per-form override for FK value-help `Client` creation. Falls back to `setDefaultClientFactory`.   |
+| Prop              | Type                                                                 | Purpose                                                                                          |
+| ----------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `def`             | `FormDef`                                                            | Required. From `createAsFormDef(type).def`.                                                      |
+| `formData`        | `{ value: TFormData }`                                               | External reactive container. Omit to let the form own one.                                       |
+| `formContext`     | `TFormContext`                                                       | App-wide context object. Visible to `@ui.form.fn.*` scope (`context`), custom validators, slots. |
+| `types`           | `TAsTypeComponents`                                                  | Required. Map of built-in renderer ids → components. Use `createDefaultTypes()`.                 |
+| `components`      | `Record<string, Component>`                                          | Custom-name → component map; targeted by `@ui.form.component 'name'`.                            |
+| `errors`          | `Record<string, string \| undefined>`                                | External errors keyed by absolute dotted path; `__form` for top-level banner.                    |
+| `firstValidation` | `'on-change'` `'on-blur'` `'touched-on-blur'` `'on-submit'` `'none'` | When live field validation first activates. Defaults to `'on-change'`.                           |
+| `hideRootTitle`   | `boolean`                                                            | Suppress the root field's `@meta.label`. Use when chrome (dialog header) already shows it.       |
+| `hideSubmit`      | `boolean`                                                            | Suppress the default submit button. Empty `<template #form.submit />` does NOT suppress.         |
+| `loading`         | `boolean`                                                            | Freeze form: `inert` body + overlay. Used by `<AsWfForm>` during round-trips.                    |
+| `clientFactory`   | `ClientFactory`                                                      | Per-form override for FK value-help `Client` creation. Falls back to `setDefaultClientFactory`.  |
 
 Source: `packages/vue-form/src/components/as-form.vue:9-52`.
 
 ## AsForm emits summary
 
-| Event                | Payload                                                                  | Fires when                                                                                                              |
-| -------------------- | ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `submit`             | `(data: TFormData)`                                                      | `<form>` submit, validation passed. `data` is the unwrapped domain object.                                              |
-| `error`              | `(errors: { path: string; message: string }[])`                          | `<form>` submit, validation failed. One entry per invalid field.                                                        |
-| `action`             | `(name: string, data: TFormData)`                                        | Phantom `@ui.form.action` field invoked, OR `@wf.action.withData` field clicked. `name` is the action id.                |
-| `unsupported-action` | `(name: string, data: TFormData)`                                        | An action name was dispatched that no field declares. Useful for shared chrome to detect mismatch.                      |
-| `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)`   | Leaf blur commit, array add/remove, union switch. `type` discriminates: `'update'` `'array-add'` `'array-remove'` `'union-switch'`. |
+| Event                | Payload                                                                | Fires when                                                                                                                          |
+| -------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `submit`             | `(data: TFormData)`                                                    | `<form>` submit, validation passed. `data` is the unwrapped domain object.                                                          |
+| `error`              | `(errors: { path: string; message: string }[])`                        | `<form>` submit, validation failed. One entry per invalid field.                                                                    |
+| `action`             | `(name: string, data: TFormData)`                                      | Phantom `@ui.form.action` field invoked, OR `@wf.action.withData` field clicked. `name` is the action id.                           |
+| `unsupported-action` | `(name: string, data: TFormData)`                                      | An action name was dispatched that no field declares. Useful for shared chrome to detect mismatch.                                  |
+| `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur commit, array add/remove, union switch. `type` discriminates: `'update'` `'array-add'` `'array-remove'` `'union-switch'`. |
 
 `TAsChangeType` source: `packages/vue-form/src/components/types.ts:200`.
 
@@ -166,17 +155,17 @@ Source: `packages/vue-form/src/components/as-form.vue:9-52`.
   :errors="serverErrors"
   :form-context="{ tenantId, locale }"
   @submit="save"
-  @action="(name, data) => name === 'delete' ? remove(data.id) : null"
+  @action="(name, data) => (name === 'delete' ? remove(data.id) : null)"
   @change="(type, path) => debug(type, path)"
 />
 ```
 
 ## Reading list
 
-| Need                                                                      | File                                                  |
-| ------------------------------------------------------------------------- | ----------------------------------------------------- |
-| AsField/AsIterator deep dive, default type map, validation strategies     | [forms.md](forms.md)                                  |
-| Arrays, nested objects, discriminated unions, tuples, path nesting        | [structural-fields.md](structural-fields.md)          |
-| `@ui.form.fn.*` dynamic annotations, `installDynamicResolver`, `TFnScope` | [dynamic-fields.md](dynamic-fields.md)                |
-| Custom components, `TAsComponentProps`, locale, currency                  | [customization.md](customization.md)                  |
-| `@ui.form.action`, multi-action forms, FK pickers via `@db.rel.FK`        | [actions-refs.md](actions-refs.md)                    |
+| Need                                                                      | File                                         |
+| ------------------------------------------------------------------------- | -------------------------------------------- |
+| AsField/AsIterator deep dive, default type map, validation strategies     | [forms.md](forms.md)                         |
+| Arrays, nested objects, discriminated unions, tuples, path nesting        | [structural-fields.md](structural-fields.md) |
+| `@ui.form.fn.*` dynamic annotations, `installDynamicResolver`, `TFnScope` | [dynamic-fields.md](dynamic-fields.md)       |
+| Custom components, `TAsComponentProps`, locale, currency                  | [customization.md](customization.md)         |
+| `@ui.form.action`, multi-action forms, FK pickers via `@db.rel.FK`        | [actions-refs.md](actions-refs.md)           |

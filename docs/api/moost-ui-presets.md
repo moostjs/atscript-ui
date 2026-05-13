@@ -80,12 +80,12 @@ class PresetsController extends AsPresetsController {
 
 ### Extension points
 
-| Method | Default | Override when |
-| --- | --- | --- |
-| `getCurrentUser()` | abstract | Always — wire to your auth layer. |
-| `getMaxPresetsPerUser(app, tableKey, user)` | returns `this.maxPresetsPerUser` (10) | Tiered quotas (admin / paid / free). |
-| `canPublishPresets(app, tableKey, user)` | returns `true` | Restrict public presets by tier or per-table policy. |
-| `getUserLabel(user)` | returns `undefined` | Surface display names on shared presets. |
+| Method                                      | Default                               | Override when                                        |
+| ------------------------------------------- | ------------------------------------- | ---------------------------------------------------- |
+| `getCurrentUser()`                          | abstract                              | Always — wire to your auth layer.                    |
+| `getMaxPresetsPerUser(app, tableKey, user)` | returns `this.maxPresetsPerUser` (10) | Tiered quotas (admin / paid / free).                 |
+| `canPublishPresets(app, tableKey, user)`    | returns `true`                        | Restrict public presets by tier or per-table policy. |
+| `getUserLabel(user)`                        | returns `undefined`                   | Surface display names on shared presets.             |
 
 ### REST endpoints
 

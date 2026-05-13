@@ -114,13 +114,14 @@ any other path. Read `formData.value` when you want the raw form
 data (or just hand the whole thing to JSON.stringify for debugging).
 
 ```ts
-formData.value === {
-  firstName: "",
-  lastName: "",
-  age: 25,            // from @meta.default '25'
-  email: undefined,   // optional → undefined
-  password: "",
-}
+formData.value ===
+  {
+    firstName: "",
+    lastName: "",
+    age: 25, // from @meta.default '25'
+    email: undefined, // optional → undefined
+    password: "",
+  };
 ```
 
 **`createDefaultTypes()`** returns a fresh map of every built-in field
@@ -136,11 +137,11 @@ See [Field Types](/forms/field-types) for the full map.
 
 **`<AsForm>`** is the Tier-1 component. Required props:
 
-| Prop         | Type                | Why                                                          |
-| ------------ | ------------------- | ------------------------------------------------------------ |
-| `def`        | `FormDef`           | What to render — produced by `createAsFormDef`.              |
-| `types`      | `TAsTypeComponents` | Type-to-component map. Use `createDefaultTypes()` to start.  |
-| `form-data`  | reactive object     | Container `{ value: domainData }`. Recommended — see below.  |
+| Prop        | Type                | Why                                                         |
+| ----------- | ------------------- | ----------------------------------------------------------- |
+| `def`       | `FormDef`           | What to render — produced by `createAsFormDef`.             |
+| `types`     | `TAsTypeComponents` | Type-to-component map. Use `createDefaultTypes()` to start. |
+| `form-data` | reactive object     | Container `{ value: domainData }`. Recommended — see below. |
 
 If `form-data` is omitted, `useAsForm` falls back to a bare
 `ref<{}>` with **no `{ value }` wrapper and no `@meta.default`
@@ -162,13 +163,7 @@ wrapper) once submit-time validation passes. If validation fails,
 `@error` fires instead with `{ path, message }[]`.
 
 ```vue
-<AsForm
-  :def="def"
-  :form-data="formData"
-  :types="types"
-  @submit="onSubmit"
-  @error="onErrors"
-/>
+<AsForm :def="def" :form-data="formData" :types="types" @submit="onSubmit" @error="onErrors" />
 ```
 
 ```ts

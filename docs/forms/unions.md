@@ -109,12 +109,12 @@ call the composable directly. It returns:
 
 ```ts
 const {
-  unionField,           // FormUnionFieldDef | undefined
-  hasMultipleVariants,  // ComputedRef<boolean>
-  localUnionIndex,      // Ref<number>
-  innerField,           // ComputedRef<FormFieldDef | undefined>
-  changeVariant,        // (newIndex: number) => void
-  optionalEnabled,      // ComputedRef<boolean>
+  unionField, // FormUnionFieldDef | undefined
+  hasMultipleVariants, // ComputedRef<boolean>
+  localUnionIndex, // Ref<number>
+  innerField, // ComputedRef<FormFieldDef | undefined>
+  changeVariant, // (newIndex: number) => void
+  optionalEnabled, // ComputedRef<boolean>
 } = useAsUnion(props);
 ```
 

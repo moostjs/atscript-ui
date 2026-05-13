@@ -14,20 +14,20 @@ Built-in cells, custom cell dispatch, slot API, locale.
 
 Source: `composables/create-default-cell-types.ts:19-35`.
 
-| Cell type    | Default component   | Render                                                                                     |
-| ------------ | ------------------- | ------------------------------------------------------------------------------------------ |
-| `text`       | `AsTableCellValue`  | Passthrough via `formatCellValue`.                                                          |
-| `enum`       | `AsTableCellValue`  | Enum label (lookup `column.options`).                                                       |
-| `ref`        | `AsTableCellValue`  | FK display label resolved from joined row data.                                              |
-| `boolean`    | `AsTableCellValue`  | Stringified (locale-aware via `formatCellValue`).                                            |
-| `number`     | `AsCellNumber`      | `Intl.NumberFormat` with currency, precision, unit. Right-aligned, tabular-nums.            |
-| `date`       | `AsCellDate`        | Date-only via `Intl.DateTimeFormat`.                                                         |
-| `datetime`   | `AsCellDate`        | Date + time-of-day. Honours timezone from `useCellLocale`.                                  |
-| `relative`   | `AsCellDate`        | `formatTimeAgoIntl` ("3 hours ago").                                                         |
-| `array`      | `AsCellArray`       | Primitive arrays → chip list; complex arrays → JSON popover.                                |
-| `object`     | `AsCellJson`        | JSON tree popover.                                                                           |
-| `union`      | `AsCellUnion`       | Per-row dispatcher: primitive / array / object branches; switches subtree per row.          |
-| `__actions`  | `AsRowActions`      | Synthesized row-actions pseudo-column. See [actions-selection.md](actions-selection.md).    |
+| Cell type   | Default component  | Render                                                                                   |
+| ----------- | ------------------ | ---------------------------------------------------------------------------------------- |
+| `text`      | `AsTableCellValue` | Passthrough via `formatCellValue`.                                                       |
+| `enum`      | `AsTableCellValue` | Enum label (lookup `column.options`).                                                    |
+| `ref`       | `AsTableCellValue` | FK display label resolved from joined row data.                                          |
+| `boolean`   | `AsTableCellValue` | Stringified (locale-aware via `formatCellValue`).                                        |
+| `number`    | `AsCellNumber`     | `Intl.NumberFormat` with currency, precision, unit. Right-aligned, tabular-nums.         |
+| `date`      | `AsCellDate`       | Date-only via `Intl.DateTimeFormat`.                                                     |
+| `datetime`  | `AsCellDate`       | Date + time-of-day. Honours timezone from `useCellLocale`.                               |
+| `relative`  | `AsCellDate`       | `formatTimeAgoIntl` ("3 hours ago").                                                     |
+| `array`     | `AsCellArray`      | Primitive arrays → chip list; complex arrays → JSON popover.                             |
+| `object`    | `AsCellJson`       | JSON tree popover.                                                                       |
+| `union`     | `AsCellUnion`      | Per-row dispatcher: primitive / array / object branches; switches subtree per row.       |
+| `__actions` | `AsRowActions`     | Synthesized row-actions pseudo-column. See [actions-selection.md](actions-selection.md). |
 
 ## Resolution order
 
@@ -71,13 +71,13 @@ defineProps<{
 
 `components/defaults/as-cell-number.vue`. Locale-aware decimal formatter. Reads:
 
-| Source                      | Annotation                                       | Field on `ColumnDef`     |
-| --------------------------- | ------------------------------------------------ | ------------------------ |
-| Locale                      | `useCellLocale().locale`                         | —                        |
-| Currency code (fixed)       | `@db.amount.currency 'USD'`                      | `currencyCode`           |
-| Currency code (per-row)     | `@db.amount.currency.ref 'currencyField'`        | `currencyRefField`       |
-| Unit (fixed / per-row)      | `@db.unit 'kg'` / `@db.unit.ref 'unit'`          | `unitCode` / `unitRefField` |
-| Precision scale             | `@db.column.precision 2`                         | `precisionScale`         |
+| Source                  | Annotation                                | Field on `ColumnDef`        |
+| ----------------------- | ----------------------------------------- | --------------------------- |
+| Locale                  | `useCellLocale().locale`                  | —                           |
+| Currency code (fixed)   | `@db.amount.currency 'USD'`               | `currencyCode`              |
+| Currency code (per-row) | `@db.amount.currency.ref 'currencyField'` | `currencyRefField`          |
+| Unit (fixed / per-row)  | `@db.unit 'kg'` / `@db.unit.ref 'unit'`   | `unitCode` / `unitRefField` |
+| Precision scale         | `@db.column.precision 2`                  | `precisionScale`            |
 
 Money branch wins over precision (CLDR currency fraction digits beat static config). Non-finite raw values render the source string so malformed decimals stay visible. Internally delegates to `formatDecimalForDisplay` from `@atscript/ui`.
 
@@ -125,7 +125,7 @@ Reads `state.actions.cellRow` (pre-flattened `[default?, ...others.row, ...rows]
 import { provideCellLocale } from "@atscript/vue-table";
 
 provideCellLocale(() => ({
-  language: "en-US",       // BCP-47, drives Intl.* formatters
+  language: "en-US", // BCP-47, drives Intl.* formatters
   timezone: "America/New_York", // IANA, or undefined / "system" → browser TZ
 }));
 ```
@@ -226,14 +226,14 @@ For numeric cells, prefer composing with `useCellLocale()` + `formatDecimalForDi
 
 `<AsTable>` / `<AsWindowTable>` forward named slots from the consumer through `<AsTableBase>`:
 
-| Slot name              | Slot props                                                      | Replaces                                                  |
-| ---------------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
-| `#header-<colPath>`    | `{ column, sorters, multiIndex, direction }`                    | The default `<th>` content for that column.               |
-| `#cell-<colPath>`      | `{ row, column, value, rowIndex }`                              | The default `<td>` content for that column (one row).     |
-| `#empty`               | `{ filters, searchTerm, clearFilters }`                         | Empty-state body when results are empty.                  |
-| `#query-loading`       | —                                                                | Spinner / skeleton during fetch (default is a small icon overlay). |
-| `#error`               | `{ error, kind, retry }`                                        | Error-state body.                                         |
-| `#last-row`            | —                                                                | Pseudo-row rendered after the last data row (footer / totals). |
+| Slot name           | Slot props                                   | Replaces                                                           |
+| ------------------- | -------------------------------------------- | ------------------------------------------------------------------ |
+| `#header-<colPath>` | `{ column, sorters, multiIndex, direction }` | The default `<th>` content for that column.                        |
+| `#cell-<colPath>`   | `{ row, column, value, rowIndex }`           | The default `<td>` content for that column (one row).              |
+| `#empty`            | `{ filters, searchTerm, clearFilters }`      | Empty-state body when results are empty.                           |
+| `#query-loading`    | —                                            | Spinner / skeleton during fetch (default is a small icon overlay). |
+| `#error`            | `{ error, kind, retry }`                     | Error-state body.                                                  |
+| `#last-row`         | —                                            | Pseudo-row rendered after the last data row (footer / totals).     |
 
 Slot scope-name uses the column path verbatim (dots included): `<template #cell-address.city="...">`. Slots win over the cell-component dispatch for matched columns.
 
@@ -241,20 +241,20 @@ Slot scope-name uses the column path verbatim (dots included): `<template #cell-
 
 Static annotations (resolved once per column, cached):
 
-| Annotation                          | Effect                                                       |
-| ----------------------------------- | ------------------------------------------------------------ |
-| `@ui.table.classes "name"`          | Add CSS class. Repeatable.                                   |
-| `@ui.table.styles "color: red"`     | Inline style.                                                |
-| `@ui.table.attr "title", "hint"`    | HTML attribute. Repeatable; key/value pairs.                 |
-| `@ui.table.width "8em"`             | Default column width (rendered if not user-resized).         |
+| Annotation                       | Effect                                               |
+| -------------------------------- | ---------------------------------------------------- |
+| `@ui.table.classes "name"`       | Add CSS class. Repeatable.                           |
+| `@ui.table.styles "color: red"`  | Inline style.                                        |
+| `@ui.table.attr "title", "hint"` | HTML attribute. Repeatable; key/value pairs.         |
+| `@ui.table.width "8em"`          | Default column width (rendered if not user-resized). |
 
 Dynamic variants (per-cell, require `@atscript/ui-fns`):
 
-| Annotation                                       | Type signature                                                 |
-| ------------------------------------------------ | -------------------------------------------------------------- |
-| `@ui.table.fn.classes 'row.foo > 10 ? "hot" : "cold"'` | `(row, ctx) => string \| string[] \| Record<string, boolean>` |
-| `@ui.table.fn.styles 'row.bg ? `background: ${row.bg}` : ""'` | `(row, ctx) => string \| Record<string, unknown>` |
-| `@ui.table.fn.attr 'title', 'row.tooltip'`       | `(row, ctx) => string`. Repeatable per attribute name.         |
+| Annotation                                                    | Type signature                                                |
+| ------------------------------------------------------------- | ------------------------------------------------------------- |
+| `@ui.table.fn.classes 'row.foo > 10 ? "hot" : "cold"'`        | `(row, ctx) => string \| string[] \| Record<string, boolean>` |
+| `@ui.table.fn.styles 'row.bg ? `background: ${row.bg}` : ""'` | `(row, ctx) => string \| Record<string, unknown>`             |
+| `@ui.table.fn.attr 'title', 'row.tooltip'`                    | `(row, ctx) => string`. Repeatable per attribute name.        |
 
 Function expressions run inside a sandbox built from `useCellResolver`'s `scope`:
 

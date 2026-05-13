@@ -17,9 +17,9 @@ SSR is involved.
 
 ```typescript
 // entry-client.ts / entry-server.ts
-import { installDynamicResolver } from '@atscript/ui-fns'
+import { installDynamicResolver } from "@atscript/ui-fns";
 
-installDynamicResolver()
+installDynamicResolver();
 ```
 
 `installDynamicResolver()` swaps in `DynamicFieldResolver` and registers the
@@ -30,23 +30,23 @@ compile.
 
 Every compiled function body sees these variables in scope:
 
-| Variable  | What it is                                                                  |
-| --------- | --------------------------------------------------------------------------- |
-| `v`       | Current value of the annotated field                                        |
-| `data`    | Unwrapped domain data (`formData.value`)                                    |
-| `context` | The `:form-context` prop passed to `<AsForm>`, or `{}`                      |
-| `entry`   | Per-field evaluated snapshot (name, type, disabled, options, …)             |
-| `action`  | Dispatched action id when the evaluation was kicked off by an action click  |
+| Variable  | What it is                                                                 |
+| --------- | -------------------------------------------------------------------------- |
+| `v`       | Current value of the annotated field                                       |
+| `data`    | Unwrapped domain data (`formData.value`)                                   |
+| `context` | The `:form-context` prop passed to `<AsForm>`, or `{}`                     |
+| `entry`   | Per-field evaluated snapshot (name, type, disabled, options, …)            |
+| `action`  | Dispatched action id when the evaluation was kicked off by an action click |
 
 The full type is `TFnScope` from `@atscript/ui-fns/runtime/types.ts`.
 
 ```typescript
 interface TFnScope<V = unknown> {
-  v?: V
-  data: Record<string, unknown>
-  context: Record<string, unknown>
-  entry?: TFieldEvaluated
-  action?: string
+  v?: V;
+  data: Record<string, unknown>;
+  context: Record<string, unknown>;
+  entry?: TFieldEvaluated;
+  action?: string;
 }
 ```
 
@@ -58,28 +58,28 @@ is no `v`, `entry`, or `action` at the form-level scope.
 
 Field-level keys:
 
-| Static                  | Dynamic                    |
-| ----------------------- | -------------------------- |
-| `@meta.label`           | `@ui.form.fn.label`        |
-| `@meta.description`     | `@ui.form.fn.description`  |
-| `@ui.form.placeholder`  | `@ui.form.fn.placeholder`  |
-| `@ui.form.hint`         | `@ui.form.fn.hint`         |
-| `@ui.form.hidden`       | `@ui.form.fn.hidden`       |
-| `@ui.form.disabled`     | `@ui.form.fn.disabled`     |
-| `@meta.readonly`        | `@ui.form.fn.readonly`     |
-| `@ui.form.options`      | `@ui.form.fn.options`      |
-| `@meta.default`         | `@ui.form.fn.value`        |
-| `@ui.form.attr`         | `@ui.form.fn.attr`         |
-| `@ui.form.classes`      | `@ui.form.fn.classes`      |
-| `@ui.form.styles`       | `@ui.form.fn.styles`       |
+| Static                 | Dynamic                   |
+| ---------------------- | ------------------------- |
+| `@meta.label`          | `@ui.form.fn.label`       |
+| `@meta.description`    | `@ui.form.fn.description` |
+| `@ui.form.placeholder` | `@ui.form.fn.placeholder` |
+| `@ui.form.hint`        | `@ui.form.fn.hint`        |
+| `@ui.form.hidden`      | `@ui.form.fn.hidden`      |
+| `@ui.form.disabled`    | `@ui.form.fn.disabled`    |
+| `@meta.readonly`       | `@ui.form.fn.readonly`    |
+| `@ui.form.options`     | `@ui.form.fn.options`     |
+| `@meta.default`        | `@ui.form.fn.value`       |
+| `@ui.form.attr`        | `@ui.form.fn.attr`        |
+| `@ui.form.classes`     | `@ui.form.fn.classes`     |
+| `@ui.form.styles`      | `@ui.form.fn.styles`      |
 
 Form-level keys (on the root `interface`):
 
-| Static                    | Dynamic                          |
-| ------------------------- | -------------------------------- |
-| `@meta.label`             | `@ui.form.fn.title`              |
-| `@ui.form.submit.text`    | `@ui.form.fn.submit.text`        |
-| —                         | `@ui.form.fn.submit.disabled`    |
+| Static                 | Dynamic                       |
+| ---------------------- | ----------------------------- |
+| `@meta.label`          | `@ui.form.fn.title`           |
+| `@ui.form.submit.text` | `@ui.form.fn.submit.text`     |
+| —                      | `@ui.form.fn.submit.disabled` |
 
 When both static and dynamic are present, the dynamic one wins.
 
@@ -130,11 +130,11 @@ The matching Vue page is a normal `<AsForm>`:
 
 ```vue
 <script setup lang="ts">
-import { AsForm, createDefaultTypes, createAsFormDef } from '@atscript/vue-form'
-import { EventRegistration } from './schemas/EventRegistration.as'
+import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
+import { EventRegistration } from "./schemas/EventRegistration.as";
 
-const { def, formData } = createAsFormDef(EventRegistration)
-const types = createDefaultTypes()
+const { def, formData } = createAsFormDef(EventRegistration);
+const types = createDefaultTypes();
 </script>
 
 <template>
@@ -169,12 +169,7 @@ city: ui.select
 prop on `<AsForm>` and read `context.citiesByCountry` instead.
 
 ```vue
-<AsForm
-  :def="def"
-  :form-data="formData"
-  :form-context="{ citiesByCountry }"
-  :types="types"
-/>
+<AsForm :def="def" :form-data="formData" :form-context="{ citiesByCountry }" :types="types" />
 ```
 
 ```atscript
@@ -237,13 +232,14 @@ function body when possible.
 which are compile-time artifacts you own — that's safe. Two things to never do:
 
 ::: warning
+
 - **Don't store user-authored expressions** in a database and feed them to
   `ui-fns`. Anyone with write access to that store gets arbitrary code
   execution in the browser.
 - **Don't disable `installDynamicResolver()` in production while keeping
   `@ui.form.fn.*` in your `.as`** — the static resolver silently ignores
   `*.fn.*` keys and your forms will appear broken with no error.
-:::
+  :::
 
 ## Next steps
 

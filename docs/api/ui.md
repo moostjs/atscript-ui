@@ -285,8 +285,14 @@ interface TableActionsModel {
 ### `TableQueryState`, `SortControl`, `PaginationControl`
 
 ```typescript
-interface SortControl { field: string; direction: "asc" | "desc"; }
-interface PaginationControl { page: number; itemsPerPage: number; }
+interface SortControl {
+  field: string;
+  direction: "asc" | "desc";
+}
+interface PaginationControl {
+  page: number;
+  itemsPerPage: number;
+}
 
 interface TableQueryState {
   sort?: SortControl[];
@@ -303,10 +309,7 @@ interface TableQueryState {
 Builds a `TableDef` from a `MetaResponse` plus the deserialized atscript type.
 
 ```typescript
-function createTableDef(
-  meta: MetaResponse,
-  type: TAtscriptAnnotatedType,
-): TableDef;
+function createTableDef(meta: MetaResponse, type: TAtscriptAnnotatedType): TableDef;
 ```
 
 See [Annotations Reference](/tables/annotations) for how `@ui.table.*` and `@db.*` annotations populate `ColumnDef`.
@@ -390,8 +393,8 @@ Every supported annotation has a stringly-typed constant exported from `@atscrip
 
 ### Cross-surface
 
-| Name | Value |
-| --- | --- |
+| Name      | Value       |
+| --------- | ----------- |
 | `UI_TYPE` | `"ui.type"` |
 
 ### Form static keys
@@ -436,7 +439,10 @@ Returns a reusable validator function bound to a `FormDef`. Built once, called p
 function getFormValidator(
   def: FormDef,
   opts?: Partial<TValidatorOptions>,
-): (callOpts: { data: Record<string, unknown>; context?: Record<string, unknown> }) => Record<string, string>;
+): (callOpts: {
+  data: Record<string, unknown>;
+  context?: Record<string, unknown>;
+}) => Record<string, string>;
 ```
 
 Returns an errors record keyed by dot-separated field path (empty when valid).
@@ -503,7 +509,9 @@ interface ValueHelpInfo {
 
 ```typescript
 function extractValueHelp(prop: TAtscriptAnnotatedType): ValueHelpInfo | undefined;
-function extractLiteralOptions(prop: TAtscriptAnnotatedType): { key: string; label: string }[] | undefined;
+function extractLiteralOptions(
+  prop: TAtscriptAnnotatedType,
+): { key: string; label: string }[] | undefined;
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 ```
 
@@ -619,8 +627,15 @@ See [Grid Layout](/forms/grid-layout).
 Framework-agnostic decimal-string formatting and parsing — shared by `@atscript/vue-form` AsDecimal and `@atscript/vue-table` cells. Storage is string-only so DB-precision decimals never bounce through floats.
 
 ```typescript
-interface CurrencyDisplay { decimals: number; symbol: string; }
-interface DecimalParts { integer: string; fraction: string; sign: "+" | "-"; }
+interface CurrencyDisplay {
+  decimals: number;
+  symbol: string;
+}
+interface DecimalParts {
+  integer: string;
+  fraction: string;
+  sign: "+" | "-";
+}
 interface FormatDecimalOptions {
   currency?: string;
   locale?: string;
@@ -714,11 +729,11 @@ function getMetaEntry(url: string, factory?: ClientFactory): MetaCacheEntry;
 function resetMetaCache(): void;
 
 interface MetaCacheEntry {
-  client: Client;                                       // from `@atscript/db-client`
+  client: Client; // from `@atscript/db-client`
   meta: Promise<MetaResponse>;
-  type: Promise<TAtscriptAnnotatedType>;                // pre-deserialized
-  resolved?: Promise<ResolvedValueHelp>;                // populated lazily by `resolveValueHelp`
-  tableDef?: Promise<TableDef>;                         // populated lazily by Vue `useTable`
+  type: Promise<TAtscriptAnnotatedType>; // pre-deserialized
+  resolved?: Promise<ResolvedValueHelp>; // populated lazily by `resolveValueHelp`
+  tableDef?: Promise<TableDef>; // populated lazily by Vue `useTable`
 }
 ```
 

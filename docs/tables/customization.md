@@ -21,14 +21,14 @@ Pick the smallest layer that does the job.
 
 `<AsTable>` exposes per-column slots plus a handful of globals:
 
-| Slot                  | Payload                  | Renders                          |
-| --------------------- | ------------------------ | -------------------------------- |
-| `#header-<colPath>`   | `{ column }`             | The `<th>` for that column       |
-| `#cell-<colPath>`     | `{ value, row, column }` | The `<td>` for that column       |
-| `#empty`              | —                        | Body when results are empty      |
-| `#query-loading`      | —                        | Overlay while a query is in flight |
-| `#error`              | `{ error }`              | Body when the last query failed  |
-| `#last-row`           | —                        | Pseudo-row after the last data row |
+| Slot                | Payload                  | Renders                            |
+| ------------------- | ------------------------ | ---------------------------------- |
+| `#header-<colPath>` | `{ column }`             | The `<th>` for that column         |
+| `#cell-<colPath>`   | `{ value, row, column }` | The `<td>` for that column         |
+| `#empty`            | —                        | Body when results are empty        |
+| `#query-loading`    | —                        | Overlay while a query is in flight |
+| `#error`            | `{ error }`              | Body when the last query failed    |
+| `#last-row`         | —                        | Pseudo-row after the last data row |
 
 ```vue
 <AsTable>
@@ -136,22 +136,22 @@ const controls = {
 
 The full `TAsTableControls` shape:
 
-| Key                | Default                | Purpose                                    |
-| ------------------ | ---------------------- | ------------------------------------------ |
-| `headerCell`       | `AsTableHeaderCell`    | One `<th>` per column                       |
-| `columnMenu`       | `AsColumnMenu`         | Dropdown menu on column headers             |
-| `rowActions`       | `AsRowActions`         | Per-row action button / dropdown            |
-| `filterInput`      | `AsFilterInput`        | Editable filter pill in the filter bar      |
-| `filterDialog`     | `AsFilterDialog`       | Per-column filter dialog                    |
-| `filterField`      | `AsFilterField`        | One filter field row inside the filter bar  |
-| `filterValueHelp`  | (lazy)                 | Value-help dialog (`?` lookups)             |
-| `configDialog`     | `AsConfigDialog`       | Three-tab settings dialog                   |
-| `fieldsSelector`   | (lazy)                 | Inner column / filter list                  |
-| `sortersConfig`    | (lazy)                 | Inner sorters list                          |
-| `confirmDialog`    | `AsConfirmDialog`      | In-app `state.prompt()` dialog              |
-| `actionFormDialog` | (lazy)                 | Wraps `<AsForm>` for `@InputForm` actions   |
-| `presetPicker`     | `AsPresetPicker`       | Dropdown for apply / save / manage          |
-| `presetDialog`     | `AsPresetDialog`       | Rename / delete / publish / favorite        |
+| Key                | Default             | Purpose                                    |
+| ------------------ | ------------------- | ------------------------------------------ |
+| `headerCell`       | `AsTableHeaderCell` | One `<th>` per column                      |
+| `columnMenu`       | `AsColumnMenu`      | Dropdown menu on column headers            |
+| `rowActions`       | `AsRowActions`      | Per-row action button / dropdown           |
+| `filterInput`      | `AsFilterInput`     | Editable filter pill in the filter bar     |
+| `filterDialog`     | `AsFilterDialog`    | Per-column filter dialog                   |
+| `filterField`      | `AsFilterField`     | One filter field row inside the filter bar |
+| `filterValueHelp`  | (lazy)              | Value-help dialog (`?` lookups)            |
+| `configDialog`     | `AsConfigDialog`    | Three-tab settings dialog                  |
+| `fieldsSelector`   | (lazy)              | Inner column / filter list                 |
+| `sortersConfig`    | (lazy)              | Inner sorters list                         |
+| `confirmDialog`    | `AsConfirmDialog`   | In-app `state.prompt()` dialog             |
+| `actionFormDialog` | (lazy)              | Wraps `<AsForm>` for `@InputForm` actions  |
+| `presetPicker`     | `AsPresetPicker`    | Dropdown for apply / save / manage         |
+| `presetDialog`     | `AsPresetDialog`    | Rename / delete / publish / favorite       |
 
 Lazy entries aren't seeded by `createDefaultControls()` — the table
 root mounts them only when needed (an action declares an

@@ -67,11 +67,11 @@ The form type is what the server serializes per step. Whitelisting on the form m
 ## serializeFormSchema strips @wf.context.pass
 
 ```typescript
-serializeFormSchema(type)
+serializeFormSchema(type);
 // → serializeAnnotatedType(type, { ignoreAnnotations: ['wf.context.pass'], refDepth: 0.5 })
 ```
 
-`@wf.context.pass` is **server-only**. Stripping it from the wire payload prevents the client from learning the whitelist (which keys are *allowed*) — and there is no reason for the client to see it either. Source: `packages/moost-wf/src/form-input/serialize.ts:24-27`.
+`@wf.context.pass` is **server-only**. Stripping it from the wire payload prevents the client from learning the whitelist (which keys are _allowed_) — and there is no reason for the client to see it either. Source: `packages/moost-wf/src/form-input/serialize.ts:24-27`.
 
 The annotation lives on the type's `metadata`, which `extractPassContext` reads at request time. The wire-serialized schema does not carry it.
 
@@ -119,7 +119,7 @@ const wf = useWfForm({ path: "/wf/trigger", name: "auth/login" });
 
 `formContext` is a `ShallowRef<Record<string, unknown>>` (`packages/vue-wf/src/use-wf-form.ts:72`). Wholesale-replaced on every server response (the field map is the response's `context` with `errors` stripped — `errors` go to `wf.errors` separately, `packages/vue-wf/src/use-wf-form.ts:168-186`).
 
-### Via @ui.form.fn.* dynamic fields
+### Via @ui.form.fn.\* dynamic fields
 
 The strongest pattern: drive form rendering from context inside the `.as` schema itself, with no template changes per step.
 
@@ -197,6 +197,6 @@ A `@ui.form.fn.*` callback expecting `ctx.email` on a form without `@wf.context.
 
 Common misuse:
 
-- Whitelisting on the *context* type (no effect — annotation only fires on the form type).
+- Whitelisting on the _context_ type (no effect — annotation only fires on the form type).
 - Forgetting `@wf.context.pass` when porting a form to a new flow — the title silently renders with `undefined`.
 - Whitelisting a key that the server never set in `wfContext` — `extractPassContext` skips it (no error).

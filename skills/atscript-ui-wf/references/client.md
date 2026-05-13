@@ -20,22 +20,22 @@
 
 Source: `packages/vue-wf/src/components/as-wf-form.vue:10-26`.
 
-| Prop | Type | Default | Purpose |
-| ---- | ---- | ------- | ------- |
-| `path` | `string` | (required) | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`) |
-| `name` | `string` | (required) | Workflow id (`wfid`) to start (e.g. `'auth/login'`) |
-| `input` | `Record<string, unknown>` | `undefined` | Initial input sent with the `start` request |
-| `tokenTransport` | `'body' \| 'cookie' \| 'query'` | `'body'` | Where to read / write the state token |
-| `tokenName` | `string` | `'wfs'` | Token field name in JSON body / URL query |
-| `wfidName` | `string` | `'wfid'` | Workflow-id field name in the JSON body |
-| `fetchOptions` | `RequestInit` | `{}` | Static `fetch` options (headers, credentials, etc.) merged into every request |
-| `fetch` | `typeof fetch` | `globalThis.fetch` | Override `fetch` itself — for auth wrappers / status bus |
-| `autoStart` | `boolean` | `true` | Auto-call `start(input)` on mount |
-| `initialToken` | `string` | `undefined` | Pre-existing state token (resume). Takes precedence over `tokenTransport: 'query'` auto-detection |
-| `types` | `TAsTypeComponents` | (required) | Type-to-component map for `AsForm` rendering (use `createDefaultTypes()` from `@atscript/vue-form`) |
-| `firstValidation` | `TFormState['firstValidation']` | undefined | First-validation strategy forwarded to `AsForm` (see `atscript-ui-forms` skill) |
-| `components` | `Record<string, Component>` | undefined | Custom components map forwarded to `AsForm` |
-| `clientFactory` | `ClientFactory` | undefined | Per-form FK value-help client factory forwarded to `AsForm` |
+| Prop              | Type                            | Default            | Purpose                                                                                             |
+| ----------------- | ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
+| `path`            | `string`                        | (required)         | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                     |
+| `name`            | `string`                        | (required)         | Workflow id (`wfid`) to start (e.g. `'auth/login'`)                                                 |
+| `input`           | `Record<string, unknown>`       | `undefined`        | Initial input sent with the `start` request                                                         |
+| `tokenTransport`  | `'body' \| 'cookie' \| 'query'` | `'body'`           | Where to read / write the state token                                                               |
+| `tokenName`       | `string`                        | `'wfs'`            | Token field name in JSON body / URL query                                                           |
+| `wfidName`        | `string`                        | `'wfid'`           | Workflow-id field name in the JSON body                                                             |
+| `fetchOptions`    | `RequestInit`                   | `{}`               | Static `fetch` options (headers, credentials, etc.) merged into every request                       |
+| `fetch`           | `typeof fetch`                  | `globalThis.fetch` | Override `fetch` itself — for auth wrappers / status bus                                            |
+| `autoStart`       | `boolean`                       | `true`             | Auto-call `start(input)` on mount                                                                   |
+| `initialToken`    | `string`                        | `undefined`        | Pre-existing state token (resume). Takes precedence over `tokenTransport: 'query'` auto-detection   |
+| `types`           | `TAsTypeComponents`             | (required)         | Type-to-component map for `AsForm` rendering (use `createDefaultTypes()` from `@atscript/vue-form`) |
+| `firstValidation` | `TFormState['firstValidation']` | undefined          | First-validation strategy forwarded to `AsForm` (see `atscript-ui-forms` skill)                     |
+| `components`      | `Record<string, Component>`     | undefined          | Custom components map forwarded to `AsForm`                                                         |
+| `clientFactory`   | `ClientFactory`                 | undefined          | Per-form FK value-help client factory forwarded to `AsForm`                                         |
 
 `path`, `name`, `types` are the only required props. Defaults from `withDefaults` at `packages/vue-wf/src/components/as-wf-form.vue:21-26`.
 
@@ -43,13 +43,13 @@ Source: `packages/vue-wf/src/components/as-wf-form.vue:10-26`.
 
 Source: `packages/vue-wf/src/components/as-wf-form.vue:28-34`.
 
-| Event | Signature | Fires when |
-| ----- | --------- | ---------- |
-| `finished` | `(response: unknown) => void` | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`) |
-| `error` | `(error: { message: string; status?: number }) => void` | network failure, non-2xx response, or `{ error: {...} }` body |
-| `form` | `(def: FormDef, context?: Record<string, unknown>) => void` | each time the rendered form / context changes (initial render, schema swap, re-validation) |
-| `submit` | `(data: unknown) => void` | user submitted the form (fires **before** the HTTP request is sent) |
-| `loading` | `(isLoading: boolean) => void` | request lifecycle — `true` on send, `false` on response/error |
+| Event      | Signature                                                   | Fires when                                                                                          |
+| ---------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `finished` | `(response: unknown) => void`                               | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`) |
+| `error`    | `(error: { message: string; status?: number }) => void`     | network failure, non-2xx response, or `{ error: {...} }` body                                       |
+| `form`     | `(def: FormDef, context?: Record<string, unknown>) => void` | each time the rendered form / context changes (initial render, schema swap, re-validation)          |
+| `submit`   | `(data: unknown) => void`                                   | user submitted the form (fires **before** the HTTP request is sent)                                 |
+| `loading`  | `(isLoading: boolean) => void`                              | request lifecycle — `true` on send, `false` on response/error                                       |
 
 Side-effect wiring lives in `as-wf-form.vue:40-58` (watchers translate composable refs to emits).
 
@@ -68,21 +68,21 @@ Source: `packages/vue-wf/src/components/as-wf-form.vue:89-161`. All slots are ty
 </AsWfForm>
 ```
 
-| Slot prop | Shape |
-| --------- | ----- |
-| `form` | `{ def: FormDef \| null, formData: Record<string, unknown> \| null, formContext: Record<string, unknown> }` |
-| `state` | `{ loading: boolean, error: unknown, finished: boolean, response: unknown }` |
-| `actions` | `{ start: (input?) => Promise<void>, submit: (data) => void, retry: () => Promise<void> }` |
+| Slot prop | Shape                                                                                                       |
+| --------- | ----------------------------------------------------------------------------------------------------------- |
+| `form`    | `{ def: FormDef \| null, formData: Record<string, unknown> \| null, formContext: Record<string, unknown> }` |
+| `state`   | `{ loading: boolean, error: unknown, finished: boolean, response: unknown }`                                |
+| `actions` | `{ start: (input?) => Promise<void>, submit: (data) => void, retry: () => Promise<void> }`                  |
 
 When you supply the default slot's contents, you take over the entire layout. The component still ships the named slots below for the standard layout — opt-in by **omitting** the default slot.
 
 ### Workflow lifecycle slots
 
-| Slot | Slot props | When |
-| ---- | ---------- | ---- |
-| `wf.loading` | (none) | initial load (no form yet) |
-| `wf.error` | `{ error, retry }` | error before any form rendered |
-| `wf.finished` | `{ response }` | flow finished or outlet pause |
+| Slot          | Slot props         | When                           |
+| ------------- | ------------------ | ------------------------------ |
+| `wf.loading`  | (none)             | initial load (no form yet)     |
+| `wf.error`    | `{ error, retry }` | error before any form rendered |
+| `wf.finished` | `{ response }`     | flow finished or outlet pause  |
 
 ```vue
 <AsWfForm ...>
@@ -103,14 +103,14 @@ When you supply the default slot's contents, you take over the entire layout. Th
 
 These pass through to the `AsForm` component (see `atscript-ui-forms` skill). The vue-wf wrapper adds `loading` to each slot prop.
 
-| Slot | Slot props (added) | Purpose |
-| ---- | ------------------ | ------- |
-| `form.header` | `loading: boolean` + AsForm header props | above the form fields |
-| `form.before` | `loading` + AsForm before props | between header and fields |
-| `form.after` | `loading` + AsForm after props | between fields and submit |
-| `form.submit` | `loading` + `disabled`, `text`, … | replace the submit button entirely |
-| `form.footer` | `loading` + AsForm footer props | below the submit row |
-| `form.error` | `{ error, retry }` | inline error inside the form (after a form has rendered) |
+| Slot          | Slot props (added)                       | Purpose                                                  |
+| ------------- | ---------------------------------------- | -------------------------------------------------------- |
+| `form.header` | `loading: boolean` + AsForm header props | above the form fields                                    |
+| `form.before` | `loading` + AsForm before props          | between header and fields                                |
+| `form.after`  | `loading` + AsForm after props           | between fields and submit                                |
+| `form.submit` | `loading` + `disabled`, `text`, …        | replace the submit button entirely                       |
+| `form.footer` | `loading` + AsForm footer props          | below the submit row                                     |
+| `form.error`  | `{ error, retry }`                       | inline error inside the form (after a form has rendered) |
 
 ```vue
 <AsWfForm ...>
@@ -146,27 +146,27 @@ interface UseWfFormReturn {
 }
 ```
 
-| Method | Sends | Purpose |
-| ------ | ----- | ------- |
-| `start(input?)` | `{ wfid, input?, wfs? }` | start (or resume with `initialToken`) the flow |
-| `submit(data)` | `{ wfs, input: data }` | submit the current form |
-| `action(name)` | `{ wfs, action: name }` | dispatch a plain action (no data) |
-| `actionWithData(name, data)` | `{ wfs, action: name, input: data }` | dispatch a `@wf.action.withData` action |
-| `retry()` | last request body | replay the last failed request — see error recovery |
+| Method                       | Sends                                | Purpose                                             |
+| ---------------------------- | ------------------------------------ | --------------------------------------------------- |
+| `start(input?)`              | `{ wfid, input?, wfs? }`             | start (or resume with `initialToken`) the flow      |
+| `submit(data)`               | `{ wfs, input: data }`               | submit the current form                             |
+| `action(name)`               | `{ wfs, action: name }`              | dispatch a plain action (no data)                   |
+| `actionWithData(name, data)` | `{ wfs, action: name, input: data }` | dispatch a `@wf.action.withData` action             |
+| `retry()`                    | last request body                    | replay the last failed request — see error recovery |
 
 ### State refs
 
-| Ref | Type | Replaced when |
-| --- | ---- | ------------- |
-| `formDef` | `ShallowRef<FormDef \| null>` | new payload arrives (different schema) — `null` on finished/outlet |
-| `formData` | `ShallowRef<Record<string, unknown> \| null>` | new payload arrives — `null` on finished/outlet |
-| `formContext` | `ShallowRef<Record<string, unknown>>` | every response (with `errors` stripped) |
-| `errors` | `ShallowRef<Record<string, string>>` | every response (server-side validation errors, keyed by field path) |
-| `loading` | `Ref<boolean>` | request lifecycle |
-| `finished` | `Ref<boolean>` | flow finished OR outlet pause |
-| `response` | `ShallowRef<unknown>` | finished body |
-| `error` | `ShallowRef<unknown>` | error body or network failure |
-| `formKey` | `Ref<number>` | bumps when payload changes — bind to `:key` on rendered form to force remount |
+| Ref           | Type                                          | Replaced when                                                                 |
+| ------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
+| `formDef`     | `ShallowRef<FormDef \| null>`                 | new payload arrives (different schema) — `null` on finished/outlet            |
+| `formData`    | `ShallowRef<Record<string, unknown> \| null>` | new payload arrives — `null` on finished/outlet                               |
+| `formContext` | `ShallowRef<Record<string, unknown>>`         | every response (with `errors` stripped)                                       |
+| `errors`      | `ShallowRef<Record<string, string>>`          | every response (server-side validation errors, keyed by field path)           |
+| `loading`     | `Ref<boolean>`                                | request lifecycle                                                             |
+| `finished`    | `Ref<boolean>`                                | flow finished OR outlet pause                                                 |
+| `response`    | `ShallowRef<unknown>`                         | finished body                                                                 |
+| `error`       | `ShallowRef<unknown>`                         | error body or network failure                                                 |
+| `formKey`     | `Ref<number>`                                 | bumps when payload changes — bind to `:key` on rendered form to force remount |
 
 `AsWfForm` already binds `formKey` to its inner `AsForm` (`packages/vue-wf/src/components/as-wf-form.vue:125`). When building a custom shell, do the same.
 
@@ -178,11 +178,11 @@ interface UseWfFormOptions {
   name: string;
   input?: Record<string, unknown>;
   tokenTransport?: "body" | "cookie" | "query";
-  tokenName?: string;            // default "wfs"
-  wfidName?: string;             // default "wfid"
+  tokenName?: string; // default "wfs"
+  wfidName?: string; // default "wfid"
   fetchOptions?: RequestInit;
   fetch?: typeof fetch;
-  autoStart?: boolean;           // default true
+  autoStart?: boolean; // default true
   initialToken?: string;
 }
 ```
@@ -222,11 +222,11 @@ For static header sets (no per-request logic), `fetchOptions: { headers: {...}, 
 
 Client compares `JSON.stringify(ir.payload)` between successive responses (`packages/vue-wf/src/use-wf-form.ts:175-182`). Three outcomes:
 
-| Comparison | Effect |
-| ---------- | ------ |
-| Same payload (re-validation) | preserve `formData`, render new `errors`, `formKey` unchanged |
-| Different payload (new step) | rebuild `formDef`, fresh `formData`, **bump `formKey`** → AsForm remounts |
-| No `inputRequired` (finished / outlet / error) | `formDef = null`, `formData = null` |
+| Comparison                                     | Effect                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| Same payload (re-validation)                   | preserve `formData`, render new `errors`, `formKey` unchanged             |
+| Different payload (new step)                   | rebuild `formDef`, fresh `formData`, **bump `formKey`** → AsForm remounts |
+| No `inputRequired` (finished / outlet / error) | `formDef = null`, `formData = null`                                       |
 
 Why: when the server rejects a submit and re-sends the same form, the user's typed values must stay on screen. The deep-equality check on the serialized payload is the trigger.
 
@@ -331,12 +331,7 @@ const token = (route.query.wfs as string) || undefined;
 </script>
 
 <template>
-  <AsWfForm
-    path="/api/wf/trigger"
-    name="auth/magic-link"
-    :initialToken="token"
-    :types
-  />
+  <AsWfForm path="/api/wf/trigger" name="auth/magic-link" :initialToken="token" :types />
 </template>
 ```
 
@@ -350,12 +345,7 @@ const token = route.params.token as string;
 </script>
 
 <template>
-  <AsWfForm
-    path="/api/wf/trigger"
-    name="admin/invite"
-    :initialToken="token"
-    :types
-  />
+  <AsWfForm path="/api/wf/trigger" name="admin/invite" :initialToken="token" :types />
 </template>
 ```
 
@@ -364,12 +354,7 @@ const token = route.params.token as string;
 Pattern 3 — auto-detect from URL (`tokenTransport: 'query'` only):
 
 ```vue
-<AsWfForm
-  path="/api/wf/trigger"
-  name="auth/magic-link"
-  tokenTransport="query"
-  :types
-/>
+<AsWfForm path="/api/wf/trigger" name="auth/magic-link" tokenTransport="query" :types />
 ```
 
 The composable reads `?wfs=<token>` from `window.location.search` once on `start()` (`packages/vue-wf/src/use-wf-form.ts:107-110`). Skip `initialToken` for this auto-detection path.

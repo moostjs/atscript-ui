@@ -7,8 +7,8 @@ outline: deep
 Every workflow has a **context** — a typed, mutable object that
 persists across steps. Steps mutate it; conditions read it; the
 state strategy serializes it between rounds. This page covers how it
-works and — importantly — how to expose select keys to the *client
-form* without leaking the rest.
+works and — importantly — how to expose select keys to the _client
+form_ without leaking the rest.
 
 ## The context object
 
@@ -106,7 +106,7 @@ helper:
    `wf.context.pass` annotations from the type's metadata, picks
    only matching keys off the context object.
 2. Builds the response: `{ inputRequired: { payload, transport,
-   context: { email: ctx.email } } }`.
+context: { email: ctx.email } } }`.
 3. The client form's `formContext` ref ends up as `{ email: "..." }`.
 
 The same happens automatically when the `@FormInput()` interceptor
@@ -179,12 +179,12 @@ Anything **not** in `@wf.context.pass` never crosses the wire:
 
 ```ts
 // Server-side context for the LoginCtx flow:
-ctx.userId = 42;          // ← not in @wf.context.pass — NEVER sent
-ctx.otpCode = "123456";   // ← not in @wf.context.pass — NEVER sent
-ctx.email = "...";        // ← whitelisted — sent
+ctx.userId = 42; // ← not in @wf.context.pass — NEVER sent
+ctx.otpCode = "123456"; // ← not in @wf.context.pass — NEVER sent
+ctx.email = "..."; // ← whitelisted — sent
 ```
 
-The framework defaults to *whitelist* not *blacklist* for exactly
+The framework defaults to _whitelist_ not _blacklist_ for exactly
 this reason: forgetting to mark `otpCode` private would be a
 catastrophic bug; forgetting to mark `email` public is a harmless
 "the title shows 'your email'" fallback.

@@ -69,10 +69,7 @@ import {
   createHttpOutlet,
   outletHttp,
 } from "@moostjs/event-wf";
-import {
-  serializeFormSchema,
-  extractPassContext,
-} from "@atscript/moost-wf";
+import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
 import { HelloForm } from "../../shared/forms/hello.as";
 
 interface HelloCtx {
@@ -82,10 +79,7 @@ interface HelloCtx {
 @Controller()
 export class HelloWorkflow {
   @Workflow("hello")
-  @WorkflowSchema<HelloCtx>([
-    { id: "ask-name" },
-    { id: "greet" },
-  ])
+  @WorkflowSchema<HelloCtx>([{ id: "ask-name" }, { id: "greet" }])
   flow() {}
 
   @Step("ask-name")
@@ -146,10 +140,8 @@ class WfController {
   async handle() {
     const wfApp = this.wf.getWfApp();
     const deps: WfOutletTriggerDeps = {
-      start: (schemaId, ctx, opts) =>
-        wfApp.start(schemaId, ctx as never, { input: opts?.input }),
-      resume: (state, opts) =>
-        wfApp.resume(state as never, { input: opts?.input }),
+      start: (schemaId, ctx, opts) => wfApp.start(schemaId, ctx as never, { input: opts?.input }),
+      resume: (state, opts) => wfApp.resume(state as never, { input: opts?.input }),
     };
     return handleWfOutletRequest(
       {
@@ -201,13 +193,7 @@ function onFinished(response: unknown) {
 
 <template>
   <div v-if="greeting">{{ greeting }}</div>
-  <AsWfForm
-    v-else
-    path="/wf"
-    name="hello"
-    :types="types"
-    @finished="onFinished"
-  />
+  <AsWfForm v-else path="/wf" name="hello" :types="types" @finished="onFinished" />
 </template>
 ```
 

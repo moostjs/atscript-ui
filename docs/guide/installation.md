@@ -10,13 +10,13 @@ A full reference for wiring atscript-ui into a Vue 3 + Vite project. The [Quick 
 
 You only need the packages whose components you actually render.
 
-| Use case                      | Install                                                                                                                 |
-| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Forms only                    | `@atscript/ui` `@atscript/ui-styles` `@atscript/vue-form`                                                               |
-| Forms + tables                | `@atscript/ui` `@atscript/ui-table` `@atscript/ui-styles` `@atscript/vue-form` `@atscript/vue-table`                    |
-| Forms + tables + workflows    | + `@atscript/vue-wf` on the client, `@atscript/moost-wf` on the server                                                  |
-| Server-side preset persistence | + `@atscript/moost-ui-presets` on the server                                                                            |
-| Dynamic annotations           | + `@atscript/ui-fns` (opt-in: enables `@ui.fn.*` and `@ui.form.validate`)                                              |
+| Use case                       | Install                                                                                              |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Forms only                     | `@atscript/ui` `@atscript/ui-styles` `@atscript/vue-form`                                            |
+| Forms + tables                 | `@atscript/ui` `@atscript/ui-table` `@atscript/ui-styles` `@atscript/vue-form` `@atscript/vue-table` |
+| Forms + tables + workflows     | + `@atscript/vue-wf` on the client, `@atscript/moost-wf` on the server                               |
+| Server-side preset persistence | + `@atscript/moost-ui-presets` on the server                                                         |
+| Dynamic annotations            | + `@atscript/ui-fns` (opt-in: enables `@ui.fn.*` and `@ui.form.validate`)                            |
 
 Every flavour also wants `vunor`, `unocss`, `unplugin-atscript`, `unplugin-vue-components`, and `@atscript/typescript` as dev deps:
 
@@ -44,12 +44,7 @@ import Components from "unplugin-vue-components/vite";
 import { AsResolver } from "@atscript/ui-styles/vite";
 
 export default defineConfig({
-  plugins: [
-    atscript(),
-    UnoCSS(),
-    vue(),
-    Components({ resolvers: [AsResolver()] }),
-  ],
+  plugins: [atscript(), UnoCSS(), vue(), Components({ resolvers: [AsResolver()] })],
 });
 ```
 
@@ -57,8 +52,11 @@ export default defineConfig({
 If you SSR a moost-db / moost-wf server with native database drivers, mark them external. Example:
 
 ```ts
-ssr: { external: ["@atscript/db", "@atscript/db-sqlite", "better-sqlite3"] }
+ssr: {
+  external: ["@atscript/db", "@atscript/db-sqlite", "better-sqlite3"];
+}
 ```
+
 :::
 
 ## UnoCSS configuration
@@ -91,7 +89,7 @@ export default defineConfig({
 
 What the preset does:
 
-- Registers vunor (the theme system: scopes, layers, surfaces, `c8-*` clickables, `i8-*` inputs, fingertip-* heights, spacing tokens `$xxs..$xxl`).
+- Registers vunor (the theme system: scopes, layers, surfaces, `c8-*` clickables, `i8-*` inputs, fingertip-\* heights, spacing tokens `$xxs..$xxl`).
 - Registers the `as-*` shortcut tree from `@atscript/ui-styles` (every component's styles live here, not in `.vue` templates).
 - Registers a custom extractor that scans your sources for `<AsForm>` / `useForm` / `createDefaultTypes` / etc. and pulls in the matching pre-computed class lists. **You don't have to add `node_modules` to `content.filesystem`.**
 - Bakes in an icon set under the `as` collection (`i-as-search`, `i-as-close`, `i-as-loading`, …).
@@ -111,8 +109,8 @@ Components({ resolvers: [AsResolver()] });
 
 What auto-resolves:
 
-| Auto-imported (Tier 1)                                                                                                                                | NOT auto-imported (Tier 2)                                                                        |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Auto-imported (Tier 1)                                                                                                                               | NOT auto-imported (Tier 2)                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `<AsForm>` `<AsField>` `<AsIterator>` `<AsTable>` `<AsTableRoot>` `<AsWindowTable>` `<AsTableActions>` `<AsFilters>` `<AsPresetPicker>` `<AsWfForm>` | Default field components (`AsInput`, `AsSelect`, `AsCheckbox`, …), default cells, default dialogs |
 
 Tier-2 defaults are swap targets you compose through `:types` / `:components` prop maps, not template tags — so the resolver intentionally skips them. Composables (`useForm`, `useTable`, `useWfForm`) are not components and always need an explicit import. See [Styling: AsResolver](/styling/installation#asresolver-auto-import) for the full pattern.

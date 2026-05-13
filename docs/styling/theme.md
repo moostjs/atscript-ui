@@ -14,11 +14,11 @@ interface AsPresetVunorOptions {
 
 `asPresetVunor` accepts the above directly. Anything beyond that (palette, fingertip overrides, typography) flows through vunor's own preset, which is composed internally with sensible defaults. To override palette and fingertip from your app, drop down to vunor's `presetVunor` and pair it with the rest of our presets — covered below.
 
-| Option              | Type                     | Default                                       | Effect                                                                                                                                       |
-| ------------------- | ------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `baseRadius`        | `string`                 | `"4px"`                                       | Drives `rounded-base` and vunor's `r0..r4` ladder used across forms, table cells, dialogs, and chips.                                        |
-| `excludeComponents` | `string[]`               | `[]`                                          | Kebab-case component names to drop from the safelist. Use when you swap a default for your own implementation and want to shed unused rules. |
-| `iconOverrides`     | `Record<string, string>` | `{}`                                          | Replace baked icons with custom SVG strings or Iconify IDs. See [Icons](/styling/icons).                                                     |
+| Option              | Type                     | Default | Effect                                                                                                                                       |
+| ------------------- | ------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `baseRadius`        | `string`                 | `"4px"` | Drives `rounded-base` and vunor's `r0..r4` ladder used across forms, table cells, dialogs, and chips.                                        |
+| `excludeComponents` | `string[]`               | `[]`    | Kebab-case component names to drop from the safelist. Use when you swap a default for your own implementation and want to shed unused rules. |
+| `iconOverrides`     | `Record<string, string>` | `{}`    | Replace baked icons with custom SVG strings or Iconify IDs. See [Icons](/styling/icons).                                                     |
 
 ## Minimal palette override
 
@@ -55,11 +55,7 @@ To override these in your app, replace `asPresetVunor()` with a hand-composed pr
 ```typescript
 // uno.config.ts
 import { defineConfig } from "unocss";
-import {
-  allShortcuts,
-  createAsExtractor,
-  mergeVunorShortcuts,
-} from "@atscript/ui-styles";
+import { allShortcuts, createAsExtractor, mergeVunorShortcuts } from "@atscript/ui-styles";
 import { presetVunor, vunorShortcuts } from "vunor/theme";
 import presetIcons from "@unocss/preset-icons";
 import { bakedIcons } from "@atscript/ui-styles";

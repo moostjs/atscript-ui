@@ -6,7 +6,7 @@ outline: deep
 
 `@atscript/vue-wf` (client) and `@atscript/moost-wf` (server) implement
 **HTTP round-trip workflow forms**: long, multi-step user flows where
-the *server* decides which screen comes next.
+the _server_ decides which screen comes next.
 
 A single workflow is one long-lived conversation: the server pauses,
 asks the client for a form, validates the answer, optionally branches,
@@ -76,12 +76,7 @@ keeps going until `finished: true`.
 One Vue 3 component (Tier 1, auto-imported by `AsResolver`):
 
 ```vue
-<AsWfForm
-  path="/api/wf"
-  name="auth/login"
-  :types="types"
-  @finished="onFinished"
-/>
+<AsWfForm path="/api/wf" name="auth/login" :types="types" @finished="onFinished" />
 ```
 
 Or use the composable `useWfForm({ ... })` directly when you want to
@@ -112,17 +107,17 @@ See [Server-Side Authoring](/workflows/server-authoring).
 
 ## Quick map
 
-| Topic                                              | Page                                                    |
-| -------------------------------------------------- | ------------------------------------------------------- |
-| Two-step end-to-end example                        | [Hello World](/workflows/hello-world)                   |
-| `@Workflow` + `@Step` + `@WorkflowSchema`          | [Server-Side Authoring](/workflows/server-authoring)    |
-| `@FormInput`, `requireInput`, server-side errors   | [Form Input & Validation](/workflows/form-input)        |
-| Alt actions (resend code, save draft, …)           | [Actions](/workflows/actions)                           |
-| Passing context to the client form                 | [Context Passing](/workflows/context)                   |
-| Durable state with `AsWfStore`                     | [State Persistence](/workflows/state-persistence)       |
-| Magic links, outlets, resume                       | [Outlets & Resume](/workflows/outlets-resume)           |
-| `<AsWfForm>` + `useWfForm()` reference             | [Client: AsWfForm](/workflows/client)                   |
-| Login+MFA, invite+register, checkout               | [Recipes](/workflows/recipes)                           |
+| Topic                                            | Page                                                 |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| Two-step end-to-end example                      | [Hello World](/workflows/hello-world)                |
+| `@Workflow` + `@Step` + `@WorkflowSchema`        | [Server-Side Authoring](/workflows/server-authoring) |
+| `@FormInput`, `requireInput`, server-side errors | [Form Input & Validation](/workflows/form-input)     |
+| Alt actions (resend code, save draft, …)         | [Actions](/workflows/actions)                        |
+| Passing context to the client form               | [Context Passing](/workflows/context)                |
+| Durable state with `AsWfStore`                   | [State Persistence](/workflows/state-persistence)    |
+| Magic links, outlets, resume                     | [Outlets & Resume](/workflows/outlets-resume)        |
+| `<AsWfForm>` + `useWfForm()` reference           | [Client: AsWfForm](/workflows/client)                |
+| Login+MFA, invite+register, checkout             | [Recipes](/workflows/recipes)                        |
 
 ## Related
 

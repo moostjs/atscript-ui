@@ -24,8 +24,8 @@ interface PresetSnapshot {
     columnNames: string[];
     columnWidths?: Record<string, string>;
   };
-  filters?: string[];        // displayed filter field paths
-  filterOps?: FieldFilters;  // applied filter conditions
+  filters?: string[]; // displayed filter field paths
+  filterOps?: FieldFilters; // applied filter conditions
   sorters?: SortControl[];
   itemsPerPage?: number;
 }
@@ -44,11 +44,11 @@ entries-arrays for atscript validation) is converted via
 
 ## Three preset kinds
 
-| Kind         | ID prefix     | Persisted | Scope                 |
-| ------------ | ------------- | --------- | --------------------- |
-| **System**   | `sys:`        | No        | Built into the app    |
-| **User**     | (uuid)        | Yes       | One user, one table   |
-| **Public**   | (uuid)        | Yes       | All users, one table  |
+| Kind       | ID prefix | Persisted | Scope                |
+| ---------- | --------- | --------- | -------------------- |
+| **System** | `sys:`    | No        | Built into the app   |
+| **User**   | (uuid)    | Yes       | One user, one table  |
+| **Public** | (uuid)    | Yes       | All users, one table |
 
 System presets are declared by the app, never round-trip to the
 server, and always render in the picker at index 0 onwards. The
@@ -66,8 +66,8 @@ Per-user, per-table preferences keyed deterministically as
 
 ```ts
 interface UserConfData {
-  defaultPresetId?: string;   // applied at first load
-  favPresetIds?: string[];    // pinned in the picker
+  defaultPresetId?: string; // applied at first load
+  favPresetIds?: string[]; // pinned in the picker
 }
 ```
 
@@ -92,7 +92,7 @@ provideCellLocale(() => ({
   timezone: prefs.value.timezone,
 }));
 
-await save({ appearance: "dark" });   // optimistic shallow merge
+await save({ appearance: "dark" }); // optimistic shallow merge
 ```
 
 `save()` is optimistic: the local `prefs` updates immediately, the
@@ -113,7 +113,13 @@ apps just pass the `preset` prop and let `<AsPresetPicker>` consume
 const presets = usePresets({
   url: "/api/db/_presets",
   tableKey: "orders",
-  systemPresets: [{ id: "open", label: "Open", content: { filterOps: { status: [{ type: "eq", value: ["pending"] }] } } }],
+  systemPresets: [
+    {
+      id: "open",
+      label: "Open",
+      content: { filterOps: { status: [{ type: "eq", value: ["pending"] }] } },
+    },
+  ],
 });
 ```
 

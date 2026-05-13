@@ -21,43 +21,43 @@ Root component. Renders an HTML `<form>`, owns the form-state machine, wires pro
 
 ### Props
 
-| Prop              | Type                                         | Default        | Description                                                                                                            |
-| ----------------- | -------------------------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `def`             | `FormDef`                                    | —              | Required. The form definition.                                                                                         |
-| `formData`        | `{ value: TFormData }`                       | internal `{}`  | External wrapped container.                                                                                            |
-| `formContext`     | `TFormContext`                               | `undefined`    | App-wide context for validators / dynamic fn scope.                                                                    |
-| `types`           | `TAsTypeComponents`                          | —              | Required. Built-in renderer-id → component map.                                                                        |
-| `components`      | `Record<string, Component>`                  | `undefined`    | Custom-name → component map. Targeted by `@ui.form.component`.                                                         |
-| `errors`          | `Record<string, string \| undefined>`        | `undefined`    | Server errors keyed by absolute path; `__form` for top-level.                                                          |
-| `firstValidation` | `TFormState['firstValidation']`              | `'on-change'`  | See [firstValidation strategies](#firstvalidation-strategies).                                                          |
-| `hideRootTitle`   | `boolean`                                    | `false`        | Suppress the root field's `@meta.label` heading.                                                                       |
-| `hideSubmit`      | `boolean`                                    | `false`        | Suppress the default submit button. Required because an empty `<template #form.submit />` does not suppress fallback.  |
-| `loading`         | `boolean`                                    | `false`        | Apply `inert` to the body + paint a loading overlay.                                                                   |
-| `clientFactory`   | `ClientFactory`                              | global default | Per-form factory for value-help HTTP clients.                                                                          |
+| Prop              | Type                                  | Default        | Description                                                                                                           |
+| ----------------- | ------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `def`             | `FormDef`                             | —              | Required. The form definition.                                                                                        |
+| `formData`        | `{ value: TFormData }`                | internal `{}`  | External wrapped container.                                                                                           |
+| `formContext`     | `TFormContext`                        | `undefined`    | App-wide context for validators / dynamic fn scope.                                                                   |
+| `types`           | `TAsTypeComponents`                   | —              | Required. Built-in renderer-id → component map.                                                                       |
+| `components`      | `Record<string, Component>`           | `undefined`    | Custom-name → component map. Targeted by `@ui.form.component`.                                                        |
+| `errors`          | `Record<string, string \| undefined>` | `undefined`    | Server errors keyed by absolute path; `__form` for top-level.                                                         |
+| `firstValidation` | `TFormState['firstValidation']`       | `'on-change'`  | See [firstValidation strategies](#firstvalidation-strategies).                                                        |
+| `hideRootTitle`   | `boolean`                             | `false`        | Suppress the root field's `@meta.label` heading.                                                                      |
+| `hideSubmit`      | `boolean`                             | `false`        | Suppress the default submit button. Required because an empty `<template #form.submit />` does not suppress fallback. |
+| `loading`         | `boolean`                             | `false`        | Apply `inert` to the body + paint a loading overlay.                                                                  |
+| `clientFactory`   | `ClientFactory`                       | global default | Per-form factory for value-help HTTP clients.                                                                         |
 
 ### Emits
 
-| Event                | Payload                                                                | When                                                       |
-| -------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------- |
-| `submit`             | `(data: TFormData)`                                                    | Form submitted; validation passed.                          |
-| `error`              | `(errors: { path: string; message: string }[])`                        | Submit attempted; validation failed.                        |
+| Event                | Payload                                                                | When                                                         |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `submit`             | `(data: TFormData)`                                                    | Form submitted; validation passed.                           |
+| `error`              | `(errors: { path: string; message: string }[])`                        | Submit attempted; validation failed.                         |
 | `action`             | `(name: string, data: TFormData)`                                      | A `@ui.form.action` button (or `@wf.action.withData`) fires. |
-| `unsupported-action` | `(name: string, data: TFormData)`                                      | Action name dispatched but no field declares it.            |
-| `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur / array add+remove / union switch.                |
+| `unsupported-action` | `(name: string, data: TFormData)`                                      | Action name dispatched but no field declares it.             |
+| `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur / array add+remove / union switch.                 |
 
 ### Slots
 
 All slots receive submit-related scoped bindings (`clearErrors`, `reset`, `setErrors`, `disabled`, `formContext`).
 
-| Slot              | When                                                                                                | Default                            |
-| ----------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `form.header`     | Above everything inside `<form>`. Use for breadcrumbs / page-level chrome.                          | empty                              |
-| `form.before`     | Above `<AsField :field="def.rootField" />`.                                                         | empty                              |
-| `form.after`      | Below the root field; above the error banner.                                                       | empty                              |
-| `form.error`      | Form-level `__form` banner. Receives `{ message, dismiss }`.                                        | Built-in `<div role="alert">`.     |
-| `form.submit`     | Submit button. Receives `{ disabled, text, ... }`. **Empty slot does not suppress fallback** — use `hide-submit` prop. | Built-in `<button>` with `submitText`. |
-| `form.footer`     | Below submit.                                                                                       | empty                              |
-| `form.loading`    | Inside the loading overlay (when `loading=true`).                                                   | Spinner icon.                      |
+| Slot           | When                                                                                                                   | Default                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| `form.header`  | Above everything inside `<form>`. Use for breadcrumbs / page-level chrome.                                             | empty                                  |
+| `form.before`  | Above `<AsField :field="def.rootField" />`.                                                                            | empty                                  |
+| `form.after`   | Below the root field; above the error banner.                                                                          | empty                                  |
+| `form.error`   | Form-level `__form` banner. Receives `{ message, dismiss }`.                                                           | Built-in `<div role="alert">`.         |
+| `form.submit`  | Submit button. Receives `{ disabled, text, ... }`. **Empty slot does not suppress fallback** — use `hide-submit` prop. | Built-in `<button>` with `submitText`. |
+| `form.footer`  | Below submit.                                                                                                          | empty                                  |
+| `form.loading` | Inside the loading overlay (when `loading=true`).                                                                      | Spinner icon.                          |
 
 Source: `packages/vue-form/src/components/as-form.vue:84-156`.
 
@@ -67,14 +67,14 @@ Renders one field — resolves all annotations, picks the component, manages mod
 
 ### Props
 
-| Prop          | Type                | Description                                                                                  |
-| ------------- | ------------------- | -------------------------------------------------------------------------------------------- |
-| `field`       | `FormFieldDef`      | Required. The field definition from `def.fields[i]` or `def.rootField`.                       |
-| `error`       | `string`            | Inline override (rare — server errors usually go through `:errors` on AsForm).                |
-| `onRemove`    | `() => void`        | Remove-this-item callback. Set by `AsArray` when iterating items.                             |
-| `canRemove`   | `boolean`           | Whether removal is allowed (respects `@expect.minLength`).                                    |
-| `removeLabel` | `string`            | Label for the remove affordance.                                                              |
-| `arrayIndex`  | `number`            | Zero-based index when rendered as a direct array item; drives the `#N` label suffix.          |
+| Prop          | Type           | Description                                                                          |
+| ------------- | -------------- | ------------------------------------------------------------------------------------ |
+| `field`       | `FormFieldDef` | Required. The field definition from `def.fields[i]` or `def.rootField`.              |
+| `error`       | `string`       | Inline override (rare — server errors usually go through `:errors` on AsForm).       |
+| `onRemove`    | `() => void`   | Remove-this-item callback. Set by `AsArray` when iterating items.                    |
+| `canRemove`   | `boolean`      | Whether removal is allowed (respects `@expect.minLength`).                           |
+| `removeLabel` | `string`       | Label for the remove affordance.                                                     |
+| `arrayIndex`  | `number`       | Zero-based index when rendered as a direct array item; drives the `#N` label suffix. |
 
 ### Component resolution
 
@@ -113,13 +113,13 @@ Renders all fields of a definition. Used to splice in additional fields under a 
 
 ### Props
 
-| Prop         | Type      | Description                                                                                                                                |
-| ------------ | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `def`        | `FormDef` | Definition whose `.fields` to iterate.                                                                                                     |
-| `pathPrefix` | `string`  | Optional extra path segment to nest under (appended to the inherited `PATH_PREFIX_KEY`). Use when iterating a sub-def under a custom path. |
-| `onRemove`   | `() => void` | Forwarded to every AsField.                                                                                                              |
-| `canRemove`  | `boolean` | Forwarded.                                                                                                                                 |
-| `removeLabel`| `string`  | Forwarded.                                                                                                                                 |
+| Prop          | Type         | Description                                                                                                                                |
+| ------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `def`         | `FormDef`    | Definition whose `.fields` to iterate.                                                                                                     |
+| `pathPrefix`  | `string`     | Optional extra path segment to nest under (appended to the inherited `PATH_PREFIX_KEY`). Use when iterating a sub-def under a custom path. |
+| `onRemove`    | `() => void` | Forwarded to every AsField.                                                                                                                |
+| `canRemove`   | `boolean`    | Forwarded.                                                                                                                                 |
+| `removeLabel` | `string`     | Forwarded.                                                                                                                                 |
 
 Source: `packages/vue-form/src/components/as-iterator.vue:1-38`.
 
@@ -131,43 +131,43 @@ Source: `packages/vue-form/src/components/as-iterator.vue:1-38`.
 
 `createDefaultTypes()` returns this map. Spread it to extend, override individual entries to swap built-ins.
 
-| Renderer id | Component   | Used for                                                                              |
-| ----------- | ----------- | ------------------------------------------------------------------------------------- |
-| `text`      | `AsInput`   | `<input type="text">` (default for `string`)                                          |
-| `textarea`  | `AsInput`   | `<textarea>` — set via `@ui.form.type 'textarea'`                                     |
-| `password`  | `AsInput`   | `<input type="password">` — set via `@ui.form.type 'password'`                        |
-| `number`    | `AsNumber`  | Integer / non-decimal numbers                                                          |
-| `decimal`   | `AsDecimal` | Decimal numbers (`@db.amount.currency`, `@db.column.precision`, `@db.unit`)            |
-| `select`    | `AsSelect`  | `@expect.values [...]` or explicit `@ui.form.type 'select'`                            |
-| `radio`     | `AsRadio`   | `@ui.form.type 'radio'`                                                                |
-| `checkbox`  | `AsCheckbox`| `boolean` (tri-state via `useAsTriStateCheckbox`)                                      |
-| `paragraph` | `AsParagraph` | Read-only display (`@ui.form.type 'paragraph'`)                                      |
-| `action`    | `AsAction`  | Phantom action button (`@ui.form.action 'id', 'label'`)                                |
-| `object`    | `AsObject`  | Nested structures                                                                      |
-| `array`     | `AsArray`   | `T[]`                                                                                  |
-| `union`     | `AsUnion`   | `A \| B`                                                                               |
-| `tuple`     | `AsTuple`   | `[A, B]`                                                                               |
-| `ref`       | `AsRef`     | FK with `@db.rel.FK` + `@db.http.path`                                                 |
-| `date`      | `AsDate`    | `Date` storage                                                                         |
-| `datetime`  | `AsDatetime`| `Date` with time (`@ui.form.type 'datetime'`)                                          |
-| `time`      | `AsTime`    | `HH:mm` (`@ui.form.type 'time'`)                                                       |
+| Renderer id | Component     | Used for                                                                    |
+| ----------- | ------------- | --------------------------------------------------------------------------- |
+| `text`      | `AsInput`     | `<input type="text">` (default for `string`)                                |
+| `textarea`  | `AsInput`     | `<textarea>` — set via `@ui.form.type 'textarea'`                           |
+| `password`  | `AsInput`     | `<input type="password">` — set via `@ui.form.type 'password'`              |
+| `number`    | `AsNumber`    | Integer / non-decimal numbers                                               |
+| `decimal`   | `AsDecimal`   | Decimal numbers (`@db.amount.currency`, `@db.column.precision`, `@db.unit`) |
+| `select`    | `AsSelect`    | `@expect.values [...]` or explicit `@ui.form.type 'select'`                 |
+| `radio`     | `AsRadio`     | `@ui.form.type 'radio'`                                                     |
+| `checkbox`  | `AsCheckbox`  | `boolean` (tri-state via `useAsTriStateCheckbox`)                           |
+| `paragraph` | `AsParagraph` | Read-only display (`@ui.form.type 'paragraph'`)                             |
+| `action`    | `AsAction`    | Phantom action button (`@ui.form.action 'id', 'label'`)                     |
+| `object`    | `AsObject`    | Nested structures                                                           |
+| `array`     | `AsArray`     | `T[]`                                                                       |
+| `union`     | `AsUnion`     | `A \| B`                                                                    |
+| `tuple`     | `AsTuple`     | `[A, B]`                                                                    |
+| `ref`       | `AsRef`       | FK with `@db.rel.FK` + `@db.http.path`                                      |
+| `date`      | `AsDate`      | `Date` storage                                                              |
+| `datetime`  | `AsDatetime`  | `Date` with time (`@ui.form.type 'datetime'`)                               |
+| `time`      | `AsTime`      | `HH:mm` (`@ui.form.type 'time'`)                                            |
 
 Source: `packages/vue-form/src/composables/create-default-types.ts:29-50`.
 
 ## Atscript primitive → field type
 
-| `.as` shape          | `field.type` | Default component | Notes                                                                                   |
-| -------------------- | ------------ | ----------------- | --------------------------------------------------------------------------------------- |
-| `string`             | `text`       | `AsInput`         | Set `@ui.form.type 'textarea'` / `'password'` to swap renderer id.                      |
-| `string.email`       | `text`       | `AsInput`         | `@expect.email` baked in via the atscript primitive.                                    |
-| `number`             | `number`     | `AsNumber`        | `@db.column.precision` switches to `decimal` if present.                                |
-| `boolean`            | `checkbox`   | `AsCheckbox`      | Optional `boolean` → tri-state (true/false/undefined).                                  |
-| `Date`               | `date`       | `AsDate`          | Use `@ui.form.type 'datetime'` / `'time'` for finer granularity.                        |
-| `T[]`                | `array`      | `AsArray`         | `T` can be primitive, object, union, tuple.                                             |
-| `[A, B]`             | `tuple`      | `AsTuple`         | Fixed-length positional.                                                                |
-| `A \| B`             | `union`      | `AsUnion`         | Discriminated by required-prop fingerprint.                                              |
-| `interface { ... }`  | `object`     | `AsObject`        | Renders flat at root; collapsible when nested.                                          |
-| FK ref (`@db.rel.FK`)| `ref`        | `AsRef`           | Requires `@db.http.path` on the target type.                                            |
+| `.as` shape           | `field.type` | Default component | Notes                                                              |
+| --------------------- | ------------ | ----------------- | ------------------------------------------------------------------ |
+| `string`              | `text`       | `AsInput`         | Set `@ui.form.type 'textarea'` / `'password'` to swap renderer id. |
+| `string.email`        | `text`       | `AsInput`         | `@expect.email` baked in via the atscript primitive.               |
+| `number`              | `number`     | `AsNumber`        | `@db.column.precision` switches to `decimal` if present.           |
+| `boolean`             | `checkbox`   | `AsCheckbox`      | Optional `boolean` → tri-state (true/false/undefined).             |
+| `Date`                | `date`       | `AsDate`          | Use `@ui.form.type 'datetime'` / `'time'` for finer granularity.   |
+| `T[]`                 | `array`      | `AsArray`         | `T` can be primitive, object, union, tuple.                        |
+| `[A, B]`              | `tuple`      | `AsTuple`         | Fixed-length positional.                                           |
+| `A \| B`              | `union`      | `AsUnion`         | Discriminated by required-prop fingerprint.                        |
+| `interface { ... }`   | `object`     | `AsObject`        | Renders flat at root; collapsible when nested.                     |
+| FK ref (`@db.rel.FK`) | `ref`        | `AsRef`           | Requires `@db.http.path` on the target type.                       |
 
 A field carrying `@ui.form.type 'X'` forces `:types['X']` to render it (or `:components['Y']` via `@ui.form.component 'Y'`).
 
@@ -175,11 +175,11 @@ A field carrying `@ui.form.type 'X'` forces `:types['X']` to render it (or `:com
 
 Three layers, run in order on submit. Live (pre-submit) validation runs only the same checks per `firstValidation` policy.
 
-| Layer                       | Source                                          | Runs at                                                  |
-| --------------------------- | ----------------------------------------------- | -------------------------------------------------------- |
-| `@expect.*` rules            | Atscript Validator (`getFormValidator(def)`)    | Submit + live (when active). Built-in rules: `email`, `int`, `minLength`, `maxLength`, `minValue`, `maxValue`, `pattern`, `notEmpty`, `values`. |
-| `@meta.required`            | Implicit non-empty check                        | Same as above. Renders the `*` marker.                   |
-| `@ui.form.validate '(...)'` | Custom validator strings (requires ui-fns)      | Same as above. Receives `TFnScope` with `v`/`data`/`context`/`entry`. |
+| Layer                       | Source                                       | Runs at                                                                                                                                         |
+| --------------------------- | -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@expect.*` rules           | Atscript Validator (`getFormValidator(def)`) | Submit + live (when active). Built-in rules: `email`, `int`, `minLength`, `maxLength`, `minValue`, `maxValue`, `pattern`, `notEmpty`, `values`. |
+| `@meta.required`            | Implicit non-empty check                     | Same as above. Renders the `*` marker.                                                                                                          |
+| `@ui.form.validate '(...)'` | Custom validator strings (requires ui-fns)   | Same as above. Receives `TFnScope` with `v`/`data`/`context`/`entry`.                                                                           |
 
 `@expect.*` rules live in the atscript skill — see `expect.md` there for the catalog.
 
@@ -196,13 +196,13 @@ Source: `packages/vue-form/src/composables/use-as-form.ts:178-180`. The `errorLi
 
 Field-level live validation is gated until one of these conditions matches. Once the first submit happens, every field is "active" regardless.
 
-| Strategy           | Live validation activates when…                                              |
-| ------------------ | ---------------------------------------------------------------------------- |
-| `'on-change'`      | First submit happened **or** the field's model has changed (touched). (default) |
-| `'touched-on-blur'`| First submit happened **or** (blur happened AND touched).                    |
-| `'on-blur'`        | First submit happened **or** blur happened.                                  |
-| `'on-submit'`      | First submit happened. Live updates never run before then.                   |
-| `'none'`           | Disable live validation entirely. Submit also skips per-field iteration.     |
+| Strategy            | Live validation activates when…                                                 |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `'on-change'`       | First submit happened **or** the field's model has changed (touched). (default) |
+| `'touched-on-blur'` | First submit happened **or** (blur happened AND touched).                       |
+| `'on-blur'`         | First submit happened **or** blur happened.                                     |
+| `'on-submit'`       | First submit happened. Live updates never run before then.                      |
+| `'none'`            | Disable live validation entirely. Submit also skips per-field iteration.        |
 
 Source: `packages/vue-form/src/composables/use-as-field.ts:62-77`.
 
@@ -228,9 +228,9 @@ Pass server-supplied errors keyed by absolute dotted path:
   :form-data="formData"
   :types="types"
   :errors="{
-    'name': 'Already taken',
+    name: 'Already taken',
     'address.street': 'Missing house number',
-    '__form': 'Server is down — try again later',
+    __form: 'Server is down — try again later',
   }"
 />
 ```
@@ -271,7 +271,7 @@ const { submit, clearErrors, reset, setErrors } = useAsState({
     if (data.value.password !== data.value.passwordConfirm) {
       errors["passwordConfirm"] = "Passwords don't match";
     }
-    return errors;          // empty = passed
+    return errors; // empty = passed
   },
 });
 ```
@@ -284,11 +284,11 @@ Source: `packages/vue-form/src/composables/use-as-state.ts:84-111`.
 
 Available on the return value of `useAsForm` AND scoped on all `<AsForm>` slots:
 
-| Helper          | Effect                                                                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `reset()`       | Run every registered field's `reset()` callback (re-applies defaults), then `clearErrors()`. Async — awaits `nextTick`.                  |
-| `clearErrors()` | Reset `firstSubmitHappened`, clear `freshFields`, clear external and submit errors on every registered field.                            |
-| `setErrors(map)`| Push `map` into per-field `externalError` state. Each field reads `map[path]` keyed on its absolute path.                                |
+| Helper           | Effect                                                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `reset()`        | Run every registered field's `reset()` callback (re-applies defaults), then `clearErrors()`. Async — awaits `nextTick`. |
+| `clearErrors()`  | Reset `firstSubmitHappened`, clear `freshFields`, clear external and submit errors on every registered field.           |
+| `setErrors(map)` | Push `map` into per-field `externalError` state. Each field reads `map[path]` keyed on its absolute path.               |
 
 `useAsForm` additionally exposes `internalErrors: Ref<Record<string, string>>` — the most-recent submit's validator output, merged with `:errors` to drive descendant error-count badges on collapsed objects.
 

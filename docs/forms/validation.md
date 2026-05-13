@@ -148,23 +148,18 @@ Each field decides per-keystroke whether it's "validation-active" based
 on the form's `firstValidation` strategy
 (`packages/vue-form/src/composables/use-as-field.ts:62-77`):
 
-| Strategy           | Becomes active after…                          |
-| ------------------ | ---------------------------------------------- |
-| `on-change`        | first submit OR first edit (default)           |
-| `touched-on-blur`  | first submit OR (edited AND blurred)           |
-| `on-blur`          | first submit OR first blur                     |
-| `on-submit`        | first submit only                              |
-| `none`             | never (validation suppressed entirely)         |
+| Strategy          | Becomes active after…                  |
+| ----------------- | -------------------------------------- |
+| `on-change`       | first submit OR first edit (default)   |
+| `touched-on-blur` | first submit OR (edited AND blurred)   |
+| `on-blur`         | first submit OR first blur             |
+| `on-submit`       | first submit only                      |
+| `none`            | never (validation suppressed entirely) |
 
 Pass it as a prop:
 
 ```vue
-<AsForm
-  :def="def"
-  :form-data="formData"
-  :types="types"
-  first-validation="touched-on-blur"
-/>
+<AsForm :def="def" :form-data="formData" :types="types" first-validation="touched-on-blur" />
 ```
 
 On **submit**, the entire form validates synchronously — every field
@@ -201,12 +196,7 @@ The shape is `Record<absolutePath, message>`. Use `__form` as the key
 for a form-level banner.
 
 ```vue
-<AsForm
-  :def="def"
-  :form-data="formData"
-  :types="types"
-  :errors="serverErrors"
-/>
+<AsForm :def="def" :form-data="formData" :types="types" :errors="serverErrors" />
 ```
 
 ```ts

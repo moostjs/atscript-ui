@@ -82,14 +82,14 @@ export interface CustomersTable {
 }
 ```
 
-| Annotation              | Picker behaviour                                                 |
-| ----------------------- | ---------------------------------------------------------------- |
-| `@ui.dict.label`        | Primary text shown for each row                                  |
-| `@ui.dict.descr`        | Secondary text under the label                                   |
-| `@ui.dict.attr`         | Extra columns shown in the expanded mini-table view              |
-| `@ui.dict.searchable`   | Forces the picker to send `$search` even without fulltext index  |
-| `@ui.dict.filterable`   | Field appears in the picker's filter dialog                      |
-| `@ui.dict.sortable`     | Field appears in the picker's sort options                       |
+| Annotation            | Picker behaviour                                                |
+| --------------------- | --------------------------------------------------------------- |
+| `@ui.dict.label`      | Primary text shown for each row                                 |
+| `@ui.dict.descr`      | Secondary text under the label                                  |
+| `@ui.dict.attr`       | Extra columns shown in the expanded mini-table view             |
+| `@ui.dict.searchable` | Forces the picker to send `$search` even without fulltext index |
+| `@ui.dict.filterable` | Field appears in the picker's filter dialog                     |
+| `@ui.dict.sortable`   | Field appears in the picker's sort options                      |
 
 Without `@ui.dict.label`, the picker falls back to the primary-key column —
 useable but not pretty.
@@ -105,32 +105,31 @@ prop to `<AsForm>` (or `<AsWfForm>`):
 
 ```vue
 <script setup lang="ts">
-import { AsForm, type ClientFactory } from '@atscript/vue-form'
-import { Client } from '@atscript/db-client'
+import { AsForm, type ClientFactory } from "@atscript/vue-form";
+import { Client } from "@atscript/db-client";
 
 const clientFactory: ClientFactory = (url) =>
   new Client(url, {
-    fetch: (req) =>
-      fetch(req, { headers: { Authorization: `Bearer ${getToken()}` } }),
-  })
+    fetch: (req) => fetch(req, { headers: { Authorization: `Bearer ${getToken()}` } }),
+  });
 </script>
 
 <template>
-  <AsForm
-    :def="def"
-    :form-data="formData"
-    :types="types"
-    :client-factory="clientFactory"
-  />
+  <AsForm :def="def" :form-data="formData" :types="types" :client-factory="clientFactory" />
 </template>
 ```
 
 For an app-wide default, call `setDefaultClientFactory` once at startup:
 
 ```typescript
-import { setDefaultClientFactory } from '@atscript/vue-form'
+import { setDefaultClientFactory } from "@atscript/vue-form";
 
-setDefaultClientFactory((url) => new Client(url, { /* auth */ }))
+setDefaultClientFactory(
+  (url) =>
+    new Client(url, {
+      /* auth */
+    }),
+);
 ```
 
 Per-form `clientFactory` props override the default. Both fall back to the

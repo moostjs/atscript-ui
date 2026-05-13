@@ -16,12 +16,12 @@ The `as-*` shortcut tree, how to read it, and how to extend it without forking. 
 
 ## Naming convention
 
-| Pattern                | Meaning                                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| `as-<concept>`         | Base concept (e.g. `as-description`, `as-overlay`, `as-close-btn`, `as-field`, `as-table`, `as-form`)     |
+| Pattern                | Meaning                                                                                                                    |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `as-<concept>`         | Base concept (e.g. `as-description`, `as-overlay`, `as-close-btn`, `as-field`, `as-table`, `as-form`)                      |
 | `as-<case>-<concept>`  | Variant extending the base (e.g. `as-form-description` extends `as-description`, `as-dialog-close` extends `as-close-btn`) |
-| `as-<concept>-<part>`  | A part of a composite concept (e.g. `as-form-title`, `as-fpill-chip`, `as-table-checkbox-tick`)           |
-| `as-<concept>-<state>` | A state variant (`as-fpill-active`, `as-fpill-label-active`, `as-table-row-active`)                       |
+| `as-<concept>-<part>`  | A part of a composite concept (e.g. `as-form-title`, `as-fpill-chip`, `as-table-checkbox-tick`)                            |
+| `as-<concept>-<state>` | A state variant (`as-fpill-active`, `as-fpill-label-active`, `as-table-row-active`)                                        |
 
 The case-prefix pattern is the customization handle: overriding `as-form-description` restyles error/help text only inside forms; overriding `as-description` restyles it everywhere. Pick the narrowest extension point that fits the requirement.
 
@@ -31,11 +31,11 @@ The case-prefix pattern is the customization handle: overriding `as-form-descrip
 
 ```typescript
 import {
-  commonShortcuts,  // shared base concepts
-  formShortcuts,    // <AsForm>, <AsField>, …
-  tableShortcuts,   // <AsTable>, <AsFilters>, …
-  wfShortcuts,      // <AsWfForm>
-  allShortcuts,     // merge of all four — pass to vunorShortcuts()
+  commonShortcuts, // shared base concepts
+  formShortcuts, // <AsForm>, <AsField>, …
+  tableShortcuts, // <AsTable>, <AsFilters>, …
+  wfShortcuts, // <AsWfForm>
+  allShortcuts, // merge of all four — pass to vunorShortcuts()
 } from "@atscript/ui-styles";
 ```
 
@@ -50,12 +50,12 @@ Source:
 
 Representative top-level concepts per group. (Not exhaustive — read the directory for the full list.)
 
-| Group               | Concepts (selected)                                                                                                                                                                                                                                                                                                          |
-| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commonShortcuts`   | `as-kbd`, `as-description`, `as-overlay`, `as-overlay-icon`, `as-close-btn`, `as-dialog-close`                                                                                                                                                                                                                                |
-| `formShortcuts`     | `as-form`, `as-form-title`, `as-form-description`, `as-form-error`, `as-form-overlay`, `as-form-grid`, `as-default-field`, `as-field-label`, `as-field-input-row`, `as-field-description`, `as-field-remove-btn`, `as-select-wrap`, `as-checkbox-field`, `as-radio-group`, `as-array`, `as-collapsible`, `as-object`, `as-ref`, `as-action`, `as-no-data`, `as-decimal-number`, `as-dropdown` |
-| `tableShortcuts`    | `as-table`, `as-th-*`, `as-td-*`, `as-table-scroll-container`, `as-table-outer-wrap`, `as-table-sticky`, `as-table-stretch`, `as-table-checkbox`, `as-table-row-active`, `as-table-empty`, `as-table-loading`, `as-table-error`, `as-table-query-overlay`, `as-cell-number`, `as-cell` (number/date/json/string/...), `as-fpill`, `as-page`, `as-column-menu`, `as-preset-picker`, `as-preset-dialog`, `as-filter-dialog`, `as-filter-field`, `as-config-dialog`, `as-config-tab`, `as-confirm-dialog`, `as-action-form`, `as-orderable-list`, `as-row-actions`, `as-sorter`, `as-table-actions`, `as-window-table`, `as-window-skeleton`, `as-window-scrollbar` |
-| `wfShortcuts`       | `as-wf-form-error`                                                                                                                                                                                                                                                                                                            |
+| Group             | Concepts (selected)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commonShortcuts` | `as-kbd`, `as-description`, `as-overlay`, `as-overlay-icon`, `as-close-btn`, `as-dialog-close`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `formShortcuts`   | `as-form`, `as-form-title`, `as-form-description`, `as-form-error`, `as-form-overlay`, `as-form-grid`, `as-default-field`, `as-field-label`, `as-field-input-row`, `as-field-description`, `as-field-remove-btn`, `as-select-wrap`, `as-checkbox-field`, `as-radio-group`, `as-array`, `as-collapsible`, `as-object`, `as-ref`, `as-action`, `as-no-data`, `as-decimal-number`, `as-dropdown`                                                                                                                                                                                                                                                                    |
+| `tableShortcuts`  | `as-table`, `as-th-*`, `as-td-*`, `as-table-scroll-container`, `as-table-outer-wrap`, `as-table-sticky`, `as-table-stretch`, `as-table-checkbox`, `as-table-row-active`, `as-table-empty`, `as-table-loading`, `as-table-error`, `as-table-query-overlay`, `as-cell-number`, `as-cell` (number/date/json/string/...), `as-fpill`, `as-page`, `as-column-menu`, `as-preset-picker`, `as-preset-dialog`, `as-filter-dialog`, `as-filter-field`, `as-config-dialog`, `as-config-tab`, `as-confirm-dialog`, `as-action-form`, `as-orderable-list`, `as-row-actions`, `as-sorter`, `as-table-actions`, `as-window-table`, `as-window-skeleton`, `as-window-scrollbar` |
+| `wfShortcuts`     | `as-wf-form-error`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 
 Each group also re-exports its per-file slices (e.g. `asFormShortcuts`, `asFieldShortcuts`, `asTableShortcuts`, `asCellShortcuts`, …) so you can compose a subset preset by hand if needed. See `packages/ui-styles/src/shortcuts/{form,table}/index.ts` for the full export list.
 
@@ -78,16 +78,16 @@ Shortcuts live in `packages/ui-styles/src/shortcuts/{form,table,wf,common}/<as-n
 
 The object form's keys are UnoCSS variant prefixes. Common shapes used across the tree:
 
-| Key                                         | Meaning                                                  |
-| ------------------------------------------- | -------------------------------------------------------- |
-| `""`                                        | Base — unconditional classes                             |
-| `"hover:"`                                  | `:hover` variant                                          |
-| `"focus:"`, `"focus-within:"`, `"focus-visible:"` | Focus variants                                       |
-| `"disabled:"`, `"hover:not-disabled:"`      | Disabled / not-disabled variants                          |
-| `"[&_child]:"`                              | Descendant selector variant (UnoCSS arbitrary variant)    |
-| `"[&.classname]:"`                          | Compound-class variant (state via class on same element)  |
-| `"[&_:is(input,select,textarea)]:"`         | Multi-selector descendant — wrap list in `:is(...)`       |
-| `"[&_tbody_tr:is([data-state=checked])]:"`  | Reka-UI state attribute via `:is()` (see below)           |
+| Key                                               | Meaning                                                  |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| `""`                                              | Base — unconditional classes                             |
+| `"hover:"`                                        | `:hover` variant                                         |
+| `"focus:"`, `"focus-within:"`, `"focus-visible:"` | Focus variants                                           |
+| `"disabled:"`, `"hover:not-disabled:"`            | Disabled / not-disabled variants                         |
+| `"[&_child]:"`                                    | Descendant selector variant (UnoCSS arbitrary variant)   |
+| `"[&.classname]:"`                                | Compound-class variant (state via class on same element) |
+| `"[&_:is(input,select,textarea)]:"`               | Multi-selector descendant — wrap list in `:is(...)`      |
+| `"[&_tbody_tr:is([data-state=checked])]:"`        | Reka-UI state attribute via `:is()` (see below)          |
 
 Example with a compound-class variant from `as-field.ts:12-13`:
 
@@ -104,23 +104,23 @@ If you want your extension to inherit palette swaps, dark mode, and scope tintin
 
 Vunor vocabulary you can lean on:
 
-| Bucket             | Tokens                                                                            |
-| ------------------ | --------------------------------------------------------------------------------- |
-| Spacing            | `$xxs`, `$xs`, `$s`, `$m`, `$l`, `$xl`, `$xxl`                                    |
-| Fingertip          | `fingertip-xs..xl` (`h-`, `w-`, `size-`)                                          |
-| Typography         | `text-body`, `text-callout`, `text-body-l`                                        |
-| Scope              | `scope-primary`, `scope-error`, `scope-good`, `scope-warn`, `scope-neutral`, `scope-secondary` |
-| Current helpers    | `current-hl`, `current-border-hl`, `current-outline-hl`, `text-current`, `text-current-hl`, `bg-current-hl/{10,15,20,30,40}` |
-| Layers             | `layer-0`, `layer-1`, `layer-2`                                                   |
-| Surfaces           | `surface-50`, `surface-100`, `surface-600`, ...                                   |
-| Button chrome      | `c8-filled`, `c8-flat`, `c8-outlined`, `c8-light`, `c8-chrome`                    |
-| Icon helpers       | `i8-bare`, `i8-apply-border`, `i8-apply-outline`                                  |
-| Radius             | `rounded-base`, `rounded-r0..r4`, `rounded-full`                                  |
-| Shadow             | `shadow-popup`                                                                    |
-| Borders            | `border-1` alone pulls color from the active surface/layer                        |
-| Focus ring         | `outline i8-apply-outline current-outline-hl` (composed)                          |
-| Disabled affordance| `disabled-soft` (vunor primitive)                                                 |
-| Em-sized icons     | `text-[1em]`, `text-[1.25em]`, `text-[3em]` (size relative to text)               |
+| Bucket              | Tokens                                                                                                                       |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Spacing             | `$xxs`, `$xs`, `$s`, `$m`, `$l`, `$xl`, `$xxl`                                                                               |
+| Fingertip           | `fingertip-xs..xl` (`h-`, `w-`, `size-`)                                                                                     |
+| Typography          | `text-body`, `text-callout`, `text-body-l`                                                                                   |
+| Scope               | `scope-primary`, `scope-error`, `scope-good`, `scope-warn`, `scope-neutral`, `scope-secondary`                               |
+| Current helpers     | `current-hl`, `current-border-hl`, `current-outline-hl`, `text-current`, `text-current-hl`, `bg-current-hl/{10,15,20,30,40}` |
+| Layers              | `layer-0`, `layer-1`, `layer-2`                                                                                              |
+| Surfaces            | `surface-50`, `surface-100`, `surface-600`, ...                                                                              |
+| Button chrome       | `c8-filled`, `c8-flat`, `c8-outlined`, `c8-light`, `c8-chrome`                                                               |
+| Icon helpers        | `i8-bare`, `i8-apply-border`, `i8-apply-outline`                                                                             |
+| Radius              | `rounded-base`, `rounded-r0..r4`, `rounded-full`                                                                             |
+| Shadow              | `shadow-popup`                                                                                                               |
+| Borders             | `border-1` alone pulls color from the active surface/layer                                                                   |
+| Focus ring          | `outline i8-apply-outline current-outline-hl` (composed)                                                                     |
+| Disabled affordance | `disabled-soft` (vunor primitive)                                                                                            |
+| Em-sized icons      | `text-[1em]`, `text-[1.25em]`, `text-[3em]` (size relative to text)                                                          |
 
 For layout values that vunor doesn't tokenize (e.g. `min-w-[8em]`, `w-[4em]`, `min-h-[80px]`), explicit literals are expected — vunor only owns palette/spacing/typography/depth.
 
@@ -149,17 +149,16 @@ import { vunorShortcuts } from "vunor/theme";
 
 const consumerShortcuts = defineShortcuts({
   // New concept — picks up palette/scope automatically.
-  "as-brand-banner":
-    "scope-primary c8-light px-$m py-$s rounded-base font-600 text-callout",
+  "as-brand-banner": "scope-primary c8-light px-$m py-$s rounded-base font-600 text-callout",
   // Extension of an existing one (variant naming convention):
   "as-form-banner": "as-brand-banner mb-$m",
 });
 
 export default defineConfig({
-  presets: asPresetVunor({ /* ... */ }),
-  shortcuts: [
-    vunorShortcuts(mergeVunorShortcuts([allShortcuts, consumerShortcuts])),
-  ],
+  presets: asPresetVunor({
+    /* ... */
+  }),
+  shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, consumerShortcuts]))],
 });
 ```
 
@@ -186,12 +185,12 @@ Mergers are shallow on the outer key + deep on the variant map — overriding `a
 
 Reka-UI primitives expose keyboard/selection state on DOM attributes, not classes:
 
-| Attribute               | Meaning                                                      |
-| ----------------------- | ------------------------------------------------------------ |
-| `data-highlighted=""`   | Keyboard cursor / pointer focus on a menu item, listbox row  |
-| `data-state="checked"`  | Selected / on (combobox item, checkbox, switch)              |
-| `data-state="open"`     | Open trigger / popover                                       |
-| `aria-selected="true"`  | Selected (used on rows that aren't combobox items)           |
+| Attribute              | Meaning                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `data-highlighted=""`  | Keyboard cursor / pointer focus on a menu item, listbox row |
+| `data-state="checked"` | Selected / on (combobox item, checkbox, switch)             |
+| `data-state="open"`    | Open trigger / popover                                      |
+| `aria-selected="true"` | Selected (used on rows that aren't combobox items)          |
 
 When extending shortcuts that target Reka-UI primitives, wrap the inner attribute selector in `:is(...)`. **Nested `[]` inside an arbitrary-variant bracket silently fails to compile in UnoCSS.**
 
@@ -235,11 +234,11 @@ Generated at the package's publish time; you read them, you don't compute them. 
 
 ```typescript
 import {
-  componentClasses,    // Record<kebab, readonly string[]>
-  componentPackages,   // Record<kebab, "form" | "table" | "wf">
-  helperAliases,       // Record<helperFnName, readonly kebab[]>
+  componentClasses, // Record<kebab, readonly string[]>
+  componentPackages, // Record<kebab, "form" | "table" | "wf">
+  helperAliases, // Record<helperFnName, readonly kebab[]>
   getComponentClasses, // (...names: string[]) => string[]
-  getHelperClasses,    // (...helpers: string[]) => string[]
+  getHelperClasses, // (...helpers: string[]) => string[]
 } from "@atscript/ui-styles";
 
 // All classes painted by <AsForm> + <AsField> + <AsIterator>:
@@ -260,10 +259,10 @@ import { defineConfig } from "unocss";
 import { createAsExtractor } from "@atscript/ui-styles";
 
 export default defineConfig({
-  presets: [/* your own vunor preset assembly, NOT asPresetVunor */],
-  extractors: [
-    createAsExtractor({ excludeComponents: ["as-input"] }),
+  presets: [
+    /* your own vunor preset assembly, NOT asPresetVunor */
   ],
+  extractors: [createAsExtractor({ excludeComponents: ["as-input"] })],
 });
 ```
 

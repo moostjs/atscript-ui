@@ -4,7 +4,7 @@ outline: deep
 
 # Outlets & Resume
 
-A workflow doesn't always pause for *form input*. Sometimes it
+A workflow doesn't always pause for _form input_. Sometimes it
 pauses for an **external event**: an email link clicked, a webhook
 fired, an approval submitted from another app. That's what
 **outlets** are for, and **resume** is how the flow picks up where
@@ -16,16 +16,16 @@ An outlet is a side-channel the workflow engine writes to when a
 step decides to pause for something other than form input. The HTTP
 outlet (which we've used for input forms) is one of several:
 
-| Outlet      | Where it sends                | Used for                                      |
-| ----------- | ----------------------------- | --------------------------------------------- |
-| HTTP        | The current HTTP response body | Request form input (the round-trip)           |
-| Email       | An email sender               | Magic links, confirmation, OTP delivery       |
-| (custom)    | Anywhere — webhooks, SMS, …   | Whatever your step calls `outletX()` for      |
+| Outlet   | Where it sends                 | Used for                                 |
+| -------- | ------------------------------ | ---------------------------------------- |
+| HTTP     | The current HTTP response body | Request form input (the round-trip)      |
+| Email    | An email sender                | Magic links, confirmation, OTP delivery  |
+| (custom) | Anywhere — webhooks, SMS, …    | Whatever your step calls `outletX()` for |
 
 When a step returns an outlet payload that's **not HTTP**, the
 client sees `{ sent: true }` or `{ outlet: "name" }` in its current
-HTTP response. From the browser's perspective, the flow is *done*.
-But on the server it's *paused*, waiting for an out-of-band
+HTTP response. From the browser's perspective, the flow is _done_.
+But on the server it's _paused_, waiting for an out-of-band
 resumption.
 
 ## A typical email-magic-link flow
@@ -82,7 +82,7 @@ hands the request to your sender, which composes and sends the
 email. The URL inside the email embeds `?wfs=<handle>`.
 
 The `if (ctx.inviteEmailSent) return` guard is essential: when Alice
-resumes, the engine re-enters this step, and we must *not* send the
+resumes, the engine re-enters this step, and we must _not_ send the
 invite a second time. Flip a flag in context on first run, check it
 on resume.
 
@@ -95,11 +95,7 @@ request returns an error.
 The HTTP dispatcher registers every outlet your flows use:
 
 ```ts
-import {
-  createHttpOutlet,
-  createEmailOutlet,
-  handleWfOutletRequest,
-} from "@moostjs/event-wf";
+import { createHttpOutlet, createEmailOutlet, handleWfOutletRequest } from "@moostjs/event-wf";
 import { consoleEmailSender } from "../workflows/email-sender";
 
 return handleWfOutletRequest(
@@ -121,18 +117,18 @@ plugs in SES, SendGrid, Postmark.
 ## Token transport for resume
 
 The `token` config on `handleWfOutletRequest` controls how the token
-crosses the wire on *resume*. Three places it can live:
+crosses the wire on _resume_. Three places it can live:
 
-| Transport | Read                          | Write                                 | Use when                                                  |
-| --------- | ----------------------------- | ------------------------------------- | --------------------------------------------------------- |
-| `body`    | JSON body, key `wfs`          | JSON response, key `wfs`              | Default. Token lives only in memory; lost on reload.      |
-| `cookie`  | `Cookie: wfs=...`             | `Set-Cookie: wfs=...`                 | Survives page reload. Same browser only.                  |
-| `query`   | `?wfs=...`                    | Append to redirect URLs               | Magic links — URL-shareable; single-use.                  |
+| Transport | Read                 | Write                    | Use when                                             |
+| --------- | -------------------- | ------------------------ | ---------------------------------------------------- |
+| `body`    | JSON body, key `wfs` | JSON response, key `wfs` | Default. Token lives only in memory; lost on reload. |
+| `cookie`  | `Cookie: wfs=...`    | `Set-Cookie: wfs=...`    | Survives page reload. Same browser only.             |
+| `query`   | `?wfs=...`           | Append to redirect URLs  | Magic links — URL-shareable; single-use.             |
 
 `token.read` is a list, so the same endpoint can accept all three.
 `token.write` is the format the server hands back on every response.
 
-Configured globally on the controller — the *client* picks how to
+Configured globally on the controller — the _client_ picks how to
 read the initial token via `<AsWfForm tokenTransport="...">` or the
 `initialToken` prop (see below).
 
@@ -175,12 +171,7 @@ If the token sits in `window.location.search`, the form auto-reads
 it on mount:
 
 ```vue
-<AsWfForm
-  path="/api/wf"
-  name="users/invite"
-  token-transport="query"
-  :types="types"
-/>
+<AsWfForm path="/api/wf" name="users/invite" token-transport="query" :types="types" />
 ```
 
 The composable's `readInitialToken()` pulls `?wfs=...` from the URL
@@ -192,12 +183,7 @@ The browser sends the cookie automatically; the form just mounts. No
 token wiring at all:
 
 ```vue
-<AsWfForm
-  path="/api/wf"
-  name="auth/login"
-  token-transport="cookie"
-  :types="types"
-/>
+<AsWfForm path="/api/wf" name="auth/login" token-transport="cookie" :types="types" />
 ```
 
 Good for "save and continue later" on the same machine.
@@ -224,7 +210,7 @@ The race-safe `getAndDelete` (see [State Persistence](/workflows/state-persisten
 ensures two simultaneous clicks on the same link only resume once.
 
 Common pitfall: the token is single-use by default. The flow's
-*next* outlet request mints a new token. If your client throws away
+_next_ outlet request mints a new token. If your client throws away
 the new token (e.g. because it didn't expect another round-trip),
 the user is stuck. `<AsWfForm>` handles this automatically — it
 reads the new `wfs` off every response.
@@ -264,7 +250,7 @@ Hours later, from Alice's browser via magic link:
 
 `createXxxOutlet(...)` is just a function that converts your step's
 return value into an `WfOutletRequest`. Roll your own when you need
-SMS, push, Slack, a webhook — anything that's *not* the current HTTP
+SMS, push, Slack, a webhook — anything that's _not_ the current HTTP
 response.
 
 The pattern: define an `outletX(args)` helper that returns

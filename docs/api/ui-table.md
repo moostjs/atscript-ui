@@ -31,9 +31,19 @@ Canonical operator names used in filter conditions. `bw` ("between") is the rang
 
 ```typescript
 type FilterConditionType =
-  | "eq" | "ne" | "gt" | "gte" | "lt" | "lte"
-  | "contains" | "starts" | "ends" | "bw"
-  | "null" | "notNull" | "regex";
+  | "eq"
+  | "ne"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "contains"
+  | "starts"
+  | "ends"
+  | "bw"
+  | "null"
+  | "notNull"
+  | "regex";
 ```
 
 ### `FilterCondition`
@@ -59,7 +69,7 @@ type FieldFilters = Record<string, FilterCondition[]>;
 
 ```typescript
 function isFilled(cond: FilterCondition): boolean;
-function hasSecondValue(type: FilterConditionType): boolean;        // `true` only for `"bw"`
+function hasSecondValue(type: FilterConditionType): boolean; // `true` only for `"bw"`
 function isSimpleEq(cond: FilterCondition): boolean;
 function conditionLabel(type: FilterConditionType): string;
 function filledFilterCount(filters: FieldFilters): number;
@@ -216,8 +226,14 @@ interface AsPresetEntryRow {
 
 type AsPresetEntryData = PresetData | UserConfData | AppConfData;
 
-interface PresetData { label: string; content?: PresetSnapshotWire; }
-interface UserConfData { defaultPresetId?: string; favPresetIds?: string[]; }
+interface PresetData {
+  label: string;
+  content?: PresetSnapshotWire;
+}
+interface UserConfData {
+  defaultPresetId?: string;
+  favPresetIds?: string[];
+}
 interface AppConfData {
   appearance?: "system" | "light" | "dark";
   language?: string;
@@ -280,7 +296,7 @@ System presets are read-only, framework-defined snapshots like "Standard view". 
 
 ```typescript
 interface SystemPreset {
-  id: string;          // "sys:standard" or "sys:<custom>"
+  id: string; // "sys:standard" or "sys:<custom>"
   label: string;
   snapshot: PresetSnapshot;
   aspects: PresetAspect[];
@@ -304,7 +320,11 @@ function resolveSystemPresets(
 
 ```typescript
 function stableStringify(value: unknown): string;
-function isDirtyAgainst(current: PresetSnapshot, claimed: AspectMask, baseline: PresetSnapshot): boolean;
+function isDirtyAgainst(
+  current: PresetSnapshot,
+  claimed: AspectMask,
+  baseline: PresetSnapshot,
+): boolean;
 ```
 
 `stableStringify` produces deterministic JSON (sorted keys) so a snapshot's hash is stable across reorders. `isDirtyAgainst` returns true when at least one claimed aspect differs from baseline.
@@ -485,10 +505,7 @@ Used by `buildTableQuery` to combine force + user controls; safe to call directl
 function mergeSorters(force: SortControl[], user: SortControl[]): SortControl[];
 
 /** AND-merge two `FilterExpr` trees, producing a wire shape that survives the Uniquery parser collapse. */
-function mergeFilters(
-  force?: FilterExpr,
-  user?: FilterExpr,
-): FilterExpr | undefined;
+function mergeFilters(force?: FilterExpr, user?: FilterExpr): FilterExpr | undefined;
 ```
 
 ## URL query bridge
@@ -549,7 +566,10 @@ function resolveAspectGate(value: boolean | string[] | undefined): AspectGate;
 function stateToUrlQueryString(state: UrlQueryStateLike, defaults: UrlQueryDefaults): string;
 
 /** Robust by design — schema drift never breaks the recipient's view. */
-function urlQueryStringToState(urlString: string, opts?: UrlQueryParseOptions): UrlQueryStateSnapshot;
+function urlQueryStringToState(
+  urlString: string,
+  opts?: UrlQueryParseOptions,
+): UrlQueryStateSnapshot;
 ```
 
 See [URL State](/tables/url-state).
@@ -623,15 +643,13 @@ interface PageAlignedBlock {
   firstIndex: number;
 }
 
-function pageAlignedBlocksFor(
-  skip: number,
-  limit: number,
-  blockSize: number,
-): PageAlignedBlock[];
+function pageAlignedBlocksFor(skip: number, limit: number, blockSize: number): PageAlignedBlock[];
 function blockStartFor(absIdx: number, blockSize: number): number;
 function clampTopIndex(topIndex: number, totalCount: number, viewport: number): number;
 
-interface MergeResult { /* ... */ }
+interface MergeResult {
+  /* ... */
+}
 function walkForwardAbsorb(results: MergeResult): void;
 function walkBackwardAbsorb(results: MergeResult): void;
 

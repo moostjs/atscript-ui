@@ -94,7 +94,9 @@ function labelRegex(text: string): RegExp {
 // Click the optional empty-state "Add <Title>" placeholder rendered by
 // `as-array.vue`'s `empty` slot for optional unset arrays.
 async function clickEmptyAdd(page: Page, title: string): Promise<void> {
-  await section(page).locator(".as-object-empty-add", { hasText: `Add ${title}` }).click();
+  await section(page)
+    .locator(".as-object-empty-add", { hasText: `Add ${title}` })
+    .click();
 }
 
 // The inline "Add <singular>" button inside an open array's body.
@@ -370,9 +372,7 @@ test.describe("Section 26 — array-showcase", () => {
     expect(numberBox!.width).toBeGreaterThan(labelBox!.width * 1.4);
   });
 
-  test("required object: submit with no phones surfaces the minLength error", async ({
-    page,
-  }) => {
+  test("required object: submit with no phones surfaces the minLength error", async ({ page }) => {
     await submit(page);
     await expect(collapsibleError(page, "At least one phone is required")).toBeVisible();
   });

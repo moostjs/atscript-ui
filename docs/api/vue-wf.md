@@ -82,18 +82,18 @@ interface AsWfFormProps {
 
 ### Slots
 
-| Slot | Scope | Purpose |
-| --- | --- | --- |
-| default | `{ form, state, actions }` | Wraps everything below — opt into a fully custom shell. `form` = `{ def, formData, formContext }`, `state` = `{ loading, error, finished, response }`, `actions` = `{ start, submit, retry }`. |
-| `wf.loading` | — | First-load placeholder (only fires before the first FormDef arrives). |
-| `wf.error` | `{ error, retry }` | Transport / 4xx fallback shown when there's no form yet. |
-| `wf.finished` | `{ response }` | Terminal state. |
-| `form.error` | `{ error, retry }` | Server-supplied form-level error (rendered alongside the form). |
-| `form.header` | AsForm's `form.header` slot props + `{ loading }` | Form chrome above the fields. |
-| `form.before` | AsForm's `form.before` slot props + `{ loading }` | Above the field tree. |
-| `form.after` | AsForm's `form.after` slot props + `{ loading }` | Below the field tree. |
-| `form.submit` | AsForm's `form.submit` slot props + `{ loading }` | Replace the submit button. Default: `<button :disabled="loading">{{ text }}</button>`. |
-| `form.footer` | AsForm's `form.footer` slot props + `{ loading }` | Below the submit row. |
+| Slot          | Scope                                             | Purpose                                                                                                                                                                                        |
+| ------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| default       | `{ form, state, actions }`                        | Wraps everything below — opt into a fully custom shell. `form` = `{ def, formData, formContext }`, `state` = `{ loading, error, finished, response }`, `actions` = `{ start, submit, retry }`. |
+| `wf.loading`  | —                                                 | First-load placeholder (only fires before the first FormDef arrives).                                                                                                                          |
+| `wf.error`    | `{ error, retry }`                                | Transport / 4xx fallback shown when there's no form yet.                                                                                                                                       |
+| `wf.finished` | `{ response }`                                    | Terminal state.                                                                                                                                                                                |
+| `form.error`  | `{ error, retry }`                                | Server-supplied form-level error (rendered alongside the form).                                                                                                                                |
+| `form.header` | AsForm's `form.header` slot props + `{ loading }` | Form chrome above the fields.                                                                                                                                                                  |
+| `form.before` | AsForm's `form.before` slot props + `{ loading }` | Above the field tree.                                                                                                                                                                          |
+| `form.after`  | AsForm's `form.after` slot props + `{ loading }`  | Below the field tree.                                                                                                                                                                          |
+| `form.submit` | AsForm's `form.submit` slot props + `{ loading }` | Replace the submit button. Default: `<button :disabled="loading">{{ text }}</button>`.                                                                                                         |
+| `form.footer` | AsForm's `form.footer` slot props + `{ loading }` | Below the submit row.                                                                                                                                                                          |
 
 ### Example
 

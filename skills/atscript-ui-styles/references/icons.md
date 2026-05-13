@@ -8,25 +8,25 @@ Customize the bundled icon set. Two public extension points: `iconOverrides` for
 - [Unknown keys ignored](#unknown-keys-ignored)
 - [Adding brand-new icons](#adding-brand-new-icons)
 - [Em-based sizing rule](#em-based-sizing-rule)
-- [Reference grep — i-as-* usage in shortcuts](#reference-grep--i-as--usage-in-shortcuts)
+- [Reference grep — i-as-\* usage in shortcuts](#reference-grep--i-as--usage-in-shortcuts)
 
 ## Default icon set
 
 Out-of-the-box icons live under the `as` collection — every glyph the library paints is `i-as-<name>`. Categories shipped:
 
-| Category          | Aliases                                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Dialog / chrome   | `close`, `menu`, `ellipsis`, `settings`                                                                              |
-| Table operations  | `filter`, `filter-ops`, `sort-asc`, `sorters`, `columns`, `refresh`                                                  |
-| Field markers     | `field-empty`, `field-fill`, `value-help`                                                                            |
-| Search            | `search`                                                                                                             |
-| Inline controls   | `plus`, `check`, `check-square`, `trash`, `warning`                                                                  |
-| Pin / favorites   | `pin`, `pin-filled`, `star`, `star-filled`                                                                           |
-| Visibility        | `eye`, `eye-off`, `eye-slash`                                                                                        |
-| Chevrons / arrows | `chevron-{up,down,left,right}`, `chevron-double-{up,down,left,right}`, `arrow-{up,down}`                             |
-| Drag handle       | `grip`                                                                                                               |
-| Theme toggle      | `sun`, `moon`                                                                                                        |
-| Loading           | `loading` (spinner)                                                                                                  |
+| Category          | Aliases                                                                                  |
+| ----------------- | ---------------------------------------------------------------------------------------- |
+| Dialog / chrome   | `close`, `menu`, `ellipsis`, `settings`                                                  |
+| Table operations  | `filter`, `filter-ops`, `sort-asc`, `sorters`, `columns`, `refresh`                      |
+| Field markers     | `field-empty`, `field-fill`, `value-help`                                                |
+| Search            | `search`                                                                                 |
+| Inline controls   | `plus`, `check`, `check-square`, `trash`, `warning`                                      |
+| Pin / favorites   | `pin`, `pin-filled`, `star`, `star-filled`                                               |
+| Visibility        | `eye`, `eye-off`, `eye-slash`                                                            |
+| Chevrons / arrows | `chevron-{up,down,left,right}`, `chevron-double-{up,down,left,right}`, `arrow-{up,down}` |
+| Drag handle       | `grip`                                                                                   |
+| Theme toggle      | `sun`, `moon`                                                                            |
+| Loading           | `loading` (spinner)                                                                      |
 
 The complete read-only map is exported as `bakedIcons` (a `Record<string, string>` of alias → SVG markup). The specific Iconify IDs we resolve at our publish time are an internal detail — override by alias name, not by Iconify ID.
 
@@ -83,7 +83,7 @@ No `width`, no `height`, no hex colors.
 ```typescript
 asPresetVunor({
   iconOverrides: {
-    brandNonexistent: '<svg>...</svg>', // alias not in bakedIcons
+    brandNonexistent: "<svg>...</svg>", // alias not in bakedIcons
   },
 });
 ```
@@ -102,12 +102,13 @@ import { vunorShortcuts } from "vunor/theme";
 
 export default defineConfig({
   presets: [
-    ...asPresetVunor({ /* options */ }),
+    ...asPresetVunor({
+      /* options */
+    }),
     presetIcons({
       collections: {
         // Iconify JSON sets — lazy-loaded at build time:
-        lucide: () =>
-          import("@iconify-json/lucide/icons.json").then((i) => i.default),
+        lucide: () => import("@iconify-json/lucide/icons.json").then((i) => i.default),
         // Inline custom SVGs under your own prefix:
         brand: {
           logo: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">...</svg>',
@@ -135,12 +136,12 @@ Note: you can't add brand-new icons by widening `iconOverrides` — unknown keys
 
 Every `as-*` shortcut that paints an icon sizes it with `em` units so the icon tracks the surrounding text size. Example sizings used across the shortcut tree:
 
-| Class                    | Size                                | Used by                                  |
-| ------------------------ | ----------------------------------- | ---------------------------------------- |
-| `text-[1em]`             | matches surrounding text            | `as-field-remove-btn-icon`, dialog icons |
-| `text-[1.25em]`          | slightly larger than text           | `as-close-btn`                           |
-| `text-[3em]`             | hero overlay icon                   | `as-overlay-icon`                        |
-| `text-[1.54em]`          | "empty state" hero                  | `as-vh-empty-icon`                       |
+| Class           | Size                      | Used by                                  |
+| --------------- | ------------------------- | ---------------------------------------- |
+| `text-[1em]`    | matches surrounding text  | `as-field-remove-btn-icon`, dialog icons |
+| `text-[1.25em]` | slightly larger than text | `as-close-btn`                           |
+| `text-[3em]`    | hero overlay icon         | `as-overlay-icon`                        |
+| `text-[1.54em]` | "empty state" hero        | `as-vh-empty-icon`                       |
 
 For your own icons, prefer the same pattern:
 
@@ -150,7 +151,7 @@ For your own icons, prefer the same pattern:
 
 Pinning `w-[16px] h-[16px]` locks the icon to 16px regardless of surrounding text size. Use it when you want a fixed-size glyph; use the em-based form when you want the icon to grow with the text it sits beside.
 
-## Reference grep — i-as-* usage in shortcuts
+## Reference grep — i-as-\* usage in shortcuts
 
 To see exactly which alias a UI element paints, search the shortcut tree:
 

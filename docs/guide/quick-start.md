@@ -62,12 +62,7 @@ import Components from "unplugin-vue-components/vite";
 import { AsResolver } from "@atscript/ui-styles/vite";
 
 export default defineConfig({
-  plugins: [
-    atscript(),
-    UnoCSS(),
-    vue(),
-    Components({ resolvers: [AsResolver()] }),
-  ],
+  plugins: [atscript(), UnoCSS(), vue(), Components({ resolvers: [AsResolver()] })],
 });
 ```
 

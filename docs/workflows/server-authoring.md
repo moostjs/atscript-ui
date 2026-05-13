@@ -14,13 +14,7 @@ workflow.
 
 ```ts
 import { Controller } from "moost";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-} from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
 
 interface LoginCtx {
   userId?: number;
@@ -53,13 +47,13 @@ export class LoginWorkflow {
 
 Five decorators do all the work:
 
-| Decorator                  | Where         | What                                                                                                                                                              |
-| -------------------------- | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@Controller()`            | class         | Standard Moost — makes the class DI-discoverable.                                                                                                                 |
-| `@Workflow("id")`          | method        | Declares this controller method as a workflow root. The `id` is what clients pass as `wfid` (e.g. `wfid: "auth/login"`).                                          |
-| `@WorkflowSchema<Ctx>([…])`| same method   | Lists the steps and any `condition?: (ctx) => boolean`. The engine evaluates each condition just before executing that step; false skips it.                      |
-| `@Step("id")`              | sibling method| Implements one step. The `id` matches a `WorkflowSchema` entry.                                                                                                   |
-| `@WorkflowParam("input"\|"context")` | step arg | Injects the current request input or the mutable context object. `input` is whatever the client posted under `input`; `context` is the per-flow state.            |
+| Decorator                            | Where          | What                                                                                                                                                   |
+| ------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@Controller()`                      | class          | Standard Moost — makes the class DI-discoverable.                                                                                                      |
+| `@Workflow("id")`                    | method         | Declares this controller method as a workflow root. The `id` is what clients pass as `wfid` (e.g. `wfid: "auth/login"`).                               |
+| `@WorkflowSchema<Ctx>([…])`          | same method    | Lists the steps and any `condition?: (ctx) => boolean`. The engine evaluates each condition just before executing that step; false skips it.           |
+| `@Step("id")`                        | sibling method | Implements one step. The `id` matches a `WorkflowSchema` entry.                                                                                        |
+| `@WorkflowParam("input"\|"context")` | step arg       | Injects the current request input or the mutable context object. `input` is whatever the client posted under `input`; `context` is the per-flow state. |
 
 The `flow()` method that carries `@Workflow` + `@WorkflowSchema` is
 usually empty — its body is never called. The decorators just attach
@@ -224,7 +218,7 @@ endpoint that dispatches incoming requests.
 const app = new Moost();
 void app.adapter(new MoostHttp()).listen(3000);
 app.adapter(new MoostWf());
-app.registerControllers(LoginWorkflow, RegisterWorkflow, /* ... */);
+app.registerControllers(LoginWorkflow, RegisterWorkflow /* ... */);
 ```
 
 `MoostWf` is the workflow adapter — it picks up classes with
@@ -304,7 +298,7 @@ A few things to know:
   links (`?wfs=token` in URLs).
 - **`eventContext` forwarding** — the `deps.start`/`deps.resume`
   wrappers forward the HTTP event context so `useWfFinished().set({
-  cookies })` actually writes Set-Cookie on the response. Without
+cookies })` actually writes Set-Cookie on the response. Without
   this, the WF runs in an isolated context and cookies are silently
   dropped.
 
@@ -348,7 +342,7 @@ between steps. Don't put non-serializable values in there
 (class instances, functions, blobs).
 
 See [Context Passing](/workflows/context) for the rules around
-exposing context values to the *client* form.
+exposing context values to the _client_ form.
 
 ## Where to go next
 

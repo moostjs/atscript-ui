@@ -27,16 +27,16 @@ Annotations cluster into five namespaces:
 
 ## `@ui.table.*` — static column annotations
 
-| Annotation                          | Arg(s)                                  | Where               | Controls                                                                                                                                                |
-| ----------------------------------- | --------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@ui.table.type "type"`             | built-in renderer id                    | `prop`, `type`      | Flips the built-in cell renderer. Built-in ids: `text`, `number`, `boolean`, `date`, `datetime`, `relative`, `array`, `object`, `union`, `enum`, `ref`. Reserved for built-ins — for custom cells use `@ui.table.component`. Wins over `@ui.type`. |
-| `@ui.table.component "name"`        | component name                          | `prop`, `type`, `interface` | Named component override for custom cells — looked up in the `:components` map passed to `<AsTableRoot>`. The dedicated mechanism for hand-rolled renderers. Wins over `@ui.table.type` when both resolve. |
-| `@ui.table.width "240px"`           | CSS width string                        | `prop`, `type`      | Default column width. Double-clicking the resize handle auto-fits to content; the column menu's *Reset width* entry restores this value.                |
-| `@ui.table.hidden`                  | —                                       | `prop`, `type`      | Column hidden by default. User can re-enable via *Columns* in the config dialog (it still appears in `state.allColumns`).                               |
-| `@ui.table.order N`                 | `number`                                | `prop`, `type`      | Initial column ordering. Lower values appear first. User-driven reorder still mutates `state.columnNames` and is preserved per-preset / per-URL-state.   |
-| `@ui.table.attr "name", "value"`    | name, value                             | `prop`, `type`      | Custom attribute or component prop applied to the rendered `<td>`. Repeatable.                                                                          |
-| `@ui.table.classes "names"`         | space-separated class list              | `prop`, `type`, `interface` | CSS classes appended to every `<td>` in this column. Repeatable. Use `as-*` shortcuts or vunor primitives — see [Customization](/tables/customization). |
-| `@ui.table.styles "css"`            | inline CSS                              | `prop`, `type`, `interface` | Inline styles appended to the rendered `<td>`. Repeatable.                                                                                              |
+| Annotation                       | Arg(s)                     | Where                       | Controls                                                                                                                                                                                                                                           |
+| -------------------------------- | -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.table.type "type"`          | built-in renderer id       | `prop`, `type`              | Flips the built-in cell renderer. Built-in ids: `text`, `number`, `boolean`, `date`, `datetime`, `relative`, `array`, `object`, `union`, `enum`, `ref`. Reserved for built-ins — for custom cells use `@ui.table.component`. Wins over `@ui.type`. |
+| `@ui.table.component "name"`     | component name             | `prop`, `type`, `interface` | Named component override for custom cells — looked up in the `:components` map passed to `<AsTableRoot>`. The dedicated mechanism for hand-rolled renderers. Wins over `@ui.table.type` when both resolve.                                         |
+| `@ui.table.width "240px"`        | CSS width string           | `prop`, `type`              | Default column width. Double-clicking the resize handle auto-fits to content; the column menu's _Reset width_ entry restores this value.                                                                                                           |
+| `@ui.table.hidden`               | —                          | `prop`, `type`              | Column hidden by default. User can re-enable via _Columns_ in the config dialog (it still appears in `state.allColumns`).                                                                                                                          |
+| `@ui.table.order N`              | `number`                   | `prop`, `type`              | Initial column ordering. Lower values appear first. User-driven reorder still mutates `state.columnNames` and is preserved per-preset / per-URL-state.                                                                                             |
+| `@ui.table.attr "name", "value"` | name, value                | `prop`, `type`              | Custom attribute or component prop applied to the rendered `<td>`. Repeatable.                                                                                                                                                                     |
+| `@ui.table.classes "names"`      | space-separated class list | `prop`, `type`, `interface` | CSS classes appended to every `<td>` in this column. Repeatable. Use `as-*` shortcuts or vunor primitives — see [Customization](/tables/customization).                                                                                            |
+| `@ui.table.styles "css"`         | inline CSS                 | `prop`, `type`, `interface` | Inline styles appended to the rendered `<td>`. Repeatable.                                                                                                                                                                                         |
 
 ```atscript
 @ui.table.width "12em"
@@ -51,11 +51,11 @@ These require `@atscript/ui-fns` (installed alongside `@atscript/ui`).
 The argument is a JavaScript expression evaluated per-row with the row
 data in scope — use sparingly, this opts into `new Function()`.
 
-| Annotation                       | Arg(s)               | Controls                                                                          |
-| -------------------------------- | -------------------- | --------------------------------------------------------------------------------- |
-| `@ui.table.fn.attr "name", "expr"` | name, JS expression  | Per-row attribute/prop on the `<td>`. Repeatable; each evaluated for every row.   |
-| `@ui.table.fn.classes "expr"`    | JS expression        | Per-row class list on the `<td>`. Repeatable.                                     |
-| `@ui.table.fn.styles "expr"`     | JS expression        | Per-row inline style on the `<td>`. Repeatable.                                   |
+| Annotation                         | Arg(s)              | Controls                                                                        |
+| ---------------------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| `@ui.table.fn.attr "name", "expr"` | name, JS expression | Per-row attribute/prop on the `<td>`. Repeatable; each evaluated for every row. |
+| `@ui.table.fn.classes "expr"`      | JS expression       | Per-row class list on the `<td>`. Repeatable.                                   |
+| `@ui.table.fn.styles "expr"`       | JS expression       | Per-row inline style on the `<td>`. Repeatable.                                 |
 
 ```atscript
 @ui.table.fn.classes "inStock ? 'text-success' : 'text-error'"
@@ -75,14 +75,14 @@ table doesn't show the raw ID — it shows a label resolved from the
 referenced row. The referenced interface declares which fields play
 which role with the `@ui.dict.*` family:
 
-| Annotation               | Node           | Purpose                                                                                                                              |
-| ------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `@ui.dict.label`         | `prop`         | Primary display field for value-help and `ref`-type cells.                                                                           |
-| `@ui.dict.descr`         | `prop`         | Secondary description in the value-help picker.                                                                                      |
-| `@ui.dict.attr`          | `prop`         | Additional attribute column in table-mode value-help. Repeatable.                                                                    |
-| `@ui.dict.filterable`    | `prop`         | Filterable in the picker UI (surfaced via `meta.fields[name].filterable`).                                                           |
-| `@ui.dict.sortable`      | `prop`         | Sortable in the picker UI.                                                                                                           |
-| `@ui.dict.searchable`    | `prop`, `interface` | Participates in `$search` inside the value-help picker. On an interface, marks every `string` prop as searchable.                |
+| Annotation            | Node                | Purpose                                                                                                           |
+| --------------------- | ------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `@ui.dict.label`      | `prop`              | Primary display field for value-help and `ref`-type cells.                                                        |
+| `@ui.dict.descr`      | `prop`              | Secondary description in the value-help picker.                                                                   |
+| `@ui.dict.attr`       | `prop`              | Additional attribute column in table-mode value-help. Repeatable.                                                 |
+| `@ui.dict.filterable` | `prop`              | Filterable in the picker UI (surfaced via `meta.fields[name].filterable`).                                        |
+| `@ui.dict.sortable`   | `prop`              | Sortable in the picker UI.                                                                                        |
+| `@ui.dict.searchable` | `prop`, `interface` | Participates in `$search` inside the value-help picker. On an interface, marks every `string` prop as searchable. |
 
 ```atscript
 @db.table 'categories'
@@ -132,13 +132,13 @@ hand-rolled widgets.
 
 These come from atscript core; the table reads a small subset.
 
-| Annotation                                | Effect on the table                                                                                                              |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `@meta.id`                                | Marks the primary key. Surfaces in `tableDef.primaryKeys`; drives action POSTs, `__remove` and row addressing.                   |
-| `@meta.label "..."`                       | Column header text. Falls back to a humanised path when absent.                                                                  |
-| `@meta.description "..."`                 | Tooltip text on the header cell.                                                                                                 |
-| `@expect.maxLength N`                     | Used to derive the default column width when `@ui.table.width` is absent. The longer the max, the wider the column.              |
-| `optional` (atscript syntax `?:`)         | Sets `ColumnDef.nullable = true`. The filter dialog's operator picker shows `null` / `notNull` only for nullable columns.        |
+| Annotation                        | Effect on the table                                                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `@meta.id`                        | Marks the primary key. Surfaces in `tableDef.primaryKeys`; drives action POSTs, `__remove` and row addressing.            |
+| `@meta.label "..."`               | Column header text. Falls back to a humanised path when absent.                                                           |
+| `@meta.description "..."`         | Tooltip text on the header cell.                                                                                          |
+| `@expect.maxLength N`             | Used to derive the default column width when `@ui.table.width` is absent. The longer the max, the wider the column.       |
+| `optional` (atscript syntax `?:`) | Sets `ColumnDef.nullable = true`. The filter dialog's operator picker shows `null` / `notNull` only for nullable columns. |
 
 ```atscript
 @meta.id
@@ -161,28 +161,29 @@ Most `@db.*` annotations belong to the [atscript-db skill](https://db.atscript.d
 but several flow back into the table either through the `/meta`
 response or by direct introspection of the column's atscript type.
 
-| Annotation                       | Read by              | What it does for the table                                                                                                                   |
-| -------------------------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@db.table 'name'`               | server (`/meta`)     | Makes the interface a DB table; required for moost-db to serve it.                                                                           |
-| `@db.http.path '/...'`           | server               | Mounts the moost-db controllers under a custom HTTP path — `<AsTableRoot url="..."`> points here.                                            |
-| `@db.index.fulltext 'name'`      | server (`/meta`)     | Adds a full-text search index. `tableDef.searchable` becomes `true`; the search box drives `controls.$search`.                              |
-| `@db.index.plain 'name'`         | server (`/meta`)     | Surfaces the column as filterable / sortable (in combination with `@db.column.*` / `@db.table.*` flags). Powers the column menu's *Sort* / *Filter*. |
-| `@db.index.unique 'name'`        | server (`/meta`)     | Same as above; also flagged in relation metadata.                                                                                            |
-| `@db.rel.FK`                     | client (`extractValueHelp`) | Marks a column as a foreign key. Cell type becomes `ref`; the filter dialog opens a value-help picker against the referenced table.   |
-| `@db.json`                       | server               | Stores the field as opaque JSON. Sub-paths are NOT auto-flattened into columns — the cell shows the JSON via `AsCellJson`.                  |
-| `@db.amount.currency 'EUR'`      | client (`extractMeasurement`) | Literal currency code; `AsCellNumber` formats with `Intl.NumberFormat` for that currency.                                            |
-| `@db.amount.currency.ref 'fld'`  | client               | Sibling-field reference — currency comes from another column on the same row.                                                                |
-| `@db.unit 'kg'`                  | client               | Literal unit-of-measure suffix on numeric cells.                                                                                             |
-| `@db.unit.ref 'fld'`             | client               | Sibling-field unit reference.                                                                                                                |
-| `@db.column.precision p, s`      | client               | Decimal precision/scale — `AsCellNumber` honours the second arg as fraction-digit count.                                                     |
+| Annotation                      | Read by                       | What it does for the table                                                                                                                           |
+| ------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@db.table 'name'`              | server (`/meta`)              | Makes the interface a DB table; required for moost-db to serve it.                                                                                   |
+| `@db.http.path '/...'`          | server                        | Mounts the moost-db controllers under a custom HTTP path — `<AsTableRoot url="..."`> points here.                                                    |
+| `@db.index.fulltext 'name'`     | server (`/meta`)              | Adds a full-text search index. `tableDef.searchable` becomes `true`; the search box drives `controls.$search`.                                       |
+| `@db.index.plain 'name'`        | server (`/meta`)              | Surfaces the column as filterable / sortable (in combination with `@db.column.*` / `@db.table.*` flags). Powers the column menu's _Sort_ / _Filter_. |
+| `@db.index.unique 'name'`       | server (`/meta`)              | Same as above; also flagged in relation metadata.                                                                                                    |
+| `@db.rel.FK`                    | client (`extractValueHelp`)   | Marks a column as a foreign key. Cell type becomes `ref`; the filter dialog opens a value-help picker against the referenced table.                  |
+| `@db.json`                      | server                        | Stores the field as opaque JSON. Sub-paths are NOT auto-flattened into columns — the cell shows the JSON via `AsCellJson`.                           |
+| `@db.amount.currency 'EUR'`     | client (`extractMeasurement`) | Literal currency code; `AsCellNumber` formats with `Intl.NumberFormat` for that currency.                                                            |
+| `@db.amount.currency.ref 'fld'` | client                        | Sibling-field reference — currency comes from another column on the same row.                                                                        |
+| `@db.unit 'kg'`                 | client                        | Literal unit-of-measure suffix on numeric cells.                                                                                                     |
+| `@db.unit.ref 'fld'`            | client                        | Sibling-field unit reference.                                                                                                                        |
+| `@db.column.precision p, s`     | client                        | Decimal precision/scale — `AsCellNumber` honours the second arg as fraction-digit count.                                                             |
 
 ::: info Where to learn more
+
 - The DB / table / column / index / relation annotations:
   [db.atscript.dev/api/tables](https://db.atscript.dev/api/tables) and
   [db.atscript.dev/relations](https://db.atscript.dev/relations).
 - The `/meta` HTTP response shape:
   [db.atscript.dev/http/crud](https://db.atscript.dev/http/crud).
-:::
+  :::
 
 ## Putting it together
 

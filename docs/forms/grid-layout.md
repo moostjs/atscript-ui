@@ -135,11 +135,11 @@ pair stacks because their container is narrow enough.
 `packages/ui/src/form/grid.ts:buildGridClasses` emits a UnoCSS class string per
 field:
 
-| Desktop span | Narrow span | Generated classes                                   |
-| ------------ | ----------- | --------------------------------------------------- |
-| `'6'`        | (default)   | `col-span-6` (narrow falls back to full)            |
-| `'4'`        | `'6'`       | `col-span-4 as-narrow:col-span-6`                   |
-| `'6'`        | `'12'`      | `col-span-6` (no narrow class — `12` is default)    |
+| Desktop span | Narrow span | Generated classes                                |
+| ------------ | ----------- | ------------------------------------------------ |
+| `'6'`        | (default)   | `col-span-6` (narrow falls back to full)         |
+| `'4'`        | `'6'`       | `col-span-4 as-narrow:col-span-6`                |
+| `'6'`        | `'12'`      | `col-span-6` (no narrow class — `12` is default) |
 
 `col-span-1`..`col-span-12` and `row-span-1`..`row-span-6` are pre-safelisted by
 `@atscript/ui-styles`, so adding arbitrary spans never requires preset edits.

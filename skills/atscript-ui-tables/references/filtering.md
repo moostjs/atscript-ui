@@ -18,9 +18,19 @@ Filter model, condition types, dialogs, OR/AND semantics.
 
 ```typescript
 export type FilterConditionType =
-  | "eq" | "ne" | "gt" | "gte" | "lt" | "lte"
-  | "contains" | "starts" | "ends" | "bw"
-  | "null" | "notNull" | "regex";
+  | "eq"
+  | "ne"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "contains"
+  | "starts"
+  | "ends"
+  | "bw"
+  | "null"
+  | "notNull"
+  | "regex";
 
 export interface FilterCondition {
   type: FilterConditionType;
@@ -32,16 +42,16 @@ export type FieldFilters = Record<string, FilterCondition[]>;
 
 `packages/ui-table/src/filters/filter-types.ts`. Each entry on `state.filters` is a path → conditions array. Value usage:
 
-| Type                  | Uses                     | Notes                                                        |
-| --------------------- | ------------------------ | ------------------------------------------------------------ |
-| `eq`, `ne`            | `value[0]`               | Exact compare.                                               |
-| `gt`, `gte`, `lt`, `lte` | `value[0]`            | Order ops.                                                   |
-| `contains`            | `value[0]`               | Compiled to `$regex: /escaped/i`.                            |
-| `starts`              | `value[0]`               | Compiled to `$regex: /^escaped/i`.                            |
-| `ends`                | `value[0]`               | Compiled to `$regex: /escaped$/i`.                            |
-| `bw`                  | `value[0]` (low), `value[1]` (high) | Inclusive between.                                  |
-| `null` / `notNull`    | ignored                  | `$exists: false` / `$exists: true`.                          |
-| `regex`               | `value[0]`               | Raw uniqu regex (no escape, no `i` flag — caller controls).  |
+| Type                     | Uses                                | Notes                                                       |
+| ------------------------ | ----------------------------------- | ----------------------------------------------------------- |
+| `eq`, `ne`               | `value[0]`                          | Exact compare.                                              |
+| `gt`, `gte`, `lt`, `lte` | `value[0]`                          | Order ops.                                                  |
+| `contains`               | `value[0]`                          | Compiled to `$regex: /escaped/i`.                           |
+| `starts`                 | `value[0]`                          | Compiled to `$regex: /^escaped/i`.                          |
+| `ends`                   | `value[0]`                          | Compiled to `$regex: /escaped$/i`.                          |
+| `bw`                     | `value[0]` (low), `value[1]` (high) | Inclusive between.                                          |
+| `null` / `notNull`       | ignored                             | `$exists: false` / `$exists: true`.                         |
+| `regex`                  | `value[0]`                          | Raw uniqu regex (no escape, no `i` flag — caller controls). |
 
 `isFilled(condition)` (`filter-conditions.ts:7-25`) determines whether a condition contributes to the Uniquery: `null`/`notNull` always count; `bw` requires both values present; everything else needs `value[0]`.
 
@@ -49,11 +59,11 @@ export type FieldFilters = Record<string, FilterCondition[]>;
 
 `filtersToUniqueryFilter` (`packages/ui-table/src/filters/filters-to-uniquery.ts:60-85`):
 
-| Group within one field                  | Combiner |
-| --------------------------------------- | -------- |
-| Inclusion ops (`eq`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts`, `ends`, `bw`, `null`, `regex`) | `$or` |
-| Exclusion ops (`ne`, `notNull`)         | `$and`   |
-| Across fields                           | `$and`   |
+| Group within one field                                                                              | Combiner |
+| --------------------------------------------------------------------------------------------------- | -------- |
+| Inclusion ops (`eq`, `gt`, `gte`, `lt`, `lte`, `contains`, `starts`, `ends`, `bw`, `null`, `regex`) | `$or`    |
+| Exclusion ops (`ne`, `notNull`)                                                                     | `$and`   |
+| Across fields                                                                                       | `$and`   |
 
 Single-condition groups unwrap to a bare expression (no enclosing `$or`/`$and`). Empty groups are skipped. The function returns `undefined` when nothing is filled — `buildTableQuery` then omits `filter` entirely.
 
@@ -67,13 +77,13 @@ Single-condition groups unwrap to a bare expression (no enclosing `$or`/`$and`).
 
 Invariant 3:
 
-| Mutation                          | Effect on `filterFields` | Effect on `filters` |
-| --------------------------------- | ------------------------ | ------------------- |
-| `state.addFilterField(path)`      | append if absent         | none                |
-| `state.removeFilterField(path)`   | remove                   | none                |
-| `state.setFieldFilter(path, [])`  | none                     | delete `[path]`     |
-| `state.removeFieldFilter(path)`   | none                     | delete `[path]`     |
-| `state.resetFilters()`            | none                     | `{}`                |
+| Mutation                         | Effect on `filterFields` | Effect on `filters` |
+| -------------------------------- | ------------------------ | ------------------- |
+| `state.addFilterField(path)`     | append if absent         | none                |
+| `state.removeFilterField(path)`  | remove                   | none                |
+| `state.setFieldFilter(path, [])` | none                     | delete `[path]`     |
+| `state.removeFieldFilter(path)`  | none                     | delete `[path]`     |
+| `state.resetFilters()`           | none                     | `{}`                |
 
 A field can have applied conditions but no visible input (preset applied state, URL hydration); a field can have a visible input but no applied conditions (user opened the input but hasn't typed). When building a custom filter dialog, write `filterFields` and `filters` independently — cross-clearing one from the other fights the watcher and produces double-fetches.
 
@@ -103,14 +113,14 @@ Inverse: `uniqueryFilterToFieldFilters(filterExpr)` decodes a Uniquery into the 
 
 `packages/ui-table/src/filters/filter-conditions-map.ts:45-61`:
 
-| Column type     | Available conditions                                                            |
-| --------------- | ------------------------------------------------------------------------------- |
-| `text`          | `eq`, `ne`, `contains`, `starts`, `ends`, `bw`, `null`, `notNull`, `regex`     |
-| `number`        | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`                  |
-| `boolean`       | `eq`, `ne`, `null`, `notNull`                                                   |
-| `date`          | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`                  |
-| `enum`          | same as `text`                                                                  |
-| `ref`           | same as `text`                                                                  |
+| Column type | Available conditions                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| `text`      | `eq`, `ne`, `contains`, `starts`, `ends`, `bw`, `null`, `notNull`, `regex` |
+| `number`    | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`              |
+| `boolean`   | `eq`, `ne`, `null`, `notNull`                                              |
+| `date`      | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`              |
+| `enum`      | same as `text`                                                             |
+| `ref`       | same as `text`                                                             |
 
 Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Use `conditionsForType(type, nullable)` to read the resolved list. Map a `ColumnDef.type` string to `ColumnFilterType` via `columnFilterType(columnType)`.
 
@@ -118,9 +128,9 @@ Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Us
 
 `packages/vue-table/src/components/as-filters.vue`. Renders one `<AsFilterField>` per visible filter path.
 
-| Prop              | Type       | Notes                                                                     |
-| ----------------- | ---------- | ------------------------------------------------------------------------- |
-| `filterFields`    | `string[]` | Override the visible list; defaults to `state.filterFields.value`.       |
+| Prop           | Type       | Notes                                                              |
+| -------------- | ---------- | ------------------------------------------------------------------ |
+| `filterFields` | `string[]` | Override the visible list; defaults to `state.filterFields.value`. |
 
 All `$attrs` pass through to each `<AsFilterField>`.
 
@@ -132,9 +142,9 @@ Use a separate `<AsFilters>` block in the toolbar to render the chip strip; the 
 
 Props (the only required one is `column`):
 
-| Prop      | Type        |
-| --------- | ----------- |
-| `column`  | `ColumnDef` |
+| Prop     | Type        |
+| -------- | ----------- |
+| `column` | `ColumnDef` |
 
 Internally delegates value entry to `controls.filterInput` (`AsFilterInput` by default). Override `controls.filterField` to replace the entire shell, or `controls.filterInput` to change just the value editor.
 
@@ -151,6 +161,7 @@ state.openFilterDialog(column);
 Or from the column-header menu via `<AsColumnMenu>` ("Filter…" item — `columnMenu.filters: true` on `<AsTable>` / `<AsWindowTable>`).
 
 Dialog UI lets the user:
+
 - pick `FilterConditionType` per condition row
 - enter the value(s) (one or two for `bw`)
 - add/remove condition rows (multiple rows produce the per-field OR/AND fold above)
@@ -212,8 +223,8 @@ state.applyUrlQuery("status=active");
 ### Read current applied filters
 
 ```typescript
-const f = state.filters.value;  // FieldFilters
-const count = filledFilterCount(f);  // from @atscript/ui-table
+const f = state.filters.value; // FieldFilters
+const count = filledFilterCount(f); // from @atscript/ui-table
 ```
 
 ### Force a filter the user can't remove
@@ -221,10 +232,7 @@ const count = filledFilterCount(f);  // from @atscript/ui-table
 Use `<AsTableRoot :force-filters>`:
 
 ```vue
-<AsTableRoot
-  url="/api/db/tables/orders"
-  :force-filters="{ tenantId: currentTenantId }"
-/>
+<AsTableRoot url="/api/db/tables/orders" :force-filters="{ tenantId: currentTenantId }" />
 ```
 
 `forceFilters` is a Uniquery `FilterExpr` — see atscript-db skill. AND'd at the top level with user filters; not visible in `state.filters`; not echoed in the URL bridge.
@@ -234,11 +242,7 @@ Use `<AsTableRoot :force-filters>`:
 Render your own list, write to `state.filters` directly:
 
 ```vue
-<button
-  v-for="path in customChipPaths"
-  :key="path"
-  @click="state.removeFieldFilter(path)"
->
+<button v-for="path in customChipPaths" :key="path" @click="state.removeFieldFilter(path)">
   {{ filterTokenLabel(path, state.filters.value[path] ?? []) }}
 </button>
 ```
@@ -248,7 +252,7 @@ Render your own list, write to `state.filters` directly:
 ### Clear all applied filters
 
 ```typescript
-state.resetFilters();   // state.filters = {}
+state.resetFilters(); // state.filters = {}
 ```
 
 This does NOT clear `filterFields` (display) — visible inputs stay. To clear both:

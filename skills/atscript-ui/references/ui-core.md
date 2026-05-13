@@ -31,13 +31,13 @@ Form-side. Source: `packages/ui/src/form/types.ts`.
 
 ```typescript
 export interface FormFieldDef {
-  path: string;                     // '' = root
+  path: string; // '' = root
   prop: TAtscriptAnnotatedType;
-  type: string;                     // structural kind: 'array', 'object', 'union', 'tuple', or primitive
-  customType?: string;              // @ui.form.type / @ui.type override for structured kinds only
+  type: string; // structural kind: 'array', 'object', 'union', 'tuple', or primitive
+  customType?: string; // @ui.form.type / @ui.type override for structured kinds only
   phantom: boolean;
   name: string;
-  allStatic: boolean;               // true when no ui.fn.* keys exist — Vue perf flag
+  allStatic: boolean; // true when no ui.fn.* keys exist — Vue perf flag
 }
 
 export interface FormDef {
@@ -49,7 +49,7 @@ export interface FormDef {
 
 export interface FormArrayFieldDef extends FormFieldDef {
   itemType: TAtscriptAnnotatedType;
-  itemField: FormFieldDef;          // template (path='')
+  itemField: FormFieldDef; // template (path='')
 }
 
 export interface FormObjectFieldDef extends FormFieldDef {
@@ -67,12 +67,15 @@ export interface FormTupleFieldDef extends FormFieldDef {
 export interface FormUnionVariant {
   label: string;
   type: TAtscriptAnnotatedType;
-  def?: FormDef;                    // for object variants
-  itemField?: FormFieldDef;         // for primitive variants
+  def?: FormDef; // for object variants
+  itemField?: FormFieldDef; // for primitive variants
   designType?: string;
 }
 
-export interface TFormAction { id: string; label: string; }
+export interface TFormAction {
+  id: string;
+  label: string;
+}
 ```
 
 Table-side. Source: `packages/ui/src/table/types.ts`.
@@ -81,9 +84,9 @@ Table-side. Source: `packages/ui/src/table/types.ts`.
 export interface TableDef {
   type: TAtscriptAnnotatedType;
   columns: ColumnDef[];
-  flatMap: Map<string, TAtscriptAnnotatedType>;   // empty for non-object roots
+  flatMap: Map<string, TAtscriptAnnotatedType>; // empty for non-object roots
   primaryKeys: string[];
-  preferredId: string[];                          // defaults to primaryKeys
+  preferredId: string[]; // defaults to primaryKeys
   crud: TCrudPermissions;
   canRemove: boolean;
   actions: TableActionsModel;
@@ -100,26 +103,26 @@ export interface ColumnDef {
   component?: string;
   sortable: boolean;
   filterable: boolean;
-  nullable: boolean;          // drops null / notNull ops when false
+  nullable: boolean; // drops null / notNull ops when false
   visible: boolean;
   width?: string;
-  maxLen?: number;            // @expect.maxLen — drives default width
+  maxLen?: number; // @expect.maxLen — drives default width
   order: number;
   options?: { key: string; label: string }[];
   valueHelpInfo?: ValueHelpInfo;
-  currencyCode?: string;      // from @db.amount.currency literal
-  currencyRefField?: string;  // from @db.amount.currency.ref
+  currencyCode?: string; // from @db.amount.currency literal
+  currencyRefField?: string; // from @db.amount.currency.ref
   unitCode?: string;
   unitRefField?: string;
-  precisionScale?: number;    // 2nd arg of @db.column.precision
-  fixed?: boolean;            // synthesised locked-chrome column (e.g. row-actions)
+  precisionScale?: number; // 2nd arg of @db.column.precision
+  fixed?: boolean; // synthesised locked-chrome column (e.g. row-actions)
 }
 
 export interface TableActionsModel {
   table: TDbActionInfo[];
   row: TDbActionInfo[];
   rows: TDbActionInfo[];
-  default: { table?: TDbActionInfo; row?: TDbActionInfo; rows?: TDbActionInfo; };
+  default: { table?: TDbActionInfo; row?: TDbActionInfo; rows?: TDbActionInfo };
 }
 
 export interface MetaResponse {
@@ -135,19 +138,36 @@ export interface MetaResponse {
   type: TSerializedAnnotatedType;
 }
 
-export interface FieldMeta { sortable: boolean; filterable: boolean; }
-export interface SearchIndexInfo { name: string; description?: string; type?: 'text' | 'vector'; }
-export interface RelationInfo { name: string; direction: 'to' | 'from' | 'via'; isArray: boolean; }
-export interface SortControl { field: string; direction: 'asc' | 'desc'; }
-export interface PaginationControl { page: number; itemsPerPage: number; }
+export interface FieldMeta {
+  sortable: boolean;
+  filterable: boolean;
+}
+export interface SearchIndexInfo {
+  name: string;
+  description?: string;
+  type?: "text" | "vector";
+}
+export interface RelationInfo {
+  name: string;
+  direction: "to" | "from" | "via";
+  isArray: boolean;
+}
+export interface SortControl {
+  field: string;
+  direction: "asc" | "desc";
+}
+export interface PaginationControl {
+  page: number;
+  itemsPerPage: number;
+}
 ```
 
 Value-help. Source: `packages/ui/src/value-help/types.ts`, `packages/ui/src/value-help/resolve.ts`.
 
 ```typescript
 export interface ValueHelpInfo {
-  url: string;                  // from target's @db.http.path
-  targetField: string;          // from prop.ref.field — the value committed on pick
+  url: string; // from target's @db.http.path
+  targetField: string; // from prop.ref.field — the value committed on pick
 }
 
 export type TFormEntryOptions = { key: string; label: string } | string;
@@ -167,12 +187,12 @@ export interface ResolvedValueHelp {
 
 ## @atscript/ui — factories
 
-| Signature | Semantics |
-| --- | --- |
-| `createFormDef(type: TAtscriptAnnotatedType): FormDef` | Walks the annotated type, builds field defs, flattens descendants. Single call per form. `packages/ui/src/form/create-form-def.ts:48`. |
-| `createTableDef(meta: MetaResponse, preDeserializedType?: TAtscriptAnnotatedType): TableDef` | Deserializes `meta.type`, builds `ColumnDef` per field, sorts by `@ui.table.order`. `packages/ui/src/table/create-table-def.ts:32`. |
+| Signature                                                                                    | Semantics                                                                                                                                                                                       |
+| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createFormDef(type: TAtscriptAnnotatedType): FormDef`                                       | Walks the annotated type, builds field defs, flattens descendants. Single call per form. `packages/ui/src/form/create-form-def.ts:48`.                                                          |
+| `createTableDef(meta: MetaResponse, preDeserializedType?: TAtscriptAnnotatedType): TableDef` | Deserializes `meta.type`, builds `ColumnDef` per field, sorts by `@ui.table.order`. `packages/ui/src/table/create-table-def.ts:32`.                                                             |
 | `createFormData<T>(type: T, resolver?: TFormValueResolver): { value: TAtscriptDataType<T> }` | Produces initial wrapped form value `{ value: ... }`. Backfills primitive `decimal` to `"0"` so optional toggle / array-add render an editable value. `packages/ui/src/form/path-utils.ts:114`. |
-| `buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVariant[]` | Materialises union branches with labels + pre-built defs/itemFields. `packages/ui/src/form/create-form-def.ts:288`. |
+| `buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVariant[]`                    | Materialises union branches with labels + pre-built defs/itemFields. `packages/ui/src/form/create-form-def.ts:288`.                                                                             |
 
 ## @atscript/ui — FieldResolver contract
 
@@ -198,23 +218,23 @@ export interface FieldResolver {
 }
 
 export interface TResolveOptions<T> {
-  staticAsBoolean?: boolean;             // any non-undefined static → true
-  transform?: (raw: unknown) => T;       // post-process raw static value
+  staticAsBoolean?: boolean; // any non-undefined static → true
+  transform?: (raw: unknown) => T; // post-process raw static value
 }
 ```
 
-| Function | Semantics |
-| --- | --- |
-| `class StaticFieldResolver` | Default. Reads only `prop.metadata.get(staticKey)`. `hasComputedAnnotations` always `false`. |
-| `class DynamicFieldResolver` (in `@atscript/ui-fns`) | Compiles fn keys via `new Function`, falls back to static. |
-| `setResolver(resolver)` | Replace the singleton (called by `installDynamicResolver()`). |
-| `getResolver(): FieldResolver` | Read the current singleton. |
-| `defaultResolver: StaticFieldResolver` | The static instance. |
-| `resolveFieldProp(prop, fnKey, staticKey, scope, opts?)` | Delegates to the active resolver — preferred call site. |
-| `resolveFormProp(type, fnKey, staticKey, scope, opts?)` | Form-level (top scope). |
-| `resolveStatic(metadata, staticKey, opts?)` | Direct static metadata read — used by both static + dynamic implementations. |
-| `hasComputedAnnotations(prop): boolean` | Delegate. |
-| `getFieldMeta(prop, key)` | Typed metadata read; `K extends keyof AtscriptMetadata` overload returns the typed value, else `unknown`. |
+| Function                                                 | Semantics                                                                                                 |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `class StaticFieldResolver`                              | Default. Reads only `prop.metadata.get(staticKey)`. `hasComputedAnnotations` always `false`.              |
+| `class DynamicFieldResolver` (in `@atscript/ui-fns`)     | Compiles fn keys via `new Function`, falls back to static.                                                |
+| `setResolver(resolver)`                                  | Replace the singleton (called by `installDynamicResolver()`).                                             |
+| `getResolver(): FieldResolver`                           | Read the current singleton.                                                                               |
+| `defaultResolver: StaticFieldResolver`                   | The static instance.                                                                                      |
+| `resolveFieldProp(prop, fnKey, staticKey, scope, opts?)` | Delegates to the active resolver — preferred call site.                                                   |
+| `resolveFormProp(type, fnKey, staticKey, scope, opts?)`  | Form-level (top scope).                                                                                   |
+| `resolveStatic(metadata, staticKey, opts?)`              | Direct static metadata read — used by both static + dynamic implementations.                              |
+| `hasComputedAnnotations(prop): boolean`                  | Delegate.                                                                                                 |
+| `getFieldMeta(prop, key)`                                | Typed metadata read; `K extends keyof AtscriptMetadata` overload returns the typed value, else `unknown`. |
 
 Source: `packages/ui/src/shared/field-resolver.ts`.
 
@@ -413,19 +433,19 @@ interface MetaCacheEntry { client: Client; meta: Promise<MetaResponse>; type: Pr
 
 Every constant `as const` from `packages/ui/src/shared/annotation-keys.ts`, re-exported from the package index. Use these instead of literal strings.
 
-| Namespace | Constants |
-| --- | --- |
-| Cross-surface | `UI_TYPE` |
-| Form static | `UI_FORM_PLACEHOLDER`, `UI_FORM_HINT`, `UI_FORM_CLASSES`, `UI_FORM_STYLES`, `UI_FORM_AUTOCOMPLETE`, `UI_FORM_DISABLED`, `UI_FORM_OPTIONS`, `UI_FORM_ORDER`, `UI_FORM_TYPE`, `UI_FORM_COMPONENT`, `UI_FORM_HIDDEN`, `UI_FORM_ATTR`, `UI_FORM_GRID_COL_SPAN`, `UI_FORM_GRID_ROW_SPAN`, `UI_FORM_SUBMIT_TEXT`, `UI_FORM_LABEL_SINGULAR`, `UI_FORM_ACTION`, `UI_FORM_PREFIX`, `UI_FORM_PREFIX_REF`, `UI_FORM_PREFIX_ICON`, `UI_FORM_SUFFIX`, `UI_FORM_SUFFIX_REF`, `UI_FORM_SUFFIX_ICON` |
-| Table static | `UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_HIDDEN`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER` |
-| Dictionary | `UI_DICT_LABEL`, `UI_DICT_DESCR`, `UI_DICT_ATTR`, `UI_DICT_FILTERABLE`, `UI_DICT_SORTABLE`, `UI_DICT_SEARCHABLE` |
-| Form dynamic (ui-fns) | `UI_FORM_FN_PREFIX`, `UI_FORM_FN_LABEL`, `UI_FORM_FN_PLACEHOLDER`, `UI_FORM_FN_DESCRIPTION`, `UI_FORM_FN_HINT`, `UI_FORM_FN_HIDDEN`, `UI_FORM_FN_DISABLED`, `UI_FORM_FN_READONLY`, `UI_FORM_FN_OPTIONS`, `UI_FORM_FN_ATTR`, `UI_FORM_FN_VALUE`, `UI_FORM_FN_CLASSES`, `UI_FORM_FN_STYLES`, `UI_FORM_FN_TITLE`, `UI_FORM_FN_SUBMIT_TEXT`, `UI_FORM_FN_SUBMIT_DISABLED` |
-| Table dynamic (ui-fns) | `UI_TABLE_FN_PREFIX`, `UI_TABLE_FN_ATTR`, `UI_TABLE_FN_CLASSES`, `UI_TABLE_FN_STYLES` |
-| Validation (ui-fns) | `UI_FORM_VALIDATE` |
-| DB (re-exported for convenience) | `DB_REL_FK`, `DB_HTTP_PATH`, `DB_AMOUNT_CURRENCY`, `DB_AMOUNT_CURRENCY_REF`, `DB_UNIT`, `DB_UNIT_REF`, `DB_COLUMN_PRECISION` |
-| Workflow | `WF_ACTION_WITH_DATA` |
-| Meta | `META_LABEL`, `META_ID`, `META_DESCRIPTION`, `META_READONLY`, `META_REQUIRED`, `META_DEFAULT`, `META_SENSITIVE` |
-| Expect | `EXPECT_MAX_LENGTH` |
+| Namespace                        | Constants                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cross-surface                    | `UI_TYPE`                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Form static                      | `UI_FORM_PLACEHOLDER`, `UI_FORM_HINT`, `UI_FORM_CLASSES`, `UI_FORM_STYLES`, `UI_FORM_AUTOCOMPLETE`, `UI_FORM_DISABLED`, `UI_FORM_OPTIONS`, `UI_FORM_ORDER`, `UI_FORM_TYPE`, `UI_FORM_COMPONENT`, `UI_FORM_HIDDEN`, `UI_FORM_ATTR`, `UI_FORM_GRID_COL_SPAN`, `UI_FORM_GRID_ROW_SPAN`, `UI_FORM_SUBMIT_TEXT`, `UI_FORM_LABEL_SINGULAR`, `UI_FORM_ACTION`, `UI_FORM_PREFIX`, `UI_FORM_PREFIX_REF`, `UI_FORM_PREFIX_ICON`, `UI_FORM_SUFFIX`, `UI_FORM_SUFFIX_REF`, `UI_FORM_SUFFIX_ICON` |
+| Table static                     | `UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_HIDDEN`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER`                                                                                                                                                                                                                                                                                                                                 |
+| Dictionary                       | `UI_DICT_LABEL`, `UI_DICT_DESCR`, `UI_DICT_ATTR`, `UI_DICT_FILTERABLE`, `UI_DICT_SORTABLE`, `UI_DICT_SEARCHABLE`                                                                                                                                                                                                                                                                                                                                                                     |
+| Form dynamic (ui-fns)            | `UI_FORM_FN_PREFIX`, `UI_FORM_FN_LABEL`, `UI_FORM_FN_PLACEHOLDER`, `UI_FORM_FN_DESCRIPTION`, `UI_FORM_FN_HINT`, `UI_FORM_FN_HIDDEN`, `UI_FORM_FN_DISABLED`, `UI_FORM_FN_READONLY`, `UI_FORM_FN_OPTIONS`, `UI_FORM_FN_ATTR`, `UI_FORM_FN_VALUE`, `UI_FORM_FN_CLASSES`, `UI_FORM_FN_STYLES`, `UI_FORM_FN_TITLE`, `UI_FORM_FN_SUBMIT_TEXT`, `UI_FORM_FN_SUBMIT_DISABLED`                                                                                                                |
+| Table dynamic (ui-fns)           | `UI_TABLE_FN_PREFIX`, `UI_TABLE_FN_ATTR`, `UI_TABLE_FN_CLASSES`, `UI_TABLE_FN_STYLES`                                                                                                                                                                                                                                                                                                                                                                                                |
+| Validation (ui-fns)              | `UI_FORM_VALIDATE`                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| DB (re-exported for convenience) | `DB_REL_FK`, `DB_HTTP_PATH`, `DB_AMOUNT_CURRENCY`, `DB_AMOUNT_CURRENCY_REF`, `DB_UNIT`, `DB_UNIT_REF`, `DB_COLUMN_PRECISION`                                                                                                                                                                                                                                                                                                                                                         |
+| Workflow                         | `WF_ACTION_WITH_DATA`                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| Meta                             | `META_LABEL`, `META_ID`, `META_DESCRIPTION`, `META_READONLY`, `META_REQUIRED`, `META_DEFAULT`, `META_SENSITIVE`                                                                                                                                                                                                                                                                                                                                                                      |
+| Expect                           | `EXPECT_MAX_LENGTH`                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 
 `UI_FORM_FN_PREFIX = 'ui.form.fn.'` and `UI_TABLE_FN_PREFIX = 'ui.table.fn.'` are the prefix strings — `DynamicFieldResolver.hasComputedAnnotations` matches them with `startsWith`.
 
@@ -495,9 +515,12 @@ export interface TValidatorContext {
   context: Record<string, unknown>;
 }
 
-export type TBuildFieldEntryOpts = Partial<Pick<TFieldEvaluated,
-  'name' | 'type' | 'component' | 'optional' | 'disabled' | 'hidden' | 'readonly'
->>;
+export type TBuildFieldEntryOpts = Partial<
+  Pick<
+    TFieldEvaluated,
+    "name" | "type" | "component" | "optional" | "disabled" | "hidden" | "readonly"
+  >
+>;
 ```
 
 Source: `packages/ui-fns/src/index.ts`, `packages/ui-fns/src/runtime/types.ts`, `packages/ui-fns/src/runtime/dynamic-resolver.ts`, `packages/ui-fns/src/runtime/validator-plugin.ts`.
@@ -508,9 +531,19 @@ Source: `packages/ui-fns/src/index.ts`, `packages/ui-fns/src/runtime/types.ts`, 
 
 ```typescript
 export type FilterConditionType =
-  | 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte'
-  | 'contains' | 'starts' | 'ends' | 'bw'
-  | 'null' | 'notNull' | 'regex';
+  | "eq"
+  | "ne"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "contains"
+  | "starts"
+  | "ends"
+  | "bw"
+  | "null"
+  | "notNull"
+  | "regex";
 
 export interface FilterCondition {
   type: FilterConditionType;
@@ -520,7 +553,7 @@ export interface FilterCondition {
 
 export type FieldFilters = Record<string, FilterCondition[]>;
 
-export type ColumnFilterType = 'text' | 'number' | 'date' | 'boolean' | 'enum' | 'ref';
+export type ColumnFilterType = "text" | "number" | "date" | "boolean" | "enum" | "ref";
 ```
 
 Helpers:
@@ -607,7 +640,7 @@ Preset data shapes (application layer):
 
 ```typescript
 export interface PresetData {
-  label: string;                          // public-name unique within (app, tableKey)
+  label: string; // public-name unique within (app, tableKey)
   content?: PresetSnapshotWire;
 }
 export interface UserConfData {
@@ -615,19 +648,19 @@ export interface UserConfData {
   favPresetIds?: string[];
 }
 export interface AppConfData {
-  appearance?: 'system' | 'light' | 'dark';
-  language?: string;                       // BCP-47, max 5 chars
-  timezone?: string;                       // IANA, max 64 chars
-  density?: 'compact' | 'cozy' | 'comfortable';
-  dateFormat?: 'iso' | 'us' | 'eu';
+  appearance?: "system" | "light" | "dark";
+  language?: string; // BCP-47, max 5 chars
+  timezone?: string; // IANA, max 64 chars
+  density?: "compact" | "cozy" | "comfortable";
+  dateFormat?: "iso" | "us" | "eu";
   firstDayOfWeek?: 0 | 1 | 6;
-  customJson?: string;                     // max 1024 chars
+  customJson?: string; // max 1024 chars
 }
 export type AsPresetEntryData = PresetData | UserConfData | AppConfData;
 
 export interface AsPresetEntryRow {
   id: string;
-  type: 'preset' | 'userConf' | 'appConf';
+  type: "preset" | "userConf" | "appConf";
   app: string;
   tableKey?: string;
   user: string;
@@ -648,12 +681,23 @@ export interface PresetCapabilities {
 }
 
 export type AsPresetsErrorCode =
-  | 'preset_limit_reached' | 'reserved_id' | 'public_name_conflict'
-  | 'missing_scope' | 'missing_id' | 'invalid_type' | 'type_immutable'
-  | 'identity_immutable' | 'preset_not_found' | 'publish_forbidden'
-  | 'action_unsupported';
+  | "preset_limit_reached"
+  | "reserved_id"
+  | "public_name_conflict"
+  | "missing_scope"
+  | "missing_id"
+  | "invalid_type"
+  | "type_immutable"
+  | "identity_immutable"
+  | "preset_not_found"
+  | "publish_forbidden"
+  | "action_unsupported";
 
-export interface PresetLimitReachedBody { code: 'preset_limit_reached'; limit: number; count: number; }
+export interface PresetLimitReachedBody {
+  code: "preset_limit_reached";
+  limit: number;
+  count: number;
+}
 ```
 
 Preset ids + reserved prefixes:
@@ -842,7 +886,7 @@ Source: `packages/ui-table/src/columns/column-widths.ts`.
 The contract any framework wrapper must satisfy. Values are plain — the framework wraps them in its own reactive primitives. Source: `packages/ui-table/src/state/table-state-types.ts`.
 
 ```typescript
-export type ConfigTab = 'columns' | 'filters' | 'sorters';
+export type ConfigTab = "columns" | "filters" | "sorters";
 
 export interface TableStateData {
   tableDef: TableDef | null;
@@ -851,8 +895,8 @@ export interface TableStateData {
   columns: ColumnDef[];
   allColumns: ColumnDef[];
   columnWidths: ColumnWidthsMap;
-  filterFields: string[];           // displayed filter inputs
-  filters: FieldFilters;            // applied conditions
+  filterFields: string[]; // displayed filter inputs
+  filters: FieldFilters; // applied conditions
   sorters: SortControl[];
   results: Record<string, unknown>[];
   resultsStart: number;
@@ -872,20 +916,20 @@ export interface TableStateData {
 }
 
 export interface TableStateMethods {
-  query(): void;                     // microtask-coalesced refresh
-  queryImmediate(): Promise<void>;   // sync refresh, settles on response
-  queryNext(): void;                 // append-style extension, no page mutation
+  query(): void; // microtask-coalesced refresh
+  queryImmediate(): Promise<void>; // sync refresh, settles on response
+  queryNext(): void; // append-style extension, no page mutation
   loadRange(skip: number, limit: number): Promise<void>;
-  invalidate(): void;                // wipe + reset, no refetch
+  invalidate(): void; // wipe + reset, no refetch
   dataAt(absIdx: number): Record<string, unknown> | undefined;
   loadingAt(absIdx: number): boolean;
   errorAt(absIdx: number): Error | null;
   resetFilters(): void;
   showConfigDialog(tab?: ConfigTab): void;
   addFilterField(path: string): void;
-  removeFilterField(path: string): void;                            // does NOT clear applied filter value
+  removeFilterField(path: string): void; // does NOT clear applied filter value
   setFieldFilter(path: string, conditions: FilterCondition[]): void; // does NOT touch filterFields
-  removeFieldFilter(path: string): void;                            // does NOT remove filterField
+  removeFieldFilter(path: string): void; // does NOT remove filterField
   setColumnWidth(path: string, width: string): void;
   resetColumnWidth(path: string): void;
   openFilterDialog(column: ColumnDef): void;

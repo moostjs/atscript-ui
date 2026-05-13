@@ -24,12 +24,12 @@ In return: zero build-time integration. You can paste the stylesheet `<link>` in
 
 The package exposes four CSS subpaths:
 
-| Subpath                          | Contents                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------- |
-| `@atscript/ui-styles/css/all`    | Every shortcut from every package — pick this if you use more than one.   |
-| `@atscript/ui-styles/css/form`   | `commonShortcuts` + `formShortcuts` only — for `@atscript/vue-form` apps. |
-| `@atscript/ui-styles/css/table`  | `commonShortcuts` + `tableShortcuts` only — for `@atscript/vue-table` apps. |
-| `@atscript/ui-styles/css/wf`     | `commonShortcuts` + `wfShortcuts` only — for `@atscript/vue-wf` apps.     |
+| Subpath                         | Contents                                                                    |
+| ------------------------------- | --------------------------------------------------------------------------- |
+| `@atscript/ui-styles/css/all`   | Every shortcut from every package — pick this if you use more than one.     |
+| `@atscript/ui-styles/css/form`  | `commonShortcuts` + `formShortcuts` only — for `@atscript/vue-form` apps.   |
+| `@atscript/ui-styles/css/table` | `commonShortcuts` + `tableShortcuts` only — for `@atscript/vue-table` apps. |
+| `@atscript/ui-styles/css/wf`    | `commonShortcuts` + `wfShortcuts` only — for `@atscript/vue-wf` apps.       |
 
 The per-package bundles are **independently complete** — each one ships its own copy of `commonShortcuts` and vunor primitives so it stands alone. That means they overlap on shared rules: **don't combine `form.css` + `table.css`** in the same app, use `all.css` instead.
 

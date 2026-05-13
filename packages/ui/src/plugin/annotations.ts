@@ -410,7 +410,8 @@ export const uiAnnotations: TAnnotationsTree = {
           argument: {
             name: "class",
             type: "string",
-            description: "CSS class painting the icon glyph. Consumer manages safelist / preset coverage.",
+            description:
+              "CSS class painting the icon glyph. Consumer manages safelist / preset coverage.",
           },
         }),
       },
@@ -465,7 +466,8 @@ export const uiAnnotations: TAnnotationsTree = {
           argument: {
             name: "class",
             type: "string",
-            description: "CSS class painting the icon glyph. Consumer manages safelist / preset coverage.",
+            description:
+              "CSS class painting the icon glyph. Consumer manages safelist / preset coverage.",
           },
         }),
       },

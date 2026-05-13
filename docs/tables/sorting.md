@@ -12,7 +12,7 @@ is the same as for filters: pure mutators, single watcher reaction.
 
 ```typescript
 interface SortControl {
-  field: string;                  // column path (dot-notation)
+  field: string; // column path (dot-notation)
   direction: "asc" | "desc";
 }
 ```
@@ -56,7 +56,7 @@ non-sortable columns the header is inert.
 
 ### The config dialog
 
-`<AsConfigDialog>`'s *Sorters* tab is the heavy-duty editor:
+`<AsConfigDialog>`'s _Sorters_ tab is the heavy-duty editor:
 
 - Reorder sorters by drag.
 - Flip direction.
@@ -93,7 +93,10 @@ import { mergeSorters } from "@atscript/ui-table";
 
 mergeSorters(
   [{ field: "priority", direction: "desc" }],
-  [{ field: "priority", direction: "asc" }, { field: "name", direction: "asc" }],
+  [
+    { field: "priority", direction: "asc" },
+    { field: "name", direction: "asc" },
+  ],
 );
 // → [{ field: "priority", direction: "desc" }, { field: "name", direction: "asc" }]
 ```
@@ -103,7 +106,7 @@ entry is dropped from the merged result — the force entry wins. The
 user's array isn't mutated; only the merged result that flows into
 `buildTableQuery` is affected.
 
-This is the natural reading of "force": the server *always* sees the
+This is the natural reading of "force": the server _always_ sees the
 force sorter, and the user can layer additional tie-breakers
 underneath but cannot override.
 
@@ -132,9 +135,7 @@ need to call `state.query()`.
 controls block from the merged sorters:
 
 ```typescript
-const sorters = forceSorters?.length
-  ? mergeSorters(forceSorters, userSorters)
-  : userSorters;
+const sorters = forceSorters?.length ? mergeSorters(forceSorters, userSorters) : userSorters;
 
 const $sort: Record<string, 1 | -1> = {};
 for (const s of sorters) {
@@ -151,4 +152,4 @@ adapter-specific lowering.
 - [Pagination & Virtualization](/tables/pagination) — how sort
   changes interact with page reset and block invalidation.
 - [URL State](/tables/url-state) — bookmarkable sort order.
-- [Config Dialog](/tables/config-dialog) — the *Sorters* tab UX.
+- [Config Dialog](/tables/config-dialog) — the _Sorters_ tab UX.

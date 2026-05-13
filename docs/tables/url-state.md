@@ -24,10 +24,7 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 </script>
 
 <template>
-  <AsTableRoot
-    url="/api/db/tables/orders"
-    v-model:url-query="urlQuery"
-  />
+  <AsTableRoot url="/api/db/tables/orders" v-model:url-query="urlQuery" />
 </template>
 ```
 
@@ -40,12 +37,12 @@ instances from the consumer app.
 
 Four aspects round-trip:
 
-| Aspect          | URL form (uniqu syntax)            |
-| --------------- | ----------------------------------- |
-| Filters         | `name=acme&status='active'`         |
-| Sorters         | `$sort=-createdAt,+name`            |
-| Pagination      | `$skip=50` (page-derived)           |
-| Search          | `$search='laptop'`                  |
+| Aspect     | URL form (uniqu syntax)     |
+| ---------- | --------------------------- |
+| Filters    | `name=acme&status='active'` |
+| Sorters    | `$sort=-createdAt,+name`    |
+| Pagination | `$skip=50` (page-derived)   |
+| Search     | `$search='laptop'`          |
 
 Default view (page 1, no filters, no sorters, no search) emits an
 empty string — no `?` in the URL.
@@ -74,10 +71,10 @@ The shape:
 
 ```ts
 interface UrlQuerySync {
-  filters?: boolean | string[];     // allowlist of field paths
-  sorters?: boolean | string[];     // allowlist of field paths
-  search?: boolean;                 // $search
-  pagination?: boolean;             // $skip + $limit
+  filters?: boolean | string[]; // allowlist of field paths
+  sorters?: boolean | string[]; // allowlist of field paths
+  search?: boolean; // $search
+  pagination?: boolean; // $skip + $limit
 }
 ```
 
@@ -116,12 +113,7 @@ A canonical table-page consumer:
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import {
-  AsTable,
-  AsTableRoot,
-  useTableUrlQuery,
-  createDefaultControls,
-} from "@atscript/vue-table";
+import { AsTable, AsTableRoot, useTableUrlQuery, createDefaultControls } from "@atscript/vue-table";
 
 const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 const controls = createDefaultControls();

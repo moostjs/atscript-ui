@@ -5,16 +5,16 @@ outline: deep
 # Actions
 
 A workflow form's submit button advances the flow. **Actions** are
-the other buttons next to it — *resend code*, *save draft*, *use
-backup method*, *forgot password*. Each one posts back to the same
+the other buttons next to it — _resend code_, _save draft_, _use
+backup method_, _forgot password_. Each one posts back to the same
 step with an `action` name, optionally with form data.
 
 ## The two action kinds
 
-| Kind                  | Annotation                  | Sends data?  | Server reads via       |
-| --------------------- | --------------------------- | ------------ | ---------------------- |
-| Plain action          | `@ui.form.action 'name'`    | No           | `@AltAction()` param   |
-| Action with data      | `@wf.action.withData 'name'`| Yes (deep-partial validated) | `@AltAction()` param + `@FormInput()` data() |
+| Kind             | Annotation                   | Sends data?                  | Server reads via                             |
+| ---------------- | ---------------------------- | ---------------------------- | -------------------------------------------- |
+| Plain action     | `@ui.form.action 'name'`     | No                           | `@AltAction()` param                         |
+| Action with data | `@wf.action.withData 'name'` | Yes (deep-partial validated) | `@AltAction()` param + `@FormInput()` data() |
 
 Both render as buttons in the rendered form's action row. Both let
 the step keep the user on the same screen, re-render the same form,
@@ -112,10 +112,10 @@ The `@FormInput()` interceptor inspects the action before validating:
   fields cause re-pause with errors.
 - **`@ui.form.action`** (plain): handler runs regardless of input
   shape. The action is "fire-and-forget" — no form data needs to be
-  valid. Useful for *resend code*, *forgot password*, *cancel*.
+  valid. Useful for _resend code_, _forgot password_, _cancel_.
 - **`@wf.action.withData`**: deep-partial validation. The
   framework only checks the fields actually present in the payload —
-  missing fields are not "required-failing". Useful for *save draft*
+  missing fields are not "required-failing". Useful for _save draft_
   flows where the user might be halfway through.
 
 If the action name is not declared on the form, the framework
@@ -203,7 +203,7 @@ re-pause the same form. The flow stays a flow.
 - [Form Input & Validation](/workflows/form-input) — `@FormInput()`
   and `requireInput()` patterns reused above.
 - [Context Passing](/workflows/context) — how the form renderer
-  reads context (e.g. to label the *resend* button with the masked
+  reads context (e.g. to label the _resend_ button with the masked
   email).
 - [Forms / Annotations](/forms/annotations) — the full annotation
   reference, including `@ui.form.action`.

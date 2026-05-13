@@ -69,9 +69,7 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await fee.decimal.blur();
 
     // currency=USD has 2 decimals; @db.column.precision 12, 2 → storage="19.99".
-    await expect(page.getByTestId("measurements-preview")).toContainText(
-      /"simpleFee":\s*"19\.99"/,
-    );
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"simpleFee":\s*"19\.99"/);
   });
 
   // ── 9 & 10. Dynamic currency rounds when picker shrinks scale ──
@@ -126,9 +124,7 @@ test.describe("Section 23 — numeric inputs showcase", () => {
   });
 
   // ── 2. Decimal with @ui.form.prefix + @ui.form.suffix (non-currency) ──
-  test("decimal with explicit prefix + suffix renders both adornment pills", async ({
-    page,
-  }) => {
+  test("decimal with explicit prefix + suffix renders both adornment pills", async ({ page }) => {
     await gotoDemo(page);
     const score = decimalLocator(page, /Score/);
     await expect(score.prefix).toHaveText("#");
@@ -136,9 +132,7 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await score.integer.fill("42");
     await score.decimal.fill("5");
     await score.decimal.blur();
-    await expect(page.getByTestId("measurements-preview")).toContainText(
-      /"score":\s*"42\.50"/,
-    );
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"score":\s*"42\.50"/);
   });
 
   // ── 1. Number with explicit prefix + suffix ──
@@ -204,9 +198,7 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await weight.input.fill("4.25");
     await weight.input.blur();
     // weight is `number`-typed → primitive number (no quotes).
-    await expect(page.getByTestId("measurements-preview")).toContainText(
-      /"weight":\s*4\.25(?!")/,
-    );
+    await expect(page.getByTestId("measurements-preview")).toContainText(/"weight":\s*4\.25(?!")/);
   });
 
   // ── 5. icon: @ui.form.suffix.icon renders a trailing icon span past the unit pill ──
@@ -299,9 +291,7 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await expect(fee.decimal).toHaveValue("00");
   });
 
-  test("keyboard bridge: arrow right at integer end focuses decimal start", async ({
-    page,
-  }) => {
+  test("keyboard bridge: arrow right at integer end focuses decimal start", async ({ page }) => {
     await gotoDemo(page);
     const fee = decimalLocator(page, /Simple fee/);
     await fee.integer.click();
@@ -325,9 +315,7 @@ test.describe("Section 23 — numeric inputs showcase", () => {
     await expect(fee.decimal).toHaveValue("50");
   });
 
-  test("number input strips non-numeric chars on the fly (typed garbage)", async ({
-    page,
-  }) => {
+  test("number input strips non-numeric chars on the fly (typed garbage)", async ({ page }) => {
     await gotoDemo(page);
     const weight = numberLocator(page, /^Weight/);
     await weight.input.fill("");

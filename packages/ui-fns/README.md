@@ -16,10 +16,10 @@ pnpm add @atscript/ui-fns
 
 ## Entry points
 
-| Subpath | What it exports |
-| --- | --- |
-| `@atscript/ui-fns` | `FnFieldResolver` — drop-in replacement for the default `FieldResolver` |
-| `@atscript/ui-fns/plugin` | atscript build-time plugin that compiles `@ui.fn.*` bodies |
+| Subpath                   | What it exports                                                         |
+| ------------------------- | ----------------------------------------------------------------------- |
+| `@atscript/ui-fns`        | `FnFieldResolver` — drop-in replacement for the default `FieldResolver` |
+| `@atscript/ui-fns/plugin` | atscript build-time plugin that compiles `@ui.fn.*` bodies              |
 
 ## License
 

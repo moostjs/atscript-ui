@@ -20,11 +20,11 @@ Peer requirements: `moost`, `@moostjs/event-wf`, `@atscript/core`, `@atscript/ty
 
 ## Entry points
 
-| Subpath | What it exports |
-| --- | --- |
-| `@atscript/moost-wf` | Workflow decorators, interceptors, runtime |
-| `@atscript/moost-wf/plugin` | atscript build-time plugin |
-| `@atscript/moost-wf/store` | Generated runtime for `AsWfStateRecord` |
+| Subpath                       | What it exports                                                                    |
+| ----------------------------- | ---------------------------------------------------------------------------------- |
+| `@atscript/moost-wf`          | Workflow decorators, interceptors, runtime                                         |
+| `@atscript/moost-wf/plugin`   | atscript build-time plugin                                                         |
+| `@atscript/moost-wf/store`    | Generated runtime for `AsWfStateRecord`                                            |
 | `@atscript/moost-wf/store.as` | Raw `.as` source for the workflow-state record — re-import if you customize fields |
 
 ## License

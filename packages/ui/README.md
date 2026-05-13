@@ -21,10 +21,10 @@ pnpm add @atscript/ui
 
 ## Entry points
 
-| Subpath | What it exports |
-| --- | --- |
-| `@atscript/ui` | `FormDef`, `TableDef`, `FieldResolver`, validators, path utilities |
-| `@atscript/ui/plugin` | atscript code-generation plugin (build-time) |
+| Subpath               | What it exports                                                    |
+| --------------------- | ------------------------------------------------------------------ |
+| `@atscript/ui`        | `FormDef`, `TableDef`, `FieldResolver`, validators, path utilities |
+| `@atscript/ui/plugin` | atscript code-generation plugin (build-time)                       |
 
 ## License
 

@@ -96,7 +96,9 @@ function fieldByLabelScoped(scope: Locator, labelText: string | RegExp): Locator
   return scope
     .getByLabel(re)
     .first()
-    .locator("xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' as-default-field ')][1]");
+    .locator(
+      "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' as-default-field ')][1]",
+    );
 }
 
 // Click the optional struct/array's "Add <Title>" empty-state button.
