@@ -206,7 +206,7 @@ This is SKILL.md invariant 9.
 
 ## Wiring AsWfStore into the workflow engine
 
-`MoostWf` takes no store option. The store is plugged in **per request** via `HandleStateStrategy` from `@moostjs/event-wf`, passed into `handleWfOutletRequest({ state })`. Pattern:
+`MoostWf` takes no store option. The store is plugged in **per request** via `HandleStateStrategy` from `@moostjs/event-wf`, passed into `handleAsOutletRequest({ state })`. Pattern:
 
 ```typescript
 import { Controller } from "moost";
@@ -216,10 +216,9 @@ import {
   HandleStateStrategy,
   EncapsulatedStateStrategy,
   createEmailOutlet,
-  handleWfOutletRequest,
   type WfOutletTriggerDeps,
 } from "@moostjs/event-wf";
-import { createAsHttpOutlet } from "@atscript/moost-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 
 const wfStore = new AsWfStore({
@@ -248,7 +247,7 @@ export class WorkflowsController {
           eventContext: opts?.eventContext as never,
         }),
     };
-    return handleWfOutletRequest(
+    return handleAsOutletRequest(
       {
         allow: ["auth/invite" /* ... */],
         // Per-call strategy selection. Return the same `handleStrategy` to use

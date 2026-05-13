@@ -41,7 +41,7 @@ export class EditProfileWorkflow {
     });
     useWfFinished().set({
       type: "data",
-      value: { finished: true, ok: true, user: { username: input.username, email: input.email } },
+      value: { ok: true, user: { username: input.username, email: input.email } },
     });
     return;
   }

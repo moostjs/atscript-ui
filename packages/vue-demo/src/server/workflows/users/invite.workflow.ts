@@ -148,7 +148,6 @@ export class InviteWorkflow {
     useWfFinished().set({
       type: "data",
       value: {
-        finished: true,
         ok: true,
         user: { username: payload.username, roleName: payload.roleName },
       },

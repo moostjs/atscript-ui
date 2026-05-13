@@ -183,7 +183,7 @@ issueSession(@WorkflowParam("context") ctx: LoginCtx) {
   const token = this.sessions.encode({ userId: ctx.userId! /* ... */ });
   useWfFinished().set({
     type: "data",
-    value: { finished: true, ok: true, user: { username: ctx.username! } },
+    value: { ok: true, user: { username: ctx.username! } },
     cookies: {
       session: {
         value: token,
@@ -196,8 +196,11 @@ issueSession(@WorkflowParam("context") ctx: LoginCtx) {
 ```
 
 The `value` field becomes the response body the client sees on
-`@finished`. `cookies` sets `Set-Cookie` headers (the HTTP outlet
-forwards them — see app wiring below for the eventContext caveat).
+`@finished`. The `finished: true` marker `<AsWfForm>` routes on is
+supplied automatically by `handleAsOutletRequest` (see app wiring
+below) — step handlers only return their domain data. `cookies` sets
+`Set-Cookie` headers (the HTTP outlet forwards them — see app wiring
+below for the eventContext caveat).
 
 ## App wiring
 
@@ -226,12 +229,11 @@ import { Controller } from "moost";
 import { Post } from "@moostjs/event-http";
 import {
   MoostWf,
-  handleWfOutletRequest,
   EncapsulatedStateStrategy,
   createEmailOutlet,
   type WfOutletTriggerDeps,
 } from "@moostjs/event-wf";
-import { createAsHttpOutlet } from "@atscript/moost-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 
 @Controller()
 export class WorkflowsController {
@@ -252,7 +254,7 @@ export class WorkflowsController {
           eventContext: opts?.eventContext as never,
         }),
     };
-    return handleWfOutletRequest(
+    return handleAsOutletRequest(
       {
         allow: ["auth/login", "auth/register"],
         state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),

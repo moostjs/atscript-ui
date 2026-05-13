@@ -95,11 +95,11 @@ request returns an error.
 The HTTP dispatcher registers every outlet your flows use:
 
 ```ts
-import { createEmailOutlet, handleWfOutletRequest } from "@moostjs/event-wf";
-import { createAsHttpOutlet } from "@atscript/moost-wf";
+import { createEmailOutlet } from "@moostjs/event-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 import { consoleEmailSender } from "../workflows/email-sender";
 
-return handleWfOutletRequest(
+return handleAsOutletRequest(
   {
     allow: ALLOWED_WORKFLOWS,
     state: () => handleStrategy,
@@ -118,11 +118,19 @@ client's root-level routing keys — `finished`, `sent`, `outlet`, or
 `error` — pass through at the response root (merged with `context`
 if any), so `outletHttp({ outlet: "awaiting-payment" })` for a
 webhook pause, `outletHttp({ error: { message } })`, etc. continue
-to work without registering a separate outlet. If you need a bare
-HTTP outlet for non-`<AsWfForm>` consumers (a custom JS client, an
-inline-data response, …), use `createHttpOutlet` from
-`@moostjs/event-wf` directly — it flattens payload + context onto
-the response root unconditionally and leaves the shape to you.
+to work without registering a separate outlet.
+
+`handleAsOutletRequest` is the matching trigger: a thin wrapper
+around `handleWfOutletRequest` that supplies the `finished: true`
+marker `<AsWfForm>` reads when a step calls
+`useWfFinished().set({ value })`. Pass-through for non-object
+responses (redirect's empty-string body, primitives), arrays, and
+already-marked envelopes (`inputRequired` / `finished` / `error` /
+`sent` / `outlet`). If you need a bare HTTP outlet + trigger for
+non-`<AsWfForm>` consumers (a custom JS client, an inline-data
+response, …), use `createHttpOutlet` and `handleWfOutletRequest`
+from `@moostjs/event-wf` directly — they flatten payload + context
+onto the response root unconditionally and leave the shape to you.
 
 `createEmailOutlet(sender)` takes a sender — your function that
 actually composes + dispatches the email. A `consoleEmailSender` that
@@ -131,7 +139,7 @@ plugs in SES, SendGrid, Postmark.
 
 ## Token transport for resume
 
-The `token` config on `handleWfOutletRequest` controls how the token
+The `token` config on `handleAsOutletRequest` controls how the token
 crosses the wire on _resume_. Three places it can live:
 
 | Transport | Read                 | Write                    | Use when                                             |

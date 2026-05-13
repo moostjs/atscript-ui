@@ -20,16 +20,16 @@ An **outlet** is a workflow pause that hands control to an external channel (ema
 
 Two outlet flavours from `@moostjs/event-wf`:
 
-| Outlet                                | Use                                                                                                                                                                                                                                                                          |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `outletHttp(payload, context?)`       | embeds payload in the HTTP response. With `createAsHttpOutlet()` mounted in `handleWfOutletRequest`, the outlet wraps the return value as `{ inputRequired: { payload, transport: 'http', context } }` — what `<AsWfForm>` decodes. The flow continues on the next request. |
-| `outletEmail(to, template, data)`     | sends an email, returns `{ sent: true }` (or `{ outlet: '<name>' }`), client closes the loop. Resume comes from the link in the email.                                                                                                                                       |
+| Outlet                            | Use                                                                                                                                                                                                                                                                         |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `outletHttp(payload, context?)`   | embeds payload in the HTTP response. With `createAsHttpOutlet()` mounted in `handleAsOutletRequest`, the outlet wraps the return value as `{ inputRequired: { payload, transport: 'http', context } }` — what `<AsWfForm>` decodes. The flow continues on the next request. |
+| `outletEmail(to, template, data)` | sends an email, returns `{ sent: true }` (or `{ outlet: '<name>' }`), client closes the loop. Resume comes from the link in the email.                                                                                                                                      |
 
 You can also write custom outlets (SMS, push, webhook). The runtime treats them all the same way: pause + persist + return a response shape that the client recognizes.
 
 ### Why two HTTP outlets?
 
-`createHttpOutlet` (from `@moostjs/event-wf`) is the generic primitive — it flattens `outletHttp(payload, context)` onto the response root unconditionally. `createAsHttpOutlet` (from `@atscript/moost-wf`) pre-configures the `transform` to wrap generic form payloads in the `{ inputRequired: {...} }` envelope `<AsWfForm>` decodes, while letting signal payloads (`finished`/`sent`/`outlet`/`error`) flow through unwrapped. Use `createAsHttpOutlet()` for every trigger fronting `<AsWfForm>`; reach for bare `createHttpOutlet()` only for non-`<AsWfForm>` consumers. See SKILL.md invariant 11 for the pass-through detail.
+`createHttpOutlet` (from `@moostjs/event-wf`) is the generic primitive — it flattens `outletHttp(payload, context)` onto the response root unconditionally. `createAsHttpOutlet` (from `@atscript/moost-wf`) pre-configures the `transform` to wrap generic form payloads in the `{ inputRequired: {...} }` envelope `<AsWfForm>` decodes, while letting signal payloads (`finished`/`sent`/`outlet`/`error`) flow through unwrapped. Use `createAsHttpOutlet()` for every trigger fronting `<AsWfForm>`; reach for bare `createHttpOutlet()` only for non-`<AsWfForm>` consumers. Pair it with `handleAsOutletRequest` (also from `@atscript/moost-wf`) as the trigger — that wrapper supplies the `finished: true` marker `<AsWfForm>` reads when a step calls `useWfFinished().set({ value })`. See SKILL.md invariants 11 + 12 for details.
 
 ## Outlet response shapes
 
@@ -132,7 +132,7 @@ collectEmail(
 
 ### Step 2 — send link and pause
 
-`outletEmail(to, template, data)` pauses the flow and emits the email. The engine persists state via the configured `HandleStateStrategy` and mints the token; the `createEmailOutlet(sender)` adapter (registered in `handleWfOutletRequest({ outlets })`) receives the rendered token through the sender callback and injects it into the template's `url`.
+`outletEmail(to, template, data)` pauses the flow and emits the email. The engine persists state via the configured `HandleStateStrategy` and mints the token; the `createEmailOutlet(sender)` adapter (registered in `handleAsOutletRequest({ outlets })`) receives the rendered token through the sender callback and injects it into the template's `url`.
 
 ```typescript
 import { outletEmail } from "@moostjs/event-wf";

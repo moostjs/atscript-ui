@@ -179,7 +179,7 @@ if (action === "forgotPassword") {
   // mount a different workflow.
   useWfFinished().set({
     type: "data",
-    value: { finished: true, redirect: "/recover" },
+    value: { redirect: "/recover" },
   });
   return;
 }

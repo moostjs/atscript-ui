@@ -57,7 +57,7 @@ const HANDLE_STATE_WFIDS = new Set<string>(["users/invite", "approvals/multi-ste
 @Post("wf")
 async handle() {
   // ...
-  return handleWfOutletRequest(
+  return handleAsOutletRequest(
     {
       allow: ALLOWED_WORKFLOWS,
       state: (wfid) =>

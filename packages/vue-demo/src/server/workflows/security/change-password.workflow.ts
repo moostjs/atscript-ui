@@ -57,7 +57,7 @@ export class ChangePasswordWorkflow {
     await usersTable.updateOne({ id: ctx.userId!, password: hash, salt });
     useWfFinished().set({
       type: "data",
-      value: { finished: true, ok: true },
+      value: { ok: true },
     });
     return;
   }

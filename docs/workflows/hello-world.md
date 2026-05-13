@@ -97,7 +97,7 @@ export class HelloWorkflow {
   greet(@WorkflowParam("context") ctx: HelloCtx) {
     useWfFinished().set({
       type: "data",
-      value: { finished: true, message: `Hello, ${ctx.name}!` },
+      value: { message: `Hello, ${ctx.name}!` },
     });
     return;
   }
@@ -117,13 +117,8 @@ field-level errors into the context is shown in
 ```ts
 import { Moost } from "moost";
 import { MoostHttp, Post } from "@moostjs/event-http";
-import {
-  MoostWf,
-  handleWfOutletRequest,
-  EncapsulatedStateStrategy,
-  type WfOutletTriggerDeps,
-} from "@moostjs/event-wf";
-import { createAsHttpOutlet } from "@atscript/moost-wf";
+import { MoostWf, EncapsulatedStateStrategy, type WfOutletTriggerDeps } from "@moostjs/event-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 import { Controller } from "moost";
 import { HelloWorkflow } from "./workflows/hello.workflow";
 
@@ -138,7 +133,7 @@ class WfController {
       start: (schemaId, ctx, opts) => wfApp.start(schemaId, ctx as never, { input: opts?.input }),
       resume: (state, opts) => wfApp.resume(state as never, { input: opts?.input }),
     };
-    return handleWfOutletRequest(
+    return handleAsOutletRequest(
       {
         allow: ["hello"],
         state: () =>
@@ -161,7 +156,10 @@ void app.init();
 ```
 
 The HTTP controller forwards every `POST /wf` to the workflow engine
-via `handleWfOutletRequest` — that helper reads the body, routes to
+via `handleAsOutletRequest` — a thin wrapper around
+`handleWfOutletRequest` that supplies the `finished: true` marker
+`<AsWfForm>` reads, so step handlers can return plain domain data via
+`useWfFinished().set({ value })`. The wrapper reads the body, routes to
 start vs resume, runs the matched step, and serializes the outlet
 response. We use `EncapsulatedStateStrategy` here: the state token
 is a signed, self-contained blob; no DB needed. See

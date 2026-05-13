@@ -19,7 +19,9 @@ import { createDefaultTypes } from "@atscript/vue-form";
 const types = createDefaultTypes();
 
 function onFinished(response: unknown) {
-  // response = the @ value handed to useWfFinished().set({ value })
+  // response = { finished: true, ...value } — the marker is supplied by
+  // handleAsOutletRequest; `value` is what useWfFinished().set({ value })
+  // passed from the step.
 }
 </script>
 

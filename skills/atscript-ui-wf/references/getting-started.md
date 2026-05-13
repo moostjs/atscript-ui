@@ -127,14 +127,14 @@ await app.registerControllers(HelloWorkflow).init();
 
 ### 4. HTTP trigger
 
-Expose `POST /wf/trigger` that forwards the request body to the workflow engine (start by `wfid`, resume by `wfs`). Register `createAsHttpOutlet()` in the outlet list so `outletHttp(...)` returns the `inputRequired` envelope `<AsWfForm>` expects:
+Expose `POST /wf/trigger` that forwards the request body to the workflow engine (start by `wfid`, resume by `wfs`). Register `createAsHttpOutlet()` in the outlet list so `outletHttp(...)` returns the `inputRequired` envelope `<AsWfForm>` expects, and use `handleAsOutletRequest` as the trigger so `useWfFinished().set({ value })` reaches the client with the `finished: true` marker `<AsWfForm>` routes on:
 
 ```typescript
-import { handleWfOutletRequest, EncapsulatedStateStrategy } from "@moostjs/event-wf";
-import { createAsHttpOutlet } from "@atscript/moost-wf";
+import { EncapsulatedStateStrategy } from "@moostjs/event-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 
 // inside the @Post('wf/trigger') handler:
-return handleWfOutletRequest(
+return handleAsOutletRequest(
   {
     allow: ["hello"],
     state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
@@ -145,7 +145,7 @@ return handleWfOutletRequest(
 );
 ```
 
-See `outlets.md` for the bare-`createHttpOutlet` alternative and SKILL.md invariant 11.
+See `outlets.md` for the bare-`createHttpOutlet` + `handleWfOutletRequest` alternative and SKILL.md invariants 11 + 12.
 
 ### 5. Client mount
 

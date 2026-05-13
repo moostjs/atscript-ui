@@ -6,11 +6,10 @@ import {
   createEmailOutlet,
   EncapsulatedStateStrategy,
   HandleStateStrategy,
-  handleWfOutletRequest,
   type WfOutletTriggerDeps,
   type WfStateStrategy,
 } from "@moostjs/event-wf";
-import { createAsHttpOutlet } from "@atscript/moost-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 // Keep the email outlet registered for future magic-link flows (user invite, password-reset);
 // current P6 workflows dispatch OTP inline so they can pause on a form in the same response.
@@ -85,7 +84,7 @@ export class WorkflowsController {
 
   @Post("wf")
   async handle() {
-    // Use handleWfOutletRequest directly so we can forward the HTTP eventContext
+    // Use handleAsOutletRequest directly so we can forward the HTTP eventContext
     // into the workflow — otherwise `useWfFinished().set({ cookies })` in a step
     // writes to the WF's isolated context and the HTTP trigger can't read it back.
     // (MoostWf.handleOutlet drops the eventContext param — workaround until fixed upstream.)
@@ -102,7 +101,7 @@ export class WorkflowsController {
           eventContext: opts?.eventContext as never,
         }),
     };
-    return await handleWfOutletRequest(
+    return await handleAsOutletRequest(
       {
         allow: [...ALLOWED_WORKFLOWS],
         // Per-call strategy selection: the framework calls this with `wfid`

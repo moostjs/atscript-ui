@@ -58,7 +58,10 @@ Every round-trip is one POST. The response is one of:
 - `{ inputRequired: { payload, transport, context }, wfs }` — render
   this form next, here is the new state token.
 - `{ finished: true, ... }` — done; the rest of the body is the
-  flow's result payload (session cookie set, redirect URL, …).
+  flow's result payload (session cookie set, redirect URL, …). The
+  `finished: true` marker is supplied by `handleAsOutletRequest`, so
+  step handlers only return their domain data via
+  `useWfFinished().set({ value })`.
 - `{ sent: true }` / `{ outlet: "..." }` — flow paused waiting for
   an external event (email link clicked, webhook fired). The current
   HTTP session is done; resume happens later via the token.
