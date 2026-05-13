@@ -77,7 +77,10 @@ describe("dateShortcuts", () => {
 
   it("defaults to current date when no argument passed", () => {
     const shortcuts = dateShortcuts();
-    const todayISO = new Date().toISOString().slice(0, 10);
+    // Match production's local-timezone formatting (not toISOString, which is UTC
+    // and disagrees with local time for ~2h after midnight in UTC+ timezones).
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     for (const s of shortcuts) {
       expect(s.dates[1]).toBe(todayISO);
     }
