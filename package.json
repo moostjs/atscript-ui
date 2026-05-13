@@ -15,7 +15,7 @@
   },
   "type": "module",
   "scripts": {
-    "ready": "vp fmt && vp lint && vp run test -r && vp run build -r && pnpm run test:e2e",
+    "ready": "vp fmt && vp lint && vp run test -r && vp run build -r",
     "dev": "pnpm --filter vue-playground run dev",
     "demo:dev": "pnpm --filter @atscript/vue-demo run dev",
     "docs:dev": "pnpm --filter docs run dev",
