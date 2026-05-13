@@ -99,10 +99,10 @@ export interface OrdersTable {
     paymentMethod?: OrderPaymentCard | OrderPaymentBank | OrderPaymentInvoice
 
     @meta.label 'Note'
-    @meta.description 'Mixed-shape union — string, string[], or { author, body }. Demonstrates per-row cell dispatch.'
+    @meta.description 'Mixed-shape union — string[] or { author, body }. Demonstrates per-row cell dispatch.'
     @db.json
     @ui.form.hidden
-    note?: string | string[] | {
+    note?: string[] | {
         @meta.label 'Author'
         author: string
 

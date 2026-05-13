@@ -83,13 +83,15 @@ async function expandSection(page: Page, fieldLabel: string) {
 
 // Assert the row is in the "no value yet" state for the given union field:
 // the `Add <Label>` empty-state button is visible, and there is no variant
-// trigger anywhere on the page (each spec page only renders one union
-// field, so the global `.as-variant-trigger` count check is safe).
+// trigger inside the labeled collapsible. Scope the trigger count to the
+// labeled collapsible so unrelated union fields (`note` etc.) elsewhere on
+// the page — including `@ui.form.hidden` ones kept in the DOM via `v-show`
+// — don't poison the assertion.
 async function expectEmptyUnion(page: Page, fieldLabel: string) {
   await expect(
     page.locator(".as-object-empty-add", { hasText: `Add ${fieldLabel}` }),
   ).toBeVisible();
-  await expect(page.locator(".as-variant-trigger")).toHaveCount(0);
+  await expect(variantTrigger(page, fieldLabel)).toHaveCount(0);
 }
 
 test.describe("Section 21 — union variant round-trip in edit form", () => {

@@ -458,7 +458,9 @@ test.describe("Section 19 — workflows", () => {
         await page.getByRole("button", { name: /Register|Submit|Submitting/i }).click();
 
         await expect(page.locator('input[name="code"]')).toBeVisible();
-        await expect(page.getByRole("heading", { name: "Verify Your Email" })).toBeVisible();
+        await expect(
+          page.getByRole("heading", { name: "Enter the code sent to your email" }),
+        ).toBeVisible();
 
         const entry = await waitForOutletEntry({
           template: "register-otp",

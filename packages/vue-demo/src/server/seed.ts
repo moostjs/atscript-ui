@@ -180,14 +180,12 @@ const pickPaymentMethod = (i: number): Record<string, unknown> | undefined => {
   }
 };
 
-// 4-step cycle string -> string[] -> { author, body } -> null.
+// 3-step cycle string[] -> { author, body } -> null.
 const pickNote = (i: number): unknown => {
-  switch ((i - 1) % 4) {
+  switch ((i - 1) % 3) {
     case 0:
-      return `Quick note for order ${i}.`;
-    case 1:
       return [`urgent`, `priority`, `customer-${i}`];
-    case 2:
+    case 1:
       return { author: `agent${i}`, body: `Reviewed order ${i}. All good.` };
     default:
       return undefined;
