@@ -7,29 +7,29 @@ settings:
 catalogs:
   default:
     '@atscript/core':
-      specifier: ^0.1.54
-      version: 0.1.54
+      specifier: ^0.1.55
+      version: 0.1.55
     '@atscript/db':
-      specifier: ^0.1.75
-      version: 0.1.75
+      specifier: ^0.1.76
+      version: 0.1.76
     '@atscript/db-client':
-      specifier: ^0.1.75
-      version: 0.1.75
+      specifier: ^0.1.76
+      version: 0.1.76
     '@atscript/db-sql-tools':
-      specifier: ^0.1.75
-      version: 0.1.75
+      specifier: ^0.1.76
+      version: 0.1.76
     '@atscript/db-sqlite':
-      specifier: ^0.1.75
-      version: 0.1.75
+      specifier: ^0.1.76
+      version: 0.1.76
     '@atscript/moost-db':
-      specifier: ^0.1.75
-      version: 0.1.75
+      specifier: ^0.1.76
+      version: 0.1.76
     '@atscript/moost-validator':
-      specifier: ^0.1.54
-      version: 0.1.54
+      specifier: ^0.1.55
+      version: 0.1.55
     '@atscript/typescript':
-      specifier: ^0.1.54
-      version: 0.1.54
+      specifier: ^0.1.55
+      version: 0.1.55
     '@iconify/utils':
       specifier: ^3.1.0
       version: 3.1.0
@@ -106,8 +106,8 @@ catalogs:
       specifier: ^66.6.0
       version: 66.6.8
     unplugin-atscript:
-      specifier: ^0.1.54
-      version: 0.1.54
+      specifier: ^0.1.55
+      version: 0.1.55
     unplugin-swc:
       specifier: ^1.5.9
       version: 1.5.9
@@ -167,19 +167,19 @@ importers:
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@atscript/db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
       '@atscript/db-sqlite':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6))(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6))(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
       '@atscript/moost-db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@atscript/ui-table':
         specifier: workspace:*
         version: link:../ui-table
@@ -200,7 +200,7 @@ importers:
         version: 0.6.9
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       unplugin-swc:
         specifier: 'catalog:'
         version: 1.5.9(@swc/core@1.15.18(@swc/helpers@0.5.19))
@@ -212,16 +212,16 @@ importers:
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@atscript/db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
       '@atscript/db-sqlite':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6))(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6))(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
@@ -239,7 +239,7 @@ importers:
         version: 0.6.9
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -248,20 +248,20 @@ importers:
     dependencies:
       '@atscript/db-client':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@atscript/db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -277,10 +277,10 @@ importers:
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -336,7 +336,7 @@ importers:
     devDependencies:
       '@atscript/db-client':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)
       '@uniqu/core':
         specifier: 'catalog:'
         version: 0.1.6
@@ -351,7 +351,7 @@ importers:
     dependencies:
       '@atscript/db-client':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
@@ -397,28 +397,28 @@ importers:
     devDependencies:
       '@atscript/db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
       '@atscript/db-sql-tools':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6)
       '@atscript/db-sqlite':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6))(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6))(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
       '@atscript/moost-db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)
       '@atscript/moost-ui-presets':
         specifier: workspace:^
         version: link:../moost-ui-presets
       '@atscript/moost-validator':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(moost@0.6.9)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(moost@0.6.9)
       '@atscript/moost-wf':
         specifier: workspace:^
         version: link:../moost-wf
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@iconify-json/ph':
         specifier: ^1.2.2
         version: 1.2.2
@@ -463,7 +463,7 @@ importers:
         version: 5.9.3
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       unplugin-swc:
         specifier: 'catalog:'
         version: 1.5.9(@swc/core@1.15.18(@swc/helpers@0.5.19))
@@ -479,13 +479,13 @@ importers:
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@atscript/db-client':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@atscript/ui-fns':
         specifier: workspace:^
         version: link:../ui-fns
@@ -506,7 +506,7 @@ importers:
         version: 2.9.2(vue@3.5.30(typescript@5.9.3))
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.12(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -524,7 +524,7 @@ importers:
     dependencies:
       '@atscript/db-client':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
@@ -564,22 +564,22 @@ importers:
     devDependencies:
       '@atscript/db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
       '@atscript/db-sql-tools':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6)
+        version: 0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6)
       '@atscript/db-sqlite':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6))(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
+        version: 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6))(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)
       '@atscript/moost-db':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)
       '@atscript/moost-wf':
         specifier: workspace:^
         version: link:../moost-wf
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@moostjs/event-http':
         specifier: 'catalog:'
         version: 0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11)
@@ -609,7 +609,7 @@ importers:
         version: 5.9.3
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       unplugin-swc:
         specifier: 'catalog:'
         version: 1.5.9(@swc/core@1.15.18(@swc/helpers@0.5.19))
@@ -631,10 +631,10 @@ importers:
     devDependencies:
       '@atscript/db-client':
         specifier: 'catalog:'
-        version: 0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)
+        version: 0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@tanstack/vue-virtual':
         specifier: 'catalog:'
         version: 3.13.23(vue@3.5.30(typescript@5.9.3))
@@ -680,13 +680,13 @@ importers:
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
-        version: 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+        version: 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@atscript/moost-wf':
         specifier: workspace:^
         version: link:../moost-wf
       '@atscript/typescript':
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@atscript/vue-form':
         specifier: workspace:^
         version: link:../vue-form
@@ -701,7 +701,7 @@ importers:
         version: 18.0.1
       unplugin-atscript:
         specifier: 'catalog:'
-        version: 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)
+        version: 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@latest
         version: '@voidzero-dev/vite-plus-test@0.1.13(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -717,65 +717,65 @@ packages:
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
 
-  '@atscript/core@0.1.54':
-    resolution: {integrity: sha512-c4LA+WaqdhEADmZxJRJL/OrAa6KMl/LIOPitxNJkdHwX8apkCF7errc5dG8sA/l1T59n6+RaG3q8KX+xMWNquA==}
+  '@atscript/core@0.1.55':
+    resolution: {integrity: sha512-Cu3QjC7wUm+Ovplwd21YfVqUisRP5amSW93D217UE+FYzqdlLKhE0WD1hMSixhNVGD1ihHqgKzSJrp/dSn/AJA==}
 
-  '@atscript/db-client@0.1.75':
-    resolution: {integrity: sha512-PR/WWGdfluZKtQ1CvSTCxwCx6YcAj9P0Kx2YAwfAVlz1XB3fDXYlHDFRllhpcist8UZOzOn5Ta0iiQlga5An5Q==}
+  '@atscript/db-client@0.1.76':
+    resolution: {integrity: sha512-aaorZOl6EwMNCd0FqvHasDQYQRSuutLITVC2h18eg0TtgxWNUtBMc6j4v89/0/uZgx4Dw33YzyFG27NJ92wXDQ==}
     peerDependencies:
       '@atscript/db': ^0.1.44
-      '@atscript/typescript': ^0.1.54
+      '@atscript/typescript': ^0.1.55
 
-  '@atscript/db-sql-tools@0.1.75':
-    resolution: {integrity: sha512-o61jTwCZL5BG1zYv1iK1vrctx4n5wZxdFui4HqiKVcbao3OLbgobE1I1nwo/kIcYuudnVOPXs3Vbj0TahyMJzw==}
+  '@atscript/db-sql-tools@0.1.76':
+    resolution: {integrity: sha512-Qah8DT0yYvBFHLuCbLJLMHk2rU2fMdwwdM5htbfJZf4cA361E6kqsNvtZk6GD49aOWMsPfxOJ6gAnKJ0y+cyvA==}
     peerDependencies:
-      '@atscript/db': ^0.1.75
+      '@atscript/db': ^0.1.76
       '@uniqu/core': ^0.1.6
 
-  '@atscript/db-sqlite@0.1.75':
-    resolution: {integrity: sha512-DJPfCLeFXWsEjZ1++tF9O1OlRN59N6RFlJ+a/CWZPH00qwN2nnvrUZStJJ/tIb1CIZMaiDT+CNyrvPxGKih3Hw==}
+  '@atscript/db-sqlite@0.1.76':
+    resolution: {integrity: sha512-2Tq+aqJYf0eQPhLzCGQLniFtutgMUIctUqxI8d6S2V5CLqhvlS7kL2QujHXGapwJ2Sg5jzmhRsnoCDn0mYhEuw==}
     peerDependencies:
-      '@atscript/core': ^0.1.54
-      '@atscript/db': ^0.1.75
-      '@atscript/db-sql-tools': ^0.1.75
-      '@atscript/typescript': ^0.1.54
+      '@atscript/core': ^0.1.55
+      '@atscript/db': ^0.1.76
+      '@atscript/db-sql-tools': ^0.1.76
+      '@atscript/typescript': ^0.1.55
       '@uniqu/core': ^0.1.6
       better-sqlite3: '>=11.0.0'
     peerDependenciesMeta:
       better-sqlite3:
         optional: true
 
-  '@atscript/db@0.1.75':
-    resolution: {integrity: sha512-wUi9rYVUWEjGYTbnZ+Tx6ZB7GLEH8LicRb0MFPXM7kPgsZB2QbfvAvYwOXX3acoKkTMQ7J9gdA33yu2CSQutoA==}
+  '@atscript/db@0.1.76':
+    resolution: {integrity: sha512-0us+xQSVCepCYdtO4i6Ym6npMmj+x97AQdeTG5TMUW9cfqNCwwbpCY6q5L8a128Zu9WHVPMNxHFZ2oN4x4Ezyw==}
     peerDependencies:
-      '@atscript/core': ^0.1.54
-      '@atscript/typescript': ^0.1.54
+      '@atscript/core': ^0.1.55
+      '@atscript/typescript': ^0.1.55
       '@uniqu/core': ^0.1.6
 
-  '@atscript/moost-db@0.1.75':
-    resolution: {integrity: sha512-55OuQqb5bWU7+CsSDqdADHqt6M8wiBD0hG0nylVx31st/2di6vRDEFTsvHHipNgT0fiqhzDzMqqKn3zWBOdEXg==}
+  '@atscript/moost-db@0.1.76':
+    resolution: {integrity: sha512-stdHA/33fzve2Ba1+snHRs0Jqa9pvfm3uZ4vmiMNnHcJcblmw5Cb3Y77y3WS4bHKwIpDSa9XvvgqIWPxJntK7A==}
     peerDependencies:
-      '@atscript/db': ^0.1.75
-      '@atscript/typescript': ^0.1.54
+      '@atscript/db': ^0.1.76
+      '@atscript/typescript': ^0.1.55
       '@moostjs/event-http': ^0.6.9
       '@uniqu/core': ^0.1.6
       '@wooksjs/event-core': ^0.7.11
       '@wooksjs/http-body': ^0.7.11
       moost: ^0.6.9
 
-  '@atscript/moost-validator@0.1.54':
-    resolution: {integrity: sha512-2xY7TxOuT4/dNUtXyeyQ2OfM/6J+ofoDx42S5fPV4kb0QvYWQnbICafHhwElQJ91oQfwhg1Ik8yMnhOrg7FSPQ==}
+  '@atscript/moost-validator@0.1.55':
+    resolution: {integrity: sha512-OxqDK301pbRwOrSbqbW3V758Z+4cZrtKkHGW/HKj7+ilTtB7AQ4No/7gw0yF6JBvYZQboD5lIRaP17m3wBimUQ==}
     peerDependencies:
-      '@atscript/core': ^0.1.54
-      '@atscript/typescript': ^0.1.54
+      '@atscript/core': ^0.1.55
+      '@atscript/typescript': ^0.1.55
       '@moostjs/event-http': ^0.6.9
       moost: ^0.6.9
 
-  '@atscript/typescript@0.1.54':
-    resolution: {integrity: sha512-fLjyc5eA1s8mBNUhv0LQSxyxUnmW1iRC7XMmHhkadF7Og+aXt8Y/wC+JkT7wP2WuYK1p1DxB8UlQCbLHto1qyQ==}
+  '@atscript/typescript@0.1.55':
+    resolution: {integrity: sha512-ryq68nZfSojAsXHuy17TMCOm1XGLlP1PYcwj09Pq6TcF8w2MpcJX4mf1w+xh8WGJTh9u9JaHX7xyDRqBh3vn5w==}
     hasBin: true
     peerDependencies:
-      '@atscript/core': ^0.1.54
+      '@atscript/core': ^0.1.55
       '@atscript/db': ^0.1.74
     peerDependenciesMeta:
       '@atscript/db':
@@ -3015,9 +3015,6 @@ packages:
     resolution: {integrity: sha512-LOHxIOaPYdHlJRtCQfDIVZtfw/ufM8+rVj649RIHzcm/vGwQRXFt6OPqIFWsm2XEMrNIEtWR64sY1LEKD2vAOA==}
     engines: {node: '>=4.0.0'}
 
-  defu@6.1.4:
-    resolution: {integrity: sha512-mEQCMmwJu317oSz8CwdIOdwf3xMif1ttiM8LTufzc3g6kR+9Pe236twL8j3IYT1F7GfRgGcW6MWxzZjLIkuHIg==}
-
   defu@6.1.7:
     resolution: {integrity: sha512-7z22QmUWiQ/2d0KkdYmANbRUVABpZ9SNYyH5vx6PZ+nE5bcC0l7uFvEfHlyld/HcGBFTL536ClDt3DEcSlEJAQ==}
 
@@ -3849,11 +3846,11 @@ packages:
       '@unocss/webpack':
         optional: true
 
-  unplugin-atscript@0.1.54:
-    resolution: {integrity: sha512-8r8GRA9hdg2OBKbwI5p6g1hiax7d6N16ObAKw9MjWnIIWeS+/ErqPZDCFp3wSKlXy5loSHRgqYMcPNEyFxdm0Q==}
+  unplugin-atscript@0.1.55:
+    resolution: {integrity: sha512-hiTwysQiAldw42RUBbnklR2HhImfdRs1vRLOiwJRGhosSs9R1uXn4imI3WmGjsavcc1AOw/7wzJaRk1f8IhANQ==}
     peerDependencies:
-      '@atscript/core': ^0.1.54
-      '@atscript/typescript': ^0.1.54
+      '@atscript/core': ^0.1.55
+      '@atscript/typescript': ^0.1.55
 
   unplugin-swc@1.5.9:
     resolution: {integrity: sha512-RKwK3yf0M+MN17xZfF14bdKqfx0zMXYdtOdxLiE6jHAoidupKq3jGdJYANyIM1X/VmABhh1WpdO+/f4+Ol89+g==}
@@ -4065,7 +4062,7 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.1.1
 
-  '@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)':
+  '@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)':
     dependencies:
       '@prostojs/parser': 0.6.0
       defu: 6.1.7
@@ -4075,38 +4072,38 @@ snapshots:
       - '@emnapi/core'
       - '@emnapi/runtime'
 
-  '@atscript/db-client@0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)':
+  '@atscript/db-client@0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)':
     dependencies:
-      '@atscript/db': 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
-      '@atscript/typescript': 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+      '@atscript/db': 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
+      '@atscript/typescript': 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@uniqu/url': 0.1.6
 
-  '@atscript/db-sql-tools@0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6)':
+  '@atscript/db-sql-tools@0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6)':
     dependencies:
-      '@atscript/db': 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+      '@atscript/db': 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
       '@uniqu/core': 0.1.6
 
-  '@atscript/db-sqlite@0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6))(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)':
+  '@atscript/db-sqlite@0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db-sql-tools@0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6))(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)(better-sqlite3@11.10.0)':
     dependencies:
-      '@atscript/core': 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      '@atscript/db': 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
-      '@atscript/db-sql-tools': 0.1.75(@atscript/db@0.1.75)(@uniqu/core@0.1.6)
-      '@atscript/typescript': 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+      '@atscript/core': 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@atscript/db': 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
+      '@atscript/db-sql-tools': 0.1.76(@atscript/db@0.1.76)(@uniqu/core@0.1.6)
+      '@atscript/typescript': 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@uniqu/core': 0.1.6
     optionalDependencies:
       better-sqlite3: 11.10.0
       sqlite-vec: 0.1.9
 
-  '@atscript/db@0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)':
+  '@atscript/db@0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)':
     dependencies:
-      '@atscript/core': 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      '@atscript/typescript': 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+      '@atscript/core': 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@atscript/typescript': 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@uniqu/core': 0.1.6
 
-  '@atscript/moost-db@0.1.75(@atscript/db@0.1.75)(@atscript/typescript@0.1.54)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)':
+  '@atscript/moost-db@0.1.76(@atscript/db@0.1.76)(@atscript/typescript@0.1.55)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(@uniqu/core@0.1.6)(@wooksjs/event-core@0.7.11)(@wooksjs/http-body@0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)))(moost@0.6.9)':
     dependencies:
-      '@atscript/db': 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
-      '@atscript/typescript': 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+      '@atscript/db': 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
+      '@atscript/typescript': 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@moostjs/event-http': 0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11)
       '@uniqu/core': 0.1.6
       '@uniqu/url': 0.1.6
@@ -4114,20 +4111,20 @@ snapshots:
       '@wooksjs/http-body': 0.7.11(@wooksjs/event-core@0.7.11)(@wooksjs/event-http@0.7.11(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11))
       moost: 0.6.9
 
-  '@atscript/moost-validator@0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(moost@0.6.9)':
+  '@atscript/moost-validator@0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@moostjs/event-http@0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11))(moost@0.6.9)':
     dependencies:
-      '@atscript/core': 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      '@atscript/typescript': 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+      '@atscript/core': 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@atscript/typescript': 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       '@moostjs/event-http': 0.6.9(@prostojs/infact@0.4.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11)
       moost: 0.6.9
 
-  '@atscript/typescript@0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)':
+  '@atscript/typescript@0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)':
     dependencies:
-      '@atscript/core': 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@atscript/core': 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
       '@moostjs/event-cli': 0.6.9(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(moost@0.6.9)(wooks@0.7.11)
       moost: 0.6.9
     optionalDependencies:
-      '@atscript/db': 0.1.75(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54)(@uniqu/core@0.1.6)
+      '@atscript/db': 0.1.76(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55)(@uniqu/core@0.1.6)
     transitivePeerDependencies:
       - '@prostojs/logger'
       - '@prostojs/router'
@@ -5843,8 +5840,6 @@ snapshots:
 
   deep-extend@0.6.0: {}
 
-  defu@6.1.4: {}
-
   defu@6.1.7: {}
 
   dequal@2.0.3: {}
@@ -6772,7 +6767,7 @@ snapshots:
   unconfig@7.5.0:
     dependencies:
       '@quansync/fs': 1.0.0
-      defu: 6.1.4
+      defu: 6.1.7
       jiti: 2.6.1
       quansync: 1.0.0
       unconfig-core: 7.5.0
@@ -6852,10 +6847,10 @@ snapshots:
       - '@emnapi/runtime'
       - vite
 
-  unplugin-atscript@0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.54):
+  unplugin-atscript@0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/typescript@0.1.55):
     dependencies:
-      '@atscript/core': 0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
-      '@atscript/typescript': 0.1.54(@atscript/core@0.1.54(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.75)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
+      '@atscript/core': 0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2)
+      '@atscript/typescript': 0.1.55(@atscript/core@0.1.55(@emnapi/core@1.9.2)(@emnapi/runtime@1.9.2))(@atscript/db@0.1.76)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.3)(@wooksjs/event-core@0.7.11)(wooks@0.7.11)
       unplugin: 2.3.11
 
   unplugin-swc@1.5.9(@swc/core@1.15.18(@swc/helpers@0.5.19)):
