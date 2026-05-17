@@ -6,6 +6,8 @@ import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
 import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
 import type { TFormState } from "@atscript/vue-form";
+import type { WfAction } from "@atscript/moost-wf";
+import AsWfFinish from "./defaults/as-wf-finish.vue";
 
 interface AsWfFormProps extends UseWfFormOptions {
   /** Type-to-component map for AsForm rendering */
@@ -31,6 +33,9 @@ const emit = defineEmits<{
   (e: "form", def: FormDef, context?: Record<string, unknown>): void;
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
+  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
+  (e: "dismiss"): void;
+  (e: "action", action: WfAction): void;
 }>();
 
 // ── Composable ──────────────────────────────────────────────
@@ -112,7 +117,36 @@ function onAction(name: string, data: unknown) {
     </div>
 
     <div v-else-if="wf.finished.value">
-      <slot name="wf.finished" :response="wf.response.value" />
+      <slot name="wf.finished" :response="wf.response.value" :payload="wf.finishedPayload.value">
+        <!--
+          Per `feedback_vue_empty_slot`: a `<template #x>` registered on a child
+          short-circuits the child's default fallback even when its content is
+          empty. So we only forward slot names that the AsWfForm consumer
+          actually provided — otherwise AsWfFinish's defaults render.
+        -->
+        <AsWfFinish
+          :payload="wf.finishedPayload.value"
+          @navigate="(p) => emit('navigate', p)"
+          @dismiss="() => emit('dismiss')"
+          @action="(a) => emit('action', a)"
+        >
+          <template v-if="$slots['wf.finish.message']" #message="scope">
+            <slot name="wf.finish.message" v-bind="scope" />
+          </template>
+          <template v-if="$slots['wf.finish.countdown']" #countdown="scope">
+            <slot name="wf.finish.countdown" v-bind="scope" />
+          </template>
+          <template v-if="$slots['wf.finish.skip']" #skip="scope">
+            <slot name="wf.finish.skip" v-bind="scope" />
+          </template>
+          <template v-if="$slots['wf.finish.primary']" #primary="scope">
+            <slot name="wf.finish.primary" v-bind="scope" />
+          </template>
+          <template v-if="$slots['wf.finish.option']" #option="scope">
+            <slot name="wf.finish.option" v-bind="scope" />
+          </template>
+        </AsWfFinish>
+      </slot>
     </div>
 
     <div v-else-if="wf.formDef.value && wf.formData.value">

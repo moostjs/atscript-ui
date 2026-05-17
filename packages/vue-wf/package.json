@@ -36,6 +36,10 @@
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     },
+    "./as-wf-finish": {
+      "types": "./dist/as-wf-finish.d.mts",
+      "import": "./dist/as-wf-finish.mjs"
+    },
     "./as-wf-form": {
       "types": "./dist/as-wf-form.d.mts",
       "import": "./dist/as-wf-form.mjs"

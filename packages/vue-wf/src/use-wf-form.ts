@@ -1,5 +1,6 @@
 import type { FormDef } from "@atscript/ui";
 import { createFormDef, createFormData } from "@atscript/ui";
+import type { WfFinished } from "@atscript/moost-wf";
 import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 import { onMounted, onUnmounted, reactive, ref, shallowRef, type Ref, type ShallowRef } from "vue";
@@ -52,6 +53,8 @@ export interface UseWfFormReturn {
   loading: Ref<boolean>;
   finished: Ref<boolean>;
   response: ShallowRef<unknown>;
+  /** Typed envelope on finish — null while running, on outlet pause, or before first response. */
+  finishedPayload: ShallowRef<WfFinished | null>;
   error: ShallowRef<unknown>;
   start: (input?: Record<string, unknown>) => Promise<void>;
   submit: (data: unknown) => Promise<void>;
@@ -72,6 +75,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   const formContext = shallowRef<Record<string, unknown>>({});
   const errors = shallowRef<Record<string, string>>({});
   const response = shallowRef<unknown>(null);
+  const finishedPayload = shallowRef<WfFinished | null>(null);
   const error = shallowRef<unknown>(null);
   const loading = ref(false);
   const finished = ref(false);
@@ -131,6 +135,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     if (data.finished) {
       finished.value = true;
       response.value = data;
+      // Cast: `finished: true` discriminator gates this branch.
+      finishedPayload.value = data as unknown as WfFinished;
       formDef.value = null;
       formData.value = null;
       lastPayloadJson = undefined;
@@ -146,6 +152,9 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     if (data.sent === true || typeof data.outlet === "string") {
       finished.value = true;
       response.value = data;
+      // Outlet pause is conceptually finished-for-this-client but isn't a
+      // terminal `WfFinished` envelope — keep finishedPayload null.
+      finishedPayload.value = null;
       formDef.value = null;
       formData.value = null;
       lastPayloadJson = undefined;
@@ -290,6 +299,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     loading,
     finished,
     response,
+    finishedPayload,
     error,
     start,
     submit,

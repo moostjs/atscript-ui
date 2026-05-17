@@ -305,6 +305,44 @@ describe("useWfForm", () => {
     expect(result.error.value).toEqual({ message: "Unexpected response format" });
   });
 
+  it("finishedPayload surfaces the typed envelope on finish", async () => {
+    // WHY: typed accessor lets new code reach `end.mode` without `any` casts.
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    mockFetch([
+      mockInputRequired(LoginForm, { token: "tok1" }),
+      {
+        finished: true,
+        data: { userId: 42 },
+        end: { mode: "manual", primary: { label: "OK", action: { type: "dismiss" } } },
+      },
+    ]);
+    const { result } = mountComposable({ path: "/api/wf", name: "auth/login" });
+    await flushPromises();
+    await result.submit({ username: "a", password: "b" });
+    await flushPromises();
+    expect(result.finishedPayload.value).not.toBeNull();
+    expect(result.finishedPayload.value!.end?.mode).toBe("manual");
+    expect(result.finishedPayload.value!.data).toEqual({ userId: 42 });
+  });
+
+  it("finishedPayload stays null on outlet-pause responses", async () => {
+    // WHY: outlet pause ≠ terminal envelope per Phase 2 contract.
+    mockFetch([{ sent: true, outlet: "email" }]);
+    const { result } = mountComposable({ path: "/api/wf", name: "test" });
+    await flushPromises();
+    expect(result.finished.value).toBe(true);
+    expect(result.finishedPayload.value).toBeNull();
+  });
+
+  it("finishedPayload stays null while form is rendered", async () => {
+    // WHY: only a `finished: true` response should populate the typed accessor.
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    mockFetch([mockInputRequired(LoginForm)]);
+    const { result } = mountComposable({ path: "/api/wf", name: "auth/login" });
+    await flushPromises();
+    expect(result.finishedPayload.value).toBeNull();
+  });
+
   it("custom fetch override is used instead of global fetch", async () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     const globalSpy = vi.fn();
