@@ -1,6 +1,6 @@
 {
   "name": "@atscript/moost-ui-presets",
-  "version": "0.1.63",
+  "version": "0.1.64",
   "description": "Moost controller and atscript schema for table-preset persistence — server-side persistence layer for atscript-ui table presets",
   "keywords": [
     "atscript",

@@ -13,8 +13,7 @@ import { defineShortcuts } from "vunor/theme";
 // — the bare `c8-progress-fill` class would be filtered out by the component
 // class extractor since it's not `as-*` / `i-as-*` prefixed.
 export const asWfFinishSkipShortcuts = defineShortcuts({
-  "as-wf-finish-skip":
-    "c8-filled scope-primary c8-progress btn h-fingertip-m px-$m cursor-pointer",
+  "as-wf-finish-skip": "c8-filled scope-primary c8-progress btn h-fingertip-m px-$m cursor-pointer",
   "as-wf-finish-skip-fill": "c8-progress-fill",
   "as-wf-finish-skip-label": "c8-progress-label",
 });

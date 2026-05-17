@@ -26,14 +26,25 @@ interface WfFinished<TData = unknown> {
   reason?: string;
 }
 
-interface WfMessage { level: "info" | "success" | "warn" | "error"; text: string; }
+interface WfMessage {
+  level: "info" | "success" | "warn" | "error";
+  text: string;
+}
 
 type WfFinishedEnd =
   | { mode: "immediate"; action: WfAction }
-  | { mode: "auto"; timeoutMs: number; action: WfAction; skipButton?: { label: string; behavior?: "now" | "cancel" } }
+  | {
+      mode: "auto";
+      timeoutMs: number;
+      action: WfAction;
+      skipButton?: { label: string; behavior?: "now" | "cancel" };
+    }
   | { mode: "manual"; primary?: WfButton; options?: WfButton[] };
 
-interface WfButton { label: string; action: WfAction; }
+interface WfButton {
+  label: string;
+  action: WfAction;
+}
 
 type WfAction =
   | { type: "redirect"; target: string; reason?: string }
@@ -47,14 +58,14 @@ auto-injects the marker for bare returns; helpers already include it.
 
 ## Helpers — which one to pick
 
-| Helper                              | Use when                                                            |
-| ----------------------------------- | ------------------------------------------------------------------- |
-| `finishWfWithData(data, message?)`  | Domain payload, consumer drives next UX itself                      |
-| `finishWfWithMessage(level, text)`  | Pure status message, no transition                                  |
-| `finishWfWithRedirect(target, opts)`| Redirect; pass `autoMs` for countdown + `skipLabel` for skip button |
-| `finishWfWithChoice({ primary?, options? })` | Manual mode — user picks; requires at least one button     |
-| `finishWfAborted(reason, opts?)`    | Terminal soft-failure (`aborted: true`)                             |
-| `finishWf(envelope)`                | Escape hatch — combination the helpers don't cover                  |
+| Helper                                       | Use when                                                            |
+| -------------------------------------------- | ------------------------------------------------------------------- |
+| `finishWfWithData(data, message?)`           | Domain payload, consumer drives next UX itself                      |
+| `finishWfWithMessage(level, text)`           | Pure status message, no transition                                  |
+| `finishWfWithRedirect(target, opts)`         | Redirect; pass `autoMs` for countdown + `skipLabel` for skip button |
+| `finishWfWithChoice({ primary?, options? })` | Manual mode — user picks; requires at least one button              |
+| `finishWfAborted(reason, opts?)`             | Terminal soft-failure (`aborted: true`)                             |
+| `finishWf(envelope)`                         | Escape hatch — combination the helpers don't cover                  |
 
 Cookies stay on the raw wooks call — `useWfFinished().set({ type: "data",
 value: envelope, cookies: { ... } })` — because cookies are an HTTP-level
@@ -105,14 +116,14 @@ Source: `packages/vue-wf/src/components/as-wf-form.vue` slot-forwarding
 block, `packages/vue-wf/src/components/defaults/as-wf-finish.vue` slot
 declarations.
 
-| Slot (forwarded by `<AsWfForm>`) | Scope                                                                                | Renders when                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------ | --------------------------------------------- |
-| `wf.finished`                    | `{ response, payload }`                                                              | full override of the finish screen            |
-| `wf.finish.message`              | `{ message: WfMessage }`                                                             | `payload.message` is set                      |
-| `wf.finish.countdown`            | `{ secondsRemaining, totalSeconds, skip: () => void, cancel: () => void }`           | `end.mode === 'auto'`                         |
-| `wf.finish.skip`                 | `{ button: { label, behavior }, trigger: () => void }`                               | `end.mode === 'auto'` + `skipButton` set      |
-| `wf.finish.primary`              | `{ button: WfButton, trigger: () => void }`                                          | `end.mode === 'manual'` + primary set         |
-| `wf.finish.option`               | `{ button: WfButton, index: number, trigger: () => void }`                           | `end.mode === 'manual'` (per option)          |
+| Slot (forwarded by `<AsWfForm>`) | Scope                                                                      | Renders when                             |
+| -------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------- |
+| `wf.finished`                    | `{ response, payload }`                                                    | full override of the finish screen       |
+| `wf.finish.message`              | `{ message: WfMessage }`                                                   | `payload.message` is set                 |
+| `wf.finish.countdown`            | `{ secondsRemaining, totalSeconds, skip: () => void, cancel: () => void }` | `end.mode === 'auto'`                    |
+| `wf.finish.skip`                 | `{ button: { label, behavior }, trigger: () => void }`                     | `end.mode === 'auto'` + `skipButton` set |
+| `wf.finish.primary`              | `{ button: WfButton, trigger: () => void }`                                | `end.mode === 'manual'` + primary set    |
+| `wf.finish.option`               | `{ button: WfButton, index: number, trigger: () => void }`                 | `end.mode === 'manual'` (per option)     |
 
 Overrides must call the `trigger` callback to run the action — it preserves
 the redirect / reload / dismiss decision logic. Reimplementing the action

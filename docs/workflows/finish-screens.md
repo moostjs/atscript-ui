@@ -132,12 +132,12 @@ finishWfWithRedirect("/dashboard", {
 });
 ```
 
-| Option       | Type                    | Effect                                                                 |
-| ------------ | ----------------------- | ---------------------------------------------------------------------- |
-| `reason`     | `string`                | Free-form hint propagated via `@action` for analytics or branching.    |
-| `message`    | `WfMessage`             | Banner shown alongside the countdown (or briefly on `immediate`).      |
-| `autoMs`     | `number`                | Switches to `mode: 'auto'` with this delay.                            |
-| `skipLabel`  | `string`                | Adds a "skip" button to the auto screen.                               |
+| Option      | Type        | Effect                                                              |
+| ----------- | ----------- | ------------------------------------------------------------------- |
+| `reason`    | `string`    | Free-form hint propagated via `@action` for analytics or branching. |
+| `message`   | `WfMessage` | Banner shown alongside the countdown (or briefly on `immediate`).   |
+| `autoMs`    | `number`    | Switches to `mode: 'auto'` with this delay.                         |
+| `skipLabel` | `string`    | Adds a "skip" button to the auto screen.                            |
 
 ### `finishWfWithChoice({ message?, primary?, options? })`
 
@@ -213,7 +213,7 @@ The three modes:
   "Redirecting…" announcement and that's it.
 - **`auto`** — a countdown text + optional skip button. The action
   fires after `timeoutMs` or when the user clicks skip (`behavior:
-  'now'` is the default; `'cancel'` only clears the timer and leaves
+'now'` is the default; `'cancel'` only clears the timer and leaves
   the user on the screen).
 - **`manual`** — `message` banner + buttons. The primary button (if
   provided) gets initial focus and is the Enter-key target; options
@@ -227,14 +227,14 @@ has a working default — override only the pieces you want to
 restyle. Every slot scope includes a callback so your custom UI
 keeps the action wiring without re-implementing the logic.
 
-| Slot                    | Renders when                          | Scope                                                                                                  |
-| ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `wf.finished`           | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                 |
-| `wf.finish.message`     | `payload.message` is set              | `{ message: WfMessage }`                                                                               |
-| `wf.finish.countdown`   | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (100ms internally) |
-| `wf.finish.skip`        | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                             |
-| `wf.finish.primary`     | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                        |
-| `wf.finish.option`      | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                         |
+| Slot                  | Renders when                          | Scope                                                                                                  |
+| --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `wf.finished`         | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                 |
+| `wf.finish.message`   | `payload.message` is set              | `{ message: WfMessage }`                                                                               |
+| `wf.finish.countdown` | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (100ms internally) |
+| `wf.finish.skip`      | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                             |
+| `wf.finish.primary`   | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                        |
+| `wf.finish.option`    | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                         |
 
 Example — override the primary button with a design-system one,
 keeping the trigger contract:

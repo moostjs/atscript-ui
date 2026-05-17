@@ -25,8 +25,7 @@ function navigate(url: string) {
         <code
           >finishWfWithRedirect('/wf-demo', &#123; autoMs: 4000, skipLabel: 'Go now' &#125;)</code
         >. The default <code>AsWfFinish</code> renders a progress-fill skip button with the
-        countdown text below it — the fill runs on a CSS animation timed by the auto-fire
-        duration.
+        countdown text below it — the fill runs on a CSS animation timed by the auto-fire duration.
       </p>
       <AsWfForm
         path="/api/wf"
