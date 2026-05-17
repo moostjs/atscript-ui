@@ -42,6 +42,38 @@ const demoShortcuts = defineShortcuts({
   "table-pagination-ellipsis":
     "inline-grid place-items-center w-fingertip-s h-fingertip-s text-current/50",
   "table-pagination-loaded": "text-current/60 text-callout",
+
+  /* ────────── Welcome / login demo discovery cards ────────── */
+  /** Two-up grid that holds the public demo entry-points beneath the
+   *  sign-in card. Single column on phones, side-by-side from `sm:` up. */
+  "as-demo-grid": "grid grid-cols-1 sm:grid-cols-2 gap-$s w-full max-w-[480px] sm:max-w-[640px]",
+  /** Eyebrow above the demo-grid pair — frames the section so the cards
+   *  don't read as orphaned chrome floating below the sign-in card. */
+  "as-demo-eyebrow":
+    "scope-grey font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/55 text-center m-0",
+  /** Demo entry-point card. Outlined (transparent) so it reads as
+   *  "explore further" against the elevated sign-in card without
+   *  competing for primary-CTA attention. Hover lifts the surface and
+   *  reveals the arrow. */
+  "as-demo-card": {
+    "":
+      "group flex flex-col gap-$xs p-$m rounded-r2 border-1 layer-0 no-underline " +
+      "text-current cursor-pointer transition-all duration-150 outline-none",
+    "hover:": "layer-1 border-current-hl/40 -translate-y-[1px] shadow-popup",
+    "focus-visible:": "border-current-hl/60 i8-apply-outline",
+  },
+  "as-demo-card-head": "flex items-center gap-$s",
+  "as-demo-card-icon":
+    "scope-primary inline-grid place-items-center size-fingertip-s rounded-base " +
+    "bg-current-hl/10 text-current-hl text-[1.15em] shrink-0",
+  "as-demo-card-title": "text-body font-600 tracking-[-0.01em] m-0",
+  "as-demo-card-arrow": {
+    "":
+      "scope-primary ml-auto i-ph:arrow-right text-current-hl/70 text-[1.1em] " +
+      "transition-transform duration-150",
+    "group-hover:": "translate-x-[2px] text-current-hl",
+  },
+  "as-demo-card-desc": "text-callout text-current/65 leading-snug m-0",
 });
 
 export default defineConfig({

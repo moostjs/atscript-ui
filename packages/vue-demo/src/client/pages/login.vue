@@ -16,8 +16,11 @@ async function onFinished() {
 </script>
 
 <template>
-  <div class="min-h-screen grid place-items-center layer-1">
-    <div class="flex flex-col gap-$s min-w-[360px] p-$l layer-0 border-1 rounded-r2 shadow-popup">
+  <div class="min-h-screen grid place-items-center layer-1 py-$xl">
+    <div class="flex flex-col items-center gap-$l w-full max-w-[640px] px-$m">
+    <div
+      class="flex flex-col gap-$s w-full max-w-[480px] min-w-[320px] p-$l layer-0 border-1 rounded-r2 shadow-popup"
+    >
       <div class="flex items-center gap-$m mb-$s">
         <img src="/logo.svg" alt="AtShop" class="size-22" />
         <div class="flex flex-col">
@@ -63,21 +66,35 @@ async function onFinished() {
         >
       </p>
     </div>
-    <div class="mt-$l flex flex-col items-center gap-$xs">
-      <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
-        Forms Demo · no auth required
-      </p>
-      <RouterLink to="/forms-demo" class="scope-primary text-current-hl underline text-callout">
-        Browse form variations →
-      </RouterLink>
-    </div>
-    <div class="mt-$l flex flex-col items-center gap-$xs">
-      <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
-        Workflow Demo · no auth required
-      </p>
-      <RouterLink to="/wf-demo" class="scope-primary text-current-hl underline text-callout">
-        Browse workflow scenarios →
-      </RouterLink>
+    <section class="flex flex-col items-center gap-$s w-full">
+      <p class="as-demo-eyebrow">Explore the demos · no auth required</p>
+      <div class="as-demo-grid">
+        <RouterLink to="/forms-demo" class="as-demo-card">
+          <div class="as-demo-card-head">
+            <span class="as-demo-card-icon">
+              <span class="i-ph:list-checks" aria-hidden="true" />
+            </span>
+            <h2 class="as-demo-card-title">Forms</h2>
+            <span class="as-demo-card-arrow" aria-hidden="true" />
+          </div>
+          <p class="as-demo-card-desc">
+            15+ patterns: arrays, unions, dates, grid layouts, validation.
+          </p>
+        </RouterLink>
+        <RouterLink to="/wf-demo" class="as-demo-card">
+          <div class="as-demo-card-head">
+            <span class="as-demo-card-icon">
+              <span class="i-ph:flow-arrow" aria-hidden="true" />
+            </span>
+            <h2 class="as-demo-card-title">Workflows</h2>
+            <span class="as-demo-card-arrow" aria-hidden="true" />
+          </div>
+          <p class="as-demo-card-desc">
+            9 scenarios: redirects, branching, multi-step, outlets, finishers.
+          </p>
+        </RouterLink>
+      </div>
+    </section>
     </div>
   </div>
 </template>
