@@ -13,6 +13,13 @@ description: >-
   via `AsWfStore` + `@wf.store.fromContext` shadow columns (with `cleanup` /
   `heal` / `getAndDelete`); when implementing outlets (email magic link,
   webhook) with resume via `initialToken` (body / cookie / query transport);
+  when emitting a unified `WfFinished` envelope via `finishWfWithData` /
+  `finishWfWithMessage` / `finishWfWithRedirect` / `finishWfWithChoice` /
+  `finishWfAborted` (auto-redirect with countdown, manual choice, dismiss);
+  when overriding the `<AsWfFinish>` slots (`wf.finish.message` /
+  `wf.finish.countdown` / `wf.finish.skip` / `wf.finish.primary` /
+  `wf.finish.option`) or hooking `@navigate` / `@dismiss` / `@action`;
+  when installing the opt-in `workflowSsrAdapter` for SSR 3xx redirects;
   or when debugging the wire envelope. Out of scope: plain forms (use
   `atscript-ui-forms`), tables (use `atscript-ui-tables`), styling.
 ---
@@ -131,6 +138,7 @@ Token transports: 'body' (default), 'cookie', 'query' (?wfs=...).
 | 10  | **Token transport survives reloads only if persistent.** `body` transport (default) is lost on reload. `cookie` survives until expiry. `query` (`?wfs=token`) is URL-shareable and single-use. Pick the transport that matches your resume story.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 11  | **HTTP outlet wraps `inputRequired` — conditionally.** Mount `createAsHttpOutlet()` from `@atscript/moost-wf` (not bare `createHttpOutlet`) in `handleAsOutletRequest`. It wraps generic form payloads in `{ inputRequired: { payload, transport: 'http', context } }` so `<AsWfForm>` decodes them. **Pass-through:** payloads already carrying a root-level routing key — `finished`, `sent`, `outlet`, `error` — flow through at the response root (merged with `context` if any), so `outletHttp({ outlet: 'awaiting-payment' })` and `outletHttp({ error: { message } })` keep working without a separate outlet. Bare `createHttpOutlet` flattens everything and crashes `<AsWfForm>` on form payloads with "Unexpected response format". |
 | 12  | **Finished-response wrap.** Use `handleAsOutletRequest` from `@atscript/moost-wf` (not bare `handleWfOutletRequest` from `@moostjs/event-wf`) as your trigger. It wraps the `useWfFinished({ value })` unwrap (wooks `index.mjs:198`) so the response carries the `finished: true` marker `<AsWfForm>` requires. Pass-through for non-object responses (redirects, primitives), arrays, and already-marked envelopes (`inputRequired` / `finished` / `error` / `sent` / `outlet`). Step handlers return their domain data via `useWfFinished().set({ value: { ok: true, ... } })` — never embed `finished: true` inside `value`.                                                                                                                |
+| 13  | **Use `WfFinished` envelope helpers — not raw `useWfFinished`.** Phase-4 ships `finishWfWithData` / `finishWfWithMessage` / `finishWfWithRedirect` / `finishWfWithChoice` / `finishWfAborted` from `@atscript/moost-wf`. Each builds the right `WfFinished` envelope (`{ finished: true, data?, message?, end?, aborted?, reason? }`) and calls wooks under the hood. Reach for raw `useWfFinished().set({ type: 'data', value: envelope, cookies })` only when you need to set response cookies alongside the envelope — cookies are an HTTP-level concern the helpers don't expose. See [finish-screens](references/finish-screens.md). |
 
 ## Key imports
 
@@ -152,8 +160,26 @@ import {
   useWfAction,
   createAsHttpOutlet,
   handleAsOutletRequest,
+  // WfFinished envelope helpers (Phase 4)
+  finishWf,
+  finishWfWithData,
+  finishWfWithMessage,
+  finishWfWithRedirect,
+  finishWfWithChoice,
+  finishWfAborted,
+  isWfFinished,
 } from "@atscript/moost-wf";
-import type { TFormInput } from "@atscript/moost-wf";
+import type {
+  TFormInput,
+  WfFinished,
+  WfMessage,
+  WfFinishedEnd,
+  WfButton,
+  WfAction,
+} from "@atscript/moost-wf";
+
+// SSR — opt-in interceptor that translates immediate-redirect envelopes to 3xx
+import { workflowSsrAdapter } from "@atscript/moost-wf/ssr-adapter";
 
 // Server — atscript build-time plugin (in atscript.config.ts)
 import wfPlugin from "@atscript/moost-wf/plugin"; // default export — registers @wf.context.pass, @wf.action.withData, @wf.store.fromContext
@@ -191,6 +217,7 @@ import {
 | State persistence | [state.md](references/state.md)                     | `AsWfStore({ table, clock?, actor? })` wiring, `AsWfStateRecord` base schema + extension with `@meta.id`, `@wf.store.fromContext` shadow columns (uses, limits, race-safe `getAndDelete`), `cleanup(retention?)`, `heal(options?)` backfill, CJS limitation                                            |
 | Outlets / resume  | [outlets.md](references/outlets.md)                 | Outlet semantics (`{ sent: true }`, `{ outlet: '<name>' }`), email magic-link pattern with `?wfs=token` resume, webhook resume, token transports (`body` / `cookie` / `query`) — when to pick which, `initialToken` prop                                                                               |
 | Client            | [client.md](references/client.md)                   | `<AsWfForm>` props/emits/slots (`@finished`, `@error`, `@form`, `@submit`, `@loading`; slots `#wf.loading`, `#wf.error`, `#wf.finished`, `#form.*`), `useWfForm(options)` composable (`start` / `submit` / `action` / `actionWithData` / `retry`), custom `fetch` for auth headers                     |
+| Finish screens    | [finish-screens.md](references/finish-screens.md)   | `WfFinished` envelope, the five `finishWf*` helpers, `AsWfFinish` end-mode rendering (`immediate` / `auto` / `manual`), `wf.finish.*` scoped-slot contract with `trigger` callbacks, `@navigate` / `@dismiss` / `@action` events, opt-in `workflowSsrAdapter` for real 3xx redirects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 ## See also
 

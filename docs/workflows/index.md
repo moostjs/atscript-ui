@@ -120,6 +120,7 @@ See [Server-Side Authoring](/workflows/server-authoring).
 | Durable state with `AsWfStore`                   | [State Persistence](/workflows/state-persistence)    |
 | Magic links, outlets, resume                     | [Outlets & Resume](/workflows/outlets-resume)        |
 | `<AsWfForm>` + `useWfForm()` reference           | [Client: AsWfForm](/workflows/client)                |
+| Terminal screens, redirects, choice buttons      | [Finish Screens](/workflows/finish-screens)          |
 | Login+MFA, invite+register, checkout             | [Recipes](/workflows/recipes)                        |
 
 ## Related

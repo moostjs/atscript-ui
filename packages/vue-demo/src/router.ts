@@ -31,6 +31,26 @@ const routes = [
     component: () => import("./client/pages/forms-demo/index.vue"),
   },
   {
+    path: "/wf-demo",
+    name: "wf-demo",
+    component: () => import("./client/pages/wf-demo/index.vue"),
+  },
+  {
+    path: "/wf-demo/finish-immediate",
+    name: "wf-demo-finish-immediate",
+    component: () => import("./client/pages/wf-demo/finish-immediate.vue"),
+  },
+  {
+    path: "/wf-demo/finish-auto",
+    name: "wf-demo-finish-auto",
+    component: () => import("./client/pages/wf-demo/finish-auto.vue"),
+  },
+  {
+    path: "/wf-demo/finish-manual",
+    name: "wf-demo-finish-manual",
+    component: () => import("./client/pages/wf-demo/finish-manual.vue"),
+  },
+  {
     path: "/forms-demo/nested-collapsible",
     name: "forms-demo-nested-collapsible",
     component: () => import("./client/pages/forms-demo/nested-collapsible.vue"),

@@ -93,6 +93,11 @@ defineEmits<{
   (e: "form", def: FormDef, context?: Record<string, unknown>): void;
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
+  // Fired by the default AsWfFinish screen when a WfFinished envelope's
+  // `end` triggers an action. See "Finish Screens".
+  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
+  (e: "dismiss"): void;
+  (e: "action", action: WfAction): void;
 }>();
 ```
 
@@ -128,17 +133,29 @@ When the default slot is **not** overridden (the usual case), the
 component renders one of these named slots based on the current
 state, with sensible fallbacks:
 
-| Slot          | When                            | Slot props                              |
-| ------------- | ------------------------------- | --------------------------------------- |
-| `wf.loading`  | First load (no formDef yet)     | —                                       |
-| `wf.error`    | Top-level error, no formDef     | `{ error, retry }`                      |
-| `wf.finished` | `finished === true`             | `{ response }`                          |
-| `form.error`  | Mid-flow error (formDef exists) | `{ error, retry }`                      |
-| `form.header` | Above the rendered form         | Forwarded from `AsForm` + `{ loading }` |
-| `form.before` | Inside the form, above fields   | "                                       |
-| `form.after`  | Inside the form, below fields   | "                                       |
-| `form.submit` | Replace the submit button       | `{ text, disabled, loading }`           |
-| `form.footer` | Below the form                  | "                                       |
+| Slot                  | When                                       | Slot props                                |
+| --------------------- | ------------------------------------------ | ----------------------------------------- |
+| `wf.loading`          | First load (no formDef yet)                | —                                         |
+| `wf.error`            | Top-level error, no formDef                | `{ error, retry }`                        |
+| `wf.finished`         | `finished === true`                        | `{ response, payload }`                   |
+| `wf.finish.message`   | finished with `message`                    | `{ message }`                             |
+| `wf.finish.countdown` | finished with `end.mode === 'auto'`        | `{ secondsRemaining, totalSeconds, skip, cancel }` |
+| `wf.finish.skip`      | finished with `auto` end + `skipButton`    | `{ button, trigger }`                     |
+| `wf.finish.primary`   | finished with `end.mode === 'manual'`      | `{ button, trigger }`                     |
+| `wf.finish.option`    | finished with `manual` end (each option)   | `{ button, index, trigger }`              |
+| `form.error`          | Mid-flow error (formDef exists)            | `{ error, retry }`                        |
+| `form.header`         | Above the rendered form                    | Forwarded from `AsForm` + `{ loading }`   |
+| `form.before`         | Inside the form, above fields              | "                                         |
+| `form.after`          | Inside the form, below fields              | "                                         |
+| `form.submit`         | Replace the submit button                  | `{ text, disabled, loading }`             |
+| `form.footer`         | Below the form                             | "                                         |
+
+The `wf.finished` slot's `payload` is the typed `WfFinished` envelope
+(`response` is the same value, kept for back-compat). When the
+envelope's `end` is set, the default rendering switches into a
+`AsWfFinish` screen — see [Finish Screens](/workflows/finish-screens)
+for the envelope shape, the `wf.finish.*` scoped slots, and the
+`@navigate` / `@dismiss` / `@action` event contract.
 
 Example: custom loading + finished states:
 

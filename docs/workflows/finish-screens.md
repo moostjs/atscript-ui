@@ -1,0 +1,343 @@
+---
+outline: deep
+---
+
+# Finish Screens
+
+When a workflow terminates, the server returns a `WfFinished` envelope.
+`<AsWfForm>` reads it, fires `@finished`, and — by default — renders an
+`AsWfFinish` screen that drives the next user action: a redirect, a
+countdown, a button choice, or just a final message.
+
+This page documents the envelope shape, the workflow-author helpers
+that produce it, the slot contract for customizing the rendering, and
+the event contract for hooking the actions into your router.
+
+## Why a unified terminal shape
+
+Different workflows want different post-finish UX — sign-in wants a
+silent redirect, a long-running task wants a countdown the user can
+skip, a multi-outcome flow wants a choice screen. Without a shared
+shape the client either renders nothing (forcing every consumer to
+own the screen) or hardcodes one outcome (forcing the server to
+write JavaScript). The envelope keeps the server in charge of intent
+and lets the client render the corresponding UX without a custom
+component per workflow.
+
+## The envelope
+
+```ts
+interface WfFinished<TData = unknown> {
+  finished: true;
+  data?: TData;
+  message?: WfMessage;
+  end?: WfFinishedEnd;
+  aborted?: boolean;
+  reason?: string;
+}
+
+interface WfMessage {
+  level: "info" | "success" | "warn" | "error";
+  text: string;
+}
+
+type WfFinishedEnd =
+  | { mode: "immediate"; action: WfAction }
+  | {
+      mode: "auto";
+      timeoutMs: number;
+      action: WfAction;
+      skipButton?: { label: string; behavior?: "now" | "cancel" };
+    }
+  | {
+      mode: "manual";
+      primary?: WfButton;
+      options?: WfButton[];
+    };
+
+interface WfButton {
+  label: string;
+  action: WfAction;
+}
+
+type WfAction =
+  | { type: "redirect"; target: string; mode: "soft" | "hard"; reason?: string }
+  | { type: "reload" }
+  | { type: "dismiss" };
+```
+
+- **`finished: true`** — required marker. The HTTP adapter wraps bare
+  step results to add it; the Phase-4 helpers below already include
+  it, so wrapping is a no-op for them.
+- **`data`** — your domain payload. Whatever the consumer reads on
+  `@finished`. Type-parameterize via `WfFinished<MyShape>`.
+- **`message`** — optional banner rendered at the top of the finish
+  screen. Use for "you're signed in" / "submission saved" toasts that
+  the screen itself shows for a beat before navigating.
+- **`end`** — what to do next. Drives the rendering mode.
+- **`aborted` / `reason`** — soft-failure signal. Used together when
+  the flow ends in a recoverable terminal state (`"reason: rate-limited"`).
+
+When `end` is omitted, `AsWfFinish` just renders the `message` (if any)
+and waits for the consumer to act. With `end` set, the rendering and
+action wiring follow the rules below.
+
+## Helpers
+
+All five helpers live in `@atscript/moost-wf` and call the underlying
+`useWfFinished` from `@moostjs/event-wf`. Use them in place of raw
+`useWfFinished().set({ value: {...} })` whenever possible — the
+helpers build the envelope correctly and keep the wire shape stable
+across upgrades.
+
+### `finishWfWithData(data, message?)`
+
+Terminal data, no transition UI. The client reads `data` on
+`@finished` and is responsible for what happens next.
+
+```ts
+import { finishWfWithData } from "@atscript/moost-wf";
+
+@Step("invoice-submit-save")
+async save(@WorkflowParam("input") input: InvoiceInput) {
+  const id = await invoices.insertOne(input);
+  finishWfWithData({ ok: true, id });
+}
+```
+
+### `finishWfWithMessage(level, text)`
+
+Pure message — no data, no transition. Use when the only outcome is
+"tell the user something."
+
+```ts
+finishWfWithMessage("success", "We've sent a verification email.");
+```
+
+### `finishWfWithRedirect(target, opts?)`
+
+Redirect to another URL. With `autoMs` you get a countdown +
+optional skip button; without `autoMs` the redirect fires on mount
+(`mode: 'immediate'`).
+
+```ts
+// Immediate — `AsWfFinish` triggers @navigate on mount, no UI flashes by.
+finishWfWithRedirect("/dashboard", { mode: "soft", reason: "post-login" });
+
+// Auto — countdown ticks down, skip button fires the action immediately.
+finishWfWithRedirect("/dashboard", {
+  mode: "soft",
+  autoMs: 4000,
+  skipLabel: "Go now",
+  message: { level: "success", text: "All set!" },
+});
+```
+
+| Option       | Type                    | Effect                                                                 |
+| ------------ | ----------------------- | ---------------------------------------------------------------------- |
+| `mode`       | `"soft" \| "hard"`      | `"soft"` (default) emits `@navigate`; `"hard"` sets `window.location.href`. |
+| `reason`     | `string`                | Free-form hint passed back to `@navigate` for analytics or branching.  |
+| `message`    | `WfMessage`             | Banner shown alongside the countdown (or briefly on `immediate`).      |
+| `autoMs`     | `number`                | Switches to `mode: 'auto'` with this delay.                            |
+| `skipLabel`  | `string`                | Adds a "skip" button to the auto screen.                               |
+
+### `finishWfWithChoice({ message?, primary?, options? })`
+
+`mode: 'manual'`. The user picks one of the buttons. Provide either a
+`primary` (Enter-key target) or one or more `options`; passing
+neither throws at runtime.
+
+```ts
+finishWfWithChoice({
+  message: { level: "info", text: "Submission queued. What's next?" },
+  primary: {
+    label: "View submission",
+    action: { type: "redirect", target: "/submissions/123", mode: "soft" },
+  },
+  options: [
+    {
+      label: "Submit another",
+      action: { type: "redirect", target: "/submit", mode: "soft" },
+    },
+    { label: "Done", action: { type: "dismiss" } },
+  ],
+});
+```
+
+When `primary` is omitted, all `options` render with equal visual
+weight and the first option becomes the Enter-key target.
+
+### `finishWfAborted(reason, opts?)`
+
+Terminal soft-failure. `aborted: true` plus the reason; optional
+`message` and `end` if you want to redirect the user away from the
+form.
+
+```ts
+finishWfAborted("rate-limited", {
+  message: { level: "warn", text: "Too many attempts. Try again in 5 minutes." },
+});
+```
+
+### Escape hatch — `finishWf(envelope)`
+
+If you need a combination the helpers don't cover (e.g. `mode:
+'manual'` with terminal `data` AND a primary button), pass the full
+envelope yourself:
+
+```ts
+import { finishWf } from "@atscript/moost-wf";
+
+finishWf({
+  finished: true,
+  data: { receiptId: 42 },
+  end: {
+    mode: "manual",
+    primary: { label: "Print", action: { type: "reload" } },
+    options: [{ label: "Done", action: { type: "dismiss" } }],
+  },
+});
+```
+
+## Rendering on the client
+
+`<AsWfForm>` renders the finish screen automatically. The default
+behaviour ships in `AsWfFinish` (Tier-2 swappable), wired to
+`<AsWfForm>` so consumers get correct rendering without any
+template work.
+
+The three modes:
+
+- **`immediate`** — no DOM is rendered. The action fires on mount.
+  Soft redirects emit `@navigate`; hard redirects call
+  `window.location.href`. The user sees a screen-reader-only
+  "Redirecting…" announcement and that's it.
+- **`auto`** — a countdown text + optional skip button. The action
+  fires after `timeoutMs` or when the user clicks skip (`behavior:
+  'now'` is the default; `'cancel'` only clears the timer and leaves
+  the user on the screen).
+- **`manual`** — `message` banner + buttons. The primary button (if
+  provided) gets initial focus and is the Enter-key target; options
+  render alongside. If no `primary`, the first option is the
+  Enter-key target.
+
+## Customizing via slots
+
+`<AsWfForm>` forwards five named scoped slots into `AsWfFinish`. Each
+has a working default — override only the pieces you want to
+restyle. Every slot scope includes a callback so your custom UI
+keeps the action wiring without re-implementing the logic.
+
+| Slot                    | Renders when                          | Scope                                                                                                  |
+| ----------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `wf.finished`           | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                 |
+| `wf.finish.message`     | `payload.message` is set              | `{ message: WfMessage }`                                                                               |
+| `wf.finish.countdown`   | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (100ms internally) |
+| `wf.finish.skip`        | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                             |
+| `wf.finish.primary`     | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                        |
+| `wf.finish.option`      | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                         |
+
+Example — override the primary button with a design-system one,
+keeping the trigger contract:
+
+```vue
+<AsWfForm path="/api/wf" name="checkout" :types="types" @navigate="router.push">
+  <template #wf.finish.primary="{ button, trigger }">
+    <MyBrandButton :variant="'filled'" @click="trigger">
+      {{ button.label }}
+    </MyBrandButton>
+  </template>
+</AsWfForm>
+```
+
+The `trigger` callback runs the action (redirect / reload / dismiss)
+exactly as the default button would. Custom UI never needs to
+re-implement the redirect-or-emit decision.
+
+## Events
+
+`<AsWfForm>` (and the default `AsWfFinish`) emit three events when
+an action runs:
+
+```ts
+defineEmits<{
+  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
+  (e: "dismiss"): void;
+  (e: "action", action: WfAction): void;
+}>();
+```
+
+- **`@navigate`** — fired when a `redirect` action with `mode:
+  'soft'` runs. Wire it to your router:
+
+  ```vue
+  <script setup lang="ts">
+  import { useRouter } from "vue-router";
+  const router = useRouter();
+  function onNavigate(payload: { target: string; reason?: string }) {
+    void router.push(payload.target);
+  }
+  </script>
+
+  <template>
+    <AsWfForm path="/api/wf" name="checkout" :types="types" @navigate="onNavigate" />
+  </template>
+  ```
+
+  If no `@navigate` listener is attached, the component falls back
+  to `window.location.href` and logs a dev-only warning. Hard
+  redirects (`mode: 'hard'`) skip the event and always call
+  `window.location.href`.
+
+- **`@dismiss`** — fired for `action.type === 'dismiss'`. The flow
+  stays on screen — the consumer decides what to do (close a modal,
+  reset state, etc.).
+
+- **`@action`** — fires before every action, including reloads and
+  redirects. Useful for analytics or telemetry without intercepting
+  navigation.
+
+## Aborted flows
+
+A workflow that calls `finishWfAborted(reason)` still fires
+`@finished` on the client — `aborted` and `reason` are exposed on
+the envelope alongside `data`. Treat them like a soft-error: render
+a banner via the `message` field (if you set one) or branch on
+`payload.aborted` inside the `wf.finished` slot for full control.
+
+## SSR consumers
+
+Server-rendered (or no-JS) consumers can't render `auto` / `manual`
+finish screens — those require client-side timers and button
+listeners. For SSR flows that need real `Location:` redirects on
+`mode: 'immediate'`, install the opt-in adapter:
+
+```ts
+import { Controller, Intercept } from "moost";
+import { workflowSsrAdapter } from "@atscript/moost-wf/ssr-adapter";
+
+@Controller("/auth")
+@Intercept(workflowSsrAdapter)
+export class AuthController { /* ... */ }
+```
+
+The adapter checks the response body for an `immediate` redirect
+envelope and rewrites it to `303` (hard) or `302` (soft) +
+`Location:` header. `auto` / `manual` envelopes pass through as
+200 JSON regardless — render them in the SPA.
+
+## Reference
+
+- Types and helpers: `packages/moost-wf/src/wf-finished.ts`
+- SSR adapter: `packages/moost-wf/src/ssr-adapter.ts`
+- Default component: `packages/vue-wf/src/components/defaults/as-wf-finish.vue`
+- Client wiring: `packages/vue-wf/src/components/as-wf-form.vue`
+
+## Where to go next
+
+- [Client: AsWfForm](/workflows/client) — props, emits, full slot
+  list, custom fetch.
+- [Server-Side Authoring](/workflows/server-authoring) — the
+  surrounding decorator stack the helpers plug into.
+- [Outlets & Resume](/workflows/outlets-resume) — `{ sent: true }`
+  vs. `{ finished: true }` and how the two pause types interact.

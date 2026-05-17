@@ -17,6 +17,7 @@ Part of the [atscript-ui](https://github.com/moostjs/atscript-ui) monorepo.
 - `<AsWfForm>` — single component that drives the full workflow: posts current state, renders the next step's form, validates with the schema returned by the server, and resumes after pauses
 - Hooks for custom transport, error display, and per-step UI overrides
 - Built on [`@atscript/vue-form`](../vue-form), so all form-rendering primitives (field types, default renderers, layout grid) carry over
+- Default `AsWfFinish` screen + `wf.finish.*` scoped slots + `@navigate` / `@dismiss` / `@action` events for the unified `WfFinished` terminal envelope. See [Finish Screens](https://ui.atscript.dev/workflows/finish-screens).
 
 ## Install
 

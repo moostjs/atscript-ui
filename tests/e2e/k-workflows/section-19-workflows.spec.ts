@@ -10,8 +10,10 @@
 // hygiene.
 //
 // Wire-shape findings:
-//   - Login finish: `{ wfs?, finished: true, ok: true, user: { username, roleName } }`
-//     + Set-Cookie `demo.sid=...; HttpOnly; SameSite=Lax; Path=/`.
+//   - Login finish: `{ wfs?, finished: true, data: { ok: true, user: { username, roleName } } }`
+//     + Set-Cookie `demo.sid=...; HttpOnly; SameSite=Lax; Path=/`. Phase 4
+//     migrated the wire shape to the unified WfFinished envelope so domain
+//     data now lives under `.data`.
 //   - Login wrong-creds: `inputRequired.context.errors.password = "Invalid
 //     username or password"`. NO Set-Cookie. Unknown-username and
 //     wrong-password produce the same message for no info-leak
@@ -72,8 +74,8 @@ import {
 interface WfResponse {
   wfs?: string;
   finished?: boolean;
-  ok?: boolean;
-  user?: { username: string; roleName: string };
+  /** Phase 4 WfFinished envelope: domain payload moved under `.data`. */
+  data?: { ok?: boolean; user?: { username: string; roleName: string }; [k: string]: unknown };
   sent?: boolean;
   outlet?: string;
   inputRequired?: {
@@ -195,8 +197,8 @@ test.describe("Section 19 — workflows", () => {
         expect(finish.status).toBeGreaterThanOrEqual(200);
         expect(finish.status).toBeLessThan(300);
         expect(finish.json.finished).toBe(true);
-        expect(finish.json.ok).toBe(true);
-        expect(finish.json.user).toEqual({ username: "admin", roleName: "admin" });
+        expect(finish.json.data?.ok).toBe(true);
+        expect(finish.json.data?.user).toEqual({ username: "admin", roleName: "admin" });
         // Set-Cookie attributes per workflow issueSession(): HttpOnly,
         // SameSite=Lax, Path=/, Max-Age (numeric, 7 days × 1000 ms).
         expect(finish.setCookie).not.toBeNull();
@@ -371,8 +373,8 @@ test.describe("Section 19 — workflows", () => {
           input: { code },
         });
         expect(right.json.finished).toBe(true);
-        expect(right.json.ok).toBe(true);
-        expect(right.json.user?.username).toBe("alice");
+        expect(right.json.data?.ok).toBe(true);
+        expect(right.json.data?.user?.username).toBe("alice");
         expect(right.setCookie).toMatch(/demo\.sid=/);
       } finally {
         await ctx.dispose();
@@ -394,7 +396,7 @@ test.describe("Section 19 — workflows", () => {
           input: { code },
         });
         expect(fin.json.finished).toBe(true);
-        expect(fin.json.user?.username).toBe("alice");
+        expect(fin.json.data?.user?.username).toBe("alice");
         expect(fin.setCookie).toMatch(/demo\.sid=/);
       } finally {
         await ctx.dispose();

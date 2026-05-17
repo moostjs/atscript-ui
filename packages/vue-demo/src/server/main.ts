@@ -30,6 +30,9 @@ import { RegisterWorkflow } from "./workflows/auth/register.workflow";
 import { ChangePasswordWorkflow } from "./workflows/security/change-password.workflow";
 import { EditProfileWorkflow } from "./workflows/profile/edit.workflow";
 import { InviteWorkflow } from "./workflows/users/invite.workflow";
+import { WfFinishImmediateDemoWorkflow } from "./workflows/wf-demo/finish-immediate.workflow";
+import { WfFinishAutoDemoWorkflow } from "./workflows/wf-demo/finish-auto.workflow";
+import { WfFinishManualDemoWorkflow } from "./workflows/wf-demo/finish-manual.workflow";
 import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import { auditInterceptor } from "./auth/audit";
@@ -68,6 +71,9 @@ app.registerControllers(
   ChangePasswordWorkflow,
   EditProfileWorkflow,
   InviteWorkflow,
+  WfFinishImmediateDemoWorkflow,
+  WfFinishAutoDemoWorkflow,
+  WfFinishManualDemoWorkflow,
   UsersController,
   RolesController,
   CategoriesController,

@@ -9,7 +9,8 @@ const isAnonymous = computed(
     route.path === "/login" ||
     route.path === "/register" ||
     route.path.startsWith("/invite/") ||
-    route.path.startsWith("/forms-demo"),
+    route.path.startsWith("/forms-demo") ||
+    route.path.startsWith("/wf-demo"),
 );
 </script>
 

@@ -271,6 +271,7 @@ const workflowsSidebar = [
     text: "Client (vue-wf)",
     items: [
       { text: "AsWfForm", link: "/workflows/client" },
+      { text: "Finish Screens", link: "/workflows/finish-screens" },
       { text: "Recipes", link: "/workflows/recipes" },
     ],
   },

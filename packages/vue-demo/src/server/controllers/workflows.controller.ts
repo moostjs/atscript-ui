@@ -31,6 +31,9 @@ const ALLOWED_WORKFLOWS = [
   "api/security/change-password",
   "api/profile/edit",
   "api/users/invite",
+  "api/wf-demo/finish-immediate",
+  "api/wf-demo/finish-auto",
+  "api/wf-demo/finish-manual",
 ] as const;
 
 // Workflows whose state must survive process restart (durable handle persistence).

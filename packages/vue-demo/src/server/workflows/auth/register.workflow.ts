@@ -1,5 +1,6 @@
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
+import type { WfFinished } from "@atscript/moost-wf";
 import { usersTable, rolesTable } from "../../db";
 import { hashPassword } from "../../auth/password";
 import { SessionService } from "../../auth/session.service";
@@ -119,12 +120,17 @@ export class RegisterWorkflow {
       issuedAt: Math.floor(Date.now() / 1000),
     };
     const token = this.sessions.encode(payload);
-    useWfFinished().set({
-      type: "data",
-      value: {
+    // Envelope wraps the domain data; cookies remain on the wooks call.
+    const envelope: WfFinished<{ ok: boolean; user: { username: string; roleName: string } }> = {
+      finished: true,
+      data: {
         ok: true,
         user: { username: payload.username, roleName: payload.roleName },
       },
+    };
+    useWfFinished().set({
+      type: "data",
+      value: envelope,
       cookies: {
         [SESSION_COOKIE]: {
           value: token,
