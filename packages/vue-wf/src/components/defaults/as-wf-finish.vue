@@ -90,15 +90,15 @@ function startAutoTimer(): void {
     clearAutoTimers();
     runAction(e.action);
   }, e.timeoutMs);
-  // 100ms tick lets consumers render smooth progress rings — but only write
-  // the ref when the second changes so the default whole-second template
-  // doesn't churn 10× per second.
+  // 250ms tick — fast enough that the integer countdown updates feel
+  // responsive near second boundaries, slow enough to avoid wasting frames
+  // now that the visible progress is driven by CSS keyframes.
   countdownInterval = setInterval(() => {
     const elapsed = Date.now() - autoStartedAt;
     const remainMs = Math.max(0, e.timeoutMs - elapsed);
     const next = Math.ceil(remainMs / 1000);
     if (next !== secondsRemaining.value) secondsRemaining.value = next;
-  }, 100);
+  }, 250);
 }
 
 function skipAuto(): void {

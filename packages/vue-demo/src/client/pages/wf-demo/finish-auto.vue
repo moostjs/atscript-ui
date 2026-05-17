@@ -1,9 +1,8 @@
 <script setup lang="ts">
-// Default `AsWfFinish` rendering: the countdown text now sits above a
-// CSS-animated progress bar and the skip button fills L→R at the same
-// rate. Both run on the new `c8-progress` primitive — see
-// `ui-styles/src/shortcuts/common/c8-progress.ts`. No countdown override
-// needed; this page exists to showcase the polished default.
+// Default `AsWfFinish` rendering: the skip button fills L→R via the
+// `c8-progress` primitive (see `ui-styles/src/shortcuts/common/c8-progress.ts`)
+// with the countdown text below it. No countdown override needed; this page
+// exercises the default.
 import { useRouter } from "vue-router";
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../../types/demo-types";
@@ -25,9 +24,9 @@ function navigate(url: string) {
         Submitting finishes with
         <code
           >finishWfWithRedirect('/wf-demo', &#123; autoMs: 4000, skipLabel: 'Go now' &#125;)</code
-        >. The default <code>AsWfFinish</code> renders the countdown text with a smooth progress
-        bar below it and a progress-fill skip button — both run on CSS animations timed by the
-        auto-fire duration.
+        >. The default <code>AsWfFinish</code> renders a progress-fill skip button with the
+        countdown text below it — the fill runs on a CSS animation timed by the auto-fire
+        duration.
       </p>
       <AsWfForm
         path="/api/wf"
