@@ -17,20 +17,30 @@ import { defineShortcuts } from "vunor/theme";
 //   </button>
 //
 // Notes:
-// - `isolate` creates a new stacking context so `c8-progress-fill` (z-[-1])
-//   stays inside the button but reliably sits behind any other child content.
 // - `overflow-hidden` clips the fill to the button's rounded corners.
-// - The fill is tinted with `bg-current/20` so it darkens the parent button
-//   uniformly across `c8-filled` / `c8-flat` / `c8-light` — same darkening
-//   pattern as `c8-*-active`.
+// - Both the fill and the label are `absolute inset-0` siblings inside the
+//   `relative` host. With both at auto z-index, the later-painted element
+//   wins — the label comes after the fill in source order, so it naturally
+//   sits on top without any stacking-context tricks. Avoid `isolate` on the
+//   host and `z-[-1]` on the fill: combined, they place the fill BEHIND the
+//   button's own solid background (`c8-filled` paints `--current-bg`),
+//   making it invisible.
+// - The fill is tinted with `bg-black/20` so it produces a uniform darken
+//   overlay on top of any underlying button surface (`c8-filled`,
+//   `c8-flat`, `c8-light`) in both light and dark themes. `bg-current/20`
+//   would resolve to `currentColor` (the foreground text color — white on
+//   filled-primary) and lighten rather than darken.
 // - The `progress-fill` keyframes are registered as a preset preflight in
 //   `ui-styles/src/preset.ts` so the rule emits exactly once.
 export const c8ProgressShortcuts = defineShortcuts({
-  "c8-progress": "relative overflow-hidden isolate",
+  "c8-progress": "relative overflow-hidden",
   "c8-progress-fill":
-    "absolute inset-0 z-[-1] origin-left w-0 bg-current/20 animate-[progress-fill_var(--progress-duration,4s)_linear_forwards]",
-  // Wrap the button's text content so it sits above `c8-progress-fill`
-  // regardless of the fill's stacking-context tricks. Keeps consumers from
-  // having to inline raw `relative` in templates.
-  "c8-progress-label": "relative",
+    "absolute inset-0 origin-left w-0 bg-black/20 animate-[progress-fill_var(--progress-duration,4s)_linear_forwards]",
+  // Absolute overlay that fills the host bounds and centers its content.
+  // Paints over `c8-progress-fill` purely by source order (the label comes
+  // after the fill in template). `px-$m` is structural so consumers can
+  // wrap labels of varying length without inlining utilities — the host
+  // button's `h-*` and any explicit `min-w-*` define the box, and this
+  // overlay centers within it.
+  "c8-progress-label": "absolute inset-0 flex items-center justify-center px-$m",
 });

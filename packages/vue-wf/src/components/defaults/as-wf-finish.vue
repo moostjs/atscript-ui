@@ -187,17 +187,6 @@ const skipScope = computed(() => {
     </slot>
 
     <template v-if="end?.mode === 'auto' && !autoCancelled">
-      <slot
-        name="countdown"
-        :seconds-remaining="secondsRemaining"
-        :total-seconds="totalSeconds"
-        :skip="skipAuto"
-        :cancel="cancelAuto"
-      >
-        <div class="as-wf-finish-countdown" aria-live="polite">
-          Continuing in {{ secondsRemaining }}…
-        </div>
-      </slot>
       <div v-if="skipScope" class="as-wf-finish-actions">
         <slot name="skip" :button="skipScope" :trigger="skipAuto">
           <button
@@ -211,6 +200,17 @@ const skipScope = computed(() => {
           </button>
         </slot>
       </div>
+      <slot
+        name="countdown"
+        :seconds-remaining="secondsRemaining"
+        :total-seconds="totalSeconds"
+        :skip="skipAuto"
+        :cancel="cancelAuto"
+      >
+        <div class="as-wf-finish-countdown" aria-live="polite">
+          Continuing in {{ secondsRemaining }}…
+        </div>
+      </slot>
     </template>
 
     <template v-if="end?.mode === 'manual'">

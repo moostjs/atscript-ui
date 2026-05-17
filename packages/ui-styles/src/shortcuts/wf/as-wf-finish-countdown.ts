@@ -1,8 +1,10 @@
 import { defineShortcuts } from "vunor/theme";
 
 export const asWfFinishCountdownShortcuts = defineShortcuts({
-  // "Continuing in N…" countdown text. The visual progress indication lives
-  // on the skip button (`as-wf-finish-skip` via `c8-progress`), so this slot
-  // is just muted body text — no stacked progress bar underneath.
-  "as-wf-finish-countdown": "text-body text-current-muted",
+  // "Continuing in N…" countdown text. Renders BELOW the skip button as a
+  // smaller, muted caption. `text-callout` (≈0.89em) is the next typography
+  // step down from `text-body`, paired with `text-current-muted` for the
+  // de-emphasized treatment. `text-center` centers the text under the
+  // (centered) actions row inside the `flex-col items-stretch` host.
+  "as-wf-finish-countdown": "text-callout text-current-muted text-center",
 });
