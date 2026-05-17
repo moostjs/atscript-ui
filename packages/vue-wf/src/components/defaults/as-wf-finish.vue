@@ -195,16 +195,7 @@ const skipScope = computed(() => {
         :cancel="cancelAuto"
       >
         <div class="as-wf-finish-countdown" aria-live="polite">
-          <div>Continuing in {{ secondsRemaining }}…</div>
-          <!-- CSS-animated progress bar — duration is the full auto timeout,
-               so the fill stays in lockstep with `setTimeout(action, timeoutMs)`
-               regardless of how often `secondsRemaining` ticks. -->
-          <div
-            class="as-wf-finish-countdown-progress"
-            :style="{ '--progress-duration': `${end.timeoutMs}ms` }"
-          >
-            <div class="as-wf-finish-countdown-progress-fill" />
-          </div>
+          Continuing in {{ secondsRemaining }}…
         </div>
       </slot>
       <div v-if="skipScope" class="as-wf-finish-actions">
