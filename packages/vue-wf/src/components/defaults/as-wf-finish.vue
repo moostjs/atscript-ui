@@ -195,13 +195,28 @@ const skipScope = computed(() => {
         :cancel="cancelAuto"
       >
         <div class="as-wf-finish-countdown" aria-live="polite">
-          Continuing in {{ secondsRemaining }}…
+          <div>Continuing in {{ secondsRemaining }}…</div>
+          <!-- CSS-animated progress bar — duration is the full auto timeout,
+               so the fill stays in lockstep with `setTimeout(action, timeoutMs)`
+               regardless of how often `secondsRemaining` ticks. -->
+          <div
+            class="as-wf-finish-countdown-progress"
+            :style="{ '--progress-duration': `${end.timeoutMs}ms` }"
+          >
+            <div class="as-wf-finish-countdown-progress-fill" />
+          </div>
         </div>
       </slot>
       <div v-if="skipScope" class="as-wf-finish-actions">
         <slot name="skip" :button="skipScope" :trigger="skipAuto">
-          <button type="button" class="as-wf-finish-skip" @click="skipAuto">
-            {{ skipScope.label }}
+          <button
+            type="button"
+            class="as-wf-finish-skip"
+            :style="{ '--progress-duration': `${end.timeoutMs}ms` }"
+            @click="skipAuto"
+          >
+            <span class="as-wf-finish-skip-fill" />
+            <span class="as-wf-finish-skip-label">{{ skipScope.label }}</span>
           </button>
         </slot>
       </div>

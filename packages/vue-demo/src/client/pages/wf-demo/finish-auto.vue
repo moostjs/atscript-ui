@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// Demonstrates a custom countdown slot — the consumer overrides
-// `#wf.finish.countdown` to render a progress bar in addition to the seconds.
-import { computed, ref } from "vue";
+// Default `AsWfFinish` rendering: the countdown text now sits above a
+// CSS-animated progress bar and the skip button fills L→R at the same
+// rate. Both run on the new `c8-progress` primitive — see
+// `ui-styles/src/shortcuts/common/c8-progress.ts`. No countdown override
+// needed; this page exists to showcase the polished default.
 import { useRouter } from "vue-router";
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../../types/demo-types";
@@ -10,15 +12,8 @@ import { sharedFetch } from "../../api/fetch";
 const router = useRouter();
 const types = createDemoTypes();
 
-const totalSecondsRef = ref(0);
-
 function navigate(url: string) {
   void router.push(url);
-}
-
-function progressPct(remaining: number, total: number) {
-  if (!total) return 0;
-  return Math.max(0, Math.min(100, ((total - remaining) / total) * 100));
 }
 </script>
 
@@ -30,8 +25,9 @@ function progressPct(remaining: number, total: number) {
         Submitting finishes with
         <code
           >finishWfWithRedirect('/wf-demo', &#123; autoMs: 4000, skipLabel: 'Go now' &#125;)</code
-        >. The default <code>AsWfFinish</code> renders the countdown text + skip button. Below the
-        demo overrides <code>#wf.finish.countdown</code> with a progress bar.
+        >. The default <code>AsWfFinish</code> renders the countdown text with a smooth progress
+        bar below it and a progress-fill skip button — both run on CSS animations timed by the
+        auto-fire duration.
       </p>
       <AsWfForm
         path="/api/wf"
@@ -41,22 +37,6 @@ function progressPct(remaining: number, total: number) {
         first-validation="on-submit"
         :navigate="navigate"
       >
-        <template #wf.finish.countdown="{ secondsRemaining, totalSeconds }">
-          <div class="flex flex-col gap-$xs">
-            <div class="flex items-baseline justify-between">
-              <span class="text-callout">Continuing in {{ secondsRemaining }}s…</span>
-              <span class="text-caption text-current/60 font-mono"
-                >{{ totalSeconds - secondsRemaining }}/{{ totalSeconds }}</span
-              >
-            </div>
-            <div class="h-1 layer-1 rounded-r1 overflow-hidden">
-              <div
-                class="h-full c8-filled scope-primary transition-all"
-                :style="{ width: `${progressPct(secondsRemaining, totalSeconds)}%` }"
-              />
-            </div>
-          </div>
-        </template>
         <template #form.submit="{ disabled, loading, text }">
           <button
             type="submit"

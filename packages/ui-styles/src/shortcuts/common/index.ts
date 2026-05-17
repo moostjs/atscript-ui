@@ -1,4 +1,5 @@
 import { defineShortcuts, mergeVunorShortcuts } from "vunor/theme";
+import { c8ProgressShortcuts } from "./c8-progress";
 
 const baseCommon = defineShortcuts({
   // Keyboard shortcut badge — small button-shaped hint shown next to text
@@ -37,4 +38,4 @@ const baseCommon = defineShortcuts({
   "as-dialog-close": "as-close-btn ml-auto",
 });
 
-export const commonShortcuts = mergeVunorShortcuts([baseCommon]);
+export const commonShortcuts = mergeVunorShortcuts([baseCommon, c8ProgressShortcuts]);

@@ -111,6 +111,22 @@ const shimmerKeyframesPreset: Preset = {
 };
 
 /**
+ * Preset entry that injects the `@keyframes progress-fill` definition driving
+ * the `c8-progress-fill` shortcut (and any other consumer that wants a 0→100%
+ * left-to-right width fill). Duration is supplied per-instance via the
+ * `--progress-duration` CSS custom property on the host element, so the same
+ * keyframes serve every timed-fill UI — no per-duration class explosion.
+ */
+const progressKeyframesPreset: Preset = {
+  name: "atscript-ui-progress-keyframes",
+  preflights: [
+    {
+      getCSS: () => "@keyframes progress-fill { from { width: 0%; } to { width: 100%; } }",
+    },
+  ],
+};
+
+/**
  * No-op marker classes referenced by other shortcuts. UnoCSS warns
  * `unmatched utility "X" in shortcut "Y"` when a shortcut body references
  * a utility that doesn't resolve to any rule:
@@ -204,6 +220,7 @@ function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
   return [
     bakedIconsPreset(iconOverrides),
     shimmerKeyframesPreset,
+    progressKeyframesPreset,
     markerRulesPreset,
     formGridSafelistPreset,
     presetVunor({
