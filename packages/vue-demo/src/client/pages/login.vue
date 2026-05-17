@@ -71,5 +71,13 @@ async function onFinished() {
         Browse form variations →
       </RouterLink>
     </div>
+    <div class="mt-$l flex flex-col items-center gap-$xs">
+      <p class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0">
+        Workflow Demo · no auth required
+      </p>
+      <RouterLink to="/wf-demo" class="scope-primary text-current-hl underline text-callout">
+        Browse workflow scenarios →
+      </RouterLink>
+    </div>
   </div>
 </template>
