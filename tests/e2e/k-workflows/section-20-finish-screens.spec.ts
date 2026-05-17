@@ -35,7 +35,7 @@ test.describe("Section 20 — WfFinished envelope (smoke)", () => {
 
       // Confirm we landed on the wf-demo index — the heading is the
       // unambiguous marker.
-      await expect(page.getByRole("heading", { name: /WfFinished envelope/i })).toBeVisible();
+      await expect(page.getByRole("heading", { name: /Workflow variations/i })).toBeVisible();
     } finally {
       await ctx.close();
     }
