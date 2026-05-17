@@ -248,7 +248,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
 
     // Dev-only: surface the silent magic-link footgun (URL has ?wfs=… but
     // initialToken was not wired, so the flow restarts instead of resuming).
-    if (import.meta.env?.DEV !== false && !initialToken && transport !== "query") {
+    if (import.meta.env?.DEV && !initialToken && transport !== "query") {
       const urlToken = new URLSearchParams(window.location.search).get(tokenName);
       if (urlToken) {
         console.warn(

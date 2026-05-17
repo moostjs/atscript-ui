@@ -12,8 +12,8 @@ const types = createDemoTypes();
 
 const totalSecondsRef = ref(0);
 
-function onNavigate(payload: { target: string; mode: "soft" | "hard"; reason?: string }) {
-  void router.push(payload.target);
+function navigate(url: string) {
+  void router.push(url);
 }
 
 function progressPct(remaining: number, total: number) {
@@ -28,7 +28,8 @@ function progressPct(remaining: number, total: number) {
       <h1 class="text-lg font-700 m-0">Finish · mode: auto</h1>
       <p class="text-callout text-current/70 m-0">
         Submitting finishes with
-        <code>finishWfWithRedirect('/wf-demo', &#123; autoMs: 4000, skipLabel: 'Go now' &#125;)</code
+        <code
+          >finishWfWithRedirect('/wf-demo', &#123; autoMs: 4000, skipLabel: 'Go now' &#125;)</code
         >. The default <code>AsWfFinish</code> renders the countdown text + skip button. Below the
         demo overrides <code>#wf.finish.countdown</code> with a progress bar.
       </p>
@@ -38,7 +39,7 @@ function progressPct(remaining: number, total: number) {
         :types="types"
         :fetch="sharedFetch"
         first-validation="on-submit"
-        @navigate="onNavigate"
+        :navigate="navigate"
       >
         <template #wf.finish.countdown="{ secondsRemaining, totalSeconds }">
           <div class="flex flex-col gap-$xs">

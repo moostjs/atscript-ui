@@ -30,7 +30,6 @@ export class WfFinishAutoDemoWorkflow {
     }
     ctx.note = input.note;
     finishWfWithRedirect("/wf-demo", {
-      mode: "soft",
       autoMs: 4000,
       skipLabel: "Go now",
       reason: "demo-auto",

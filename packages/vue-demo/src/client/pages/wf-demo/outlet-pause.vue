@@ -22,10 +22,10 @@ function onFinished(_response: unknown) {
     <div class="max-w-[520px] mx-auto flex flex-col gap-$m">
       <h1 class="text-lg font-700 m-0">Outlet pause · check your email</h1>
       <p class="text-callout text-current/70 m-0">
-        Submitting emits <code>outletEmail(...)</code>; the workflow pauses waiting for
-        out-of-band resumption (a magic link). The client sees
-        <code>&#123; sent: true &#125;</code> and treats the session as finished. Resumption
-        happens when the recipient clicks the link (logged to server console here).
+        Submitting emits <code>outletEmail(...)</code>; the workflow pauses waiting for out-of-band
+        resumption (a magic link). The client sees <code>&#123; sent: true &#125;</code> and treats
+        the session as finished. Resumption happens when the recipient clicks the link (logged to
+        server console here).
       </p>
       <AsWfForm
         path="/api/wf"

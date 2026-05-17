@@ -30,12 +30,12 @@ export class WfFinishManualDemoWorkflow {
       message: { level: "success", text: "What would you like to do next?" },
       primary: {
         label: "Back to demo index",
-        action: { type: "redirect", target: "/wf-demo", mode: "soft", reason: "manual-primary" },
+        action: { type: "redirect", target: "/wf-demo", reason: "manual-primary" },
       },
       options: [
         {
           label: "Sign in",
-          action: { type: "redirect", target: "/login", mode: "soft", reason: "manual-login" },
+          action: { type: "redirect", target: "/login", reason: "manual-login" },
         },
         { label: "Stay here", action: { type: "dismiss" } },
       ],

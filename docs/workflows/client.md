@@ -72,6 +72,14 @@ interface AsWfFormProps {
   components?: Record<string, Component>;
   /** Per-form client factory (FK value-help). */
   clientFactory?: ClientFactory;
+
+  // ── Finish screen routing ──────────────────────────────────
+  /**
+   * Forwarded to `<AsWfFinish>`. Invoked with the redirect target URL
+   * when a `redirect` action fires. Matches the `navigate` option on
+   * `@atscript/db-client`'s `Client` so one handler covers both.
+   */
+  navigate?: (url: string) => void | Promise<void>;
 }
 ```
 
@@ -95,7 +103,6 @@ defineEmits<{
   (e: "loading", isLoading: boolean): void;
   // Fired by the default AsWfFinish screen when a WfFinished envelope's
   // `end` triggers an action. See "Finish Screens".
-  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
   (e: "dismiss"): void;
   (e: "action", action: WfAction): void;
 }>();
@@ -154,8 +161,8 @@ The `wf.finished` slot's `payload` is the typed `WfFinished` envelope
 (`response` is the same value, kept for back-compat). When the
 envelope's `end` is set, the default rendering switches into a
 `AsWfFinish` screen — see [Finish Screens](/workflows/finish-screens)
-for the envelope shape, the `wf.finish.*` scoped slots, and the
-`@navigate` / `@dismiss` / `@action` event contract.
+for the envelope shape, the `wf.finish.*` scoped slots, the
+`navigate` prop wiring, and the `@dismiss` / `@action` event contract.
 
 Example: custom loading + finished states:
 

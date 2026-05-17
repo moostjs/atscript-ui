@@ -84,30 +84,19 @@ describe("finishWfWithMessage", () => {
 });
 
 describe("finishWfWithRedirect", () => {
-  // Why: bare call defaults to soft mode + immediate — the most common login
-  // flow ("login OK, take me to /dashboard via the SPA router").
-  it("defaults to immediate + soft redirect", () => {
+  // Why: bare call defaults to immediate — the most common login flow
+  // ("login OK, take me to /dashboard"). The consumer's `navigate` handler
+  // decides cross-origin vs in-app routing — modes don't live in the envelope.
+  it("defaults to immediate redirect", () => {
     setSpy.mockClear();
     finishWfWithRedirect("/dashboard");
     expect(lastEnvelope()).toEqual({
       finished: true,
       end: {
         mode: "immediate",
-        action: { type: "redirect", target: "/dashboard", mode: "soft" },
+        action: { type: "redirect", target: "/dashboard" },
       },
     });
-  });
-
-  // Why: hard mode is what magic-link / post-action flows need (full page nav,
-  // GET method via the SSR adapter's 303).
-  it("respects opts.mode = 'hard'", () => {
-    setSpy.mockClear();
-    finishWfWithRedirect("/login", { mode: "hard" });
-    const env = lastEnvelope();
-    expect(env.end?.mode).toBe("immediate");
-    if (env.end?.mode === "immediate") {
-      expect(env.end.action).toEqual({ type: "redirect", target: "/login", mode: "hard" });
-    }
   });
 
   // Why: `autoMs` switches the envelope into countdown mode — UI shows a
@@ -120,7 +109,7 @@ describe("finishWfWithRedirect", () => {
     if (env.end?.mode === "auto") {
       expect(env.end.timeoutMs).toBe(3000);
       expect(env.end.skipButton).toEqual({ label: "Skip" });
-      expect(env.end.action).toEqual({ type: "redirect", target: "/x", mode: "soft" });
+      expect(env.end.action).toEqual({ type: "redirect", target: "/x" });
     }
   });
 
@@ -153,7 +142,7 @@ describe("finishWfWithChoice", () => {
     finishWfWithChoice({
       primary: {
         label: "OK",
-        action: { type: "redirect", target: "/x", mode: "soft" },
+        action: { type: "redirect", target: "/x" },
       },
     });
     const env = lastEnvelope();
@@ -209,7 +198,7 @@ describe("finishWfAborted", () => {
       message: { level: "error", text: "Session expired" },
       end: {
         mode: "immediate",
-        action: { type: "redirect", target: "/login", mode: "hard" },
+        action: { type: "redirect", target: "/login" },
       },
     });
     const env = lastEnvelope();

@@ -10,7 +10,7 @@ author-facing helpers, the default `AsWfFinish` component shipped via
 - [Helpers — which one to pick](#helpers--which-one-to-pick)
 - [End modes — rendering rules](#end-modes--rendering-rules)
 - [Slot contract](#slot-contract)
-- [Events — `@navigate` / `@dismiss` / `@action`](#events--navigate--dismiss--action)
+- [Routing & events — `navigate` prop, `@dismiss`, `@action`](#routing--events--navigate-prop-dismiss-action)
 
 ## Envelope shape
 
@@ -36,7 +36,7 @@ type WfFinishedEnd =
 interface WfButton { label: string; action: WfAction; }
 
 type WfAction =
-  | { type: "redirect"; target: string; mode: "soft" | "hard"; reason?: string }
+  | { type: "redirect"; target: string; reason?: string }
   | { type: "reload" }
   | { type: "dismiss" };
 ```
@@ -66,7 +66,6 @@ import { finishWfWithRedirect, finishWfWithChoice } from "@atscript/moost-wf";
 
 // Auto-redirect with countdown.
 finishWfWithRedirect("/dashboard", {
-  mode: "soft",
   autoMs: 4000,
   skipLabel: "Go now",
   message: { level: "success", text: "All set!" },
@@ -75,9 +74,9 @@ finishWfWithRedirect("/dashboard", {
 // Manual choice.
 finishWfWithChoice({
   message: { level: "info", text: "What's next?" },
-  primary: { label: "View order", action: { type: "redirect", target: "/orders/42", mode: "soft" } },
+  primary: { label: "View order", action: { type: "redirect", target: "/orders/42" } },
   options: [
-    { label: "Submit another", action: { type: "redirect", target: "/submit", mode: "soft" } },
+    { label: "Submit another", action: { type: "redirect", target: "/submit" } },
     { label: "Done", action: { type: "dismiss" } },
   ],
 });
@@ -87,10 +86,10 @@ finishWfWithChoice({
 
 The default `AsWfFinish` (Tier-2, swappable) reads `payload.end.mode`:
 
-- **`immediate`** — no DOM rendered; action fires on mount. `redirect/soft`
-  emits `@navigate`; `redirect/hard` calls `window.location.href`. If no
-  `@navigate` listener is attached for a soft redirect, fallback to
-  `window.location.href` + a dev-only `console.warn`.
+- **`immediate`** — no DOM rendered; action fires on mount. `redirect`
+  invokes the `navigate` prop (if provided), otherwise falls back to
+  `window.location.assign`. In a non-browser context with no prop, logs
+  `console.error` and stays put.
 - **`auto`** — countdown text + optional skip button. Timer fires after
   `timeoutMs`; skip-button behaviour `"now"` (default) fires immediately,
   `"cancel"` only clears the timer and leaves the user on the screen.
@@ -121,7 +120,7 @@ inside the override loses the dev-only fallback warning and the `@action`
 analytics emit.
 
 ```vue
-<AsWfForm path="/api/wf" name="checkout" :types="types" @navigate="router.push">
+<AsWfForm path="/api/wf" name="checkout" :types="types" :navigate="navigate">
   <template #wf.finish.primary="{ button, trigger }">
     <MyBrandButton variant="filled" @click="trigger">{{ button.label }}</MyBrandButton>
   </template>
@@ -130,26 +129,30 @@ analytics emit.
 
 > [feedback_vue_empty_slot](file:///Users/mavrik/.claude/projects/-Users-mavrik-code-atscript-ui/memory/feedback_vue_empty_slot.md): `<AsWfForm>` only forwards a `wf.finish.*` slot to `AsWfFinish` when the consumer actually provides one (`$slots['wf.finish.message']` guard). An empty `<template #wf.finish.message />` would otherwise suppress the default fallback — but since the consumer never provided the slot in that case, the guard preserves the default.
 
-## Events — `@navigate` / `@dismiss` / `@action`
+## Routing & events — `navigate` prop, `@dismiss`, `@action`
 
 ```ts
+interface AsWfFormProps {
+  // …
+  navigate?: (url: string) => void | Promise<void>;
+}
+
 defineEmits<{
-  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
   (e: "dismiss"): void;
   (e: "action", action: WfAction): void;
 }>();
 ```
 
-- `@navigate` — fires on `redirect/soft`. Wire to `router.push`:
+- `navigate` prop — receives the redirect target URL. Wire to your router:
   ```ts
-  function onNavigate(p: { target: string }) { void router.push(p.target); }
+  const navigate = (url: string) => router.push(url);
   ```
+  Matches the `navigate` option on `@atscript/db-client`'s `Client` so one
+  handler covers both workflow redirects and DB `processor: 'navigate'`
+  actions. When omitted, `AsWfFinish` falls back to
+  `window.location.assign(url)`; in a non-browser context with no prop, it
+  logs `console.error` and stays put.
 - `@dismiss` — fires on `action.type === 'dismiss'`. Use to close modals or
   reset state — `AsWfFinish` does not navigate.
 - `@action` — fires on every action (redirect / reload / dismiss). Analytics
-  hook; does not control navigation.
-
-Hard redirects (`mode: "hard"`) bypass `@navigate` and call
-`window.location.href`. There is no way to intercept them other than
-overriding the `wf.finish.primary` / `wf.finish.option` / `wf.finish.skip`
-slots with custom triggers.
+  hook; the `reason` field on `redirect` actions flows through this event.

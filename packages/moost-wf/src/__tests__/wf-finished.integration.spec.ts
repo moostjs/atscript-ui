@@ -62,13 +62,13 @@ describe("WfFinished helpers end-to-end through wrapFinished", () => {
     });
   });
 
-  it("finishWfWithRedirect (immediate, soft) → envelope reaches HTTP as JSON", () => {
+  it("finishWfWithRedirect (immediate) → envelope reaches HTTP as JSON", () => {
     setSpy.mockClear();
     finishWfWithRedirect("/home");
     const body = roundTrip() as { finished: true; end: { mode: string; action: unknown } };
     expect(body.finished).toBe(true);
     expect(body.end.mode).toBe("immediate");
-    expect(body.end.action).toEqual({ type: "redirect", target: "/home", mode: "soft" });
+    expect(body.end.action).toEqual({ type: "redirect", target: "/home" });
   });
 
   it("finishWfWithRedirect (auto) → countdown envelope passes through", () => {
@@ -84,7 +84,7 @@ describe("WfFinished helpers end-to-end through wrapFinished", () => {
     finishWfWithChoice({
       primary: {
         label: "Go",
-        action: { type: "redirect", target: "/x", mode: "soft" },
+        action: { type: "redirect", target: "/x" },
       },
       options: [{ label: "Dismiss", action: { type: "dismiss" } }],
     });

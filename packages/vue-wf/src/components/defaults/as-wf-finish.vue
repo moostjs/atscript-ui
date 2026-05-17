@@ -1,26 +1,41 @@
 <script setup lang="ts">
-import { computed, getCurrentInstance, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { WfAction, WfButton, WfFinished } from "@atscript/moost-wf";
 
 const props = defineProps<{
   payload: WfFinished | null;
+  /**
+   * Consumer-provided navigation handler. Receives the redirect target URL —
+   * the consumer decides cross-origin vs in-app routing. Mirrors the
+   * `navigate` option on `@atscript/db-client`'s `Client`: one handler
+   * across the stack.
+   */
+  navigate?: (url: string) => void | Promise<void>;
 }>();
 
 const emit = defineEmits<{
-  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
   (e: "dismiss"): void;
   /** Fired whenever an action runs — analytics hook. */
   (e: "action", action: WfAction): void;
 }>();
 
 // ── Action execution ───────────────────────────────────────
-// Surface vnode listeners so we can detect a missing `@navigate` handler at
-// runtime — silent dead-buttons are the worst UX for `redirect/soft` actions.
-const instance = getCurrentInstance();
-let warnedSoftFallback = false;
-
-function hasListener(name: "onNavigate" | "onDismiss"): boolean {
-  return !!instance?.vnode.props && name in (instance.vnode.props as Record<string, unknown>);
+async function dispatchRedirect(url: string): Promise<void> {
+  if (props.navigate) {
+    await props.navigate(url);
+    return;
+  }
+  const loc = (globalThis as { location?: { assign?: (url: string) => void } }).location;
+  if (loc?.assign) {
+    loc.assign(url);
+    return;
+  }
+  // Mirrors db-client's SSR-throw posture but soft-fails in the Vue render
+  // path — crashing the finish screen is worse than a logged misconfiguration.
+  console.error(
+    `[AsWfFinish] Cannot redirect to "${url}": no \`navigate\` prop and no browser environment. ` +
+      `Pass a \`navigate\` prop to AsWfForm / AsWfFinish.`,
+  );
 }
 
 function runAction(action: WfAction): void {
@@ -28,27 +43,7 @@ function runAction(action: WfAction): void {
   // navigation that unloads the page.
   emit("action", action);
   if (action.type === "redirect") {
-    if (action.mode === "hard") {
-      window.location.href = action.target;
-      return;
-    }
-    if (hasListener("onNavigate")) {
-      emit("navigate", {
-        target: action.target,
-        mode: action.mode,
-        reason: action.reason,
-      });
-      return;
-    }
-    if (import.meta.env?.DEV !== false && !warnedSoftFallback) {
-      warnedSoftFallback = true;
-      console.warn(
-        "[AsWfFinish] soft redirect requested but no `@navigate` listener is attached; " +
-          "falling back to `window.location.href`. Wire `@navigate` to your router's push() " +
-          "for SPA navigation.",
-      );
-    }
-    window.location.href = action.target;
+    void dispatchRedirect(action.target);
     return;
   }
   if (action.type === "reload") {

@@ -5,28 +5,24 @@ import AsWfFinish from "../components/defaults/as-wf-finish.vue";
 import type { WfButton, WfFinished } from "@atscript/moost-wf";
 
 // ── window.location helpers ─────────────────────────────────
-// happy-dom's location has a real href setter that triggers navigation;
-// we replace with a writable plain object so assertions read setter values.
+// happy-dom's location.assign triggers real navigation; we replace with a
+// writable plain object so assertions read setter values.
 let origLocation: Location;
-let hrefStore: { value: string };
+let assignSpy: ReturnType<typeof vi.fn>;
+let reloadSpy: ReturnType<typeof vi.fn>;
 
 function stubLocation() {
   origLocation = window.location;
-  hrefStore = { value: origLocation.href };
-  const reloadSpy = vi.fn();
+  assignSpy = vi.fn();
+  reloadSpy = vi.fn();
   Object.defineProperty(window, "location", {
     configurable: true,
     value: {
-      get href() {
-        return hrefStore.value;
-      },
-      set href(v: string) {
-        hrefStore.value = v;
-      },
+      assign: assignSpy,
       reload: reloadSpy,
     },
   });
-  return { reloadSpy };
+  return { assignSpy, reloadSpy };
 }
 
 function restoreLocation() {
@@ -37,12 +33,9 @@ function restoreLocation() {
 }
 
 // ── Component-mount helpers ─────────────────────────────────
-function mountFinish(
-  payload: WfFinished | null,
-  listeners: { onNavigate?: (p: unknown) => void; onDismiss?: () => void } = {},
-) {
+function mountFinish(payload: WfFinished | null, extraProps: Record<string, unknown> = {}) {
   return mount(AsWfFinish, {
-    props: { payload, ...listeners } as Record<string, unknown>,
+    props: { payload, ...extraProps } as Record<string, unknown>,
   });
 }
 
@@ -58,20 +51,21 @@ afterEach(() => {
 describe("AsWfFinish — no `end` directive", () => {
   // WHY: without `end`, AsWfFinish must stay quiet — parent decides.
   it("fires no action and renders the message banner", async () => {
-    const { reloadSpy } = stubLocation();
-    const onNavigate = vi.fn();
+    const { assignSpy, reloadSpy } = stubLocation();
+    const navigate = vi.fn();
     try {
       const w = mountFinish(
         {
           finished: true,
           message: { level: "success", text: "Welcome!" },
         },
-        { onNavigate },
+        { navigate },
       );
       await flushPromises();
       expect(w.text()).toContain("Welcome!");
       expect(w.find('[data-level="success"]').exists()).toBe(true);
-      expect(onNavigate).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
+      expect(assignSpy).not.toHaveBeenCalled();
       expect(reloadSpy).not.toHaveBeenCalled();
     } finally {
       restoreLocation();
@@ -80,77 +74,76 @@ describe("AsWfFinish — no `end` directive", () => {
 });
 
 describe("AsWfFinish — `immediate` mode", () => {
-  // WHY: hard redirect must set href synchronously on mount — no DOM, no race.
-  it("redirect/hard sets window.location.href on mount", async () => {
-    stubLocation();
+  // WHY: when `navigate` is provided, the prop is the sole dispatcher.
+  it("redirect with `navigate` prop calls the prop with the target URL", async () => {
+    const { assignSpy } = stubLocation();
+    const navigate = vi.fn();
     try {
-      mountFinish({
-        finished: true,
-        end: {
-          mode: "immediate",
-          action: { type: "redirect", target: "/login", mode: "hard" },
-        },
-      });
-      await flushPromises();
-      expect(hrefStore.value).toBe("/login");
-    } finally {
-      restoreLocation();
-    }
-  });
-
-  // WHY: SPA-routed flows expect `@navigate`, not a page reload.
-  it("redirect/soft emits @navigate when listener attached", async () => {
-    stubLocation();
-    const onNavigate = vi.fn();
-    try {
-      const initialHref = hrefStore.value;
-      const w = mountFinish(
+      mountFinish(
         {
           finished: true,
           end: {
             mode: "immediate",
-            action: {
-              type: "redirect",
-              target: "/home",
-              mode: "soft",
-              reason: "post-login",
-            },
+            action: { type: "redirect", target: "/home", reason: "post-login" },
           },
         },
-        { onNavigate },
+        { navigate },
       );
       await flushPromises();
-      const emitted = w.emitted("navigate");
-      expect(emitted).toBeTruthy();
-      expect(emitted![0]![0]).toEqual({
-        target: "/home",
-        mode: "soft",
-        reason: "post-login",
-      });
-      // Did NOT fall back to location.href.
-      expect(hrefStore.value).toBe(initialHref);
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith("/home");
+      // Did NOT fall back to location.assign.
+      expect(assignSpy).not.toHaveBeenCalled();
     } finally {
       restoreLocation();
     }
   });
 
-  // WHY: silent dead-button is the worst UX — without @navigate, we must navigate.
-  it("redirect/soft falls back to location.href when no @navigate attached", async () => {
-    stubLocation();
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+  // WHY: SSR-style fallback path — without `navigate` prop, drive the browser.
+  it("redirect without `navigate` prop calls window.location.assign", async () => {
+    const { assignSpy } = stubLocation();
     try {
       mountFinish({
         finished: true,
         end: {
           mode: "immediate",
-          action: { type: "redirect", target: "/fallback", mode: "soft" },
+          action: { type: "redirect", target: "/fallback" },
         },
       });
       await flushPromises();
-      expect(hrefStore.value).toBe("/fallback");
-      expect(warnSpy).toHaveBeenCalled();
+      expect(assignSpy).toHaveBeenCalledTimes(1);
+      expect(assignSpy).toHaveBeenCalledWith("/fallback");
     } finally {
       restoreLocation();
+    }
+  });
+
+  // WHY: without `navigate` AND without a browser, we log + soft-fail rather
+  // than crash the render path. Mirrors the SSR-throw posture in db-client
+  // but stays out of Vue's render error path.
+  it("redirect without `navigate` and no browser logs console.error", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    Object.defineProperty(globalThis, "location", {
+      configurable: true,
+      value: undefined,
+    });
+    try {
+      mountFinish({
+        finished: true,
+        end: {
+          mode: "immediate",
+          action: { type: "redirect", target: "/no-browser" },
+        },
+      });
+      await flushPromises();
+      expect(errorSpy).toHaveBeenCalledTimes(1);
+      expect(errorSpy.mock.calls[0]![0]).toContain("/no-browser");
+    } finally {
+      // Restore a fresh location object so subsequent tests have a baseline.
+      Object.defineProperty(globalThis, "location", {
+        configurable: true,
+        value: { assign: () => {}, reload: () => {} },
+      });
     }
   });
 
@@ -207,7 +200,7 @@ describe("AsWfFinish — `auto` mode", () => {
   it("fires the action after timeoutMs elapses", async () => {
     vi.useFakeTimers();
     stubLocation();
-    const onNavigate = vi.fn();
+    const navigate = vi.fn();
     try {
       mountFinish(
         {
@@ -215,15 +208,15 @@ describe("AsWfFinish — `auto` mode", () => {
           end: {
             mode: "auto",
             timeoutMs: 3000,
-            action: { type: "redirect", target: "/next", mode: "soft" },
+            action: { type: "redirect", target: "/next" },
           },
         },
-        { onNavigate },
+        { navigate },
       );
       await nextTick();
-      expect(onNavigate).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
       vi.advanceTimersByTime(3000);
-      expect(onNavigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
     } finally {
       restoreLocation();
     }
@@ -276,7 +269,7 @@ describe("AsWfFinish — `auto` mode", () => {
   it("skipButton behavior=now fires the action right away", async () => {
     vi.useFakeTimers();
     stubLocation();
-    const onNavigate = vi.fn();
+    const navigate = vi.fn();
     try {
       const w = mountFinish(
         {
@@ -284,18 +277,18 @@ describe("AsWfFinish — `auto` mode", () => {
           end: {
             mode: "auto",
             timeoutMs: 10_000,
-            action: { type: "redirect", target: "/now", mode: "soft" },
+            action: { type: "redirect", target: "/now" },
             skipButton: { label: "Skip", behavior: "now" },
           },
         },
-        { onNavigate },
+        { navigate },
       );
       await nextTick();
       await w.find("button").trigger("click");
-      expect(onNavigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
       // Timer must also be cleared — no double-fire.
       vi.advanceTimersByTime(10_000);
-      expect(onNavigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledTimes(1);
     } finally {
       restoreLocation();
     }
@@ -305,7 +298,7 @@ describe("AsWfFinish — `auto` mode", () => {
   it("skipButton behavior=cancel halts the timer without firing", async () => {
     vi.useFakeTimers();
     stubLocation();
-    const onNavigate = vi.fn();
+    const navigate = vi.fn();
     try {
       const w = mountFinish(
         {
@@ -313,16 +306,16 @@ describe("AsWfFinish — `auto` mode", () => {
           end: {
             mode: "auto",
             timeoutMs: 4000,
-            action: { type: "redirect", target: "/skip", mode: "soft" },
+            action: { type: "redirect", target: "/skip" },
             skipButton: { label: "Stay", behavior: "cancel" },
           },
         },
-        { onNavigate },
+        { navigate },
       );
       await nextTick();
       await w.find("button").trigger("click");
       vi.advanceTimersByTime(10_000);
-      expect(onNavigate).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
     } finally {
       restoreLocation();
     }
@@ -332,7 +325,7 @@ describe("AsWfFinish — `auto` mode", () => {
   it("clears the timer on unmount before timeout", async () => {
     vi.useFakeTimers();
     stubLocation();
-    const onNavigate = vi.fn();
+    const navigate = vi.fn();
     try {
       const w = mountFinish(
         {
@@ -340,15 +333,15 @@ describe("AsWfFinish — `auto` mode", () => {
           end: {
             mode: "auto",
             timeoutMs: 2000,
-            action: { type: "redirect", target: "/x", mode: "soft" },
+            action: { type: "redirect", target: "/x" },
           },
         },
-        { onNavigate },
+        { navigate },
       );
       await nextTick();
       w.unmount();
       vi.advanceTimersByTime(5000);
-      expect(onNavigate).not.toHaveBeenCalled();
+      expect(navigate).not.toHaveBeenCalled();
     } finally {
       restoreLocation();
     }
@@ -359,7 +352,7 @@ describe("AsWfFinish — `manual` mode", () => {
   const primary: WfButton = { label: "Continue", action: { type: "dismiss" } };
   const optA: WfButton = {
     label: "Try again",
-    action: { type: "redirect", target: "/retry", mode: "soft" },
+    action: { type: "redirect", target: "/retry" },
   };
   const optB: WfButton = { label: "Go home", action: { type: "reload" } };
 
@@ -384,23 +377,20 @@ describe("AsWfFinish — `manual` mode", () => {
   // WHY: clicking each button fires the matching action exactly once.
   it("clicking a button fires its action", async () => {
     stubLocation();
-    const onNavigate = vi.fn();
+    const navigate = vi.fn();
     try {
       const w = mountFinish(
         {
           finished: true,
           end: { mode: "manual", primary, options: [optA] },
         },
-        { onNavigate },
+        { navigate },
       );
       await flushPromises();
       const tryAgain = w.findAll("button").find((b) => b.text() === "Try again")!;
       await tryAgain.trigger("click");
-      expect(onNavigate).toHaveBeenCalledTimes(1);
-      expect(onNavigate.mock.calls[0]![0]).toMatchObject({
-        target: "/retry",
-        mode: "soft",
-      });
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith("/retry");
     } finally {
       restoreLocation();
     }
@@ -441,19 +431,19 @@ describe("AsWfFinish — `manual` mode", () => {
   // WHY: when no primary, Enter must route to the first option (round-2 delta).
   it("Enter key triggers the first option when primary is omitted", async () => {
     stubLocation();
-    const onNavigate = vi.fn();
+    const navigate = vi.fn();
     try {
       const w = mountFinish(
         {
           finished: true,
           end: { mode: "manual", options: [optA, optB] },
         },
-        { onNavigate },
+        { navigate },
       );
       await flushPromises();
       await w.find(".as-wf-finish").trigger("keydown", { key: "Enter" });
-      expect(onNavigate).toHaveBeenCalledTimes(1);
-      expect(onNavigate.mock.calls[0]![0]).toMatchObject({ target: "/retry" });
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith("/retry");
     } finally {
       restoreLocation();
     }

@@ -38,7 +38,7 @@ export interface WfButton {
 }
 
 export type WfAction =
-  | { type: "redirect"; target: string; mode: "soft" | "hard"; reason?: string }
+  | { type: "redirect"; target: string; reason?: string }
   | { type: "reload" }
   | { type: "dismiss" };
 
@@ -72,8 +72,6 @@ export function finishWfWithMessage(level: WfMessage["level"], text: string): vo
 }
 
 export interface RedirectOpts {
-  /** Soft = SPA navigate via `@navigate`; hard = `window.location.href`. Default: `soft`. */
-  mode?: "soft" | "hard";
   reason?: string;
   message?: WfMessage;
   /** Present → `mode: 'auto'` with countdown; absent → `mode: 'immediate'`. */
@@ -83,12 +81,7 @@ export interface RedirectOpts {
 }
 
 export function finishWfWithRedirect(target: string, opts: RedirectOpts = {}): void {
-  const action: WfAction = {
-    type: "redirect",
-    target,
-    mode: opts.mode ?? "soft",
-    reason: opts.reason,
-  };
+  const action: WfAction = { type: "redirect", target, reason: opts.reason };
   const end: WfFinishedEnd = opts.autoMs
     ? {
         mode: "auto",

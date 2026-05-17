@@ -9,8 +9,8 @@ import { sharedFetch } from "../../api/fetch";
 const router = useRouter();
 const types = createDemoTypes();
 
-function onNavigate(payload: { target: string; mode: "soft" | "hard"; reason?: string }) {
-  void router.push(payload.target);
+function navigate(url: string) {
+  void router.push(url);
 }
 
 function onDismiss() {
@@ -33,7 +33,7 @@ function onDismiss() {
         :types="types"
         :fetch="sharedFetch"
         first-validation="on-submit"
-        @navigate="onNavigate"
+        :navigate="navigate"
         @dismiss="onDismiss"
       >
         <template #wf.finish.primary="{ button, trigger }">

@@ -22,8 +22,8 @@ function onForm(_def: FormDef, ctx?: Record<string, unknown>) {
     <div class="max-w-[520px] mx-auto flex flex-col gap-$m">
       <h1 class="text-lg font-700 m-0">Multi-step · 3 rounds</h1>
       <p class="text-callout text-current/70 m-0">
-        Three sequential input rounds, each with its own form. The form schema
-        swaps automatically on each <code>inputRequired</code> response.
+        Three sequential input rounds, each with its own form. The form schema swaps automatically
+        on each <code>inputRequired</code> response.
       </p>
       <div v-if="step > 0" class="text-caption text-current/60" data-testid="multi-step-indicator">
         Step {{ step }} of 3

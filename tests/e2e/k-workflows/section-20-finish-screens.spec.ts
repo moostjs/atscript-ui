@@ -27,7 +27,7 @@ test.describe("Section 20 — WfFinished envelope (smoke)", () => {
       await noteInput.fill("smoke");
 
       // Submit and assert the SPA navigated to the redirect target via the
-      // `@navigate` listener wired to vue-router.push().
+      // `navigate` prop wired to vue-router.push().
       await Promise.all([
         page.waitForURL(/\/wf-demo$/),
         page.getByRole("button", { name: /Run/i }).click(),

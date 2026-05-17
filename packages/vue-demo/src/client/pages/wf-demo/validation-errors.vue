@@ -14,9 +14,8 @@ const types = createDemoTypes();
     <div class="max-w-[520px] mx-auto flex flex-col gap-$m">
       <h1 class="text-lg font-700 m-0">Server-side validation errors</h1>
       <p class="text-callout text-current/70 m-0">
-        Submitting an <code>@example.com</code> or <code>@test.com</code> address re-issues the
-        form with an inline error. User-entered values are preserved across the
-        re-validation round-trip.
+        Submitting an <code>@example.com</code> or <code>@test.com</code> address re-issues the form
+        with an inline error. User-entered values are preserved across the re-validation round-trip.
       </p>
       <AsWfForm
         path="/api/wf"

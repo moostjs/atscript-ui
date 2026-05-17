@@ -34,10 +34,7 @@ export class WfFinishAbortedDemoWorkflow {
       return httpInputRequired(AbortableDemoForm, ctx);
     }
     ctx.name = input.name;
-    finishWfWithData(
-      { ok: true, name: input.name },
-      { level: "success", text: "Saved." },
-    );
+    finishWfWithData({ ok: true, name: input.name }, { level: "success", text: "Saved." });
     return;
   }
 }

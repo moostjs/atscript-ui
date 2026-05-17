@@ -32,7 +32,6 @@ export class WfFinishImmediateDemoWorkflow {
     }
     ctx.note = input.note;
     finishWfWithRedirect("/wf-demo", {
-      mode: "soft",
       reason: "demo-immediate",
       message: { level: "success", text: "Redirecting now…" },
     });

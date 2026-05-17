@@ -11,7 +11,7 @@ const variations: Variation[] = [
     to: "/wf-demo/finish-immediate",
     title: "Immediate redirect",
     description:
-      "AsWfFinish triggers the redirect on mount — no countdown, no choice. Soft redirect emits @navigate.",
+      "AsWfFinish triggers the redirect on mount — no countdown, no choice. Wires the `navigate` prop to the router.",
     badge: "mode: immediate",
   },
   {
@@ -83,10 +83,7 @@ const variations: Variation[] = [
       </p>
       <ul class="flex flex-col gap-$s list-none p-0 m-0">
         <li v-for="v in variations" :key="v.to">
-          <RouterLink
-            :to="v.to"
-            class="block p-$m layer-0 border-1 rounded-r2 hover:scope-primary"
-          >
+          <RouterLink :to="v.to" class="block p-$m layer-0 border-1 rounded-r2 hover:scope-primary">
             <span
               class="font-mono text-caption uppercase tracking-[0.14em] scope-primary text-current-hl"
               >{{ v.badge }}</span

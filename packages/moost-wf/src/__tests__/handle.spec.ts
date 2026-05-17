@@ -52,7 +52,7 @@ describe("wrapFinished", () => {
       finished: true,
       end: {
         mode: "immediate",
-        action: { type: "redirect", target: "/login", mode: "hard" },
+        action: { type: "redirect", target: "/login" },
       },
     };
     expect(wrapFinished(envelope)).toBe(envelope);

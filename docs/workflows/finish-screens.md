@@ -61,7 +61,7 @@ interface WfButton {
 }
 
 type WfAction =
-  | { type: "redirect"; target: string; mode: "soft" | "hard"; reason?: string }
+  | { type: "redirect"; target: string; reason?: string }
   | { type: "reload" }
   | { type: "dismiss" };
 ```
@@ -121,12 +121,11 @@ optional skip button; without `autoMs` the redirect fires on mount
 (`mode: 'immediate'`).
 
 ```ts
-// Immediate — `AsWfFinish` triggers @navigate on mount, no UI flashes by.
-finishWfWithRedirect("/dashboard", { mode: "soft", reason: "post-login" });
+// Immediate — `AsWfFinish` triggers the `navigate` prop on mount, no UI flashes by.
+finishWfWithRedirect("/dashboard", { reason: "post-login" });
 
 // Auto — countdown ticks down, skip button fires the action immediately.
 finishWfWithRedirect("/dashboard", {
-  mode: "soft",
   autoMs: 4000,
   skipLabel: "Go now",
   message: { level: "success", text: "All set!" },
@@ -135,8 +134,7 @@ finishWfWithRedirect("/dashboard", {
 
 | Option       | Type                    | Effect                                                                 |
 | ------------ | ----------------------- | ---------------------------------------------------------------------- |
-| `mode`       | `"soft" \| "hard"`      | `"soft"` (default) emits `@navigate`; `"hard"` sets `window.location.href`. |
-| `reason`     | `string`                | Free-form hint passed back to `@navigate` for analytics or branching.  |
+| `reason`     | `string`                | Free-form hint propagated via `@action` for analytics or branching.    |
 | `message`    | `WfMessage`             | Banner shown alongside the countdown (or briefly on `immediate`).      |
 | `autoMs`     | `number`                | Switches to `mode: 'auto'` with this delay.                            |
 | `skipLabel`  | `string`                | Adds a "skip" button to the auto screen.                               |
@@ -152,12 +150,12 @@ finishWfWithChoice({
   message: { level: "info", text: "Submission queued. What's next?" },
   primary: {
     label: "View submission",
-    action: { type: "redirect", target: "/submissions/123", mode: "soft" },
+    action: { type: "redirect", target: "/submissions/123" },
   },
   options: [
     {
       label: "Submit another",
-      action: { type: "redirect", target: "/submit", mode: "soft" },
+      action: { type: "redirect", target: "/submit" },
     },
     { label: "Done", action: { type: "dismiss" } },
   ],
@@ -209,8 +207,9 @@ template work.
 The three modes:
 
 - **`immediate`** — no DOM is rendered. The action fires on mount.
-  Soft redirects emit `@navigate`; hard redirects call
-  `window.location.href`. The user sees a screen-reader-only
+  Redirects call the `navigate` prop you pass to `<AsWfForm>`; if no
+  prop is provided, the component falls back to
+  `window.location.assign`. The user sees a screen-reader-only
   "Redirecting…" announcement and that's it.
 - **`auto`** — a countdown text + optional skip button. The action
   fires after `timeoutMs` or when the user clicks skip (`behavior:
@@ -241,7 +240,7 @@ Example — override the primary button with a design-system one,
 keeping the trigger contract:
 
 ```vue
-<AsWfForm path="/api/wf" name="checkout" :types="types" @navigate="router.push">
+<AsWfForm path="/api/wf" name="checkout" :types="types" :navigate="navigate">
   <template #wf.finish.primary="{ button, trigger }">
     <MyBrandButton :variant="'filled'" @click="trigger">
       {{ button.label }}
@@ -254,47 +253,50 @@ The `trigger` callback runs the action (redirect / reload / dismiss)
 exactly as the default button would. Custom UI never needs to
 re-implement the redirect-or-emit decision.
 
+## Routing
+
+`redirect` actions go through a `navigate` prop on `<AsWfForm>`. The
+prop is a function that receives the target URL — your handler decides
+cross-origin vs in-app routing.
+
+```ts
+import { useRouter } from "vue-router";
+const router = useRouter();
+const navigate = (url: string) => router.push(url);
+```
+
+```vue
+<AsWfForm path="/api/wf" name="checkout" :types="types" :navigate="navigate" />
+```
+
+If no `navigate` prop is provided, `AsWfFinish` falls back to
+`window.location.assign(url)`. In an SSR or non-browser context with
+no prop and no browser `location`, it logs `console.error` and does
+nothing — better than crashing the render path.
+
+The same `navigate` handler can be passed to `@atscript/db-client`'s
+`Client({ navigate })` option, so one navigation function covers both
+workflow redirects and `processor: 'navigate'` DB actions.
+
 ## Events
 
-`<AsWfForm>` (and the default `AsWfFinish`) emit three events when
-an action runs:
+`<AsWfForm>` (and the default `AsWfFinish`) emit two events when an
+action runs:
 
 ```ts
 defineEmits<{
-  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
   (e: "dismiss"): void;
   (e: "action", action: WfAction): void;
 }>();
 ```
-
-- **`@navigate`** — fired when a `redirect` action with `mode:
-  'soft'` runs. Wire it to your router:
-
-  ```vue
-  <script setup lang="ts">
-  import { useRouter } from "vue-router";
-  const router = useRouter();
-  function onNavigate(payload: { target: string; reason?: string }) {
-    void router.push(payload.target);
-  }
-  </script>
-
-  <template>
-    <AsWfForm path="/api/wf" name="checkout" :types="types" @navigate="onNavigate" />
-  </template>
-  ```
-
-  If no `@navigate` listener is attached, the component falls back
-  to `window.location.href` and logs a dev-only warning. Hard
-  redirects (`mode: 'hard'`) skip the event and always call
-  `window.location.href`.
 
 - **`@dismiss`** — fired for `action.type === 'dismiss'`. The flow
   stays on screen — the consumer decides what to do (close a modal,
   reset state, etc.).
 
 - **`@action`** — fires before every action, including reloads and
-  redirects. Useful for analytics or telemetry without intercepting
+  redirects. The `WfAction` payload includes the optional
+  `reason` for analytics or telemetry, without intercepting
   navigation.
 
 ## Aborted flows

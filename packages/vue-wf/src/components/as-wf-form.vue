@@ -18,6 +18,12 @@ interface AsWfFormProps extends UseWfFormOptions {
   components?: Record<string, Component>;
   /** Per-form client factory override (FK value-help). Forwarded to AsForm. */
   clientFactory?: ClientFactory;
+  /**
+   * Consumer-provided navigation handler forwarded to `<AsWfFinish>`. Pairs
+   * with `@atscript/db-client`'s `Client({ navigate })` option so one handler
+   * covers both workflow redirects and DB navigate-actions.
+   */
+  navigate?: (url: string) => void | Promise<void>;
 }
 
 const props = withDefaults(defineProps<AsWfFormProps>(), {
@@ -33,7 +39,6 @@ const emit = defineEmits<{
   (e: "form", def: FormDef, context?: Record<string, unknown>): void;
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
-  (e: "navigate", payload: { target: string; mode: "soft" | "hard"; reason?: string }): void;
   (e: "dismiss"): void;
   (e: "action", action: WfAction): void;
 }>();
@@ -126,7 +131,7 @@ function onAction(name: string, data: unknown) {
         -->
         <AsWfFinish
           :payload="wf.finishedPayload.value"
-          @navigate="(p) => emit('navigate', p)"
+          :navigate="navigate"
           @dismiss="() => emit('dismiss')"
           @action="(a) => emit('action', a)"
         >
