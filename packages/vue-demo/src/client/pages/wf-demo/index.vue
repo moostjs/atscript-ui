@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import DarkToggle from "../forms-demo/_dark-toggle.vue";
+
 type Variation = {
   to: string;
   title: string;
@@ -74,22 +76,42 @@ const variations: Variation[] = [
 </script>
 
 <template>
-  <div class="min-h-screen p-$l">
-    <div class="max-w-[760px] mx-auto flex flex-col gap-$m">
-      <h1 class="text-lg font-700 m-0">WfFinished envelope · demo</h1>
-      <p class="text-callout text-current/70 m-0">
-        Each variation drives a workflow round-trip and exercises one branch of the unified
-        <code>WfFinished</code> envelope or a workflow-loop pattern.
-      </p>
-      <ul class="flex flex-col gap-$s list-none p-0 m-0">
+  <div class="min-h-screen layer-1">
+    <div class="max-w-3xl mx-auto p-$l flex flex-col gap-$l">
+      <header class="flex flex-col gap-$xs">
+        <div class="flex items-center justify-between gap-$s">
+          <p
+            class="font-mono text-callout font-600 tracking-[0.14em] uppercase text-current/60 m-0"
+          >
+            atscript-ui · workflows demo
+          </p>
+          <DarkToggle />
+        </div>
+        <h1 class="text-h1 m-0">Workflow variations</h1>
+        <p class="text-body text-current-muted m-0">
+          Each variation drives a workflow round-trip and exercises one branch of the unified
+          <code>WfFinished</code> envelope or a workflow-loop pattern.
+        </p>
+        <RouterLink to="/login" class="text-callout text-current/60 underline mt-$xs self-start">
+          ← back to sign-in
+        </RouterLink>
+      </header>
+
+      <ul class="flex flex-col gap-$s p-0 list-none m-0">
         <li v-for="v in variations" :key="v.to">
-          <RouterLink :to="v.to" class="block p-$m layer-0 border-1 rounded-r2 hover:scope-primary">
+          <RouterLink
+            :to="v.to"
+            class="layer-0 border-1 rounded-r2 p-$m flex items-start gap-$m cursor-pointer hover:bg-current/5"
+          >
+            <div class="flex-1 flex flex-col gap-$xxs">
+              <h3 class="text-body-l font-600 m-0">{{ v.title }}</h3>
+              <p class="text-callout text-current-muted m-0">{{ v.description }}</p>
+            </div>
             <span
-              class="font-mono text-caption uppercase tracking-[0.14em] scope-primary text-current-hl"
-              >{{ v.badge }}</span
+              class="scope-primary font-mono text-[10px] uppercase tracking-wider px-$xs py-[2px] rounded-base text-current-hl bg-current/10"
             >
-            <h2 class="text-body-l font-700 m-0 mt-$xs">{{ v.title }}</h2>
-            <p class="text-body text-current/70 m-0 mt-$xxs">{{ v.description }}</p>
+              {{ v.badge }}
+            </span>
           </RouterLink>
         </li>
       </ul>
