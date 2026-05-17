@@ -204,14 +204,27 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
         body: JSON.stringify(buildBody(body)),
       });
 
+      const data = await res.json().catch(() => null);
+
+      // Always extract token first: a 4xx may carry a fresh wfs handle
+      // (HandleStateStrategy single-use handles). Discarding it leaves the
+      // form sending a consumed handle on the next submit → permanent 410.
+      if (data && typeof data === "object" && !Array.isArray(data)) {
+        extractToken(data as Record<string, unknown>);
+      }
+
       if (!res.ok) {
-        const errData = await res.json().catch(() => ({ message: res.statusText }));
-        error.value = { message: errData.message ?? res.statusText, status: res.status };
+        const msg = (data as { message?: string } | null)?.message ?? res.statusText;
+        error.value = { message: msg, status: res.status };
         return;
       }
 
-      const data = await res.json();
-      processResponse(data);
+      if (!data) {
+        error.value = { message: "Unexpected response format" };
+        return;
+      }
+
+      processResponse(data as Record<string, unknown>);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       error.value = { message: err instanceof Error ? err.message : "Network error" };
@@ -223,6 +236,21 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   async function start(input?: Record<string, unknown>): Promise<void> {
     const initialToken = readInitialToken();
     if (initialToken) token = initialToken;
+
+    // Dev-only: surface the silent magic-link footgun (URL has ?wfs=… but
+    // initialToken was not wired, so the flow restarts instead of resuming).
+    if (import.meta.env?.DEV !== false && !initialToken && transport !== "query") {
+      const urlToken = new URLSearchParams(window.location.search).get(tokenName);
+      if (urlToken) {
+        console.warn(
+          `[useWfForm] URL contains ?${tokenName}=… but no \`initialToken\` ` +
+            `was passed and \`tokenTransport\` is "${transport}". ` +
+            `Workflow will start fresh instead of resuming the magic-link flow. ` +
+            `Pass \`initial-token="route.query.${tokenName}"\` or set ` +
+            `\`tokenTransport: "query"\`.`,
+        );
+      }
+    }
 
     const body: Record<string, unknown> = { [wfidName]: options.name };
     if (input) body.input = input;
