@@ -18,13 +18,18 @@ import { defineShortcuts } from "vunor/theme";
 //
 // Notes:
 // - `overflow-hidden` clips the fill to the button's rounded corners.
-// - Both the fill and the label are `absolute inset-0` siblings inside the
-//   `relative` host. With both at auto z-index, the later-painted element
-//   wins — the label comes after the fill in source order, so it naturally
-//   sits on top without any stacking-context tricks. Avoid `isolate` on the
-//   host and `z-[-1]` on the fill: combined, they place the fill BEHIND the
-//   button's own solid background (`c8-filled` paints `--current-bg`),
-//   making it invisible.
+// - The fill is `absolute inset-0` (out of flow) BEHIND the label, which
+//   stays `relative` and IN FLOW. Source order alone resolves stacking:
+//   relative-positioned elements paint after absolutely-positioned siblings
+//   within the same stacking context when both have `z-index: auto`. No
+//   `isolate`, no `z-[-1]`.
+//
+//   Why the label MUST stay in flow: absolute children don't contribute to
+//   the host's intrinsic size. If both fill and label are absolute, the
+//   button collapses to its minimum padding box (≈ 2em wide on a single-
+//   char button), and the label wraps char-by-char inside a tiny square.
+//   Keeping the label `relative` lets the host size from the label's
+//   natural content width.
 // - The fill is tinted with `bg-black/20` so it produces a uniform darken
 //   overlay on top of any underlying button surface (`c8-filled`,
 //   `c8-flat`, `c8-light`) in both light and dark themes. `bg-current/20`
@@ -36,11 +41,9 @@ export const c8ProgressShortcuts = defineShortcuts({
   "c8-progress": "relative overflow-hidden",
   "c8-progress-fill":
     "absolute inset-0 origin-left w-0 bg-black/20 animate-[progress-fill_var(--progress-duration,4s)_linear_forwards]",
-  // Absolute overlay that fills the host bounds and centers its content.
-  // Paints over `c8-progress-fill` purely by source order (the label comes
-  // after the fill in template). `px-$m` is structural so consumers can
-  // wrap labels of varying length without inlining utilities — the host
-  // button's `h-*` and any explicit `min-w-*` define the box, and this
-  // overlay centers within it.
-  "c8-progress-label": "absolute inset-0 flex items-center justify-center px-$m",
+  // In-flow label. Sits on top of the absolute fill via source order, and
+  // contributes its natural content width to the host so the button sizes
+  // to "Go now" (not 2em). Padding, height, and centering are owned by
+  // the host button (`px-$m`, `h-fingertip-m`, `btn` or inline-flex).
+  "c8-progress-label": "relative",
 });
