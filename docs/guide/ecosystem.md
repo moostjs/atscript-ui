@@ -16,6 +16,10 @@ atscript-ui sits inside a three-site family. They share one source-of-truth (the
 
 The boundary is clean — atscript doesn't know about HTTP, atscript-db doesn't know about Vue, atscript-ui doesn't know about your SQL dialect. A `.as` file flows through all three.
 
+::: tip Built on top: Aooth
+[**Aooth**](https://aooth.moost.org) — auth + RBAC for the Moost / atscript ecosystem — ships login, password-recovery, and invite workflows whose `.as` form models are rendered client-side by `<AsWfForm>` from `@atscript/vue-wf`. A working example of the four-layer story: `.as` → DB → server workflow → rendered UI.
+:::
+
 ## Package dependency graph
 
 ```
