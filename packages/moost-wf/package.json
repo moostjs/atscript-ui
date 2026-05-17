@@ -44,6 +44,10 @@
       "types": "./dist/store.d.mts",
       "import": "./dist/store.mjs"
     },
+    "./ssr-adapter": {
+      "types": "./dist/ssr-adapter.d.mts",
+      "import": "./dist/ssr-adapter.mjs"
+    },
     "./store.as": "./src/store/as-wf-state.as",
     "./package.json": "./package.json"
   },
@@ -65,6 +69,8 @@
     "@moostjs/event-wf": "catalog:",
     "@prostojs/wf": "^0.1.1",
     "@wooksjs/event-core": "catalog:",
+    "@wooksjs/event-http": "catalog:",
+    "@wooksjs/event-wf": "catalog:",
     "moost": "catalog:",
     "unplugin-atscript": "catalog:",
     "vitest": "catalog:"
@@ -73,6 +79,12 @@
     "@atscript/core": "catalog:",
     "@atscript/typescript": "catalog:",
     "@moostjs/event-wf": "catalog:",
+    "@wooksjs/event-http": "catalog:",
     "moost": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@wooksjs/event-http": {
+      "optional": true
+    }
   }
 }

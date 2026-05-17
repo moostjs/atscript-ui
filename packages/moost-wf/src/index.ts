@@ -9,3 +9,27 @@ export { useFormInput } from "./form-input/use";
 export { useWfAction } from "./form-input/use-wf-action";
 export { createAsHttpOutlet } from "./outlet";
 export { handleAsOutletRequest } from "./handle";
+
+// ── WfFinished envelope (Phase 2) ─────────────────────────────
+//
+// The HTTP adapter ALWAYS returns 200/201 JSON for `finished: true`
+// envelopes. SSR consumers that need real 3xx redirects install the
+// opt-in interceptor at `@atscript/moost-wf/ssr-adapter`.
+export {
+  finishWf,
+  finishWfAborted,
+  finishWfWithChoice,
+  finishWfWithData,
+  finishWfWithMessage,
+  finishWfWithRedirect,
+  isWfFinished,
+} from "./wf-finished";
+export type {
+  ChoiceOpts,
+  RedirectOpts,
+  WfAction,
+  WfButton,
+  WfFinished,
+  WfFinishedEnd,
+  WfMessage,
+} from "./wf-finished";
