@@ -51,6 +51,36 @@ const routes = [
     component: () => import("./client/pages/wf-demo/finish-manual.vue"),
   },
   {
+    path: "/wf-demo/finish-data",
+    name: "wf-demo-finish-data",
+    component: () => import("./client/pages/wf-demo/finish-data.vue"),
+  },
+  {
+    path: "/wf-demo/finish-message",
+    name: "wf-demo-finish-message",
+    component: () => import("./client/pages/wf-demo/finish-message.vue"),
+  },
+  {
+    path: "/wf-demo/finish-aborted",
+    name: "wf-demo-finish-aborted",
+    component: () => import("./client/pages/wf-demo/finish-aborted.vue"),
+  },
+  {
+    path: "/wf-demo/multi-step",
+    name: "wf-demo-multi-step",
+    component: () => import("./client/pages/wf-demo/multi-step.vue"),
+  },
+  {
+    path: "/wf-demo/validation-errors",
+    name: "wf-demo-validation-errors",
+    component: () => import("./client/pages/wf-demo/validation-errors.vue"),
+  },
+  {
+    path: "/wf-demo/outlet-pause",
+    name: "wf-demo-outlet-pause",
+    component: () => import("./client/pages/wf-demo/outlet-pause.vue"),
+  },
+  {
     path: "/forms-demo/nested-collapsible",
     name: "forms-demo-nested-collapsible",
     component: () => import("./client/pages/forms-demo/nested-collapsible.vue"),

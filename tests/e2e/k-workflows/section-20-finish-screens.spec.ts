@@ -40,4 +40,124 @@ test.describe("Section 20 — WfFinished envelope (smoke)", () => {
       await ctx.close();
     }
   });
+
+  test("20.2 finish-data — payload renders via overridden #wf.finished slot", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/finish-data");
+      await page.locator('input[name="note"]').fill("World");
+      await page.getByRole("button", { name: /Run/i }).click();
+      const payload = page.getByTestId("finish-data-payload");
+      await expect(payload).toBeVisible();
+      await expect(payload).toContainText("Hello, World!");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("20.3 finish-message — default AsWfFinish renders banner-only on submit", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/finish-message");
+      await page.locator('input[name="note"]').fill("smoke");
+      await page.getByRole("button", { name: /Run/i }).click();
+      await expect(page.getByText(/Nothing to do here/i)).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("20.4 finish-aborted — submit path emits success banner", async ({ browser }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/finish-aborted");
+      await page.locator('input[name="name"]').fill("Ada");
+      await page.getByRole("button", { name: /^Submit$/ }).click();
+      await expect(page.getByText(/Saved\./i)).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("20.5 finish-aborted — Cancel action emits warn banner via finishWfAborted", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/finish-aborted");
+      await page.getByRole("button", { name: /^Cancel$/ }).click();
+      await expect(page.getByText(/Operation cancelled/i)).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("20.6 multi-step — three sequential rounds complete via schema swaps", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/multi-step");
+      await expect(page.getByTestId("multi-step-indicator")).toContainText("Step 1 of 3");
+      await page.locator('input[name="name"]').fill("Ada");
+      await page.getByRole("button", { name: /Continue/i }).click();
+      await expect(page.getByTestId("multi-step-indicator")).toContainText("Step 2 of 3");
+      // Radio: pick "green".
+      await page.locator('input[name="color"][value="green"]').check();
+      await page.getByRole("button", { name: /Continue/i }).click();
+      await expect(page.getByTestId("multi-step-indicator")).toContainText("Step 3 of 3");
+      await page.locator('input[name="confirm"]').check();
+      await page.getByRole("button", { name: /Confirm/i }).click();
+      await expect(page.getByText(/All three steps complete/i)).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("20.7 validation-errors — server re-issues form with inline error then accepts retry", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/validation-errors");
+      const emailInput = page.locator('input[name="email"]');
+      await emailInput.fill("foo@example.com");
+      await page.getByRole("button", { name: /^Submit$/ }).click();
+      await expect(page.getByText(/Example domain not allowed/i)).toBeVisible();
+      // Same-schema re-validation preserves the value — assert + correct it.
+      await expect(emailInput).toHaveValue("foo@example.com");
+      await emailInput.fill("foo@real.com");
+      await page.getByRole("button", { name: /^Submit$/ }).click();
+      await expect(page.getByText(/Email accepted/i)).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("20.8 outlet-pause — submit emits sent marker, page shows check-your-email screen", async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+    try {
+      const page = await ctx.newPage();
+      await page.goto("/wf-demo/outlet-pause");
+      await page.locator('input[name="note"]').fill("ping");
+      await page.getByRole("button", { name: /Send link/i }).click();
+      const sent = page.getByTestId("outlet-pause-sent");
+      await expect(sent).toBeVisible();
+      await expect(sent).toHaveAttribute("data-sent", "true");
+    } finally {
+      await ctx.close();
+    }
+  });
 });

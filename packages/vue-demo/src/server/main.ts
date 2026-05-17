@@ -33,6 +33,12 @@ import { InviteWorkflow } from "./workflows/users/invite.workflow";
 import { WfFinishImmediateDemoWorkflow } from "./workflows/wf-demo/finish-immediate.workflow";
 import { WfFinishAutoDemoWorkflow } from "./workflows/wf-demo/finish-auto.workflow";
 import { WfFinishManualDemoWorkflow } from "./workflows/wf-demo/finish-manual.workflow";
+import { WfFinishDataDemoWorkflow } from "./workflows/wf-demo/finish-data.workflow";
+import { WfFinishMessageDemoWorkflow } from "./workflows/wf-demo/finish-message.workflow";
+import { WfFinishAbortedDemoWorkflow } from "./workflows/wf-demo/finish-aborted.workflow";
+import { WfMultiStepDemoWorkflow } from "./workflows/wf-demo/multi-step.workflow";
+import { WfValidationErrorsDemoWorkflow } from "./workflows/wf-demo/validation-errors.workflow";
+import { WfOutletPauseDemoWorkflow } from "./workflows/wf-demo/outlet-pause.workflow";
 import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import { auditInterceptor } from "./auth/audit";
@@ -74,6 +80,12 @@ app.registerControllers(
   WfFinishImmediateDemoWorkflow,
   WfFinishAutoDemoWorkflow,
   WfFinishManualDemoWorkflow,
+  WfFinishDataDemoWorkflow,
+  WfFinishMessageDemoWorkflow,
+  WfFinishAbortedDemoWorkflow,
+  WfMultiStepDemoWorkflow,
+  WfValidationErrorsDemoWorkflow,
+  WfOutletPauseDemoWorkflow,
   UsersController,
   RolesController,
   CategoriesController,

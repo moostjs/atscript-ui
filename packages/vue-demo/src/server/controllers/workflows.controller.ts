@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Controller } from "moost";
-import { Post } from "@moostjs/event-http";
+import { Body, Post } from "@moostjs/event-http";
 import {
   MoostWf,
   createEmailOutlet,
@@ -9,7 +9,7 @@ import {
   type WfOutletTriggerDeps,
   type WfStateStrategy,
 } from "@moostjs/event-wf";
-import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
+import { createAsHttpOutlet, handleAsOutletRequest, useWfAction } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 // Keep the email outlet registered for future magic-link flows (user invite, password-reset);
 // current P6 workflows dispatch OTP inline so they can pause on a form in the same response.
@@ -34,6 +34,12 @@ const ALLOWED_WORKFLOWS = [
   "api/wf-demo/finish-immediate",
   "api/wf-demo/finish-auto",
   "api/wf-demo/finish-manual",
+  "api/wf-demo/finish-data",
+  "api/wf-demo/finish-message",
+  "api/wf-demo/finish-aborted",
+  "api/wf-demo/multi-step",
+  "api/wf-demo/validation-errors",
+  "api/wf-demo/outlet-pause",
 ] as const;
 
 // Workflows whose state must survive process restart (durable handle persistence).
@@ -86,11 +92,18 @@ export class WorkflowsController {
   constructor(private readonly wf: MoostWf) {}
 
   @Post("wf")
-  async handle() {
+  async handle(@Body() body: { action?: string } | undefined) {
     // Use handleAsOutletRequest directly so we can forward the HTTP eventContext
     // into the workflow — otherwise `useWfFinished().set({ cookies })` in a step
     // writes to the WF's isolated context and the HTTP trigger can't read it back.
     // (MoostWf.handleOutlet drops the eventContext param — workaround until fixed upstream.)
+    //
+    // Also propagate `body.action` into the WF event context so `@AltAction()`
+    // resolves correctly inside steps — `handleWfOutletRequest` doesn't wire
+    // the action key itself, so each app must opt in.
+    if (typeof body?.action === "string") {
+      useWfAction().setAction(body.action);
+    }
     const wfApp = this.wf.getWfApp();
     const deps: WfOutletTriggerDeps = {
       start: (schemaId, context, opts) =>
