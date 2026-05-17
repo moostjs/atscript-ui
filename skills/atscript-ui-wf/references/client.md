@@ -80,9 +80,9 @@ When you supply the default slot's contents, you take over the entire layout. Th
 
 | Slot          | Slot props         | When                           |
 | ------------- | ------------------ | ------------------------------ |
-| `wf.loading`  | (none)             | initial load (no form yet)     |
+| `wf.loading`  | (none)             | initial load (no form yet) — default fallback renders an `as-form-overlay` spinner inside a `min-h-[100px]` wrapper, matching the overlay shown between subsequent round-trips. Override only to swap in a custom indicator. |
 | `wf.error`    | `{ error, retry }` | error before any form rendered |
-| `wf.finished` | `{ response }`     | flow finished or outlet pause  |
+| `wf.finished` | `{ response, payload }` — `payload: WfFinished \| null` is the typed envelope; `response` is the same data untyped, kept for back-compat | flow finished. Default renders `<AsWfFinish :payload>` — override to opt out and render fully custom. |
 
 ```vue
 <AsWfForm ...>
@@ -93,8 +93,8 @@ When you supply the default slot's contents, you take over the entire layout. Th
     <ErrorBanner :error="error" />
     <button @click="retry">Try again</button>
   </template>
-  <template #wf.finished="{ response }">
-    <SuccessPanel :response="response" />
+  <template #wf.finished="{ payload }">
+    <SuccessPanel :envelope="payload" />
   </template>
 </AsWfForm>
 ```

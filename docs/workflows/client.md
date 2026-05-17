@@ -142,7 +142,7 @@ state, with sensible fallbacks:
 
 | Slot                  | When                                     | Slot props                                         |
 | --------------------- | ---------------------------------------- | -------------------------------------------------- |
-| `wf.loading`          | First load (no formDef yet)              | —                                                  |
+| `wf.loading`          | First load (no formDef yet)              | — (default: `as-form-overlay` spinner on a `min-h-[100px]` wrapper, matching the overlay shown on subsequent round-trips) |
 | `wf.error`            | Top-level error, no formDef              | `{ error, retry }`                                 |
 | `wf.finished`         | `finished === true`                      | `{ response, payload }`                            |
 | `wf.finish.message`   | finished with `message`                  | `{ message }`                                      |
@@ -164,7 +164,11 @@ envelope's `end` is set, the default rendering switches into a
 for the envelope shape, the `wf.finish.*` scoped slots, the
 `navigate` prop wiring, and the `@dismiss` / `@action` event contract.
 
-Example: custom loading + finished states:
+Example: custom loading + finished states. The `wf.loading` slot
+already has a default — the same `as-form-overlay` spinner that paints
+on subsequent round-trips, on a wrapper with `min-h-[100px]` so the
+page doesn't jump. Override only to swap in a branded indicator or
+copy:
 
 ```vue
 <AsWfForm path="/api/wf" name="auth/login" :types="types" @finished="onFinished">
@@ -253,7 +257,10 @@ interface UseWfFormReturn {
 }
 ```
 
-A rolled-your-own shell:
+A rolled-your-own shell. Note that the placeholder text below is just
+illustrative — `<AsWfForm>` renders an `as-form-overlay` spinner on a
+`min-h-[100px]` wrapper during the first round-trip by default, so when
+you stick with the wrapper component you get the overlay for free:
 
 ```vue
 <script setup lang="ts">

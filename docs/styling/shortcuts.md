@@ -150,6 +150,48 @@ A minimal shortcut. Right-alignment plus tabular-numerals so numbers in a column
 
 The object-form syntax lets a shortcut declare its base body under `""` and then add variant bodies (`"hover:"`, `"focus-visible:"`, `"[&_.icon]:"`). Consumers paint over a single state without forking the body.
 
+### Progress button — `c8-progress`
+
+```typescript
+// shortcuts/common/c8-progress.ts
+"c8-progress": "relative overflow-hidden",
+"c8-progress-fill":
+  "absolute inset-y-0 left-0 w-0 bg-black/20 animate-[progress-fill_var(--progress-duration,4s)_linear_forwards]",
+"c8-progress-label": "relative",
+```
+
+`c8-progress` turns any `c8-*` clickable surface into a self-filling
+progress button — the kind of "I'll fire when the bar reaches the
+end, but click me to fire now" control used by auto-redirect skip
+buttons, hold-to-confirm CTAs, and timed confirmations. The 3-class
+API:
+
+```html
+<button
+  class="c8-filled scope-primary c8-progress h-fingertip-m px-$m"
+  :style="{ '--progress-duration': '4000ms' }"
+>
+  <span class="c8-progress-fill" />
+  <span class="c8-progress-label">Confirm</span>
+</button>
+```
+
+- `c8-progress` composes on top of any `c8-*` base (`c8-filled`,
+  `c8-flat`, `c8-light`, …). It adds `relative overflow-hidden` so
+  the fill clips to the button's rounded corners.
+- `c8-progress-fill` is absolutely positioned out of flow and
+  animates `width 0% → 100%` over `--progress-duration` (set as an
+  inline style on the host). `bg-black/20` is a uniform darken
+  overlay that works on any underlying surface in both light and
+  dark themes.
+- `c8-progress-label` is in-flow `relative` — it sits above the
+  absolute fill via source order. Required (not optional): without
+  an in-flow child the button collapses to its padding box.
+
+The animation is driven by `@keyframes progress-fill`, registered
+once as a UnoCSS preflight by `asPresetVunor`. Consumers don't have
+to register anything beyond installing the preset.
+
 ### Default form field, deep selectors
 
 ```typescript

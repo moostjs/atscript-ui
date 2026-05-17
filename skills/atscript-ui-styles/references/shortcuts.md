@@ -52,10 +52,10 @@ Representative top-level concepts per group. (Not exhaustive — read the direct
 
 | Group             | Concepts (selected)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commonShortcuts` | `as-kbd`, `as-description`, `as-overlay`, `as-overlay-icon`, `as-close-btn`, `as-dialog-close`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `commonShortcuts` | `as-kbd`, `as-description`, `as-overlay`, `as-overlay-icon`, `as-close-btn`, `as-dialog-close`, `c8-progress` / `c8-progress-fill` / `c8-progress-label`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | `formShortcuts`   | `as-form`, `as-form-title`, `as-form-description`, `as-form-error`, `as-form-overlay`, `as-form-grid`, `as-default-field`, `as-field-label`, `as-field-input-row`, `as-field-description`, `as-field-remove-btn`, `as-select-wrap`, `as-checkbox-field`, `as-radio-group`, `as-array`, `as-collapsible`, `as-object`, `as-ref`, `as-action`, `as-no-data`, `as-decimal-number`, `as-dropdown`                                                                                                                                                                                                                                                                    |
 | `tableShortcuts`  | `as-table`, `as-th-*`, `as-td-*`, `as-table-scroll-container`, `as-table-outer-wrap`, `as-table-sticky`, `as-table-stretch`, `as-table-checkbox`, `as-table-row-active`, `as-table-empty`, `as-table-loading`, `as-table-error`, `as-table-query-overlay`, `as-cell-number`, `as-cell` (number/date/json/string/...), `as-fpill`, `as-page`, `as-column-menu`, `as-preset-picker`, `as-preset-dialog`, `as-filter-dialog`, `as-filter-field`, `as-config-dialog`, `as-config-tab`, `as-confirm-dialog`, `as-action-form`, `as-orderable-list`, `as-row-actions`, `as-sorter`, `as-table-actions`, `as-window-table`, `as-window-skeleton`, `as-window-scrollbar` |
-| `wfShortcuts`     | `as-wf-form-error`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| `wfShortcuts`     | `as-wf-form-error`, `as-wf-form-loading`, `as-wf-finish`, `as-wf-finish-message`, `as-wf-finish-actions`, `as-wf-finish-primary`, `as-wf-finish-option`, `as-wf-finish-skip` / `-fill` / `-label`, `as-wf-finish-countdown`                                                                                                                                                                                                                                                                                                                                                                                                                       |
 
 Each group also re-exports its per-file slices (e.g. `asFormShortcuts`, `asFieldShortcuts`, `asTableShortcuts`, `asCellShortcuts`, …) so you can compose a subset preset by hand if needed. See `packages/ui-styles/src/shortcuts/{form,table}/index.ts` for the full export list.
 
@@ -97,6 +97,33 @@ Example with a compound-class variant from `as-field.ts:12-13`:
 ```
 
 `<AsField>` adds class `required` on the wrapper when the field is required; the variant paints a red `*` after the label.
+
+## `c8-progress` — progress-button primitive
+
+A public 3-class family in `commonShortcuts` that turns any `c8-*`
+clickable surface into a self-filling progress button — natural fit
+for auto-fire skip buttons, hold-to-confirm, timed CTAs.
+
+```html
+<button
+  class="c8-filled scope-primary c8-progress h-fingertip-m px-$m"
+  :style="{ '--progress-duration': '4000ms' }"
+>
+  <span class="c8-progress-fill" />
+  <span class="c8-progress-label">Confirm</span>
+</button>
+```
+
+- `c8-progress` — composes on any `c8-*` base. Adds `relative overflow-hidden`.
+- `c8-progress-fill` — absolutely positioned `bg-black/20` overlay,
+  animates `width 0% → 100%` via `@keyframes progress-fill` over
+  `--progress-duration`. CSS-only — no JS ticker needed.
+- `c8-progress-label` — keeps the label in flow (required; otherwise
+  the button collapses to its padding box).
+
+The keyframes are registered as a UnoCSS preflight by `asPresetVunor`,
+so consumers don't have to register anything beyond installing the
+preset. Source: `packages/ui-styles/src/shortcuts/common/c8-progress.ts`.
 
 ## Composing from vunor primitives (recommended)
 

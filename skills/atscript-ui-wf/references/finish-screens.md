@@ -101,9 +101,20 @@ The default `AsWfFinish` (Tier-2, swappable) reads `payload.end.mode`:
   invokes the `navigate` prop (if provided), otherwise falls back to
   `window.location.assign`. In a non-browser context with no prop, logs
   `console.error` and stays put.
-- **`auto`** — countdown text + optional skip button. Timer fires after
-  `timeoutMs`; skip-button behaviour `"now"` (default) fires immediately,
-  `"cancel"` only clears the timer and leaves the user on the screen.
+- **`auto`** — filled primary CTA (the skip button) whose background
+  fills L→R with a `bg-black/20` darken overlay over `timeoutMs`, plus
+  a smaller muted countdown line ("Continuing in N…") centered below.
+  The button **is** the progress indicator — no separate progress
+  bar. Built on the public `c8-progress` shortcut family in
+  `@atscript/ui-styles` (`c8-filled scope-primary c8-progress` +
+  `c8-progress-fill` + `c8-progress-label`); reusable for any
+  "fills then fires" UI. Animation is CSS-driven via
+  `@keyframes progress-fill` + `--progress-duration`; the JS
+  countdown ticks at 250ms internally, integer-only transitions.
+  Timer fires after `timeoutMs`; skip-button behaviour `"now"`
+  (default) fires immediately, `"cancel"` only clears the timer and
+  leaves the user on the screen. If `skipButton` is omitted from the
+  envelope, only the countdown line renders.
 - **`manual`** — message banner + buttons. Primary (if set) gets initial
   focus and is the Enter-key target; otherwise the first option does.
 

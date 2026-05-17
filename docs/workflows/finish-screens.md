@@ -211,10 +211,17 @@ The three modes:
   prop is provided, the component falls back to
   `window.location.assign`. The user sees a screen-reader-only
   "Redirecting…" announcement and that's it.
-- **`auto`** — a countdown text + optional skip button. The action
-  fires after `timeoutMs` or when the user clicks skip (`behavior:
-'now'` is the default; `'cancel'` only clears the timer and leaves
-  the user on the screen).
+- **`auto`** — a filled primary CTA (the skip button) whose
+  background fills left-to-right with a `bg-black/20` darken overlay
+  over `timeoutMs`, with a smaller muted countdown line ("Continuing
+  in N…") centered underneath. The button **is** the progress
+  indicator — there's no separate progress bar. Clicking it fires the
+  action immediately (`behavior: 'now'`, the default) or only clears
+  the timer (`behavior: 'cancel'`). The fill is CSS-driven via
+  `@keyframes progress-fill` plus a `--progress-duration` custom
+  property, so the bar animates smoothly regardless of the JS
+  countdown's tick rate. If `skipButton` is omitted from the
+  envelope, only the countdown text renders.
 - **`manual`** — `message` banner + buttons. The primary button (if
   provided) gets initial focus and is the Enter-key target; options
   render alongside. If no `primary`, the first option is the
@@ -231,7 +238,7 @@ keeps the action wiring without re-implementing the logic.
 | --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `wf.finished`         | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                 |
 | `wf.finish.message`   | `payload.message` is set              | `{ message: WfMessage }`                                                                               |
-| `wf.finish.countdown` | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (100ms internally) |
+| `wf.finish.countdown` | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (250ms internally; integer transitions only) |
 | `wf.finish.skip`      | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                             |
 | `wf.finish.primary`   | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                        |
 | `wf.finish.option`    | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                         |
@@ -306,6 +313,37 @@ A workflow that calls `finishWfAborted(reason)` still fires
 the envelope alongside `data`. Treat them like a soft-error: render
 a banner via the `message` field (if you set one) or branch on
 `payload.aborted` inside the `wf.finished` slot for full control.
+
+## Reusing the progress-button primitive
+
+The auto-mode skip button is built on a public `c8-progress` shortcut
+family in `@atscript/ui-styles`. The same primitive composes any
+"fills then fires" UI — hold-to-confirm CTAs, timed confirmations, any
+button you want to double as its own progress indicator. The three
+classes:
+
+```html
+<button
+  class="c8-filled scope-primary c8-progress h-fingertip-m px-$m"
+  :style="{ '--progress-duration': '4000ms' }"
+>
+  <span class="c8-progress-fill" />
+  <span class="c8-progress-label">Confirm</span>
+</button>
+```
+
+- `c8-progress` — adds `relative overflow-hidden`. Layer it on top of
+  any `c8-*` base (`c8-filled`, `c8-flat`, `c8-light`).
+- `c8-progress-fill` — absolutely-positioned `bg-black/20` overlay
+  that animates `width 0% → 100%` over `--progress-duration` via the
+  globally-registered `@keyframes progress-fill` (no JS).
+- `c8-progress-label` — keeps the label in flow so the button doesn't
+  collapse to its padding box. Required.
+
+The keyframes are registered as a UnoCSS preflight by `asPresetVunor`,
+so consumers don't have to register anything beyond installing the
+preset. See [Styling — the as-\* shortcut system](/styling/shortcuts)
+for the broader shortcut tree.
 
 ## Reference
 
