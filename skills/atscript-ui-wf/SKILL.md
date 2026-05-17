@@ -19,7 +19,6 @@ description: >-
   when overriding the `<AsWfFinish>` slots (`wf.finish.message` /
   `wf.finish.countdown` / `wf.finish.skip` / `wf.finish.primary` /
   `wf.finish.option`) or hooking `@navigate` / `@dismiss` / `@action`;
-  when installing the opt-in `workflowSsrAdapter` for SSR 3xx redirects;
   or when debugging the wire envelope. Out of scope: plain forms (use
   `atscript-ui-forms`), tables (use `atscript-ui-tables`), styling.
 ---
@@ -178,9 +177,6 @@ import type {
   WfAction,
 } from "@atscript/moost-wf";
 
-// SSR — opt-in interceptor that translates immediate-redirect envelopes to 3xx
-import { workflowSsrAdapter } from "@atscript/moost-wf/ssr-adapter";
-
 // Server — atscript build-time plugin (in atscript.config.ts)
 import wfPlugin from "@atscript/moost-wf/plugin"; // default export — registers @wf.context.pass, @wf.action.withData, @wf.store.fromContext
 
@@ -217,7 +213,7 @@ import {
 | State persistence | [state.md](references/state.md)                     | `AsWfStore({ table, clock?, actor? })` wiring, `AsWfStateRecord` base schema + extension with `@meta.id`, `@wf.store.fromContext` shadow columns (uses, limits, race-safe `getAndDelete`), `cleanup(retention?)`, `heal(options?)` backfill, CJS limitation                                            |
 | Outlets / resume  | [outlets.md](references/outlets.md)                 | Outlet semantics (`{ sent: true }`, `{ outlet: '<name>' }`), email magic-link pattern with `?wfs=token` resume, webhook resume, token transports (`body` / `cookie` / `query`) — when to pick which, `initialToken` prop                                                                               |
 | Client            | [client.md](references/client.md)                   | `<AsWfForm>` props/emits/slots (`@finished`, `@error`, `@form`, `@submit`, `@loading`; slots `#wf.loading`, `#wf.error`, `#wf.finished`, `#form.*`), `useWfForm(options)` composable (`start` / `submit` / `action` / `actionWithData` / `retry`), custom `fetch` for auth headers                     |
-| Finish screens    | [finish-screens.md](references/finish-screens.md)   | `WfFinished` envelope, the five `finishWf*` helpers, `AsWfFinish` end-mode rendering (`immediate` / `auto` / `manual`), `wf.finish.*` scoped-slot contract with `trigger` callbacks, `@navigate` / `@dismiss` / `@action` events, opt-in `workflowSsrAdapter` for real 3xx redirects                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Finish screens    | [finish-screens.md](references/finish-screens.md)   | `WfFinished` envelope, the five `finishWf*` helpers, `AsWfFinish` end-mode rendering (`immediate` / `auto` / `manual`), `wf.finish.*` scoped-slot contract with `trigger` callbacks, `@navigate` / `@dismiss` / `@action` events                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 
 ## See also
 

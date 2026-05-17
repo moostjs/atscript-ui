@@ -11,7 +11,6 @@ export default defineConfig({
       index: "src/index.ts",
       plugin: "src/plugin.ts",
       store: "src/store/index.ts",
-      "ssr-adapter": "src/ssr-adapter.ts",
     },
     dts: true,
     // ESM-only because the `./store` subpath re-exports atscript-generated
@@ -28,7 +27,6 @@ export default defineConfig({
         "moost",
         "@moostjs/event-wf",
         "@wooksjs/event-core",
-        "@wooksjs/event-http",
         "@wooksjs/event-wf",
       ],
     },

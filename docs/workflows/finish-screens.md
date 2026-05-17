@@ -305,31 +305,9 @@ the envelope alongside `data`. Treat them like a soft-error: render
 a banner via the `message` field (if you set one) or branch on
 `payload.aborted` inside the `wf.finished` slot for full control.
 
-## SSR consumers
-
-Server-rendered (or no-JS) consumers can't render `auto` / `manual`
-finish screens — those require client-side timers and button
-listeners. For SSR flows that need real `Location:` redirects on
-`mode: 'immediate'`, install the opt-in adapter:
-
-```ts
-import { Controller, Intercept } from "moost";
-import { workflowSsrAdapter } from "@atscript/moost-wf/ssr-adapter";
-
-@Controller("/auth")
-@Intercept(workflowSsrAdapter)
-export class AuthController { /* ... */ }
-```
-
-The adapter checks the response body for an `immediate` redirect
-envelope and rewrites it to `303` (hard) or `302` (soft) +
-`Location:` header. `auto` / `manual` envelopes pass through as
-200 JSON regardless — render them in the SPA.
-
 ## Reference
 
 - Types and helpers: `packages/moost-wf/src/wf-finished.ts`
-- SSR adapter: `packages/moost-wf/src/ssr-adapter.ts`
 - Default component: `packages/vue-wf/src/components/defaults/as-wf-finish.vue`
 - Client wiring: `packages/vue-wf/src/components/as-wf-form.vue`
 

@@ -13,8 +13,8 @@ export { handleAsOutletRequest } from "./handle";
 // ── WfFinished envelope (Phase 2) ─────────────────────────────
 //
 // The HTTP adapter ALWAYS returns 200/201 JSON for `finished: true`
-// envelopes. SSR consumers that need real 3xx redirects install the
-// opt-in interceptor at `@atscript/moost-wf/ssr-adapter`.
+// envelopes. Terminal UX (redirects, countdowns, manual choices) is
+// rendered client-side by `<AsWfFinish>` from the `end.action`.
 export {
   finishWf,
   finishWfAborted,

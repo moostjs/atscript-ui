@@ -165,9 +165,16 @@ Example: custom loading + finished states:
     <div class="spinner">Signing you in…</div>
   </template>
 
-  <template #wf.finished="{ response }">
+  <template #wf.finished="{ response, payload }">
+    <!-- `payload` is the typed `WfFinished` envelope; `response` is the same
+         value kept for back-compat. `payload` is `null` when the flow ended
+         via an outlet pause (`{ sent: true }` / `{ outlet: '<name>' }`)
+         rather than a true `finished: true` envelope. -->
+    <div v-if="payload?.message" class="banner">
+      {{ payload.message.text }}
+    </div>
     <div class="success">
-      Welcome, {{ (response as any).user.username }}!
+      Welcome, {{ (payload?.data as any)?.user?.username }}!
     </div>
   </template>
 
@@ -179,6 +186,12 @@ Example: custom loading + finished states:
   </template>
 </AsWfForm>
 ```
+
+Providing `#wf.finished` opts out of the default `AsWfFinish` rendering —
+the consumer takes full responsibility for the finish UI (including any
+`end.action` wiring). To keep `AsWfFinish` and only restyle one piece,
+override a `#wf.finish.*` sub-slot instead. See
+[Finish Screens](/workflows/finish-screens) for the sub-slot contract.
 
 ## `useWfForm()` composable
 

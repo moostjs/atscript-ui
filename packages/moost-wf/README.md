@@ -17,7 +17,7 @@ Part of the [atscript-ui](https://github.com/moostjs/atscript-ui) monorepo.
 - Workflow decorators that wrap Moost handlers and expose them as `@atscript/vue-wf`-compatible endpoints
 - Interceptors that serialize / deserialize workflow state across HTTP requests
 - `@AsWfState` storage abstraction with a default `@atscript/db`-backed implementation
-- Unified `WfFinished` envelope + helpers (`finishWfWithData`, `finishWfWithRedirect`, `finishWfWithChoice`, …) for terminal-screen UX, plus an opt-in `workflowSsrAdapter` for SSR consumers that need real 3xx redirects. See [Finish Screens](https://ui.atscript.dev/workflows/finish-screens).
+- Unified `WfFinished` envelope + helpers (`finishWfWithData`, `finishWfWithRedirect`, `finishWfWithChoice`, …) for terminal-screen UX. See [Finish Screens](https://ui.atscript.dev/workflows/finish-screens).
 
 ## Install
 

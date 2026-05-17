@@ -52,8 +52,9 @@ export function isWfFinished(v: unknown): v is WfFinished {
 // Why `type: 'data'`: wooks's `useWfFinished()` unwraps the `value` field
 // before returning the workflow result. Without the explicit data type,
 // wooks would emit its own 302 — but redirect semantics live inside our
-// envelope's `end.action`, translated to a real 3xx only by the opt-in
-// `workflowSsrAdapter`.
+// envelope's `end.action`, which the client renders via `<AsWfFinish>`
+// (countdown / manual choice / immediate). The server always returns the
+// envelope as plain JSON; there is no server-side 3xx translation.
 function setEnvelope(envelope: WfFinished): void {
   wooksUseWfFinished().set({ type: "data", value: envelope });
 }

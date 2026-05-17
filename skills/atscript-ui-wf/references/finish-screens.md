@@ -11,7 +11,6 @@ author-facing helpers, the default `AsWfFinish` component shipped via
 - [End modes — rendering rules](#end-modes--rendering-rules)
 - [Slot contract](#slot-contract)
 - [Events — `@navigate` / `@dismiss` / `@action`](#events--navigate--dismiss--action)
-- [SSR adapter (opt-in)](#ssr-adapter-opt-in)
 
 ## Envelope shape
 
@@ -154,29 +153,3 @@ Hard redirects (`mode: "hard"`) bypass `@navigate` and call
 `window.location.href`. There is no way to intercept them other than
 overriding the `wf.finish.primary` / `wf.finish.option` / `wf.finish.skip`
 slots with custom triggers.
-
-## SSR adapter (opt-in)
-
-Source: `packages/moost-wf/src/ssr-adapter.ts` exported from
-`@atscript/moost-wf/ssr-adapter`.
-
-Install on the controller / handler serving the workflow route when you need
-SSR or no-JS consumers to follow `mode: 'immediate'` redirects:
-
-```ts
-import { Controller, Intercept } from "moost";
-import { workflowSsrAdapter } from "@atscript/moost-wf/ssr-adapter";
-
-@Controller("/auth")
-@Intercept(workflowSsrAdapter)
-export class AuthController { /* ... */ }
-```
-
-- `mode: 'hard'` → 303 + `Location:` header, empty body.
-- `mode: 'soft'` → 302 + `Location:` header, empty body.
-- `mode: 'auto'` / `mode: 'manual'` / no `end` → pass-through as 200 JSON
-  (need client-side rendering).
-
-The interceptor reads the response body, checks `isWfFinished()`, and
-rewrites only the `immediate` redirect branch. Everything else flows
-through untouched.
