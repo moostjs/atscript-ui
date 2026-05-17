@@ -234,14 +234,14 @@ has a working default — override only the pieces you want to
 restyle. Every slot scope includes a callback so your custom UI
 keeps the action wiring without re-implementing the logic.
 
-| Slot                  | Renders when                          | Scope                                                                                                  |
-| --------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `wf.finished`         | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                 |
-| `wf.finish.message`   | `payload.message` is set              | `{ message: WfMessage }`                                                                               |
+| Slot                  | Renders when                          | Scope                                                                                                                            |
+| --------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `wf.finished`         | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                                           |
+| `wf.finish.message`   | `payload.message` is set              | `{ message: WfMessage }`                                                                                                         |
 | `wf.finish.countdown` | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (250ms internally; integer transitions only) |
-| `wf.finish.skip`      | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                             |
-| `wf.finish.primary`   | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                        |
-| `wf.finish.option`    | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                         |
+| `wf.finish.skip`      | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                                                       |
+| `wf.finish.primary`   | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                                                  |
+| `wf.finish.option`    | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                                                   |
 
 Example — override the primary button with a design-system one,
 keeping the trigger contract:
