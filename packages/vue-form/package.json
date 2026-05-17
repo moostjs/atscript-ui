@@ -92,6 +92,11 @@
       "import": "./dist/as-iterator.mjs",
       "require": "./dist/as-iterator.cjs"
     },
+    "./as-multi-select": {
+      "types": "./dist/as-multi-select.d.mts",
+      "import": "./dist/as-multi-select.mjs",
+      "require": "./dist/as-multi-select.cjs"
+    },
     "./as-number": {
       "types": "./dist/as-number.d.mts",
       "import": "./dist/as-number.mjs",

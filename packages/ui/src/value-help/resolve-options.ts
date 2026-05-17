@@ -1,4 +1,4 @@
-import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import type { TAtscriptAnnotatedType, TAtscriptTypeArray } from "@atscript/typescript/utils";
 import type { TFormEntryOptions } from "./types";
 import { UI_FORM_FN_OPTIONS, UI_FORM_OPTIONS } from "../shared/annotation-keys";
 import { resolveFieldProp, asArray } from "../shared/field-resolver";
@@ -47,5 +47,10 @@ export function resolveOptions(
     { transform: parseStaticOptions },
   );
   if (resolved !== undefined) return resolved;
-  return extractLiteralOptions(prop);
+  const literals = extractLiteralOptions(prop);
+  if (literals !== undefined) return literals;
+  if (prop.type.kind === "array") {
+    return extractLiteralOptions((prop.type as TAtscriptTypeArray).of);
+  }
+  return undefined;
 }

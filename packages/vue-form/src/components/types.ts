@@ -208,6 +208,7 @@ export type TAsChangeType = "update" | "array-add" | "array-remove" | "union-swi
 export type TAsTypeComponents = {
   text: Component;
   select: Component;
+  multiselect: Component;
   radio: Component;
   checkbox: Component;
   paragraph: Component;

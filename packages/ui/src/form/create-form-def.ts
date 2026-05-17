@@ -22,6 +22,8 @@ import {
   DB_UNIT_REF,
   META_LABEL,
   UI_FORM_COMPONENT,
+  UI_FORM_FN_OPTIONS,
+  UI_FORM_OPTIONS,
   UI_FORM_ORDER,
   UI_FORM_PREFIX,
   UI_FORM_PREFIX_ICON,
@@ -133,10 +135,20 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
   // Array
   if (kind === "array") {
     const arrayType = prop.type as TAtscriptTypeArray;
+    // Multiselect dispatch: keep structural `type: 'array'` so isArrayField
+    // and validator/path logic stay honest; route the renderer via
+    // customType. Eligibility: explicit @ui.form.type multiselect, OR
+    // array carries @ui.form.options / @ui.form.fn.options, OR item is a
+    // pure literal union.
+    const isMultiselect =
+      customType === "multiselect" ||
+      getFieldMeta(prop, UI_FORM_OPTIONS) !== undefined ||
+      getFieldMeta(prop, UI_FORM_FN_OPTIONS) !== undefined ||
+      isPureLiteralUnion(arrayType.of);
     return {
       ...base,
       type: "array",
-      customType,
+      customType: isMultiselect ? "multiselect" : customType,
       itemType: arrayType.of,
       itemField: createFieldDef("", arrayType.of),
     } as FormArrayFieldDef;

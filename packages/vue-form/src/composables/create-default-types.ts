@@ -2,6 +2,7 @@ import type { TAsTypeComponents } from "../components/types";
 import {
   AsInput,
   AsSelect,
+  AsMultiSelect,
   AsRadio,
   AsCheckbox,
   AsParagraph,
@@ -34,6 +35,7 @@ export function createDefaultTypes(): TAsTypeComponents {
     number: AsNumber,
     decimal: AsDecimal,
     select: AsSelect,
+    multiselect: AsMultiSelect,
     radio: AsRadio,
     checkbox: AsCheckbox,
     paragraph: AsParagraph,

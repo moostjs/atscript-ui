@@ -86,8 +86,8 @@ renderer a field uses on whichever surface lacks its own override
 (`@ui.form.type` for forms, `@ui.table.type` for tables). The value
 must be one of the built-in type ids that the form/cell type maps
 know how to dispatch — `text`, `password`, `textarea`, `number`,
-`decimal`, `select`, `radio`, `checkbox`, `paragraph`, `action`,
-`date`, `datetime`, `time`, etc.
+`decimal`, `select`, `radio`, `checkbox`, `multiselect`, `paragraph`,
+`action`, `date`, `datetime`, `time`, etc.
 
 For primitives it folds into the field's structural `type` at
 FormDef-build time; for structured fields (`object`, `array`, `union`,
@@ -205,6 +205,10 @@ on the field type) are extracted automatically — no
 role: 'admin' | 'user' | 'guest'
 ```
 
+The same option sources also feed the `multiselect` renderer on array
+fields — see [Field Types — Multi-select arrays](/forms/field-types#multi-select-arrays)
+for the dispatch rules.
+
 ### Custom validation
 
 | Annotation                                       | Effect                                                                                               |
@@ -216,10 +220,10 @@ The validator receives `(value, data, context)`. See
 
 ### Component swap
 
-| Annotation                     | Effect                                                                                                                                                                                                      |
-| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@ui.form.type 'textarea'`     | Flips to a different **built-in** renderer (`text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `date`, `datetime`, `time`, `paragraph`, `action`). Reserved for built-ins. |
-| `@ui.form.component 'MyInput'` | Resolves a **named** component from the `:components` map (highest precedence). The dedicated mechanism for custom renderers.                                                                               |
+| Annotation                     | Effect                                                                                                                                                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.form.type 'textarea'`     | Flips to a different **built-in** renderer (`text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `multiselect`, `date`, `datetime`, `time`, `paragraph`, `action`). Reserved for built-ins. |
+| `@ui.form.component 'MyInput'` | Resolves a **named** component from the `:components` map (highest precedence). The dedicated mechanism for custom renderers.                                                                                              |
 
 Resolution precedence (see `as-field.vue:373-386`):
 

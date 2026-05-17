@@ -7,6 +7,7 @@ const BUILTIN_TYPES = [
   "number",
   "decimal",
   "select",
+  "multiselect",
   "textarea",
   "checkbox",
   "radio",

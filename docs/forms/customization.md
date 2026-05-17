@@ -19,8 +19,8 @@ override is normal.
 Pass a `:types` map to `<AsForm>`. The map's keys are the **built-in field
 type ids** resolved by `<AsField>`:
 `text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`,
-`checkbox`, `paragraph`, `action`, `object`, `array`, `union`, `tuple`,
-`ref`, `date`, `datetime`, `time`.
+`checkbox`, `multiselect`, `paragraph`, `action`, `object`, `array`,
+`union`, `tuple`, `ref`, `date`, `datetime`, `time`.
 
 ```vue
 <script setup lang="ts">

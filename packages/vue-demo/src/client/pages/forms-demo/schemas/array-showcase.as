@@ -70,4 +70,33 @@ export interface ArrayShowcaseForm {
         @ui.form.label.singular 'member'
         members?: string[]
     }[]
+
+    // ── Multiselect: literal-union array → combobox popup ───
+    @meta.label 'Frameworks'
+    @meta.description 'Literal-union array — dispatches to the multiselect renderer (combobox popup with chips), not the add/remove array UI.'
+    frameworksUsed: ('react' | 'vue' | 'svelte' | 'angular')[]
+
+    // ── Multiselect: string[] with explicit @ui.form.options ─
+    @meta.label 'Roles'
+    @meta.description 'string[] with @ui.form.options — also dispatches to multiselect.'
+    @ui.form.options 'Admin', 'admin'
+    @ui.form.options 'Editor', 'editor'
+    @ui.form.options 'Viewer', 'viewer'
+    roles: string[]
+
+    // ── Optional multiselect ────────────────────────────────
+    @meta.label 'Preferred frameworks'
+    @meta.description 'Optional literal-union array — renders the combobox popup with nothing pre-selected.'
+    frameworks?: ('react' | 'vue')[]
+
+    // ── Bounded multiselect (minLength/maxLength) ───────────
+    @meta.label 'Topics'
+    @meta.description 'string[] options with minLength 1 / maxLength 3 — submission surfaces array-level validation.'
+    @ui.form.options 'Frontend', 'frontend'
+    @ui.form.options 'Backend', 'backend'
+    @ui.form.options 'DevOps', 'devops'
+    @ui.form.options 'Design', 'design'
+    @expect.minLength 1, 'Pick at least one topic'
+    @expect.maxLength 3, 'Pick at most three topics'
+    topics: string[]
 }

@@ -8,6 +8,7 @@ import { asDropdownShortcuts } from "./as-dropdown";
 import { asFieldShortcuts } from "./as-field";
 import { asFormShortcuts } from "./as-form";
 import { asFormGridShortcuts } from "./as-form-grid";
+import { asMultiSelectShortcuts } from "./as-multi-select";
 import { asNoDataShortcuts } from "./as-no-data";
 import { asObjectShortcuts } from "./as-object";
 import { asRefShortcuts } from "./as-ref";
@@ -22,6 +23,7 @@ export {
   asFieldShortcuts,
   asFormShortcuts,
   asFormGridShortcuts,
+  asMultiSelectShortcuts,
   asNoDataShortcuts,
   asObjectShortcuts,
   asRefShortcuts,
@@ -38,6 +40,7 @@ export const formShortcuts = mergeVunorShortcuts([
   asArrayShortcuts,
   asNoDataShortcuts,
   asDropdownShortcuts,
+  asMultiSelectShortcuts,
   asRefShortcuts,
   asActionShortcuts,
 ]);

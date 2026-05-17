@@ -1,6 +1,7 @@
 export { default as AsFieldShell } from "./as-field-shell.vue";
 export { default as AsInput } from "./as-input.vue";
 export { default as AsSelect } from "./as-select.vue";
+export { default as AsMultiSelect } from "./as-multi-select.vue";
 export { default as AsRadio } from "./as-radio.vue";
 export { default as AsCheckbox } from "./as-checkbox.vue";
 export { default as AsParagraph } from "./as-paragraph.vue";
