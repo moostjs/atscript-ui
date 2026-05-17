@@ -1,5 +1,6 @@
 import { mergeVunorShortcuts } from "vunor/theme";
 import { asWfFormShortcuts } from "./as-wf-form";
+import { asWfFormLoadingShortcuts } from "./as-wf-form-loading";
 import { asWfFinishShortcuts } from "./as-wf-finish";
 import { asWfFinishMessageShortcuts } from "./as-wf-finish-message";
 import { asWfFinishCountdownShortcuts } from "./as-wf-finish-countdown";
@@ -10,6 +11,7 @@ import { asWfFinishSkipShortcuts } from "./as-wf-finish-skip";
 
 export {
   asWfFormShortcuts,
+  asWfFormLoadingShortcuts,
   asWfFinishShortcuts,
   asWfFinishMessageShortcuts,
   asWfFinishCountdownShortcuts,
@@ -21,6 +23,7 @@ export {
 
 export const wfShortcuts = mergeVunorShortcuts([
   asWfFormShortcuts,
+  asWfFormLoadingShortcuts,
   asWfFinishShortcuts,
   asWfFinishMessageShortcuts,
   asWfFinishCountdownShortcuts,

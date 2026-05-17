@@ -2637,6 +2637,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-wf-finish-primary",
     "as-wf-finish-skip",
     "as-wf-form-error",
+    "as-wf-form-loading",
     "i-as-chevron-down",
     "i-as-close",
     "i-as-field-empty",

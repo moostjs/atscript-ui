@@ -111,8 +111,12 @@ function onAction(name: string, data: unknown) {
     }"
     :actions="{ start: wf.start, submit: onSubmit, retry: wf.retry }"
   >
-    <div v-if="wf.loading.value && !wf.formDef.value">
-      <slot name="wf.loading" />
+    <div v-if="wf.loading.value && !wf.formDef.value" class="as-wf-form-loading">
+      <slot name="wf.loading">
+        <div class="as-form-overlay">
+          <span class="as-form-overlay-icon" aria-hidden="true" />
+        </div>
+      </slot>
     </div>
 
     <div v-else-if="wf.error.value && !wf.formDef.value">
