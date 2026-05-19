@@ -17,19 +17,25 @@ Tune brand colors, radii, dark mode, scope tints, and depth layers via `asPreset
 ## asPresetVunor options
 
 ```typescript
-interface AsBaseUnoConfigOptions {
-  baseRadius?: string; // forwarded to vunor.baseRadius
-}
+// AsBaseUnoConfigOptions is just vunor's `presetVunor()` option type — every
+// field (`baseRadius`, `palette`, `fingertip`, `typography`, `animation`, …)
+// is accepted flat at the top level of asPresetVunor's input.
+interface AsBaseUnoConfigOptions extends AsVunorPresetOptions {}
 
 interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
   excludeComponents?: string[]; // kebab names dropped from extractor safelist
   iconOverrides?: Record<string, string>; // alias → SVG string; see icons.md
-  // Palette / fingertip are forwarded to `presetVunor`. The exact shape
-  // of `palette` is vunor's — see the `vunor` skill.
 }
 ```
 
-Defined in `packages/ui-styles/src/preset.ts` (lines 73-95). Returns `Preset[]` — pass directly to UnoCSS's `presets`.
+Defined in [`packages/ui-styles/src/preset.ts`](../../../packages/ui-styles/src/preset.ts). Returns `Preset[]` — pass directly to UnoCSS's `presets`.
+
+Every vunor field is optional. The baked atscript-ui defaults (`defaultAsVunorOptions`, also exported) fill in any omitted value. Two fields merge per-key so consumers can override one entry without redeclaring the whole map:
+
+- `palette.colors` — `{ primary: "#ff0000" }` keeps `grey` / `neutral` / `error` defaults
+- `fingertip` — `{ m: "36px" }` keeps the other four sizes
+
+All other fields (`baseRadius`, `typography`, `animation`, `palette.lightest`, etc.) replace the default wholesale — provide a complete shape if you set them.
 
 ## Palette overrides
 
@@ -80,7 +86,7 @@ The brand swap re-derives every `as-*` rule's color, focus ring, hover state, an
 
 ## Built-in palette defaults
 
-For reference (so you can see what changes when you override). Source: `packages/ui-styles/src/preset.ts` (lines 218-231):
+For reference (so you can see what changes when you override). Source: `defaultAsVunorOptions` in [`packages/ui-styles/src/preset.ts`](../../../packages/ui-styles/src/preset.ts) — also exported, so you can read or extend it from your own config:
 
 | Color         | Default   | Source         |
 | ------------- | --------- | -------------- |

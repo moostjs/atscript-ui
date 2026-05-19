@@ -74,8 +74,12 @@ export default defineConfig({
     filesystem: ["src/**/*.{vue,ts,tsx}"],
   },
   presets: asPresetVunor({
-    // Theme overrides (all optional)
+    // The full vunor presetVunor() theme is accepted flat here. Omitted
+    // fields fall back to atscript-ui's baked defaults. See
+    // /styling/theme for the full option list.
     baseRadius: "8px",
+    palette: { colors: { primary: "#a855f7" } }, // keeps grey/neutral/error defaults
+    // fingertip: { m: "36px" },
     // Drop classes for defaults you've swapped out (post-match exclusion)
     excludeComponents: ["as-filter-dialog"],
     // Override one of the baked icons by name

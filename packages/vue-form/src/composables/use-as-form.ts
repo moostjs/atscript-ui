@@ -93,6 +93,12 @@ export interface UseAsFormOptions<TFormData = unknown, TFormContext = unknown> {
   clientFactory?: () => ClientFactory | undefined;
   /** Suppress the root field's title (use when the chrome already shows the form's label). */
   hideRootTitle?: () => boolean | undefined;
+  /**
+   * Busy-state flag. When `true`, the form is locked (inert + overlay) and the
+   * default submit button is disabled. `<AsWfForm>` wires this to its
+   * server round-trip so consumers can drop their own submit overrides.
+   */
+  loading?: () => boolean | undefined;
 
   /**
    * Outbound callbacks. Customer form roots typically wire these to
@@ -272,12 +278,14 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   );
   const submitDisabled = computed(
     () =>
-      resolveFormProp<boolean>(
+      options.loading?.() === true ||
+      (resolveFormProp<boolean>(
         options.def().type,
         UI_FORM_FN_SUBMIT_DISABLED,
         undefined,
         ctx.value,
-      ) ?? false,
+      ) ??
+        false),
   );
 
   // ── Action handler (provided to AsField tree) ──────────────

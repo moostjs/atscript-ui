@@ -21,6 +21,14 @@ The vunor-powered UnoCSS preset, the safelist extractor that drives our as-compo
 Returns an array of UnoCSS presets + rules + safelist entries spreadable into `unocss.config.ts`. Bundles vunor (palette / scope / layer / surface / c8 / i8), the `as-*` shortcut tree, the baked icon collection (`i-as-*`), and the safelist extractor.
 
 ```typescript
+// AsBaseUnoConfigOptions IS vunor's presetVunor option type — every field
+// (`baseRadius`, `palette`, `fingertip`, `typography`, `animation`, …) is
+// accepted flat at the top level. Omitted fields fall back to the baked
+// `defaultAsVunorOptions`. `palette.colors` and `fingertip` shallow-merge
+// per-key so you can override one entry without redeclaring the whole map.
+type AsVunorPresetOptions = NonNullable<Parameters<typeof presetVunor>[0]>;
+interface AsBaseUnoConfigOptions extends AsVunorPresetOptions {}
+
 interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
   /** Drop a kebab-case component's classes from the safelist when the consumer has replaced it. */
   excludeComponents?: string[];
@@ -28,12 +36,11 @@ interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
   iconOverrides?: Record<string, string>;
 }
 
-interface AsBaseUnoConfigOptions {
-  /** Forwarded to vunor's `baseRadius`. Drives `rounded-base` and the `r0..r4` ladder. */
-  baseRadius?: string;
-}
-
 function asPresetVunor(options?: AsPresetVunorOptions): Preset[];
+
+/** Baked-in vunor theme atscript-ui has shipped since day one. Exported so
+ *  consumers can read or extend it (e.g. spread + tweak one field). */
+const defaultAsVunorOptions: AsVunorPresetOptions;
 ```
 
 ```typescript
@@ -44,6 +51,8 @@ export default defineConfig({
   presets: [
     ...asPresetVunor({
       baseRadius: "0.5rem",
+      palette: { colors: { primary: "#a855f7" } }, // keeps grey/neutral/error defaults
+      fingertip: { m: "36px" }, // keeps xs/s/l/xl defaults
       excludeComponents: ["as-input"],
     }),
   ],

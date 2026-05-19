@@ -60,6 +60,10 @@ export default defineConfig({
   },
   presets: asPresetVunor({
     baseRadius: "6px",
+    // Brand colors, fingertip ladder, typography, animation, etc. all sit
+    // flat at this level — `asPresetVunor` accepts the full presetVunor()
+    // theme. See [Theme & Palette](/styling/theme) for the full option list.
+    // palette: { colors: { primary: '#a855f7' } },
   }),
   shortcuts: [vunorShortcuts(allShortcuts)],
 });

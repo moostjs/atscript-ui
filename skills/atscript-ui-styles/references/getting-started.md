@@ -53,8 +53,12 @@ export default defineConfig({
   // Do NOT wrap in another array; UnoCSS would treat the inner array as
   // a single preset and crash.
   presets: asPresetVunor({
+    // Full presetVunor() theme is accepted flat at the top level.
+    // Omitted fields fall back to `defaultAsVunorOptions`.
     baseRadius: "0.5rem",
-    // palette: { colors: { primary: '#3b82f6' } },
+    palette: { colors: { primary: "#3b82f6" } }, // keeps grey/neutral/error defaults
+    // fingertip: { m: "36px" },                  // keeps xs/s/l/xl defaults
+    // typography: { ... },                       // wholesale replacement
     // iconOverrides: { search: '<svg viewBox="0 0 24 24">...</svg>' },
     // excludeComponents: ['as-input'],
   }),
@@ -65,14 +69,19 @@ export default defineConfig({
 });
 ```
 
-`asPresetVunor()` already injects the class extractor and the icon collection (under prefix `as`). Avoid registering a second `presetIcons({ collections: { as: ... } })` with the same `as` prefix — it would overwrite the bundled mapping. Use a different prefix for your own icons (see [icons.md](icons.md)). See `packages/ui-styles/src/preset.ts` (lines 236-245).
+`asPresetVunor()` already injects the class extractor and the icon collection (under prefix `as`). Avoid registering a second `presetIcons({ collections: { as: ... } })` with the same `as` prefix — it would overwrite the bundled mapping. Use a different prefix for your own icons (see [icons.md](icons.md)).
 
-| Knob                | Type                     | Default         | Purpose                                                                  |
-| ------------------- | ------------------------ | --------------- | ------------------------------------------------------------------------ |
-| `baseRadius`        | `string`                 | `"4px"`         | Forwarded to vunor `baseRadius`; drives `rounded-base` + `r0..r4` ladder |
-| `iconOverrides`     | `Record<string, string>` | `undefined`     | Per-alias SVG override merged on top of `bakedIcons`                     |
-| `excludeComponents` | `string[]`               | `undefined`     | Kebab component names dropped from the extractor's safelist              |
-| `palette`           | vunor palette config     | design defaults | Forwarded to `presetVunor({ palette })` — see [theming.md](theming.md)   |
+| Knob                | Type                       | Default         | Purpose                                                                                |
+| ------------------- | -------------------------- | --------------- | -------------------------------------------------------------------------------------- |
+| `baseRadius`        | `string`                   | `"4px"`         | vunor `baseRadius`; drives `rounded-base` + `r0..r4` ladder                            |
+| `palette`           | `TVunorPaletteOptions`     | design defaults | Brand palette. `colors` is per-key merged with `defaultAsVunorOptions.palette.colors`. |
+| `fingertip`         | `{ xs/s/m/l/xl?: string }` | design defaults | Touch-target ladder driving `h-fingertip-*`. Per-key merged.                           |
+| `typography`        | vunor typography map       | vunor defaults  | Override the typography ladder. Wholesale replacement.                                 |
+| `animation`         | vunor animation map        | vunor defaults  | Override animation tokens. Wholesale replacement.                                      |
+| `iconOverrides`     | `Record<string, string>`   | `undefined`     | Per-alias SVG override merged on top of `bakedIcons`                                   |
+| `excludeComponents` | `string[]`                 | `undefined`     | Kebab component names dropped from the extractor's safelist                            |
+
+See [theming.md](theming.md) for the full palette/scope/layer/surface story.
 
 ## main.ts
 

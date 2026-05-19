@@ -1,106 +1,105 @@
 # Theme & Palette
 
-`asPresetVunor()` forwards its options to vunor's `presetVunor`. Tuning a single brand color regenerates the entire `layer-*`, `surface-*`, `c8-*`, and `current-*` ladder — and every `as-*` shortcut that consumes them picks up the change automatically.
+`asPresetVunor()` accepts vunor's full `presetVunor` theme directly at the top level. Tuning a single brand color regenerates the entire `layer-*`, `surface-*`, `c8-*`, and `current-*` ladder — and every `as-*` shortcut that consumes them picks up the change automatically.
 
 ## Options
 
+`asPresetVunor()`'s input is vunor's `presetVunor()` option type plus two atscript-specific extras (`excludeComponents`, `iconOverrides`). Every vunor field — `baseRadius`, `palette`, `fingertip`, `typography`, `animation`, … — is flat at the top level:
+
 ```typescript
-interface AsPresetVunorOptions {
-  baseRadius?: string;
+interface AsPresetVunorOptions extends /* vunor's presetVunor options */ {
   excludeComponents?: string[];
   iconOverrides?: Record<string, string>;
 }
 ```
 
-`asPresetVunor` accepts the above directly. Anything beyond that (palette, fingertip overrides, typography) flows through vunor's own preset, which is composed internally with sensible defaults. To override palette and fingertip from your app, drop down to vunor's `presetVunor` and pair it with the rest of our presets — covered below.
+Omitted fields fall back to atscript-ui's baked defaults. Two of them merge per-key so you can override one entry without redeclaring the whole map:
 
-| Option              | Type                     | Default | Effect                                                                                                                                       |
-| ------------------- | ------------------------ | ------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `baseRadius`        | `string`                 | `"4px"` | Drives `rounded-base` and vunor's `r0..r4` ladder used across forms, table cells, dialogs, and chips.                                        |
-| `excludeComponents` | `string[]`               | `[]`    | Kebab-case component names to drop from the safelist. Use when you swap a default for your own implementation and want to shed unused rules. |
-| `iconOverrides`     | `Record<string, string>` | `{}`    | Replace baked icons with custom SVG strings or Iconify IDs. See [Icons](/styling/icons).                                                     |
+- **`palette.colors`** — `{ primary: "#ff0000" }` keeps `grey` / `neutral` / `error` defaults.
+- **`fingertip`** — `{ m: "36px" }` keeps the other four sizes.
 
-## Minimal palette override
+Every other field (`baseRadius`, `palette.lightest`, `typography`, `animation`, …) replaces the default wholesale — provide the full shape if you set it. The baked defaults are exported as `defaultAsVunorOptions` if you want to read or spread them.
 
-The cleanest place to set brand colors is at the vunor level. The atscript-ui defaults look like this internally:
+| Option              | Type                                | Default                 | Effect                                                                                                                                       |
+| ------------------- | ----------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `baseRadius`        | `string`                            | `"4px"`                 | Drives `rounded-base` and vunor's `r0..r4` ladder used across forms, table cells, dialogs, and chips.                                        |
+| `palette`           | vunor `TVunorPaletteOptions`        | see below               | Brand palette — `colors.primary`, `colors.grey`, `colors.error`, plus `lightest` / `darkest` / `layersDepth`. `colors` is per-key merged.    |
+| `fingertip`         | `{ xs/s/m/l/xl?: string }`          | see below               | Touch-target ladder driving `h-fingertip-*` / `size-fingertip-*`. Per-key merged.                                                            |
+| `typography`        | vunor typography map                | vunor defaults          | Override individual entries in the typography ladder (`body`, `callout`, `h1`, …). Wholesale replacement of the whole map.                   |
+| `animation`         | `{ durations / animation / keyframes }` | vunor defaults     | Animation tokens. Wholesale replacement.                                                                                                     |
+| `excludeComponents` | `string[]`                          | `[]`                    | Kebab-case component names to drop from the safelist. Use when you swap a default for your own implementation and want to shed unused rules. |
+| `iconOverrides`     | `Record<string, string>`            | `{}`                    | Replace baked icons with custom SVG strings or Iconify IDs. See [Icons](/styling/icons).                                                     |
+
+## Baked-in defaults
+
+For reference (so you can see what changes when you override). Source: `defaultAsVunorOptions` in `@atscript/ui-styles`.
 
 ```typescript
-import { presetVunor } from "vunor/theme";
-
-presetVunor({
+const defaultAsVunorOptions = {
   baseRadius: "4px",
-  fingertip: {
-    xs: "20px",
-    s: "28px",
-    m: "32px",
-    l: "36px",
-    xl: "40px",
-  },
+  fingertip: { xs: "20px", s: "28px", m: "32px", l: "36px", xl: "40px" },
   palette: {
     colors: {
-      primary: "#2563eb",
-      grey: "#64748b",
-      neutral: "#475569",
-      error: "#dc2626",
+      primary: "#2563eb", // blue accent
+      grey: "#64748b", // slate neutrals
+      neutral: "#475569", // slate (darker)
+      error: "#dc2626", // red-600
     },
     lightest: 0.97,
     darkest: 0.22,
     layersDepth: 0.08,
   },
-});
+};
 ```
 
-To override these in your app, replace `asPresetVunor()` with a hand-composed preset list that re-uses our extractor and shortcut tree but swaps in your own `presetVunor`:
+## Brand palette swap
+
+The cleanest place to set brand colors is `asPresetVunor()` itself — no hand-composed preset list required:
 
 ```typescript
 // uno.config.ts
 import { defineConfig } from "unocss";
-import { allShortcuts, createAsExtractor, mergeVunorShortcuts } from "@atscript/ui-styles";
-import { presetVunor, vunorShortcuts } from "vunor/theme";
-import presetIcons from "@unocss/preset-icons";
-import { bakedIcons } from "@atscript/ui-styles";
+import { allShortcuts, asPresetVunor } from "@atscript/ui-styles";
+import { vunorShortcuts } from "vunor/theme";
 
 export default defineConfig({
   content: { filesystem: ["src/**/*.{vue,ts,tsx}"] },
-  presets: [
-    presetIcons({
-      collections: {
-        as: (name) => bakedIcons[name],
+  presets: asPresetVunor({
+    baseRadius: "8px",
+    palette: {
+      colors: {
+        primary: "#a855f7", // your brand
+        grey: "#71717a",
+        neutral: "#52525b",
+        error: "#ef4444",
+        good: "#22c55e",
+        warn: "#eab308",
       },
-    }),
-    presetVunor({
-      baseRadius: "8px",
-      palette: {
-        colors: {
-          primary: "#a855f7", // your brand
-          grey: "#71717a",
-          neutral: "#52525b",
-          error: "#ef4444",
-          good: "#22c55e",
-          warn: "#eab308",
-        },
-        lightest: 0.98,
-        darkest: 0.18,
-        layersDepth: 0.06,
-      },
-      fingertip: {
-        xs: "18px",
-        s: "26px",
-        m: "32px",
-        l: "38px",
-        xl: "44px",
-      },
-    }),
-    {
-      name: "atscript-ui-extractors",
-      extractors: [createAsExtractor()],
+      lightest: 0.98,
+      darkest: 0.18,
+      layersDepth: 0.06,
     },
-  ],
+    fingertip: {
+      xs: "18px",
+      s: "26px",
+      m: "32px",
+      l: "38px",
+      xl: "44px",
+    },
+  }),
   shortcuts: [vunorShortcuts(allShortcuts)],
 });
 ```
 
-In most apps you don't need this much control — `asPresetVunor({ baseRadius })` plus a few `iconOverrides` is enough. Drop down to the hand-composed form only when you need a brand palette beyond the defaults.
+You don't need to provide every key — anything omitted keeps the baked default. The smallest possible brand swap:
+
+```typescript
+presets: asPresetVunor({
+  palette: { colors: { primary: "#a855f7" } },
+}),
+```
+
+`grey`, `neutral`, and `error` keep their defaults; `lightest` / `darkest` / `layersDepth` keep theirs; `fingertip` and `baseRadius` keep theirs.
 
 ## Brand color propagation
 
@@ -175,7 +174,7 @@ export default defineConfig({
 });
 ```
 
-For deeper palette/typography tweaks, drop down to `presetVunor()` directly as shown in the [Minimal palette override](#minimal-palette-override) section above.
+For deeper palette/typography tweaks (advanced palette config — `mainPalette`, `layerPalette`, `surfaces`), pass them as `palette` keys to `asPresetVunor` directly. The full vunor option shape is documented in the [vunor](https://github.com/mav-rik/vunor) docs.
 
 ## Next steps
 

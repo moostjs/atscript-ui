@@ -71,6 +71,7 @@ const form = useAsForm<TFormData, TFormContext>({
   errors: () => props.errors,
   clientFactory: () => props.clientFactory,
   hideRootTitle: () => props.hideRootTitle,
+  loading: () => props.loading,
   emits: {
     submit: (data) => emit("submit", data),
     error: (errors) => emit("error", errors),

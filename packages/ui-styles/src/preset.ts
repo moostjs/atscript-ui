@@ -70,10 +70,53 @@ function bakedIconsPreset(overrides?: Record<string, string>) {
   });
 }
 
-export interface AsBaseUnoConfigOptions {
-  /** Forwarded to vunor's `baseRadius`; drives `rounded-base` and the `r0..r4` ladder. */
-  baseRadius?: string;
-}
+/**
+ * Full `presetVunor()` options object. Re-exported so consumers can type
+ * their own theme overrides without reaching into `vunor/theme` themselves.
+ */
+export type AsVunorPresetOptions = NonNullable<Parameters<typeof presetVunor>[0]>;
+
+/**
+ * Baked-in vunor theme defaults atscript-ui has shipped since day one.
+ * Any field a consumer omits from `asPresetVunor({ vunor: ... })` falls
+ * back to the value here. Exported so consumers can read the defaults
+ * if they want to extend (rather than replace) a nested map.
+ */
+export const defaultAsVunorOptions = {
+  baseRadius: "4px",
+  fingertip: {
+    xs: "20px",
+    s: "28px",
+    m: "32px",
+    l: "36px",
+    xl: "40px",
+  },
+  palette: {
+    colors: {
+      // Design accent — blue
+      primary: "#2563eb",
+      // Design neutrals — slate
+      grey: "#64748b",
+      neutral: "#475569",
+      // Design danger — red-600
+      error: "#dc2626",
+    },
+    lightest: 0.97,
+    darkest: 0.22,
+    layersDepth: 0.08,
+  },
+} as const satisfies AsVunorPresetOptions;
+
+/**
+ * Full `presetVunor()` theme options. Every field is optional and merged on
+ * top of the baked atscript-ui defaults (`defaultAsVunorOptions`):
+ * - `palette.colors` is shallow-merged so consumers can override one colour
+ *   without losing the others.
+ * - `fingertip` is shallow-merged the same way.
+ * - All other fields (`baseRadius`, `typography`, `animation`, …) replace
+ *   the default wholesale — provide a complete shape if you set them.
+ */
+export interface AsBaseUnoConfigOptions extends AsVunorPresetOptions {}
 
 export interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
   /**
@@ -111,17 +154,17 @@ const shimmerKeyframesPreset: Preset = {
 };
 
 /**
- * Preset entry that injects the `@keyframes progress-fill` definition driving
- * the `c8-progress-fill` shortcut (and any other consumer that wants a 0→100%
- * left-to-right width fill). Duration is supplied per-instance via the
- * `--progress-duration` CSS custom property on the host element, so the same
- * keyframes serve every timed-fill UI — no per-duration class explosion.
+ * Preset entry that injects the `@keyframes as-progress-fill` definition
+ * driving the `c8-progress-fill` shortcut (and any other consumer that wants
+ * a 0→100% left-to-right width fill). Duration is supplied per-instance via
+ * the `--progress-duration` CSS custom property on the host element, so the
+ * same keyframes serve every timed-fill UI — no per-duration class explosion.
  */
 const progressKeyframesPreset: Preset = {
   name: "atscript-ui-progress-keyframes",
   preflights: [
     {
-      getCSS: () => "@keyframes progress-fill { from { width: 0%; } to { width: 100%; } }",
+      getCSS: () => "@keyframes as-progress-fill { from { width: 0%; } to { width: 100%; } }",
     },
   ],
 };
@@ -214,8 +257,31 @@ const formGridSafelistPreset: Preset = {
   safelist: FORM_GRID_SAFELIST,
 };
 
+/**
+ * Merges consumer-supplied vunor options on top of `defaultAsVunorOptions`.
+ * `palette.colors` and `fingertip` shallow-merge per-key so a consumer can
+ * override one entry without redeclaring the whole map; every other field
+ * replaces the default outright.
+ */
+function mergeVunorOptions(user: AsVunorPresetOptions | undefined): AsVunorPresetOptions {
+  if (!user) return defaultAsVunorOptions;
+  const { fingertip, palette, ...rest } = user;
+  return {
+    ...defaultAsVunorOptions,
+    ...rest,
+    fingertip: { ...defaultAsVunorOptions.fingertip, ...fingertip },
+    palette: palette
+      ? {
+          ...defaultAsVunorOptions.palette,
+          ...palette,
+          colors: { ...defaultAsVunorOptions.palette.colors, ...palette.colors },
+        }
+      : defaultAsVunorOptions.palette,
+  };
+}
+
 function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
-  const { baseRadius = "4px", iconOverrides } = options;
+  const { iconOverrides, excludeComponents: _exc, ...vunorOpts } = options;
 
   return [
     bakedIconsPreset(iconOverrides),
@@ -223,30 +289,7 @@ function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
     progressKeyframesPreset,
     markerRulesPreset,
     formGridSafelistPreset,
-    presetVunor({
-      baseRadius,
-      fingertip: {
-        xs: "20px",
-        s: "28px",
-        m: "32px",
-        l: "36px",
-        xl: "40px",
-      },
-      palette: {
-        colors: {
-          // Design accent — blue
-          primary: "#2563eb",
-          // Design neutrals — slate
-          grey: "#64748b",
-          neutral: "#475569",
-          // Design danger — red-600
-          error: "#dc2626",
-        },
-        lightest: 0.97,
-        darkest: 0.22,
-        layersDepth: 0.08,
-      },
-    }) as Preset,
+    presetVunor(mergeVunorOptions(vunorOpts)) as Preset,
   ];
 }
 

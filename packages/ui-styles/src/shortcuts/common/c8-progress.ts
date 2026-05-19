@@ -26,11 +26,11 @@ import { defineShortcuts } from "vunor/theme";
 // - `bg-black/20` produces a uniform darken overlay on top of any
 //   underlying button surface in both themes. `bg-current/20` would resolve
 //   to the foreground text color and lighten on filled buttons.
-// - The `progress-fill` keyframes are registered as a preset preflight in
+// - The `as-progress-fill` keyframes are registered as a preset preflight in
 //   `ui-styles/src/preset.ts` so the rule emits exactly once.
 export const c8ProgressShortcuts = defineShortcuts({
   "c8-progress": "relative overflow-hidden",
   "c8-progress-fill":
-    "absolute inset-y-0 left-0 w-0 bg-black/20 animate-[progress-fill_var(--progress-duration,4s)_linear_forwards]",
+    "absolute inset-y-0 left-0 w-0 bg-black/20 animate-[as-progress-fill_var(--progress-duration,4s)_linear_forwards]",
   "c8-progress-label": "relative",
 });

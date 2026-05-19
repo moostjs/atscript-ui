@@ -8,7 +8,8 @@ description: >-
   `@atscript/ui-styles/vite` so Tier-1 components (`<AsForm>`, `<AsTable>`,
   `<AsField>`, `<AsIterator>`, `<AsTableRoot>`, `<AsTable>`, `<AsWindowTable>`,
   `<AsFilters>`, `<AsPresetPicker>`, `<AsTableActions>`, `<AsWfForm>`)
-  auto-import; when tuning the vunor palette / `baseRadius` / dark mode; when
+  auto-import; when tuning the vunor palette / `baseRadius` / `fingertip` /
+  `typography` (all accepted flat at `asPresetVunor`'s top level) / dark mode; when
   overriding individual icons via `iconOverrides` or adding new ones via
   `@unocss/preset-icons`; when extending the shortcut tree with
   `mergeVunorShortcuts(allShortcuts, defineShortcuts({...}))`; when shipping
@@ -40,7 +41,12 @@ import { vunorShortcuts } from "vunor/theme";
 
 export default defineConfig({
   presets: asPresetVunor({
+    // Full presetVunor() theme is accepted flat. Omitted fields fall back to
+    // atscript-ui's baked defaults (`defaultAsVunorOptions`). `palette.colors`
+    // and `fingertip` shallow-merge per-key.
     baseRadius: "0.5rem",
+    palette: { colors: { primary: "#a855f7" } }, // keeps grey/neutral/error
+    // fingertip: { m: "36px" },
     // iconOverrides: { search: '<svg>...</svg>' },
   }),
   shortcuts: [vunorShortcuts(allShortcuts)],
@@ -144,7 +150,7 @@ import { AsResolver } from "@atscript/ui-styles/vite";
 | Domain        | File                                                | When                                                                                                                                                                                                                                                                                 |
 | ------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | First contact | [getting-started.md](references/getting-started.md) | Install matrix, full `uno.config.ts` + `vite.config.ts` (`asPresetVunor`, `AsResolver`), Tier-1 vs Tier-2 auto-import boundary, virtual `uno.css` entry                                                                                                                              |
-| Theming       | [theming.md](references/theming.md)                 | vunor palette overrides (`palette.colors`, `lightest`, `darkest`, `layersDepth`), `baseRadius`, dark mode, scope tints, layer / surface tones, deriving brand colors                                                                                                                 |
+| Theming       | [theming.md](references/theming.md)                 | Full vunor theme accepted flat at `asPresetVunor` top level: `palette.colors`, `lightest`, `darkest`, `layersDepth`, `baseRadius`, `fingertip`, `typography`. Baked defaults exported as `defaultAsVunorOptions`. Dark mode, scope tints, layer / surface tones, deriving brand colors. |
 | Icons         | [icons.md](references/icons.md)                     | Default semantic alias set (what ships out of the box), `iconOverrides` shape + the `currentColor` / `1em` rules, adding new icons via `@unocss/preset-icons` (separate prefix), `bakedIcons` constant                                                                               |
 | Shortcut tree | [shortcuts.md](references/shortcuts.md)             | `as-*` naming convention (variant suffix), four shortcut groups (form / table / wf / common), extending with `mergeVunorShortcuts` + `defineShortcuts`, composing from vunor primitives for inherited theming, when to extend vs sibling, `excludeComponents` to drop unused classes |
 | Pre-built CSS | [prebuilt-css.md](references/prebuilt-css.md)       | The four subpaths (`/css/{all,form,table,wf}`), trade-offs vs UnoCSS path, brand color tuning via CSS custom properties, HTML and Vite usage                                                                                                                                         |

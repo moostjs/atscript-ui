@@ -188,12 +188,8 @@ function onAction(name: string, data: unknown) {
         <template #form.after="slotProps">
           <slot name="form.after" v-bind="{ ...slotProps, loading: wf.loading.value }" />
         </template>
-        <template #form.submit="slotProps">
-          <slot name="form.submit" v-bind="{ ...slotProps, loading: wf.loading.value }">
-            <button :disabled="slotProps.disabled || wf.loading.value">
-              {{ slotProps.text }}
-            </button>
-          </slot>
+        <template v-if="$slots['form.submit']" #form.submit="slotProps">
+          <slot name="form.submit" v-bind="{ ...slotProps, loading: wf.loading.value }" />
         </template>
         <template #form.footer="slotProps">
           <slot name="form.footer" v-bind="{ ...slotProps, loading: wf.loading.value }" />
