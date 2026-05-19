@@ -85,11 +85,11 @@ export type AsVunorPresetOptions = NonNullable<Parameters<typeof presetVunor>[0]
 export const defaultAsVunorOptions = {
   baseRadius: "4px",
   fingertip: {
-    xs: "20px",
-    s: "28px",
-    m: "32px",
-    l: "36px",
-    xl: "40px",
+    xs: "1.5em",
+    s: "2.15em",
+    m: "2.6em",
+    l: "2.9em",
+    xl: "3.25em",
   },
   palette: {
     colors: {
