@@ -1,6 +1,6 @@
 {
   "name": "@atscript/ui",
-  "version": "0.1.65",
+  "version": "0.1.66",
   "description": "Framework-agnostic runtime for form and table definitions from atscript annotated types",
   "keywords": [
     "annotations",
