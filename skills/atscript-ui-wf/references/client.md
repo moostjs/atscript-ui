@@ -15,6 +15,7 @@
 - [Custom shell pattern](#custom-shell-pattern)
 - [Recipe — minimal mount with custom slots](#recipe--minimal-mount-with-custom-slots)
 - [Recipe — resume from URL parameter](#recipe--resume-from-url-parameter)
+- [SSR considerations](#ssr-considerations)
 
 ## <AsWfForm> props
 
@@ -358,3 +359,31 @@ Pattern 3 — auto-detect from URL (`tokenTransport: 'query'` only):
 ```
 
 The composable reads `?wfs=<token>` from `window.location.search` once on `start()` (`packages/vue-wf/src/use-wf-form.ts:107-110`). Skip `initialToken` for this auto-detection path.
+
+## SSR considerations
+
+`<AsWfForm>` calls `start(input)` from `onMounted` by default (`packages/vue-wf/src/use-wf-form.ts:287-289`), which `fetch`es `path` to retrieve the first form schema. Under SSR that runs at hydration time on the client — but if a parent component mounts a child `<AsWfForm>` during server rendering (e.g. inside an `<Suspense>` boundary that awaits child effects), the `fetch` will fire in Node and either crash (no `globalThis.fetch` polyfill) or hit your own server from itself.
+
+Two equivalent guards — pick whichever fits the surrounding code:
+
+```vue
+<!-- 1. Set autoStart="false" and trigger explicitly after hydration. -->
+<AsWfForm v-slot="{ actions }" path="/wf" name="…" :types :auto-start="false">
+  <button @click="actions.start()">Begin</button>
+</AsWfForm>
+
+<!-- 2. v-if gate on a client-only ref (Vite SSR, Nuxt, etc.). -->
+<AsWfForm v-if="hydrated" path="/wf" name="…" :types />
+```
+
+```ts
+// hydrated.ts
+import { onMounted, ref } from "vue";
+export function useHydrated() {
+  const hydrated = ref(false);
+  onMounted(() => (hydrated.value = true));
+  return hydrated;
+}
+```
+
+The same applies to `useWfForm()` directly — pass `autoStart: false` and call `start()` from a client-only callback (`onMounted`, route navigation guard, etc.). The component's `<AsForm>` shell is SSR-safe — it just has nothing to render until `formDef` is populated.

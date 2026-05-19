@@ -87,6 +87,10 @@ installDynamicResolver();
 
 Source: `packages/ui-fns/src/index.ts:32`.
 
+### SSR placement
+
+Call it from the **client entry only** (e.g. `entry-client.ts` for vite-ssr / `app.client.ts` for Nuxt). The dynamic resolver compiles annotation arguments with `new Function`, and forms / tables render on the client in atscript-ui — there's no SSR path that needs the dynamic resolver. Calling it from the server entry has no upside and widens the surface for schema-injection bugs (any compromised `.as` content would `eval` in the Node process). The default `StaticFieldResolver` is the safe SSR default — keep it there.
+
 Security model: `DynamicFieldResolver` compiles annotation arguments with `new Function`. Only safe for schemas that are part of your build (validated by the atscript compiler at type-check time). Never feed user-controlled `.as` content into a runtime where `installDynamicResolver()` is active.
 
 ## Locale providers (optional)

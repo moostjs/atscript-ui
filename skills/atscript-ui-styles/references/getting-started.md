@@ -77,19 +77,28 @@ export default defineConfig({
 ## main.ts
 
 ```typescript
-// 1. Virtual UnoCSS entry FIRST — it must run before any component module so
+// 1. CSS reset BEFORE `virtual:uno.css` so vunor's preflight (loaded by
+//    asPresetVunor → presetVunor) lands on top of a normalized baseline.
+//    Skipping the reset leaves headings / lists in browser defaults that
+//    fight vunor's typography ladder (text-body, text-callout, ...).
+//    Any UnoCSS reset works — Tailwind-compat is the most common:
+import "@unocss/reset/tailwind.css";
+
+// 2. Virtual UnoCSS entry — it must run before any component module so
 //    the extractor sees their imports during the dev server's first scan.
 import "virtual:uno.css";
 
-// 2. (optional) Your global stylesheet — fonts, body baseline, resets.
+// 3. (optional) Your global stylesheet — fonts, body baseline, overrides.
 import "./styles/app.css";
 
-// 3. App boot.
+// 4. App boot.
 import { createApp } from "vue";
 import App from "./App.vue";
 
 createApp(App).mount("#app");
 ```
+
+`@unocss/reset` is a peer of `unocss` (already in your deps). Pick a variant: `tailwind.css` (closest to vunor's design assumptions), `tailwind-compat.css`, `normalize.css`, or `eric-meyer.css`. The reset is **not** shipped by `@atscript/ui-styles` and is technically optional — but vunor's preflight assumes normalized defaults, so without one you'll see browser-default serif on headings, list bullets where you don't want them, etc.
 
 Fonts are NOT shipped by `@atscript/ui-styles`. Add your own font stack to `app.css` — vunor's typography ladder (`text-body`, `text-callout`, `text-body-l`) reads from `font-family: inherit`.
 
