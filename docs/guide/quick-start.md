@@ -105,6 +105,8 @@ createApp(App).mount("#app");
 
 ::: warning installDynamicResolver
 `installDynamicResolver()` activates `@ui.fn.*` and `@ui.form.validate` — both compile annotation strings into runtime functions via `new Function`. Only call it if you trust every `.as` file in your build. Skip the call (and the import) if you only use static annotations.
+
+**SSR**: call this from the **client entry only** (e.g. `entry-client.ts`). Forms render on the client; the dynamic resolver has nothing to do on the server, and `new Function` in the Node entry widens the schema-injection surface for no upside.
 :::
 
 ## 6. Your first form

@@ -338,6 +338,33 @@ never sees a "delayed" response from the old request.
 
 The component also aborts on unmount.
 
+## SSR
+
+`<AsWfForm>` calls `start(input)` from `onMounted` by default, which `fetch`es `path` to retrieve the first form schema. Under SSR (`createSSRApp`) `onMounted` runs at hydration time on the client — but if a parent mounts a child `<AsWfForm>` during server rendering (e.g. inside a `<Suspense>` boundary that awaits child effects), the `fetch` fires in Node and either crashes (no `globalThis.fetch` polyfill) or hits your own server from itself.
+
+Two equivalent guards:
+
+```vue
+<!-- 1. Set autoStart="false" and trigger explicitly after hydration. -->
+<AsWfForm v-slot="{ actions }" path="/wf" name="…" :types :auto-start="false">
+  <button @click="actions.start()">Begin</button>
+</AsWfForm>
+
+<!-- 2. v-if on a client-only ref. -->
+<AsWfForm v-if="hydrated" path="/wf" name="…" :types />
+```
+
+```ts
+import { onMounted, ref } from "vue";
+export function useHydrated() {
+  const hydrated = ref(false);
+  onMounted(() => (hydrated.value = true));
+  return hydrated;
+}
+```
+
+The `<AsForm>` shell itself is SSR-safe — it has nothing to render until `formDef` is populated, so the only concern is the auto-`fetch` on mount. `useWfForm()` direct callers get the same `autoStart: false` knob.
+
 ## Reference
 
 - Component: `packages/vue-wf/src/components/as-wf-form.vue`
