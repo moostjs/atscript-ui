@@ -7,6 +7,7 @@ Form actions (`@ui.form.action` + `AsAction`), multi-action forms, submit-button
 - [Form actions — @ui.form.action](#form-actions--uiformaction)
 - [AsAction default component](#asaction-default-component)
 - [Multi-action forms](#multi-action-forms)
+- [Inline action on an input field](#inline-action-on-an-input-field)
 - [Submit button controls](#submit-button-controls)
 - [FK references — @db.rel.FK](#fk-references--dbrelfk)
 - [ValueHelpClient flow](#valuehelpclient-flow)
@@ -139,6 +140,40 @@ function supportsAction(def: FormDef, actionId: string): boolean {
 ```
 
 Useful when shared chrome (e.g. a workflow root) dispatches actions through the form and you need to differentiate "I forgot to wire this" from "no field claims this id".
+
+## Inline action on an input field
+
+`@ui.form.action` is not limited to `ui.action` phantom fields. Placed on a regular input (string, password, number, …) it renders a link-styled button in the field's footer (right-aligned next to any error/hint) and dispatches `action` with the same `(name, data)` signature as the phantom-field variant. Disabling the field also dims the link.
+
+```atscript
+@meta.label 'Sign In'
+export interface LoginForm {
+    @meta.label 'Username'
+    username: string
+
+    @meta.label 'Password'
+    @ui.type 'password'
+    @ui.form.action 'forgot-password', 'Forgot password?'
+    password: string
+}
+```
+
+In a workflow form (`<AsWfForm>`) the click forwards to `useWfForm().action(id)` and the step receives it via `@AltAction()` from `@atscript/moost-wf`:
+
+```ts
+@Step("login-credentials")
+async enterCredentials(
+  @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
+  @WorkflowParam("context") ctx: LoginCtx,
+  @AltAction() action: string | undefined,
+) {
+  if (action === "forgot-password") {
+    ctx.recovery = true;
+    return;
+  }
+  // …normal credential flow
+}
+```
 
 ## Submit button controls
 

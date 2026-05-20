@@ -14,42 +14,42 @@ const variations: Variation[] = [
     title: "Immediate redirect",
     description:
       "AsWfFinish triggers the redirect on mount — no countdown, no choice. Wires the `navigate` prop to the router.",
-    badge: "mode: immediate",
+    badge: "trigger: immediate",
   },
   {
     to: "/wf-demo/finish-auto",
     title: "Auto redirect (countdown + skip)",
     description:
       "Countdown ticks down to the action; the optional skip button fires the action immediately.",
-    badge: "mode: auto",
+    badge: "trigger: auto",
   },
   {
     to: "/wf-demo/finish-manual",
     title: "Manual choice (primary + options)",
     description:
       "User picks the outcome. Primary is the Enter-key target; options render alongside.",
-    badge: "mode: manual",
+    badge: "trigger: manual",
   },
   {
     to: "/wf-demo/finish-data",
     title: "Terminal data payload",
     description:
-      "finishWfWithData() emits typed result data + a success banner. Page overrides #wf.finished to render the payload.",
-    badge: "helper: data",
+      "finishWf({ data, message }) emits typed result data + a success banner. Page overrides #wf.finished to render the payload.",
+    badge: "shape: data",
   },
   {
     to: "/wf-demo/finish-message",
     title: "Message-only finish",
     description:
-      "finishWfWithMessage() — banner only, no data, no end action. The minimal terminal envelope.",
-    badge: "helper: message",
+      "finishWf({ message }) — banner only, no data, no next action. The minimal terminal envelope.",
+    badge: "shape: message",
   },
   {
     to: "/wf-demo/finish-aborted",
     title: "Abortable form (cancel action)",
     description:
-      "Two finish paths: submit succeeds with data; the Cancel action button calls finishWfAborted().",
-    badge: "helper: aborted",
+      "Two finish paths: submit succeeds with data; the Cancel action button calls abortWf().",
+    badge: "shape: aborted",
   },
   {
     to: "/wf-demo/multi-step",

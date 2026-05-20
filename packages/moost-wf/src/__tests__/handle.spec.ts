@@ -43,15 +43,15 @@ describe("wrapFinished", () => {
     expect(r).toEqual({ ok: true });
   });
 
-  // Why: Phase 2 helpers produce already-marked WfFinished envelopes; wrap
-  // must be a true no-op so envelopes carrying `end: { mode: 'immediate',
+  // Why: `finishWf` produces already-marked WfFinished envelopes; wrap
+  // must be a true no-op so envelopes carrying `next: { trigger: 'immediate',
   // action: redirect }` reach the HTTP layer as 200 JSON (not 302) — the
   // SSR adapter is the only place that translates back to 3xx.
-  it("passes through a full WfFinished envelope with a redirect end unchanged", () => {
+  it("passes through a full WfFinished envelope with a redirect next unchanged", () => {
     const envelope = {
       finished: true,
-      end: {
-        mode: "immediate",
+      next: {
+        trigger: "immediate",
         action: { type: "redirect", target: "/login" },
       },
     };

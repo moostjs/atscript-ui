@@ -1,9 +1,9 @@
-// Terminal `data` payload + success message — no `end` action.
+// Terminal `data` payload + success message — no `next` action.
 // The client renders the message via default AsWfFinish and exposes `payload.data`
 // to the `wf.finished` slot so consumers can render typed result data.
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWfWithData } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 import { FinishDemoForm } from "../forms/finish-demo-form.as";
 import { httpInputRequired } from "../wf-helpers";
 
@@ -26,10 +26,10 @@ export class WfFinishDataDemoWorkflow {
       return httpInputRequired(FinishDemoForm, ctx);
     }
     ctx.note = input.note;
-    finishWfWithData(
-      { greeting: `Hello, ${input.note}!`, timestamp: Date.now() },
-      { level: "success", text: "Greeting generated." },
-    );
+    finishWf({
+      data: { greeting: `Hello, ${input.note}!`, timestamp: Date.now() },
+      message: { level: "success", text: "Greeting generated." },
+    });
     return;
   }
 }

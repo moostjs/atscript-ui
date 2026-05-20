@@ -17,11 +17,13 @@ function navigate(url: string) {
 <template>
   <div class="min-h-screen p-$l">
     <div class="max-w-[520px] mx-auto flex flex-col gap-$m">
-      <h1 class="text-lg font-700 m-0">Finish · mode: immediate</h1>
+      <h1 class="text-lg font-700 m-0">Finish · trigger: immediate</h1>
       <p class="text-callout text-current/70 m-0">
         Submitting the form finishes the workflow with
-        <code>finishWfWithRedirect('/wf-demo')</code>. The default <code>AsWfFinish</code> fires the
-        action on mount.
+        <code
+          >finishWf(&#123; next: &#123; trigger: 'immediate', action: &#123; type: 'redirect',
+          target: '/wf-demo' &#125; &#125; &#125;)</code
+        >. The default <code>AsWfFinish</code> fires the action on mount.
       </p>
       <AsWfForm
         path="/api/wf"

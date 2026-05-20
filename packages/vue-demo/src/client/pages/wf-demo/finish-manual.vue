@@ -21,10 +21,12 @@ function onDismiss() {
 <template>
   <div class="min-h-screen p-$l">
     <div class="max-w-[520px] mx-auto flex flex-col gap-$m">
-      <h1 class="text-lg font-700 m-0">Finish · mode: manual</h1>
+      <h1 class="text-lg font-700 m-0">Finish · trigger: manual</h1>
       <p class="text-callout text-current/70 m-0">
-        Submitting finishes with <code>finishWfWithChoice(&#123; primary, options &#125;)</code>.
-        The primary button is the Enter-key target; this page overrides
+        Submitting finishes with
+        <code
+          >finishWf(&#123; next: &#123; trigger: 'manual', primary, options &#125; &#125;)</code
+        >. The primary button is the Enter-key target; this page overrides
         <code>#wf.finish.primary</code> with a custom-styled button.
       </p>
       <AsWfForm

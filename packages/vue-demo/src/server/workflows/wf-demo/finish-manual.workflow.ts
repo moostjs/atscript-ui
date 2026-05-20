@@ -1,9 +1,9 @@
-// Phase 4 demo — `end.mode: 'manual'` with primary + two options via
-// `finishWfWithChoice`. The user picks an outcome (redirect home, redirect to
-// login, or dismiss the screen entirely).
+// `next.trigger: 'manual'` with primary + two options via `finishWf`.
+// The user picks an outcome (redirect home, redirect to login, or dismiss
+// the screen entirely).
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWfWithChoice } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 import { FinishDemoForm } from "../forms/finish-demo-form.as";
 import { httpInputRequired } from "../wf-helpers";
 
@@ -26,19 +26,22 @@ export class WfFinishManualDemoWorkflow {
       return httpInputRequired(FinishDemoForm, ctx);
     }
     ctx.note = input.note;
-    finishWfWithChoice({
+    finishWf({
       message: { level: "success", text: "What would you like to do next?" },
-      primary: {
-        label: "Back to demo index",
-        action: { type: "redirect", target: "/wf-demo", reason: "manual-primary" },
-      },
-      options: [
-        {
-          label: "Sign in",
-          action: { type: "redirect", target: "/login", reason: "manual-login" },
+      next: {
+        trigger: "manual",
+        primary: {
+          label: "Back to demo index",
+          action: { type: "redirect", target: "/wf-demo", reason: "manual-primary" },
         },
-        { label: "Stay here", action: { type: "dismiss" } },
-      ],
+        options: [
+          {
+            label: "Sign in",
+            action: { type: "redirect", target: "/login", reason: "manual-login" },
+          },
+          { label: "Stay here", action: { type: "dismiss" } },
+        ],
+      },
     });
     return;
   }

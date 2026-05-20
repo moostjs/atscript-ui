@@ -102,7 +102,7 @@ defineEmits<{
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
   // Fired by the default AsWfFinish screen when a WfFinished envelope's
-  // `end` triggers an action. See "Finish Screens".
+  // `next` triggers an action. See "Finish Screens".
   (e: "dismiss"): void;
   (e: "action", action: WfAction): void;
 }>();
@@ -146,10 +146,10 @@ state, with sensible fallbacks:
 | `wf.error`            | Top-level error, no formDef              | `{ error, retry }`                                                                                                        |
 | `wf.finished`         | `finished === true`                      | `{ response, payload }`                                                                                                   |
 | `wf.finish.message`   | finished with `message`                  | `{ message }`                                                                                                             |
-| `wf.finish.countdown` | finished with `end.mode === 'auto'`      | `{ secondsRemaining, totalSeconds, skip, cancel }`                                                                        |
-| `wf.finish.skip`      | finished with `auto` end + `skipButton`  | `{ button, trigger }`                                                                                                     |
-| `wf.finish.primary`   | finished with `end.mode === 'manual'`    | `{ button, trigger }`                                                                                                     |
-| `wf.finish.option`    | finished with `manual` end (each option) | `{ button, index, trigger }`                                                                                              |
+| `wf.finish.countdown` | finished with `next.trigger === 'auto'`      | `{ secondsRemaining, totalSeconds, skip, cancel }`                                                                        |
+| `wf.finish.skip`      | finished with `auto` next + `skipButton`     | `{ button, trigger }`                                                                                                     |
+| `wf.finish.primary`   | finished with `next.trigger === 'manual'`    | `{ button, trigger }`                                                                                                     |
+| `wf.finish.option`    | finished with `manual` next (each option)    | `{ button, index, trigger }`                                                                                              |
 | `form.error`          | Mid-flow error (formDef exists)          | `{ error, retry }`                                                                                                        |
 | `form.header`         | Above the rendered form                  | Forwarded from `AsForm` + `{ loading }`                                                                                   |
 | `form.before`         | Inside the form, above fields            | "                                                                                                                         |
@@ -159,7 +159,7 @@ state, with sensible fallbacks:
 
 The `wf.finished` slot's `payload` is the typed `WfFinished` envelope
 (`response` is the same value, kept for back-compat). When the
-envelope's `end` is set, the default rendering switches into a
+envelope's `next` is set, the default rendering switches into a
 `AsWfFinish` screen — see [Finish Screens](/workflows/finish-screens)
 for the envelope shape, the `wf.finish.*` scoped slots, the
 `navigate` prop wiring, and the `@dismiss` / `@action` event contract.
@@ -200,7 +200,7 @@ copy:
 
 Providing `#wf.finished` opts out of the default `AsWfFinish` rendering —
 the consumer takes full responsibility for the finish UI (including any
-`end.action` wiring). To keep `AsWfFinish` and only restyle one piece,
+`next.action` wiring). To keep `AsWfFinish` and only restyle one piece,
 override a `#wf.finish.*` sub-slot instead. See
 [Finish Screens](/workflows/finish-screens) for the sub-slot contract.
 

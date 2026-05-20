@@ -21,6 +21,10 @@ const props = defineProps<
   }
 >();
 
+const emit = defineEmits<{
+  (e: "action", name: string): void;
+}>();
+
 // Treat both undefined and null as "unset" — DB-roundtripped null (SQL NULL) renders empty placeholder.
 const optionalEnabled = computed(() => props.model?.value != null);
 
@@ -110,13 +114,25 @@ const showEmptyPlaceholder = computed(
         <slot :input-id="inputId" :error-id="errorId" :desc-id="descId" />
       </div>
       <slot name="after-input" :desc-id="descId" />
-      <div
-        v-if="error || hint"
-        :id="errorId"
-        class="as-error-slot"
-        :role="error ? 'alert' : undefined"
-      >
-        {{ error || hint }}
+      <div v-if="error || hint || formAction" class="as-field-footer-row">
+        <div
+          v-if="error || hint"
+          :id="errorId"
+          class="as-error-slot"
+          :role="error ? 'alert' : undefined"
+        >
+          {{ error || hint }}
+        </div>
+        <span v-else class="as-error-slot" aria-hidden="true" />
+        <button
+          v-if="formAction"
+          type="button"
+          class="as-field-action-link"
+          :disabled="disabled"
+          @click="emit('action', formAction.id)"
+        >
+          {{ formAction.label }}
+        </button>
       </div>
     </template>
   </div>

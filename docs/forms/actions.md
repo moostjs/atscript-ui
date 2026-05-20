@@ -81,6 +81,47 @@ saveDraft: ui.action
 discard: ui.action
 ```
 
+## Inline action on an input field
+
+`@ui.form.action` may also sit on a regular input field (string, password,
+number, …) instead of a `ui.action` phantom. It then renders as a link-styled
+button in the field's footer, right-aligned next to any error or hint, and
+emits the same `action` event. Disabling the field also dims the link.
+
+Typical use — a "Forgot password?" link below a password input:
+
+```atscript
+@meta.label 'Sign In'
+export interface LoginForm {
+    @meta.label 'Username'
+    username: string
+
+    @meta.label 'Password'
+    @ui.type 'password'
+    @ui.form.action 'forgot-password', 'Forgot password?'
+    password: string
+}
+```
+
+In a workflow form (`<AsWfForm>`), the action is forwarded to
+`useWfForm().action(id)` and resolved server-side via `@AltAction()` from
+`@atscript/moost-wf`:
+
+```ts
+@Step("login-credentials")
+async enterCredentials(
+  @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
+  @WorkflowParam("context") ctx: LoginCtx,
+  @AltAction() action: string | undefined,
+) {
+  if (action === "forgot-password") {
+    ctx.recovery = true;
+    return;
+  }
+  // …normal credential flow
+}
+```
+
 ## Customising the Submit button
 
 The Submit button is rendered by `<AsForm>` itself (not a phantom field). Two

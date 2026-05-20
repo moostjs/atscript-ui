@@ -14,8 +14,8 @@ const types = createDemoTypes();
       <h1 class="text-lg font-700 m-0">Finish · data payload</h1>
       <p class="text-callout text-current/70 m-0">
         Submitting finishes with
-        <code>finishWfWithData(&#123; greeting, timestamp &#125;, &#123; level, text &#125;)</code>.
-        No <code>end</code> action — the demo overrides <code>#wf.finished</code> to render the
+        <code>finishWf(&#123; data: &#123; greeting, timestamp &#125;, message &#125;)</code>.
+        No <code>next</code> action — the demo overrides <code>#wf.finished</code> to render the
         typed <code>payload.data</code> below the default banner.
       </p>
       <AsWfForm

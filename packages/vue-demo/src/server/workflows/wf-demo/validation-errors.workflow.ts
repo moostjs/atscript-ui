@@ -4,7 +4,7 @@
 // rebuild). User corrects, resubmits, succeeds.
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWfWithData } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 import { EmailDemoForm } from "../forms/email-form.as";
 import { httpInputRequired } from "../wf-helpers";
 
@@ -35,10 +35,10 @@ export class WfValidationErrorsDemoWorkflow {
       });
     }
     ctx.email = input.email;
-    finishWfWithData(
-      { accepted: true, email: input.email },
-      { level: "success", text: "Email accepted." },
-    );
+    finishWf({
+      data: { accepted: true, email: input.email },
+      message: { level: "success", text: "Email accepted." },
+    });
     return;
   }
 }

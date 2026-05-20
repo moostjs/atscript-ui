@@ -1,7 +1,7 @@
 import { Controller } from "moost";
 import { HttpError } from "@moostjs/event-http";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWfWithData } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 import { usersTable } from "../../db";
 import { useSession } from "../../auth/use-session";
 import { ProfileForm } from "../forms/profile-form.as";
@@ -40,7 +40,7 @@ export class EditProfileWorkflow {
       username: input.username,
       email: input.email,
     });
-    finishWfWithData({ ok: true, user: { username: input.username, email: input.email } });
+    finishWf({ data: { ok: true, user: { username: input.username, email: input.email } } });
     return;
   }
 }

@@ -56,7 +56,7 @@ function runAction(action: WfAction): void {
 }
 
 // ── Derived state ──────────────────────────────────────────
-const end = computed(() => props.payload?.end ?? null);
+const next = computed(() => props.payload?.next ?? null);
 const message = computed(() => props.payload?.message ?? null);
 
 // ── Auto mode: timer + countdown ───────────────────────────
@@ -79,35 +79,35 @@ function clearAutoTimers(): void {
 }
 
 function startAutoTimer(): void {
-  const e = end.value;
-  if (!e || e.mode !== "auto") return;
+  const n = next.value;
+  if (!n || n.trigger !== "auto") return;
   clearAutoTimers();
   autoCancelled.value = false;
   autoStartedAt = Date.now();
-  totalSeconds.value = Math.ceil(e.timeoutMs / 1000);
+  totalSeconds.value = Math.ceil(n.timeoutMs / 1000);
   secondsRemaining.value = totalSeconds.value;
   autoTimer = setTimeout(() => {
     clearAutoTimers();
-    runAction(e.action);
-  }, e.timeoutMs);
+    runAction(n.action);
+  }, n.timeoutMs);
   // 250ms tick — fast enough that the integer countdown updates feel
   // responsive near second boundaries, slow enough to avoid wasting frames
   // now that the visible progress is driven by CSS keyframes.
   countdownInterval = setInterval(() => {
     const elapsed = Date.now() - autoStartedAt;
-    const remainMs = Math.max(0, e.timeoutMs - elapsed);
-    const next = Math.ceil(remainMs / 1000);
-    if (next !== secondsRemaining.value) secondsRemaining.value = next;
+    const remainMs = Math.max(0, n.timeoutMs - elapsed);
+    const nextSec = Math.ceil(remainMs / 1000);
+    if (nextSec !== secondsRemaining.value) secondsRemaining.value = nextSec;
   }, 250);
 }
 
 function skipAuto(): void {
-  const e = end.value;
-  if (!e || e.mode !== "auto") return;
-  const behavior = e.skipButton?.behavior ?? "now";
+  const n = next.value;
+  if (!n || n.trigger !== "auto") return;
+  const behavior = n.skipButton?.behavior ?? "now";
   clearAutoTimers();
   if (behavior === "now") {
-    runAction(e.action);
+    runAction(n.action);
   } else {
     // "cancel" → flow ends here; consumer must navigate themselves.
     autoCancelled.value = true;
@@ -121,13 +121,13 @@ function cancelAuto(): void {
 
 // ── Mount/unmount: drive immediate + auto modes ────────────
 function applyMode(): void {
-  const e = end.value;
-  if (!e) return;
-  if (e.mode === "immediate") {
-    runAction(e.action);
+  const n = next.value;
+  if (!n) return;
+  if (n.trigger === "immediate") {
+    runAction(n.action);
     return;
   }
-  if (e.mode === "auto") {
+  if (n.trigger === "auto") {
     startAutoTimer();
   }
 }
@@ -137,8 +137,8 @@ onMounted(() => applyMode());
 // Re-run if payload swaps after mount (rare, but defensive).
 watch(
   () => props.payload,
-  (next, prev) => {
-    if (next === prev) return;
+  (newPayload, prev) => {
+    if (newPayload === prev) return;
     clearAutoTimers();
     applyMode();
   },
@@ -148,10 +148,10 @@ onUnmounted(() => clearAutoTimers());
 
 // ── Manual mode wiring ────────────────────────────────────
 const manualPrimary = computed<WfButton | null>(() =>
-  end.value?.mode === "manual" ? (end.value.primary ?? null) : null,
+  next.value?.trigger === "manual" ? (next.value.primary ?? null) : null,
 );
 const manualOptions = computed<WfButton[]>(() =>
-  end.value?.mode === "manual" ? (end.value.options ?? []) : [],
+  next.value?.trigger === "manual" ? (next.value.options ?? []) : [],
 );
 
 function onKeydown(ev: KeyboardEvent): void {
@@ -169,15 +169,15 @@ function triggerButton(btn: WfButton): void {
 }
 
 const skipScope = computed(() => {
-  const e = end.value;
-  if (e?.mode !== "auto" || !e.skipButton) return null;
-  const behavior = e.skipButton.behavior ?? "now";
-  return { label: e.skipButton.label, behavior } as const;
+  const n = next.value;
+  if (n?.trigger !== "auto" || !n.skipButton) return null;
+  const behavior = n.skipButton.behavior ?? "now";
+  return { label: n.skipButton.label, behavior } as const;
 });
 </script>
 
 <template>
-  <span v-if="end?.mode === 'immediate'" class="sr-only" aria-live="polite">Redirecting…</span>
+  <span v-if="next?.trigger === 'immediate'" class="sr-only" aria-live="polite">Redirecting…</span>
 
   <div v-else class="as-wf-finish" @keydown="onKeydown">
     <slot v-if="message" name="message" :message="message">
@@ -186,13 +186,13 @@ const skipScope = computed(() => {
       </div>
     </slot>
 
-    <template v-if="end?.mode === 'auto' && !autoCancelled">
+    <template v-if="next?.trigger === 'auto' && !autoCancelled">
       <div v-if="skipScope" class="as-wf-finish-actions">
         <slot name="skip" :button="skipScope" :trigger="skipAuto">
           <button
             type="button"
             class="as-wf-finish-skip"
-            :style="{ '--progress-duration': `${end.timeoutMs}ms` }"
+            :style="{ '--progress-duration': `${next.timeoutMs}ms` }"
             @click="skipAuto"
           >
             <span class="as-wf-finish-skip-fill" />
@@ -213,7 +213,7 @@ const skipScope = computed(() => {
       </slot>
     </template>
 
-    <template v-if="end?.mode === 'manual'">
+    <template v-if="next?.trigger === 'manual'">
       <div class="as-wf-finish-actions">
         <slot
           v-if="manualPrimary"

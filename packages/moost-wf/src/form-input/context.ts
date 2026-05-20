@@ -3,7 +3,6 @@ import type { TAtscriptAnnotatedType, TAtscriptTypeObject } from "@atscript/type
 export const WF_CONTEXT_PASS = "wf.context.pass";
 const UI_FORM_ACTION = "ui.form.action";
 const WF_ACTION_WITH_DATA = "wf.action.withData";
-const UI_ALT_ACTION = "ui.altAction";
 
 export interface TFormActions {
   actions: string[];
@@ -33,7 +32,6 @@ export function extractPassContext(
 
 /**
  * Read declared action names from `@ui.form.action` and `@wf.action.withData` annotations.
- * Also reads legacy `@ui.altAction` as a stateless action fallback.
  * Results are cached per type identity.
  */
 export function getFormActions(type: TAtscriptAnnotatedType): TFormActions {
@@ -64,14 +62,6 @@ export function getFormActions(type: TAtscriptAnnotatedType): TFormActions {
     if (wfAction) {
       actionsWithData.push(wfAction);
       continue;
-    }
-
-    const altAction = fieldType.metadata.get(UI_ALT_ACTION as never) as
-      | { id: string; label?: string }
-      | string
-      | undefined;
-    if (altAction) {
-      actions.push(typeof altAction === "string" ? altAction : altAction.id);
     }
   }
 

@@ -6,7 +6,7 @@ export interface WfFinished<TData = unknown> {
   finished: true;
   data?: TData;
   message?: WfMessage;
-  end?: WfFinishedEnd;
+  next?: WfNext;
   aborted?: boolean;
   reason?: string;
 }
@@ -16,18 +16,18 @@ export interface WfMessage {
   text: string;
 }
 
-export type WfFinishedEnd =
-  | { mode: "immediate"; action: WfAction }
+export type WfNext =
+  | { trigger: "immediate"; action: WfAction }
   | {
-      mode: "auto";
+      trigger: "auto";
       timeoutMs: number;
       action: WfAction;
       skipButton?: { label: string; behavior?: "now" | "cancel" };
     }
   | {
-      mode: "manual";
+      trigger: "manual";
       // primary is optional — when omitted, AsWfForm renders all `options`
-      // with equal visual weight (round-2 delta).
+      // with equal visual weight.
       primary?: WfButton;
       options?: WfButton[];
     };
@@ -49,78 +49,55 @@ export function isWfFinished(v: unknown): v is WfFinished {
 
 // ── Helpers ─────────────────────────────────────────────────────
 
+/**
+ * Options bag shared by `finishWf` and `abortWf`. Every field is optional
+ * — pick whichever envelope properties the terminal screen needs.
+ */
+export interface FinishWfOpts<T = unknown> {
+  data?: T;
+  message?: WfMessage;
+  next?: WfNext;
+}
+
 // Why `type: 'data'`: wooks's `useWfFinished()` unwraps the `value` field
 // before returning the workflow result. Without the explicit data type,
 // wooks would emit its own 302 — but redirect semantics live inside our
-// envelope's `end.action`, which the client renders via `<AsWfFinish>`
+// envelope's `next.action`, which the client renders via `<AsWfFinish>`
 // (countdown / manual choice / immediate). The server always returns the
 // envelope as plain JSON; there is no server-side 3xx translation.
 function setEnvelope(envelope: WfFinished): void {
   wooksUseWfFinished().set({ type: "data", value: envelope });
 }
 
-export function finishWf<T>(payload: WfFinished<T>): void {
-  setEnvelope(payload);
+/**
+ * Build a `WfFinished` envelope and hand it to wooks. All envelope
+ * properties are optional; pass `data`, `message`, and/or `next`:
+ *
+ *   finishWf({ data: { id: 42 } });
+ *   finishWf({ message: { level: "success", text: "Saved." } });
+ *   finishWf({
+ *     next: {
+ *       trigger: "auto",
+ *       timeoutMs: 3000,
+ *       action: { type: "redirect", target: "/home" },
+ *     },
+ *   });
+ */
+export function finishWf<T = unknown>(opts?: FinishWfOpts<T>): void {
+  setEnvelope({ finished: true, ...opts });
 }
 
-export function finishWfWithData<T>(data: T, message?: WfMessage): void {
-  finishWf({ finished: true, data, message });
-}
-
-export function finishWfWithMessage(level: WfMessage["level"], text: string): void {
-  finishWf({ finished: true, message: { level, text } });
-}
-
-export interface RedirectOpts {
-  reason?: string;
-  message?: WfMessage;
-  /** Present → `mode: 'auto'` with countdown; absent → `mode: 'immediate'`. */
-  autoMs?: number;
-  /** Only honored when `autoMs` is set — adds a "skip / cancel" button. */
-  skipLabel?: string;
-}
-
-export function finishWfWithRedirect(target: string, opts: RedirectOpts = {}): void {
-  const action: WfAction = { type: "redirect", target, reason: opts.reason };
-  const end: WfFinishedEnd = opts.autoMs
-    ? {
-        mode: "auto",
-        timeoutMs: opts.autoMs,
-        action,
-        skipButton: opts.skipLabel ? { label: opts.skipLabel } : undefined,
-      }
-    : { mode: "immediate", action };
-  finishWf({ finished: true, message: opts.message, end });
-}
-
-export interface ChoiceOpts {
-  data?: unknown;
-  message?: WfMessage;
-  primary?: WfButton;
-  options?: WfButton[];
-}
-
-export function finishWfWithChoice(opts: ChoiceOpts): void {
-  if (!opts.primary && (!opts.options || opts.options.length === 0)) {
-    throw new Error("finishWfWithChoice() requires at least a primary button or one option.");
-  }
-  finishWf({
-    finished: true,
-    data: opts.data,
-    message: opts.message,
-    end: { mode: "manual", primary: opts.primary, options: opts.options },
-  });
-}
-
-export function finishWfAborted(
-  reason: string,
-  opts: { message?: WfMessage; end?: WfFinishedEnd } = {},
-): void {
-  finishWf({
-    finished: true,
-    aborted: true,
-    reason,
-    message: opts.message,
-    end: opts.end,
-  });
+/**
+ * Build an aborted `WfFinished` envelope (`aborted: true` + `reason`) and
+ * hand it to wooks. The same options as `finishWf` are accepted — an
+ * aborted flow may still carry partial `data`, a `message`, or a `next`
+ * action that lets the user navigate away.
+ *
+ *   abortWf("user-cancelled");
+ *   abortWf("rate-limited", {
+ *     message: { level: "warn", text: "Try again later." },
+ *   });
+ */
+export function abortWf(reason: string, opts?: FinishWfOpts): void {
+  setEnvelope({ finished: true, aborted: true, reason, ...opts });
 }

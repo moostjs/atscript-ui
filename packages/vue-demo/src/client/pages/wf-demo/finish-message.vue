@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Default AsWfFinish renders just the banner when the envelope has neither
-// `data` nor `end`. This page exists to verify that visual contract.
+// `data` nor `next`. This page exists to verify that visual contract.
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../../types/demo-types";
 import { sharedFetch } from "../../api/fetch";
@@ -14,7 +14,8 @@ const types = createDemoTypes();
       <h1 class="text-lg font-700 m-0">Finish · message only</h1>
       <p class="text-callout text-current/70 m-0">
         Submitting finishes with
-        <code>finishWfWithMessage('info', '…')</code>. The default <code>AsWfFinish</code> renders
+        <code>finishWf(&#123; message: &#123; level: 'info', text: '…' &#125; &#125;)</code>. The
+        default <code>AsWfFinish</code> renders
         just the banner — no countdown, no buttons.
       </p>
       <AsWfForm

@@ -333,7 +333,7 @@ Source: `packages/moost-wf/src/form-input/serialize.ts:5-30`.
 getFormActions(type: TAtscriptAnnotatedType): { actions: string[]; actionsWithData: string[] }
 ```
 
-Walks `type.type.props`, reads `@ui.form.action`, `@wf.action.withData`, and legacy `@ui.altAction` annotations on each field. Cached per type. Used internally by `@FormInput()` to classify the incoming action; expose only if you build a custom dispatcher.
+Walks `type.type.props`, reads `@ui.form.action` and `@wf.action.withData` annotations on each field. Cached per type. Used internally by `@FormInput()` to classify the incoming action; expose only if you build a custom dispatcher.
 
 `@ui.form.action` may be `{ id, label? }` or a bare string. `@wf.action.withData` is always a bare string.
 

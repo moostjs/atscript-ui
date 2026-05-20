@@ -82,8 +82,8 @@ describe("AsWfFinish — `immediate` mode", () => {
       mountFinish(
         {
           finished: true,
-          end: {
-            mode: "immediate",
+          next: {
+            trigger: "immediate",
             action: { type: "redirect", target: "/home", reason: "post-login" },
           },
         },
@@ -105,8 +105,8 @@ describe("AsWfFinish — `immediate` mode", () => {
     try {
       mountFinish({
         finished: true,
-        end: {
-          mode: "immediate",
+        next: {
+          trigger: "immediate",
           action: { type: "redirect", target: "/fallback" },
         },
       });
@@ -130,8 +130,8 @@ describe("AsWfFinish — `immediate` mode", () => {
     try {
       mountFinish({
         finished: true,
-        end: {
-          mode: "immediate",
+        next: {
+          trigger: "immediate",
           action: { type: "redirect", target: "/no-browser" },
         },
       });
@@ -153,7 +153,7 @@ describe("AsWfFinish — `immediate` mode", () => {
     try {
       const w = mountFinish({
         finished: true,
-        end: { mode: "immediate", action: { type: "dismiss" } },
+        next: { trigger: "immediate", action: { type: "dismiss" } },
       });
       await flushPromises();
       expect(w.emitted("dismiss")).toBeTruthy();
@@ -168,7 +168,7 @@ describe("AsWfFinish — `immediate` mode", () => {
     try {
       mountFinish({
         finished: true,
-        end: { mode: "immediate", action: { type: "reload" } },
+        next: { trigger: "immediate", action: { type: "reload" } },
       });
       await flushPromises();
       expect(reloadSpy).toHaveBeenCalled();
@@ -183,7 +183,7 @@ describe("AsWfFinish — `immediate` mode", () => {
     try {
       const w = mountFinish({
         finished: true,
-        end: { mode: "immediate", action: { type: "dismiss" } },
+        next: { trigger: "immediate", action: { type: "dismiss" } },
       });
       await flushPromises();
       const emitted = w.emitted("action");
@@ -205,8 +205,8 @@ describe("AsWfFinish — `auto` mode", () => {
       mountFinish(
         {
           finished: true,
-          end: {
-            mode: "auto",
+          next: {
+            trigger: "auto",
             timeoutMs: 3000,
             action: { type: "redirect", target: "/next" },
           },
@@ -237,8 +237,8 @@ describe("AsWfFinish — `auto` mode", () => {
               {
                 payload: {
                   finished: true,
-                  end: {
-                    mode: "auto",
+                  next: {
+                    trigger: "auto",
                     timeoutMs: 5000,
                     action: { type: "dismiss" },
                   },
@@ -274,8 +274,8 @@ describe("AsWfFinish — `auto` mode", () => {
       const w = mountFinish(
         {
           finished: true,
-          end: {
-            mode: "auto",
+          next: {
+            trigger: "auto",
             timeoutMs: 10_000,
             action: { type: "redirect", target: "/now" },
             skipButton: { label: "Skip", behavior: "now" },
@@ -303,8 +303,8 @@ describe("AsWfFinish — `auto` mode", () => {
       const w = mountFinish(
         {
           finished: true,
-          end: {
-            mode: "auto",
+          next: {
+            trigger: "auto",
             timeoutMs: 4000,
             action: { type: "redirect", target: "/skip" },
             skipButton: { label: "Stay", behavior: "cancel" },
@@ -330,8 +330,8 @@ describe("AsWfFinish — `auto` mode", () => {
       const w = mountFinish(
         {
           finished: true,
-          end: {
-            mode: "auto",
+          next: {
+            trigger: "auto",
             timeoutMs: 2000,
             action: { type: "redirect", target: "/x" },
           },
@@ -362,7 +362,7 @@ describe("AsWfFinish — `manual` mode", () => {
     try {
       const w = mountFinish({
         finished: true,
-        end: { mode: "manual", primary, options: [optA, optB] },
+        next: { trigger: "manual", primary, options: [optA, optB] },
       });
       await flushPromises();
       const labels = w.findAll("button").map((b) => b.text());
@@ -382,7 +382,7 @@ describe("AsWfFinish — `manual` mode", () => {
       const w = mountFinish(
         {
           finished: true,
-          end: { mode: "manual", primary, options: [optA] },
+          next: { trigger: "manual", primary, options: [optA] },
         },
         { navigate },
       );
@@ -402,7 +402,7 @@ describe("AsWfFinish — `manual` mode", () => {
     try {
       const w = mountFinish({
         finished: true,
-        end: { mode: "manual", options: [optA, optB] },
+        next: { trigger: "manual", options: [optA, optB] },
       });
       await flushPromises();
       const labels = w.findAll("button").map((b) => b.text());
@@ -418,7 +418,7 @@ describe("AsWfFinish — `manual` mode", () => {
     try {
       const w = mountFinish({
         finished: true,
-        end: { mode: "manual", primary, options: [optA] },
+        next: { trigger: "manual", primary, options: [optA] },
       });
       await flushPromises();
       await w.find(".as-wf-finish").trigger("keydown", { key: "Enter" });
@@ -436,7 +436,7 @@ describe("AsWfFinish — `manual` mode", () => {
       const w = mountFinish(
         {
           finished: true,
-          end: { mode: "manual", options: [optA, optB] },
+          next: { trigger: "manual", options: [optA, optB] },
         },
         { navigate },
       );
@@ -468,7 +468,7 @@ describe("AsWfFinish — slot overrides", () => {
               {
                 payload: {
                   finished: true,
-                  end: { mode: "manual", primary },
+                  next: { trigger: "manual", primary },
                 } as WfFinished,
               },
               {

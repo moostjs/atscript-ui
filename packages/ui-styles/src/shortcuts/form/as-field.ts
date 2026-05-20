@@ -79,6 +79,14 @@ export const asFieldShortcuts = defineShortcuts({
     "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1",
   "as-error-slot": "leading-[1] text-callout text-current/60",
 
+  "as-field-footer-row": "flex flex-row items-baseline justify-between gap-$xs",
+  "as-field-action-link": {
+    "":
+      "border-0 bg-transparent p-0 text-callout scope-primary text-current-hl cursor-pointer disabled-soft",
+    "hover:not-disabled:": "underline",
+    "focus-visible:": "underline",
+  },
+
   "as-field-description": "as-description -mt-[0.2em]",
   "as-field-label-index": "text-current/60 font-400 font-mono normal-case",
 

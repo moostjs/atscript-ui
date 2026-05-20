@@ -31,7 +31,7 @@ interface WfFinished<TData = unknown> {
   finished: true;
   data?: TData;
   message?: WfMessage;
-  end?: WfFinishedEnd;
+  next?: WfNext;
   aborted?: boolean;
   reason?: string;
 }
@@ -41,16 +41,16 @@ interface WfMessage {
   text: string;
 }
 
-type WfFinishedEnd =
-  | { mode: "immediate"; action: WfAction }
+type WfNext =
+  | { trigger: "immediate"; action: WfAction }
   | {
-      mode: "auto";
+      trigger: "auto";
       timeoutMs: number;
       action: WfAction;
       skipButton?: { label: string; behavior?: "now" | "cancel" };
     }
   | {
-      mode: "manual";
+      trigger: "manual";
       primary?: WfButton;
       options?: WfButton[];
     };
@@ -67,130 +67,149 @@ type WfAction =
 ```
 
 - **`finished: true`** — required marker. The HTTP adapter wraps bare
-  step results to add it; the Phase-4 helpers below already include
-  it, so wrapping is a no-op for them.
+  step results to add it; the helpers below already include it, so
+  wrapping is a no-op for them.
 - **`data`** — your domain payload. Whatever the consumer reads on
   `@finished`. Type-parameterize via `WfFinished<MyShape>`.
 - **`message`** — optional banner rendered at the top of the finish
   screen. Use for "you're signed in" / "submission saved" toasts that
   the screen itself shows for a beat before navigating.
-- **`end`** — what to do next. Drives the rendering mode.
+- **`next`** — what to do next. Drives the rendering trigger.
 - **`aborted` / `reason`** — soft-failure signal. Used together when
   the flow ends in a recoverable terminal state (`"reason: rate-limited"`).
 
-When `end` is omitted, `AsWfFinish` just renders the `message` (if any)
-and waits for the consumer to act. With `end` set, the rendering and
+When `next` is omitted, `AsWfFinish` just renders the `message` (if any)
+and waits for the consumer to act. With `next` set, the rendering and
 action wiring follow the rules below.
 
 ## Helpers
 
-All five helpers live in `@atscript/moost-wf` and call the underlying
-`useWfFinished` from `@moostjs/event-wf`. Use them in place of raw
-`useWfFinished().set({ value: {...} })` whenever possible — the
-helpers build the envelope correctly and keep the wire shape stable
-across upgrades.
+`@atscript/moost-wf` ships two helpers — `finishWf(opts?)` and
+`abortWf(reason, opts?)` — that wrap `useWfFinished` from
+`@moostjs/event-wf`. Both accept the same shared options bag:
 
-### `finishWfWithData(data, message?)`
+```ts
+interface FinishWfOpts<T = unknown> {
+  data?: T;
+  message?: WfMessage;
+  next?: WfNext;
+}
 
-Terminal data, no transition UI. The client reads `data` on
+function finishWf<T = unknown>(opts?: FinishWfOpts<T>): void;
+function abortWf(reason: string, opts?: FinishWfOpts): void;
+```
+
+Use them in place of raw `useWfFinished().set({ value: {...} })` whenever
+possible — they build the envelope correctly and keep the wire shape
+stable across upgrades.
+
+### Terminal data
+
+Domain payload, no transition UI. The client reads `data` on
 `@finished` and is responsible for what happens next.
 
 ```ts
-import { finishWfWithData } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 
 @Step("invoice-submit-save")
 async save(@WorkflowParam("input") input: InvoiceInput) {
   const id = await invoices.insertOne(input);
-  finishWfWithData({ ok: true, id });
+  finishWf({ data: { ok: true, id } });
 }
 ```
 
-### `finishWfWithMessage(level, text)`
+### Message-only
 
 Pure message — no data, no transition. Use when the only outcome is
 "tell the user something."
 
 ```ts
-finishWfWithMessage("success", "We've sent a verification email.");
-```
-
-### `finishWfWithRedirect(target, opts?)`
-
-Redirect to another URL. With `autoMs` you get a countdown +
-optional skip button; without `autoMs` the redirect fires on mount
-(`mode: 'immediate'`).
-
-```ts
-// Immediate — `AsWfFinish` triggers the `navigate` prop on mount, no UI flashes by.
-finishWfWithRedirect("/dashboard", { reason: "post-login" });
-
-// Auto — countdown ticks down, skip button fires the action immediately.
-finishWfWithRedirect("/dashboard", {
-  autoMs: 4000,
-  skipLabel: "Go now",
-  message: { level: "success", text: "All set!" },
+finishWf({
+  message: { level: "success", text: "We've sent a verification email." },
 });
 ```
 
-| Option      | Type        | Effect                                                              |
-| ----------- | ----------- | ------------------------------------------------------------------- |
-| `reason`    | `string`    | Free-form hint propagated via `@action` for analytics or branching. |
-| `message`   | `WfMessage` | Banner shown alongside the countdown (or briefly on `immediate`).   |
-| `autoMs`    | `number`    | Switches to `mode: 'auto'` with this delay.                         |
-| `skipLabel` | `string`    | Adds a "skip" button to the auto screen.                            |
+### Redirect (immediate or auto)
 
-### `finishWfWithChoice({ message?, primary?, options? })`
-
-`mode: 'manual'`. The user picks one of the buttons. Provide either a
-`primary` (Enter-key target) or one or more `options`; passing
-neither throws at runtime.
+Set `next.trigger` to `"immediate"` for a redirect on mount, or
+`"auto"` for a countdown + optional skip button.
 
 ```ts
-finishWfWithChoice({
-  message: { level: "info", text: "Submission queued. What's next?" },
-  primary: {
-    label: "View submission",
-    action: { type: "redirect", target: "/submissions/123" },
+// Immediate — `AsWfFinish` triggers the `navigate` prop on mount, no UI flashes by.
+finishWf({
+  next: {
+    trigger: "immediate",
+    action: { type: "redirect", target: "/dashboard", reason: "post-login" },
   },
-  options: [
-    {
-      label: "Submit another",
-      action: { type: "redirect", target: "/submit" },
+});
+
+// Auto — countdown ticks down, skip button fires the action immediately.
+finishWf({
+  message: { level: "success", text: "All set!" },
+  next: {
+    trigger: "auto",
+    timeoutMs: 4000,
+    action: { type: "redirect", target: "/dashboard" },
+    skipButton: { label: "Go now" },
+  },
+});
+```
+
+`WfAction`'s `reason` field is propagated via `@action` for analytics or
+branching. `skipButton.behavior` defaults to `"now"` (fire the action
+immediately); set it to `"cancel"` to only clear the timer.
+
+### Manual choice
+
+`trigger: "manual"`. The user picks one of the buttons. Provide either a
+`primary` (Enter-key target) or one or more `options`. An empty `manual`
+shape with neither `primary` nor `options` produces an unactionable
+screen — the renderer expects at least one button.
+
+```ts
+finishWf({
+  message: { level: "info", text: "Submission queued. What's next?" },
+  next: {
+    trigger: "manual",
+    primary: {
+      label: "View submission",
+      action: { type: "redirect", target: "/submissions/123" },
     },
-    { label: "Done", action: { type: "dismiss" } },
-  ],
+    options: [
+      { label: "Submit another", action: { type: "redirect", target: "/submit" } },
+      { label: "Done", action: { type: "dismiss" } },
+    ],
+  },
 });
 ```
 
 When `primary` is omitted, all `options` render with equal visual
 weight and the first option becomes the Enter-key target.
 
-### `finishWfAborted(reason, opts?)`
+### Aborted soft-failure
 
-Terminal soft-failure. `aborted: true` plus the reason; optional
-`message` and `end` if you want to redirect the user away from the
-form.
+`abortWf(reason, opts?)` sets `aborted: true` plus the reason; the same
+`FinishWfOpts` bag lets you attach `data`, a `message`, or a `next`
+action that takes the user away from the form.
 
 ```ts
-finishWfAborted("rate-limited", {
+import { abortWf } from "@atscript/moost-wf";
+
+abortWf("rate-limited", {
   message: { level: "warn", text: "Too many attempts. Try again in 5 minutes." },
 });
 ```
 
-### Escape hatch — `finishWf(envelope)`
+### Combining shapes
 
-If you need a combination the helpers don't cover (e.g. `mode:
-'manual'` with terminal `data` AND a primary button), pass the full
-envelope yourself:
+`FinishWfOpts` is one bag — combine `data`, `message`, and `next` as
+needed (e.g. `manual` choice with terminal `data` AND a primary button):
 
 ```ts
-import { finishWf } from "@atscript/moost-wf";
-
 finishWf({
-  finished: true,
   data: { receiptId: 42 },
-  end: {
-    mode: "manual",
+  next: {
+    trigger: "manual",
     primary: { label: "Print", action: { type: "reload" } },
     options: [{ label: "Done", action: { type: "dismiss" } }],
   },
@@ -204,7 +223,7 @@ behaviour ships in `AsWfFinish` (Tier-2 swappable), wired to
 `<AsWfForm>` so consumers get correct rendering without any
 template work.
 
-The three modes:
+The three triggers:
 
 - **`immediate`** — no DOM is rendered. The action fires on mount.
   Redirects call the `navigate` prop you pass to `<AsWfForm>`; if no
@@ -234,14 +253,14 @@ has a working default — override only the pieces you want to
 restyle. Every slot scope includes a callback so your custom UI
 keeps the action wiring without re-implementing the logic.
 
-| Slot                  | Renders when                          | Scope                                                                                                                            |
-| --------------------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `wf.finished`         | Any finished envelope                 | `{ response, payload }` — full override; ignores the rest of the table                                                           |
-| `wf.finish.message`   | `payload.message` is set              | `{ message: WfMessage }`                                                                                                         |
-| `wf.finish.countdown` | `end.mode === 'auto'`                 | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (250ms internally; integer transitions only) |
-| `wf.finish.skip`      | `end.mode === 'auto'` + `skipButton`  | `{ button: { label, behavior }, trigger }`                                                                                       |
-| `wf.finish.primary`   | `end.mode === 'manual'` with primary  | `{ button: WfButton, trigger }`                                                                                                  |
-| `wf.finish.option`    | `end.mode === 'manual'` (each option) | `{ button: WfButton, index: number, trigger }`                                                                                   |
+| Slot                  | Renders when                                  | Scope                                                                                                                            |
+| --------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `wf.finished`         | Any finished envelope                         | `{ response, payload }` — full override; ignores the rest of the table                                                           |
+| `wf.finish.message`   | `payload.message` is set                      | `{ message: WfMessage }`                                                                                                         |
+| `wf.finish.countdown` | `next.trigger === 'auto'`                     | `{ secondsRemaining, totalSeconds, skip, cancel }` — `secondsRemaining` ticks 1/sec (250ms internally; integer transitions only) |
+| `wf.finish.skip`      | `next.trigger === 'auto'` + `skipButton`      | `{ button: { label, behavior }, trigger }`                                                                                       |
+| `wf.finish.primary`   | `next.trigger === 'manual'` with primary      | `{ button: WfButton, trigger }`                                                                                                  |
+| `wf.finish.option`    | `next.trigger === 'manual'` (each option)     | `{ button: WfButton, index: number, trigger }`                                                                                   |
 
 Example — override the primary button with a design-system one,
 keeping the trigger contract:
@@ -308,11 +327,11 @@ defineEmits<{
 
 ## Aborted flows
 
-A workflow that calls `finishWfAborted(reason)` still fires
-`@finished` on the client — `aborted` and `reason` are exposed on
-the envelope alongside `data`. Treat them like a soft-error: render
-a banner via the `message` field (if you set one) or branch on
-`payload.aborted` inside the `wf.finished` slot for full control.
+A workflow that calls `abortWf(reason)` still fires `@finished` on the
+client — `aborted` and `reason` are exposed on the envelope alongside
+`data`. Treat them like a soft-error: render a banner via the `message`
+field (if you set one) or branch on `payload.aborted` inside the
+`wf.finished` slot for full control.
 
 ## Reusing the progress-button primitive
 

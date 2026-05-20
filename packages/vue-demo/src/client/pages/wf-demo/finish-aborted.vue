@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // The form exposes two actions — primary submit + `@ui.form.action 'cancel'`.
-// On cancel the server emits `finishWfAborted` with a `warn` banner; on submit
-// it finishes with success data.
+// On cancel the server emits `abortWf` with a `warn` banner; on submit it
+// finishes with success data.
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../../types/demo-types";
 import { sharedFetch } from "../../api/fetch";
@@ -15,8 +15,8 @@ const types = createDemoTypes();
       <h1 class="text-lg font-700 m-0">Finish · aborted</h1>
       <p class="text-callout text-current/70 m-0">
         Two finish paths: submit calls
-        <code>finishWfWithData(&#123;ok:true&#125;, &#123;level:'success'&#125;)</code>; clicking
-        "Cancel" calls <code>finishWfAborted('user-cancel', &#123; message &#125;)</code>. Both
+        <code>finishWf(&#123; data: &#123;ok:true&#125;, message &#125;)</code>; clicking
+        "Cancel" calls <code>abortWf('user-cancel', &#123; message &#125;)</code>. Both
         terminate the workflow.
       </p>
       <AsWfForm

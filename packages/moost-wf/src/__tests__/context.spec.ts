@@ -62,16 +62,6 @@ describe("getFormActions", () => {
     expect(actionsWithData).toEqual(["saveDraft"]);
   });
 
-  it("reads legacy @ui.altAction as stateless action", () => {
-    const type = objectType({
-      code: stringProp(),
-      resetAction: phantomProp({ "ui.altAction": { id: "reset" } }),
-    });
-
-    const { actions } = getFormActions(type);
-    expect(actions).toEqual(["reset"]);
-  });
-
   it("reads @ui.form.action with string value", () => {
     const type = objectType({
       code: stringProp(),

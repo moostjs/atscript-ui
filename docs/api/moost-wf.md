@@ -164,7 +164,7 @@ interface TFormActions {
 function getFormActions(type: TAtscriptAnnotatedType): TFormActions;
 ```
 
-Reads `@ui.form.action`, `@wf.action.withData`, and the legacy `@ui.altAction`. Results are cached per type identity.
+Reads `@ui.form.action` and `@wf.action.withData`. Results are cached per type identity.
 
 ## Classes
 

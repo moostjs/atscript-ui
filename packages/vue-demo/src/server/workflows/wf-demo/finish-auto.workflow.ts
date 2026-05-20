@@ -1,12 +1,11 @@
-// Phase 4 demo — `end.mode: 'auto'` redirect with countdown + skip via
-// `finishWfWithRedirect`.
+// `next.trigger: 'auto'` redirect with countdown + skip via `finishWf`.
 //
 // One round-trip. The default AsWfFinish renders the countdown text and a
 // "Go now" skip button (skip behaviour defaults to `now` → fires the action
 // immediately).
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWfWithRedirect } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 import { FinishDemoForm } from "../forms/finish-demo-form.as";
 import { httpInputRequired } from "../wf-helpers";
 
@@ -29,11 +28,14 @@ export class WfFinishAutoDemoWorkflow {
       return httpInputRequired(FinishDemoForm, ctx);
     }
     ctx.note = input.note;
-    finishWfWithRedirect("/wf-demo", {
-      autoMs: 4000,
-      skipLabel: "Go now",
-      reason: "demo-auto",
+    finishWf({
       message: { level: "info", text: "All done. Redirecting in a moment…" },
+      next: {
+        trigger: "auto",
+        timeoutMs: 4000,
+        action: { type: "redirect", target: "/wf-demo", reason: "demo-auto" },
+        skipButton: { label: "Go now" },
+      },
     });
     return;
   }

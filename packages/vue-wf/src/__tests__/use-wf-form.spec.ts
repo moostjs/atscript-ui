@@ -306,14 +306,14 @@ describe("useWfForm", () => {
   });
 
   it("finishedPayload surfaces the typed envelope on finish", async () => {
-    // WHY: typed accessor lets new code reach `end.mode` without `any` casts.
+    // WHY: typed accessor lets new code reach `next.trigger` without `any` casts.
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([
       mockInputRequired(LoginForm, { token: "tok1" }),
       {
         finished: true,
         data: { userId: 42 },
-        end: { mode: "manual", primary: { label: "OK", action: { type: "dismiss" } } },
+        next: { trigger: "manual", primary: { label: "OK", action: { type: "dismiss" } } },
       },
     ]);
     const { result } = mountComposable({ path: "/api/wf", name: "auth/login" });
@@ -321,7 +321,7 @@ describe("useWfForm", () => {
     await result.submit({ username: "a", password: "b" });
     await flushPromises();
     expect(result.finishedPayload.value).not.toBeNull();
-    expect(result.finishedPayload.value!.end?.mode).toBe("manual");
+    expect(result.finishedPayload.value!.next?.trigger).toBe("manual");
     expect(result.finishedPayload.value!.data).toEqual({ userId: 42 });
   });
 

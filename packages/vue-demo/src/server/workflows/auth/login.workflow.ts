@@ -1,6 +1,6 @@
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
-import type { WfFinished } from "@atscript/moost-wf";
+import { AltAction, finishWf, type WfFinished } from "@atscript/moost-wf";
 import { usersTable, rolesTable } from "../../db";
 import { verifyPassword } from "../../auth/password";
 import { SessionService } from "../../auth/session.service";
@@ -9,7 +9,7 @@ import {
   SESSION_MAX_AGE_SEC,
   type SessionPayload,
 } from "../../auth/session-payload";
-import { LoginForm, MfaPincodeForm } from "../forms/login-form.as";
+import { LoginForm, MfaPincodeForm, RecoveryForm } from "../forms/login-form.as";
 import { httpInputRequired } from "../wf-helpers";
 
 export interface LoginCtx {
@@ -20,10 +20,13 @@ export interface LoginCtx {
   roleName?: SessionPayload["roleName"];
   mfaEnabled?: boolean;
   otpCode?: string;
+  recovery?: boolean;
 }
 
 /** Exported for the p6-login-schema.spec.ts unit test. */
 export const needsMfa = (ctx: LoginCtx): boolean => !!ctx.mfaEnabled;
+
+const needsRecovery = (ctx: LoginCtx): boolean => !!ctx.recovery;
 
 @Controller()
 export class LoginWorkflow {
@@ -32,6 +35,7 @@ export class LoginWorkflow {
   @Workflow("auth/login")
   @WorkflowSchema<LoginCtx>([
     { id: "login-credentials" },
+    { id: "login-recover-password", condition: needsRecovery },
     { id: "login-verify-otp", condition: needsMfa },
     { id: "login-issue-session" },
   ])
@@ -41,7 +45,12 @@ export class LoginWorkflow {
   async enterCredentials(
     @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
     @WorkflowParam("context") ctx: LoginCtx,
+    @AltAction() action: string | undefined,
   ) {
+    if (action === "forgot-password") {
+      ctx.recovery = true;
+      return;
+    }
     if (!input || !input.username || !input.password) {
       return httpInputRequired(LoginForm, ctx);
     }
@@ -88,6 +97,24 @@ export class LoginWorkflow {
     return;
   }
 
+  @Step("login-recover-password")
+  recoverPassword(
+    @WorkflowParam("input") input: { email?: string } | undefined,
+    @WorkflowParam("context") ctx: LoginCtx,
+  ) {
+    if (!input || !input.email) {
+      return httpInputRequired(RecoveryForm, ctx);
+    }
+    finishWf({
+      data: { ok: true, recovery: true },
+      message: {
+        level: "success",
+        text: `If an account exists for ${input.email}, a recovery link has been sent.`,
+      },
+    });
+    return;
+  }
+
   @Step("login-verify-otp")
   verifyOtp(
     @WorkflowParam("input") input: { code?: string } | undefined,
@@ -114,7 +141,7 @@ export class LoginWorkflow {
     const token = this.sessions.encode(payload);
     // Envelope wraps the domain data so `<AsWfForm>` sees `finished: true`
     // alongside the payload. Cookies remain on the raw wooks call —
-    // Phase 2 helpers don't expose `cookies` (orthogonal wooks-level concern).
+    // `finishWf` / `abortWf` don't expose `cookies` (orthogonal wooks-level concern).
     const envelope: WfFinished<{ ok: boolean; user: { username: string; roleName: string } }> = {
       finished: true,
       data: {

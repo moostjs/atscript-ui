@@ -19,11 +19,13 @@ function navigate(url: string) {
 <template>
   <div class="min-h-screen p-$l">
     <div class="max-w-[520px] mx-auto flex flex-col gap-$m">
-      <h1 class="text-lg font-700 m-0">Finish · mode: auto</h1>
+      <h1 class="text-lg font-700 m-0">Finish · trigger: auto</h1>
       <p class="text-callout text-current/70 m-0">
         Submitting finishes with
         <code
-          >finishWfWithRedirect('/wf-demo', &#123; autoMs: 4000, skipLabel: 'Go now' &#125;)</code
+          >finishWf(&#123; next: &#123; trigger: 'auto', timeoutMs: 4000, action: &#123; type:
+          'redirect', target: '/wf-demo' &#125;, skipButton: &#123; label: 'Go now' &#125; &#125;
+          &#125;)</code
         >. The default <code>AsWfFinish</code> renders a progress-fill skip button with the
         countdown text below it — the fill runs on a CSS animation timed by the auto-fire duration.
       </p>

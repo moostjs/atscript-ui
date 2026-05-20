@@ -1,7 +1,7 @@
 import { Controller } from "moost";
 import { HttpError } from "@moostjs/event-http";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWfWithData } from "@atscript/moost-wf";
+import { finishWf } from "@atscript/moost-wf";
 import { usersTable } from "../../db";
 import { hashPassword, verifyPassword } from "../../auth/password";
 import { useSession } from "../../auth/use-session";
@@ -56,7 +56,7 @@ export class ChangePasswordWorkflow {
     }
     const { hash, salt } = await hashPassword(input.newPassword);
     await usersTable.updateOne({ id: ctx.userId!, password: hash, salt });
-    finishWfWithData({ ok: true });
+    finishWf({ data: { ok: true } });
     return;
   }
 }

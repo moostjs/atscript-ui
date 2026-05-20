@@ -1,14 +1,15 @@
 # finish-screens
 
-Terminal-screen rendering for workflows: the `WfFinished` envelope, the five
-author-facing helpers, the default `AsWfFinish` component shipped via
-`<AsWfForm>`, scoped-slot overrides, action events, and the opt-in SSR adapter.
+Terminal-screen rendering for workflows: the `WfFinished` envelope, the two
+author-facing helpers (`finishWf` / `abortWf`), the default `AsWfFinish`
+component shipped via `<AsWfForm>`, scoped-slot overrides, action events,
+and the opt-in SSR adapter.
 
 ## Contents
 
 - [Envelope shape](#envelope-shape)
-- [Helpers — which one to pick](#helpers--which-one-to-pick)
-- [End modes — rendering rules](#end-modes--rendering-rules)
+- [Helpers — finishWf and abortWf](#helpers--finishwf-and-abortwf)
+- [Next triggers — rendering rules](#next-triggers--rendering-rules)
 - [Slot contract](#slot-contract)
 - [Routing & events — `navigate` prop, `@dismiss`, `@action`](#routing--events--navigate-prop-dismiss-action)
 
@@ -21,7 +22,7 @@ interface WfFinished<TData = unknown> {
   finished: true;
   data?: TData;
   message?: WfMessage;
-  end?: WfFinishedEnd;
+  next?: WfNext;
   aborted?: boolean;
   reason?: string;
 }
@@ -31,15 +32,15 @@ interface WfMessage {
   text: string;
 }
 
-type WfFinishedEnd =
-  | { mode: "immediate"; action: WfAction }
+type WfNext =
+  | { trigger: "immediate"; action: WfAction }
   | {
-      mode: "auto";
+      trigger: "auto";
       timeoutMs: number;
       action: WfAction;
       skipButton?: { label: string; behavior?: "now" | "cancel" };
     }
-  | { mode: "manual"; primary?: WfButton; options?: WfButton[] };
+  | { trigger: "manual"; primary?: WfButton; options?: WfButton[] };
 
 interface WfButton {
   label: string;
@@ -54,18 +55,32 @@ type WfAction =
 
 Step handlers must produce envelopes via the helpers below, not by setting
 `finished: true` inside `useWfFinished().set({ value })`. The HTTP adapter
-auto-injects the marker for bare returns; helpers already include it.
+auto-injects the marker for bare returns; the helpers already include it.
 
-## Helpers — which one to pick
+## Helpers — finishWf and abortWf
 
-| Helper                                       | Use when                                                            |
-| -------------------------------------------- | ------------------------------------------------------------------- |
-| `finishWfWithData(data, message?)`           | Domain payload, consumer drives next UX itself                      |
-| `finishWfWithMessage(level, text)`           | Pure status message, no transition                                  |
-| `finishWfWithRedirect(target, opts)`         | Redirect; pass `autoMs` for countdown + `skipLabel` for skip button |
-| `finishWfWithChoice({ primary?, options? })` | Manual mode — user picks; requires at least one button              |
-| `finishWfAborted(reason, opts?)`             | Terminal soft-failure (`aborted: true`)                             |
-| `finishWf(envelope)`                         | Escape hatch — combination the helpers don't cover                  |
+```ts
+interface FinishWfOpts<T = unknown> {
+  data?: T;
+  message?: WfMessage;
+  next?: WfNext;
+}
+
+function finishWf<T = unknown>(opts?: FinishWfOpts<T>): void;
+function abortWf(reason: string, opts?: FinishWfOpts): void;
+```
+
+One row per terminal outcome. Pick the call literal that matches the
+envelope you want on the wire:
+
+| Outcome                  | Call                                                                                                                                                                                                                                              |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain payload           | `finishWf({ data: { id: 42 } })`                                                                                                                                                                                                                  |
+| Message-only             | `finishWf({ message: { level: "success", text: "Saved." } })`                                                                                                                                                                                     |
+| Immediate redirect       | `finishWf({ next: { trigger: "immediate", action: { type: "redirect", target: "/home" } } })`                                                                                                                                                     |
+| Auto redirect + skip     | `finishWf({ next: { trigger: "auto", timeoutMs: 4000, action: { type: "redirect", target: "/home" }, skipButton: { label: "Go now" } } })`                                                                                                        |
+| Manual choice            | `finishWf({ next: { trigger: "manual", primary: { label: "Go", action: { type: "redirect", target: "/x" } }, options: [{ label: "Dismiss", action: { type: "dismiss" } }] } })`                                                                   |
+| Aborted (soft-failure)   | `abortWf("rate-limited", { message: { level: "warn", text: "Try later." } })`                                                                                                                                                                     |
 
 Cookies stay on the raw wooks call — `useWfFinished().set({ type: "data",
 value: envelope, cookies: { ... } })` — because cookies are an HTTP-level
@@ -73,29 +88,41 @@ concern orthogonal to the envelope. Construct the envelope by hand and pass
 it as `value`.
 
 ```ts
-import { finishWfWithRedirect, finishWfWithChoice } from "@atscript/moost-wf";
+import { finishWf, abortWf } from "@atscript/moost-wf";
 
 // Auto-redirect with countdown.
-finishWfWithRedirect("/dashboard", {
-  autoMs: 4000,
-  skipLabel: "Go now",
+finishWf({
   message: { level: "success", text: "All set!" },
+  next: {
+    trigger: "auto",
+    timeoutMs: 4000,
+    action: { type: "redirect", target: "/dashboard" },
+    skipButton: { label: "Go now" },
+  },
 });
 
 // Manual choice.
-finishWfWithChoice({
+finishWf({
   message: { level: "info", text: "What's next?" },
-  primary: { label: "View order", action: { type: "redirect", target: "/orders/42" } },
-  options: [
-    { label: "Submit another", action: { type: "redirect", target: "/submit" } },
-    { label: "Done", action: { type: "dismiss" } },
-  ],
+  next: {
+    trigger: "manual",
+    primary: { label: "View order", action: { type: "redirect", target: "/orders/42" } },
+    options: [
+      { label: "Submit another", action: { type: "redirect", target: "/submit" } },
+      { label: "Done", action: { type: "dismiss" } },
+    ],
+  },
+});
+
+// Aborted with a banner.
+abortWf("rate-limited", {
+  message: { level: "warn", text: "Too many attempts. Try again in 5 minutes." },
 });
 ```
 
-## End modes — rendering rules
+## Next triggers — rendering rules
 
-The default `AsWfFinish` (Tier-2, swappable) reads `payload.end.mode`:
+The default `AsWfFinish` (Tier-2, swappable) reads `payload.next.trigger`:
 
 - **`immediate`** — no DOM rendered; action fires on mount. `redirect`
   invokes the `navigate` prop (if provided), otherwise falls back to
@@ -118,7 +145,7 @@ The default `AsWfFinish` (Tier-2, swappable) reads `payload.end.mode`:
 - **`manual`** — message banner + buttons. Primary (if set) gets initial
   focus and is the Enter-key target; otherwise the first option does.
 
-When `end` is omitted, `AsWfFinish` renders the `message` (if any) and
+When `next` is omitted, `AsWfFinish` renders the `message` (if any) and
 waits — the consumer's `@finished` handler drives the next action.
 
 ## Slot contract
@@ -131,10 +158,10 @@ declarations.
 | -------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------- |
 | `wf.finished`                    | `{ response, payload }`                                                    | full override of the finish screen       |
 | `wf.finish.message`              | `{ message: WfMessage }`                                                   | `payload.message` is set                 |
-| `wf.finish.countdown`            | `{ secondsRemaining, totalSeconds, skip: () => void, cancel: () => void }` | `end.mode === 'auto'`                    |
-| `wf.finish.skip`                 | `{ button: { label, behavior }, trigger: () => void }`                     | `end.mode === 'auto'` + `skipButton` set |
-| `wf.finish.primary`              | `{ button: WfButton, trigger: () => void }`                                | `end.mode === 'manual'` + primary set    |
-| `wf.finish.option`               | `{ button: WfButton, index: number, trigger: () => void }`                 | `end.mode === 'manual'` (per option)     |
+| `wf.finish.countdown`            | `{ secondsRemaining, totalSeconds, skip: () => void, cancel: () => void }` | `next.trigger === 'auto'`                    |
+| `wf.finish.skip`                 | `{ button: { label, behavior }, trigger: () => void }`                     | `next.trigger === 'auto'` + `skipButton` set |
+| `wf.finish.primary`              | `{ button: WfButton, trigger: () => void }`                                | `next.trigger === 'manual'` + primary set    |
+| `wf.finish.option`               | `{ button: WfButton, index: number, trigger: () => void }`                 | `next.trigger === 'manual'` (per option)     |
 
 Overrides must call the `trigger` callback to run the action — it preserves
 the redirect / reload / dismiss decision logic. Reimplementing the action
