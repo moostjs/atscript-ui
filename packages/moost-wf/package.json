@@ -74,6 +74,8 @@
     "@atscript/core": "catalog:",
     "@atscript/typescript": "catalog:",
     "@moostjs/event-wf": "catalog:",
+    "@wooksjs/event-core": "catalog:",
+    "@wooksjs/event-wf": "catalog:",
     "moost": "catalog:"
   }
 }
