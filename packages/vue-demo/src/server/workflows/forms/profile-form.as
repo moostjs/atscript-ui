@@ -17,15 +17,19 @@ export interface ProfileForm {
     email: string.email
 }
 
-@meta.label 'Change Password'
+@meta.label 'Verify Current Password'
 @ui.form.submit.text 'Update Password'
-export interface ChangePasswordForm {
+export interface VerifyPasswordForm {
     @meta.label 'Current Password'
     @ui.type 'password'
     @ui.form.placeholder 'Current password'
     @meta.required 'Current password is required'
     oldPassword: string
+}
 
+@meta.label 'Set New Password'
+@ui.form.submit.text 'Update Password'
+export interface SetNewPasswordForm {
     @meta.label 'New Password'
     @ui.type 'password'
     @ui.form.placeholder 'At least 6 characters'

@@ -5,7 +5,7 @@ import { WfInput, finishWf, useAtscriptWf } from "@atscript/moost-wf";
 import { usersTable } from "../../db";
 import { hashPassword, verifyPassword } from "../../auth/password";
 import { useSession } from "../../auth/use-session";
-import { ChangePasswordForm } from "../forms/profile-form.as";
+import { VerifyPasswordForm, SetNewPasswordForm } from "../forms/profile-form.as";
 
 interface ChangePasswordCtx {
   userId?: number;
@@ -20,7 +20,7 @@ export class ChangePasswordWorkflow {
 
   @Step("cp-verify-old")
   async verifyOld(
-    @WfInput() input: ChangePasswordForm,
+    @WfInput() input: VerifyPasswordForm,
     @WorkflowParam("context") ctx: ChangePasswordCtx,
   ) {
     const session = useSession();
@@ -28,7 +28,7 @@ export class ChangePasswordWorkflow {
 
     const user = await usersTable.findOne({ filter: { id: session.userId } });
     if (!user || !(await verifyPassword(input.oldPassword, user.password ?? "", user.salt ?? ""))) {
-      throw useAtscriptWf(ChangePasswordForm).requireInput({
+      throw useAtscriptWf(VerifyPasswordForm).requireInput({
         errors: { oldPassword: "Current password is incorrect" },
       });
     }
@@ -39,7 +39,7 @@ export class ChangePasswordWorkflow {
 
   @Step("cp-set-new")
   async setNew(
-    @WfInput() input: ChangePasswordForm,
+    @WfInput() input: SetNewPasswordForm,
     @WorkflowParam("context") ctx: ChangePasswordCtx,
   ) {
     const { hash, salt } = await hashPassword(input.newPassword);
