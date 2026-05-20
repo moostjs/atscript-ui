@@ -7,6 +7,9 @@ export { serializeFormSchema } from "./wf-io/serialize";
 export { extractPassContext, getFormActions } from "./wf-io/context";
 export { useFormInput } from "./wf-io/use-form-input";
 export { useWfAction } from "./wf-io/use-wf-action";
+export { useAtscriptWf } from "./wf-io/use-atscript-wf";
+export { WfInput } from "./wf-io/wf-input.decorator";
+export { WfAction } from "./wf-io/wf-action.decorator";
 export { createAsHttpOutlet } from "./outlet";
 export { handleAsOutletRequest } from "./handle";
 
@@ -18,7 +21,7 @@ export { handleAsOutletRequest } from "./handle";
 export { abortWf, finishWf, isWfFinished } from "./wf-finished";
 export type {
   FinishWfOpts,
-  WfAction,
+  WfActionRequest,
   WfButton,
   WfFinished,
   WfMessage,

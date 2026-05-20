@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
-import type { WfAction, WfButton, WfFinished } from "@atscript/moost-wf";
+import type { WfActionRequest, WfButton, WfFinished } from "@atscript/moost-wf";
 
 const props = defineProps<{
   payload: WfFinished | null;
@@ -16,7 +16,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: "dismiss"): void;
   /** Fired whenever an action runs — analytics hook. */
-  (e: "action", action: WfAction): void;
+  (e: "action", action: WfActionRequest): void;
 }>();
 
 // ── Action execution ───────────────────────────────────────
@@ -38,7 +38,7 @@ async function dispatchRedirect(url: string): Promise<void> {
   );
 }
 
-function runAction(action: WfAction): void {
+function runAction(action: WfActionRequest): void {
   // Analytics first so consumers can log even when the action also fires
   // navigation that unloads the page.
   emit("action", action);

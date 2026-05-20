@@ -6,7 +6,7 @@ import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
 import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
 import type { TFormState } from "@atscript/vue-form";
-import type { WfAction } from "@atscript/moost-wf";
+import type { WfActionRequest } from "@atscript/moost-wf";
 import AsWfFinish from "./defaults/as-wf-finish.vue";
 
 interface AsWfFormProps extends UseWfFormOptions {
@@ -40,7 +40,7 @@ const emit = defineEmits<{
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
   (e: "dismiss"): void;
-  (e: "action", action: WfAction): void;
+  (e: "action", action: WfActionRequest): void;
 }>();
 
 // ── Composable ──────────────────────────────────────────────

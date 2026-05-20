@@ -178,7 +178,7 @@ describe("AsWfFinish — `immediate` mode", () => {
   });
 
   // WHY: analytics hook must fire before navigation unloads the page.
-  it("emits @action with the WfAction descriptor", async () => {
+  it("emits @action with the WfActionRequest descriptor", async () => {
     stubLocation();
     try {
       const w = mountFinish({

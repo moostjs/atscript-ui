@@ -17,11 +17,11 @@ export interface WfMessage {
 }
 
 export type WfNext =
-  | { trigger: "immediate"; action: WfAction }
+  | { trigger: "immediate"; action: WfActionRequest }
   | {
       trigger: "auto";
       timeoutMs: number;
-      action: WfAction;
+      action: WfActionRequest;
       skipButton?: { label: string; behavior?: "now" | "cancel" };
     }
   | {
@@ -34,10 +34,10 @@ export type WfNext =
 
 export interface WfButton {
   label: string;
-  action: WfAction;
+  action: WfActionRequest;
 }
 
-export type WfAction =
+export type WfActionRequest =
   | { type: "redirect"; target: string; reason?: string }
   | { type: "reload" }
   | { type: "dismiss" };
