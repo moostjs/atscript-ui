@@ -15,8 +15,7 @@ const types = createDemoTypes();
       <p class="text-callout text-current/70 m-0">
         Submitting finishes with
         <code>finishWf(&#123; message: &#123; level: 'info', text: '…' &#125; &#125;)</code>. The
-        default <code>AsWfFinish</code> renders
-        just the banner — no countdown, no buttons.
+        default <code>AsWfFinish</code> renders just the banner — no countdown, no buttons.
       </p>
       <AsWfForm
         path="/api/wf"

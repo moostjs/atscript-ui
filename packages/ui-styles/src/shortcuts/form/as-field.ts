@@ -81,8 +81,7 @@ export const asFieldShortcuts = defineShortcuts({
 
   "as-field-footer-row": "flex flex-row items-baseline justify-between gap-$xs",
   "as-field-action-link": {
-    "":
-      "border-0 bg-transparent p-0 text-callout scope-primary text-current-hl cursor-pointer disabled-soft",
+    "": "border-0 bg-transparent p-0 text-callout scope-primary text-current-hl cursor-pointer disabled-soft",
     "hover:not-disabled:": "underline",
     "focus-visible:": "underline",
   },

@@ -64,9 +64,7 @@ test.describe("Section 19.12 — forgot password recovery", () => {
       await expect(page.locator('input[name="email"]')).toBeVisible();
       await expect(page.locator('input[name="username"]')).toHaveCount(0);
       await expect(page.locator('input[name="password"]')).toHaveCount(0);
-      await expect(
-        page.getByRole("button", { name: /Send recovery email/i }),
-      ).toBeVisible();
+      await expect(page.getByRole("button", { name: /Send recovery email/i })).toBeVisible();
     } finally {
       await ctx.close();
     }

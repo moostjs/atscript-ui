@@ -73,14 +73,14 @@ function abortWf(reason: string, opts?: FinishWfOpts): void;
 One row per terminal outcome. Pick the call literal that matches the
 envelope you want on the wire:
 
-| Outcome                  | Call                                                                                                                                                                                                                                              |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain payload           | `finishWf({ data: { id: 42 } })`                                                                                                                                                                                                                  |
-| Message-only             | `finishWf({ message: { level: "success", text: "Saved." } })`                                                                                                                                                                                     |
-| Immediate redirect       | `finishWf({ next: { trigger: "immediate", action: { type: "redirect", target: "/home" } } })`                                                                                                                                                     |
-| Auto redirect + skip     | `finishWf({ next: { trigger: "auto", timeoutMs: 4000, action: { type: "redirect", target: "/home" }, skipButton: { label: "Go now" } } })`                                                                                                        |
-| Manual choice            | `finishWf({ next: { trigger: "manual", primary: { label: "Go", action: { type: "redirect", target: "/x" } }, options: [{ label: "Dismiss", action: { type: "dismiss" } }] } })`                                                                   |
-| Aborted (soft-failure)   | `abortWf("rate-limited", { message: { level: "warn", text: "Try later." } })`                                                                                                                                                                     |
+| Outcome                | Call                                                                                                                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain payload         | `finishWf({ data: { id: 42 } })`                                                                                                                                                |
+| Message-only           | `finishWf({ message: { level: "success", text: "Saved." } })`                                                                                                                   |
+| Immediate redirect     | `finishWf({ next: { trigger: "immediate", action: { type: "redirect", target: "/home" } } })`                                                                                   |
+| Auto redirect + skip   | `finishWf({ next: { trigger: "auto", timeoutMs: 4000, action: { type: "redirect", target: "/home" }, skipButton: { label: "Go now" } } })`                                      |
+| Manual choice          | `finishWf({ next: { trigger: "manual", primary: { label: "Go", action: { type: "redirect", target: "/x" } }, options: [{ label: "Dismiss", action: { type: "dismiss" } }] } })` |
+| Aborted (soft-failure) | `abortWf("rate-limited", { message: { level: "warn", text: "Try later." } })`                                                                                                   |
 
 Cookies stay on the raw wooks call — `useWfFinished().set({ type: "data",
 value: envelope, cookies: { ... } })` — because cookies are an HTTP-level
@@ -154,10 +154,10 @@ Source: `packages/vue-wf/src/components/as-wf-form.vue` slot-forwarding
 block, `packages/vue-wf/src/components/defaults/as-wf-finish.vue` slot
 declarations.
 
-| Slot (forwarded by `<AsWfForm>`) | Scope                                                                      | Renders when                             |
-| -------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------- |
-| `wf.finished`                    | `{ response, payload }`                                                    | full override of the finish screen       |
-| `wf.finish.message`              | `{ message: WfMessage }`                                                   | `payload.message` is set                 |
+| Slot (forwarded by `<AsWfForm>`) | Scope                                                                      | Renders when                                 |
+| -------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- |
+| `wf.finished`                    | `{ response, payload }`                                                    | full override of the finish screen           |
+| `wf.finish.message`              | `{ message: WfMessage }`                                                   | `payload.message` is set                     |
 | `wf.finish.countdown`            | `{ secondsRemaining, totalSeconds, skip: () => void, cancel: () => void }` | `next.trigger === 'auto'`                    |
 | `wf.finish.skip`                 | `{ button: { label, behavior }, trigger: () => void }`                     | `next.trigger === 'auto'` + `skipButton` set |
 | `wf.finish.primary`              | `{ button: WfButton, trigger: () => void }`                                | `next.trigger === 'manual'` + primary set    |

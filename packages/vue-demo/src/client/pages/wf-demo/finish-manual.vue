@@ -24,8 +24,7 @@ function onDismiss() {
       <h1 class="text-lg font-700 m-0">Finish · trigger: manual</h1>
       <p class="text-callout text-current/70 m-0">
         Submitting finishes with
-        <code
-          >finishWf(&#123; next: &#123; trigger: 'manual', primary, options &#125; &#125;)</code
+        <code>finishWf(&#123; next: &#123; trigger: 'manual', primary, options &#125; &#125;)</code
         >. The primary button is the Enter-key target; this page overrides
         <code>#wf.finish.primary</code> with a custom-styled button.
       </p>
