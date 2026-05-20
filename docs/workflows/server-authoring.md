@@ -96,64 +96,53 @@ Three things a step can do:
 
 ### 1. Request input (pause)
 
-Return `outletHttp(payload, context)`. With `createAsHttpOutlet()`
-mounted in the controller (see [App wiring](#app-wiring) below), the
-outlet wraps the response in the `{ inputRequired: { payload,
-transport, context } }` envelope the client expects, so the step body
-stays declarative:
+The recommended path is the `@WfInput()` decorator — see
+[Form Input & Validation](/workflows/form-input). It auto-validates
+the input against the schema, auto-pauses on missing/invalid input,
+and lets the handler body focus on business logic:
 
 ```ts
-import { outletHttp } from "@moostjs/event-wf";
-import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
+import { WfInput, useAtscriptWf } from "@atscript/moost-wf";
 
 @Step("login-credentials")
 async enterCredentials(
-  @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
+  @WfInput() input: LoginForm,
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
-  if (!input?.username || !input?.password) {
-    return outletHttp(serializeFormSchema(LoginForm), extractPassContext(LoginForm, ctx));
+  // input is schema-validated; reach the body only with valid input
+  const user = await usersTable.findOne({ filter: { username: input.username } });
+  if (!user || !verify(input.password, user.password)) {
+    throw useAtscriptWf(LoginForm).requireInput({
+      errors: { password: "Invalid credentials" },
+    });
   }
+  ctx.userId = user.id;
+}
+```
+
+`useAtscriptWf(Type).requireInput({ errors? , formMessage? })` builds
+a `StepRetriableError` carrying the schema + field errors; the
+workflow engine catches it natively and re-pauses the same step. See
+[Form Input & Validation](/workflows/form-input) for the full
+contract.
+
+Prefer the composable directly when you need to interleave action
+handling with validation:
+
+```ts
+import { useAtscriptWf } from "@atscript/moost-wf";
+
+@Step("login-credentials")
+async enterCredentials(@WorkflowParam("context") ctx: LoginCtx) {
+  const wf = useAtscriptWf(LoginForm);
+  if (wf.resolveAction() === "forgot") {
+    await this.sendPasswordReset();
+    return;
+  }
+  const input = wf.resolveInput();
   // ... validate credentials ...
 }
 ```
-
-When the same step also wants to surface field-level errors, a tiny
-helper that merges `errors` into the passed context keeps the call
-sites tidy:
-
-```ts
-// shared/wf-helpers.ts
-import { outletHttp, type WfOutletRequest } from "@moostjs/event-wf";
-import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
-import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-
-export function httpInputRequired(
-  type: TAtscriptAnnotatedType,
-  wfContext: object,
-  errors?: Record<string, string>,
-): WfOutletRequest {
-  const context: Record<string, unknown> = {
-    ...extractPassContext(type, wfContext as Record<string, unknown>),
-  };
-  if (errors) context.errors = errors;
-  return outletHttp(serializeFormSchema(type), context) as WfOutletRequest;
-}
-```
-
-Now every step that needs input reads cleanly:
-
-```ts
-if (!input?.username || !input?.password) {
-  return httpInputRequired(LoginForm, ctx);
-}
-if (badPassword) {
-  return httpInputRequired(LoginForm, ctx, { password: "Invalid credentials" });
-}
-```
-
-The third arg is field errors — see
-[Form Input & Validation](/workflows/form-input).
 
 ### 2. Advance to the next step
 
@@ -298,22 +287,6 @@ cookies })` actually writes Set-Cookie on the response. Without
   this, the WF runs in an isolated context and cookies are silently
   dropped.
 
-### Mount the FormInputRequired interceptor
-
-If you use `@FormInput()` with `requireInput()` (see
-[Form Input & Validation](/workflows/form-input)), mount the catch
-interceptor globally so thrown `FormInputRequired` signals turn into
-proper outlet responses:
-
-```ts
-import { formInputInterceptor } from "@atscript/moost-wf";
-
-app.applyGlobalInterceptors(formInputInterceptor());
-```
-
-Mount it once on app boot. Steps that don't throw `FormInputRequired`
-are unaffected.
-
 ## Reading the workflow context
 
 Inside a step, `@WorkflowParam("context")` gives you the typed,
@@ -342,8 +315,8 @@ exposing context values to the _client_ form.
 
 ## Where to go next
 
-- [Form Input & Validation](/workflows/form-input) — `@FormInput()`,
-  `requireInput()`, server-side errors.
+- [Form Input & Validation](/workflows/form-input) — `@WfInput()`,
+  `useAtscriptWf().requireInput()`, server-side errors.
 - [Actions](/workflows/actions) — alt actions like "resend code" or
   "save draft".
 - [Outlets & Resume](/workflows/outlets-resume) — pause for an

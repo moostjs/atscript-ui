@@ -158,14 +158,14 @@ export interface LoginForm {
 }
 ```
 
-In a workflow form (`<AsWfForm>`) the click forwards to `useWfForm().action(id)` and the step receives it via `@AltAction()` from `@atscript/moost-wf`:
+In a workflow form (`<AsWfForm>`) the click forwards to `useWfForm().action(id)` and the step receives it via `@WfAction()` from `@atscript/moost-wf`:
 
 ```ts
 @Step("login-credentials")
 async enterCredentials(
-  @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
+  @WfInput({ pass: true }) input: LoginForm | undefined,
   @WorkflowParam("context") ctx: LoginCtx,
-  @AltAction() action: string | undefined,
+  @WfAction() action: string | undefined,
 ) {
   if (action === "forgot-password") {
     ctx.recovery = true;

@@ -11,10 +11,10 @@ step with an `action` name, optionally with form data.
 
 ## The two action kinds
 
-| Kind             | Annotation                   | Sends data?                  | Server reads via                             |
-| ---------------- | ---------------------------- | ---------------------------- | -------------------------------------------- |
-| Plain action     | `@ui.form.action 'name'`     | No                           | `@AltAction()` param                         |
-| Action with data | `@wf.action.withData 'name'` | Yes (deep-partial validated) | `@AltAction()` param + `@FormInput()` data() |
+| Kind             | Annotation                   | Sends data?                  | Server reads via                                                     |
+| ---------------- | ---------------------------- | ---------------------------- | -------------------------------------------------------------------- |
+| Plain action     | `@ui.form.action 'name'`     | No                           | `@WfAction()` param (step skipped unless `@WfInput({ pass: true })`) |
+| Action with data | `@wf.action.withData 'name'` | Yes (deep-partial validated) | `@WfAction()` param + `@WfInput()` data                              |
 
 Both render as buttons in the rendered form's action row. Both let
 the step keep the user on the same screen, re-render the same form,
@@ -58,65 +58,101 @@ action next to the submit button.
 
 ## Reading the action on the server
 
-Two ways, mirroring how you read input:
+Two ways, mirroring how you read input.
 
-### Manual: query the param
-
-You can pull the action out of the request yourself, but the
-preferred path is the decorator:
-
-### Decorator: `@AltAction()`
+### Decorator: `@WfAction()`
 
 ```ts
-import { FormInput, AltAction, type TFormInput } from "@atscript/moost-wf";
+import { WfInput, WfAction, useAtscriptWf } from "@atscript/moost-wf";
 import { MfaPincodeForm } from "../forms/MfaPincodeForm.as";
 
 @Step("login-verify-otp")
 async verifyOtp(
-  @FormInput() form: TFormInput<MfaPincodeForm>,
-  @AltAction() action: string | undefined,
+  @WfInput({ pass: true }) input: MfaPincodeForm | undefined,
+  @WfAction() action: string | undefined,
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
+  const wf = useAtscriptWf(MfaPincodeForm);
+
   if (action === "resend") {
     ctx.otpCode = String(Math.floor(100000 + Math.random() * 900000));
     await sendOtpEmail(ctx.email!, ctx.otpCode);
     // Re-pause the same form (no errors) so the user can re-enter the code.
-    throw form.requireInput();
+    throw wf.requireInput();
   }
 
   if (action === "saveDraft") {
-    // Partial form data is available — save what we have and re-pause.
-    const partial = form.data() ?? {};
-    await drafts.save(ctx.userId!, partial);
-    throw form.requireInput();
+    // input here is partial-validated form data from @wf.action.withData.
+    await drafts.save(ctx.userId!, input ?? {});
+    throw wf.requireInput();
   }
 
-  // No action → normal submit path.
-  const input = form.data()!;
-  if (input.code !== ctx.otpCode) {
-    throw form.requireInput({ code: "Invalid code" });
+  // No action → normal submit path; input is fully validated.
+  if (input!.code !== ctx.otpCode) {
+    throw wf.requireInput({ errors: { code: "Invalid code" } });
   }
   return;
 }
 ```
 
-`@AltAction()` returns the action name string, or `undefined` for a
+`@WfAction()` returns the action name string, or `undefined` for a
 normal submit. The handler dispatches with a regular `switch` / `if`
 chain.
 
+`@WfInput({ pass: true })` opts this step into handling no-data
+actions (`@ui.form.action`) without forcing input — the parameter
+resolves to `undefined` when a no-data action fires. Without
+`pass: true`, the decorator throws on no-data actions.
+
+### Composable: `useAtscriptWf()`
+
+For full explicit control (no decorator policy matrix), call the
+composable directly:
+
+```ts
+import { useAtscriptWf } from "@atscript/moost-wf";
+
+@Step("login-verify-otp")
+async verifyOtp(@WorkflowParam("context") ctx: LoginCtx) {
+  const wf = useAtscriptWf(MfaPincodeForm);
+  const action = wf.resolveAction();
+
+  if (action === "resend") {
+    ctx.otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    await sendOtpEmail(ctx.email!, ctx.otpCode);
+    throw wf.requireInput();
+  }
+
+  const input = wf.resolveInput({ partial: action === "saveDraft" ? "deep" : undefined });
+  if (action === "saveDraft") {
+    await drafts.save(ctx.userId!, input);
+    throw wf.requireInput();
+  }
+  if (input.code !== ctx.otpCode) {
+    throw wf.requireInput({ errors: { code: "Invalid code" } });
+  }
+}
+```
+
+`resolveAction()` throws if the action isn't declared on the form
+schema; `resolveInput()` throws if input is missing or invalid.
+Both return a `StepRetriableError` the workflow engine catches
+natively.
+
 ## How validation differs per kind
 
-The `@FormInput()` interceptor inspects the action before validating:
+`@WfInput()` inspects the action before validating:
 
 - **No action** (normal submit): full validation; missing required
   fields cause re-pause with errors.
-- **`@ui.form.action`** (plain): handler runs regardless of input
-  shape. The action is "fire-and-forget" — no form data needs to be
-  valid. Useful for _resend code_, _forgot password_, _cancel_.
-- **`@wf.action.withData`**: deep-partial validation. The
-  framework only checks the fields actually present in the payload —
-  missing fields are not "required-failing". Useful for _save draft_
-  flows where the user might be halfway through.
+- **`@ui.form.action`** (plain): the step is skipped unless declared
+  with `@WfInput({ pass: true })`. With `pass: true`, the parameter
+  resolves to `undefined` and the handler runs. Useful for _resend
+  code_, _forgot password_, _cancel_.
+- **`@wf.action.withData`**: deep-partial validation. The framework
+  only checks the fields actually present in the payload — missing
+  fields are not "required-failing". Useful for _save draft_ flows
+  where the user might be halfway through.
 
 If the action name is not declared on the form, the framework
 re-pauses with a `__form` error `"Action "<name>" is not supported"`.
@@ -167,7 +203,7 @@ POST /wf
 if (action === "resend") {
   ctx.otpCode = String(Math.floor(100000 + Math.random() * 900000));
   await sendOtp(ctx.email!, ctx.otpCode);
-  throw form.requireInput(); // re-render same form, no errors
+  throw useAtscriptWf(MfaPincodeForm).requireInput(); // re-render same form, no errors
 }
 ```
 
@@ -200,8 +236,8 @@ re-pause the same form. The flow stays a flow.
 
 ## Where to go next
 
-- [Form Input & Validation](/workflows/form-input) — `@FormInput()`
-  and `requireInput()` patterns reused above.
+- [Form Input & Validation](/workflows/form-input) — `@WfInput()`
+  and `useAtscriptWf().requireInput()` patterns reused above.
 - [Context Passing](/workflows/context) — how the form renderer
   reads context (e.g. to label the _resend_ button with the masked
   email).

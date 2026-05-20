@@ -99,8 +99,9 @@ The list works as a whitelist:
 
 ### How it propagates
 
-When a step returns `httpInputRequired(MfaPincodeForm, ctx)`, the
-helper:
+When a step's `@WfInput()` decorator (or a manual
+`useAtscriptWf(MfaPincodeForm).requireInput()` call) throws a
+`StepRetriableError`, the framework:
 
 1. Calls `extractPassContext(MfaPincodeForm, ctx)` — reads
    `wf.context.pass` annotations from the type's metadata, picks
@@ -109,9 +110,9 @@ helper:
 context: { email: ctx.email } } }`.
 3. The client form's `formContext` ref ends up as `{ email: "..." }`.
 
-The same happens automatically when the `@FormInput()` interceptor
-or `requireInput()` constructs the response — both call
-`extractPassContext` under the hood.
+Both `@WfInput()` and `useAtscriptWf().requireInput()` call
+`extractPassContext` under the hood, so the whitelist applies
+uniformly.
 
 If you re-pause with errors, errors merge into the context:
 

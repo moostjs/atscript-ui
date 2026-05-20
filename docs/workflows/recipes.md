@@ -73,20 +73,20 @@ with OTP verification.
 **Sketch:**
 
 ```ts
+import { WfInput, useAtscriptWf } from "@atscript/moost-wf";
+
 @Step("register-details")
 async enterDetails(
-  @WorkflowParam("input") input: { username?: string; email?: string; password?: string } | undefined,
+  @WfInput() input: RegisterForm,
   @WorkflowParam("context") ctx: RegisterCtx,
 ) {
-  if (!input || !input.username || !input.email || !input.password) {
-    return httpInputRequired(RegisterForm, ctx);
-  }
+  const wf = useAtscriptWf(RegisterForm);
 
   if (await usersTable.findOne({ filter: { username: input.username } })) {
-    return httpInputRequired(RegisterForm, ctx, { username: "Username already taken" });
+    throw wf.requireInput({ errors: { username: "Username already taken" } });
   }
   if (await usersTable.findOne({ filter: { email: input.email } })) {
-    return httpInputRequired(RegisterForm, ctx, { email: "Email already registered" });
+    throw wf.requireInput({ errors: { email: "Email already registered" } });
   }
 
   const pw = await hashPassword(input.password);
@@ -239,15 +239,16 @@ flow() {}
 
 @Step("checkout-address")
 async address(
-  @FormInput() form: TFormInput<AddressForm>,
-  @AltAction() action: string | undefined,
+  @WfInput({ pass: true }) input: AddressForm | undefined,
+  @WfAction() action: string | undefined,
   @WorkflowParam("context") ctx: CheckoutCtx,
 ) {
+  const wf = useAtscriptWf(AddressForm);
   if (action === "saveDraft") {
-    ctx.draftAddress = form.data() ?? {};
-    throw form.requireInput(); // re-render same form, no errors
+    ctx.draftAddress = input ?? {};
+    throw wf.requireInput(); // re-render same form, no errors
   }
-  ctx.address = form.data()!;
+  ctx.address = input!;
   return;
 }
 ```
@@ -275,8 +276,9 @@ All four recipes share the same toolbox:
 
 - `.as` types as the single source of truth.
 - `@WorkflowSchema` for linear or branched flow shape.
-- `@FormInput` + `requireInput` for validation + re-render-same-form.
-- `@AltAction` for plain actions (resend, forgot, save draft).
+- `@WfInput` + `useAtscriptWf().requireInput()` for validation +
+  re-render-same-form.
+- `@WfAction` for plain actions (resend, forgot, save draft).
 - `@wf.context.pass` for safe context exposure.
 - `AsWfStore` + shadow columns when state has to outlive the
   request.

@@ -1,6 +1,6 @@
 # getting-started
 
-Install matrix, end-to-end hello flow, global interceptor wiring, atscript config, minimal client mount.
+Install matrix, end-to-end hello flow, atscript config, minimal client mount.
 
 ## Contents
 
@@ -54,15 +54,8 @@ export interface HelloName {
 ```typescript
 // src/wf/hello.workflow.ts
 import { Controller } from "moost";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-  outletHttp,
-} from "@moostjs/event-wf";
-import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
+import { WfInput } from "@atscript/moost-wf";
 import { HelloName } from "./forms.as";
 
 interface Ctx {
@@ -76,15 +69,9 @@ export class HelloWorkflow {
   flow() {}
 
   @Step("ask")
-  ask(
-    @WorkflowParam("input") input: { name?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
-    if (!input?.name) {
-      // `createAsHttpOutlet()` (mounted in the trigger, step 4 below) wraps
-      // this in `{ inputRequired: { payload, transport, context } }`.
-      return outletHttp(serializeFormSchema(HelloName), extractPassContext(HelloName, ctx));
-    }
+  ask(@WfInput() input: HelloName, @WorkflowParam("context") ctx: Ctx) {
+    // @WfInput() validates against the schema; the body only runs with valid input.
+    // Missing/invalid input throws StepRetriableError — the engine re-pauses the step.
     ctx.name = input.name;
   }
 
@@ -98,32 +85,30 @@ export class HelloWorkflow {
 }
 ```
 
-Key shapes (`packages/moost-wf/src/form-input/decorator.ts:21-29` for the higher-level `@FormInput()` flavour):
+Key shapes:
 
-- `Workflow`, `Step`, `WorkflowSchema`, `WorkflowParam`, `useWfFinished`, `outletHttp` come from **`@moostjs/event-wf`**, not from `moost`. Only `@Controller()` comes from `moost`.
-- `serializeFormSchema`, `extractPassContext`, `createAsHttpOutlet`, `@FormInput()` and friends come from **`@atscript/moost-wf`**.
+- `Workflow`, `Step`, `WorkflowSchema`, `WorkflowParam`, `useWfFinished` come from **`@moostjs/event-wf`**, not from `moost`. Only `@Controller()` comes from `moost`.
+- `WfInput`, `WfAction`, `useAtscriptWf`, `serializeFormSchema`, `extractPassContext`, `createAsHttpOutlet`, `handleAsOutletRequest` come from **`@atscript/moost-wf`**.
 
-### 3. App bootstrap — mount the global interceptor
+### 3. App bootstrap
 
 ```typescript
 // src/server.ts
 import { Moost } from "moost";
 import { MoostHttp } from "@moostjs/event-http";
 import { MoostWf } from "@moostjs/event-wf";
-import { formInputInterceptor } from "@atscript/moost-wf";
 import { HelloWorkflow } from "./wf/hello.workflow";
 
 const app = new Moost();
-
-// MANDATORY: catches FormInputRequired thrown by step handlers / `form.requireInput()`.
-// Without it the protocol breaks — see SKILL.md invariant 1.
-app.applyGlobalInterceptors(formInputInterceptor());
 
 app.adapter(new MoostHttp()).adapter(new MoostWf());
 await app.registerControllers(HelloWorkflow).init();
 ```
 
-`formInputInterceptor()` is **global**. Mount it exactly once on the Moost app. Skipping it means `throw form.requireInput()` and uncaught `FormInputRequired` bubble out as 500s instead of the `inputRequired` outlet response (`packages/moost-wf/src/form-input/interceptor.ts:18-29`).
+`StepRetriableError` thrown by `@WfInput()` or
+`useAtscriptWf().requireInput()` is caught natively by the workflow
+engine and turned into the `inputRequired` outlet response — no
+global interceptor mount is required.
 
 ### 4. HTTP trigger
 
@@ -216,7 +201,7 @@ See `client.md` for the full props/emits/slots reference.
 
 | File                     | When                                                                                     |
 | ------------------------ | ---------------------------------------------------------------------------------------- |
-| [server.md](server.md)   | authoring controllers, branching, action handlers, `@FormInput()` validation flow        |
+| [server.md](server.md)   | authoring controllers, branching, action handlers, `@WfInput()` validation flow          |
 | [context.md](context.md) | `@wf.context.pass` whitelist, `extractPassContext`, consuming `formContext`              |
 | [state.md](state.md)     | `AsWfStore`, `@wf.store.fromContext` shadow columns, `cleanup` / `heal` / `getAndDelete` |
 | [outlets.md](outlets.md) | outlet response shapes, magic-link / webhook resume, token transports                    |

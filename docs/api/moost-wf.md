@@ -1,15 +1,15 @@
 # @atscript/moost-wf
 
-Server-side workflow runtime that pairs with [`@atscript/vue-wf`](/api/vue-wf). Decorators (`@FormInput`, `@AltAction`), a global interceptor, helpers for context passing and action discovery, plus an opt-in store implementation backed by atscript-db. Atscript-typed forms are the contract — the client renders whatever schema the server returns.
+Server-side workflow runtime that pairs with [`@atscript/vue-wf`](/api/vue-wf). Decorators (`@WfInput`, `@WfAction`), a schema-aware composable (`useAtscriptWf`), helpers for context passing and action discovery, plus an opt-in store implementation backed by atscript-db. Atscript-typed forms are the contract — the client renders whatever schema the server returns.
 
 ## Contents
 
 - [Plugin](#plugin)
 - [Decorators](#decorators)
-- [Interceptors](#interceptors)
 - [Composables](#composables)
 - [Helpers](#helpers)
-- [Classes](#classes)
+- [Outlet helpers](#outlet-helpers)
+- [Finish-screen envelope](#finish-screen-envelope)
 - [Store subpath](#store-subpath)
 
 ## Plugin
@@ -34,94 +34,118 @@ Annotations registered:
 
 ## Decorators
 
-### `@FormInput()`
+### `@WfInput(opts?)`
 
-Parameter decorator. Combines a `Resolve` (injecting `{ data(), requireInput() }`) with an `Intercept` that auto-validates inbound payloads before the step runs.
+Parameter decorator that resolves to the validated, typed input for the current step. Built on top of `useAtscriptWf()` with the action-aware policy matrix baked in.
 
 ```typescript
-function FormInput(): ParameterDecorator;
-
-type TFormInput<_T = unknown> = ReturnType<typeof useFormInput>;
+function WfInput(opts?: { pass?: boolean }): ParameterDecorator;
 ```
 
 ```typescript
-import { FormInput, type TFormInput } from "@atscript/moost-wf";
+import { WfInput } from "@atscript/moost-wf";
 import { Step } from "@moostjs/event-wf";
 import type { LoginForm } from "./LoginForm.as";
 
 class AuthFlow {
   @Step("login")
-  async login(@FormInput() form: TFormInput<LoginForm>) {
-    const { username, password } = form.data() ?? {};
+  async login(@WfInput() input: LoginForm) {
     try {
-      return await this.auth.login(username, password);
+      return await this.auth.login(input.username, input.password);
     } catch {
-      throw form.requireInput({ password: "Invalid credentials" });
+      // requireInput() builds a StepRetriableError — throw it to re-pause.
+      throw useAtscriptWf(LoginForm).requireInput({
+        errors: { password: "Invalid credentials" },
+      });
     }
   }
 }
 ```
 
-The interceptor short-circuits with an `inputRequired` reply on the first invocation (or any time the validator rejects) — your step handler only runs on a valid payload.
+Policy matrix:
 
-### `@AltAction()`
+| Situation                                          | Behaviour                                                                                             |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| No action fired                                    | Strict full validation against the schema. Missing input throws `StepRetriableError`.                 |
+| Action declared in `@wf.action.withData`           | Deep-partial validation — present fields validated, missing fields OK.                                |
+| Action declared in `@ui.form.action`               | Input must be absent. Without `pass: true`, the decorator throws (no-data actions exclude this step). |
+| Action declared in `@ui.form.action`, `pass: true` | The step opts in to handling the no-data action: parameter resolves to `undefined`, body still runs.  |
+| Unknown action                                     | `StepRetriableError` propagates with `__form: 'Action "<name>" is not supported'`.                    |
 
-Parameter decorator that resolves the **action name** from the current workflow event. Returns `undefined` for plain form submits.
+### `@WfAction()`
+
+Parameter decorator that resolves to the current workflow action name (or `undefined` for plain submits).
 
 ```typescript
-const AltAction: () => ParameterDecorator;
+function WfAction(): ParameterDecorator;
 ```
 
 ```typescript
 @Step("mfa-verify")
 async mfaVerify(
-  @FormInput() form: TFormInput<PincodeForm>,
-  @AltAction() action: string | undefined,
+  @WfInput() input: PincodeForm,
+  @WfAction() action: string | undefined,
 ) {
   if (action === "resend") {
     await this.sendOtp(this.ctx.email);
     return;
   }
-  await this.verifyCode(form.data()!.code);
+  await this.verifyCode(input.code);
 }
 ```
 
-## Interceptors
-
-### `formInputInterceptor()`
-
-Global interceptor that catches `FormInputRequired` signals (thrown by `form.requireInput()`) and converts them into `inputRequired` outlet responses. Mount once at app startup.
-
-```typescript
-function formInputInterceptor(): TInterceptorDef;
-```
-
-```typescript
-import { Moost } from "moost";
-import { formInputInterceptor } from "@atscript/moost-wf";
-
-const app = new Moost();
-app.applyGlobalInterceptors(formInputInterceptor());
-```
+If the parameter is annotated with an atscript type, unknown actions throw `StepRetriableError` — same behaviour as `useAtscriptWf(Type).resolveAction()`. Without a type, the raw action is returned.
 
 ## Composables
 
-### `useFormInput(type?)`
+### `useAtscriptWf(type)`
 
-The composable backing `@FormInput()`. Use directly when you need form-input semantics outside a parameter slot.
+Schema-driven workflow I/O primitives. Returns three pure, independent helpers — composable consumers can interleave their own logic between checking the action and validating the input.
 
 ```typescript
-function useFormInput(type?: TAtscriptAnnotatedType): {
-  data<T = unknown>(): T | undefined;
-  requireInput(errors?: Record<string, string>): FormInputRequired;
+function useAtscriptWf<T extends TAtscriptTypeDef>(
+  type: TAtscriptAnnotatedType<T>,
+): {
+  resolveInput(opts?: { partial?: "deep" }): InferDataType<T>;
+  resolveAction(): string | undefined;
+  requireInput(opts?: {
+    errors?: Record<string, string>;
+    formMessage?: string;
+  }): StepRetriableError;
 };
 ```
 
-`data()` reads the current `state.input` from `useWfState()`. `requireInput()` builds and throws a `FormInputRequired` signal — the interceptor converts it into an `inputRequired` reply.
+| Method                | Purpose                                                                                                                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `resolveInput(opts?)` | Validates `state.input` against the schema and returns it typed. Throws `StepRetriableError` if input is missing or invalid. **Does not consult the action.** |
+| `resolveAction()`     | Returns the action name (or `undefined`). Throws `StepRetriableError` if the action is not declared on the schema. **Does not consult the input.**            |
+| `requireInput(opts?)` | Builder for `StepRetriableError`. `errors` is field-keyed; `formMessage` becomes the top-level `__form` error. Use it to bail out from custom branches.       |
+
+Validator instances are cached per `(type, opts)` pair.
+
+```typescript
+import { useAtscriptWf } from "@atscript/moost-wf";
+import { LoginForm } from "./LoginForm.as";
+
+@Step("login")
+async login() {
+  const wf = useAtscriptWf(LoginForm);
+  const action = wf.resolveAction();
+  if (action === "forgot") {
+    await this.sendPasswordReset();
+    return;
+  }
+  const input = wf.resolveInput();
+  // ... auth ...
+  if (failed) {
+    throw wf.requireInput({ errors: { password: "Invalid credentials" } });
+  }
+}
+```
 
 ### `useWfAction()`
 
-Read/write the current workflow action from the event context. The HTTP trigger sets it from the request body; step handlers read it (or prefer `@AltAction()`).
+Low-level read/write for the current workflow action from the event context. The HTTP trigger sets it from the request body; step handlers read it (or prefer `@WfAction()` / `useAtscriptWf().resolveAction()`).
 
 ```typescript
 function useWfAction(): {
@@ -153,7 +177,7 @@ function extractPassContext(
 
 ### `getFormActions(type)`
 
-Inspects a form type's metadata and returns the declared `actions` and `actionsWithData` ids — used by the interceptor to dispatch the right behaviour for each action.
+Inspects a form type's metadata and returns the declared `actions` and `actionsWithData` ids — used internally by `useAtscriptWf` to classify the incoming action.
 
 ```typescript
 interface TFormActions {
@@ -166,36 +190,71 @@ function getFormActions(type: TAtscriptAnnotatedType): TFormActions;
 
 Reads `@ui.form.action` and `@wf.action.withData`. Results are cached per type identity.
 
-## Classes
+## Outlet helpers
 
-### `FormInputRequired`
+### `createAsHttpOutlet()`
 
-Signal class thrown by `form.requireInput()` and caught by `formInputInterceptor`.
+Pre-configured HTTP outlet for `<AsWfForm>`. Wraps generic form payloads in `{ inputRequired: { payload, transport, context } }` while letting signal payloads (`finished` / `sent` / `outlet` / `error`) flow through unwrapped.
+
+### `handleAsOutletRequest(opts, deps)`
+
+Drop-in replacement for `handleWfOutletRequest` (from `@moostjs/event-wf`). Adds the `finished: true` marker that `<AsWfForm>` reads when a step calls `useWfFinished().set({ value })`.
 
 ```typescript
-class FormInputRequired {
-  constructor(
-    public readonly schema: unknown,
-    public readonly errors?: Record<string, string>,
-    public readonly context?: Record<string, unknown>,
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
+
+@Post("wf")
+async handle() {
+  // ... build deps ...
+  return handleAsOutletRequest(
+    {
+      allow: ["auth/login"],
+      state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
+      outlets: [createAsHttpOutlet()],
+      token: { read: ["body"], write: "body", name: "wfs" },
+    },
+    deps,
   );
 }
 ```
 
-Hand-throw this when you need to pause from outside an `@FormInput()` slot:
+## Finish-screen envelope
+
+Helpers for the unified `WfFinished` envelope rendered by `<AsWfFinish>` on the client. Reach for `finishWf` / `abortWf` instead of raw `useWfFinished()` unless you need to set HTTP-level cookies alongside the envelope.
+
+### `finishWf(opts?)`
+
+Builds and writes a `WfFinished` envelope to `useWfFinished()`.
 
 ```typescript
-import { FormInputRequired, serializeFormSchema } from "@atscript/moost-wf";
-import { MyForm } from "./my-form.as";
+function finishWf(opts?: FinishWfOpts): void;
 
-if (!ok) {
-  throw new FormInputRequired(
-    serializeFormSchema(MyForm),
-    { fieldName: "Server says no" },
-    { contextKey: "value" },
-  );
+interface FinishWfOpts {
+  data?: unknown;
+  message?: WfMessage;
+  next?: WfNext;
 }
 ```
+
+### `abortWf(reason, opts?)`
+
+Same shape as `finishWf`, additionally sets `aborted: true` and the abort `reason`.
+
+```typescript
+function abortWf(reason: string, opts?: FinishWfOpts): void;
+```
+
+### `isWfFinished(value)`
+
+Type guard for `WfFinished` envelopes — useful in custom transports or outlet wrappers.
+
+```typescript
+function isWfFinished(value: unknown): value is WfFinished;
+```
+
+### Envelope types
+
+`WfFinished` carries `{ aborted?, reason?, data?, message?, next? }`. `WfNext` is the `{ trigger: 'immediate' | 'auto' | 'manual', ... }` discriminated union the client renders. `WfMessage`, `WfButton`, and `WfActionRequest` round out the schema. See [Finish Screens](/workflows/finish-screens) for the full surface.
 
 ## Store subpath
 
@@ -271,17 +330,6 @@ When a field on the consumer's row schema carries `@wf.store.fromContext 'path'`
 - `applyShadows(payload, state)` — change how shadow values are resolved or coerced.
 - `scanShadowFields()` — read shadow specs from a different annotation key.
 - `resolvePath(obj, path)` / `coerceShadowValue(raw, spec)` — change traversal or type-coercion rules.
-
-## Types
-
-### `TFormInput<T>`
-
-Type alias re-exported from the decorator module.
-
-```typescript
-type TFormInput<_T = unknown> = ReturnType<typeof useFormInput>;
-// = { data<T>(): T | undefined; requireInput(errors?): FormInputRequired }
-```
 
 ## Cross-links
 

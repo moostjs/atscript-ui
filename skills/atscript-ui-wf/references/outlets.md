@@ -122,10 +122,9 @@ End-to-end: collect email, send magic link, resume from `?wfs=<token>`.
 ```typescript
 @Step("collect-email")
 collectEmail(
-  @WorkflowParam("input") input: { email?: string } | undefined,
+  @WfInput() input: EmailForm,
   @WorkflowParam("context") ctx: { email?: string; token?: string },
 ) {
-  if (!input?.email) return httpInputRequired(EmailForm, ctx);
   ctx.email = input.email;
 }
 ```

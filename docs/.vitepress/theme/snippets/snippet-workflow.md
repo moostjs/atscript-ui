@@ -8,14 +8,12 @@ export class LoginFlow {
   flow() {}
 
   @Step("creds")
-  async creds(@FormInput input?: LoginForm) {
-    if (!input) return requireInput(LoginForm);
+  async creds(@WfInput() input: LoginForm) {
     return { user: await authenticate(input) };
   }
 
   @Step("mfa")
-  async mfa(@FormInput input?: MfaForm, @WfState user) {
-    if (user.mfaEnabled && !input) return requireInput(MfaForm);
+  async mfa(@WfInput() input: MfaForm, @WfState user) {
     return { finished: true, redirect: "/dashboard" };
   }
 }

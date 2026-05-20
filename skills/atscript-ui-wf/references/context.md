@@ -86,7 +86,7 @@ const ctx = extractPassContext(type, wfState.ctx<Record<string, unknown>>());
 
 Walks `type.metadata.get('wf.context.pass')`, then copies matching keys from `wfContext` into a fresh object. Missing keys are omitted (`packages/moost-wf/src/form-input/context.ts:19-32`).
 
-Used inside `httpInputRequired()` and `@FormInput()` to build the response `context` field. You normally never call it directly unless writing a custom outlet helper.
+Used inside `useAtscriptWf().requireInput()` and `@WfInput()` to build the response `context` field. You normally never call it directly unless writing a custom outlet helper.
 
 ## Consuming context on the client
 
@@ -156,13 +156,15 @@ export interface MfaPincodeForm {
 ```typescript
 @Step("verify-otp")
 verifyOtp(
-  @WorkflowParam("input") input: { code?: string } | undefined,
+  @WfInput() input: MfaPincodeForm,
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
   // ctx.email was set in the previous step ('credentials')
-  if (!input?.code) return httpInputRequired(MfaPincodeForm, ctx);
-  if (input.code !== ctx.otpCode)
-    return httpInputRequired(MfaPincodeForm, ctx, { code: "Invalid code" });
+  if (input.code !== ctx.otpCode) {
+    throw useAtscriptWf(MfaPincodeForm).requireInput({
+      errors: { code: "Invalid code" },
+    });
+  }
 }
 ```
 

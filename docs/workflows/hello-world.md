@@ -242,7 +242,7 @@ there is no server-side row to clean up either.
 
 - [Server-Side Authoring](/workflows/server-authoring) — the full
   decorator stack, branching, error returns.
-- [Form Input & Validation](/workflows/form-input) — `@FormInput()`,
+- [Form Input & Validation](/workflows/form-input) — `@WfInput()`,
   validation errors that re-render the same form.
 - [Client: AsWfForm](/workflows/client) — props, slots, the
   composable form.

@@ -23,7 +23,7 @@ async enterCredentials(
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
   if (!input?.username || !input?.password) {
-    return httpInputRequired(LoginForm, ctx);
+    throw useAtscriptWf(LoginForm).requireInput();
   }
   // ... use input.username, input.password ...
 }
@@ -33,95 +33,90 @@ You write the empty-input guard, you decide when to re-pause. No
 automatic validation — the handler sees raw client data, type-asserted
 to `T | undefined`.
 
-### Decorator: `@FormInput()`
+### Decorator: `@WfInput()`
 
-`@FormInput()` collapses the boilerplate into one parameter:
+`@WfInput()` collapses the boilerplate into one parameter:
 
 ```ts
-import { FormInput, type TFormInput } from "@atscript/moost-wf";
+import { WfInput } from "@atscript/moost-wf";
+import { LoginForm } from "./LoginForm.as";
 
 @Step("login-credentials")
 async enterCredentials(
-  @FormInput() form: TFormInput<LoginForm>,
+  @WfInput() input: LoginForm,
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
-  const input = form.data();
-  // ... validated, fully-typed access ...
+  // input is validated and typed — auth.login can use it directly
+  await this.auth.login(input.username, input.password);
 }
 ```
 
 The decorator does three things:
 
 1. **Auto-pause** on first call (no input yet) — returns the
-   serialized schema to the client, the handler body never runs.
+   serialized schema to the client; the handler body never runs.
 2. **Auto-validate** subsequent calls against the form type. Any
    `@expect.*`, `@meta.required`, `string.email`, custom
    `@ui.form.validate` rule baked into the type fires automatically.
-3. **Inject `{ data(), requireInput(errors?) }`** so the handler can
-   read the validated payload and re-pause with custom errors.
+3. **Reject the input** with a `StepRetriableError` carrying the
+   schema + field errors — the workflow engine catches it natively
+   and re-pauses the same step with the new error map.
 
 If validation fails, the framework re-pauses the workflow at the
 same step with the field errors. The handler body is **not** called
 — so by the time your code runs, the input is guaranteed valid for
 that type's static constraints.
 
-The `T` type parameter on `TFormInput<T>` is purely for IDE typing;
-the runtime knows the type from the param metadata that the
-`@FormInput()` decorator wires up.
+## Bailing out with custom errors
 
-## The `form` object
-
-`TFormInput<T>` exposes two methods (see
-`packages/moost-wf/src/form-input/use.ts`):
-
-```ts
-form.data<T>(): T | undefined        // the validated input, or undefined on first call
-form.requireInput(errors?: Record<string, string>): FormInputRequired
-```
-
-- **`data()`** — returns the input the client posted, after
-  validation. Same shape as `@WorkflowParam("input")`.
-- **`requireInput(errors)`** — builds a `FormInputRequired` signal.
-  **Throw** it (don't return) to re-pause the workflow with field
-  errors visible:
+Validation that the `.as` type can't express — DB uniqueness checks,
+auth failures, business-rule violations — uses
+`useAtscriptWf(Type).requireInput(opts?)` to build the same
+`StepRetriableError` the decorator throws. **Throw it** (don't
+return) to re-pause with the schema + the error map.
 
 ```ts
+import { useAtscriptWf, WfInput } from "@atscript/moost-wf";
+import { LoginForm } from "./LoginForm.as";
+
 @Step("login-credentials")
 async enterCredentials(
-  @FormInput() form: TFormInput<LoginForm>,
+  @WfInput() input: LoginForm,
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
-  const input = form.data()!;
   const user = await usersTable.findOne({ filter: { username: input.username } });
   if (!user || !verify(input.password, user.password)) {
-    throw form.requireInput({ password: "Invalid username or password" });
+    throw useAtscriptWf(LoginForm).requireInput({
+      errors: { password: "Invalid username or password" },
+    });
   }
   ctx.userId = user.id;
   return;
 }
 ```
 
-For `requireInput` to round-trip into the response body, mount the
-global interceptor (once):
+`requireInput()` accepts:
+
+- `errors` — `Record<string, string>` keyed by field path. Special
+  key `__form` is a top-level form-wide error.
+- `formMessage` — convenience for `errors: { __form: '...' }`.
+  Combine with `errors` to attach a form-wide message alongside
+  field errors.
 
 ```ts
-import { formInputInterceptor } from "@atscript/moost-wf";
-
-app.applyGlobalInterceptors(formInputInterceptor());
+throw useAtscriptWf(LoginForm).requireInput({
+  formMessage: "Account is suspended",
+});
 ```
-
-The interceptor catches the thrown signal and emits the
-`inputRequired` outlet response. Steps that don't throw are
-unaffected.
 
 ## Server-side validation errors
 
 The same flow handles both kinds of errors uniformly:
 
-| Error source                   | What the framework does                                                                          |
-| ------------------------------ | ------------------------------------------------------------------------------------------------ |
-| Type-level (`@expect.*`, etc.) | `@FormInput()`'s `before` interceptor validates the input. On fail, re-pauses with field errors. |
-| Business-level                 | Handler calls `throw form.requireInput({ field: 'message' })`. Interceptor re-pauses.            |
+| Error source                   | What the framework does                                                                   |
+| ------------------------------ | ----------------------------------------------------------------------------------------- |
+| Type-level (`@expect.*`, etc.) | `@WfInput()` validates the input. On fail, throws `StepRetriableError`; engine re-pauses. |
+| Business-level                 | Handler calls `throw useAtscriptWf(Type).requireInput({ errors: { field: 'msg' } })`.     |
 
 Both produce the same wire response — `{ inputRequired: { payload,
 transport, context: { errors: {...} } } }` — and the client renders
@@ -134,18 +129,18 @@ A classic case the `.as` type can't express:
 ```ts
 @Step("register-details")
 async enterDetails(
-  @FormInput() form: TFormInput<RegisterForm>,
+  @WfInput() input: RegisterForm,
   @WorkflowParam("context") ctx: RegisterCtx,
 ) {
-  const input = form.data()!;
+  const wf = useAtscriptWf(RegisterForm);
 
   const usernameTaken = await usersTable.findOne({ filter: { username: input.username } });
   if (usernameTaken) {
-    throw form.requireInput({ username: "Username already taken" });
+    throw wf.requireInput({ errors: { username: "Username already taken" } });
   }
   const emailTaken = await usersTable.findOne({ filter: { email: input.email } });
   if (emailTaken) {
-    throw form.requireInput({ email: "Email already registered" });
+    throw wf.requireInput({ errors: { email: "Email already registered" } });
   }
 
   // ... advance, hash password, etc. ...
@@ -156,23 +151,27 @@ Pass multiple errors in one map; they all light up at once on the
 client:
 
 ```ts
-throw form.requireInput({
-  username: "Username already taken",
-  email: "Email already registered",
+throw useAtscriptWf(RegisterForm).requireInput({
+  errors: {
+    username: "Username already taken",
+    email: "Email already registered",
+  },
 });
 ```
 
 ### Form-level (cross-field) errors
 
-The reserved key `__form` shows the error at the form's root, not
-attached to any field:
+`formMessage` shows the error at the form's root, not attached to
+any field:
 
 ```ts
-throw form.requireInput({ __form: "Account is suspended" });
+throw useAtscriptWf(LoginForm).requireInput({
+  formMessage: "Account is suspended",
+});
 ```
 
-The client's default form renders `__form` errors at the top of the
-form chrome (see [Forms / Validation](/forms/validation)).
+The client's default form renders form-level errors at the top of
+the form chrome (see [Forms / Validation](/forms/validation)).
 
 ## Same-form detection: preserving user input
 
@@ -188,31 +187,43 @@ re-pausing — the client:
 
 User-typed values stay put. Only the errors flip.
 
-This is invisible to step authors — just `throw form.requireInput({...})`
+This is invisible to step authors — just `throw wf.requireInput({...})`
 and the client handles it.
 
-Reference: `processResponse` in
-`packages/vue-wf/src/use-wf-form.ts:128-188`.
+## Composable-driven control
 
-## Standalone `useFormInput()` composable
-
-If you need the same helper outside a `@FormInput()` decorator (say,
-inside a sub-helper called from a step):
+When you want to interleave action handling and input validation
+explicitly (without the `@WfInput` policy matrix), call
+`useAtscriptWf()` directly:
 
 ```ts
-import { useFormInput } from "@atscript/moost-wf";
-import { LoginForm } from "../forms/LoginForm.as";
+import { useAtscriptWf } from "@atscript/moost-wf";
+import { LoginForm } from "./LoginForm.as";
 
-function rejectInvalidPassword() {
-  const { requireInput } = useFormInput(LoginForm);
-  throw requireInput({ password: "Invalid credentials" });
+@Step("login-credentials")
+async enterCredentials(@WorkflowParam("context") ctx: LoginCtx) {
+  const wf = useAtscriptWf(LoginForm);
+  const action = wf.resolveAction();
+  if (action === "forgot") {
+    await this.sendPasswordReset();
+    return;
+  }
+  const input = wf.resolveInput();
+  // ... auth ...
 }
 ```
 
-Pass the atscript type so the composable knows what schema to
-serialize back to the client. When called from inside a
-`@FormInput()` decorator the type is auto-injected, so the explicit
-arg is optional in that case.
+The three helpers are pure and independent:
+
+- `resolveInput(opts?)` — validates `state.input` and returns it
+  typed; throws `StepRetriableError` on missing/invalid input.
+- `resolveAction()` — returns the action name or `undefined`;
+  throws `StepRetriableError` for unknown actions.
+- `requireInput(opts?)` — builds the retriable error for custom
+  branches.
+
+`@WfInput()` is the same composable plus the action-vs-input policy
+matrix from [Actions](/workflows/actions).
 
 ## Action validation differs
 
@@ -221,8 +232,9 @@ validates with `partial: "deep"` — the framework only checks the
 fields that are present, so a "save draft" action with half a form
 filled in passes. Plain form submits validate the whole shape.
 
-This is handled inside the interceptor; you don't write a separate
-guard.
+`@WfInput()` applies this policy automatically based on the action's
+declaration (`@ui.form.action` vs `@wf.action.withData`); you don't
+write a separate guard.
 
 ## Where to go next
 

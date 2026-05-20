@@ -307,10 +307,9 @@ flow() {}
 
 @Step("collect")
 collect(
-  @WorkflowParam("input") input: { email?: string } | undefined,
+  @WfInput() input: InviteForm,
   @WorkflowParam("context") ctx: { email?: string },
 ) {
-  if (!input?.email) return httpInputRequired(InviteForm, ctx);
   ctx.email = input.email;          // → copied to shadow column on engine.set()
 }
 

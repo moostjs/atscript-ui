@@ -100,8 +100,9 @@ that:
   handler runs.
 - Filters workflow context through a `@wf.context.pass` whitelist
   before sending it to the browser (no accidental state leakage).
-- Catches `requireInput()` signals from step handlers and converts
-  them to outlet responses.
+- Lets step handlers signal "re-pause with these errors" through
+  `useAtscriptWf(Type).requireInput({ ... })` — a `StepRetriableError`
+  the workflow engine catches natively.
 - Ships an `AsWfStore` for **durable state persistence** in any
   atscript-db table — opt in for flows that must survive process
   restart (email magic links, multi-day approvals).
@@ -110,18 +111,18 @@ See [Server-Side Authoring](/workflows/server-authoring).
 
 ## Quick map
 
-| Topic                                            | Page                                                 |
-| ------------------------------------------------ | ---------------------------------------------------- |
-| Two-step end-to-end example                      | [Hello World](/workflows/hello-world)                |
-| `@Workflow` + `@Step` + `@WorkflowSchema`        | [Server-Side Authoring](/workflows/server-authoring) |
-| `@FormInput`, `requireInput`, server-side errors | [Form Input & Validation](/workflows/form-input)     |
-| Alt actions (resend code, save draft, …)         | [Actions](/workflows/actions)                        |
-| Passing context to the client form               | [Context Passing](/workflows/context)                |
-| Durable state with `AsWfStore`                   | [State Persistence](/workflows/state-persistence)    |
-| Magic links, outlets, resume                     | [Outlets & Resume](/workflows/outlets-resume)        |
-| `<AsWfForm>` + `useWfForm()` reference           | [Client: AsWfForm](/workflows/client)                |
-| Terminal screens, redirects, choice buttons      | [Finish Screens](/workflows/finish-screens)          |
-| Login+MFA, invite+register, checkout             | [Recipes](/workflows/recipes)                        |
+| Topic                                          | Page                                                 |
+| ---------------------------------------------- | ---------------------------------------------------- |
+| Two-step end-to-end example                    | [Hello World](/workflows/hello-world)                |
+| `@Workflow` + `@Step` + `@WorkflowSchema`      | [Server-Side Authoring](/workflows/server-authoring) |
+| `@WfInput`, `requireInput`, server-side errors | [Form Input & Validation](/workflows/form-input)     |
+| Alt actions (resend code, save draft, …)       | [Actions](/workflows/actions)                        |
+| Passing context to the client form             | [Context Passing](/workflows/context)                |
+| Durable state with `AsWfStore`                 | [State Persistence](/workflows/state-persistence)    |
+| Magic links, outlets, resume                   | [Outlets & Resume](/workflows/outlets-resume)        |
+| `<AsWfForm>` + `useWfForm()` reference         | [Client: AsWfForm](/workflows/client)                |
+| Terminal screens, redirects, choice buttons    | [Finish Screens](/workflows/finish-screens)          |
+| Login+MFA, invite+register, checkout           | [Recipes](/workflows/recipes)                        |
 
 ## Related
 
