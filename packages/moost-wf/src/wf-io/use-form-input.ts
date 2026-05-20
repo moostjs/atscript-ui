@@ -1,7 +1,7 @@
 import { useWfState } from "@moostjs/event-wf";
 import { isAnnotatedType } from "@atscript/typescript/utils";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import { FormInputRequired } from "./required";
+import { FormInputRequired } from "./form-input-required";
 import { serializeFormSchema } from "./serialize";
 import { extractPassContext } from "./context";
 

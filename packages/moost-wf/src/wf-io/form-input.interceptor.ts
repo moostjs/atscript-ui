@@ -1,6 +1,6 @@
 import type { TInterceptorDef } from "moost";
 import { TInterceptorPriority } from "moost";
-import { FormInputRequired } from "./required";
+import { FormInputRequired } from "./form-input-required";
 
 /**
  * Global interceptor that catches {@link FormInputRequired} signals

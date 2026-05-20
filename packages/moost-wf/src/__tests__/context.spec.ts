@@ -1,6 +1,6 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { extractPassContext, getFormActions } from "../form-input/context";
+import { extractPassContext, getFormActions } from "../wf-io/context";
 import { objectType, phantomProp, stringProp } from "./helpers";
 
 describe("extractPassContext", () => {

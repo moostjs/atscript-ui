@@ -1,12 +1,12 @@
-export { FormInput } from "./form-input/decorator";
-export type { TFormInput } from "./form-input/decorator";
-export { AltAction } from "./form-input/alt-action.decorator";
-export { FormInputRequired } from "./form-input/required";
-export { formInputInterceptor } from "./form-input/interceptor";
-export { serializeFormSchema } from "./form-input/serialize";
-export { extractPassContext, getFormActions } from "./form-input/context";
-export { useFormInput } from "./form-input/use";
-export { useWfAction } from "./form-input/use-wf-action";
+export { FormInput } from "./wf-io/form-input.decorator";
+export type { TFormInput } from "./wf-io/form-input.decorator";
+export { AltAction } from "./wf-io/alt-action.decorator";
+export { FormInputRequired } from "./wf-io/form-input-required";
+export { formInputInterceptor } from "./wf-io/form-input.interceptor";
+export { serializeFormSchema } from "./wf-io/serialize";
+export { extractPassContext, getFormActions } from "./wf-io/context";
+export { useFormInput } from "./wf-io/use-form-input";
+export { useWfAction } from "./wf-io/use-wf-action";
 export { createAsHttpOutlet } from "./outlet";
 export { handleAsOutletRequest } from "./handle";
 

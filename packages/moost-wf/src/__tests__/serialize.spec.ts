@@ -1,7 +1,7 @@
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { serializeFormSchema } from "../form-input/serialize";
+import { serializeFormSchema } from "../wf-io/serialize";
 
 describe("serializeFormSchema", () => {
   it("serializes a simple form type", async () => {

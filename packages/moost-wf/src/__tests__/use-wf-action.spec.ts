@@ -1,6 +1,6 @@
 import { EventContext, run } from "@wooksjs/event-core";
 import { describe, expect, it } from "vitest";
-import { useWfAction } from "../form-input/use-wf-action";
+import { useWfAction } from "../wf-io/use-wf-action";
 
 describe("useWfAction", () => {
   function runInContext<T>(fn: () => T): T {
