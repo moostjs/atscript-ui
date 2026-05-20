@@ -110,9 +110,9 @@ In a workflow form (`<AsWfForm>`), the action is forwarded to
 ```ts
 @Step("login-credentials")
 async enterCredentials(
-  @WfInput({ pass: true }) input: LoginForm | undefined,
   @WorkflowParam("context") ctx: LoginCtx,
   @WfAction() action: string | undefined,
+  @WfInput({ pass: true }) input?: LoginForm,
 ) {
   if (action === "forgot-password") {
     ctx.recovery = true;

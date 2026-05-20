@@ -213,15 +213,15 @@ Two key effects:
 ### Opting in to no-data actions
 
 A step that should also handle a plain `@ui.form.action` (e.g.
-"forgot password") declares `@WfInput({ pass: true })`. The parameter
-type becomes `T | undefined`; when a no-data action fires the
-parameter is `undefined` and the handler runs.
+"forgot password") declares `@WfInput({ pass: true })`. Mark the
+parameter optional with `?:` (`input?: Form`); when a no-data action
+fires the parameter is `undefined` and the handler runs.
 
 ```typescript
 @Step("login-credentials")
 async enterCredentials(
-  @WfInput({ pass: true }) input: LoginForm | undefined,
   @WfAction() action: string | undefined,
+  @WfInput({ pass: true }) input?: LoginForm,
 ) {
   if (action === "forgot") {
     return this.sendPasswordReset();
@@ -230,6 +230,8 @@ async enterCredentials(
   await this.auth.login(input!.username, input!.password);
 }
 ```
+
+Use `?:` syntax (`input?: LoginForm`), not a union (`input: LoginForm | undefined`) — the union breaks atscript metadata reflection (TS emits `Object` instead of the AsType for union-typed parameters). `@WfInput({ pass: true })` composes `@Optional()` internally so global validator pipes skip the `undefined` value.
 
 ## useAtscriptWf composable
 
@@ -326,8 +328,8 @@ Branch on the action in the step handler:
 ```typescript
 @Step("login")
 async login(
-  @WfInput({ pass: true }) input: LoginForm | undefined,
   @WfAction() action: string | undefined,
+  @WfInput({ pass: true }) input?: LoginForm,
 ) {
   const wf = useAtscriptWf(LoginForm);
 

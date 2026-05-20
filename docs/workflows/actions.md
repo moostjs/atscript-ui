@@ -68,9 +68,9 @@ import { MfaPincodeForm } from "../forms/MfaPincodeForm.as";
 
 @Step("login-verify-otp")
 async verifyOtp(
-  @WfInput({ pass: true }) input: MfaPincodeForm | undefined,
-  @WfAction() action: string | undefined,
   @WorkflowParam("context") ctx: LoginCtx,
+  @WfAction() action: string | undefined,
+  @WfInput({ pass: true }) input?: MfaPincodeForm,
 ) {
   const wf = useAtscriptWf(MfaPincodeForm);
 
@@ -103,6 +103,8 @@ chain.
 actions (`@ui.form.action`) without forcing input — the parameter
 resolves to `undefined` when a no-data action fires. Without
 `pass: true`, the decorator throws on no-data actions.
+
+Use `?:` syntax (`input?: Form`), not a union (`input: Form | undefined`) — the union breaks atscript metadata reflection (TS emits `Object` instead of the AsType for union-typed parameters). `@WfInput({ pass: true })` composes `@Optional()` internally so global validator pipes skip the `undefined` value.
 
 ### Composable: `useAtscriptWf()`
 
