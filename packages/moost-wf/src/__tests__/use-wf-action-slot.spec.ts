@@ -1,8 +1,8 @@
 import { EventContext, run } from "@wooksjs/event-core";
 import { describe, expect, it } from "vitest";
-import { useWfAction } from "../wf-io/use-wf-action";
+import { useWfActionSlot } from "../wf-io/use-wf-action-slot";
 
-describe("useWfAction", () => {
+describe("useWfActionSlot", () => {
   function runInContext<T>(fn: () => T): T {
     const ctx = new EventContext({ logger: { log() {} } as never });
     return run(ctx, fn);
@@ -10,14 +10,14 @@ describe("useWfAction", () => {
 
   it("getAction returns undefined when no action set", () => {
     runInContext(() => {
-      const { getAction } = useWfAction();
+      const { getAction } = useWfActionSlot();
       expect(getAction()).toBeUndefined();
     });
   });
 
   it("setAction + getAction round-trip", () => {
     runInContext(() => {
-      const { setAction, getAction } = useWfAction();
+      const { setAction, getAction } = useWfActionSlot();
       setAction("resend");
       expect(getAction()).toBe("resend");
     });
@@ -25,7 +25,7 @@ describe("useWfAction", () => {
 
   it("setAction(undefined) clears the action", () => {
     runInContext(() => {
-      const { setAction, getAction } = useWfAction();
+      const { setAction, getAction } = useWfActionSlot();
       setAction("resend");
       setAction(undefined);
       expect(getAction()).toBeUndefined();

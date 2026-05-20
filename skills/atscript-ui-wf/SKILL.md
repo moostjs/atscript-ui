@@ -6,7 +6,7 @@ description: >-
   `useWfForm` on the client; when declaring server flows via `@Workflow` /
   `@Step` / `@WorkflowSchema` / `@WfInput` / `@WfAction` on top of
   `@moostjs/event-wf`; when calling `useAtscriptWf(Type)` /
-  `useWfAction` composables inside step handlers; when serializing forms via
+  `useWfActionSlot` composables inside step handlers; when serializing forms via
   `serializeFormSchema` / `extractPassContext`; when passing context across
   steps via `@wf.context.pass`; when implementing action-with-data via
   `@wf.action.withData`; when persisting workflow state via `AsWfStore` +
@@ -149,7 +149,7 @@ import {
   WfInput,
   WfAction,
   useAtscriptWf,
-  useWfAction,
+  useWfActionSlot,
   serializeFormSchema,
   extractPassContext,
   getFormActions,

@@ -10,7 +10,7 @@ Authoring server-side workflow controllers with `@atscript/moost-wf` on top of `
 - [Pause patterns](#pause-patterns)
 - [@WfInput() auto-validation flow](#wfinput-auto-validation-flow)
 - [useAtscriptWf composable](#useatscriptwf-composable)
-- [useWfAction](#usewfaction)
+- [useWfActionSlot](#usewfactionslot)
 - [Action handlers](#action-handlers)
 - [StepRetriableError](#stepretriableerror)
 - [serializeFormSchema(type)](#serializeformschematype)
@@ -280,20 +280,22 @@ async login() {
 
 Validator instances are cached per `(type, opts)` pair.
 
-## useWfAction
+## useWfActionSlot
+
+Low-level accessor for the workflow action slot in the wf event context. Intended for **transport adapters** that need to write the action from the incoming request, and for composables that need raw read/clear semantics. In step handlers, prefer `@WfAction()` / `useAtscriptWf(Type).resolveAction()` — those validate the action against the schema and throw `StepRetriableError` on unknown values.
 
 ```typescript
-import { useWfAction } from "@atscript/moost-wf";
+import { useWfActionSlot } from "@atscript/moost-wf";
 
-const { getAction, setAction } = useWfAction();
+const { getAction, setAction } = useWfActionSlot();
 ```
 
-| Method              | Purpose                                               | Where to call                                                                        |
-| ------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `getAction()`       | read the action name the client sent (or `undefined`) | step handlers (prefer `@WfAction()`)                                                 |
-| `setAction(action)` | write the action name into event context              | **HTTP trigger** — call before invoking the workflow engine, so step handlers see it |
+| Method              | Purpose                                                      | Where to call                                                                                         |
+| ------------------- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `getAction()`       | raw read of the action name (or `undefined`) — no validation | composables that need to inspect or clear the slot; step handlers should prefer the schema-aware path |
+| `setAction(action)` | write the action name into event context                     | **transport adapter** (HTTP / CLI / WS controller) — call before invoking the workflow engine         |
 
-The HTTP trigger should pull `action` from the request body and call `setAction(body.action)`. After that, `@WfAction()` / `useAtscriptWf().resolveAction()` reads it.
+The HTTP trigger pulls `action` from the request body and calls `setAction(body.action)`. After that, `@WfAction()` / `useAtscriptWf().resolveAction()` reads it from the same slot with schema validation.
 
 ## Action handlers
 

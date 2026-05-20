@@ -7,7 +7,7 @@ import { useWfState } from "@moostjs/event-wf";
 import { StepRetriableError } from "@wooksjs/event-wf";
 import { extractPassContext, getFormActions } from "./context";
 import { serializeFormSchema } from "./serialize";
-import { useWfAction } from "./use-wf-action";
+import { useWfActionSlot } from "./use-wf-action-slot";
 import { getCachedValidator } from "./validator-cache";
 
 interface RequireInputOpts {
@@ -69,7 +69,7 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(
 };
 export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotatedType<T>) {
   const wfState = useWfState();
-  const wfAction = useWfAction();
+  const wfAction = useWfActionSlot();
 
   function requireInput({ errors, formMessage }: RequireInputOpts = {}): StepRetriableError<{
     outlet: "http";

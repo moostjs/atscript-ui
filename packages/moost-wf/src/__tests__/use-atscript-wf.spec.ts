@@ -6,13 +6,13 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { WfAction } from "../wf-io/wf-action.decorator";
 import { WfInput } from "../wf-io/wf-input.decorator";
 import { useAtscriptWf } from "../wf-io/use-atscript-wf";
-import { useWfAction } from "../wf-io/use-wf-action";
+import { useWfActionSlot } from "../wf-io/use-wf-action-slot";
 import { getCachedValidator } from "../wf-io/validator-cache";
 
 /**
  * Seed the wooks/wf event context with the slots the wf composables read:
  * `wfKind.keys.input` (step input), `wfKind.keys.inputContext` (workflow
- * context). The wf action is set via `useWfAction().setAction(...)`.
+ * context). The wf action is set via `useWfActionSlot().setAction(...)`.
  */
 function runInWfContext<T>(
   opts: {
@@ -34,7 +34,7 @@ function runInWfContext<T>(
     ctx.set(wfKind.keys.inputContext, opts.wfContext ?? {});
     ctx.set(resumeKey, false);
     if (opts.action !== undefined) {
-      useWfAction().setAction(opts.action);
+      useWfActionSlot().setAction(opts.action);
     }
     return fn();
   });

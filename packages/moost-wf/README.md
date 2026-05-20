@@ -16,7 +16,7 @@ Part of the [atscript-ui](https://github.com/moostjs/atscript-ui) monorepo.
 
 - `useAtscriptWf(Type)` composable — schema-aware `resolveInput()` / `resolveAction()` / `requireInput()` for step handlers.
 - `@WfInput()` / `@WfAction()` parameter decorators — sugar over `useAtscriptWf()` with the full action-vs-input policy matrix.
-- `useWfAction()` for low-level action context access.
+- `useWfActionSlot()` for low-level action context access (transport adapters writing the action; raw read+clear flows). Step handlers should prefer `useAtscriptWf(Type).resolveAction()`.
 - Schema helpers: `serializeFormSchema`, `extractPassContext`, `getFormActions`.
 - HTTP outlet integration: `createAsHttpOutlet`, `handleAsOutletRequest`.
 - Finish-screen envelope helpers: `finishWf`, `abortWf`, `isWfFinished`, and the `WfFinished` / `WfNext` / `WfMessage` / `WfButton` / `WfActionRequest` types rendered by `<AsWfFinish>`. See [Finish Screens](https://ui.atscript.dev/workflows/finish-screens).

@@ -9,7 +9,7 @@ import {
   type WfOutletTriggerDeps,
   type WfStateStrategy,
 } from "@moostjs/event-wf";
-import { createAsHttpOutlet, handleAsOutletRequest, useWfAction } from "@atscript/moost-wf";
+import { createAsHttpOutlet, handleAsOutletRequest, useWfActionSlot } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 // Keep the email outlet registered for future magic-link flows (user invite, password-reset);
 // current P6 workflows dispatch OTP inline so they can pause on a form in the same response.
@@ -102,7 +102,7 @@ export class WorkflowsController {
     // resolves correctly inside steps — `handleWfOutletRequest` doesn't wire
     // the action key itself, so each app must opt in.
     if (typeof body?.action === "string") {
-      useWfAction().setAction(body.action);
+      useWfActionSlot().setAction(body.action);
     }
     const wfApp = this.wf.getWfApp();
     const deps: WfOutletTriggerDeps = {

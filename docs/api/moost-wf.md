@@ -143,12 +143,12 @@ async login() {
 }
 ```
 
-### `useWfAction()`
+### `useWfActionSlot()`
 
-Low-level read/write for the current workflow action from the event context. The HTTP trigger sets it from the request body; step handlers read it (or prefer `@WfAction()` / `useAtscriptWf().resolveAction()`).
+Low-level accessor for the workflow action slot in the current wf event context. Used by transport adapters (HTTP / CLI / WS controllers) to **write** the action from the incoming request, and by composables that need raw read/clear semantics. Step handlers should prefer `@WfAction()` / `useAtscriptWf(Type).resolveAction()` — the schema-validated read path.
 
 ```typescript
-function useWfAction(): {
+function useWfActionSlot(): {
   getAction(): string | undefined;
   setAction(action: string | undefined): void;
 };

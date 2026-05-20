@@ -2,7 +2,7 @@ import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { isAnnotatedType } from "@atscript/typescript/utils";
 import { Resolve } from "moost";
 import { useAtscriptWf } from "./use-atscript-wf";
-import { useWfAction } from "./use-wf-action";
+import { useWfActionSlot } from "./use-wf-action-slot";
 
 /**
  * Parameter decorator that resolves to the current workflow action name.
@@ -32,7 +32,7 @@ export function WfAction(): ParameterDecorator {
       if (type && isAnnotatedType(type)) {
         return useAtscriptWf(type as TAtscriptAnnotatedType).resolveAction();
       }
-      return useWfAction().getAction();
+      return useWfActionSlot().getAction();
     }, "WfAction")(target, key, index);
   };
 }
