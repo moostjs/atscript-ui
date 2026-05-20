@@ -353,6 +353,28 @@ describe("@WfInput — policy matrix", () => {
     expect((ir.context.errors as Record<string, string>).__form).toContain("not allowed");
   });
 
+  it("@WfInput({ pass: true }) marks the parameter as moost-optional so global validation pipes skip undefined", async () => {
+    // Why: the global @atscript/moost-validator pipe inspects param metadata
+    // and skips validation when `optional: true`. Without this flag, a
+    // legitimately-undefined resolved value (no-data alt action + pass:true)
+    // gets rejected as "Expected object". Compose @Optional() automatically.
+    const targetPass = { constructor: Stub } as unknown as object;
+    const methodPass = `m${++methodCounter}`;
+    WfInput({ pass: true })(targetPass, methodPass, 0);
+    const metaPass = getMoostMate().read(targetPass, methodPass) as
+      | { params?: Array<{ optional?: boolean }> }
+      | undefined;
+    expect((metaPass?.params || [])[0]).toHaveProperty("optional", true);
+
+    const targetStrict = { constructor: Stub } as unknown as object;
+    const methodStrict = `m${++methodCounter}`;
+    WfInput()(targetStrict, methodStrict, 0);
+    const metaStrict = getMoostMate().read(targetStrict, methodStrict) as
+      | { params?: Array<{ optional?: boolean }> }
+      | undefined;
+    expect((metaStrict?.params || [])[0]?.optional).toBeFalsy();
+  });
+
   it("throws with __form 'not supported' for an unknown action", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
     const cb = captureResolve(WfInput(), ActionForm);

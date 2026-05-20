@@ -19,9 +19,9 @@ export class WfFinishAbortedDemoWorkflow {
 
   @Step("wfd-aborted")
   run(
-    @WfInput({ pass: true }) input: AbortableDemoForm | undefined,
     @WorkflowParam("context") ctx: Ctx,
     @WfAction() action: string | undefined,
+    @WfInput({ pass: true }) input?: AbortableDemoForm,
   ) {
     if (action === "cancel") {
       abortWf("user-cancel", {

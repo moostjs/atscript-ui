@@ -1,7 +1,7 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { isAnnotatedType } from "@atscript/typescript/utils";
 import { useWfState } from "@moostjs/event-wf";
-import { Resolve } from "moost";
+import { Optional, Resolve } from "moost";
 import { getFormActions } from "./context";
 import { useAtscriptWf } from "./use-atscript-wf";
 
@@ -81,5 +81,13 @@ export function WfInput(opts?: { pass?: boolean }): ParameterDecorator {
       // no action → strict validation
       return wf.resolveInput();
     }, "WfInput")(target, key, index);
+
+    // pass:true means the decorator can legitimately return undefined when a
+    // no-data alt action fires. Mark the param as moost-optional so global
+    // validation pipes (e.g. @atscript/moost-validator) skip the undefined
+    // value instead of rejecting it as "Expected object".
+    if (opts?.pass === true) {
+      Optional()(target, key, index);
+    }
   };
 }
