@@ -56,23 +56,29 @@ function expectIR(err: unknown): {
   return ir;
 }
 
-describe("useAtscriptWf().resolveInput()", () => {
-  it("throws StepRetriableError when input is missing and no action is fired", async () => {
+function capture(fn: () => unknown): unknown {
+  try {
+    fn();
+  } catch (err) {
+    return err;
+  }
+  throw new Error("expected throw but none happened");
+}
+
+describe("useAtscriptWf().resolveInput() — pure, no action awareness", () => {
+  it("throws StepRetriableError when input is missing", async () => {
     const { NoActionsForm } = await import("./fixtures/wf-forms.as");
     expect(() =>
       runInWfContext({ input: undefined }, () => useAtscriptWf(NoActionsForm).resolveInput()),
     ).toThrow(StepRetriableError);
   });
 
-  it("throws with flattened field errors when input fails validation (no action)", async () => {
+  it("throws with flattened field errors when input fails validation", async () => {
     const { LoginForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ input: { username: "" } }, () => useAtscriptWf(LoginForm).resolveInput());
-    } catch (err) {
-      captured = err;
-    }
-    const ir = expectIR(captured);
+    const err = capture(() =>
+      runInWfContext({ input: { username: "" } }, () => useAtscriptWf(LoginForm).resolveInput()),
+    );
+    const ir = expectIR(err);
     const errors = ir.context.errors as Record<string, string>;
     // Why: validators must surface per-field errors so the client renders them
     // next to inputs rather than as a global form-level message.
@@ -80,7 +86,7 @@ describe("useAtscriptWf().resolveInput()", () => {
     expect(typeof errors.username).toBe("string");
   });
 
-  it("returns the typed input when validation passes (no action)", async () => {
+  it("returns the typed input when validation passes", async () => {
     const { LoginForm } = await import("./fixtures/wf-forms.as");
     const result = runInWfContext({ input: { username: "alice", password: "secret" } }, () =>
       useAtscriptWf(LoginForm).resolveInput(),
@@ -88,97 +94,24 @@ describe("useAtscriptWf().resolveInput()", () => {
     expect(result).toEqual({ username: "alice", password: "secret" });
   });
 
-  it("throws when a with-data action fires with no input", async () => {
+  it("validates partially when { partial: 'deep' } is passed", async () => {
     const { WithDataForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ action: "saveDraft", input: undefined }, () =>
-        useAtscriptWf(WithDataForm).resolveInput(),
-      );
-    } catch (err) {
-      captured = err;
-    }
-    const ir = expectIR(captured);
-    expect((ir.context.errors as Record<string, string>).__form).toContain("saveDraft");
-  });
-
-  it("validates partially when a with-data action fires with input", async () => {
-    const { WithDataForm } = await import("./fixtures/wf-forms.as");
-    // Partial validation: missing `code` is allowed under a with-data action.
-    const result = runInWfContext({ action: "saveDraft", input: {} }, () =>
-      useAtscriptWf(WithDataForm).resolveInput(),
+    // Partial validation: missing `code` is allowed.
+    const result = runInWfContext({ input: {} }, () =>
+      useAtscriptWf(WithDataForm).resolveInput({ partial: "deep" }),
     );
     expect(result).toEqual({});
   });
 
-  it("throws when input is present but fails partial validation under a with-data action", async () => {
+  it("throws when partial validation fails", async () => {
     const { WithDataForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ action: "saveDraft", input: { code: 42 } }, () =>
-        useAtscriptWf(WithDataForm).resolveInput(),
-      );
-    } catch (err) {
-      captured = err;
-    }
-    const ir = expectIR(captured);
-    expect(ir.context.errors).toBeDefined();
-  });
-
-  it("returns undefined when a no-data action fires and pass:true is set", async () => {
-    const { ActionForm } = await import("./fixtures/wf-forms.as");
-    const result = runInWfContext({ action: "resend", input: undefined }, () =>
-      useAtscriptWf(ActionForm).resolveInput({ pass: true }),
+    const err = capture(() =>
+      runInWfContext({ input: { code: 42 } }, () =>
+        useAtscriptWf(WithDataForm).resolveInput({ partial: "deep" }),
+      ),
     );
-    expect(result).toBeUndefined();
-  });
-
-  it("throws when a no-data action fires without pass:true", async () => {
-    const { ActionForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ action: "resend", input: undefined }, () =>
-        useAtscriptWf(ActionForm).resolveInput(),
-      );
-    } catch (err) {
-      captured = err;
-    }
-    const ir = expectIR(captured);
-    // Why: silently returning undefined would let the step handler treat
-    // a stateless action as if it were the normal submit — pass:true must
-    // be explicit opt-in.
-    expect((ir.context.errors as Record<string, string>).__form).toContain("resend");
-  });
-
-  it("throws when input is present alongside a no-data action and pass:true is set", async () => {
-    const { ActionForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ action: "resend", input: { code: "1234" } }, () =>
-        useAtscriptWf(ActionForm).resolveInput({ pass: true }),
-      );
-    } catch (err) {
-      captured = err;
-    }
-    const ir = expectIR(captured);
-    // Why: declaring a no-data action means the action contract excludes
-    // payloads. Accepting input would let clients smuggle data the step
-    // didn't sign up to validate.
-    expect((ir.context.errors as Record<string, string>).__form).toContain("not allowed");
-  });
-
-  it("throws with __form 'not supported' for an unknown action", async () => {
-    const { ActionForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ action: "bogus", input: { code: "1" } }, () =>
-        useAtscriptWf(ActionForm).resolveInput(),
-      );
-    } catch (err) {
-      captured = err;
-    }
-    const ir = expectIR(captured);
-    expect((ir.context.errors as Record<string, string>).__form).toContain("not supported");
+    const ir = expectIR(err);
+    expect(ir.context.errors).toBeDefined();
   });
 
   it("uses the cached validator on repeated calls", async () => {
@@ -202,9 +135,20 @@ describe("useAtscriptWf().resolveInput()", () => {
     expect(spy).not.toHaveBeenCalled();
     spy.mockRestore();
   });
+
+  it("does NOT look at the wf action", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    // Why: the composable's contract is "validate the input"; action policy
+    // belongs in the decorator. Setting an unknown action must not trip it.
+    const result = runInWfContext(
+      { input: { username: "alice", password: "secret" }, action: "something-random" },
+      () => useAtscriptWf(LoginForm).resolveInput(),
+    );
+    expect(result).toEqual({ username: "alice", password: "secret" });
+  });
 });
 
-describe("useAtscriptWf().resolveAction()", () => {
+describe("useAtscriptWf().resolveAction() — pure, no input awareness", () => {
   it("returns undefined when no action is set", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
     const result = runInWfContext({}, () => useAtscriptWf(ActionForm).resolveAction());
@@ -221,13 +165,10 @@ describe("useAtscriptWf().resolveAction()", () => {
 
   it("throws StepRetriableError when the action is unknown", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
-    let captured: unknown;
-    try {
-      runInWfContext({ action: "bogus" }, () => useAtscriptWf(ActionForm).resolveAction());
-    } catch (err) {
-      captured = err;
-    }
-    expectIR(captured);
+    const err = capture(() =>
+      runInWfContext({ action: "bogus" }, () => useAtscriptWf(ActionForm).resolveAction()),
+    );
+    expectIR(err);
   });
 
   it("is idempotent — second call returns the same value without re-reading", async () => {
@@ -242,6 +183,69 @@ describe("useAtscriptWf().resolveAction()", () => {
       expect(a1).toBe("resend");
       expect(a2).toBe("resend");
     });
+  });
+
+  it("does NOT look at the wf input", async () => {
+    const { ActionForm } = await import("./fixtures/wf-forms.as");
+    // Why: the primitives are independent. With input present but no action,
+    // resolveAction must still report `undefined` rather than failing.
+    const result = runInWfContext({ input: { code: "1234" } }, () =>
+      useAtscriptWf(ActionForm).resolveAction(),
+    );
+    expect(result).toBeUndefined();
+  });
+});
+
+describe("useAtscriptWf().requireInput() — error builder", () => {
+  it("builds StepRetriableError with the form schema payload", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    const err = runInWfContext({}, () => useAtscriptWf(LoginForm).requireInput());
+    expect(err).toBeInstanceOf(StepRetriableError);
+    const ir = (err as StepRetriableError<unknown>).inputRequired as {
+      outlet: "http";
+      payload: unknown;
+      context: Record<string, unknown>;
+    };
+    expect(ir.outlet).toBe("http");
+    // Payload must be the serialized form schema; serializer's exact shape
+    // is its own contract — here we just require a non-null object.
+    expect(ir.payload).toBeTruthy();
+    expect(typeof ir.payload).toBe("object");
+  });
+
+  it("includes field errors in context.errors when provided", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    const err = runInWfContext({}, () =>
+      useAtscriptWf(LoginForm).requireInput({ errors: { username: "is bad" } }),
+    );
+    const ir = (err as StepRetriableError<unknown>).inputRequired as {
+      context: Record<string, unknown>;
+    };
+    const errors = ir.context.errors as Record<string, string>;
+    expect(errors.username).toBe("is bad");
+  });
+
+  it("maps formMessage to context.errors.__form", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    const err = runInWfContext({}, () =>
+      useAtscriptWf(LoginForm).requireInput({ formMessage: "nope" }),
+    );
+    const ir = (err as StepRetriableError<unknown>).inputRequired as {
+      context: Record<string, unknown>;
+    };
+    const errors = ir.context.errors as Record<string, string>;
+    expect(errors.__form).toBe("nope");
+  });
+
+  it("omits errors when no field errors and no formMessage given", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    const err = runInWfContext({}, () => useAtscriptWf(LoginForm).requireInput());
+    const ir = (err as StepRetriableError<unknown>).inputRequired as {
+      context: Record<string, unknown>;
+    };
+    // Why: callers reading `context.errors` should be able to distinguish
+    // "no validation failure to report" from "empty error map".
+    expect(ir.context.errors).toBeUndefined();
   });
 });
 
@@ -266,8 +270,8 @@ function captureResolve(decorator: ParameterDecorator, type: unknown): ResolveCb
     resolver({ targetMeta: { type, ...extra.targetMeta } } as never);
 }
 
-describe("decorators", () => {
-  it("@WfInput resolves to the validated input", async () => {
+describe("@WfInput — policy matrix", () => {
+  it("resolves to the validated input on a clean submit", async () => {
     const { LoginForm } = await import("./fixtures/wf-forms.as");
     const cb = captureResolve(WfInput(), LoginForm);
     const result = runInWfContext({ input: { username: "alice", password: "secret" } }, () =>
@@ -276,20 +280,99 @@ describe("decorators", () => {
     expect(result).toEqual({ username: "alice", password: "secret" });
   });
 
-  it("@WfInput throws StepRetriableError on missing input", async () => {
+  it("throws when input is missing and no action is fired", async () => {
     const { LoginForm } = await import("./fixtures/wf-forms.as");
     const cb = captureResolve(WfInput(), LoginForm);
     expect(() => runInWfContext({ input: undefined }, () => cb({}))).toThrow(StepRetriableError);
   });
 
-  it("@WfAction resolves to the action name", async () => {
+  it("throws when input is invalid (no action)", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput(), LoginForm);
+    const err = capture(() => runInWfContext({ input: { username: "" } }, () => cb({})));
+    const ir = expectIR(err);
+    expect((ir.context.errors as Record<string, string>).username).toBeDefined();
+  });
+
+  it("throws when a with-data action fires with no input", async () => {
+    const { WithDataForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput(), WithDataForm);
+    const err = capture(() =>
+      runInWfContext({ action: "saveDraft", input: undefined }, () => cb({})),
+    );
+    const ir = expectIR(err);
+    expect((ir.context.errors as Record<string, string>).__form).toContain("saveDraft");
+  });
+
+  it("validates partially when a with-data action fires with input", async () => {
+    const { WithDataForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput(), WithDataForm);
+    // Partial validation: missing `code` is allowed under a with-data action.
+    const result = runInWfContext({ action: "saveDraft", input: {} }, () => cb({}));
+    expect(result).toEqual({});
+  });
+
+  it("throws when input fails partial validation under a with-data action", async () => {
+    const { WithDataForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput(), WithDataForm);
+    const err = capture(() =>
+      runInWfContext({ action: "saveDraft", input: { code: 42 } }, () => cb({})),
+    );
+    const ir = expectIR(err);
+    expect(ir.context.errors).toBeDefined();
+  });
+
+  it("returns undefined when a no-data action fires and pass:true is set", async () => {
+    const { ActionForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput({ pass: true }), ActionForm);
+    const result = runInWfContext({ action: "resend", input: undefined }, () => cb({}));
+    expect(result).toBeUndefined();
+  });
+
+  it("throws when a no-data action fires without pass:true", async () => {
+    const { ActionForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput(), ActionForm);
+    const err = capture(() => runInWfContext({ action: "resend", input: undefined }, () => cb({})));
+    const ir = expectIR(err);
+    // Why: silently returning undefined would let the step handler treat
+    // a stateless action as if it were the normal submit — pass:true must
+    // be explicit opt-in.
+    expect((ir.context.errors as Record<string, string>).__form).toContain("resend");
+  });
+
+  it("throws when input is present alongside a no-data action and pass:true is set", async () => {
+    const { ActionForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput({ pass: true }), ActionForm);
+    const err = capture(() =>
+      runInWfContext({ action: "resend", input: { code: "1234" } }, () => cb({})),
+    );
+    const ir = expectIR(err);
+    // Why: declaring a no-data action means the action contract excludes
+    // payloads. Accepting input would let clients smuggle data the step
+    // didn't sign up to validate.
+    expect((ir.context.errors as Record<string, string>).__form).toContain("not allowed");
+  });
+
+  it("throws with __form 'not supported' for an unknown action", async () => {
+    const { ActionForm } = await import("./fixtures/wf-forms.as");
+    const cb = captureResolve(WfInput(), ActionForm);
+    const err = capture(() =>
+      runInWfContext({ action: "bogus", input: { code: "1" } }, () => cb({})),
+    );
+    const ir = expectIR(err);
+    expect((ir.context.errors as Record<string, string>).__form).toContain("not supported");
+  });
+});
+
+describe("@WfAction", () => {
+  it("resolves to the action name", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
     const cb = captureResolve(WfAction(), ActionForm);
     const result = runInWfContext({ action: "resend" }, () => cb({}));
     expect(result).toBe("resend");
   });
 
-  it("@WfAction returns undefined when no action is set", async () => {
+  it("returns undefined when no action is set", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
     const cb = captureResolve(WfAction(), ActionForm);
     const result = runInWfContext({}, () => cb({}));
