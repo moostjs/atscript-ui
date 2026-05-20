@@ -10,7 +10,7 @@ atscript-ui is a monorepo for generating automated forms and smart tables driven
 
 ```bash
 # Development
-pnpm dev                    # Run vue-playground dev server (component sandbox)
+pnpm dev                    # Alias for demo:dev (run vue-demo on :3200)
 pnpm demo:dev               # Run vue-demo dev server on :3200 (full app, server + client)
 pnpm docs:dev               # Run docs dev server (VitePress)
 
@@ -55,9 +55,8 @@ pnpm release:major          # Major bump
   └─ @atscript/moost-ui-presets ← Moost controller + atscript schema for table-preset persistence
 ```
 
-Two private dev apps live in the workspace:
+One private dev app lives in the workspace:
 
-- `vue-playground` — minimal sandbox for component-level manual testing.
 - `@atscript/vue-demo` — full server+client app on **:3200** with feature pages (forms-demo, table-demo, workflows). This is the consumer app the user typically opens to verify behaviour. Run with `pnpm demo:dev`.
 
 **Important:** dev apps import library packages from their built `dist/` files (via `package.json` `main`/`exports`), not from source. After changing code in any library package, rebuild that package AND restart the consumer dev server — HMR alone won't pick up `dist/` changes or cached UnoCSS presets:
@@ -129,7 +128,7 @@ For this to work, we style **only through vunor primitives**. Every pixel litera
 
 **Explicit text color on inputs** — inside a `layer-0` wrapper, `--current-text` resolves to `scope-dark-2` (muted). Use `text-scope-dark-0 dark:text-scope-light-0` on `<input>` so user input reads as primary text, not placeholder.
 
-**Fonts live in the consumer, not the preset.** The `@atscript/ui-styles` package ships scope/layer/surface/c8/i8 + icons + the `as-*` shortcut tree. Typography baseline (Inter family, 13px body, smoothing) lives in `vue-playground/src/styles/app.css`. Real consumers bring their own font stack.
+**Fonts live in the consumer, not the preset.** The `@atscript/ui-styles` package ships scope/layer/surface/c8/i8 + icons + the `as-*` shortcut tree. Typography baseline (Inter family, 13px body, smoothing) lives in `packages/vue-demo/src/styles/app.css`. Real consumers bring their own font stack.
 
 **Reka-ui state attributes** — menu items, listbox rows, and combobox items expose keyboard state as `data-highlighted=""`, selection as `data-state="checked"`. Style them via descendant attribute selectors in the `as-*` shortcut. Nested `[]` inside an arbitrary-variant bracket (`[&_tr[data-state=checked]]:`) silently fails to compile — wrap the inner attribute selector in `:is(...)`:
 
@@ -145,7 +144,7 @@ For this to work, we style **only through vunor primitives**. Every pixel litera
 1. Is there a vunor primitive? (`scope-*`, `layer-*`, `surface-*`, `c8-*`, `i8-*`, spacing `$*`, typography, `fingertip-*`)
 2. If painting over an existing shortcut, add to the variant map (`hover:`, `focus-within:`, `[&_child]:`) — don't copy the whole shortcut.
 3. If introducing a new piece of UI, add a new `as-*` shortcut entry rather than inlining classes in the template.
-4. Build-verify: `pnpm --filter @atscript/ui-styles run build` and re-run the playground/demo dev server. Confirm the generated selector appears in the consumer app's UnoCSS output — UnoCSS silently drops malformed arbitrary variants.
+4. Build-verify: `pnpm --filter @atscript/ui-styles run build` and re-run the demo dev server. Confirm the generated selector appears in the consumer app's UnoCSS output — UnoCSS silently drops malformed arbitrary variants.
 
 ### Component organization (vue-\* packages)
 
