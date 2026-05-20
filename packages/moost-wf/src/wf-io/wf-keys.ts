@@ -1,15 +1,10 @@
 import { key } from "@wooksjs/event-core";
 
 /**
- * Event context key for the workflow action name.
+ * Internal event context key for the workflow action name.
  *
- * The HTTP trigger should set this before calling `wf.resume()`:
- * ```ts
- * import { current } from '@wooksjs/event-core'
- * import { actionKey } from '@atscript/moost-wf'
- * current().set(actionKey, body.action)
- * ```
- *
- * `@AltAction()` and `@FormInput()` read from this key.
+ * Not exported from the package barrel — HTTP triggers should call
+ * `useWfAction().setAction(body.action)` before `wf.resume()`, and step
+ * handlers should read via `@WfAction()` or `useAtscriptWf()`.
  */
 export const actionKey = key<string | undefined>("wf.action");

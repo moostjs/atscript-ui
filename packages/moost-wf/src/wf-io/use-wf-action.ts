@@ -10,7 +10,7 @@ import { actionKey } from "./wf-keys";
  * setAction(body.action)
  * ```
  *
- * **In step handlers** (to read the action — prefer `@AltAction()` decorator):
+ * **In step handlers** (to read the action — prefer `@WfAction()` decorator):
  * ```ts
  * const { getAction } = useWfAction()
  * const action = getAction()
