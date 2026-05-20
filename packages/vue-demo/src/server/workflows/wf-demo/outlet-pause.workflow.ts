@@ -11,8 +11,8 @@ import {
   outletEmail,
   type WfOutletRequest,
 } from "@moostjs/event-wf";
+import { WfInput } from "@atscript/moost-wf";
 import { FinishDemoForm } from "../forms/finish-demo-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface Ctx {
   note?: string;
@@ -26,13 +26,7 @@ export class WfOutletPauseDemoWorkflow {
   flow() {}
 
   @Step("wfd-outlet-collect")
-  collect(
-    @WorkflowParam("input") input: { note?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
-    if (!input || !input.note) {
-      return httpInputRequired(FinishDemoForm, ctx);
-    }
+  collect(@WfInput() input: FinishDemoForm, @WorkflowParam("context") ctx: Ctx) {
     ctx.note = input.note;
     return;
   }

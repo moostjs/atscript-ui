@@ -10,7 +10,7 @@ import {
   useWfFinished,
   type WfOutletRequest,
 } from "@moostjs/event-wf";
-import type { WfFinished } from "@atscript/moost-wf";
+import { WfInput, useAtscriptWf, type WfFinished } from "@atscript/moost-wf";
 import { usersTable, rolesTable } from "../../db";
 import { hashPassword } from "../../auth/password";
 import { useSession } from "../../auth/use-session";
@@ -21,7 +21,6 @@ import {
   type SessionPayload,
 } from "../../auth/session-payload";
 import { InviteStartForm, InviteAcceptForm } from "../forms/invite-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface InviteCtx {
   userId?: number;
@@ -65,7 +64,7 @@ export class InviteWorkflow {
     if (session.roleName !== "admin") throw new HttpError(403, "Admin only");
 
     if (!input || !input.email || input.roleId == null) {
-      return httpInputRequired(InviteStartForm, ctx);
+      throw useAtscriptWf(InviteStartForm).requireInput();
     }
 
     const existing = await usersTable.findOne({ filter: { email: input.email } });
@@ -75,7 +74,7 @@ export class InviteWorkflow {
 
     const role = await rolesTable.findOne({ filter: { id: input.roleId } });
     if (!role) {
-      return httpInputRequired(InviteStartForm, ctx, { roleId: "Invalid role" });
+      throw useAtscriptWf(InviteStartForm).requireInput({ errors: { roleId: "Invalid role" } });
     }
 
     const placeholderUsername = `pending-${Date.now().toString(36)}`;
@@ -112,17 +111,13 @@ export class InviteWorkflow {
   }
 
   @Step("invite-accept")
-  async acceptInvite(
-    @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
-    @WorkflowParam("context") ctx: InviteCtx,
-  ) {
+  async acceptInvite(@WfInput() input: InviteAcceptForm, @WorkflowParam("context") ctx: InviteCtx) {
     if (!ctx.userId) throw new HttpError(500, "Invite context missing userId");
-    if (!input || !input.username || !input.password) {
-      return httpInputRequired(InviteAcceptForm, ctx);
-    }
     const clash = await usersTable.findOne({ filter: { username: input.username } });
     if (clash && clash.id !== ctx.userId) {
-      return httpInputRequired(InviteAcceptForm, ctx, { username: "Username already taken" });
+      throw useAtscriptWf(InviteAcceptForm).requireInput({
+        errors: { username: "Username already taken" },
+      });
     }
     const { hash, salt } = await hashPassword(input.password);
     await usersTable.updateOne({

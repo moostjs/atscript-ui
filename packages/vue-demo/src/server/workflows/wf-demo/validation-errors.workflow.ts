@@ -4,9 +4,8 @@
 // rebuild). User corrects, resubmits, succeeds.
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWf } from "@atscript/moost-wf";
+import { WfInput, finishWf, useAtscriptWf } from "@atscript/moost-wf";
 import { EmailDemoForm } from "../forms/email-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 const BLOCKED_DOMAINS = ["@example.com", "@test.com"];
 
@@ -21,17 +20,11 @@ export class WfValidationErrorsDemoWorkflow {
   flow() {}
 
   @Step("wfd-validation")
-  run(
-    @WorkflowParam("input") input: { email?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
-    if (!input || !input.email) {
-      return httpInputRequired(EmailDemoForm, ctx);
-    }
+  run(@WfInput() input: EmailDemoForm, @WorkflowParam("context") ctx: Ctx) {
     const lower = input.email.toLowerCase();
     if (BLOCKED_DOMAINS.some((d) => lower.endsWith(d))) {
-      return httpInputRequired(EmailDemoForm, ctx, {
-        email: "Example domain not allowed. Use a real address.",
+      throw useAtscriptWf(EmailDemoForm).requireInput({
+        errors: { email: "Example domain not allowed. Use a real address." },
       });
     }
     ctx.email = input.email;

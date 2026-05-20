@@ -1,12 +1,11 @@
 // Two finish paths — happy `finishWf` on submit, `abortWf` when the "Cancel"
-// action button is clicked. `@AltAction()` resolves the action name from the
+// action button is clicked. `@WfAction()` resolves the action name from the
 // request body; if `cancel`, abort. Otherwise treat the request as a regular
 // submit.
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { abortWf, finishWf, AltAction } from "@atscript/moost-wf";
+import { WfAction, WfInput, abortWf, finishWf, useAtscriptWf } from "@atscript/moost-wf";
 import { AbortableDemoForm } from "../forms/abortable-demo-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface Ctx {
   name?: string;
@@ -20,9 +19,9 @@ export class WfFinishAbortedDemoWorkflow {
 
   @Step("wfd-aborted")
   run(
-    @WorkflowParam("input") input: { name?: string } | undefined,
+    @WfInput({ pass: true }) input: AbortableDemoForm | undefined,
     @WorkflowParam("context") ctx: Ctx,
-    @AltAction() action: string | undefined,
+    @WfAction() action: string | undefined,
   ) {
     if (action === "cancel") {
       abortWf("user-cancel", {
@@ -30,8 +29,8 @@ export class WfFinishAbortedDemoWorkflow {
       });
       return;
     }
-    if (!input || !input.name) {
-      return httpInputRequired(AbortableDemoForm, ctx);
+    if (!input) {
+      throw useAtscriptWf(AbortableDemoForm).requireInput();
     }
     ctx.name = input.name;
     finishWf({

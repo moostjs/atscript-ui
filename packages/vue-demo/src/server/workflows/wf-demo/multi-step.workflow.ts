@@ -3,13 +3,12 @@
 // can reference them and the client can render a step indicator.
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWf } from "@atscript/moost-wf";
+import { finishWf, useAtscriptWf } from "@atscript/moost-wf";
 import {
   MultiStepNameForm,
   MultiStepColorForm,
   MultiStepConfirmForm,
 } from "../forms/multi-step-forms.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface Ctx {
   step?: number;
@@ -34,7 +33,7 @@ export class WfMultiStepDemoWorkflow {
   ) {
     ctx.step = 1;
     if (!input || !input.name) {
-      return httpInputRequired(MultiStepNameForm, ctx);
+      throw useAtscriptWf(MultiStepNameForm).requireInput();
     }
     ctx.name = input.name;
     return;
@@ -47,7 +46,7 @@ export class WfMultiStepDemoWorkflow {
   ) {
     ctx.step = 2;
     if (!input || !input.color) {
-      return httpInputRequired(MultiStepColorForm, ctx);
+      throw useAtscriptWf(MultiStepColorForm).requireInput();
     }
     ctx.color = input.color;
     return;
@@ -60,7 +59,7 @@ export class WfMultiStepDemoWorkflow {
   ) {
     ctx.step = 3;
     if (!input || !input.confirm) {
-      return httpInputRequired(MultiStepConfirmForm, ctx);
+      throw useAtscriptWf(MultiStepConfirmForm).requireInput();
     }
     finishWf({
       data: { name: ctx.name, color: ctx.color },

@@ -1,12 +1,11 @@
 import { Controller } from "moost";
 import { HttpError } from "@moostjs/event-http";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWf } from "@atscript/moost-wf";
+import { WfInput, finishWf, useAtscriptWf } from "@atscript/moost-wf";
 import { usersTable } from "../../db";
 import { hashPassword, verifyPassword } from "../../auth/password";
 import { useSession } from "../../auth/use-session";
 import { ChangePasswordForm } from "../forms/profile-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface ChangePasswordCtx {
   userId?: number;
@@ -21,19 +20,16 @@ export class ChangePasswordWorkflow {
 
   @Step("cp-verify-old")
   async verifyOld(
-    @WorkflowParam("input") input: { oldPassword?: string; newPassword?: string } | undefined,
+    @WfInput() input: ChangePasswordForm,
     @WorkflowParam("context") ctx: ChangePasswordCtx,
   ) {
     const session = useSession();
     if (!session) throw new HttpError(401, "Not authenticated");
 
-    if (!input || !input.oldPassword) {
-      return httpInputRequired(ChangePasswordForm, ctx);
-    }
     const user = await usersTable.findOne({ filter: { id: session.userId } });
     if (!user || !(await verifyPassword(input.oldPassword, user.password ?? "", user.salt ?? ""))) {
-      return httpInputRequired(ChangePasswordForm, ctx, {
-        oldPassword: "Current password is incorrect",
+      throw useAtscriptWf(ChangePasswordForm).requireInput({
+        errors: { oldPassword: "Current password is incorrect" },
       });
     }
     ctx.userId = session.userId;
@@ -43,17 +39,9 @@ export class ChangePasswordWorkflow {
 
   @Step("cp-set-new")
   async setNew(
-    @WorkflowParam("input") input: { newPassword?: string } | undefined,
+    @WfInput() input: ChangePasswordForm,
     @WorkflowParam("context") ctx: ChangePasswordCtx,
   ) {
-    if (!input || !input.newPassword) {
-      return httpInputRequired(ChangePasswordForm, ctx);
-    }
-    if (input.newPassword.length < 6) {
-      return httpInputRequired(ChangePasswordForm, ctx, {
-        newPassword: "At least 6 characters",
-      });
-    }
     const { hash, salt } = await hashPassword(input.newPassword);
     await usersTable.updateOne({ id: ctx.userId!, password: hash, salt });
     finishWf({ data: { ok: true } });

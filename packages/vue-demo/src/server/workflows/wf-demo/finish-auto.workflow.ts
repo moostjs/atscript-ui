@@ -5,9 +5,8 @@
 // immediately).
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWf } from "@atscript/moost-wf";
+import { WfInput, finishWf } from "@atscript/moost-wf";
 import { FinishDemoForm } from "../forms/finish-demo-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface Ctx {
   note?: string;
@@ -20,13 +19,7 @@ export class WfFinishAutoDemoWorkflow {
   flow() {}
 
   @Step("wfd-auto")
-  run(
-    @WorkflowParam("input") input: { note?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
-    if (!input || !input.note) {
-      return httpInputRequired(FinishDemoForm, ctx);
-    }
+  run(@WfInput() input: FinishDemoForm, @WorkflowParam("context") ctx: Ctx) {
     ctx.note = input.note;
     finishWf({
       message: { level: "info", text: "All done. Redirecting in a moment…" },

@@ -98,7 +98,7 @@ export class WorkflowsController {
     // writes to the WF's isolated context and the HTTP trigger can't read it back.
     // (MoostWf.handleOutlet drops the eventContext param — workaround until fixed upstream.)
     //
-    // Also propagate `body.action` into the WF event context so `@AltAction()`
+    // Also propagate `body.action` into the WF event context so `@WfAction()`
     // resolves correctly inside steps — `handleWfOutletRequest` doesn't wire
     // the action key itself, so each app must opt in.
     if (typeof body?.action === "string") {

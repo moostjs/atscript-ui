@@ -3,9 +3,8 @@
 // to the `wf.finished` slot so consumers can render typed result data.
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWf } from "@atscript/moost-wf";
+import { WfInput, finishWf } from "@atscript/moost-wf";
 import { FinishDemoForm } from "../forms/finish-demo-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface Ctx {
   note?: string;
@@ -18,13 +17,7 @@ export class WfFinishDataDemoWorkflow {
   flow() {}
 
   @Step("wfd-data")
-  run(
-    @WorkflowParam("input") input: { note?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
-    if (!input || !input.note) {
-      return httpInputRequired(FinishDemoForm, ctx);
-    }
+  run(@WfInput() input: FinishDemoForm, @WorkflowParam("context") ctx: Ctx) {
     ctx.note = input.note;
     finishWf({
       data: { greeting: `Hello, ${input.note}!`, timestamp: Date.now() },

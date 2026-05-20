@@ -1,6 +1,6 @@
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
-import type { WfFinished } from "@atscript/moost-wf";
+import { WfInput, useAtscriptWf, type WfFinished } from "@atscript/moost-wf";
 import { usersTable, rolesTable } from "../../db";
 import { hashPassword } from "../../auth/password";
 import { SessionService } from "../../auth/session.service";
@@ -10,7 +10,6 @@ import {
   type SessionPayload,
 } from "../../auth/session-payload";
 import { RegisterForm, OtpForm } from "../forms/register-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface RegisterCtx {
   username?: string;
@@ -37,26 +36,22 @@ export class RegisterWorkflow {
   flow() {}
 
   @Step("register-details")
-  async enterDetails(
-    @WorkflowParam("input")
-    input: { username?: string; email?: string; password?: string } | undefined,
-    @WorkflowParam("context") ctx: RegisterCtx,
-  ) {
-    if (!input || !input.username || !input.email || !input.password) {
-      return httpInputRequired(RegisterForm, ctx);
-    }
-
+  async enterDetails(@WfInput() input: RegisterForm, @WorkflowParam("context") ctx: RegisterCtx) {
     const existingUsername = await usersTable.findOne({
       filter: { username: input.username },
     });
     if (existingUsername) {
-      return httpInputRequired(RegisterForm, ctx, { username: "Username already taken" });
+      throw useAtscriptWf(RegisterForm).requireInput({
+        errors: { username: "Username already taken" },
+      });
     }
     const existingEmail = await usersTable.findOne({
       filter: { email: input.email },
     });
     if (existingEmail) {
-      return httpInputRequired(RegisterForm, ctx, { email: "Email already registered" });
+      throw useAtscriptWf(RegisterForm).requireInput({
+        errors: { email: "Email already registered" },
+      });
     }
 
     const pw = await hashPassword(input.password);
@@ -73,15 +68,9 @@ export class RegisterWorkflow {
   }
 
   @Step("register-verify-otp")
-  verifyOtp(
-    @WorkflowParam("input") input: { code?: string } | undefined,
-    @WorkflowParam("context") ctx: RegisterCtx,
-  ) {
-    if (!input?.code) {
-      return httpInputRequired(OtpForm, ctx);
-    }
+  verifyOtp(@WfInput() input: OtpForm, @WorkflowParam("context") ctx: RegisterCtx) {
     if (input.code !== ctx.otpCode) {
-      return httpInputRequired(OtpForm, ctx, { code: "Invalid code" });
+      throw useAtscriptWf(OtpForm).requireInput({ errors: { code: "Invalid code" } });
     }
     return;
   }

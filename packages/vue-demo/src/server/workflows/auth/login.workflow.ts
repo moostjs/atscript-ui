@@ -1,6 +1,6 @@
 import { Controller } from "moost";
 import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
-import { AltAction, finishWf, type WfFinished } from "@atscript/moost-wf";
+import { WfAction, WfInput, finishWf, useAtscriptWf, type WfFinished } from "@atscript/moost-wf";
 import { usersTable, rolesTable } from "../../db";
 import { verifyPassword } from "../../auth/password";
 import { SessionService } from "../../auth/session.service";
@@ -10,7 +10,6 @@ import {
   type SessionPayload,
 } from "../../auth/session-payload";
 import { LoginForm, MfaPincodeForm, RecoveryForm } from "../forms/login-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 export interface LoginCtx {
   userId?: number;
@@ -43,16 +42,17 @@ export class LoginWorkflow {
 
   @Step("login-credentials")
   async enterCredentials(
-    @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
+    @WfInput({ pass: true }) input: LoginForm | undefined,
     @WorkflowParam("context") ctx: LoginCtx,
-    @AltAction() action: string | undefined,
+    @WfAction() action: string | undefined,
   ) {
     if (action === "forgot-password") {
       ctx.recovery = true;
       return;
     }
-    if (!input || !input.username || !input.password) {
-      return httpInputRequired(LoginForm, ctx);
+    const loginForm = useAtscriptWf(LoginForm);
+    if (!input) {
+      throw loginForm.requireInput();
     }
 
     const user = (await usersTable.findOne({
@@ -69,15 +69,17 @@ export class LoginWorkflow {
     } | null;
 
     if (!user || !(await verifyPassword(input.password, user.password ?? "", user.salt ?? ""))) {
-      return httpInputRequired(LoginForm, ctx, { password: "Invalid username or password" });
+      throw loginForm.requireInput({
+        errors: { password: "Invalid username or password" },
+      });
     }
     if (user.status === "suspended") {
-      return httpInputRequired(LoginForm, ctx, { __form: "Account is suspended" });
+      throw loginForm.requireInput({ formMessage: "Account is suspended" });
     }
 
     const role = await rolesTable.findOne({ filter: { id: user.roleId } });
     if (!role) {
-      return httpInputRequired(LoginForm, ctx, { __form: "User role not found" });
+      throw loginForm.requireInput({ formMessage: "User role not found" });
     }
 
     ctx.userId = user.id;
@@ -98,13 +100,7 @@ export class LoginWorkflow {
   }
 
   @Step("login-recover-password")
-  recoverPassword(
-    @WorkflowParam("input") input: { email?: string } | undefined,
-    @WorkflowParam("context") ctx: LoginCtx,
-  ) {
-    if (!input || !input.email) {
-      return httpInputRequired(RecoveryForm, ctx);
-    }
+  recoverPassword(@WfInput() input: RecoveryForm, @WorkflowParam("context") _ctx: LoginCtx) {
     finishWf({
       data: { ok: true, recovery: true },
       message: {
@@ -116,15 +112,9 @@ export class LoginWorkflow {
   }
 
   @Step("login-verify-otp")
-  verifyOtp(
-    @WorkflowParam("input") input: { code?: string } | undefined,
-    @WorkflowParam("context") ctx: LoginCtx,
-  ) {
-    if (!input?.code) {
-      return httpInputRequired(MfaPincodeForm, ctx);
-    }
+  verifyOtp(@WfInput() input: MfaPincodeForm, @WorkflowParam("context") ctx: LoginCtx) {
     if (input.code !== ctx.otpCode) {
-      return httpInputRequired(MfaPincodeForm, ctx, { code: "Invalid code" });
+      throw useAtscriptWf(MfaPincodeForm).requireInput({ errors: { code: "Invalid code" } });
     }
     return;
   }

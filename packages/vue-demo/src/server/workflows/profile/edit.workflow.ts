@@ -1,11 +1,10 @@
 import { Controller } from "moost";
 import { HttpError } from "@moostjs/event-http";
 import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
-import { finishWf } from "@atscript/moost-wf";
+import { finishWf, useAtscriptWf } from "@atscript/moost-wf";
 import { usersTable } from "../../db";
 import { useSession } from "../../auth/use-session";
 import { ProfileForm } from "../forms/profile-form.as";
-import { httpInputRequired } from "../wf-helpers";
 
 interface ProfileCtx {
   currentUsername?: string;
@@ -30,10 +29,12 @@ export class EditProfileWorkflow {
       const user = await usersTable.findOne({ filter: { id: session.userId } });
       ctx.currentUsername = user?.username;
       ctx.currentEmail = user?.email;
-      return httpInputRequired(ProfileForm, ctx);
+      throw useAtscriptWf(ProfileForm).requireInput();
     }
     if (!input.username || !input.email) {
-      return httpInputRequired(ProfileForm, ctx, { __form: "Username and email are required" });
+      throw useAtscriptWf(ProfileForm).requireInput({
+        formMessage: "Username and email are required",
+      });
     }
     await usersTable.updateOne({
       id: session.userId,
