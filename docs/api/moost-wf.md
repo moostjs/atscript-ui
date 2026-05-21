@@ -64,27 +64,29 @@ class AuthFlow {
 
 Policy matrix:
 
-| Situation                                          | Behaviour                                                                                             |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| No action fired                                    | Strict full validation against the schema. Missing input throws `StepRetriableError`.                 |
-| Action declared in `@wf.action.withData`           | Deep-partial validation — present fields validated, missing fields OK.                                |
-| Action declared in `@ui.form.action`               | Input must be absent. Without `pass: true`, the decorator throws (no-data actions exclude this step). |
-| Action declared in `@ui.form.action`, `pass: true` | The step opts in to handling the no-data action: parameter resolves to `undefined`, body still runs.  |
-| Unknown action                                     | `StepRetriableError` propagates with `__form: 'Action "<name>" is not supported'`.                    |
+| Situation                                          | Behaviour                                                                                                                                             |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| No action fired                                    | Strict full validation against the schema. Missing input throws `StepRetriableError`.                                                                 |
+| Action declared in `@wf.action.withData`           | Deep-partial validation — present fields validated, missing fields OK.                                                                                |
+| Action declared in `@ui.form.action`               | Input must be absent. Without `pass: true`, the decorator throws (no-data actions exclude this step).                                                 |
+| Action declared in `@ui.form.action`, `pass: true` | The step opts in to handling the no-data action: parameter resolves to `undefined`, body still runs.                                                  |
+| Unknown action                                     | `StepRetriableError` propagates with `__form: 'Action "<name>" is not supported'`. Same guard fires from `@WfAction(Form)` before the step body runs. |
 
-### `@WfAction()`
+Use `?:` syntax (`input?: Form`), not a union (`input: Form | undefined`) — TS emits `Object` for union-typed parameters in decorator metadata, which breaks atscript reflection. `@WfInput({ pass: true })` composes `@Optional()` internally so the parameter being `undefined` is fine for global validator pipes.
 
-Parameter decorator that resolves to the current workflow action name (or `undefined` for plain submits).
+### `@WfAction(Form)`
+
+Parameter decorator that resolves to the current workflow action name (or `undefined` for plain submits). The form type argument is **required** — the decorator validates the incoming action against the form's `@ui.form.action` / `@wf.action.withData` whitelist and throws `StepRetriableError` for unknown actions before the step body runs.
 
 ```typescript
-function WfAction(): ParameterDecorator;
+function WfAction<T extends TAtscriptTypeDef>(type: TAtscriptAnnotatedType<T>): ParameterDecorator;
 ```
 
 ```typescript
 @Step("mfa-verify")
 async mfaVerify(
+  @WfAction(PincodeForm) action: string | undefined,
   @WfInput() input: PincodeForm,
-  @WfAction() action: string | undefined,
 ) {
   if (action === "resend") {
     await this.sendOtp(this.ctx.email);
@@ -94,7 +96,7 @@ async mfaVerify(
 }
 ```
 
-If the parameter is annotated with an atscript type, unknown actions throw `StepRetriableError` — same behaviour as `useAtscriptWf(Type).resolveAction()`. Without a type, the raw action is returned.
+The form-argument whitelist is a security guard: step bodies never see an action that wasn't declared on the form. Use the same form type the step receives via `@WfInput`.
 
 ## Composables
 
@@ -141,17 +143,6 @@ async login() {
     throw wf.requireInput({ errors: { password: "Invalid credentials" } });
   }
 }
-```
-
-### `useWfActionSlot()`
-
-Low-level accessor for the workflow action slot in the current wf event context. Used by transport adapters (HTTP / CLI / WS controllers) to **write** the action from the incoming request, and by composables that need raw read/clear semantics. Step handlers should prefer `@WfAction()` / `useAtscriptWf(Type).resolveAction()` — the schema-validated read path.
-
-```typescript
-function useWfActionSlot(): {
-  getAction(): string | undefined;
-  setAction(action: string | undefined): void;
-};
 ```
 
 ## Helpers

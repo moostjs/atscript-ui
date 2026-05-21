@@ -17,21 +17,32 @@ The lowest-level option, shown throughout
 [Server-Side Authoring](/workflows/server-authoring):
 
 ```ts
+interface WfInputEnvelope {
+  action?: string;
+  formData?: { username?: string; password?: string };
+}
+
 @Step("login-credentials")
 async enterCredentials(
-  @WorkflowParam("input") input: { username?: string; password?: string } | undefined,
+  @WorkflowParam("input") input: WfInputEnvelope | undefined,
   @WorkflowParam("context") ctx: LoginCtx,
 ) {
-  if (!input?.username || !input?.password) {
+  const formData = input?.formData;
+  if (!formData?.username || !formData?.password) {
     throw useAtscriptWf(LoginForm).requireInput();
   }
-  // ... use input.username, input.password ...
+  // ... use formData.username, formData.password ...
 }
 ```
 
+The wire envelope wraps user data in `{ action?, formData? }` — both
+peers ride the workflow's `input` slot, which the engine wipes between
+steps. `@WfInput()` and `useAtscriptWf(Type).resolveInput()` unwrap
+`formData` for you; only the manual `@WorkflowParam("input")` form
+exposes the envelope shape.
+
 You write the empty-input guard, you decide when to re-pause. No
-automatic validation — the handler sees raw client data, type-asserted
-to `T | undefined`.
+automatic validation — the handler sees raw client data.
 
 ### Decorator: `@WfInput()`
 

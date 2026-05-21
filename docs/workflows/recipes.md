@@ -240,7 +240,7 @@ flow() {}
 @Step("checkout-address")
 async address(
   @WorkflowParam("context") ctx: CheckoutCtx,
-  @WfAction() action: string | undefined,
+  @WfAction(AddressForm) action: string | undefined,
   @WfInput({ pass: true }) input?: AddressForm,
 ) {
   const wf = useAtscriptWf(AddressForm);

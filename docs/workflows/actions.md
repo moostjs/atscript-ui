@@ -11,10 +11,10 @@ step with an `action` name, optionally with form data.
 
 ## The two action kinds
 
-| Kind             | Annotation                   | Sends data?                  | Server reads via                                                     |
-| ---------------- | ---------------------------- | ---------------------------- | -------------------------------------------------------------------- |
-| Plain action     | `@ui.form.action 'name'`     | No                           | `@WfAction()` param (step skipped unless `@WfInput({ pass: true })`) |
-| Action with data | `@wf.action.withData 'name'` | Yes (deep-partial validated) | `@WfAction()` param + `@WfInput()` data                              |
+| Kind             | Annotation                   | Sends data?                  | Server reads via                                                         |
+| ---------------- | ---------------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| Plain action     | `@ui.form.action 'name'`     | No                           | `@WfAction(Form)` param (step skipped unless `@WfInput({ pass: true })`) |
+| Action with data | `@wf.action.withData 'name'` | Yes (deep-partial validated) | `@WfAction(Form)` param + `@WfInput()` data                              |
 
 Both render as buttons in the rendered form's action row. Both let
 the step keep the user on the same screen, re-render the same form,
@@ -60,7 +60,7 @@ action next to the submit button.
 
 Two ways, mirroring how you read input.
 
-### Decorator: `@WfAction()`
+### Decorator: `@WfAction(Form)`
 
 ```ts
 import { WfInput, WfAction, useAtscriptWf } from "@atscript/moost-wf";
@@ -69,7 +69,7 @@ import { MfaPincodeForm } from "../forms/MfaPincodeForm.as";
 @Step("login-verify-otp")
 async verifyOtp(
   @WorkflowParam("context") ctx: LoginCtx,
-  @WfAction() action: string | undefined,
+  @WfAction(MfaPincodeForm) action: string | undefined,
   @WfInput({ pass: true }) input?: MfaPincodeForm,
 ) {
   const wf = useAtscriptWf(MfaPincodeForm);
@@ -95,9 +95,12 @@ async verifyOtp(
 }
 ```
 
-`@WfAction()` returns the action name string, or `undefined` for a
-normal submit. The handler dispatches with a regular `switch` / `if`
-chain.
+`@WfAction(Form)` returns the action name string, or `undefined` for
+a normal submit. The handler dispatches with a regular `switch` / `if`
+chain. The form-type argument is required — the decorator validates
+the incoming action against the form's `@ui.form.action` /
+`@wf.action.withData` whitelist and throws `StepRetriableError` for
+unknown actions before the step body runs.
 
 `@WfInput({ pass: true })` opts this step into handling no-data
 actions (`@ui.form.action`) without forcing input — the parameter
@@ -189,13 +192,18 @@ Bodies:
 
 ```http
 POST /wf
-{ "wfs": "<token>", "action": "resend" }
+{ "wfs": "<token>", "input": { "action": "resend" } }
 ```
 
 ```http
 POST /wf
-{ "wfs": "<token>", "action": "saveDraft", "input": { "code": "123" } }
+{ "wfs": "<token>", "input": { "action": "saveDraft", "formData": { "code": "123" } } }
 ```
+
+`action` and `formData` ride inside the workflow's `input` envelope.
+The wf engine wipes `body.input` after each step, so the action is
+cleared for free between in-request step transitions — no cleanup
+interceptor needed.
 
 ## Common patterns
 

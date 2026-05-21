@@ -104,14 +104,14 @@ export interface LoginForm {
 ```
 
 In a workflow form (`<AsWfForm>`), the action is forwarded to
-`useWfForm().action(id)` and resolved server-side via `@WfAction()` from
-`@atscript/moost-wf`:
+`useWfForm().action(id)` and resolved server-side via `@WfAction(Form)`
+from `@atscript/moost-wf`:
 
 ```ts
 @Step("login-credentials")
 async enterCredentials(
   @WorkflowParam("context") ctx: LoginCtx,
-  @WfAction() action: string | undefined,
+  @WfAction(LoginForm) action: string | undefined,
   @WfInput({ pass: true }) input?: LoginForm,
 ) {
   if (action === "forgot-password") {
