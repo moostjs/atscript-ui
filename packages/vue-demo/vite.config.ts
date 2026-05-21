@@ -27,5 +27,6 @@ export default defineConfig({
   oxc: false,
   ssr: {
     noExternal: ["@moostjs/vite"],
+    external: ["vue", "vue-router", "@vue/server-renderer"],
   },
 });
