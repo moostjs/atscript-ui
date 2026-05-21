@@ -176,8 +176,11 @@ full picture.
 ## The AsAction component
 
 The default `AsAction` component (Tier 2 swap target) is intentionally minimal:
-a `<button type="button">` that emits `action` with its `formAction.id`. Swap it
-through the `:types` map to use your design system's button:
+a `<button type="button">` that emits `action` with its `formAction.id`. Out of
+the box it is styled to **match the inline alt-action link** on an input
+field's footer — left-aligned, link-styled (`as-field-action-link`) — so phantom
+action fields read as secondary affordances next to the form's primary submit.
+Swap it through the `:types` map to use your design system's button:
 
 ```vue
 <script setup lang="ts">

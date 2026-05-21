@@ -32,7 +32,7 @@ component:
 | `datetime`    | `AsDatetime`      | date + time picker                                              |
 | `time`        | `AsTime`          | time picker (`HH:MM` / `HH:MM:SS`)                              |
 | `paragraph`   | `AsParagraph`     | read-only paragraph — value from `@meta.default` / `fn.value`   |
-| `action`      | `AsAction`        | button that emits `action` on the form                          |
+| `action`      | `AsAction`        | left-aligned link-styled button that emits `action` on the form |
 | `object`      | `AsObject`        | nested object renderer (collapsible at depth)                   |
 | `array`       | `AsArray`         | dynamic +/− array of items                                      |
 | `union`       | `AsUnion`         | variant picker + dispatch to selected variant                   |
