@@ -57,7 +57,10 @@ describe("useWfForm", () => {
     mountComposable({ path: "/api/wf", name: "auth/login", input: { hint: "prefill" } });
     await flushPromises();
 
-    expect(calls[0]!.body).toEqual({ wfid: "auth/login", input: { hint: "prefill" } });
+    expect(calls[0]!.body).toEqual({
+      wfid: "auth/login",
+      input: { formData: { hint: "prefill" } },
+    });
   });
 
   it("submit() sends POST with { wfs, input }", async () => {
@@ -76,7 +79,7 @@ describe("useWfForm", () => {
     expect(calls).toHaveLength(2);
     expect(calls[1]!.body).toEqual({
       wfs: "tok1",
-      input: { username: "alice", password: "secret" },
+      input: { formData: { username: "alice", password: "secret" } },
     });
     expect(result.finished.value).toBe(true);
     expect(result.response.value).toMatchObject({ finished: true, userId: 42 });
@@ -96,7 +99,7 @@ describe("useWfForm", () => {
     await result.action("resend");
     await flushPromises();
 
-    expect(calls[1]!.body).toEqual({ wfs: "tok1", action: "resend" });
+    expect(calls[1]!.body).toEqual({ wfs: "tok1", input: { action: "resend" } });
   });
 
   it("actionWithData() sends POST with { wfs, input, action }", async () => {
@@ -114,8 +117,7 @@ describe("useWfForm", () => {
 
     expect(calls[1]!.body).toEqual({
       wfs: "tok1",
-      input: { username: "alice" },
-      action: "saveDraft",
+      input: { action: "saveDraft", formData: { username: "alice" } },
     });
   });
 

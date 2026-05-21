@@ -7,7 +7,6 @@ import { useWfState } from "@moostjs/event-wf";
 import { StepRetriableError } from "@wooksjs/event-wf";
 import { extractPassContext, getFormActions } from "./context";
 import { serializeFormSchema } from "./serialize";
-import { useWfActionSlot } from "./use-wf-action-slot";
 import { getCachedValidator } from "./validator-cache";
 
 interface RequireInputOpts {
@@ -69,7 +68,6 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(
 };
 export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotatedType<T>) {
   const wfState = useWfState();
-  const wfAction = useWfActionSlot();
 
   function requireInput({ errors, formMessage }: RequireInputOpts = {}): StepRetriableError<{
     outlet: "http";
@@ -112,7 +110,7 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotat
   }
 
   function resolveInput(opts?: { partial?: "deep" }): InferDataType<T> {
-    const input = wfState.input<unknown>();
+    const input = wfState.input<{ action?: string; formData?: unknown }>()?.formData;
     if (input === undefined) {
       throw requireInput();
     }
@@ -126,7 +124,7 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotat
   }
 
   function resolveAction(): string | undefined {
-    const action = wfAction.getAction();
+    const action = wfState.input<{ action?: string }>()?.action;
     if (action === undefined) return undefined;
     const { actions, actionsWithData } = getFormActions(type);
     if (!actions.includes(action) && !actionsWithData.includes(action)) {

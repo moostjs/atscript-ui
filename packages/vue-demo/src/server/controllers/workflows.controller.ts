@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { Controller } from "moost";
-import { Body, Post } from "@moostjs/event-http";
+import { Post } from "@moostjs/event-http";
 import {
   MoostWf,
   createEmailOutlet,
@@ -9,7 +9,7 @@ import {
   type WfOutletTriggerDeps,
   type WfStateStrategy,
 } from "@moostjs/event-wf";
-import { createAsHttpOutlet, handleAsOutletRequest, useWfActionSlot } from "@atscript/moost-wf";
+import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
 // Keep the email outlet registered for future magic-link flows (user invite, password-reset);
 // current P6 workflows dispatch OTP inline so they can pause on a form in the same response.
@@ -92,18 +92,11 @@ export class WorkflowsController {
   constructor(private readonly wf: MoostWf) {}
 
   @Post("wf")
-  async handle(@Body() body: { action?: string } | undefined) {
+  async handle() {
     // Use handleAsOutletRequest directly so we can forward the HTTP eventContext
     // into the workflow — otherwise `useWfFinished().set({ cookies })` in a step
     // writes to the WF's isolated context and the HTTP trigger can't read it back.
     // (MoostWf.handleOutlet drops the eventContext param — workaround until fixed upstream.)
-    //
-    // Also propagate `body.action` into the WF event context so `@WfAction()`
-    // resolves correctly inside steps — `handleWfOutletRequest` doesn't wire
-    // the action key itself, so each app must opt in.
-    if (typeof body?.action === "string") {
-      useWfActionSlot().setAction(body.action);
-    }
     const wfApp = this.wf.getWfApp();
     const deps: WfOutletTriggerDeps = {
       start: (schemaId, context, opts) =>

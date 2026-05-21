@@ -56,8 +56,12 @@ async function postWf(
   ctx: APIRequestContext,
   body: Record<string, unknown>,
 ): Promise<{ status: number; setCookie: string | null; json: WfResponse }> {
+  // Helper convenience: tests pass `input` (and optional `action`) at the top
+  // level and we compose the on-wire envelope `{ action?, formData? }` here.
+  // The wire format is still strict — this just keeps test call sites terse.
+  const wireBody = composeWfBody(body);
   const res = await ctx.post("/api/wf", {
-    data: body,
+    data: wireBody,
     headers: { "content-type": "application/json" },
   });
   const headers = res.headers();
@@ -70,6 +74,19 @@ async function postWf(
     json = { error: text } as WfResponse;
   }
   return { status: res.status(), setCookie, json };
+}
+
+function composeWfBody(body: Record<string, unknown>): Record<string, unknown> {
+  const { input, action, ...rest } = body as {
+    input?: unknown;
+    action?: string;
+    [k: string]: unknown;
+  };
+  if (input === undefined && action === undefined) return rest;
+  const envelope: { action?: string; formData?: unknown } = {};
+  if (action !== undefined) envelope.action = action;
+  if (input !== undefined) envelope.formData = input;
+  return { ...rest, input: envelope };
 }
 
 function uniq(): string {
@@ -572,7 +589,7 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
       try {
         const offset = serverLogOffset();
         const r = await adminCtx.post("/api/wf", {
-          data: { wfid: "api/users/invite", input: { email, roleId: 3 } },
+          data: { wfid: "api/users/invite", input: { formData: { email, roleId: 3 } } },
         });
         expect([200, 201]).toContain(r.status());
         await waitForOutletEntry({ template: "user-invite", sinceOffset: offset });

@@ -45,7 +45,8 @@ export function WfInput(opts?: { pass?: boolean }): ParameterDecorator {
       const action = wf.resolveAction();
 
       if (action) {
-        const wfInput = useWfState().input<unknown>();
+        const envelope = useWfState().input<{ action?: string; formData?: unknown }>();
+        const wfInput = envelope?.formData;
         const { actions, actionsWithData } = getFormActions(type as TAtscriptAnnotatedType);
         const isNoData = actions.includes(action);
         const isWithData = actionsWithData.includes(action);

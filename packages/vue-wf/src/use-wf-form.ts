@@ -262,22 +262,22 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     }
 
     const body: Record<string, unknown> = { [wfidName]: options.name };
-    if (input) body.input = input;
+    if (input) body.input = { formData: input };
     if (initialToken) body[tokenName] = initialToken;
 
     await post(body);
   }
 
   async function submit(data: unknown): Promise<void> {
-    await post({ input: data });
+    await post({ input: { formData: data } });
   }
 
   async function action(name: string): Promise<void> {
-    await post({ action: name });
+    await post({ input: { action: name } });
   }
 
   async function actionWithData(name: string, data: unknown): Promise<void> {
-    await post({ input: data, action: name });
+    await post({ input: { action: name, formData: data } });
   }
 
   async function retry(): Promise<void> {

@@ -43,7 +43,7 @@ export class LoginWorkflow {
   @Step("login-credentials")
   async enterCredentials(
     @WorkflowParam("context") ctx: LoginCtx,
-    @WfAction() action: string | undefined,
+    @WfAction(LoginForm) action: string | undefined,
     @WfInput({ pass: true }) input?: LoginForm,
   ) {
     if (action === "forgot-password") {

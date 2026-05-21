@@ -26,41 +26,32 @@ export class WfMultiStepDemoWorkflow {
   ])
   flow() {}
 
+  // Each step seeds its `step` index into ctx BEFORE validating input so the
+  // first-entry `requireInput` response carries the `@wf.context.pass`-exposed
+  // value used by the form title and the multi-step indicator. @WfInput throws
+  // before the body runs, so we resolve manually here.
   @Step("wfd-multi-name")
-  askName(
-    @WorkflowParam("input") input: { name?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
+  askName(@WorkflowParam("context") ctx: Ctx) {
     ctx.step = 1;
-    if (!input || !input.name) {
-      throw useAtscriptWf(MultiStepNameForm).requireInput();
-    }
-    ctx.name = input.name;
+    ctx.name = useAtscriptWf(MultiStepNameForm).resolveInput().name;
     return;
   }
 
   @Step("wfd-multi-color")
-  askColor(
-    @WorkflowParam("input") input: { color?: string } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
+  askColor(@WorkflowParam("context") ctx: Ctx) {
     ctx.step = 2;
-    if (!input || !input.color) {
-      throw useAtscriptWf(MultiStepColorForm).requireInput();
-    }
-    ctx.color = input.color;
+    ctx.color = useAtscriptWf(MultiStepColorForm).resolveInput().color;
     return;
   }
 
   @Step("wfd-multi-confirm")
-  confirm(
-    @WorkflowParam("input") input: { confirm?: boolean } | undefined,
-    @WorkflowParam("context") ctx: Ctx,
-  ) {
+  confirm(@WorkflowParam("context") ctx: Ctx) {
     ctx.step = 3;
-    if (!input || !input.confirm) {
-      throw useAtscriptWf(MultiStepConfirmForm).requireInput();
-    }
+    const wf = useAtscriptWf(MultiStepConfirmForm);
+    const input = wf.resolveInput();
+    // @meta.required covers presence, but `false` is still a valid boolean;
+    // require an explicit tick to advance.
+    if (!input.confirm) throw wf.requireInput();
     finishWf({
       data: { name: ctx.name, color: ctx.color },
       message: { level: "success", text: "All three steps complete." },

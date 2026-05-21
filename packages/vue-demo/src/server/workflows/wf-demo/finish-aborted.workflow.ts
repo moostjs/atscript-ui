@@ -20,7 +20,7 @@ export class WfFinishAbortedDemoWorkflow {
   @Step("wfd-aborted")
   run(
     @WorkflowParam("context") ctx: Ctx,
-    @WfAction() action: string | undefined,
+    @WfAction(AbortableDemoForm) action: string | undefined,
     @WfInput({ pass: true }) input?: AbortableDemoForm,
   ) {
     if (action === "cancel") {

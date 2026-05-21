@@ -78,7 +78,7 @@ export async function performLogin(request: APIRequestContext, role: RoleSpec): 
   const otpAnchor = serverLogOffset();
   const credentials = await postWf(request, {
     wfs: start.wfs,
-    input: { username: role.username, password: role.password },
+    input: { formData: { username: role.username, password: role.password } },
   });
 
   if (credentials.error) {
@@ -104,7 +104,10 @@ export async function performLogin(request: APIRequestContext, role: RoleSpec): 
   // Step 3 (MFA only) — pull the OTP from the dev-server stdout sink.
   if (!role.email) throw new Error(`login(${role.username}): MFA role missing email`);
   const code = await waitForOtp({ email: role.email, sinceOffset: otpAnchor });
-  const finished = await postWf(request, { wfs: credentials.wfs, input: { code } });
+  const finished = await postWf(request, {
+    wfs: credentials.wfs,
+    input: { formData: { code } },
+  });
   if (!finished.finished) {
     throw new Error(
       `login(${role.username}): MFA submission did not finish: ${JSON.stringify(finished)}`,

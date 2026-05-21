@@ -18,24 +18,24 @@ export class EditProfileWorkflow {
   flow() {}
 
   @Step("profile-save")
-  async save(
-    @WorkflowParam("input") input: { username?: string; email?: string } | undefined,
-    @WorkflowParam("context") ctx: ProfileCtx,
-  ) {
+  async save(@WorkflowParam("context") ctx: ProfileCtx) {
     const session = useSession();
     if (!session) throw new HttpError(401, "Not authenticated");
 
-    if (!input) {
+    // First entry has no input — seed ctx so @wf.context.pass exposes current
+    // values to the form, then re-throw the same StepRetriableError. @WfInput
+    // doesn't fit cleanly here because it throws before the body runs.
+    const wf = useAtscriptWf(ProfileForm);
+    let input: ProfileForm;
+    try {
+      input = wf.resolveInput();
+    } catch (err) {
       const user = await usersTable.findOne({ filter: { id: session.userId } });
       ctx.currentUsername = user?.username;
       ctx.currentEmail = user?.email;
-      throw useAtscriptWf(ProfileForm).requireInput();
+      throw err;
     }
-    if (!input.username || !input.email) {
-      throw useAtscriptWf(ProfileForm).requireInput({
-        formMessage: "Username and email are required",
-      });
-    }
+
     await usersTable.updateOne({
       id: session.userId,
       username: input.username,

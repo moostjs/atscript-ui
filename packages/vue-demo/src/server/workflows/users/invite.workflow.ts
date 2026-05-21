@@ -53,19 +53,16 @@ export class InviteWorkflow {
   flow() {}
 
   @Step("invite-start")
-  async start(
-    @WorkflowParam("input") input: { email?: string; roleId?: number } | undefined,
-    @WorkflowParam("context") ctx: InviteCtx,
-  ) {
-    // Admin-only gate. arbac interceptor does not automatically cover WF steps,
-    // so assert the session inline.
+  async start(@WorkflowParam("context") ctx: InviteCtx) {
+    // Admin-only gate runs BEFORE input validation so a non-admin can never
+    // smuggle an invite past the gate by sending a valid payload — and so a
+    // missing-input first-entry from a non-admin returns 403 rather than 201
+    // with an input-required envelope.
     const session = useSession();
     if (!session) throw new HttpError(401, "Not authenticated");
     if (session.roleName !== "admin") throw new HttpError(403, "Admin only");
 
-    if (!input || !input.email || input.roleId == null) {
-      throw useAtscriptWf(InviteStartForm).requireInput();
-    }
+    const input = useAtscriptWf(InviteStartForm).resolveInput();
 
     const existing = await usersTable.findOne({ filter: { email: input.email } });
     if (existing) {

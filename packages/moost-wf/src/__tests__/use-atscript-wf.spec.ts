@@ -6,13 +6,13 @@ import { describe, expect, it, vi } from "vite-plus/test";
 import { WfAction } from "../wf-io/wf-action.decorator";
 import { WfInput } from "../wf-io/wf-input.decorator";
 import { useAtscriptWf } from "../wf-io/use-atscript-wf";
-import { useWfActionSlot } from "../wf-io/use-wf-action-slot";
 import { getCachedValidator } from "../wf-io/validator-cache";
 
 /**
  * Seed the wooks/wf event context with the slots the wf composables read:
- * `wfKind.keys.input` (step input), `wfKind.keys.inputContext` (workflow
- * context). The wf action is set via `useWfActionSlot().setAction(...)`.
+ * `wfKind.keys.input` (step input envelope), `wfKind.keys.inputContext`
+ * (workflow context). The action travels inside the envelope as
+ * `{ action, formData }` — peer keys, never separate slots.
  */
 function runInWfContext<T>(
   opts: {
@@ -30,12 +30,20 @@ function runInWfContext<T>(
     ctx.set(wfKind.keys.schemaId, "test-schema");
     ctx.set(wfKind.keys.stepId, null);
     ctx.set(wfKind.keys.indexes, undefined);
-    ctx.set(wfKind.keys.input, opts.input);
+    // Compose the envelope only when there is something to carry — a test
+    // exercising the "no payload at all" branch must see `undefined` rather
+    // than an empty wrapper object.
+    let envelope: { action?: string; formData?: unknown } | undefined;
+    if (opts.action !== undefined && opts.input !== undefined) {
+      envelope = { action: opts.action, formData: opts.input };
+    } else if (opts.action !== undefined) {
+      envelope = { action: opts.action };
+    } else if (opts.input !== undefined) {
+      envelope = { formData: opts.input };
+    }
+    ctx.set(wfKind.keys.input, envelope);
     ctx.set(wfKind.keys.inputContext, opts.wfContext ?? {});
     ctx.set(resumeKey, false);
-    if (opts.action !== undefined) {
-      useWfActionSlot().setAction(opts.action);
-    }
     return fn();
   });
 }
@@ -389,15 +397,24 @@ describe("@WfInput — policy matrix", () => {
 describe("@WfAction", () => {
   it("resolves to the action name", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
-    const cb = captureResolve(WfAction(), ActionForm);
+    const cb = captureResolve(WfAction(ActionForm), ActionForm);
     const result = runInWfContext({ action: "resend" }, () => cb({}));
     expect(result).toBe("resend");
   });
 
   it("returns undefined when no action is set", async () => {
     const { ActionForm } = await import("./fixtures/wf-forms.as");
-    const cb = captureResolve(WfAction(), ActionForm);
+    const cb = captureResolve(WfAction(ActionForm), ActionForm);
     const result = runInWfContext({}, () => cb({}));
     expect(result).toBeUndefined();
+  });
+
+  it("throws StepRetriableError for an unknown action (whitelist guard)", async () => {
+    const { ActionForm } = await import("./fixtures/wf-forms.as");
+    // Why: the decorator's security contract is to reject any action not
+    // declared on the form's @ui.form.action / @wf.action.withData whitelist
+    // — the step body must never see an unknown action.
+    const cb = captureResolve(WfAction(ActionForm), ActionForm);
+    expect(() => runInWfContext({ action: "bogus" }, () => cb({}))).toThrow(StepRetriableError);
   });
 });

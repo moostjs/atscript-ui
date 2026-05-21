@@ -166,8 +166,10 @@ describe("AsWfForm", () => {
     await resendBtn!.trigger("click");
     await flushPromises();
 
-    expect(calls[1]!.body).toHaveProperty("action", "resend");
-    expect(calls[1]!.body).not.toHaveProperty("input");
+    expect(calls[1]!.body).toHaveProperty("input.action", "resend");
+    expect((calls[1]!.body as { input: Record<string, unknown> }).input).not.toHaveProperty(
+      "formData",
+    );
   });
 
   it("paints the AsForm loading overlay while a server round-trip is in flight", async () => {
@@ -248,7 +250,7 @@ describe("AsWfForm", () => {
     await saveBtn!.trigger("click");
     await flushPromises();
 
-    expect(calls[1]!.body).toHaveProperty("action", "saveDraft");
-    expect(calls[1]!.body).toHaveProperty("input");
+    expect(calls[1]!.body).toHaveProperty("input.action", "saveDraft");
+    expect(calls[1]!.body).toHaveProperty("input.formData");
   });
 });

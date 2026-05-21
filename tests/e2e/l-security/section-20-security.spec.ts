@@ -1077,7 +1077,7 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       const finish = await ctx.post("/api/wf", {
         data: {
           wfs: startBody.wfs,
-          input: { username: "admin", password: "demo-password" },
+          input: { formData: { username: "admin", password: "demo-password" } },
         },
       });
       const headers = finish.headers();
