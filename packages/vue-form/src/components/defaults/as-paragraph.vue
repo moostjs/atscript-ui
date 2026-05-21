@@ -5,5 +5,13 @@ defineProps<TAsComponentProps>();
 </script>
 
 <template>
-  <p v-show="!hidden" aria-live="polite">{{ value }}</p>
+  <p
+    v-show="!hidden"
+    aria-live="polite"
+    class="as-default-field as-paragraph-field"
+    :class="$props.class"
+    :style="$props.style"
+  >
+    {{ value }}
+  </p>
 </template>
