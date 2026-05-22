@@ -11,7 +11,7 @@
       "source": "moostjs/atscript-db",
       "sourceType": "github",
       "skillPath": "skills/atscript-db/SKILL.md",
-      "computedHash": "c3a10c2a17da26b714dcfda1a450768842fab83c504784ccb364cddda7460ad7"
+      "computedHash": "0993f80060f64e086d99c1653667b7762856647d99d68fc15eb67af9c5f5d4a7"
     },
     "frontend-design": {
       "source": "anthropics/skills",
