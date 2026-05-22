@@ -1,20 +1,5 @@
-import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
+import { serializeAnnotatedType, type TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import {
-  DB_AMOUNT_CURRENCY,
-  DB_AMOUNT_CURRENCY_REF,
-  DB_COLUMN_PRECISION,
-  DB_UNIT,
-  DB_UNIT_REF,
-  META_LABEL,
-  UI_FORM_HIDDEN,
-  UI_FORM_ORDER,
-  UI_TABLE_HIDDEN,
-  UI_TABLE_ORDER,
-  UI_TABLE_TYPE,
-  UI_TABLE_WIDTH,
-  UI_TYPE,
-} from "../shared/annotation-keys";
 import {
   getColumn,
   getFilterableColumns,
@@ -26,35 +11,17 @@ import type { MetaResponse } from "./types";
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function stringProp(meta?: Record<string, unknown>) {
-  const h = defineAnnotatedType().designType("string");
-  if (meta) {
-    for (const [k, v] of Object.entries(meta)) h.annotate(k as keyof AtscriptMetadata, v as never);
-  }
-  return h.$type;
-}
-
-function numberProp(meta?: Record<string, unknown>) {
-  const h = defineAnnotatedType().designType("number");
-  if (meta) {
-    for (const [k, v] of Object.entries(meta)) h.annotate(k as keyof AtscriptMetadata, v as never);
-  }
-  return h.$type;
-}
-
-function booleanProp() {
-  return defineAnnotatedType().designType("boolean").$type;
-}
-
+/**
+ * Build a `MetaResponse` from a pre-serialized atscript type. `MetaResponse`
+ * is a wire shape — only its `type` field comes from an `.as` fixture; the
+ * surrounding meta (crud, primaryKeys, fields, …) stays a plain object.
+ */
 function buildMeta(
-  props: Record<string, ReturnType<typeof stringProp>>,
+  serialized: TSerializedAnnotatedType,
+  fieldNames: readonly string[],
   fields?: Record<string, { sortable: boolean; filterable: boolean }>,
   overrides?: Partial<MetaResponse>,
 ): MetaResponse {
-  const objectType = defineAnnotatedType("object");
-  for (const [name, prop] of Object.entries(props)) objectType.prop(name, prop);
-  const serialized = serializeAnnotatedType(objectType.$type);
-
   return {
     searchable: false,
     vectorSearchable: false,
@@ -66,21 +33,20 @@ function buildMeta(
     relations: [],
     fields:
       fields ??
-      Object.fromEntries(Object.keys(props).map((k) => [k, { sortable: false, filterable: true }])),
+      Object.fromEntries(fieldNames.map((k) => [k, { sortable: false, filterable: true }])),
     type: serialized,
     ...overrides,
   };
 }
 
+const F = "../__tests__/fixtures/create-table-def.as";
+
 // ── Tests ────────────────────────────────────────────────────
 
 describe("createTableDef", () => {
-  it("creates columns for a simple object type", () => {
-    const meta = buildMeta({
-      name: stringProp(),
-      age: numberProp(),
-      active: booleanProp(),
-    });
+  it("creates columns for a simple object type", async () => {
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), ["name", "age", "active"]);
     const def = createTableDef(meta);
 
     expect(def.columns).toHaveLength(3);
@@ -89,12 +55,9 @@ describe("createTableDef", () => {
     );
   });
 
-  it("infers display type from designType", () => {
-    const meta = buildMeta({
-      name: stringProp(),
-      age: numberProp(),
-      active: booleanProp(),
-    });
+  it("infers display type from designType", async () => {
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), ["name", "age", "active"]);
     const def = createTableDef(meta);
 
     expect(def.columns.find((c) => c.path === "name")!.type).toBe("text");
@@ -102,101 +65,86 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "active")!.type).toBe("boolean");
   });
 
-  it("uses @meta.label for column label", () => {
-    const meta = buildMeta({
-      firstName: stringProp({ [META_LABEL]: "First Name" }),
-    });
+  it("uses @meta.label for column label", async () => {
+    const { WithLabel } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithLabel), ["firstName"]);
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.label).toBe("First Name");
   });
 
-  it("humanizes path when no @meta.label", () => {
-    const meta = buildMeta({
-      firstName: stringProp(),
-    });
+  it("humanizes path when no @meta.label", async () => {
+    const { WithoutLabel } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithoutLabel), ["firstName"]);
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.label).toBe("First Name");
   });
 
-  it("uses bare @ui.type as the cell renderer when no @ui.table.type override exists", () => {
-    const meta = buildMeta({
-      bio: stringProp({ [UI_TYPE]: "textarea" }),
-    });
+  it("uses bare @ui.type as the cell renderer when no @ui.table.type override exists", async () => {
+    const { WithUiType } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithUiType), ["bio"]);
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.type).toBe("textarea");
   });
 
-  it("@ui.table.type wins over @ui.type for the cell renderer", () => {
-    const meta = buildMeta({
-      bio: stringProp({ [UI_TYPE]: "textarea", [UI_TABLE_TYPE]: "rich-text" }),
-    });
+  it("@ui.table.type wins over @ui.type for the cell renderer", async () => {
+    const { WithUiTableType } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithUiTableType), ["bio"]);
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.type).toBe("rich-text");
   });
 
-  it("sorts columns by @ui.table.order", () => {
-    const meta = buildMeta({
-      email: stringProp({ [UI_TABLE_ORDER]: 2 }),
-      name: stringProp({ [UI_TABLE_ORDER]: 1 }),
-      bio: stringProp({ [UI_TABLE_ORDER]: 3 }),
-    });
+  it("sorts columns by @ui.table.order", async () => {
+    const { WithTableOrder } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithTableOrder), ["email", "name", "bio"]);
     const def = createTableDef(meta);
 
     expect(def.columns.map((c) => c.path)).toEqual(["name", "email", "bio"]);
   });
 
-  it("@ui.form.order does NOT influence column order", () => {
-    const meta = buildMeta({
-      email: stringProp({ [UI_FORM_ORDER]: 1 }),
-      name: stringProp({ [UI_FORM_ORDER]: 2 }),
-    });
+  it("@ui.form.order does NOT influence column order", async () => {
+    const { WithFormOrder } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithFormOrder), ["email", "name"]);
     const def = createTableDef(meta);
 
     // No @ui.table.order → both sort to Infinity → natural insertion order preserved.
     expect(def.columns.map((c) => c.path)).toEqual(["email", "name"]);
   });
 
-  it("@ui.table.hidden sets visible: false", () => {
-    const meta = buildMeta({
-      secret: stringProp({ [UI_TABLE_HIDDEN]: true }),
-      visible: stringProp(),
-    });
+  it("@ui.table.hidden sets visible: false", async () => {
+    const { WithTableHidden } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithTableHidden), ["secret", "visible"]);
     const def = createTableDef(meta);
 
     expect(def.columns.find((c) => c.path === "secret")!.visible).toBe(false);
     expect(def.columns.find((c) => c.path === "visible")!.visible).toBe(true);
   });
 
-  it("@ui.form.hidden does NOT hide the table column", () => {
-    const meta = buildMeta({
-      internal: stringProp({ [UI_FORM_HIDDEN]: true }),
-    });
+  it("@ui.form.hidden does NOT hide the table column", async () => {
+    const { WithFormHidden } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithFormHidden), ["internal"]);
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.visible).toBe(true);
   });
 
-  it("reads @ui.table.width", () => {
-    const meta = buildMeta({
-      name: stringProp({ [UI_TABLE_WIDTH]: "240px" }),
-    });
+  it("reads @ui.table.width", async () => {
+    const { WithTableWidth } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithTableWidth), ["name"]);
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.width).toBe("240px");
   });
 
-  it("reads sortable/filterable from meta.fields", () => {
-    const meta = buildMeta(
-      { name: stringProp(), age: numberProp() },
-      {
-        name: { sortable: true, filterable: true },
-        age: { sortable: false, filterable: false },
-      },
-    );
+  it("reads sortable/filterable from meta.fields", async () => {
+    const { NameAndAge } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(NameAndAge), ["name", "age"], {
+      name: { sortable: true, filterable: true },
+      age: { sortable: false, filterable: false },
+    });
     const def = createTableDef(meta);
 
     expect(def.columns.find((c) => c.path === "name")!.sortable).toBe(true);
@@ -205,42 +153,30 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "age")!.filterable).toBe(false);
   });
 
-  it("nullable flag mirrors prop.optional", () => {
+  it("nullable flag mirrors prop.optional", async () => {
     // Required prop → nullable: false; optional `?` prop → nullable: true.
-    const objectType = defineAnnotatedType("object")
-      .prop("required", stringProp())
-      .prop("optional", defineAnnotatedType().designType("string").optional().$type);
-    const serialized = serializeAnnotatedType(objectType.$type);
-    const meta: MetaResponse = {
-      searchable: false,
-      vectorSearchable: false,
-      searchIndexes: [],
-      primaryKeys: [],
-      preferredId: [],
-      crud: {},
-      actions: [],
-      relations: [],
-      fields: {
-        required: { sortable: false, filterable: true },
-        optional: { sortable: false, filterable: true },
-      },
-      type: serialized,
-    };
+    const { RequiredAndOptional } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(RequiredAndOptional), ["required", "optional"], {
+      required: { sortable: false, filterable: true },
+      optional: { sortable: false, filterable: true },
+    });
     const def = createTableDef(meta);
     expect(def.columns.find((c) => c.path === "required")!.nullable).toBe(false);
     expect(def.columns.find((c) => c.path === "optional")!.nullable).toBe(true);
   });
 
-  it("fields not in meta.fields default to not sortable/filterable", () => {
-    const meta = buildMeta({ name: stringProp() }, {});
+  it("fields not in meta.fields default to not sortable/filterable", async () => {
+    const { WithoutLabel } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithoutLabel), ["firstName"], {});
     const def = createTableDef(meta);
 
     expect(def.columns[0]!.sortable).toBe(false);
     expect(def.columns[0]!.filterable).toBe(false);
   });
 
-  it("passes through primaryKeys, crud, searchable flags", () => {
-    const meta = buildMeta({ id: stringProp() }, undefined, {
+  it("passes through primaryKeys, crud, searchable flags", async () => {
+    const { WithId } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithId), ["id"], undefined, {
       primaryKeys: ["id"],
       preferredId: ["id"],
       crud: { query: [], pages: [], one: [] },
@@ -257,8 +193,9 @@ describe("createTableDef", () => {
     expect(def.vectorSearchable).toBe(true);
   });
 
-  it("preferredId comes from meta when distinct from primaryKeys", () => {
-    const meta = buildMeta({ id: stringProp(), slug: stringProp() }, undefined, {
+  it("preferredId comes from meta when distinct from primaryKeys", async () => {
+    const { WithIdAndSlug } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithIdAndSlug), ["id", "slug"], undefined, {
       primaryKeys: ["id"],
       preferredId: ["slug"],
     });
@@ -268,13 +205,11 @@ describe("createTableDef", () => {
     expect(def.preferredId).toEqual(["slug"]);
   });
 
-  it("skips the versionColumn from columns and propagates it to TableDef", () => {
+  it("skips the versionColumn from columns and propagates it to TableDef", async () => {
+    const { WithVersionColumn } = await import(F);
     const meta = buildMeta(
-      {
-        id: stringProp(),
-        name: stringProp(),
-        version: numberProp(),
-      },
+      serializeAnnotatedType(WithVersionColumn),
+      ["id", "name", "version"],
       {
         id: { sortable: true, filterable: true },
         name: { sortable: true, filterable: true },
@@ -291,8 +226,9 @@ describe("createTableDef", () => {
     expect(getSortableColumns(def).some((c) => c.path === "version")).toBe(false);
   });
 
-  it("preferredId falls back to primaryKeys when meta omits it (legacy server)", () => {
-    const meta = buildMeta({ id: stringProp() }, undefined, {
+  it("preferredId falls back to primaryKeys when meta omits it (legacy server)", async () => {
+    const { WithId } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithId), ["id"], undefined, {
       primaryKeys: ["id"],
     });
     delete (meta as { preferredId?: unknown }).preferredId;
@@ -301,8 +237,9 @@ describe("createTableDef", () => {
     expect(def.preferredId).toEqual(["id"]);
   });
 
-  it("passes through relations and searchIndexes", () => {
-    const meta = buildMeta({ id: stringProp() }, undefined, {
+  it("passes through relations and searchIndexes", async () => {
+    const { WithId } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithId), ["id"], undefined, {
       relations: [{ name: "author", direction: "to", isArray: false }],
       searchIndexes: [{ name: "default", type: "text" }],
     });
@@ -347,90 +284,73 @@ describe("createTableDef", () => {
 
   // ── Quantity tagging (currency / unit / precision) ──────────
 
-  it("timestamp-tagged number → cell-type 'datetime'", () => {
-    const ts = defineAnnotatedType().designType("number").tags("timestamp").$type;
-    const meta = buildMeta({ createdAt: ts });
+  it("timestamp-tagged number → cell-type 'datetime'", async () => {
+    const { WithTimestamp } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithTimestamp), ["createdAt"]);
     const def = createTableDef(meta);
     expect(def.columns.find((c) => c.path === "createdAt")!.type).toBe("datetime");
   });
 
-  it("plain number (no timestamp tag) stays cell-type 'number'", () => {
-    const meta = buildMeta({ count: numberProp() });
+  it("plain number (no timestamp tag) stays cell-type 'number'", async () => {
+    const { WithCount } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithCount), ["count"]);
     const def = createTableDef(meta);
     expect(def.columns.find((c) => c.path === "count")!.type).toBe("number");
   });
 
-  it("decimal designType maps to cell-type 'number'", () => {
-    const dec = defineAnnotatedType().designType("decimal").$type;
-    const meta = buildMeta({ price: dec });
+  it("decimal designType maps to cell-type 'number'", async () => {
+    const { WithDecimal } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithDecimal), ["price"]);
     const def = createTableDef(meta);
     expect(def.columns.find((c) => c.path === "price")!.type).toBe("number");
   });
 
-  it("reads @db.amount.currency literal onto column.currencyCode", () => {
-    const dec = defineAnnotatedType()
-      .designType("decimal")
-      .annotate(DB_AMOUNT_CURRENCY as keyof AtscriptMetadata, "USD" as never).$type;
-    const meta = buildMeta({ price: dec });
+  it("reads @db.amount.currency literal onto column.currencyCode", async () => {
+    const { WithCurrencyLiteral } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithCurrencyLiteral), ["price"]);
     const col = createTableDef(meta).columns.find((c) => c.path === "price")!;
     expect(col.currencyCode).toBe("USD");
     expect(col.currencyRefField).toBeUndefined();
   });
 
-  it("reads @db.amount.currency.ref onto column.currencyRefField", () => {
-    const dec = defineAnnotatedType()
-      .designType("decimal")
-      .annotate(DB_AMOUNT_CURRENCY_REF as keyof AtscriptMetadata, "currency" as never).$type;
-    const meta = buildMeta({ total: dec });
+  it("reads @db.amount.currency.ref onto column.currencyRefField", async () => {
+    const { WithCurrencyRef } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithCurrencyRef), ["total", "currency"]);
     const col = createTableDef(meta).columns.find((c) => c.path === "total")!;
     expect(col.currencyRefField).toBe("currency");
     expect(col.currencyCode).toBeUndefined();
   });
 
-  it("reads @db.unit literal onto column.unitCode", () => {
-    const dec = defineAnnotatedType()
-      .designType("decimal")
-      .annotate(DB_UNIT as keyof AtscriptMetadata, "kg" as never).$type;
-    const col = createTableDef(buildMeta({ weight: dec })).columns.find(
-      (c) => c.path === "weight",
-    )!;
+  it("reads @db.unit literal onto column.unitCode", async () => {
+    const { WithUnitLiteral } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithUnitLiteral), ["weight"]);
+    const col = createTableDef(meta).columns.find((c) => c.path === "weight")!;
     expect(col.unitCode).toBe("kg");
   });
 
-  it("reads @db.unit.ref onto column.unitRefField", () => {
-    const dec = defineAnnotatedType()
-      .designType("decimal")
-      .annotate(DB_UNIT_REF as keyof AtscriptMetadata, "unit" as never).$type;
-    const col = createTableDef(buildMeta({ value: dec })).columns.find((c) => c.path === "value")!;
+  it("reads @db.unit.ref onto column.unitRefField", async () => {
+    const { WithUnitRef } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithUnitRef), ["value", "unit"]);
+    const col = createTableDef(meta).columns.find((c) => c.path === "value")!;
     expect(col.unitRefField).toBe("unit");
   });
 
-  it("reads @db.column.precision scale onto column.precisionScale", () => {
-    const dec = defineAnnotatedType()
-      .designType("decimal")
-      .annotate(
-        DB_COLUMN_PRECISION as keyof AtscriptMetadata,
-        { precision: 10, scale: 2 } as never,
-      ).$type;
-    const col = createTableDef(buildMeta({ price: dec })).columns.find((c) => c.path === "price")!;
+  it("reads @db.column.precision scale onto column.precisionScale", async () => {
+    const { WithPrecision } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithPrecision), ["price"]);
+    const col = createTableDef(meta).columns.find((c) => c.path === "price")!;
     expect(col.precisionScale).toBe(2);
   });
 
   // ── Flat-flattened nested objects vs. @db.json atomic columns ─
 
-  it("skips flat-flattened object parents — only leaves become columns", () => {
+  it("skips flat-flattened object parents — only leaves become columns", async () => {
     // `profile: { firstName, lastName }` with no `@db.json` is server-flattened
     // into physical columns `profile__firstName` / `profile__lastName`. The wire
     // meta.fields lists `profile.firstName` + `profile.lastName` (NOT `profile`).
     // The synthetic parent `profile` would otherwise leak as a JSON-rendered
     // column on top of its real leaves.
-    const profileObj = defineAnnotatedType("object")
-      .prop("firstName", stringProp())
-      .prop("lastName", stringProp()).$type;
-    const objectType = defineAnnotatedType("object")
-      .prop("name", stringProp())
-      .prop("profile", profileObj);
-    const serialized = serializeAnnotatedType(objectType.$type);
+    const { WithFlatNested } = await import(F);
     const meta: MetaResponse = {
       searchable: false,
       vectorSearchable: false,
@@ -445,7 +365,7 @@ describe("createTableDef", () => {
         "profile.firstName": { sortable: false, filterable: true },
         "profile.lastName": { sortable: false, filterable: true },
       },
-      type: serialized,
+      type: serializeAnnotatedType(WithFlatNested),
     };
     const def = createTableDef(meta);
     const paths = def.columns.map((c) => c.path);
@@ -455,17 +375,11 @@ describe("createTableDef", () => {
     expect(paths).not.toContain("profile");
   });
 
-  it("keeps @db.json (atomic) object parent as a single column", () => {
+  it("keeps @db.json (atomic) object parent as a single column", async () => {
     // `address: { street, city }` with `@db.json` is stored as one JSON column;
     // its sub-paths are NOT in meta.fields. The parent stays as a single column
     // (rendered via the JSON popover cell).
-    const addressObj = defineAnnotatedType("object")
-      .prop("street", stringProp())
-      .prop("city", stringProp()).$type;
-    const objectType = defineAnnotatedType("object")
-      .prop("name", stringProp())
-      .prop("address", addressObj);
-    const serialized = serializeAnnotatedType(objectType.$type);
+    const { WithJsonNested } = await import(F);
     const meta: MetaResponse = {
       searchable: false,
       vectorSearchable: false,
@@ -479,7 +393,7 @@ describe("createTableDef", () => {
         name: { sortable: false, filterable: true },
         address: { sortable: false, filterable: false },
       },
-      type: serialized,
+      type: serializeAnnotatedType(WithJsonNested),
     };
     const def = createTableDef(meta);
     const paths = def.columns.map((c) => c.path);
@@ -488,17 +402,16 @@ describe("createTableDef", () => {
     expect(paths).not.toContain("address.city");
   });
 
-  it("non-literal union (object variants) infers cell-type 'union'", () => {
-    const cardVariant = defineAnnotatedType("object").prop("card", stringProp()).$type;
-    const bankVariant = defineAnnotatedType("object").prop("iban", stringProp()).$type;
-    const unionProp = defineAnnotatedType("union").item(cardVariant).item(bankVariant).$type;
-    const meta = buildMeta({ paymentMethod: unionProp });
+  it("non-literal union (object variants) infers cell-type 'union'", async () => {
+    const { WithUnion } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithUnion), ["paymentMethod"]);
     const def = createTableDef(meta);
     expect(def.columns.find((c) => c.path === "paymentMethod")!.type).toBe("union");
   });
 
-  it("non-FK columns have undefined valueHelpInfo", () => {
-    const meta = buildMeta({ name: stringProp(), age: numberProp() });
+  it("non-FK columns have undefined valueHelpInfo", async () => {
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), ["name", "age", "active"]);
     const def = createTableDef(meta);
 
     for (const col of def.columns) {
@@ -510,39 +423,39 @@ describe("createTableDef", () => {
 // ── Column resolver helpers ──────────────────────────────────
 
 describe("column-resolver", () => {
-  const meta = buildMeta(
-    {
-      id: stringProp({ [UI_TABLE_ORDER]: 1 }),
-      name: stringProp({ [UI_TABLE_ORDER]: 2 }),
-      secret: stringProp({ [UI_TABLE_HIDDEN]: true, [UI_TABLE_ORDER]: 3 }),
-    },
-    {
+  async function buildResolverDef() {
+    const { ResolverHelpers } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(ResolverHelpers), ["id", "name", "secret"], {
       id: { sortable: true, filterable: true },
       name: { sortable: false, filterable: true },
       secret: { sortable: false, filterable: false },
-    },
-  );
-  const def = createTableDef(meta);
+    });
+    return createTableDef(meta);
+  }
 
-  it("getVisibleColumns filters hidden columns", () => {
+  it("getVisibleColumns filters hidden columns", async () => {
+    const def = await buildResolverDef();
     const visible = getVisibleColumns(def);
     expect(visible).toHaveLength(2);
     expect(visible.map((c) => c.path)).toEqual(["id", "name"]);
   });
 
-  it("getSortableColumns returns only sortable", () => {
+  it("getSortableColumns returns only sortable", async () => {
+    const def = await buildResolverDef();
     const sortable = getSortableColumns(def);
     expect(sortable).toHaveLength(1);
     expect(sortable[0]!.path).toBe("id");
   });
 
-  it("getFilterableColumns returns only filterable", () => {
+  it("getFilterableColumns returns only filterable", async () => {
+    const def = await buildResolverDef();
     const filterable = getFilterableColumns(def);
     expect(filterable).toHaveLength(2);
     expect(filterable.map((c) => c.path)).toEqual(expect.arrayContaining(["id", "name"]));
   });
 
-  it("getColumn finds by path", () => {
+  it("getColumn finds by path", async () => {
+    const def = await buildResolverDef();
     expect(getColumn(def, "name")?.path).toBe("name");
     expect(getColumn(def, "nonexistent")).toBeUndefined();
   });
