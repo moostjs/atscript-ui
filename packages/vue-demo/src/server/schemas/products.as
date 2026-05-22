@@ -56,4 +56,8 @@ export interface ProductsTable {
     @meta.label 'Created'
     @db.default.now
     createdAt: number.timestamp
+
+    @meta.label 'Version'
+    @db.column.version
+    version: number.int
 }

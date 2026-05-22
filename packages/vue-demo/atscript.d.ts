@@ -48,6 +48,7 @@ declare global {
     "db.column.measure": boolean
     "db.column.filterable": boolean
     "db.column.sortable": boolean
+    "db.column.version": boolean
     "db.default": string
     "db.default.increment": number | true
     "db.default.uuid": boolean
