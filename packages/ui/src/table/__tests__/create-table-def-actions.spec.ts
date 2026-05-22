@@ -1,13 +1,13 @@
-import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
+import { serializeAnnotatedType } from "@atscript/typescript/utils";
 import type { TDbActionInfo, TCrudPermissions } from "@atscript/db-client";
 import { describe, expect, it } from "vitest";
+import { SimpleIdTable } from "../../__tests__/fixtures/create-table-def-actions.as";
 import { createTableDef } from "../create-table-def";
 import type { MetaResponse } from "../types";
 
+const SIMPLE_ID_TABLE_TYPE = serializeAnnotatedType(SimpleIdTable);
+
 function buildMeta(actions: TDbActionInfo[], crud: TCrudPermissions = {}): MetaResponse {
-  const obj = defineAnnotatedType("object");
-  const id = defineAnnotatedType().designType("string");
-  obj.prop("id", id.$type);
   return {
     searchable: false,
     vectorSearchable: false,
@@ -18,7 +18,7 @@ function buildMeta(actions: TDbActionInfo[], crud: TCrudPermissions = {}): MetaR
     actions,
     relations: [],
     fields: { id: { sortable: false, filterable: false } },
-    type: serializeAnnotatedType(obj.$type),
+    type: SIMPLE_ID_TABLE_TYPE,
   };
 }
 

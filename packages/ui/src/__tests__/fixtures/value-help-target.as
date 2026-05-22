@@ -46,3 +46,20 @@ export interface NumericOnly {
 
     value: number
 }
+
+/// Target shape where `version` is BOTH `@meta.id` AND `@ui.dict.attr` — backs
+/// the resolver's "drops versionColumn from primaryKeys/filter/sort/attr lists"
+/// test. The version field would otherwise leak into all four output arrays;
+/// the meta also marks it filterable + sortable so both walk-loops in
+/// `resolve.ts` get exercised.
+@db.http.path '/versioned'
+export interface VersionedTarget {
+    @meta.id
+    id: number
+
+    name: string
+
+    @meta.id
+    @ui.dict.attr
+    version: number
+}
