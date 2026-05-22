@@ -46,6 +46,7 @@ interface MetaResponse {
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
+  versionColumn?: string; // OCC version column (when `@db.column.version` is declared)
   crud: TCrudPermissions; // canCreate / canUpdate / canRemove
   actions: TDbActionInfo[]; // declarative server actions
   relations: RelationInfo[]; // to / from / via summaries
@@ -53,6 +54,8 @@ interface MetaResponse {
   type: TSerializedAnnotatedType; // serialized .as type tree
 }
 ```
+
+`versionColumn` is present only on tables annotated with `@db.column.version` (see atscript-db's optimistic concurrency reference). It names the column the server manages for optimistic concurrency. Custom `queryFn` implementations don't need to do anything with it — atscript-ui handles the version-field hiding and 409 handling automatically. Just preserve the field in your returned `MetaResponse` shape. See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide.
 
 The capability flags drive UI gates:
 

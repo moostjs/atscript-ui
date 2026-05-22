@@ -237,6 +237,7 @@ const tablesSidebar = [
       { text: "URL State", link: "/tables/url-state" },
       { text: "Presets", link: "/tables/presets" },
       { text: "Actions & Selection", link: "/tables/actions" },
+      { text: "Edit Forms with OCC", link: "/tables/edit-form-occ" },
     ],
   },
   {

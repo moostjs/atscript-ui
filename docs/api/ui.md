@@ -136,13 +136,23 @@ type TFormEntryOptions = { key: string; label: string } | string;
 
 ## Form factories
 
-### `createFormDef(type)`
+### `createFormDef(type, opts?)`
 
 Builds a `FormDef` from an annotated type. Walks props, pre-resolves structural sub-defs, and caches the flat map.
 
 ```typescript
-function createFormDef(type: TAtscriptAnnotatedType): FormDef;
+function createFormDef(type: TAtscriptAnnotatedType, opts?: { versionColumn?: string }): FormDef;
 ```
+
+When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly.
+
+```ts
+formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+  versionColumn: meta.versionColumn,
+});
+```
+
+See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide for the end-to-end flow.
 
 ### `buildUnionVariants(type)`
 
@@ -190,6 +200,8 @@ interface TableDef {
   primaryKeys: string[];
   /** Preferred row identifier for URL/wire addressing. */
   preferredId: string[];
+  /** Mirrors `MetaResponse.versionColumn` — name of the OCC version column when the table opts into `@db.column.version`. */
+  versionColumn?: string;
   crud: TCrudPermissions;
   canRemove: boolean;
   actions: TableActionsModel;
@@ -199,6 +211,8 @@ interface TableDef {
   relations: RelationInfo[];
 }
 ```
+
+`createTableDef` propagates `versionColumn` from the meta envelope and skips the matching entry from `def.columns`, so filter/sort/column-picker dialogs ignore the version column automatically — see [Edit forms with optimistic concurrency](/tables/edit-form-occ).
 
 ### `ColumnDef`
 
@@ -240,6 +254,7 @@ interface MetaResponse {
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
+  versionColumn?: string;
   crud: TCrudPermissions;
   actions: TDbActionInfo[];
   relations: RelationInfo[];
@@ -264,6 +279,8 @@ interface RelationInfo {
   isArray: boolean;
 }
 ```
+
+**`versionColumn?: string`** — name of the server-managed row version column on OCC-protected tables (declared with `@db.column.version` in your `.as` schema). Absent on tables that don't opt into OCC. Consumer code should pass this through to `createFormDef` so the version field doesn't render as an editable input, while still riding in the form data for the server's `$cas` round-trip. See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide for the full flow.
 
 ### `TableActionsModel`
 

@@ -146,6 +146,8 @@ function createAsFormDef<T extends TAtscriptAnnotatedType>(
 ): { def: FormDef; formData: { value: unknown } };
 ```
 
+For tables that opt into optimistic concurrency, call the lower-level `createFormDef(type, { versionColumn })` from `@atscript/ui` directly so the version field is excluded from `def.fields[]` (it stays in `flatMap` and form data so the wire payload still carries it). See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide.
+
 ### `formatIndexedLabelParts(label, arrayIndex)`
 
 Splits a label into base + optional `#N` suffix for two-part rendering by `AsCollapsible` / `AsFieldShell`. Returns `undefined` when both the base and suffix are absent.
