@@ -268,6 +268,29 @@ describe("createTableDef", () => {
     expect(def.preferredId).toEqual(["slug"]);
   });
 
+  it("skips the versionColumn from columns and propagates it to TableDef", () => {
+    const meta = buildMeta(
+      {
+        id: stringProp(),
+        name: stringProp(),
+        version: numberProp(),
+      },
+      {
+        id: { sortable: true, filterable: true },
+        name: { sortable: true, filterable: true },
+        version: { sortable: true, filterable: true },
+      },
+      { versionColumn: "version", primaryKeys: ["id"] },
+    );
+    const def = createTableDef(meta);
+
+    expect(def.versionColumn).toBe("version");
+    expect(def.columns.map((c) => c.path)).toEqual(["id", "name"]);
+    expect(def.flatMap.has("version")).toBe(true);
+    expect(getFilterableColumns(def).some((c) => c.path === "version")).toBe(false);
+    expect(getSortableColumns(def).some((c) => c.path === "version")).toBe(false);
+  });
+
   it("preferredId falls back to primaryKeys when meta omits it (legacy server)", () => {
     const meta = buildMeta({ id: stringProp() }, undefined, {
       primaryKeys: ["id"],

@@ -37,6 +37,15 @@ export interface MetaResponse {
    * construction for action POSTs and `'navigate'` URL `$1` substitution.
    */
   preferredId: string[];
+  /**
+   * Server-managed OCC column name (from `@db.column.version`). When present,
+   * names a normal `int` field that ships with rows like any other column.
+   * Consumers MUST keep the field's value in update payloads — the server
+   * auto-lifts it to `$cas` to detect concurrent writes — but MUST NOT render
+   * it as a user-facing column, filter, or sorter. `createTableDef` skips it
+   * from the generated `columns[]` array on this basis.
+   */
+  versionColumn?: string;
   crud: TCrudPermissions;
   actions: TDbActionInfo[];
   relations: RelationInfo[];
@@ -79,6 +88,8 @@ export interface TableDef {
   primaryKeys: string[];
   /** Preferred row identifier — see `MetaResponse.preferredId`. */
   preferredId: string[];
+  /** Server-managed OCC column name — see `MetaResponse.versionColumn`. */
+  versionColumn?: string;
   /** Per-op CRUD permissions advertised in `/meta`. Key absent → denied. */
   crud: TCrudPermissions;
   canRemove: boolean;

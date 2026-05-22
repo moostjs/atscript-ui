@@ -4,6 +4,7 @@ import { useRouter } from "vue-router";
 import { AsForm } from "@atscript/vue-form";
 import { createFormDef, type FormDef } from "@atscript/ui";
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { ClientError } from "@atscript/db-client";
 import { clientForTable } from "../api/client-factory";
 import { createDemoTypes } from "../types/demo-types";
 import { useMe } from "../api/use-me";
@@ -44,7 +45,9 @@ async function load() {
   error.value = null;
   try {
     const meta = await client.value.meta();
-    formDef.value = createFormDef(deserializeAnnotatedType(meta.type));
+    formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+      versionColumn: meta.versionColumn,
+    });
     primaryKeys.value = meta.primaryKeys ?? [];
     // Route param `:id` carries the preferredId value (e.g. `username`,
     // `sku`) — wrap it as `{ [field]: id }` so `client.one` hits the right
@@ -70,7 +73,17 @@ async function onSubmit(data: unknown) {
     await client.value.update(data as never);
     savedAt.value = Date.now();
   } catch (e) {
-    error.value = (e as Error).message;
+    const body =
+      e instanceof ClientError && e.status === 409
+        ? (e.body as { kind?: string; currentVersion?: number })
+        : null;
+    if (body?.kind === "version_mismatch") {
+      const suffix =
+        typeof body.currentVersion === "number" ? ` (current version: ${body.currentVersion})` : "";
+      error.value = `Row changed since you opened the form${suffix}. Reload the page to continue.`;
+    } else {
+      error.value = (e as Error).message;
+    }
   } finally {
     saving.value = false;
   }

@@ -163,6 +163,26 @@ describe("createFormDef", () => {
 
       expect(def.fields[0]!.allStatic).toBe(true);
     });
+
+    it("skips opts.versionColumn from fields[] but keeps it in flatMap", () => {
+      const type = objectType({
+        name: stringProp(),
+        age: numberProp(),
+        version: numberProp(),
+      });
+
+      const def = createFormDef(type, { versionColumn: "version" });
+      // OCC version column must not render as a user-editable field.
+      expect(def.fields.map((f) => f.path)).toEqual(["name", "age"]);
+      // But it must remain in the type tree — wire serialization and the
+      // server-side $cas auto-lift rely on the field still existing.
+      expect(def.flatMap.has("version")).toBe(true);
+
+      // Control: without the opt, the field renders normally — proves the
+      // skip is opt-in and non-versioned tables stay unaffected.
+      const defNoOpt = createFormDef(type);
+      expect(defNoOpt.fields.map((f) => f.path)).toContain("version");
+    });
   });
 
   describe("nested objects", () => {

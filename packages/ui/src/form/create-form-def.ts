@@ -46,8 +46,15 @@ const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
  * - **Object types** (`kind === 'object'`): produces an object root with nested fields.
  * - **Non-object types** (primitive, array, union, etc.): produces a single leaf root field
  *   with `path: ''`.
+ *
+ * @param opts.versionColumn - Name of a server-managed OCC version column to
+ *   exclude from `fields[]` (it stays in `flatMap` so the wire payload is
+ *   unchanged). Root-table concept; not propagated into nested recursive calls.
  */
-export function createFormDef(type: TAtscriptAnnotatedType): FormDef {
+export function createFormDef(
+  type: TAtscriptAnnotatedType,
+  opts?: { versionColumn?: string },
+): FormDef {
   // Non-object types: single leaf field
   if (type.type.kind !== "object") {
     const rootField = createFieldDef("", type);
@@ -63,6 +70,7 @@ export function createFormDef(type: TAtscriptAnnotatedType): FormDef {
 
   for (const [path, prop] of flatMap.entries()) {
     if (path === "") continue;
+    if (path === opts?.versionColumn) continue;
     if (isChildOfStructured(path, structuredPrefixes)) continue;
 
     const originalProp = resolveOriginalProp(objectType, path) ?? prop;

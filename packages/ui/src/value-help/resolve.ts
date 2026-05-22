@@ -52,6 +52,7 @@ function buildResolved(
 ): ResolvedValueHelp {
   const objectType =
     targetType.type.kind === "object" ? (targetType.type as TAtscriptTypeObject) : undefined;
+  const versionColumn = meta.versionColumn;
 
   const primaryKeys: string[] = [];
   let labelField: string | undefined;
@@ -61,6 +62,7 @@ function buildResolved(
 
   if (objectType) {
     for (const [name, fieldProp] of objectType.props) {
+      if (name === versionColumn) continue;
       const isPK = fieldProp.metadata.has(META_ID);
       if (isPK) primaryKeys.push(name);
 
@@ -86,6 +88,7 @@ function buildResolved(
   const sortableFields: string[] = [];
   if (meta.fields) {
     for (const [name, fm] of Object.entries(meta.fields)) {
+      if (name === versionColumn) continue;
       if (fm?.filterable) filterableFields.push(name);
       if (fm?.sortable) sortableFields.push(name);
     }

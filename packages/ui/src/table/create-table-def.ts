@@ -47,6 +47,7 @@ export function createTableDef(
 
   for (const [path, prop] of flatMap.entries()) {
     if (path === "") continue;
+    if (path === meta.versionColumn) continue;
     if (!(path in meta.fields)) {
       // Sub-paths become columns only when the server lists them in meta.fields —
       // keeps atomic JSON/document columns from leaking their internals as synthetic columns.
@@ -100,6 +101,7 @@ export function createTableDef(
     // Older servers / stub fixtures may omit `preferredId` — fall back to PK
     // so identifier extraction and `$1` substitution stay defined.
     preferredId: meta.preferredId ?? meta.primaryKeys,
+    versionColumn: meta.versionColumn,
     crud,
     canRemove: "remove" in crud,
     actions,
