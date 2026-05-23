@@ -26,7 +26,6 @@ installDynamicResolver();
 Internally:
 
 ```typescript
-// packages/ui-fns/src/index.ts:32-35
 export function installDynamicResolver(): void {
   setResolver(new DynamicFieldResolver());
   setDefaultValidatorPlugins([uiFnsValidatorPlugin()]);
@@ -56,7 +55,6 @@ Type something in `name`; `hint` appears. Without `installDynamicResolver()`, `h
 Every compiled function receives the scope object — its keys become the variables `v`, `data`, `context`, `entry`, `action` inside the function body.
 
 ```typescript
-// packages/ui-fns/src/runtime/types.ts:8-14
 export interface TFnScope<V = unknown, D = Record<string, unknown>, C = Record<string, unknown>> {
   v?: V; // current field value (this field)
   data: D; // form data, unwrapped (the inner domain object)
@@ -69,7 +67,6 @@ export interface TFnScope<V = unknown, D = Record<string, unknown>, C = Record<s
 `TFieldEvaluated`:
 
 ```typescript
-// packages/ui-fns/src/runtime/types.ts:25-35
 export interface TFieldEvaluated {
   field: string; // dotted path
   type: string; // resolved field type ('text', 'select', ...)
@@ -88,7 +85,6 @@ export interface TFieldEvaluated {
 Form-level functions (e.g. `@ui.form.fn.submit.text`) compile via `compileTopFn`:
 
 ```typescript
-// packages/ui-fns/src/runtime/fn-compiler.ts:30-33
 const code = `return (${fnStr})(data, context)`;
 ```
 
@@ -114,8 +110,6 @@ So form-level fns receive `(data, context)` and field-level fns receive `(v, dat
 | `@ui.form.fn.submit.text`     | `(data, context) => string`                                      | `@ui.form.submit.text`   | Form-level: computed submit-button text.                                                                                        |
 | `@ui.form.fn.submit.disabled` | `(data, context) => boolean`                                     | n/a                      | Form-level: computed submit-button disabled state.                                                                              |
 | `@ui.form.validate`           | `(v, data, context, entry) => true \| string`                    | n/a                      | Custom validator. Returns `true` for valid; any string is the error message.                                                    |
-
-Sources: `packages/ui/src/shared/annotation-keys.ts`, `packages/vue-form/src/components/as-field.vue:449-631`.
 
 The static counterpart (e.g. `@ui.form.label`) is read when the `.fn.` variant is absent. When both are present, the `.fn.` value wins.
 
@@ -207,7 +201,7 @@ unitPrice: number
 total: number
 ```
 
-`readonly === true` AND `@ui.form.fn.value` set → AsField writes the computed value into `data.total` whenever inputs change. (See `as-field.vue:615-631`.)
+`readonly === true` AND `@ui.form.fn.value` set → AsField writes the computed value into `data.total` whenever inputs change.
 
 ## Function-string syntax
 
@@ -235,8 +229,6 @@ So the string is treated as a single expression that produces a function. Accept
 
 Compilation is **lazy** (first read) and **cached** by string body via `FNPool` from `@prostojs/deserialize-fn`. Two fields whose annotations share an identical string share one compiled function — no extra `new Function` cost.
 
-Source: `packages/ui-fns/src/runtime/fn-compiler.ts:16-19`.
-
 ## Security model
 
 `new Function` runs in the host's full scope — these functions can call any globals available at runtime (`fetch`, `localStorage`, `window`, ...). The design assumes:
@@ -253,7 +245,6 @@ The compiler does NOT sandbox. There is no allow-list of identifiers.
 `FormFieldDef.allStatic === true` when the field's prop carries NO `@ui.form.fn.*` / `@ui.table.fn.*` / `@ui.fn.*` annotations. AsField's hot path checks this:
 
 ```typescript
-// packages/vue-form/src/components/as-field.vue:409-445
 if (props.field.allStatic) {
   // Fast path: no fn keys → no scope, no computeds.
   hasCustomValidators = false;
@@ -263,7 +254,7 @@ if (props.field.allStatic) {
 ```
 
 - Without dynamic fns, all field props are plain values (no reactive subscriptions, no scope construction).
-- The `emptyScope` is a module-level singleton shared across every `allStatic` AsField mount (`as-field.vue:4-10`).
+- The `emptyScope` is a module-level singleton shared across every `allStatic` AsField mount.
 
 When at least one `@ui.fn.*` is present, AsField takes the dynamic path:
 

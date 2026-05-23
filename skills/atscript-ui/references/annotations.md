@@ -1,4 +1,4 @@
-Authoritative reference for every `@ui.*` and `@wf.*` annotation. Spec source: `packages/ui/src/plugin/annotations.ts`, `packages/ui/src/shared/annotation-keys.ts`, `packages/ui-fns/src/plugin/annotations.ts`, `packages/moost-wf/src/plugin.ts`.
+Authoritative reference for every `@ui.*` and `@wf.*` annotation.
 
 ## Contents
 
@@ -25,7 +25,7 @@ Authoritative reference for every `@ui.*` and `@wf.*` annotation. Spec source: `
 | --------- | --------- | -------------- | -------------- |
 | `UI_TYPE` | `ui.type` | `type: string` | `prop`, `type` |
 
-**Built-in renderer ids** (`packages/ui/src/plugin/annotations.ts:4-18`):
+**Built-in renderer ids**:
 
 `text`, `password`, `number`, `decimal`, `select`, `textarea`, `checkbox`, `radio`, `date`, `datetime`, `time`, `paragraph`, `action`.
 
@@ -80,7 +80,7 @@ Adornments rendered around the input value. Order is `[prefix-icon][prefix-text]
 
 ## @ui.form.fn.\* (dynamic — requires @atscript/ui-fns)
 
-Computed at render time. Argument is a JS function string compiled with `new Function`. Field-level fn signature: `(value, data, context, entry) => result`. The `TFnScope` shape passed to compiled functions is `{ v, data, context, entry, action? }` (`packages/ui-fns/src/runtime/types.ts:8`).
+Computed at render time. Argument is a JS function string compiled with `new Function`. Field-level fn signature: `(value, data, context, entry) => result`. The `TFnScope` shape passed to compiled functions is `{ v, data, context, entry, action? }`.
 
 | Annotation                      | Constant                 | Return                              | What it controls                                                            |
 | ------------------------------- | ------------------------ | ----------------------------------- | --------------------------------------------------------------------------- |
@@ -119,7 +119,7 @@ city: string
 email: string
 ```
 
-Signature: `(value, data, context, entry) => true | string`. Validator plugin: `uiFnsValidatorPlugin()` (`packages/ui-fns/src/runtime/validator-plugin.ts:22`).
+Signature: `(value, data, context, entry) => true | string`. Validator plugin: `uiFnsValidatorPlugin()` from `@atscript/ui-fns`.
 
 ## @ui.table.\* (static)
 
@@ -177,13 +177,13 @@ Read server-side by `AsValueHelpController` (`@atscript/moost-db`) and surfaced 
 
 ## @wf.\* (workflow side)
 
-Registered by `wfPlugin()` from `@atscript/moost-wf/plugin` (`packages/moost-wf/src/plugin.ts:24`). All require the workflow runtime — install the plugin in `atscript.config.ts` server-side.
+Registered by `wfPlugin()` from `@atscript/moost-wf/plugin`. All require the workflow runtime — install the plugin in `atscript.config.ts` server-side.
 
-| Annotation                     | Argument                            | nodeType            | Where it's read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| ------------------------------ | ----------------------------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@wf.context.pass "key"`       | `key: string`; **multiple, append** | `interface`, `type` | `serializeFormSchema` strips context.pass-listed keys from the wire payload. Whitelist of context keys to pass to the client form — only listed keys are extracted from workflow state and included in the `inputRequired` response. Prevents leaking internal state to the browser.                                                                                                                                                                                                                                                                            |
-| `@wf.action.withData "id"`     | `id: string`                        | `prop`, `type`      | Drives action validation with `deepPartial=true` — accepts partial form data. Use for "save draft" / soft-validated actions.                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| `@wf.store.fromContext "path"` | `path: string`                      | `prop`              | At `AsWfStore.set()` the wf-state row gets a shadow top-level column whose value is copied from `state.context.<path>`. Path is plain dot-notation (`a.b`) — no array indices / wildcards / bracket access. PKs (`@meta.id`) are rejected. Field must be optional or carry `@meta.default` / `@db.default` (context shape varies between steps and path-misses write null). Field's resolved primitive must be `string \| number \| boolean` — no arrays, objects, decimal, or timestamp. Validated at compile time (`packages/moost-wf/src/plugin.ts:90-158`). |
+| Annotation                     | Argument                            | nodeType            | Where it's read                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------ | ----------------------------------- | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@wf.context.pass "key"`       | `key: string`; **multiple, append** | `interface`, `type` | `serializeFormSchema` strips context.pass-listed keys from the wire payload. Whitelist of context keys to pass to the client form — only listed keys are extracted from workflow state and included in the `inputRequired` response. Prevents leaking internal state to the browser.                                                                                                                                                                                                                                 |
+| `@wf.action.withData "id"`     | `id: string`                        | `prop`, `type`      | Drives action validation with `deepPartial=true` — accepts partial form data. Use for "save draft" / soft-validated actions.                                                                                                                                                                                                                                                                                                                                                                                         |
+| `@wf.store.fromContext "path"` | `path: string`                      | `prop`              | At `AsWfStore.set()` the wf-state row gets a shadow top-level column whose value is copied from `state.context.<path>`. Path is plain dot-notation (`a.b`) — no array indices / wildcards / bracket access. PKs (`@meta.id`) are rejected. Field must be optional or carry `@meta.default` / `@db.default` (context shape varies between steps and path-misses write null). Field's resolved primitive must be `string \| number \| boolean` — no arrays, objects, decimal, or timestamp. Validated at compile time. |
 
 ```atscript
 @wf.context.pass 'tenant'
@@ -243,7 +243,7 @@ Full reference in the `atscript-db` skill.
 
 ## Resolution precedence
 
-**Form component dispatch** (`packages/vue-form/src/components/as-field.vue:373-386`):
+**Form component dispatch**:
 
 ```text
 @ui.form.component (named in components map)
@@ -255,7 +255,7 @@ For primitives, `customType` is undefined: any `@ui.form.type` value is folded i
 
 **Table cell dispatch** mirrors this — `ColumnDef.component` (from `@ui.table.component`) wins, then `ColumnDef.type` (from `@ui.table.type` → `@ui.type` → inferred from `designType`).
 
-**Static vs dynamic resolution** (`packages/ui/src/shared/field-resolver.ts`):
+**Static vs dynamic resolution**:
 
 - `StaticFieldResolver` (default) reads only static metadata; ignores fn keys and returns `undefined`. `hasComputedAnnotations()` always `false`.
 - `DynamicFieldResolver` (from `@atscript/ui-fns`, activated via `installDynamicResolver()`) reads the fn key first; if a compiled fn returns a non-`undefined` value, use it; otherwise fall back to the static key.

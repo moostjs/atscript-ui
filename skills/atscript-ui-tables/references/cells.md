@@ -12,8 +12,6 @@ Built-in cells, custom cell dispatch, slot API, locale.
 
 ## Default cell type map
 
-Source: `composables/create-default-cell-types.ts:19-35`.
-
 | Cell type   | Default component  | Render                                                                                   |
 | ----------- | ------------------ | ---------------------------------------------------------------------------------------- |
 | `text`      | `AsTableCellValue` | Passthrough via `formatCellValue`.                                                       |
@@ -30,8 +28,6 @@ Source: `composables/create-default-cell-types.ts:19-35`.
 | `__actions` | `AsRowActions`     | Synthesized row-actions pseudo-column. See [actions-selection.md](actions-selection.md). |
 
 ## Resolution order
-
-`composables/use-cell-components.ts:20-29`:
 
 1. `@ui.table.component "name"` annotation on the field → `ctx.components[name]`
 2. `column.type` → `ctx.types[type]`
@@ -118,8 +114,6 @@ Reads timezone from `useCellLocale().timezone` (omitted → browser default). `t
 Reads `state.actions.cellRow` (pre-flattened `[default?, ...others.row, ...rows]`). Per-row availability gate via `applyRowGate` — actions disabled by the server (per-row `$actions: string[]`) are hidden. See [actions-selection.md](actions-selection.md).
 
 ## provideCellLocale and useCellLocale
-
-`composables/use-cell-locale.ts`.
 
 ```typescript
 import { provideCellLocale } from "@atscript/vue-table";
@@ -270,7 +264,7 @@ Function expressions run inside a sandbox built from `useCellResolver`'s `scope`
 }
 ```
 
-`packages/vue-table/src/composables/use-cell-resolver.ts:179-193`. Available variables: `row.<field>` (current row), `ctx.searchTerm`, `ctx.filters`, `ctx.sorters`, `ctx.rowIndex`. The resolver is opt-in — cells with no annotations skip the per-cell `v-bind` entirely. Static-only columns reuse a cached object.
+Available variables: `row.<field>` (current row), `ctx.searchTerm`, `ctx.filters`, `ctx.sorters`, `ctx.rowIndex`. The resolver is opt-in — cells with no annotations skip the per-cell `v-bind` entirely. Static-only columns reuse a cached object.
 
 ```atscript
 @db.table 'orders'

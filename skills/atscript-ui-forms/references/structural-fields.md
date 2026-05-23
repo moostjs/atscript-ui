@@ -40,8 +40,6 @@ const arr = useAsArray(props.field as FormArrayFieldDef, disabledRef);
 
 The composable dispatches the same change types the form emits: `'array-add'` on `addItem`, `'array-remove'` on `removeItem` and `clear`.
 
-Source: `packages/vue-form/src/composables/use-as-array.ts:12-164`.
-
 ### Length constraints
 
 ```atscript
@@ -59,7 +57,7 @@ tags: string[]
 tags: string[]
 ```
 
-Drives "Add Tag" affordance text. AsField pulls the value via `resolveSingularLabel(prop)` — falls back to the item field's `@ui.form.label.singular`, then to literal `'item'`. (See `as-field.vue:312-316`.)
+Drives "Add Tag" affordance text. AsField pulls the value via `resolveSingularLabel(prop)` — falls back to the item field's `@ui.form.label.singular`, then to literal `'item'`.
 
 ## Array patterns
 
@@ -133,8 +131,6 @@ Swap it via `:types="{ ...createDefaultTypes(), array: MyDnDList }"` for drag-re
 
 The nesting level is provided downward by AsField via `LEVEL_KEY` — incremented for every nested structured field or union.
 
-Source: `packages/vue-form/src/components/as-field.vue:134-152`.
-
 ## Path nesting
 
 AsField provides `PATH_PREFIX_KEY` (reactive `ComputedRef<string>`) when it's a structured/union container. Children consume it to compute absolute paths.
@@ -171,7 +167,7 @@ export interface AsNestedSectionsStore {
 }
 ```
 
-`AsForm` calls `provideAsNestedSectionsStore()` automatically. To drive Expand-all / Collapse-all from above the form, call it yourself in a parent component — `useAsForm` then re-uses your store instead of creating its own (`use-as-form.ts:224`).
+`AsForm` calls `provideAsNestedSectionsStore()` automatically. To drive Expand-all / Collapse-all from above the form, call it yourself in a parent component — `useAsForm` then re-uses your store instead of creating its own.
 
 ```vue
 <script setup lang="ts">
@@ -187,9 +183,7 @@ const sections = provideAsNestedSectionsStore();
 </template>
 ```
 
-`AsForm` also auto-opens every ancestor of an error path so users see invalid fields immediately (`use-as-form.ts:238-248`).
-
-Source: `packages/vue-form/src/composables/use-as-nested-sections-store.ts:1-98`.
+`AsForm` also auto-opens every ancestor of an error path so users see invalid fields immediately.
 
 ## Discriminated unions — AsUnion
 
@@ -212,8 +206,6 @@ const u = useAsUnion(props);
 
 `innerField` is the synthesized FormFieldDef for the active variant — pass to `<AsField :field="u.innerField.value" />` to dispatch through normal AsField wiring (e.g. AsObject for a struct-variant, AsField for an itemField-variant).
 
-Source: `packages/vue-form/src/composables/use-as-union.ts:13-97`.
-
 ## Variant switching wipes data
 
 Invariant: `changeVariant(newIndex)` rewrites `model.value` to a fresh instance of the target variant's type (via `createFormData(variant.type, resolver)`).
@@ -221,7 +213,7 @@ Invariant: `changeVariant(newIndex)` rewrites `model.value` to a fresh instance 
 **Within-mount stash.** `useAsUnion` keeps a `Map<number, unknown>` of per-variant data so toggling back inside the same mount restores the user's work. The stash is cleared on unmount.
 
 ```typescript
-// Inside useAsUnion (use-as-union.ts:60-83):
+// Inside useAsUnion:
 function changeVariant(newIndex: number) {
   if (props.model?.value != null) {
     variantDataStash.set(localUnionIndex.value, props.model.value);
@@ -272,5 +264,3 @@ type Coordinate = [
     @meta.label 'Longitude' number,
 ]
 ```
-
-Source: `packages/vue-form/src/composables/use-as-tuple.ts:7-81`.

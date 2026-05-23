@@ -39,12 +39,7 @@ import {
 } from "@atscript/ui-styles";
 ```
 
-Each is a `TVunorShortcut[]` (re-exported `TVunorShortcut` type from `vunor/theme`). `allShortcuts` is the standard entry point — only spread the individual groups when you intentionally want a subset (e.g. forms-only without table CSS in the bundle).
-
-Source:
-
-- `packages/ui-styles/src/shortcuts/index.ts` (lines 13-18) — `allShortcuts = mergeVunorShortcuts([commonShortcuts, formShortcuts, tableShortcuts, wfShortcuts])`.
-- Each group is itself a merge of one-component-per-file shortcut definitions under `shortcuts/{common,form,table,wf}/`.
+Each is a `TVunorShortcut[]` (re-exported `TVunorShortcut` type from `vunor/theme`). `allShortcuts` is the standard entry point — only spread the individual groups when you intentionally want a subset (e.g. forms-only without table CSS in the bundle). `allShortcuts = mergeVunorShortcuts([commonShortcuts, formShortcuts, tableShortcuts, wfShortcuts])`.
 
 ## Group contents
 
@@ -57,11 +52,11 @@ Representative top-level concepts per group. (Not exhaustive — read the direct
 | `tableShortcuts`  | `as-table`, `as-th-*`, `as-td-*`, `as-table-scroll-container`, `as-table-outer-wrap`, `as-table-sticky`, `as-table-stretch`, `as-table-checkbox`, `as-table-row-active`, `as-table-empty`, `as-table-loading`, `as-table-error`, `as-table-query-overlay`, `as-cell-number`, `as-cell` (number/date/json/string/...), `as-fpill`, `as-page`, `as-column-menu`, `as-preset-picker`, `as-preset-dialog`, `as-filter-dialog`, `as-filter-field`, `as-config-dialog`, `as-config-tab`, `as-confirm-dialog`, `as-action-form`, `as-orderable-list`, `as-row-actions`, `as-sorter`, `as-table-actions`, `as-window-table`, `as-window-skeleton`, `as-window-scrollbar` |
 | `wfShortcuts`     | `as-wf-form-error`, `as-wf-form-loading`, `as-wf-finish`, `as-wf-finish-message`, `as-wf-finish-actions`, `as-wf-finish-primary`, `as-wf-finish-option`, `as-wf-finish-skip` / `-fill` / `-label`, `as-wf-finish-countdown`                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 
-Each group also re-exports its per-file slices (e.g. `asFormShortcuts`, `asFieldShortcuts`, `asTableShortcuts`, `asCellShortcuts`, …) so you can compose a subset preset by hand if needed. See `packages/ui-styles/src/shortcuts/{form,table}/index.ts` for the full export list.
+Each group also re-exports its per-file slices (e.g. `asFormShortcuts`, `asFieldShortcuts`, `asTableShortcuts`, `asCellShortcuts`, …) so you can compose a subset preset by hand if needed.
 
 ## Reading a shortcut's body
 
-Shortcuts live in `packages/ui-styles/src/shortcuts/{form,table,wf,common}/<as-name>.ts` as `defineShortcuts({...})` calls. Two body shapes:
+Shortcuts are authored with `defineShortcuts({...})` calls, one file per component, grouped into `form`, `table`, `wf`, and `common` slices. Two body shapes:
 
 ```typescript
 // Single-string body — class list applied unconditionally.
@@ -89,7 +84,7 @@ The object form's keys are UnoCSS variant prefixes. Common shapes used across th
 | `"[&_:is(input,select,textarea)]:"`               | Multi-selector descendant — wrap list in `:is(...)`      |
 | `"[&_tbody_tr:is([data-state=checked])]:"`        | Reka-UI state attribute via `:is()` (see below)          |
 
-Example with a compound-class variant from `as-field.ts:12-13`:
+Example with a compound-class variant from the bundled `as-field` shortcut:
 
 ```typescript
 "[&.required_.as-field-label]:after:":
@@ -123,7 +118,7 @@ for auto-fire skip buttons, hold-to-confirm, timed CTAs.
 
 The keyframes are registered as a UnoCSS preflight by `asPresetVunor`,
 so consumers don't have to register anything beyond installing the
-preset. Source: `packages/ui-styles/src/shortcuts/common/c8-progress.ts`.
+preset.
 
 ## Composing from vunor primitives (recommended)
 
@@ -189,7 +184,7 @@ export default defineConfig({
 });
 ```
 
-`defineShortcuts` and `mergeVunorShortcuts` are re-exported from `vunor/theme` via `@atscript/ui-styles` (see `packages/ui-styles/src/index.ts:18-19`) — one import covers preset, allShortcuts, and authoring helpers.
+`defineShortcuts` and `mergeVunorShortcuts` are re-exported from `vunor/theme` via `@atscript/ui-styles` — one import covers preset, allShortcuts, and authoring helpers.
 
 ## Variant overrides
 
@@ -229,7 +224,7 @@ When extending shortcuts that target Reka-UI primitives, wrap the inner attribut
 "[&_tbody_tr:is([data-state=checked])]:": "bg-current-hl/15",
 ```
 
-See the canonical pattern in `packages/ui-styles/src/shortcuts/table/as-table.ts:28-34`:
+Canonical pattern (from the bundled `as-table` shortcut):
 
 ```typescript
 "[&_tbody_tr:is([data-highlighted=''])]:": "layer-1",
@@ -251,7 +246,7 @@ asPresetVunor({
 });
 ```
 
-Classes for excluded components are still REGISTERED in the shortcut tree (so they don't error if referenced) — but the extractor stops emitting them onto the safelist, so they're tree-shaken out of the generated CSS. See `packages/ui-styles/src/extractor.ts:14-15,42-43`.
+Classes for excluded components are still REGISTERED in the shortcut tree (so they don't error if referenced) — but the extractor stops emitting them onto the safelist, so they're tree-shaken out of the generated CSS.
 
 This is post-match: the extractor still walks your source, but emitted matches for excluded components are dropped. Use it only after you've fully replaced the component — leaving a partial replacement on the safelist results in styles that won't paint.
 
@@ -279,7 +274,7 @@ These maps are generated at the package's publish time and shipped as part of th
 
 ## createAsExtractor — when to call directly
 
-Usually you don't. `asPresetVunor()` already registers `createAsExtractor({ excludeComponents })` as one of its preset entries (`src/preset.ts:240-244`). Reach for `createAsExtractor` directly only when you're building a custom UnoCSS config that does NOT use `asPresetVunor()` and you still want safelist seeding from `@atscript/vue-*` source files:
+Usually you don't. `asPresetVunor()` already registers `createAsExtractor({ excludeComponents })` as one of its preset entries. Reach for `createAsExtractor` directly only when you're building a custom UnoCSS config that does NOT use `asPresetVunor()` and you still want safelist seeding from `@atscript/vue-*` source files:
 
 ```typescript
 import { defineConfig } from "unocss";
@@ -300,4 +295,4 @@ The extractor walks code for:
 3. Tag names in templates — `<AsForm>`, `<as-form>`, `<AsField>` etc.
 4. Helper function calls — e.g. `createDefaultTypes()`, mapped via `helperAliases`.
 
-See `packages/ui-styles/src/extractor.ts:49-70`. The cheap short-circuit at line 32-39 skips files containing none of `@atscript/`, `<As`, `<as-`, or a known helper name.
+The extractor short-circuits files containing none of `@atscript/`, `<As`, `<as-`, or a known helper name, so unrelated source files cost nothing.

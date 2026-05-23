@@ -10,7 +10,6 @@ Sort model, pagination vs virtualization, window-mode tuning.
 - [v-model:sorters](#v-modelsorters)
 - [Paginated mode AsTable](#paginated-mode-astable)
 - [Virtualized mode AsWindowTable](#virtualized-mode-aswindowtable)
-- [windowCache + island contract](#windowcache--island-contract)
 - [Invalidation](#invalidation)
 - [When to pick paginated vs window](#when-to-pick-paginated-vs-window)
 
@@ -25,13 +24,13 @@ export interface SortControl {
 state.sorters: ShallowRef<SortControl[]>;
 ```
 
-Multi-sort. Earlier entries win for equal keys; later entries break ties. The array is mapped to `$sort: { [field]: 1 | -1 }` by `buildTableQuery` (`packages/ui-table/src/query/build-table-query.ts:48-52`), so order is preserved per JS dict insertion order across V8 / WebKit / Firefox.
+Multi-sort. Earlier entries win for equal keys; later entries break ties. The array is mapped to `$sort: { [field]: 1 | -1 }` by `buildTableQuery`, so order is preserved per JS dict insertion order across V8 / WebKit / Firefox.
 
 The watcher uses `sortersEqual(prev, next)` for change detection — reassigning the same logical sorters is a no-op.
 
 ## Header click semantics
 
-Built into `<AsTableHeaderCell>` via `useTableColumnHandlers` (`composables/use-table-column-handlers.ts`). Default click cycle on a sortable column:
+Built into `<AsTableHeaderCell>` via `useTableColumnHandlers`. Default click cycle on a sortable column:
 
 | Current state | Plain click    | Shift-click          |
 | ------------- | -------------- | -------------------- |
@@ -51,7 +50,7 @@ import { mergeSorters } from "@atscript/ui-table";
 mergeSorters(forceSorters, userSorters);
 ```
 
-`packages/ui-table/src/query/merge-sorters.ts:9-19`:
+`mergeSorters` semantics:
 
 - Force sorters come first.
 - User sorters whose `field` collides with a force sorter are dropped (force always wins).
@@ -61,7 +60,7 @@ Force sorters are typically a tenancy or createdAt tiebreaker so paged queries a
 
 ## AsTableHeaderCell
 
-`packages/vue-table/src/components/defaults/as-table-header-cell.vue`. Renders one `<th>` with label, sort indicator, and column menu trigger. Override via `controls.headerCell`.
+Renders one `<th>` with label, sort indicator, and column menu trigger. Override via `controls.headerCell`.
 
 | Prop / slot  | Notes                                                           |
 | ------------ | --------------------------------------------------------------- |
@@ -73,7 +72,7 @@ Force sorters are typically a tenancy or createdAt tiebreaker so paged queries a
 
 ## AsConfigDialog sorters tab
 
-`<AsConfigDialog>` (`components/defaults/as-config-dialog.vue`) has three tabs (see [state-persistence.md](state-persistence.md)). The **Sorters** tab uses `<AsSortersConfig>` (Tier-3) internally:
+`<AsConfigDialog>` has three tabs (see [state-persistence.md](state-persistence.md)). The **Sorters** tab uses `<AsSortersConfig>` internally:
 
 - Add a sorter: pick field + direction from the dropdown.
 - Reorder: drag-drop the rows (orderable list).
@@ -106,7 +105,7 @@ Same applies to `filterFields`, `columnNames`, `columnWidths`, `selectedRows`.
 
 ## Paginated mode AsTable
 
-`packages/vue-table/src/components/as-table.vue`. Renders an HTML `<table>` with a fixed set of rows per `state.results`.
+Renders an HTML `<table>` with a fixed set of rows per `state.results`.
 
 | Prop               | Default               | Notes                                                                                |
 | ------------------ | --------------------- | ------------------------------------------------------------------------------------ |
@@ -135,7 +134,7 @@ Emits:
 
 ## Virtualized mode AsWindowTable
 
-`packages/vue-table/src/components/as-window-table.vue`. Same prop shape as `<AsTable>` plus window controls:
+Same prop shape as `<AsTable>` plus window controls:
 
 | Prop                  | Default                 | Notes                                                                                     |
 | --------------------- | ----------------------- | ----------------------------------------------------------------------------------------- |
@@ -147,14 +146,7 @@ Emits:
 
 Plus the shared props above (`select`, `rowDelete`, `columnMenu`, `reorderable`, `resizable`, `columnMinWidth`).
 
-Pagination is replaced by **block-aligned fetching**:
-
-1. Scroll updates `state.topIndex` and `state.viewportRowCount`.
-2. A debounced watcher (interval = `dragReleaseDebounceMs`, default 300ms) computes the blocks intersecting the viewport via `pageAlignedBlocksFor(topIndex, viewportRowCount, blockSize)`.
-3. Blocks not in `windowCache` and not in `windowLoading` are fetched via `loadRange(skip, limit)`.
-4. Each `loadRange` issues `client.pages(query, blockPage, blockSize)` and merges into `windowCache` by absolute index.
-
-Block size defaults to `100` and is tunable per `<AsTableRoot :block-size>`.
+Pagination is replaced by **block-aligned fetching**: the table fetches fixed-size blocks (default 100 rows) as the viewport scrolls into them and caches them keyed by absolute index. You don't drive this directly — `<AsWindowTable>` reads rows via `state.dataAt(absIndex)` / `state.loadingAt(absIndex)` / `state.errorAt(absIndex)` (see [query.md](query.md)). Tune the fetch behavior via the props below.
 
 Tunables for `<AsTableRoot>` in window-mode tables:
 
@@ -166,22 +158,9 @@ Tunables for `<AsTableRoot>` in window-mode tables:
 
 Emits — same as `<AsTable>` plus:
 
-| Event   | Args                                   | When                                                                                                 |
-| ------- | -------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `error` | `(error: Error, kind: QueryErrorKind)` | Initial / refresh / `loadRange` / `queryNext` failure. One emit per new error via `state.lastError`. |
-
-## windowCache + island contract
-
-| Field           | Type                           | Role                                                                                |
-| --------------- | ------------------------------ | ----------------------------------------------------------------------------------- |
-| `windowCache`   | `ShallowRef<Map<number, Row>>` | Universal cache keyed by absolute index. Populated by `runQuery` and `loadRange`.   |
-| `windowLoading` | `ShallowRef<Set<number>>`      | Block firstIndex values currently in flight.                                        |
-| `results`       | `ShallowRef<Row[]>`            | Contiguous "island" the consumer is currently rendering (for the `AsTable` branch). |
-| `resultsStart`  | `Ref<number>`                  | Absolute offset of `results[0]`.                                                    |
-
-Window-mode renderers read rows via `state.dataAt(absIndex)` / `state.loadingAt(absIndex)` / `state.errorAt(absIndex)`. The paginated `<AsTable>` reads `state.results.value` directly.
-
-`results` and `windowCache` are kept in sync by `runQuery`: a fresh fetch replaces `results`, clears `windowCache`, and re-seeds it with the new page contents. `loadRange` only mutates `windowCache` (the "island" stays anchored).
+| Event   | Args                                   | When                                                                                            |
+| ------- | -------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `error` | `(error: Error, kind: QueryErrorKind)` | Any data fetch failure (initial load, refresh, scroll-driven block fetch, or window extension). |
 
 ## Invalidation
 
@@ -189,9 +168,7 @@ Window-mode renderers read rows via `state.dataAt(absIndex)` / `state.loadingAt(
 state.invalidate();
 ```
 
-Bumps `generation` (in-flight responses for the old gen are discarded), drops `results = []`, calls `resetWindow()` (clear `windowCache` / `windowLoading` / `errors`), recomputes `resultsStart` from the current page.
-
-Does NOT refire the query. Pair with `state.query()` if you want to immediately re-fetch:
+Clears the current results and window cache and discards any in-flight responses so they can't paint stale data. Does NOT refire the query — pair with `state.query()` if you want to immediately re-fetch:
 
 ```typescript
 state.invalidate();

@@ -40,7 +40,7 @@ export interface FilterCondition {
 export type FieldFilters = Record<string, FilterCondition[]>;
 ```
 
-`packages/ui-table/src/filters/filter-types.ts`. Each entry on `state.filters` is a path → conditions array. Value usage:
+Each entry on `state.filters` is a path → conditions array. Value usage:
 
 | Type                     | Uses                                | Notes                                                       |
 | ------------------------ | ----------------------------------- | ----------------------------------------------------------- |
@@ -53,11 +53,11 @@ export type FieldFilters = Record<string, FilterCondition[]>;
 | `null` / `notNull`       | ignored                             | `$exists: false` / `$exists: true`.                         |
 | `regex`                  | `value[0]`                          | Raw uniqu regex (no escape, no `i` flag — caller controls). |
 
-`isFilled(condition)` (`filter-conditions.ts:7-25`) determines whether a condition contributes to the Uniquery: `null`/`notNull` always count; `bw` requires both values present; everything else needs `value[0]`.
+`isFilled(condition)` determines whether a condition contributes to the Uniquery: `null`/`notNull` always count; `bw` requires both values present; everything else needs `value[0]`.
 
 ## Per-field OR / AND semantics
 
-`filtersToUniqueryFilter` (`packages/ui-table/src/filters/filters-to-uniquery.ts:60-85`):
+`filtersToUniqueryFilter` semantics:
 
 | Group within one field                                                                              | Combiner |
 | --------------------------------------------------------------------------------------------------- | -------- |
@@ -67,7 +67,7 @@ export type FieldFilters = Record<string, FilterCondition[]>;
 
 Single-condition groups unwrap to a bare expression (no enclosing `$or`/`$and`). Empty groups are skipped. The function returns `undefined` when nothing is filled — `buildTableQuery` then omits `filter` entirely.
 
-`EXCLUSION_TYPES` constant in `filters-to-uniquery.ts:7` is the source of truth — extend only if a new condition type is added to the model.
+`EXCLUSION_TYPES` is the source of truth for exclusion ops — extend only if a new condition type is added to the model.
 
 ## filterFields vs filters
 
@@ -111,8 +111,6 @@ Inverse: `uniqueryFilterToFieldFilters(filterExpr)` decodes a Uniquery into the 
 
 ## Condition availability per column type
 
-`packages/ui-table/src/filters/filter-conditions-map.ts:45-61`:
-
 | Column type | Available conditions                                                       |
 | ----------- | -------------------------------------------------------------------------- |
 | `text`      | `eq`, `ne`, `contains`, `starts`, `ends`, `bw`, `null`, `notNull`, `regex` |
@@ -126,7 +124,7 @@ Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Us
 
 ## AsFilters component
 
-`packages/vue-table/src/components/as-filters.vue`. Renders one `<AsFilterField>` per visible filter path.
+Renders one `<AsFilterField>` per visible filter path.
 
 | Prop           | Type       | Notes                                                              |
 | -------------- | ---------- | ------------------------------------------------------------------ |
@@ -138,7 +136,7 @@ Use a separate `<AsFilters>` block in the toolbar to render the chip strip; the 
 
 ## AsFilterField component
 
-`packages/vue-table/src/components/defaults/as-filter-field.vue`. Renders the inline filter UI for one column: input + condition selector + delete button. Reads its conditions from `state.filters[column.path]` and writes via `state.setFieldFilter`.
+Renders the inline filter UI for one column: input + condition selector + delete button. Reads its conditions from `state.filters[column.path]` and writes via `state.setFieldFilter`.
 
 Props (the only required one is `column`):
 
@@ -150,7 +148,7 @@ Internally delegates value entry to `controls.filterInput` (`AsFilterInput` by d
 
 ## AsFilterDialog component
 
-`packages/vue-table/src/components/defaults/as-filter-dialog.vue`. Per-column condition builder. Opens when `state.filterDialogColumn.value !== null`; close via `state.closeFilterDialog()`.
+Per-column condition builder. Opens when `state.filterDialogColumn.value !== null`; close via `state.closeFilterDialog()`.
 
 Open programmatically:
 
@@ -173,13 +171,11 @@ Override via `controls.filterDialog`.
 
 ## AsFilterValueHelp
 
-`packages/vue-table/src/components/internal/as-filter-value-help.vue` (Tier-3). Renders a typeahead / mini-table inside the filter UI for enum columns (`column.options`) or FK columns (`@db.ref`). Resolves enum members or queries the referenced table via `createStaticTableState` (in-memory dataset) for enum, or via the normal table client for FK.
+A Tier-3 internal helper. Renders a typeahead / mini-table inside the filter UI for enum columns (`column.options`) or FK columns (`@db.ref`). Resolves enum members or queries the referenced table via `createStaticTableState` (in-memory dataset) for enum, or via the normal table client for FK.
 
 Not directly imported by consumers — `<AsFilterDialog>` / `<AsFilterInput>` mount it automatically when the column type is `enum` or `ref`.
 
 ## Date shortcuts
-
-`packages/ui-table/src/filters/date-shortcuts.ts`:
 
 ```typescript
 import { dateShortcuts } from "@atscript/ui-table";

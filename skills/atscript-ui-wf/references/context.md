@@ -56,7 +56,7 @@ export interface MfaPincodeForm {
 }
 ```
 
-Each annotation declares one key. The plugin spec `multiple: true, mergeStrategy: 'append'` (`packages/moost-wf/src/plugin.ts:31-46`) means multiple `@wf.context.pass` annotations stack to a list of keys.
+Each annotation declares one key. Multiple `@wf.context.pass` annotations stack to a list of keys (`multiple: true, mergeStrategy: 'append'`).
 
 Node restriction: `nodeType: ['interface', 'type']` — applies to the type root, not individual props.
 
@@ -71,7 +71,7 @@ serializeFormSchema(type);
 // → serializeAnnotatedType(type, { ignoreAnnotations: ['wf.context.pass'], refDepth: 0.5 })
 ```
 
-`@wf.context.pass` is **server-only**. Stripping it from the wire payload prevents the client from learning the whitelist (which keys are _allowed_) — and there is no reason for the client to see it either. Source: `packages/moost-wf/src/form-input/serialize.ts:24-27`.
+`@wf.context.pass` is **server-only**. Stripping it from the wire payload prevents the client from learning the whitelist (which keys are _allowed_) — and there is no reason for the client to see it either.
 
 The annotation lives on the type's `metadata`, which `extractPassContext` reads at request time. The wire-serialized schema does not carry it.
 
@@ -84,7 +84,7 @@ const ctx = extractPassContext(type, wfState.ctx<Record<string, unknown>>());
 // → { email: "u@x.io", mfaEnabled: true }   (only keys listed in @wf.context.pass)
 ```
 
-Walks `type.metadata.get('wf.context.pass')`, then copies matching keys from `wfContext` into a fresh object. Missing keys are omitted (`packages/moost-wf/src/form-input/context.ts:19-32`).
+Walks `type.metadata.get('wf.context.pass')`, then copies matching keys from `wfContext` into a fresh object. Missing keys are omitted.
 
 Used inside `useAtscriptWf().requireInput()` and `@WfInput()` to build the response `context` field. You normally never call it directly unless writing a custom outlet helper.
 
@@ -117,7 +117,7 @@ const wf = useWfForm({ path: "/wf/trigger", name: "auth/login" });
 // wf.formContext.value → Record<string, unknown>
 ```
 
-`formContext` is a `ShallowRef<Record<string, unknown>>` (`packages/vue-wf/src/use-wf-form.ts:72`). Wholesale-replaced on every server response (the field map is the response's `context` with `errors` stripped — `errors` go to `wf.errors` separately, `packages/vue-wf/src/use-wf-form.ts:168-186`).
+`formContext` is a `ShallowRef<Record<string, unknown>>`. Wholesale-replaced on every server response (the field map is the response's `context` with `errors` stripped — `errors` go to `wf.errors` separately).
 
 ### Via @ui.form.fn.\* dynamic fields
 
@@ -193,7 +193,7 @@ The client's `AsForm` runs the `@ui.form.fn.title` callback with `(data, ctx)` w
 
 ## Missing whitelist → empty context
 
-If the form type has no `@wf.context.pass` annotation, `extractPassContext` returns `{}` (`packages/moost-wf/src/form-input/context.ts:23`). The `inputRequired.context` arrives at the client as `{}` (or with only `errors` if validation failed).
+If the form type has no `@wf.context.pass` annotation, `extractPassContext` returns `{}`. The `inputRequired.context` arrives at the client as `{}` (or with only `errors` if validation failed).
 
 A `@ui.form.fn.*` callback expecting `ctx.email` on a form without `@wf.context.pass 'email'` reads `undefined`. Validate by tracing the round-trip in DevTools' Network tab — the response's `inputRequired.context` is the canonical source.
 

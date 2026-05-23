@@ -85,7 +85,7 @@ in templates — no manual import needed if `unplugin-vue-components` is wired.
 | 1   | **`@ui.form.type` is for built-in renderer ids only.** Built-ins: `text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `multiselect`, `paragraph`, `action`, `date`, `datetime`, `time`, plus structural `object`/`array`/`union`/`tuple`/`ref`. For custom renderers use `@ui.form.component` + the `:components` prop map. `multiselect` auto-dispatches on `(literal \| union)[]` and on primitive-item arrays carrying `@ui.form.options` / `@ui.form.fn.options`; value model is `T[]`. |
 | 2   | **`@ui.form.fn.*` and `@ui.form.validate` require `installDynamicResolver()` from `@atscript/ui-fns`.** Call once at app startup before mounting any `<AsForm>`. Without it, dynamic annotations silently evaluate to `undefined` and custom validators do nothing.                                                                                                                                                                                                                                                         |
 | 3   | **Form data is wrapped: `{ value: domainData }`.** Pass it as `:form-data` or omit and let `createAsFormDef` produce one. Path helpers and composables unwrap automatically. When you supply a `submitValidator`, it receives the _unwrapped_ domain data.                                                                                                                                                                                                                                                                  |
-| 4   | **Component resolution precedence**: `@ui.form.component` (name → `:components[name]`) → `@ui.form.type` / `@ui.type` (name → `:types[customType]`) → structural `field.type` (`:types[type]`). Custom components belong in `:components`; the `:types` map is reserved for built-ins. (`packages/vue-form/src/components/as-field.vue:373-386`.)                                                                                                                                                                           |
+| 4   | **Component resolution precedence**: `@ui.form.component` (name → `:components[name]`) → `@ui.form.type` / `@ui.type` (name → `:types[customType]`) → structural `field.type` (`:types[type]`). Custom components belong in `:components`; the `:types` map is reserved for built-ins.                                                                                                                                                                                                                                      |
 | 5   | **Empty slots do NOT suppress fallback.** `<template #form.submit />` still renders the default Submit button. Use the explicit boolean prop (e.g. `hide-submit`) instead.                                                                                                                                                                                                                                                                                                                                                  |
 | 6   | **Fresh fields suppress live validation until edit or submit.** Items newly added via `<AsArray>` skip the field validator on first render to avoid surprise "required" errors on freshly-rendered slots.                                                                                                                                                                                                                                                                                                                   |
 | 7   | **External errors are keyed by absolute dotted path.** Pass `:errors="{ 'address.street': 'msg', '__form': 'top-level' }"`. The `__form` key is reserved for form-wide banners.                                                                                                                                                                                                                                                                                                                                             |
@@ -211,6 +211,80 @@ async function onSubmit(data: unknown) {
 ```
 
 The version prop is excluded from `def.fields[]` (so `<AsForm>` doesn't paint it) but stays in `flatMap` and the underlying form data, so the PATCH body preserves it for the server's `$cas` lift. `createTableDef` does the symmetric thing on the table side — the version column never appears in column / filter / sort dialogs. See the `atscript-db` skill (OCC reference) for the server-side mechanics (`@db.column.version`, `$cas`, `VersionMismatchError`).
+
+## Customization
+
+Forms expose three swap mechanisms, layered on the tier model:
+
+- **Tier 1** — `<AsForm>`, `<AsField>`, `<AsIterator>` are the integration surface. Configure them via props and slots; if you need a fully custom shell, build one with `useAsForm` / `useAsField` directly.
+- **Tier 2** — the default field components (`AsInput`, `AsSelect`, `AsRadio`, `AsCheckbox`, `AsDate`, `AsParagraph`, `AsAction`, `AsObject`, `AsArray`, `AsUnion`, `AsTuple`, `AsRef`, `AsMultiSelect` — see "Key imports"). These are what you swap.
+- **Tier 3** — internal composition helpers. Not directly tagged or swapped; their style classes ride with whichever defaults import them.
+
+### Swap a built-in renderer (`:types`)
+
+`:types` maps built-in renderer ids (per invariant 1: `text`, `select`, `date`, …) to a component. Useful when you want every field of a given built-in type to render with your design system's input:
+
+```vue
+<script setup lang="ts">
+import { createDefaultTypes } from "@atscript/vue-form";
+import MyTextInput from "./MyTextInput.vue";
+
+const types = { ...createDefaultTypes(), text: MyTextInput };
+</script>
+
+<template>
+  <AsForm :def="def" :form-data="formData" :types="types" />
+</template>
+```
+
+### Swap a specific field (`:components` + `@ui.form.component`)
+
+`:components` looks up by a custom name the `.as` type opts into. Use this when you want one field — not every field of that type — to render with a custom widget (e.g. a country picker that's still a `string` to the rest of the system):
+
+```atscript
+export interface Profile {
+    @meta.label 'Country'
+    @ui.form.component 'country-picker'
+    country: string
+}
+```
+
+```vue
+<script setup lang="ts">
+import CountryPicker from "./CountryPicker.vue";
+const components = { "country-picker": CountryPicker };
+</script>
+
+<template>
+  <AsForm :def="def" :form-data="formData" :components="components" />
+</template>
+```
+
+`:components` takes precedence over `:types` (invariant 4). The `:types` map stays reserved for built-in ids — point custom names at `:components` and you keep the renderer ids available for genuine type-level overrides.
+
+### Wrap with `AsFieldShell`
+
+When the framing (label, hint, error, required marker, description) is already what you want but the input itself isn't, wrap your custom input in `AsFieldShell` rather than re-implementing the chrome:
+
+```vue
+<script setup lang="ts">
+import { AsFieldShell } from "@atscript/vue-form";
+import type { TAsComponentProps } from "@atscript/vue-form";
+defineProps<TAsComponentProps<string>>();
+</script>
+
+<template>
+  <AsFieldShell v-bind="$props">
+    <input :value="modelValue" @input="$emit('update:modelValue', $event.target.value)" />
+  </AsFieldShell>
+</template>
+```
+
+Full contract for custom components (`TAsComponentProps`, `TAsComponentEmits`, locale providers) lives in [customization.md](references/customization.md).
+
+### Style consequence
+
+If you swap `AsSelect` for a custom dropdown, the `as-select-*` shortcuts the default tagged drop out of your bundle automatically. Keep the default when its styling already fits your design system; for granular opt-out, see `atscript-ui-styles` (`allShortcuts` super-merge, swap in a narrower subset).
 
 ## See also
 

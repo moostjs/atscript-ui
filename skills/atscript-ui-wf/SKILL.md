@@ -208,6 +208,51 @@ import { StepRetriableError } from "@wooksjs/event-wf";
 | Client            | [client.md](references/client.md)                   | `<AsWfForm>` props/emits/slots (`@finished`, `@error`, `@form`, `@submit`, `@loading`; slots `#wf.loading` — default is an `as-form-overlay` icon on a `min-h-[100px]` wrapper, `#wf.error`, `#wf.finished`, `#form.*`), `useWfForm(options)` composable (`start` / `submit` / `action` / `actionWithData` / `retry`), custom `fetch` for auth headers |
 | Finish screens    | [finish-screens.md](references/finish-screens.md)   | `WfFinished` envelope, `finishWf(opts)` / `abortWf(reason, opts)` helpers, `AsWfFinish` trigger rendering (`immediate` / `auto` / `manual`), `wf.finish.*` scoped-slot contract with `trigger` callbacks, `navigate` prop (matches `@atscript/db-client`'s `Client({ navigate })`), `@dismiss` / `@action` events                                      |
 
+## Customization
+
+Workflow forms ride on top of `<AsForm>`, so the bulk of UI customization happens through the forms skill. The wf-specific surfaces:
+
+- **Tier 1** — `<AsWfForm>` and `<AsWfFinish>` are the integration surface. Use `useWfForm(options)` for a fully custom shell.
+- **Tier 2** — the finish slots (`wf.finish.*`) and the embedded `<AsForm>` defaults. The form's `:types` and `:components` propagate through `<AsWfForm>` straight to the form it renders.
+- **Server-side outlets** — swap the transport (email magic link, webhook, awaiting payment, …) by mounting different outlet helpers; see [outlets.md](references/outlets.md).
+
+### Propagate form customization through `<AsWfForm>`
+
+The `:types` and `:components` props on `<AsWfForm>` are passed straight through to the underlying `<AsForm>`. Customize the same way you would a plain form:
+
+```vue
+<script setup lang="ts">
+import { createDefaultTypes } from "@atscript/vue-form";
+import MyTextInput from "./MyTextInput.vue";
+import CountryPicker from "./CountryPicker.vue";
+
+const types = { ...createDefaultTypes(), text: MyTextInput };
+const components = { "country-picker": CountryPicker };
+</script>
+
+<template>
+  <AsWfForm path="/wf/trigger" name="signup" :types="types" :components="components" />
+</template>
+```
+
+See [atscript-ui-forms](../atscript-ui-forms/SKILL.md) for the full `:types` / `:components` / `AsFieldShell` swap mechanics.
+
+### Customize finish + abort screens
+
+`<AsWfForm>` renders `<AsWfFinish>` once the server emits a `WfFinished` envelope. Override message, primary CTA, countdown, dismiss button, or any per-option button via the `wf.finish.*` scoped slots. The server side ships envelopes via `finishWf({ ... })` or `abortWf(reason, { ... })`; see [finish-screens.md](references/finish-screens.md) for the slot contract and `WfNext` discriminated union.
+
+### Swap outlets (server-side)
+
+Outlets are mounted on the server controller. Replace the default `createAsHttpOutlet()` or add a custom outlet (`outletEmail`, `outletHttp`, your own) to change how the workflow pauses; clients reach the resume URL with `<AsWfForm :initial-token="...">`. See [outlets.md](references/outlets.md).
+
+### Auth + custom fetch
+
+Pass a `fetch` prop on `<AsWfForm>` to inject auth headers, cookies, or routing — the same way the table side accepts a `clientFactory`. The composable form is `useWfForm({ fetch, ... })`.
+
+### Style consequence
+
+The form chrome inside `<AsWfForm>` is plain `<AsForm>`, so styles tree-shake the same way: replace a default field component and its `as-*` shortcuts drop. The finish screen's `as-wf-finish-*` shortcuts stay reachable as long as you use the default `<AsWfFinish>` rendering. See `atscript-ui-styles` for the per-domain shortcut groups (`wfShortcuts`).
+
 ## See also
 
 Reference docs: https://ui.atscript.dev/workflows/. Source: https://github.com/moostjs/atscript-ui.

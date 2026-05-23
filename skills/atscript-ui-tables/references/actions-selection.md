@@ -48,7 +48,7 @@ export interface Order { ... }
 | `row`   | Per-row dropdown OR keyboard main-action OR selection-aware level=`auto` and exactly 1 selected. | identifier object `{ <preferredId>: value }` |
 | `rows`  | Multi-row selection (`level=auto` with ≥2 selected).                                             | array of identifier objects                  |
 
-Identifier objects are object-only (never bare scalars) — cross-link atscript-db skill invariant #11. Built via `extractIdentifier(row, preferredId)` from `composables/state/intent-scope.ts:95`.
+Identifier objects are object-only (never bare scalars) — cross-link atscript-db skill invariant #11.
 
 ## AsRowActions
 
@@ -72,7 +72,7 @@ Override the cell renderer via `controls.rowActions`.
 
 ## AsTableActions
 
-`packages/vue-table/src/components/as-table-actions.vue`. Tier-1 toolbar component. Selection-aware level resolution:
+Tier-1 toolbar component. Selection-aware level resolution:
 
 | `level` prop | `selectedCount` | Effective level | Reads from                                                                                                 |
 | ------------ | --------------- | --------------- | ---------------------------------------------------------------------------------------------------------- |
@@ -95,7 +95,7 @@ Slots:
 
 ## AsActionFormDialog
 
-`packages/vue-table/src/components/defaults/as-action-form-dialog.vue`. Lazy-mounted by `<AsTableRoot>` (avoids re-bundling `@atscript/vue-form` into every consumer that has no `@InputForm` actions).
+Lazy-mounted by `<AsTableRoot>` (avoids re-bundling `@atscript/vue-form` into every consumer that has no `@InputForm` actions).
 
 Opens automatically when:
 
@@ -137,7 +137,7 @@ Form-type and form-component dispatch maps for the dialog interior come from `<A
 
 ## state.actions API
 
-`state.actions: TableActionsState` (`packages/vue-table/src/types.ts:49-91`):
+`state.actions: TableActionsState`:
 
 | Field            | Type                                    | Notes                                                                      |
 | ---------------- | --------------------------------------- | -------------------------------------------------------------------------- |
@@ -171,7 +171,7 @@ Per invariant on level: `pk = pkForLevel(action.level, identifiers)`:
 | `'row'`        | `identifiers[0]` (single id object) |
 | `'rows'`       | full identifier array               |
 
-The convenience helper `triggerAction(state, action, ctx, event)` (`composables/state/intent-scope.ts:208-224`) routes through `requestActionInput` (form actions) or `confirmAction` (prompt-text actions) before calling `invoke`. Use it when wiring custom action triggers; `<AsRowActions>` and `<AsTableActions>` use it internally.
+The convenience helper `triggerAction(state, action, ctx, event)` routes through `requestActionInput` (form actions) or `confirmAction` (prompt-text actions) before calling `invoke`. Use it when wiring custom action triggers; `<AsRowActions>` and `<AsTableActions>` use it internally.
 
 ## Action result processing
 
@@ -184,7 +184,7 @@ type ActionResult =
   | { ok: false; kind: "error"; error: ClientError | Error };
 ```
 
-Source: `packages/vue-table/src/types.ts:41-46`. Processor → result mapping (`composables/state/create-actions.ts:102-148`):
+Processor → result mapping:
 
 | `action.processor`    | Behavior                                                                                                                |
 | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
@@ -220,11 +220,7 @@ Selection persistence policy on every results-replacement (`<AsTableRoot :select
 | `"clear"`   | Drop everything.                                                                                                 |
 | `"persist"` | Never write to `selectedRows`; full consumer ownership.                                                          |
 
-`useTableSelection` (`composables/use-table-selection.ts`) distinguishes **results-replacement** (query / invalidate / pagination jump) from **results-extension** (queryNext / forward or backward `loadRange`) via first/last-row reference identity. Extensions don't trigger reconciliation.
-
-`useSelectModeReset` clears `selectedRows` only on `'multi' → 'none'` transitions (renderer-owned, since `select` is a prop).
-
-`state.includeActions: Ref<boolean>` is the renderer-owned toggle for the per-row `$actions` augmentation. Pushed automatically by `<AsTable>` / `<AsWindowTable>` when `:row-actions-column` is set AND the table has row/rows actions. Flipping it on triggers a refetch (watcher reacts) so subsequent results carry `$actions`.
+Window-mode scroll extensions don't reconcile selection — only fresh top-level fetches (query, invalidate, pagination jump) re-evaluate `selectedRows` against the new results. Switching `select` from `"multi"` to `"none"` clears the current selection.
 
 ## Recipes
 

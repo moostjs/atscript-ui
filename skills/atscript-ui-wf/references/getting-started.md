@@ -32,7 +32,7 @@ pnpm add -D @atscript/core @atscript/typescript unplugin-atscript
 pnpm add @atscript/db @atscript/db-sqlite better-sqlite3
 ```
 
-`@atscript/moost-wf` peers: `@atscript/core`, `@atscript/typescript`, `@moostjs/event-wf`, `moost` (see `packages/moost-wf/package.json:peerDependencies`).
+`@atscript/moost-wf` peers: `@atscript/core`, `@atscript/typescript`, `@moostjs/event-wf`, `moost`.
 
 ## Two-step hello flow end-to-end
 
@@ -173,7 +173,7 @@ export default defineConfig({
 
 If you also use `@atscript/db` (for `AsWfStore`), add `dbPlugin()` too — see `atscript-db` skill's `getting-started.md`.
 
-`wfPlugin()` registers (`packages/moost-wf/src/plugin.ts:24-87`):
+`wfPlugin()` registers:
 
 | Annotation                         | Node                 | Argument   | Notes                                                                 |
 | ---------------------------------- | -------------------- | ---------- | --------------------------------------------------------------------- |

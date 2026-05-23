@@ -15,8 +15,6 @@ and the opt-in SSR adapter.
 
 ## Envelope shape
 
-Source: `packages/moost-wf/src/wf-finished.ts`.
-
 ```ts
 interface WfFinished<TData = unknown> {
   finished: true;
@@ -149,10 +147,6 @@ When `next` is omitted, `AsWfFinish` renders the `message` (if any) and
 waits — the consumer's `@finished` handler drives the next action.
 
 ## Slot contract
-
-Source: `packages/vue-wf/src/components/as-wf-form.vue` slot-forwarding
-block, `packages/vue-wf/src/components/defaults/as-wf-finish.vue` slot
-declarations.
 
 | Slot (forwarded by `<AsWfForm>`) | Scope                                                                      | Renders when                                 |
 | -------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------- |

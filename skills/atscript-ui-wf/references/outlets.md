@@ -33,7 +33,7 @@ You can also write custom outlets (SMS, push, webhook). The runtime treats them 
 
 ## Outlet response shapes
 
-The wire-level shape `<AsWfForm>` recognizes (`packages/vue-wf/src/use-wf-form.ts:128-153`):
+The wire-level shape `<AsWfForm>` recognizes:
 
 | Body                                                      | Client behavior                                                                        |
 | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
@@ -77,12 +77,12 @@ const token = route.query.wfs as string;
 </template>
 ```
 
-`initialToken` takes precedence over `tokenTransport: 'query'` auto-detection (`packages/vue-wf/src/use-wf-form.ts:104-112`). Use it when the token comes from app state / router param (`/invite/:token`) rather than `window.location.search`.
+`initialToken` takes precedence over `tokenTransport: 'query'` auto-detection. Use it when the token comes from app state / router param (`/invite/:token`) rather than `window.location.search`.
 
 ## Token transports
 
 ```typescript
-// From useWfForm options (packages/vue-wf/src/use-wf-form.ts:7-43)
+// useWfForm options
 tokenTransport?: 'body' | 'cookie' | 'query'   // default: 'body'
 tokenName?: string                              // default: 'wfs'
 ```
@@ -93,10 +93,10 @@ tokenName?: string                              // default: 'wfs'
 | `cookie`  | `Set-Cookie` / `Cookie` headers, server-controlled | `wfs`        | yes, until expiry               | no (same-origin)       |
 | `query`   | URL `?wfs=<token>`                                 | `wfs`        | yes (URL bookmarkable)          | yes — URL is shareable |
 
-Behaviour detail (`packages/vue-wf/src/use-wf-form.ts:114-126`):
+Behaviour detail:
 
 - `body`: client tucks `wfs` into the JSON body of each request after the first response; server returns updated `wfs` in each response.
-- `cookie`: client sets `credentials: 'include'` on every fetch (`packages/vue-wf/src/use-wf-form.ts:100`) and **does not** put the token in the body. Server handles read/write via headers.
+- `cookie`: client sets `credentials: 'include'` on every fetch and **does not** put the token in the body. Server handles read/write via headers.
 - `query`: client reads `window.location.search` once on `start()` (or uses `initialToken`); after that behaves like `body`.
 
 ## Picking a transport
@@ -211,7 +211,7 @@ async charge(@WorkflowParam("context") ctx: { orderId: string; token?: string })
 }
 ```
 
-Works without a separate outlet registration: `createAsHttpOutlet()` recognises `outlet` as a top-level routing key and passes the payload through at the response root. The client routes it via the `typeof data.outlet === 'string'` branch (`packages/vue-wf/src/use-wf-form.ts:146`) and fires `@finished`.
+Works without a separate outlet registration: `createAsHttpOutlet()` recognises `outlet` as a top-level routing key and passes the payload through at the response root. The client routes it via the `typeof data.outlet === 'string'` branch and fires `@finished`.
 
 ### Step 2 — webhook receiver
 
@@ -255,7 +255,7 @@ The original client got `{ outlet: 'awaiting-payment' }` and fired `@finished`. 
 
 ## Single-use resume invariant
 
-`AsWfStore.getAndDelete(handle)` is atomic — `findRow` → `deleteMany({ handle })` → `deletedCount === 1` gate (`packages/moost-wf/src/store/wf-store.ts:124-132`). Two concurrent callers: only one's delete returns 1; the other returns `null`.
+`AsWfStore.getAndDelete(handle)` is atomic — `findRow` → `deleteMany({ handle })` → `deletedCount === 1` gate. Two concurrent callers: only one's delete returns 1; the other returns `null`.
 
 Implications:
 

@@ -16,7 +16,7 @@ Wiring `@atscript/ui-styles` into a Vue 3 + UnoCSS app — full config files, au
 pnpm add @atscript/ui-styles vunor unocss @unocss/preset-icons unplugin-vue-components
 ```
 
-Peer deps: `vunor`, `unocss`, `@unocss/preset-icons`, `unplugin-vue-components` (optional — only needed if you use `AsResolver()`). See `packages/ui-styles/package.json` (lines 77-87).
+Peer deps: `vunor`, `unocss`, `@unocss/preset-icons`, `unplugin-vue-components` (optional — only needed if you use `AsResolver()`).
 
 ## vite.config.ts
 
@@ -39,7 +39,7 @@ export default defineConfig({
 });
 ```
 
-`AsResolver()` returns a `ComponentResolverObject` from `unplugin-vue-components` and resolves Vue tags matching `/^As[A-Z]/` against the package's `primaryComponents` set, returning `default` from a subpath import (e.g. `@atscript/vue-form/as-form`). See `packages/ui-styles/src/vite.ts` (lines 24-36).
+`AsResolver()` returns a `ComponentResolverObject` from `unplugin-vue-components` and resolves Vue tags matching `/^As[A-Z]/` against the package's `primaryComponents` set, returning `default` from a subpath import (e.g. `@atscript/vue-form/as-form`).
 
 ## uno.config.ts
 
@@ -122,7 +122,7 @@ Fonts are NOT shipped by `@atscript/ui-styles`. Add your own font stack to `app.
 | **Composables**                | `useAsForm`, `useTable`, `useAsField`, ...                                                                                                        | `import { useAsForm } from "@atscript/vue-form"`               |
 | **Tier 3 — internals**         | `AsTableBase`, `AsTableVirtualizer`, `AsOrderableList`, `AsFilterConditions`, ...                                                                 | Not exported. Not importable.                                  |
 
-Tag-name + helper-call + subpath-import detection drives the extractor's safelist; see `packages/ui-styles/src/extractor.ts` (lines 49-70). If you import a Tier-2 default with `import { AsInput } from "@atscript/vue-form"`, its classes are added to the safelist automatically.
+Tag-name + helper-call + subpath-import detection drives the extractor's safelist. If you import a Tier-2 default with `import { AsInput } from "@atscript/vue-form"`, its classes are added to the safelist automatically.
 
 ## Verifying the setup
 
@@ -132,7 +132,7 @@ Tag-name + helper-call + subpath-import detection drives the extractor's safelis
 4. Search for `as-form`, `as-field`, or `as-table` class rules. If present, the extractor matched and the shortcut tree resolved.
 5. Search for `i-as-search`, `i-as-chevron-down`, etc. — icons should be data-URL masks (not iconify network fetches).
 
-If `as-*` rules are missing: confirm `presets: asPresetVunor(...)` is spread correctly, the file actually imports `<AsForm>` (extractor short-circuits on files that contain none of `@atscript/`, `<As`, `<as-`, or a known helper name — see `extractor.ts:32-39`), and `virtual:uno.css` is loaded.
+If `as-*` rules are missing: confirm `presets: asPresetVunor(...)` is spread correctly, the file actually imports `<AsForm>` (the extractor short-circuits on files that contain none of `@atscript/`, `<As`, `<as-`, or a known helper name), and `virtual:uno.css` is loaded.
 
 If `i-as-*` icons are missing: confirm `@unocss/preset-icons` is installed (it's a peer dep), and that no other `presetIcons({ collections: { as: ... } })` is overwriting the bundled mapping.
 

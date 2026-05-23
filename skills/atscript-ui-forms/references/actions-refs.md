@@ -48,7 +48,7 @@ function handleAction(name: string, data: Order) {
 </template>
 ```
 
-Annotation arity: `@ui.form.action 'id'` or `@ui.form.action 'id', 'label'`. The `id` is the dispatch name; `label` is the button text. If `label` is omitted, AsField falls back to `@meta.label`, then the field name (`as-field.vue:323-332`).
+Annotation arity: `@ui.form.action 'id'` or `@ui.form.action 'id', 'label'`. The `id` is the dispatch name; `label` is the button text. If `label` is omitted, AsField falls back to `@meta.label`, then the field name.
 
 Phantom fields:
 
@@ -58,10 +58,10 @@ Phantom fields:
 
 ## AsAction default component
 
-Default button renderer registered for the built-in `action` type, used to render `@ui.form.action` phantom fields. Source:
+Default button renderer registered for the built-in `action` type, used to render `@ui.form.action` phantom fields.
 
 ```vue
-<!-- packages/vue-form/src/components/defaults/as-action.vue -->
+<!-- Default AsAction component -->
 <script setup lang="ts">
 import type { TAsComponentProps } from "../types";
 defineProps<TAsComponentProps>();
@@ -129,7 +129,6 @@ The submit button (driven by `@ui.form.submit.text`) is independent — it alway
 Unhandled action names emit `unsupported-action` instead of `action`:
 
 ```typescript
-// packages/vue-form/src/composables/use-as-form.ts:284-298
 function supportsAction(def: FormDef, actionId: string): boolean {
   return def.fields.some((f) => {
     const a = getFieldMeta(f.prop, UI_FORM_ACTION);
@@ -196,7 +195,7 @@ export interface User {
 }
 ```
 
-The form-level submit fns are read via `resolveFormProp` from the root type (not from any individual field). Sources: `packages/vue-form/src/composables/use-as-form.ts:264-281`.
+The form-level submit fns are read via `resolveFormProp` from the root type (not from any individual field).
 
 ## FK references — @db.rel.FK
 
@@ -241,8 +240,6 @@ For details on `@db.rel.FK` semantics, schema sync, and `@ui.dict.*` see the **a
 
 `AsRef` is registered under the built-in `ref` renderer id. When the target's `@db.http.path` is unreachable, AsRef falls back to a plain text input.
 
-Source: `packages/vue-form/src/components/defaults/as-ref.vue:1-60`.
-
 ## ValueHelpClient flow
 
 `AsRef` uses `useAsValueHelp(opts)` which wraps the framework-agnostic `ValueHelpClient` from `@atscript/ui`. The picker:
@@ -252,7 +249,6 @@ Source: `packages/vue-form/src/components/defaults/as-ref.vue:1-60`.
 3. On select, commits the value of the FK's `targetField` (typically `id`) to the model.
 
 ```typescript
-// packages/vue-form/src/composables/use-as-value-help.ts:48-152
 const vh = useAsValueHelp({
   info, // ValueHelpInfo: { url, targetField }
   model: props.model, // bind the FK value
@@ -270,7 +266,22 @@ const vh = useAsValueHelp({
 // vh.clear()         Reset model + searchText
 ```
 
-For the underlying contract (`ValueHelpClient`, `resolveValueHelp`, the on-the-wire request/response shape), see the general **atscript-ui** skill.
+When rolling your own picker without the Vue composable, drop down to the framework-agnostic primitives from `@atscript/ui`:
+
+```ts
+import { extractValueHelp, resolveValueHelp, ValueHelpClient } from "@atscript/ui";
+import { Client } from "@atscript/db-client";
+
+const info = extractValueHelp(prop); // { url, targetField } | undefined
+if (!info) return;
+
+const resolved = await resolveValueHelp(info.url); // cached per URL
+const vh = new ValueHelpClient(new Client(info.url));
+const { items } = await vh.search(resolved, { text: "acme", mode: "form", limit: 20 });
+// commit `item[info.targetField]` to your model
+```
+
+`resolveValueHelp(url)` caches per URL across the app — call `resetValueHelpCache()` to invalidate (e.g. on logout). `ValueHelpClient.search` accepts `{ text?, mode?: 'form' | 'filter', limit?, select? }`.
 
 ## `@ui.dict.*` on the target type
 
@@ -338,7 +349,7 @@ const clientFactory: ClientFactory = (url) =>
 </template>
 ```
 
-Resolution chain (`packages/vue-form/src/composables/use-as-value-help.ts:54`):
+Resolution chain:
 
 1. Nearest-ancestor `:client-factory` prop (per-form override).
 2. App-wide default set via `setDefaultClientFactory()` from `@atscript/ui`.

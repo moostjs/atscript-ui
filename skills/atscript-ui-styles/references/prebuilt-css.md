@@ -43,8 +43,6 @@ Sizes (approximate, current `dist/css/`):
 
 Cherry-pick the narrowest subpath that matches your usage. A forms-only app should import `/css/form` — saves ~75% over `/css/all`.
 
-Source: `packages/ui-styles/package.json` (lines 39-44).
-
 ## Side-effect import
 
 The `/css/*` subpaths export NO JavaScript symbols. They're CSS files; importing them executes them as a side effect (the bundler injects the CSS into the output, the dev server serves them as part of the HMR graph):

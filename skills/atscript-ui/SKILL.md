@@ -81,20 +81,20 @@ for (const field of def.fields) {
 
 `createTableDef(meta, type)` merges a `MetaResponse` (server `/meta` payload from `moost-db` or your own
 equivalent) with the deserialised atscript type to produce `ColumnDef[]`, `primaryKeys[]`, `actions`, and
-CRUD permissions. See [ui-core.md](references/ui-core.md).
+CRUD permissions.
 
 ## Invariants
 
-| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | **`@ui.type` / `@ui.form.type` / `@ui.table.type` are reserved for built-in renderer ids.** Closed list registered by the `@atscript/ui` plugin (source `packages/ui/src/plugin/annotations.ts`): `text`, `password`, `number`, `decimal`, `select`, `textarea`, `checkbox`, `radio`, `multiselect`, `date`, `datetime`, `time`, `paragraph`, `action`. Structured renderer kinds (`array`, `object`, `union`, `tuple`) are exposed by FormDef as `field.type`, never as a `@ui.*.type` argument. `multiselect` is form-only and auto-dispatches on `(literal \| union)[]` and primitive-item arrays carrying `@ui.form.options` / `@ui.form.fn.options` (value model `T[]`). Custom renderers always go via `@ui.form.component` / `@ui.table.component`, which look up in the consumer's `:components` map (not `:types`). |
-| 2   | **`@ui.fn.*` requires `installDynamicResolver()` from `@atscript/ui-fns`.** Call once at app startup before constructing any FormDef / TableDef. Without it, dynamic annotations silently behave as undefined. Compiled function strings run via `new Function` in the host's full scope — only safe for compile-time-validated schemas you control.                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 3   | **Form data is wrapped:** `formData = { value: domainData }`. Path helpers `getByPath` / `setByPath` from `@atscript/ui` handle the unwrap. Structured field paths join with `.` (e.g. `address.street`); array indices are numeric segments (`contacts.0.email`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| 4   | **`FieldResolver` is global and singleton.** `setResolver()` replaces the current resolver app-wide; the dynamic resolver from `ui-fns` replaces the static one. Call before any `createFormDef` / `createTableDef`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 5   | **Value-help is lazy.** `extractValueHelp(prop)` returns `ValueHelpInfo \| undefined` synchronously; the actual options/rows fetch happens later via `resolveValueHelp(url)` and is cached per URL across the app. Use `resetValueHelpCache()` to force a re-fetch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| 6   | **`flatMap` excludes phantom types.** FormDef / TableDef builders use `flattenAnnotatedType({ excludePhantomTypes: true })`. Phantom fields (e.g. action buttons) appear in the type tree but not in the field/column array unless they carry `@ui.form.action`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| 7   | **Validator plugins run in registration order.** `setDefaultValidatorPlugins([...])` replaces the list; `getFormValidator(def)` reads it at construction time. First plugin returning `false` short-circuits; `undefined` falls through to the next.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| 8   | **OCC version columns are auto-hidden.** Tables annotated with `@db.column.version` expose `meta.versionColumn`. Pass it to `createFormDef(type, { versionColumn })` so the version field doesn't render as an input; the value stays in form data and rides the wire payload for the server's `$cas` lift. `createTableDef` propagates it to `TableDef.versionColumn` and skips the column from `def.columns`; `resolveValueHelp` skips it from `primaryKeys` / `filterableFields` / `sortableFields` / `attrFields`. On write, catch `VersionMismatchError` from `@atscript/db-client` to surface 409 conflicts. See `atscript-db` skill (OCC reference) and the `atscript-ui-forms` skill's OCC edit pattern.                                                                                                             |
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`@ui.type` / `@ui.form.type` / `@ui.table.type` are reserved for built-in renderer ids.** Closed list registered by the `@atscript/ui` plugin: `text`, `password`, `number`, `decimal`, `select`, `textarea`, `checkbox`, `radio`, `multiselect`, `date`, `datetime`, `time`, `paragraph`, `action`. Structured renderer kinds (`array`, `object`, `union`, `tuple`) are exposed by FormDef as `field.type`, never as a `@ui.*.type` argument. `multiselect` is form-only and auto-dispatches on `(literal \| union)[]` and primitive-item arrays carrying `@ui.form.options` / `@ui.form.fn.options` (value model `T[]`). Custom renderers always go via `@ui.form.component` / `@ui.table.component`, which look up in the consumer's `:components` map (not `:types`). |
+| 2   | **`@ui.fn.*` requires `installDynamicResolver()` from `@atscript/ui-fns`.** Call once at app startup before constructing any FormDef / TableDef. Without it, dynamic annotations silently behave as undefined. Compiled function strings run via `new Function` in the host's full scope — only safe for compile-time-validated schemas you control.                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 3   | **Form data is wrapped:** `formData = { value: domainData }`. Path helpers `getByPath` / `setByPath` from `@atscript/ui` handle the unwrap. Structured field paths join with `.` (e.g. `address.street`); array indices are numeric segments (`contacts.0.email`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 4   | **`FieldResolver` is global and singleton.** `setResolver()` replaces the current resolver app-wide; the dynamic resolver from `ui-fns` replaces the static one. Call before any `createFormDef` / `createTableDef`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 5   | **Value-help is lazy.** `extractValueHelp(prop)` returns `ValueHelpInfo \| undefined` synchronously; the actual options/rows fetch happens later via `resolveValueHelp(url)` and is cached per URL across the app. Use `resetValueHelpCache()` to force a re-fetch.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 6   | **`flatMap` excludes phantom types.** FormDef / TableDef builders use `flattenAnnotatedType({ excludePhantomTypes: true })`. Phantom fields (e.g. action buttons) appear in the type tree but not in the field/column array unless they carry `@ui.form.action`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| 7   | **Validator plugins run in registration order.** `setDefaultValidatorPlugins([...])` replaces the list; `getFormValidator(def)` reads it at construction time. First plugin returning `false` short-circuits; `undefined` falls through to the next.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 8   | **OCC version columns are auto-hidden.** Tables annotated with `@db.column.version` expose `meta.versionColumn`. Pass it to `createFormDef(type, { versionColumn })` so the version field doesn't render as an input; the value stays in form data and rides the wire payload for the server's `$cas` lift. `createTableDef` propagates it to `TableDef.versionColumn` and skips the column from `def.columns`; `resolveValueHelp` skips it from `primaryKeys` / `filterableFields` / `sortableFields` / `attrFields`. On write, catch `VersionMismatchError` from `@atscript/db-client` to surface 409 conflicts. See `atscript-db` skill (OCC reference) and the `atscript-ui-forms` skill's OCC edit pattern.                                                            |
 
 ## Key imports
 
@@ -106,15 +106,10 @@ import {
   createTableDef,
   createFormData,
   buildUnionVariants,
-  // resolver
+  // resolver (most consumers only need resolveFieldProp / resolveFormProp)
   FieldResolver,
-  StaticFieldResolver,
-  setResolver,
-  getResolver,
   resolveFieldProp,
   resolveFormProp,
-  resolveStatic,
-  hasComputedAnnotations,
   // path helpers
   getByPath,
   setByPath,
@@ -145,11 +140,6 @@ import {
   getSortableColumns,
   getFilterableColumns,
   getColumn,
-  // type guards
-  isArrayField,
-  isObjectField,
-  isUnionField,
-  isTupleField,
   // annotation key constants (UI_FORM_*, UI_TABLE_*, UI_DICT_*, UI_TYPE — see annotations.md)
   UI_TYPE,
   UI_FORM_FN_LABEL,
@@ -159,7 +149,6 @@ import {
   UI_DICT_LABEL,
   // utilities
   asArray,
-  parseStaticAttrs,
   optKey,
   optLabel,
 } from "@atscript/ui";
@@ -203,8 +192,6 @@ import {
   isAuthError,
   // query builder
   buildTableQuery,
-  mergeSorters,
-  mergeFilters,
   // URL bridge
   stateToUrlQueryString,
   urlQueryStringToState,
@@ -213,25 +200,11 @@ import {
   togglePk,
   trimSelection,
   rowsToPks,
-  // state contracts (framework-agnostic)
-  ConfigTab,
-  TableStateData,
-  TableStateMethods,
-  // window mode helpers
-  pageAlignedBlocksFor,
-  blockStartFor,
-  planFetch,
-  walkForwardAbsorb,
-  walkBackwardAbsorb,
   // column widths
   computeDefaultColumnWidth,
   reconcileColumnWidthDefaults,
-  MAX_DEFAULT_COLUMN_WIDTH_PX,
   // utils
   debounce,
-  arraysEqual,
-  setsEqual,
-  sortersEqual,
   reorderColumnNames,
 } from "@atscript/ui-table";
 ```
@@ -243,7 +216,37 @@ import {
 | First contact       | [getting-started.md](references/getting-started.md) | Install matrix per use-case, root `atscript.config.ts` (UI plugins), root `vite.config.ts` (unplugin-atscript), `installDynamicResolver()` placement, locale providers, dev-server hooks                                                                            |
 | Ecosystem map       | [ecosystem.md](references/ecosystem.md)             | Which package solves which problem, dep graph, decision table, glossary, sibling-skill routing                                                                                                                                                                      |
 | `@ui.*` annotations | [annotations.md](references/annotations.md)         | Full exhaustive reference of every `@ui.*` / `@ui.form.*` / `@ui.form.fn.*` / `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*` / `@ui.type` / `@wf.*` key — argument shape, what reads it, precedence. The fastest grep target for "which annotation does X" queries |
-| Framework-agnostic  | [ui-core.md](references/ui-core.md)                 | `@atscript/ui` + `@atscript/ui-table` + `@atscript/ui-fns` programmatic APIs for a non-Vue consumer: `createFormDef`, `createTableDef`, `FieldResolver` contract, validators, value-help, decimal helpers, filter model, preset model, query builder, URL bridge    |
+
+## Customization
+
+Every `@atscript/vue-*` package follows a three-tier component layout, and the tier of a component tells you how you interact with it:
+
+- **Tier 1 — Primary roots.** Components you write as tags in your templates: `<AsForm>`, `<AsTable>`, `<AsTableRoot>`, `<AsWfForm>`, `<AsField>`, `<AsIterator>`. You compose and configure them; you don't swap them. If you need a completely different shell, build with the public composables (`useAsForm`, `useAsTable`, `useWfForm`) directly.
+- **Tier 2 — Defaults.** Shipped renderers you replace via prop maps — this is the customization surface. Forms expose `:types` (built-in renderer ids: `text`, `select`, `date`, …) and `:components` (custom names paired with `@ui.form.component` on the field). Tables expose the same plus `controls.configDialog` / `controls.filterDialog` / `controls.presetDialog` for dialog-level swaps. Per-domain skills (`atscript-ui-forms`, `atscript-ui-tables`, `atscript-ui-wf`) walk through each swap with code examples.
+- **Tier 3 — Internals.** Composition helpers consumers don't tag directly. You don't swap them, but their style classes ride along with the Tier-2 defaults that use them, so swapping out a default also releases its internal style shortcuts as dead weight in your bundle (see "Style consequence" below).
+
+### Cross-cutting swap — `ClientFactory`
+
+The one customization that's not domain-specific is the HTTP client. Tables, value-help (FK pickers), and the preset/app-config controllers all reach the network through a `ClientFactory` from `@atscript/db-client`. Replace the default to inject auth headers, route through a gateway, or run in a custom transport:
+
+```ts
+import { setDefaultClientFactory } from "@atscript/ui";
+import { Client } from "@atscript/db-client";
+
+setDefaultClientFactory(
+  (url) =>
+    new Client(url, {
+      fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
+      // headers, base URL rewriting, retry, etc.
+    }),
+);
+```
+
+Per-component overrides exist where it matters (`<AsTableRoot :client-factory>`, `<AsForm>` value-help passes its own factory through `useAsValueHelp`).
+
+### Style consequence
+
+Style classes ride with the components you import. Keep `AsFilterDialog` and its `as-filter-*` shortcuts stay reachable in your bundle; replace it with a custom dialog that doesn't tag those classes and the related shortcuts drop out of your bundle automatically. For granular opt-out, `@atscript/ui-styles` exports four shortcut groups plus an `allShortcuts` super-merge — pass a narrower subset (e.g. `commonShortcuts + formShortcuts` only) when you intentionally want to drop a domain. See the `atscript-ui-styles` skill.
 
 ## See also
 

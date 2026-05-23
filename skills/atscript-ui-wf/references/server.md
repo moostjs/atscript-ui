@@ -133,11 +133,7 @@ workflow engine catches it natively and converts it into the
 `inputRequired` envelope `<AsWfForm>` decodes — no global interceptor
 mount is required.
 
-### What `requireInput()` carries
-
-`useAtscriptWf(Type).requireInput(opts?)` builds a `StepRetriableError`
-whose payload is the serialized form schema plus the whitelisted
-context (`@wf.context.pass`) and an optional `errors` map:
+### requireInput options
 
 ```typescript
 useAtscriptWf(LoginForm).requireInput({
@@ -151,12 +147,6 @@ useAtscriptWf(LoginForm).requireInput({
 | `errors`      | `Record<string, string>` keyed by field path                         |
 | `formMessage` | top-level form-wide error — merged as `__form` into the response map |
 
-Three responsibilities baked in:
-
-1. `serializeFormSchema(type)` — strip `@wf.context.pass` and produce wire-safe payload (cached per type identity).
-2. `extractPassContext(type, wfContext)` — copy only whitelisted keys from the workflow context into the response.
-3. Throw a `StepRetriableError` carrying `outlet: 'http'` + payload + context. `createAsHttpOutlet()` wraps it in the `inputRequired` envelope `<AsWfForm>` decodes.
-
 ## @WfInput() auto-validation flow
 
 `@WfInput()` is built on `useAtscriptWf()`. It resolves the action,
@@ -165,18 +155,7 @@ action-vs-input policy matrix before the handler body runs.
 
 ### What happens on each request
 
-```
-1. The decorator's Resolve runs (priority: RESOLVE)
-2. Reads the param's atscript type from method metas
-3. Reads the action via useAtscriptWf().resolveAction()
-4. If no action + no input → throws StepRetriableError → engine re-pauses
-5. If action declared in @ui.form.action (no data)
-     → without `pass: true`: throws StepRetriableError
-     → with `pass: true`: parameter resolves to undefined, handler runs
-6. If action declared in @wf.action.withData → validate partial input, return it
-7. If unknown action → throws StepRetriableError (`__form: 'Action "<name>" is not supported'`)
-8. Otherwise (plain submit) → run validator (full), throw StepRetriableError on fail
-```
+`@WfInput()` reads the param's atscript type and the incoming action, then validates: plain submits run the full validator; actions declared via `@wf.action.withData` get deep-partial validation; actions declared via `@ui.form.action` skip the input entirely (the parameter resolves to `undefined` when `pass: true`); unknown actions throw a re-pause with a `__form` error. On any validation fail, the engine catches the thrown `StepRetriableError` and re-renders the form with `errors`.
 
 ### Decorator usage
 
@@ -386,24 +365,11 @@ the result.
 
 ## serializeFormSchema(type)
 
-```typescript
-serializeFormSchema(type: TAtscriptAnnotatedType): unknown
-```
-
-- Delegates to `serializeAnnotatedType(type, { ignoreAnnotations: ['wf.context.pass'], refDepth: 0.5 })`.
-- Strips `@wf.context.pass` from the wire payload (server-only annotation).
-- `refDepth: 0.5` = **shallow refs** — FK targets ship with `id` + interface metadata (`db.http.path`) but no structural body. Sufficient for `AsRef` pickers; keeps payload small.
-- Cached in a `WeakMap` keyed by `TAtscriptAnnotatedType` identity. Repeated serialization of the same type returns the cached payload.
+`serializeFormSchema(type)` produces the wire-safe form payload `<AsWfForm>` decodes — `@wf.context.pass` is stripped, FK targets ship as shallow refs. Cached per type identity. Used internally by `requireInput()`; expose only if you build a custom outlet.
 
 ## getFormActions(type)
 
-```typescript
-getFormActions(type: TAtscriptAnnotatedType): { actions: string[]; actionsWithData: string[] }
-```
-
-Walks `type.type.props`, reads `@ui.form.action` and `@wf.action.withData` annotations on each field. Cached per type. Used internally by `@WfInput()` / `useAtscriptWf()` to classify the incoming action; expose only if you build a custom dispatcher.
-
-`@ui.form.action` may be `{ id, label? }` or a bare string. `@wf.action.withData` is always a bare string.
+`getFormActions(type)` returns `{ actions, actionsWithData }`, the two action sets declared on the type via `@ui.form.action` and `@wf.action.withData`. Used internally to classify the incoming action; expose only if you build a custom dispatcher.
 
 ## Error handling
 

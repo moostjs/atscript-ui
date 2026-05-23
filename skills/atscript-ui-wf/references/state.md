@@ -51,11 +51,9 @@ new AsWfStore({
 | `clock` | `{ now: () => Date.now() }` | testability — override for deterministic expiry tests                                                                                                                   |
 | `actor` | `undefined`                 | callback returning the current user / service id. Stamps `createdBy` on insert, `lastUpdatedBy` on update. Invoked **at write time** — wire to your session composable. |
 
-Source: `packages/moost-wf/src/store/wf-store.ts:33-85`.
-
 ## AsWfStateRecord base schema
 
-Defined in `packages/moost-wf/src/store/as-wf-state.as`. Exported as an interface — extend it in your project.
+Exported by `@atscript/moost-wf` as an interface — extend it in your project.
 
 | Column           | Type               | Annotations                                                                  | Notes                                                                     |
 | ---------------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -113,7 +111,7 @@ const wfStore = new AsWfStore({
 });
 ```
 
-The `/store.as` subpath ships the raw `.as` file for re-export — see `packages/moost-wf/package.json:38`.
+The `/store.as` subpath ships the raw `.as` file for re-export from your own schema module.
 
 ## Shadow columns — @wf.store.fromContext
 
@@ -124,7 +122,7 @@ inviteEmail?: string
 
 A **shadow column** is a top-level DB column whose value is copied from `state.context` on every `AsWfStore.set()`. Lets you index, filter, and sort paused flows on context values without scanning the JSON `state` blob.
 
-Path syntax: dot-notation only. `'a'`, `'a.b'`, `'a.b.c'`. **No** arrays, **no** wildcards, **no** bracket access. The plugin's validator rejects invalid syntax at compile time (`packages/moost-wf/src/plugin.ts:99-106`).
+Path syntax: dot-notation only. `'a'`, `'a.b'`, `'a.b.c'`. **No** arrays, **no** wildcards, **no** bracket access. The plugin's validator rejects invalid syntax at compile time.
 
 The annotation runs on every `set()`:
 
@@ -138,21 +136,19 @@ for (const spec of specs) {
 }
 ```
 
-Source: `packages/moost-wf/src/store/wf-store.ts:246-259`.
-
 ## Shadow column constraints
 
-| Rule                                                                         | Why                                                                                                     | Enforced                                                                   |
-| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Field type must be `string \| number \| boolean`                             | shadow copy is by value; no nested JSON                                                                 | plugin validator (`packages/moost-wf/src/plugin.ts:128-155`)               |
-| Field must be **optional** (`?:`) OR carry `@meta.default` / `@db.default.*` | context shape varies between steps → path-miss writes `null` (optional) or relies on default (required) | plugin validator (`packages/moost-wf/src/plugin.ts:117-127`)               |
-| Cannot apply to `@meta.id` (PK)                                              | shadow must not overwrite the row identifier                                                            | plugin validator (`packages/moost-wf/src/plugin.ts:108-115`)               |
-| Path-miss on optional field → writes `null`                                  | clears stale value if context changes between pauses                                                    | runtime (`packages/moost-wf/src/store/wf-store.ts:253-257`)                |
-| Type mismatch (e.g. ctx value is an object)                                  | logs **once per field per store instance**, writes `null`, continues                                    | `onShadowTypeMismatch` (`packages/moost-wf/src/store/wf-store.ts:282-289`) |
+| Rule                                                                         | Why                                                                                                     | Enforced                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------- |
+| Field type must be `string \| number \| boolean`                             | shadow copy is by value; no nested JSON                                                                 | plugin validator (compile-time)  |
+| Field must be **optional** (`?:`) OR carry `@meta.default` / `@db.default.*` | context shape varies between steps → path-miss writes `null` (optional) or relies on default (required) | plugin validator (compile-time)  |
+| Cannot apply to `@meta.id` (PK)                                              | shadow must not overwrite the row identifier                                                            | plugin validator (compile-time)  |
+| Path-miss on optional field → writes `null`                                  | clears stale value if context changes between pauses                                                    | runtime                          |
+| Type mismatch (e.g. ctx value is an object)                                  | logs **once per field per store instance**, writes `null`, continues                                    | runtime (`onShadowTypeMismatch`) |
 
 Required fields without DB defaults will fail the insert on first `set()` where the context path misses. Make the column optional (or give it `@db.default.*`) unless you can guarantee the path is set in every step.
 
-Annotation supports only one path per field (`multiple: false` in the spec — `packages/moost-wf/src/plugin.ts:73`).
+Annotation supports only one path per field.
 
 ## Methods
 
@@ -169,7 +165,7 @@ All async. All operate on `handle`.
 
 ### getAndDelete contract
 
-`findRow` → `deleteMany({ handle })` → check `deletedCount === 1`. Two concurrent callers: only one's delete returns `1`; the other returns `null`. **If you subclass `AsWfStore` and override `findRow`, preserve this contract** (`packages/moost-wf/src/store/wf-store.ts:116-132`).
+`findRow` → `deleteMany({ handle })` → check `deletedCount === 1`. Two concurrent callers: only one's delete returns `1`; the other returns `null`. **If you subclass `AsWfStore` and override `findRow`, preserve this contract.**
 
 This is why "use `getAndDelete` not `get` + `delete`": separate calls are not atomic — two concurrent resumes could both observe the row and both proceed, double-firing the post-resume flow.
 
@@ -187,8 +183,6 @@ Override these to customize without rewriting the public surface:
 | `scanShadowFields()`                   | use a different annotation as the source                     |
 | `resolveFieldPrimitive(fieldType)`     | extend supported primitives                                  |
 
-Source: `packages/moost-wf/src/store/wf-store.ts:197-329`.
-
 ## When to run heal()
 
 - After adding a new `@wf.store.fromContext` field — existing rows have `null` / missing column → run `heal()` to backfill.
@@ -196,7 +190,7 @@ Source: `packages/moost-wf/src/store/wf-store.ts:197-329`.
 - After observing `[AsWfStore] @wf.store.fromContext field "..." expected ... but got ...` warnings — they fire once per field per process, so you may need `heal()` once the bug is fixed.
 - Optional `filter` narrows the scan (`{ schemaId: 'auth/invite' }` to backfill only one flow).
 
-`heal()` is a no-op if the schema declares no `@wf.store.fromContext` fields (`packages/moost-wf/src/store/wf-store.ts:159-162`).
+`heal()` is a no-op if the schema declares no `@wf.store.fromContext` fields.
 
 ## CJS limitation
 

@@ -32,7 +32,6 @@ API contract:
 Resolution order at AsField:
 
 ```typescript
-// packages/vue-form/src/components/as-field.vue:379-386
 const resolvedComponent = computed<Component | undefined>(() => {
   if (componentName) return components?.value?.[componentName];
   const map = types?.value;
@@ -141,8 +140,6 @@ defineProps<TAsComponentProps<number>>();
 
 Slot `#header` overrides the default label + actions row. Slot `#default` receives `{ inputId, descId, optionalEnabled }`.
 
-Source: `packages/vue-form/src/components/defaults/as-field-shell.vue:14-22`.
-
 ## Level 4 — Fully custom root
 
 Drop `<AsForm>` entirely; render the field tree yourself with `useAsForm`:
@@ -181,14 +178,11 @@ const form = useAsForm<Contact>({
 
 `createFormDef(type, { versionColumn })` — pass the second argument when consuming meta from an OCC-protected table (`@db.column.version`). The version column is excluded from `fields[]` so renderers don't paint it as an input, but stays in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift. See the OCC edit pattern in [`atscript-ui-forms/SKILL.md`](../SKILL.md) and the `atscript-db` skill's OCC reference.
 
-Source: `packages/vue-form/src/composables/use-as-form.ts:153-359`.
-
 ## TAsComponentProps contract
 
 Implement this interface in your custom component (or use it via `defineProps<TAsComponentProps>()`).
 
 ```typescript
-// packages/vue-form/src/components/types.ts:30-171
 export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps { ... }
 ```
 
@@ -240,12 +234,9 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps { 
 | `removeLabel`      | `string`                            | Label for the remove affordance.                                                                               |
 | `title`            | `string`                            | For structured fields (object/array/union) — title in the collapsible header.                                  |
 
-Source: `packages/vue-form/src/components/types.ts:30-171`.
-
 ## TAsComponentEmits
 
 ```typescript
-// packages/vue-form/src/components/types.ts:184-190
 export interface TAsComponentEmits<_V = unknown> {
   (e: "action", name: string): void;
 }
@@ -319,8 +310,6 @@ Available from `@atscript/vue-form`:
 | `useAsNestedSectionsStore()`  | `AsNestedSectionsStore \| undefined`                                                                                       | Read the open/closed registry for collapsible sections.                                |
 | `useAsUnionVariant()`         | `TAsUnionContext \| undefined`                                                                                             | Consume and clear the union variant picker injection inside a custom variant renderer. |
 
-Sources: each `packages/vue-form/src/composables/use-as-*.ts`.
-
 ## Locale & currency
 
 Provide the locale once at the root of your app (or inside a layout above forms):
@@ -373,4 +362,29 @@ amount: number
 
 `scale` is exposed to components as `precisionScale` (storage cap). The effective display `scale` is `min(currencyDecimals, precisionScale)` when a currency is resolved.
 
-AsField hands these as plain props on `TAsComponentProps` — your custom component reads them like any other prop without touching annotations. Source: `packages/vue-form/src/components/as-field.vue:199-307`.
+AsField hands these as plain props on `TAsComponentProps` — your custom component reads them like any other prop without touching annotations.
+
+### Decimal helpers
+
+When writing a custom decimal renderer (or formatting decimals in a cell), `@atscript/ui` exposes the storage-string-safe primitives the built-in `AsDecimal` uses. Storage values are strings so DB-precision decimals never bounce through floats.
+
+```ts
+import {
+  enforceScale,
+  parseDecimalInput,
+  formatDecimalForDisplay,
+  getCurrencyDisplayParts,
+} from "@atscript/ui";
+
+const normalized = enforceScale("123.4567", 2); // "123.45"
+const stored = parseDecimalInput("1 234,56", "de-DE"); // "1234.56" (locale-aware) or null
+const display = formatDecimalForDisplay({
+  value: stored ?? "0",
+  scale: 2,
+  locale: "de-DE",
+  group: true,
+});
+const { symbol, placement } = getCurrencyDisplayParts("EUR", "de-DE"); // { symbol: "€", placement: "suffix" }
+```
+
+`parseDecimalInput` returns `null` on garbage input; `formatDecimalForDisplay` accepts `{ value, scale?, locale?, group? }`. Use these instead of `Intl.NumberFormat` directly when you need to round-trip through a string-typed model and preserve the user's locale for separators.

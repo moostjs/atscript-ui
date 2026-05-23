@@ -6,10 +6,8 @@ URL bridge, presets, drafts, app prefs, server controller.
 - [Programmatic open](#programmatic-open)
 - [URL bridge: useTableUrlQuery](#url-bridge-usetableurlquery)
 - [URL helpers](#url-helpers)
-- [hydratingFromUrl flag](#hydratingfromurl-flag)
 - [Preset model](#preset-model)
 - [Per-aspect opt-in](#per-aspect-opt-in)
-- [Wire form](#wire-form)
 - [Three preset kinds](#three-preset-kinds)
 - [userConf](#userconf)
 - [appConf](#appconf)
@@ -19,21 +17,20 @@ URL bridge, presets, drafts, app prefs, server controller.
 - [AsPresetPicker](#aspresetpicker)
 - [Dirty detection](#dirty-detection)
 - [Server-side AsPresetsController](#server-side-aspresetscontroller)
-- [AsPresetEntry schema](#aspresetentry-schema)
+- [Server enforces](#server-enforces)
 - [REST endpoints](#rest-endpoints)
-- [Server validation invariants](#server-validation-invariants)
 - [Wiring a Moost controller](#wiring-a-moost-controller)
 - [PresetsClient](#presetsclient)
 
 ## AsConfigDialog tabs
 
-`packages/vue-table/src/components/defaults/as-config-dialog.vue`. Three tabs:
+Three tabs:
 
-| Tab       | Default body component        | Edits                                                                           |
-| --------- | ----------------------------- | ------------------------------------------------------------------------------- |
-| `columns` | `<AsFieldsSelector>` (Tier-3) | `state.columnNames` (reorder, hide/show) + `state.columnWidths` (width slider). |
-| `sorters` | `<AsSortersConfig>` (Tier-3)  | `state.sorters` (add/remove/reorder).                                           |
-| `filters` | `<AsFieldsSelector>` (Tier-3) | `state.filterFields` (add/remove visible filter inputs).                        |
+| Tab       | Default body         | Edits                                                                           |
+| --------- | -------------------- | ------------------------------------------------------------------------------- |
+| `columns` | `<AsFieldsSelector>` | `state.columnNames` (reorder, hide/show) + `state.columnWidths` (width slider). |
+| `sorters` | `<AsSortersConfig>`  | `state.sorters` (add/remove/reorder).                                           |
+| `filters` | `<AsFieldsSelector>` | `state.filterFields` (add/remove visible filter inputs).                        |
 
 Bound to `state.configDialogOpen` + `state.configTab`. Override via `controls.configDialog`.
 
@@ -49,7 +46,7 @@ state.showConfigDialog("filters");
 
 ## URL bridge: useTableUrlQuery
 
-`packages/vue-table/src/composables/use-table-url-query.ts`. Bridge between `<AsTableRoot v-model:url-query>` and vue-router.
+`useTableUrlQuery` bridges `<AsTableRoot v-model:url-query>` and vue-router.
 
 ```vue
 <script setup>
@@ -113,37 +110,18 @@ const snapshot = urlQueryStringToState(s, {
 
 Both honour `UrlQuerySync` symmetrically. The encoder reuses `buildTableQuery` for the filter/sort/search shape and appends `$skip` / `$limit` for pagination. The decoder produces a `UrlQueryStateSnapshot` (`skip` is the raw record offset — consumer computes `page = floor(skip / itemsPerPage) + 1`).
 
-## hydratingFromUrl flag
-
-`state.applyUrlQuery(urlString)` sets a private `hydratingFromUrl` guard so the watcher-driven query scheduling stays suppressed during URL replay. Release happens on `nextTick` so per-mutator watchers see the guard. On mount the `urlQueryReady` gate ensures the **first** fetch composes URL + defaults + preset into one request (not two).
-
-The `lastEmittedUrl` echo guard works in both directions:
-
-- Outbound: skip emit when state re-serializes to the same string.
-- Inbound: skip apply when called with our own echo.
-
-The decoded-form comparison covers `URLSearchParams` re-encoding of `~` (operator marker), `/`, `'`.
-
 ## Preset model
 
+`PresetSnapshot` is the in-memory dict form that runtime state holds — keys for each aspect (`columns`, `filters`, `filterOps`, `sorters`, `itemsPerPage`) and values for each one present. `PresetSnapshotWire` is the entries-array form sent over the wire (atscript can't validate `Record<string, T>`). Use `toWireSnapshot(snap)` / `fromWireSnapshot(wire)` at the boundary:
+
 ```typescript
-interface PresetSnapshot {
-  columns?: {
-    columnNames: string[];
-    columnWidths?: Record<string, string>; // overrides only, never defaults
-  };
-  filters?: string[]; // visible filter field paths (display state)
-  filterOps?: FieldFilters; // applied filter conditions
-  sorters?: SortControl[];
-  itemsPerPage?: number;
-}
+import { toWireSnapshot, fromWireSnapshot } from "@atscript/ui-table";
+
+const wire = toWireSnapshot(snapshot); // dict → entries (sorted by `field` for stable equality)
+const snap = fromWireSnapshot(wire); // entries → dict
 ```
 
-`packages/ui-table/src/presets/preset-types.ts:13-25`. Dict-shaped — what runtime state holds. Crossing the network requires `PresetSnapshotWire` (entries-array form for atscript validation).
-
 ## Per-aspect opt-in
-
-`packages/ui-table/src/presets/preset-aspects.ts:7-14`:
 
 ```typescript
 export const PRESET_ASPECTS = [
@@ -164,35 +142,7 @@ App-level aspect availability is set via `<AsTableRoot :preset.aspects>` (defaul
 
 `derivePresetAspects(content)` returns the array of present keys in canonical order (matches `PRESET_ASPECTS` order). Stamped on the server-side row's `aspects` column on every preset write so the picker can render aspect icons without loading the snapshot blob.
 
-## Wire form
-
-`packages/ui-table/src/presets/preset-wire-types.ts`. Entry-array encoding required by atscript validation (object dicts aren't validatable as Record<string, T>).
-
-```typescript
-interface PresetSnapshotWire {
-  columns?: {
-    columnNames: string[];
-    columnWidths?: { field: string; width: string }[];
-  };
-  filters?: string[];
-  filterOps?: { field: string; conditions: FilterCondition[] }[];
-  sorters?: SortControl[];
-  itemsPerPage?: number;
-}
-```
-
-```typescript
-import { toWireSnapshot, fromWireSnapshot } from "@atscript/ui-table";
-
-const wire = toWireSnapshot(snapshot); // dict → entries
-const snap = fromWireSnapshot(wire); // entries → dict
-```
-
-Entries are sorted by `field` so server-side aspect derivation, dirty checks, and equality all see a stable order. Use these whenever a snapshot crosses the network — never send the raw runtime dict.
-
 ## Three preset kinds
-
-`packages/ui-table/src/presets/preset-id.ts`:
 
 | Kind             | Id prefix                                 | Persisted | Visible to                          |
 | ---------------- | ----------------------------------------- | --------- | ----------------------------------- |
@@ -223,7 +173,7 @@ const systemPresets: SystemPresetInput[] = [
 ];
 ```
 
-`resolveSystemPresets(input?)` (`packages/ui-table/src/presets/system-presets.ts`) places Standard at index 0, then named presets in array order. Auto-prefix: `id: "monitoring"` becomes `sys:monitoring`. Duplicate ids are dropped (first wins) with a console.warn.
+`resolveSystemPresets(input?)` places Standard at index 0, then named presets in array order. Auto-prefix: `id: "monitoring"` becomes `sys:monitoring`. Duplicate ids are dropped (first wins) with a console.warn.
 
 ## userConf
 
@@ -236,7 +186,7 @@ interface UserConfData {
 }
 ```
 
-`packages/ui-table/src/presets/preset-data-types.ts:27-35`. Stamped client-side via `usePresets.setDefault(id)` / `setFavorites(ids)` / `toggleFav(id)`.
+Stamped client-side via `usePresets.setDefault(id)` / `setFavorites(ids)` / `toggleFav(id)`.
 
 Bootstrap resolution: pinned `defaultPresetId` if it still references a known preset, else `STANDARD_PRESET_ID`. Stale ids are left intact (may reactivate if the preset returns).
 
@@ -256,11 +206,11 @@ interface AppConfData {
 }
 ```
 
-`packages/ui-table/src/presets/preset-data-types.ts:42-54`. Read via `useAppPrefs`. Cells call `provideCellLocale` with `language` + `timezone`.
+Read via `useAppPrefs`. Cells call `provideCellLocale` with `language` + `timezone`.
 
 ## usePresets composable
 
-`packages/vue-table/src/composables/use-presets.ts`. Public dev-facing — powers `<AsPresetPicker>` internally.
+Public composable — powers `<AsPresetPicker>` internally.
 
 ```typescript
 const presetsHandle = usePresets({
@@ -303,7 +253,7 @@ Mutators trigger a follow-up reload — `batch(fn)` collapses N round-trips when
 
 ## useAppPrefs composable
 
-`packages/vue-table/src/composables/use-app-prefs.ts`. Singleton-per-`(app, url)`. Multiple calls share one underlying instance.
+Singleton-per-`(app, url)`. Multiple calls share one underlying instance.
 
 ```typescript
 const { prefs, save } = useAppPrefs({
@@ -330,7 +280,7 @@ Cross-instance sync: `useEventBus` (in-window) + `BroadcastChannel` (cross-tab).
 
 ## useLocalDraft composable
 
-`packages/vue-table/src/composables/use-local-draft.ts`. Opt-in localStorage overlay for in-progress edits. Survives reloads; cleared when the user explicitly applies / saves a preset.
+Opt-in localStorage overlay for in-progress edits. Survives reloads; cleared when the user explicitly applies / saves a preset.
 
 ```typescript
 const draft = useLocalDraft({
@@ -355,7 +305,7 @@ Enable per table via `<AsTableRoot :preset="{ ..., persistDrafts: true }"`. Iner
 
 ## AsPresetPicker
 
-`packages/vue-table/src/components/as-preset-picker.vue`. Tier-1 dropdown picker. Renders the presets menu (Save / Save as / Reset / Manage) when `state.preset.available.value` is true; renders nothing otherwise.
+Tier-1 dropdown picker. Renders the presets menu (Save / Save as / Reset / Manage) when `state.preset.available.value` is true; renders nothing otherwise.
 
 Reads from `state.preset` (the `PresetSurface` on `ReactiveTableState`):
 
@@ -387,17 +337,13 @@ state.preset.batch(fn);
 
 ## Dirty detection
 
-`packages/ui-table/src/presets/preset-dirty.ts`:
-
 ```typescript
-import { isDirtyAgainst, stableStringify } from "@atscript/ui-table";
+import { isDirtyAgainst } from "@atscript/ui-table";
 
 const dirty = isDirtyAgainst(activeSnapshot, currentSnapshot);
 ```
 
-Per-aspect: only aspects the active preset **claims** (key present) are compared. A column-only preset stays clean while filters change. A filter-ops-only preset doesn't dirty when columns reorder. Order-insensitive on plain objects, order-sensitive on arrays. Short-circuits on first mismatch.
-
-`stableStringify(value)` returns deterministic JSON (alphabetic keys at every depth). Used by the localStorage draft serializer; dirty detection itself uses `deepEqual` for speed.
+Returns whether the current snapshot diverges from the active preset, scoped to the aspects the active preset claims. A column-only preset stays clean while filters change; a filter-ops-only preset doesn't dirty when columns reorder.
 
 ## Server-side AsPresetsController
 
@@ -445,71 +391,7 @@ export class MyPresetsController extends AsPresetsController {
 | `canPublishPresets(a, t, u)`    | returns `true`      | Restrict public-preset creation (tiered / role / per-table). |
 | `getMaxPresetsPerUser(a, t, u)` | returns `10`        | Override cap per user / app / table.                         |
 
-## AsPresetEntry schema
-
-`packages/moost-ui-presets/src/as-preset-entry.as`:
-
-```atscript
-@db.table 'as_presets'
-export interface AsPresetEntry {
-    @meta.id @db.default.uuid @expect.maxLength 256 @expect.minLength 3
-    id: string
-
-    @db.index.plain 'preset_scope_idx'
-    type: 'preset' | 'userConf' | 'appConf'
-
-    @db.index.plain 'preset_scope_idx'
-    @db.index.unique 'preset_public_label_idx'
-    @expect.maxLength 128 @expect.minLength 1
-    app: string
-
-    @db.index.plain 'preset_scope_idx'
-    @db.index.unique 'preset_public_label_idx'
-    @expect.maxLength 64 @expect.minLength 1
-    tableKey?: string
-
-    @db.index.plain 'preset_scope_idx'
-    @db.index.plain 'preset_user_idx'
-    @expect.maxLength 128 @expect.minLength 1
-    @db.default ''
-    user: string
-
-    @expect.maxLength 128 @expect.minLength 1
-    userLabel?: string
-
-    @db.index.plain 'preset_public_idx'
-    public?: boolean
-
-    @db.index.plain 'preset_label_idx'
-    @expect.maxLength 128 @expect.minLength 1
-    label?: string
-
-    @db.index.unique 'preset_public_label_idx'
-    @expect.maxLength 128 @expect.minLength 1
-    publicLabel?: string
-
-    @expect.array.uniqueItems
-    aspects?: PresetAspect[]
-
-    @db.json
-    data: { /* polymorphic — preset | userConf | appConf variants */ }
-
-    @db.default.now createdAt: number
-    @db.default.now updatedAt: number
-}
-```
-
-Indexes:
-
-| Name                      | Columns                        | Purpose                                           |
-| ------------------------- | ------------------------------ | ------------------------------------------------- |
-| `preset_scope_idx`        | `(type, app, tableKey)`        | Read-path scope filter.                           |
-| `preset_user_idx`         | `user`                         | Owner queries.                                    |
-| `preset_public_idx`       | `public`                       | Public-listing read.                              |
-| `preset_label_idx`        | `label`                        | Public-label uniqueness scan (indexed).           |
-| `preset_public_label_idx` | `(app, tableKey, publicLabel)` | Composite unique — race-safe collision detection. |
-
-Cross-link: atscript skill for `.as` syntax; atscript-db skill for `@db.*` semantics.
+The `AsPresetEntry` row schema and its indexes ship inside `@atscript/moost-ui-presets`. When you extend `AsPresetsController`, you inherit the type and the database table — see the package source if you need the exact column list. Cross-link: atscript skill for `.as` syntax; atscript-db skill for `@db.*` semantics.
 
 ## REST endpoints
 
@@ -525,42 +407,19 @@ Inherited from `AsDbController` plus the extra capabilities endpoint:
 
 Cross-link the atscript-db skill `references/moost-db.md` for the full CRUD URL syntax and `AsDbController` hooks.
 
-## Server validation invariants
+## Server enforces
 
-Source: `packages/moost-ui-presets/src/preset-rules.ts`.
+What the controller enforces on writes — useful when you're building a custom client or debugging rejected requests:
 
-| Rule                                  | Implementation                                                                                                    |
-| ------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Reserved id prefixes rejected         | `assertNotReservedId(id)` (`reserved_id` code) for `sys:` / `uc:` / `ac:` on client writes.                       |
-| System ids rejected on update/remove  | `assertNotSystemId(id)` (`reserved_id` code).                                                                     |
-| Public-label uniqueness               | Indexed `findOne` on `(app, tableKey, label, public=true)` before write + composite unique index race-safety.     |
-| Per-user cap                          | `assertWithinCap` — counts only `type='preset'` rows for `(user, app, tableKey)`. Grandfathered on cap decrease.  |
-| `type` immutable after create         | Throws `type_immutable` on any change.                                                                            |
-| `user` / `app` / `tableKey` immutable | Throws `identity_immutable`.                                                                                      |
-| Shallow `data` merge                  | Partial patches preserve unmodified fields (`existing.data ⨯ patch.data`).                                        |
-| Public-create gate                    | `assertCanPublish` only on **private → public** transition. Already-public rows are grandfathered.                |
-| Read gate                             | `transformFilter` wraps user filter with `{ $or: [{ user }, { type: "preset", public: true }] }`.                 |
-| Scope required                        | Reads must include `app`; preset/userConf reads must also include `tableKey`. `$or` / `$not` collapse to no-info. |
-| Bulk verbs disabled                   | `insertMany` / `update` / `updateMany` / `replace` / `replaceMany` rejected (`action_unsupported`).               |
-| Identity from session                 | `user` and `userLabel` are stamped from session on every write — spoofed body fields are scrubbed.                |
-| User-conf default-ref sanitisation    | `sanitiseUserConfData` drops `data.defaultPresetId` when the target preset is no longer visible.                  |
+- Reserved id prefixes (`sys:`, `uc:`, `ac:`) are rejected on client writes.
+- Per-user preset cap (default 10, override `getMaxPresetsPerUser`).
+- Public-label uniqueness on `(app, tableKey)` — composite unique index plus pre-write check.
+- `type`, `user`, `app`, `tableKey` are immutable after create.
+- `data` patches are shallow-merged; `user` / `userLabel` are stamped from session and can't be spoofed.
+- Public-create is gated by `canPublishPresets`; private → public is the trigger (already-public rows are grandfathered).
+- Bulk verbs (`insertMany`, `update`, `updateMany`, `replace`, `replaceMany`) are disabled.
 
-`AsPresetsErrorCode` discriminated union (`packages/ui-table/src/presets/preset-data-types.ts:58-69`):
-
-```typescript
-type AsPresetsErrorCode =
-  | "preset_limit_reached"
-  | "reserved_id"
-  | "public_name_conflict"
-  | "missing_scope"
-  | "missing_id"
-  | "invalid_type"
-  | "type_immutable"
-  | "identity_immutable"
-  | "preset_not_found"
-  | "publish_forbidden"
-  | "action_unsupported";
-```
+Client errors surface as `PresetsHttpError`; on a rejected write the server may return codes like `preset_limit_reached`, `public_name_conflict`, `reserved_id`, `publish_forbidden`, or `action_unsupported` — switch on those if you build a custom error display.
 
 ## Wiring a Moost controller
 
@@ -601,7 +460,7 @@ The default `<AsPresetPicker>` is not rendered automatically — drop one in the
 
 ## PresetsClient
 
-`packages/ui-table/src/presets/presets-client.ts`. Framework-agnostic wire client. Stateless; the Vue composable holds reactive state.
+Framework-agnostic wire client (from `@atscript/ui-table`). Stateless; the Vue composable holds reactive state.
 
 ```typescript
 import { PresetsClient, isAuthError, PresetsHttpError } from "@atscript/ui-table";
@@ -631,4 +490,4 @@ Methods:
 
 `isAuthError(err)` returns `true` for HTTP 401/403 across `ClientError` and `PresetsHttpError`. `available` / `denied` semantics rely on this.
 
-`AppPrefsClient` (`packages/ui-table/src/presets/app-prefs-client.ts`) is the analogous client for `appConf` reads/writes — used internally by `useAppPrefs`.
+`AppPrefsClient` is the analogous client for `appConf` reads/writes — used internally by `useAppPrefs`.

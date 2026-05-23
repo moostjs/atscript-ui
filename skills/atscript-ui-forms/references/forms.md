@@ -59,8 +59,6 @@ All slots receive submit-related scoped bindings (`clearErrors`, `reset`, `setEr
 | `form.footer`  | Below submit.                                                                                                          | empty                                  |
 | `form.loading` | Inside the loading overlay (when `loading=true`).                                                                      | Spinner icon.                          |
 
-Source: `packages/vue-form/src/components/as-form.vue:84-156`.
-
 ## AsField
 
 Renders one field — resolves all annotations, picks the component, manages model binding, and dispatches change/blur events.
@@ -79,7 +77,6 @@ Renders one field — resolves all annotations, picks the component, manages mod
 ### Component resolution
 
 ```typescript
-// packages/vue-form/src/components/as-field.vue:373-386
 const resolvedComponent = computed<Component | undefined>(() => {
   if (componentName) return components?.value?.[componentName];
   const map = types?.value;
@@ -105,8 +102,6 @@ When the field is structured (object/array/tuple) or a union, AsField provides:
 - `PATH_PREFIX_KEY` — the absolute path of this field, so children compute `parent.child.grandchild`.
 - `LEVEL_KEY` — incremented nesting level (root structure = 0, each nested struct/array/union increments).
 
-Source: `packages/vue-form/src/components/as-field.vue:129-152`.
-
 ## AsIterator
 
 Renders all fields of a definition. Used to splice in additional fields under a specific path prefix, or to render the root field list manually.
@@ -121,11 +116,22 @@ Renders all fields of a definition. Used to splice in additional fields under a 
 | `canRemove`   | `boolean`    | Forwarded.                                                                                                                                 |
 | `removeLabel` | `string`     | Forwarded.                                                                                                                                 |
 
-Source: `packages/vue-form/src/components/as-iterator.vue:1-38`.
-
 ```vue
 <AsIterator :def="def" path-prefix="address" />
 ```
+
+## Path helpers
+
+Form data is wrapped: `formData = { value: domainData }`. `getByPath` / `setByPath` from `@atscript/ui` read or write a value at a dotted path (array indices are numeric segments — e.g. `contacts.0.email`). Use them when wiring custom side-channels (programmatic mutation, deep links) that need to touch one leaf without remounting the form.
+
+```ts
+import { getByPath, setByPath } from "@atscript/ui";
+
+const current = getByPath(formData, "address.street"); // unwraps `.value` automatically
+setByPath(formData, "contacts.0.email", "new@example.com");
+```
+
+`createFormValueResolver(data, context)` returns a `(prop, path) => unknown` resolver suited to `createFormData(type, resolver)` — it folds `@ui.form.fn.value` (when ui-fns is installed) and `@meta.default` so new wrappers start with their declared defaults.
 
 ## Default type map
 
@@ -151,8 +157,6 @@ Source: `packages/vue-form/src/components/as-iterator.vue:1-38`.
 | `date`      | `AsDate`      | `Date` storage                                                              |
 | `datetime`  | `AsDatetime`  | `Date` with time (`@ui.form.type 'datetime'`)                               |
 | `time`      | `AsTime`      | `HH:mm` (`@ui.form.type 'time'`)                                            |
-
-Source: `packages/vue-form/src/composables/create-default-types.ts:29-50`.
 
 ## Atscript primitive → field type
 
@@ -190,7 +194,7 @@ Custom validator example (requires `installDynamicResolver()` from `@atscript/ui
 message: string
 ```
 
-Source: `packages/vue-form/src/composables/use-as-form.ts:178-180`. The `errorLimit` is set to `MAX_SAFE_INTEGER` so descendant-count badges on collapsed objects reflect every nested error.
+The `errorLimit` for the form-level validator is set to `MAX_SAFE_INTEGER` so descendant-count badges on collapsed objects reflect every nested error.
 
 ## firstValidation strategies
 
@@ -204,8 +208,6 @@ Field-level live validation is gated until one of these conditions matches. Once
 | `'on-submit'`       | First submit happened. Live updates never run before then.                      |
 | `'none'`            | Disable live validation entirely. Submit also skips per-field iteration.        |
 
-Source: `packages/vue-form/src/composables/use-as-field.ts:62-77`.
-
 ## Fresh-fields suppression
 
 A field that registers AFTER the first submit (e.g. newly-added array item) is marked "fresh". Live validation is suppressed for it until either:
@@ -215,8 +217,6 @@ A field that registers AFTER the first submit (e.g. newly-added array item) is m
 - The next submit fires (entire set is cleared).
 
 Without this, an array item with a `@meta.required` field would render with a red error the moment it mounts.
-
-Source: `packages/vue-form/src/composables/use-as-state.ts:26-50`, `use-as-field.ts:49-58, 106-113`.
 
 ## External errors
 
@@ -239,8 +239,6 @@ Pass server-supplied errors keyed by absolute dotted path:
 - `__form` is reserved — it renders in the form-level banner slot (or default `<div role="alert">`), and never shows up at a leaf path.
 - A leaf error is **dismissed locally** when the user edits that field (model watcher in AsField). The dismissal is in-component state — it resets when a fresh `:errors` object reference arrives.
 - Dismissals do NOT reset on in-place mutation of the same errors object — only on identity change. Treat `errors` as immutable per server response.
-
-Source: `packages/vue-form/src/composables/use-as-external-errors.ts:48-100`.
 
 Imperative dismissal from inside a custom component:
 
@@ -278,8 +276,6 @@ const { submit, clearErrors, reset, setErrors } = useAsState({
 
 `submitValidator` is called with no args; it returns `Record<path, message>` (empty = passed). The composable also calls `setErrors(errors)` so per-field state stays in sync. The validator is responsible for reading data from its closure.
 
-Source: `packages/vue-form/src/composables/use-as-state.ts:84-111`.
-
 ## reset / clearErrors / setErrors
 
 Available on the return value of `useAsForm` AND scoped on all `<AsForm>` slots:
@@ -291,5 +287,3 @@ Available on the return value of `useAsForm` AND scoped on all `<AsForm>` slots:
 | `setErrors(map)` | Push `map` into per-field `externalError` state. Each field reads `map[path]` keyed on its absolute path.               |
 
 `useAsForm` additionally exposes `internalErrors: Ref<Record<string, string>>` — the most-recent submit's validator output, merged with `:errors` to drive descendant error-count badges on collapsed objects.
-
-Source: `packages/vue-form/src/composables/use-as-form.ts:110-141, 230-248`.

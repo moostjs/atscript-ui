@@ -133,8 +133,6 @@ If you omit `:form-data`, `useAsForm` falls back to a bare `ref<{}>` — no `{ v
 | `loading`         | `boolean`                                                            | Freeze form: `inert` body + overlay. Used by `<AsWfForm>` during round-trips.                    |
 | `clientFactory`   | `ClientFactory`                                                      | Per-form override for FK value-help `Client` creation. Falls back to `setDefaultClientFactory`.  |
 
-Source: `packages/vue-form/src/components/as-form.vue:9-52`.
-
 ## AsForm emits summary
 
 | Event                | Payload                                                                | Fires when                                                                                                                          |
@@ -145,7 +143,7 @@ Source: `packages/vue-form/src/components/as-form.vue:9-52`.
 | `unsupported-action` | `(name: string, data: TFormData)`                                      | An action name was dispatched that no field declares. Useful for shared chrome to detect mismatch.                                  |
 | `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur commit, array add/remove, union switch. `type` discriminates: `'update'` `'array-add'` `'array-remove'` `'union-switch'`. |
 
-`TAsChangeType` source: `packages/vue-form/src/components/types.ts:200`.
+`TAsChangeType` is exported from `@atscript/vue-form` — `'update' | 'array-add' | 'array-remove' | 'union-switch'`.
 
 ```vue
 <AsForm

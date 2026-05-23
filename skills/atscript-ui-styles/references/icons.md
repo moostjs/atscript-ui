@@ -153,16 +153,10 @@ Pinning `w-[16px] h-[16px]` locks the icon to 16px regardless of surrounding tex
 
 ## Reference grep — i-as-\* usage in shortcuts
 
-To see exactly which alias a UI element paints, search the shortcut tree:
+To see exactly which alias a UI element paints, search the package's shortcut tree (e.g. inside `node_modules/@atscript/ui-styles/`) for `i-as-`. Example matches:
 
-```bash
-grep -rn "i-as-" packages/ui-styles/src/shortcuts/
-```
-
-Example matches:
-
-- `as-overlay-icon: i-as-loading text-[3em]` — the spinner overlay (`shortcuts/common/index.ts:20`).
-- `as-field-remove-btn-icon: i-as-close text-[1em]` — the optional-field clear button (`shortcuts/form/as-field.ts:95`).
-- `as-table-checkbox-tick: i-as-check size-[0.9em] text-white` — checkbox tick glyph (`shortcuts/table/as-table.ts:92`).
+- `as-overlay-icon: i-as-loading text-[3em]` — the spinner overlay.
+- `as-field-remove-btn-icon: i-as-close text-[1em]` — the optional-field clear button.
+- `as-table-checkbox-tick: i-as-check size-[0.9em] text-white` — checkbox tick glyph.
 
 If you override `close`, you change the optional-field clear button glyph everywhere; if you override `loading`, you change every in-flight overlay. One alias, every consumer — that's the whole reason aliases exist instead of raw Iconify IDs in the shortcut bodies.

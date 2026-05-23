@@ -28,7 +28,7 @@ interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
 }
 ```
 
-Defined in [`packages/ui-styles/src/preset.ts`](../../../packages/ui-styles/src/preset.ts). Returns `Preset[]` — pass directly to UnoCSS's `presets`.
+Returns `Preset[]` — pass directly to UnoCSS's `presets`.
 
 Every vunor field is optional. The baked atscript-ui defaults (`defaultAsVunorOptions`, also exported) fill in any omitted value. Two fields merge per-key so consumers can override one entry without redeclaring the whole map:
 
@@ -86,7 +86,7 @@ The brand swap re-derives every `as-*` rule's color, focus ring, hover state, an
 
 ## Built-in palette defaults
 
-For reference (so you can see what changes when you override). Source: `defaultAsVunorOptions` in [`packages/ui-styles/src/preset.ts`](../../../packages/ui-styles/src/preset.ts) — also exported, so you can read or extend it from your own config:
+For reference (so you can see what changes when you override). `defaultAsVunorOptions` is exported from `@atscript/ui-styles` so you can read or extend it from your own config:
 
 | Color         | Default   | Source         |
 | ------------- | --------- | -------------- |
@@ -124,7 +124,7 @@ export default defineConfig({
 });
 ```
 
-The `as-*` shortcut tree uses explicit `dark:` selectors only where the layer/scope system can't auto-flip (e.g. paired text colors on inputs, or hand-painted scrollbar tones). See `packages/ui-styles/src/shortcuts/form/as-decimal-number.ts:41` (paired `text-scope-dark-0 dark:text-scope-light-0`) and `packages/ui-styles/src/shortcuts/table/as-window-scrollbar.ts:11-21` (`"dark:"` variant keys) for examples. For your own shortcuts, prefer `layer-0` / `surface-50` / `scope-*` tokens — they flip with the theme automatically.
+The `as-*` shortcut tree uses explicit `dark:` selectors only where the layer/scope system can't auto-flip (e.g. paired text colors on inputs, or hand-painted scrollbar tones — paired `text-scope-dark-0 dark:text-scope-light-0` is the typical pattern). For your own shortcuts, prefer `layer-0` / `surface-50` / `scope-*` tokens — they flip with the theme automatically.
 
 ## Scope tints (scope-\*)
 
@@ -145,7 +145,7 @@ Inside a scope, semantic helpers resolve against the scope's ramp:
 - `current-border-hl` — the scope's highlight border tone.
 - `current-outline-hl` — the scope's outline-ring tone (used with `outline i8-apply-outline`).
 
-Example from `as-form-error` (`shortcuts/form/as-form.ts:18-19`):
+Example from the bundled `as-form-error` shortcut:
 
 ```typescript
 "as-form-error":
@@ -178,7 +178,7 @@ Pre-built button "chromiums" — bg + fg + hover/active in one token. Always com
 | `c8-light`    | Subtle action (e.g. dialog dismiss) — tinted bg, scope text |
 | `c8-chrome`   | Neutral chrome button (dialog cancel) — surface bg + text   |
 
-Good to know: `c8-filled` derives the contrasting foreground from the active scope. If you also set `text-*` on a `c8-filled` button, it will erase that contrast (e.g. red text on red bg). The clean way to switch a `c8-filled` button's intent is to retune the scope (`!scope-error`) and leave `c8-filled` to pick the matching foreground. See `packages/ui-styles/src/shortcuts/table/_shared.ts:30-55` for the canonical pattern.
+Good to know: `c8-filled` derives the contrasting foreground from the active scope. If you also set `text-*` on a `c8-filled` button, it will erase that contrast (e.g. red text on red bg). The clean way to switch a `c8-filled` button's intent is to retune the scope (`!scope-error`) and leave `c8-filled` to pick the matching foreground.
 
 ## Spacing, typography, fingertip
 

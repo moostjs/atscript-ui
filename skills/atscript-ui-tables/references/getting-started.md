@@ -64,32 +64,30 @@ const controls = createDefaultControls();
 
 ## AsTableRoot props summary
 
-Source: `packages/vue-table/src/components/as-table-root.vue:31-100`.
+| Prop                    | Type                                                               | Default        | Purpose                                                                                                                            |
+| ----------------------- | ------------------------------------------------------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `url`                   | `string`                                                           | (required\*)   | moost-db endpoint, e.g. `/api/db/tables/products`. \*Still required even with `queryFn` — drives `/meta`.                          |
+| `queryFn`               | `(q: Uniquery, page: number, size: number) => Promise<PageResult>` | —              | Bypass moost-db `client.pages`; provide your own backend. See [query.md](query.md).                                                |
+| `clientFactory`         | `ClientFactory`                                                    | app default    | Override how the underlying `Client` is built. Falls back to `getDefaultClientFactory()`.                                          |
+| `controls`              | `TAsTableControls`                                                 | `{}`           | Skin-slot override map (header cell, filter dialog, config dialog, preset picker/dialog, row actions, etc.).                       |
+| `types`                 | `TAsCellTypeComponents`                                            | —              | Cell-type → component map. Seed with `createDefaultCellTypes()`.                                                                   |
+| `components`            | `Record<string, Component>`                                        | —              | Named cell overrides for `@ui.table.component "name"`.                                                                             |
+| `formTypes`             | `TAsTypeComponents`                                                | —              | Form-type map for the action-form dialog (`@InputForm`).                                                                           |
+| `formComponents`        | `Record<string, Component>`                                        | —              | Named form overrides for the action-form dialog.                                                                                   |
+| `limit`                 | `number`                                                           | `25`           | Initial `pagination.itemsPerPage`.                                                                                                 |
+| `forceFilters`          | `FilterExpr`                                                       | —              | Always-AND'd Uniquery filter expression; user mutations can't remove it.                                                           |
+| `forceSorters`          | `SortControl[]`                                                    | —              | Prepended before user sorters and dedup'd by field.                                                                                |
+| `queryOnMount`          | `boolean`                                                          | `true`         | When `false`, the initial fetch never fires.                                                                                       |
+| `blockQuery`            | `boolean`                                                          | `false`        | When truthy, suppresses all data fetches (refresh, scroll-driven, extension). Use as a gate while a dependency is still resolving. |
+| `rowValueFn`            | `(row) => unknown`                                                 | identity-by-PK | Extracts the unique key per row for the selection model.                                                                           |
+| `selectionPersistence`  | `"clear" \| "trim" \| "persist"`                                   | `"trim"`       | What happens to `selectedRows` on every results replacement.                                                                       |
+| `blockSize`             | `number`                                                           | `100`          | Window-mode fetch block size. Larger = fewer fetches but bigger payloads.                                                          |
+| `dragReleaseDebounceMs` | `number`                                                           | `300`          | Window-mode scroll debounce. Higher values issue fewer fetches during fast scroll.                                                 |
+| `refreshOnAction`       | `boolean`                                                          | `true`         | Refetch after successful `backend` / `__remove` action invokes.                                                                    |
+| `urlQuerySync`          | `UrlQuerySync`                                                     | full sync      | Per-aspect URL bridge gate (`filters`, `sorters`, `search`, `pagination`).                                                         |
+| `preset`                | `PresetConfig`                                                     | —              | Opt-in preset feature; requires `url` and `tableKey`. See [state-persistence.md](state-persistence.md).                            |
 
-| Prop                    | Type                                                               | Default        | Purpose                                                                                                      |
-| ----------------------- | ------------------------------------------------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------ |
-| `url`                   | `string`                                                           | (required\*)   | moost-db endpoint, e.g. `/api/db/tables/products`. \*Still required even with `queryFn` — drives `/meta`.    |
-| `queryFn`               | `(q: Uniquery, page: number, size: number) => Promise<PageResult>` | —              | Bypass moost-db `client.pages`; provide your own backend. See [query.md](query.md).                          |
-| `clientFactory`         | `ClientFactory`                                                    | app default    | Override how the underlying `Client` is built. Falls back to `getDefaultClientFactory()`.                    |
-| `controls`              | `TAsTableControls`                                                 | `{}`           | Skin-slot override map (header cell, filter dialog, config dialog, preset picker/dialog, row actions, etc.). |
-| `types`                 | `TAsCellTypeComponents`                                            | —              | Cell-type → component map. Seed with `createDefaultCellTypes()`.                                             |
-| `components`            | `Record<string, Component>`                                        | —              | Named cell overrides for `@ui.table.component "name"`.                                                       |
-| `formTypes`             | `TAsTypeComponents`                                                | —              | Form-type map for the action-form dialog (`@InputForm`).                                                     |
-| `formComponents`        | `Record<string, Component>`                                        | —              | Named form overrides for the action-form dialog.                                                             |
-| `limit`                 | `number`                                                           | `25`           | Initial `pagination.itemsPerPage`.                                                                           |
-| `forceFilters`          | `FilterExpr`                                                       | —              | Always-AND'd Uniquery filter expression; user mutations can't remove it.                                     |
-| `forceSorters`          | `SortControl[]`                                                    | —              | Prepended before user sorters and dedup'd by field.                                                          |
-| `queryOnMount`          | `boolean`                                                          | `true`         | When `false`, the initial fetch never fires.                                                                 |
-| `blockQuery`            | `boolean`                                                          | `false`        | All triggers (`query`, `queryNext`, `loadRange`) early-return while truthy.                                  |
-| `rowValueFn`            | `(row) => unknown`                                                 | identity-by-PK | Extracts the unique key per row for the selection model.                                                     |
-| `selectionPersistence`  | `"clear" \| "trim" \| "persist"`                                   | `"trim"`       | What happens to `selectedRows` on every results replacement.                                                 |
-| `blockSize`             | `number`                                                           | `100`          | Page-alignment unit for window-mode `loadRange` and `queryNext`.                                             |
-| `dragReleaseDebounceMs` | `number`                                                           | `300`          | Debounce for the `topIndex` / `viewportRowCount` watcher in window mode.                                     |
-| `refreshOnAction`       | `boolean`                                                          | `true`         | Refetch after successful `backend` / `__remove` action invokes.                                              |
-| `urlQuerySync`          | `UrlQuerySync`                                                     | full sync      | Per-aspect URL bridge gate (`filters`, `sorters`, `search`, `pagination`).                                   |
-| `preset`                | `PresetConfig`                                                     | —              | Opt-in preset feature; requires `url` and `tableKey`. See [state-persistence.md](state-persistence.md).      |
-
-`PresetConfig` (`packages/vue-table/src/types.ts:203-224`):
+`PresetConfig`:
 
 | Field           | Type                  | Notes                                                                                  |
 | --------------- | --------------------- | -------------------------------------------------------------------------------------- |
@@ -101,8 +99,6 @@ Source: `packages/vue-table/src/components/as-table-root.vue:31-100`.
 | `persistDrafts` | `boolean`             | Opt-in localStorage overlay. Default `false`.                                          |
 
 ## AsTableRoot v-models
-
-Source: `as-table-root.vue:118-133`.
 
 | v-model                 | Initial     | Purpose                                                                             |
 | ----------------------- | ----------- | ----------------------------------------------------------------------------------- |
@@ -122,19 +118,18 @@ Source: `as-table-root.vue:118-133`.
 
 ## AsTableRoot slot binding
 
-Default slot receives the public state surface (`as-table-root.vue:210-245`):
+Default slot receives the public state surface:
 
 ```typescript
 v-slot="{
   tableDef, loadingMetadata,
   allColumns, columnNames, columnWidths, columns,
   filterFields, filters, sorters,
-  results, querying, queryingNext, totalCount, loadedCount,
-  pagination, queryError, metadataError, mustRefresh, searchTerm,
+  results, querying, totalCount, loadedCount,
+  pagination, queryError, metadataError, searchTerm,
   selectedRows, selectedCount,
-  navBridge,
   // methods
-  query, queryNext, resetFilters,
+  query, resetFilters,
   showConfigDialog, openFilterDialog, closeFilterDialog,
   setFieldFilter, removeFieldFilter,
   addFilterField, removeFilterField,
@@ -146,7 +141,7 @@ Beyond the slot, the full `ReactiveTableState` is exposed via `useTableContext()
 
 ## Default control + cell-type factories
 
-`createDefaultControls()` (`composables/create-default-controls.ts:26-37`):
+`createDefaultControls()`:
 
 | Slot key           | Default component        |
 | ------------------ | ------------------------ |
@@ -160,7 +155,7 @@ Beyond the slot, the full `ReactiveTableState` is exposed via `useTableContext()
 | `rowActions`       | `AsRowActions`           |
 | `actionFormDialog` | (lazy-mounted on demand) |
 
-`createDefaultCellTypes()` (`composables/create-default-cell-types.ts:19-35`):
+`createDefaultCellTypes()`:
 
 | Cell type   | Default component  |
 | ----------- | ------------------ |
@@ -186,13 +181,11 @@ const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog };
 
 ## Tier 1 / 2 / 3
 
-Source: `packages/vue-table/src/index.ts:89-117`.
-
-| Tier         | Subdir                          | Auto-resolver | Subpath import | Use                                                                                                                                                                                                                                                                                                |
-| ------------ | ------------------------------- | ------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1 — primary  | `src/components/*.vue`          | yes           | yes            | Tags user writes: `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsTableActions`, `AsFilters`, `AsPresetPicker`.                                                                                                                                                                                      |
-| 2 — defaults | `src/components/defaults/*.vue` | no            | yes            | Swap targets: cell types (`AsCellNumber`, `AsCellDate`, …), dialogs (`AsConfigDialog`, `AsFilterDialog`, `AsPresetDialog`, lazy `AsActionFormDialog`), row chrome (`AsRowActions`, `AsTableHeaderCell`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`).                                         |
-| 3 — internal | `src/components/internal/*.vue` | no            | no             | Composition helpers (`AsTableBase`, `AsTableVirtualizer`, `AsFilterConditions`, `AsFilterValueHelp`, `AsOrderableList`, `AsFieldsSelector`, `AsSortersConfig`, `AsActionMenuContent`, …). Not part of the public API surface — no subpath export, may move or change shape between minor releases. |
+| Tier         | Auto-resolver | Subpath import | Use                                                                                                                                                                                                                                                                                                |
+| ------------ | ------------- | -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 — primary  | yes           | yes            | Tags user writes: `AsTableRoot`, `AsTable`, `AsWindowTable`, `AsTableActions`, `AsFilters`, `AsPresetPicker`.                                                                                                                                                                                      |
+| 2 — defaults | no            | yes            | Swap targets: cell types (`AsCellNumber`, `AsCellDate`, …), dialogs (`AsConfigDialog`, `AsFilterDialog`, `AsPresetDialog`, lazy `AsActionFormDialog`), row chrome (`AsRowActions`, `AsTableHeaderCell`, `AsColumnMenu`, `AsFilterField`, `AsFilterInput`).                                         |
+| 3 — internal | no            | no             | Composition helpers (`AsTableBase`, `AsTableVirtualizer`, `AsFilterConditions`, `AsFilterValueHelp`, `AsOrderableList`, `AsFieldsSelector`, `AsSortersConfig`, `AsActionMenuContent`, …). Not part of the public API surface — no subpath export, may move or change shape between minor releases. |
 
 `AsActionFormDialog` is intentionally not exported from the defaults barrel — re-exporting bundles `@atscript/vue-form` into every consumer. Subpath import: `@atscript/vue-table/as-action-form-dialog`. To eager-mount, assign it to `controls.actionFormDialog`.
 

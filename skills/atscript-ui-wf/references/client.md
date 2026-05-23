@@ -19,8 +19,6 @@
 
 ## <AsWfForm> props
 
-Source: `packages/vue-wf/src/components/as-wf-form.vue:10-26`.
-
 | Prop              | Type                            | Default            | Purpose                                                                                             |
 | ----------------- | ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
 | `path`            | `string`                        | (required)         | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                     |
@@ -38,11 +36,9 @@ Source: `packages/vue-wf/src/components/as-wf-form.vue:10-26`.
 | `components`      | `Record<string, Component>`     | undefined          | Custom components map forwarded to `AsForm`                                                         |
 | `clientFactory`   | `ClientFactory`                 | undefined          | Per-form FK value-help client factory forwarded to `AsForm`                                         |
 
-`path`, `name`, `types` are the only required props. Defaults from `withDefaults` at `packages/vue-wf/src/components/as-wf-form.vue:21-26`.
+`path`, `name`, `types` are the only required props.
 
 ## Emits
-
-Source: `packages/vue-wf/src/components/as-wf-form.vue:28-34`.
 
 | Event      | Signature                                                   | Fires when                                                                                          |
 | ---------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
@@ -52,11 +48,11 @@ Source: `packages/vue-wf/src/components/as-wf-form.vue:28-34`.
 | `submit`   | `(data: unknown) => void`                                   | user submitted the form (fires **before** the HTTP request is sent)                                 |
 | `loading`  | `(isLoading: boolean) => void`                              | request lifecycle — `true` on send, `false` on response/error                                       |
 
-Side-effect wiring lives in `as-wf-form.vue:40-58` (watchers translate composable refs to emits).
+Side-effects are wired internally via watchers that translate composable refs to emits.
 
 ## Slots
 
-Source: `packages/vue-wf/src/components/as-wf-form.vue:89-161`. All slots are typed via slot props.
+All slots are typed via slot props.
 
 ### Default slot — full custom shell
 
@@ -125,7 +121,7 @@ These pass through to the `AsForm` component (see `atscript-ui-forms` skill). Th
 
 ## useWfForm(options) composable
 
-Return shape (`packages/vue-wf/src/use-wf-form.ts:45-61`):
+Return shape:
 
 ```typescript
 interface UseWfFormReturn {
@@ -169,7 +165,7 @@ interface UseWfFormReturn {
 | `error`       | `ShallowRef<unknown>`                         | error body or network failure                                                 |
 | `formKey`     | `Ref<number>`                                 | bumps when payload changes — bind to `:key` on rendered form to force remount |
 
-`AsWfForm` already binds `formKey` to its inner `AsForm` (`packages/vue-wf/src/components/as-wf-form.vue:125`). When building a custom shell, do the same.
+`AsWfForm` already binds `formKey` to its inner `AsForm`. When building a custom shell, do the same.
 
 ## UseWfFormOptions
 
@@ -188,7 +184,7 @@ interface UseWfFormOptions {
 }
 ```
 
-Source: `packages/vue-wf/src/use-wf-form.ts:7-43`. Mirrors `<AsWfForm>` props (minus rendering-related `types`, `firstValidation`, `components`, `clientFactory`).
+Options mirror `<AsWfForm>` props (minus rendering-related `types`, `firstValidation`, `components`, `clientFactory`).
 
 ## Auth — custom fetch override
 
@@ -221,7 +217,7 @@ For static header sets (no per-request logic), `fetchOptions: { headers: {...}, 
 
 ## Same-form re-validation behavior
 
-Client compares `JSON.stringify(ir.payload)` between successive responses (`packages/vue-wf/src/use-wf-form.ts:175-182`). Three outcomes:
+Client compares `JSON.stringify(ir.payload)` between successive responses. Three outcomes:
 
 | Comparison                                     | Effect                                                                    |
 | ---------------------------------------------- | ------------------------------------------------------------------------- |
@@ -235,7 +231,7 @@ Caveat: re-validating with a payload that differs only in `@wf.context.pass` key
 
 ## AbortController behavior
 
-`useWfForm` keeps one `AbortController` per round-trip (`packages/vue-wf/src/use-wf-form.ts:85, 191-193, 254`):
+`useWfForm` keeps one `AbortController` per round-trip:
 
 - Each `post()` aborts the previous in-flight controller before starting a new one.
 - `onUnmounted` aborts on component unmount.
@@ -286,7 +282,7 @@ const wf = useWfForm({ path: props.path, name: props.name });
 Things `AsWfForm` does for you that you must replicate in a custom shell:
 
 - Bind `:key="wf.formKey.value"` on `AsForm` — without this, same-form re-validation will **not** preserve user input (the diff still bumps the key on schema change; you must wire that to remount).
-- Classify actions: `@wf.action.withData` actions need `actionWithData(name, data)`, plain actions need `action(name)`. The reference component reads `WF_ACTION_WITH_DATA` from `getFieldMeta` to build the set (`packages/vue-wf/src/components/as-wf-form.vue:62-71`).
+- Classify actions: `@wf.action.withData` actions need `actionWithData(name, data)`, plain actions need `action(name)`. The reference component reads `WF_ACTION_WITH_DATA` from `getFieldMeta` to build the set.
 - Forward `clientFactory` if your forms have FK pickers.
 
 ## Recipe — minimal mount with custom slots
@@ -350,7 +346,7 @@ const token = route.params.token as string;
 </template>
 ```
 
-`initialToken` always wins (`packages/vue-wf/src/use-wf-form.ts:104-106`). Use it whenever the token comes from somewhere other than `window.location.search` — router params, app state, postMessage, etc.
+`initialToken` always wins. Use it whenever the token comes from somewhere other than `window.location.search` — router params, app state, postMessage, etc.
 
 Pattern 3 — auto-detect from URL (`tokenTransport: 'query'` only):
 
@@ -358,11 +354,11 @@ Pattern 3 — auto-detect from URL (`tokenTransport: 'query'` only):
 <AsWfForm path="/api/wf/trigger" name="auth/magic-link" tokenTransport="query" :types />
 ```
 
-The composable reads `?wfs=<token>` from `window.location.search` once on `start()` (`packages/vue-wf/src/use-wf-form.ts:107-110`). Skip `initialToken` for this auto-detection path.
+The composable reads `?wfs=<token>` from `window.location.search` once on `start()`. Skip `initialToken` for this auto-detection path.
 
 ## SSR considerations
 
-`<AsWfForm>` calls `start(input)` from `onMounted` by default (`packages/vue-wf/src/use-wf-form.ts:287-289`), which `fetch`es `path` to retrieve the first form schema. Under SSR that runs at hydration time on the client — but if a parent component mounts a child `<AsWfForm>` during server rendering (e.g. inside an `<Suspense>` boundary that awaits child effects), the `fetch` will fire in Node and either crash (no `globalThis.fetch` polyfill) or hit your own server from itself.
+`<AsWfForm>` calls `start(input)` from `onMounted` by default, which `fetch`es `path` to retrieve the first form schema. Under SSR that runs at hydration time on the client — but if a parent component mounts a child `<AsWfForm>` during server rendering (e.g. inside an `<Suspense>` boundary that awaits child effects), the `fetch` will fire in Node and either crash (no `globalThis.fetch` polyfill) or hit your own server from itself.
 
 Two equivalent guards — pick whichever fits the surrounding code:
 
