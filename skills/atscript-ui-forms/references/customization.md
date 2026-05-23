@@ -179,6 +179,8 @@ const form = useAsForm<Contact>({
 
 `useAsForm` MUST be called from `<script setup>` of a component (it issues `provide()` calls). Its return is shaped to back the `<AsForm>` template; reach for it only when you need a non-form root element or radically different layout.
 
+`createFormDef(type, { versionColumn })` — pass the second argument when consuming meta from an OCC-protected table (`@db.column.version`). The version column is excluded from `fields[]` so renderers don't paint it as an input, but stays in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift. See the OCC edit pattern in [`atscript-ui-forms/SKILL.md`](../SKILL.md) and the `atscript-db` skill's OCC reference.
+
 Source: `packages/vue-form/src/composables/use-as-form.ts:153-359`.
 
 ## TAsComponentProps contract

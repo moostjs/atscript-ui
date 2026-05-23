@@ -87,6 +87,7 @@ export interface TableDef {
   flatMap: Map<string, TAtscriptAnnotatedType>; // empty for non-object roots
   primaryKeys: string[];
   preferredId: string[]; // defaults to primaryKeys
+  versionColumn?: string; // mirror of MetaResponse.versionColumn — name of the OCC version column (@db.column.version)
   crud: TCrudPermissions;
   canRemove: boolean;
   actions: TableActionsModel;
@@ -131,6 +132,7 @@ export interface MetaResponse {
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
+  versionColumn?: string;
   crud: TCrudPermissions;
   actions: TDbActionInfo[];
   relations: RelationInfo[];
@@ -162,6 +164,8 @@ export interface PaginationControl {
 }
 ```
 
+`versionColumn?: string` — name of the server-managed row version column on tables annotated with `@db.column.version`. Absent on tables that don't opt into OCC. Consumers pass it to `createFormDef` so the version prop doesn't render as an editable input, while the value still rides the wire payload for `$cas` round-trip server-side. `createTableDef` propagates it to `TableDef.versionColumn` and skips the column from `def.columns` so filter / sort / column-picker dialogs ignore it automatically. `resolveValueHelp` skips it from `primaryKeys` / `filterableFields` / `sortableFields` / `attrFields`.
+
 Value-help. Source: `packages/ui/src/value-help/types.ts`, `packages/ui/src/value-help/resolve.ts`.
 
 ```typescript
@@ -187,12 +191,12 @@ export interface ResolvedValueHelp {
 
 ## @atscript/ui — factories
 
-| Signature                                                                                    | Semantics                                                                                                                                                                                       |
-| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `createFormDef(type: TAtscriptAnnotatedType): FormDef`                                       | Walks the annotated type, builds field defs, flattens descendants. Single call per form. `packages/ui/src/form/create-form-def.ts:48`.                                                          |
-| `createTableDef(meta: MetaResponse, preDeserializedType?: TAtscriptAnnotatedType): TableDef` | Deserializes `meta.type`, builds `ColumnDef` per field, sorts by `@ui.table.order`. `packages/ui/src/table/create-table-def.ts:32`.                                                             |
-| `createFormData<T>(type: T, resolver?: TFormValueResolver): { value: TAtscriptDataType<T> }` | Produces initial wrapped form value `{ value: ... }`. Backfills primitive `decimal` to `"0"` so optional toggle / array-add render an editable value. `packages/ui/src/form/path-utils.ts:114`. |
-| `buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVariant[]`                    | Materialises union branches with labels + pre-built defs/itemFields. `packages/ui/src/form/create-form-def.ts:288`.                                                                             |
+| Signature                                                                                    | Semantics                                                                                                                                                                                                                                                                                                              |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `createFormDef(type: TAtscriptAnnotatedType, opts?: { versionColumn?: string }): FormDef`    | Walks the annotated type, builds field defs, flattens descendants. Pass `{ versionColumn }` from `meta.versionColumn` to skip an OCC version column from `fields[]` (still kept in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift). `packages/ui/src/form/create-form-def.ts:48`. |
+| `createTableDef(meta: MetaResponse, preDeserializedType?: TAtscriptAnnotatedType): TableDef` | Deserializes `meta.type`, builds `ColumnDef` per field, sorts by `@ui.table.order`. Propagates `meta.versionColumn` to `TableDef.versionColumn` and skips that column from `def.columns` so filter / sort / column-picker dialogs ignore it. `packages/ui/src/table/create-table-def.ts:32`.                           |
+| `createFormData<T>(type: T, resolver?: TFormValueResolver): { value: TAtscriptDataType<T> }` | Produces initial wrapped form value `{ value: ... }`. Backfills primitive `decimal` to `"0"` so optional toggle / array-add render an editable value. `packages/ui/src/form/path-utils.ts:114`.                                                                                                                        |
+| `buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVariant[]`                    | Materialises union branches with labels + pre-built defs/itemFields. `packages/ui/src/form/create-form-def.ts:288`.                                                                                                                                                                                                    |
 
 ## @atscript/ui — FieldResolver contract
 

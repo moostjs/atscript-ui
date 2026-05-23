@@ -124,6 +124,7 @@ interface MetaResponse {
   searchIndexes: SearchIndexInfo[];
   primaryKeys: string[];
   preferredId: string[];
+  versionColumn?: string; // name of the OCC version column (@db.column.version); absent when OCC isn't enabled
   crud: TCrudPermissions; // per-op booleans from @atscript/db-client
   actions: TDbActionInfo[]; // flat list — grouping happens client-side
   relations: RelationInfo[];
@@ -131,6 +132,8 @@ interface MetaResponse {
   type: TSerializedAnnotatedType;
 }
 ```
+
+`versionColumn?: string` is present on tables annotated with `@db.column.version`. `createTableDef` skips the column from `def.columns` so it never appears in column-picker / filter / sort dialogs. Custom `queryFn` implementations just need to preserve the field in the returned `MetaResponse`. The forms side reads it via `createFormDef(type, { versionColumn })` — see the `atscript-ui-forms` skill's OCC edit pattern.
 
 `actions` is a **flat array** on the wire — grouping by level (`default.table` / `default.row` / `default.rows` + `others.*`) is computed client-side by `createTableDef` into the `TableActionsModel` (`TableDef.actions`). The composed `TableDef` widens the response with cell-resolution metadata (`flatMap`, `canRemove`, …). Per invariant 11, `preferredId` is guaranteed populated for every row-returning read so identity is available in every cell / action.
 

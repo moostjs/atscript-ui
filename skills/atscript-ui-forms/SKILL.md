@@ -183,6 +183,35 @@ import type {
 | Customization        | [customization.md](references/customization.md)         | Three-level override: `:types` (built-in id swap) → `:components` (custom name + `@ui.form.component`) → `AsFieldShell` wrap → fully custom root via `useAsForm`. `TAsComponentProps` contract for custom components. Locale providers (`provideAsLocale`, currency, units).          |
 | Actions + refs       | [actions-refs.md](references/actions-refs.md)           | `@ui.form.action` + `AsAction` (single + multi-action forms, submit text, conditional disable), `@db.rel.FK` + `AsRef` value-help (`@db.http.path`, `@ui.dict.*` on target, `clientFactory` for auth headers, `ValueHelpClient` flow)                                                 |
 
+## OCC-enabled edit forms
+
+For tables annotated with `@db.column.version`, the server returns `meta.versionColumn` and auto-handles compare-and-set on update. Wire the form so the version field doesn't render as an input but the value still rides the wire:
+
+```ts
+import { createFormDef } from "@atscript/ui";
+import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { VersionMismatchError } from "@atscript/db-client";
+
+const meta = await client.meta();
+const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
+  versionColumn: meta.versionColumn,
+});
+
+async function onSubmit(data: unknown) {
+  try {
+    await client.update(data as never);
+  } catch (e) {
+    if (e instanceof VersionMismatchError) {
+      showError(`Row changed (current version: ${e.currentVersion}). Reload to continue.`);
+    } else {
+      throw e;
+    }
+  }
+}
+```
+
+The version prop is excluded from `def.fields[]` (so `<AsForm>` doesn't paint it) but stays in `flatMap` and the underlying form data, so the PATCH body preserves it for the server's `$cas` lift. `createTableDef` does the symmetric thing on the table side — the version column never appears in column / filter / sort dialogs. See the `atscript-db` skill (OCC reference) for the server-side mechanics (`@db.column.version`, `$cas`, `VersionMismatchError`).
+
 ## See also
 
 Reference docs: https://ui.atscript.dev/forms/. Source: https://github.com/moostjs/atscript-ui.
