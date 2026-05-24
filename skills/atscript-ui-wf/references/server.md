@@ -32,8 +32,8 @@ Authoring server-side workflow controllers with `@atscript/moost-wf` on top of `
 
 ```typescript
 import { Controller } from "moost";
-import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
-import { WfInput, WfAction, useAtscriptWf } from "@atscript/moost-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
+import { WfInput, WfAction, useAtscriptWf, finishWf, abortWf } from "@atscript/moost-wf";
 ```
 
 ## Schema authoring
@@ -80,7 +80,7 @@ Each step is an async (or sync) method on the controller. Possible terminations:
 | **Advance** to next step                        | return `undefined` (or any non-outlet value)                             |
 | **Pause** and ask client for input              | use `@WfInput()` — auto-pauses when input is missing or invalid          |
 | **Pause** and outlet (email / webhook)          | return `outletEmail(...)` / custom outlet — see [outlets.md](outlets.md) |
-| **Complete** the flow                           | `useWfFinished().set({ type: 'data', value })` then `return`             |
+| **Complete** the flow                           | `finishWf({ data })` (or `abortWf(reason, opts?)`) then `return`         |
 | **Re-pause** mid-handler with validation errors | `throw useAtscriptWf(Type).requireInput({ errors: { field: 'msg' } })`   |
 
 ```typescript
@@ -101,6 +101,22 @@ async enterCredentials(
 ```
 
 `return` (without a value) is the signal to advance. The engine treats the **shape of the return value** as the outlet decision — see `@moostjs/event-wf` documentation. Anything not recognized as an outlet response is treated as "step complete, advance".
+
+### Setting response cookies on completion
+
+`finishWf` / `abortWf` cover the envelope, but they don't expose the HTTP-level `cookies` field on wooks's underlying `set()` call. When a terminal step needs to set or clear cookies alongside the envelope (e.g. issuing a session cookie on login completion), reach for the raw call and pass the envelope as `value`:
+
+```typescript
+import { useWfFinished } from "@moostjs/event-wf";
+
+useWfFinished().set({
+  type: "data",
+  value: { finished: true, data: { ok: true, userId } },
+  cookies: { session: { value: token, httpOnly: true, sameSite: "lax" } },
+});
+```
+
+Trade-off: you lose the helper's envelope construction (build the `{ finished: true, ... }` object yourself) but gain cookie control. Use this only when cookies are required; default to `finishWf` / `abortWf` otherwise.
 
 ## Pause patterns
 
@@ -399,8 +415,8 @@ Schema with conditional MFA step:
 
 ```typescript
 import { Controller } from "moost";
-import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
-import { WfInput, useAtscriptWf } from "@atscript/moost-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
+import { WfInput, useAtscriptWf, finishWf } from "@atscript/moost-wf";
 import { LoginForm, MfaPincodeForm } from "./forms.as";
 
 interface LoginCtx {
@@ -450,10 +466,7 @@ export class LoginWorkflow {
 
   @Step("issue-session")
   issueSession(@WorkflowParam("context") ctx: LoginCtx) {
-    useWfFinished().set({
-      type: "data",
-      value: { ok: true, userId: ctx.userId },
-    });
+    finishWf({ data: { ok: true, userId: ctx.userId } });
   }
 }
 ```

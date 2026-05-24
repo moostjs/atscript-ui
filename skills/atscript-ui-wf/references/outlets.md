@@ -151,11 +151,13 @@ Sender callback (passed to `createEmailOutlet(sender)` in the outlet-trigger con
 ### Step 3 — post-resume step
 
 ```typescript
+import { finishWf } from "@atscript/moost-wf";
+
 @Step("link-clicked")
 async linkClicked(@WorkflowParam("context") ctx: { email?: string }) {
   // The user clicked the link. This step runs after resume.
   await markVerified(ctx.email!);
-  useWfFinished().set({ type: "data", value: { verified: true } });
+  finishWf({ data: { verified: true } });
 }
 ```
 
@@ -235,17 +237,19 @@ export class WfCallbackController {
 ### Step 3 — post-resume step
 
 ```typescript
+import { finishWf, abortWf } from "@atscript/moost-wf";
+
 @Step("finalize")
 finalize(
   @WorkflowParam("input") input: PaymentResult,
   @WorkflowParam("context") ctx: { orderId: string },
 ) {
   if (input.status !== "ok") {
-    useWfFinished().set({ type: "data", value: { ok: false, reason: input.reason } });
+    abortWf(input.reason, { message: { level: "error", text: "Payment failed." } });
     return;
   }
   // mark order paid, etc.
-  useWfFinished().set({ type: "data", value: { ok: true } });
+  finishWf({ data: { ok: true } });
 }
 ```
 

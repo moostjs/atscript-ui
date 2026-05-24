@@ -58,8 +58,8 @@ export interface HelloName {
 ```ts
 // src/wf/hello.workflow.ts
 import { Controller } from "moost";
-import { Workflow, Step, WorkflowParam, WorkflowSchema, useWfFinished } from "@moostjs/event-wf";
-import { WfInput } from "@atscript/moost-wf";
+import { Workflow, Step, WorkflowParam, WorkflowSchema } from "@moostjs/event-wf";
+import { WfInput, finishWf } from "@atscript/moost-wf";
 import { HelloName } from "./forms.as";
 
 interface Ctx {
@@ -82,7 +82,7 @@ export class HelloWorkflow {
 
   @Step("greet")
   greet(@WorkflowParam("context") ctx: Ctx) {
-    useWfFinished().set({ type: "data", value: { greeting: `Hello, ${ctx.name}!` } });
+    finishWf({ data: { greeting: `Hello, ${ctx.name}!` } });
   }
 }
 ```
@@ -134,7 +134,7 @@ Token transports: 'body' (default), 'cookie', 'query' (?wfs=...).
 | 8   | **`@atscript/moost-wf/store` is ESM-only.** Triggered by any import of `@atscript/moost-wf/store` (runtime class) or `@atscript/moost-wf/store.as` (atscript model). Fix: set `"type": "module"` in the consumer's `package.json` and bundle ESM. CJS consumers must drop `AsWfStore` and use the in-memory store from `@moostjs/event-wf`.                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 9   | **Token transport survives reloads only if persistent.** `body` transport (default) is lost on reload. `cookie` survives until expiry. `query` (`?wfs=token`) is URL-shareable and single-use. Pick the transport that matches your resume story.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | 10  | **HTTP outlet wraps `inputRequired` — conditionally.** Mount `createAsHttpOutlet()` from `@atscript/moost-wf` (not bare `createHttpOutlet`) in `handleAsOutletRequest`. It wraps generic form payloads in `{ inputRequired: { payload, transport: 'http', context } }` so `<AsWfForm>` decodes them. **Pass-through:** payloads already carrying a root-level routing key — `finished`, `sent`, `outlet`, `error` — flow through at the response root (merged with `context` if any), so `outletHttp({ outlet: 'awaiting-payment' })` and `outletHttp({ error: { message } })` keep working without a separate outlet. Bare `createHttpOutlet` flattens everything and crashes `<AsWfForm>` on form payloads with "Unexpected response format". |
-| 11  | **Finished-response wrap.** Use `handleAsOutletRequest` from `@atscript/moost-wf` (not bare `handleWfOutletRequest` from `@moostjs/event-wf`) as your trigger. It wraps the `useWfFinished({ value })` unwrap so the response carries the `finished: true` marker `<AsWfForm>` requires. Pass-through for non-object responses (redirects, primitives), arrays, and already-marked envelopes (`inputRequired` / `finished` / `error` / `sent` / `outlet`). Step handlers return their domain data via `useWfFinished().set({ value: { ok: true, ... } })` — never embed `finished: true` inside `value`.                                                                                                                                        |
+| 11  | **Finished-response wrap.** Use `handleAsOutletRequest` from `@atscript/moost-wf` (not bare `handleWfOutletRequest` from `@moostjs/event-wf`) as your trigger. It wraps the `useWfFinished({ value })` unwrap so the response carries the `finished: true` marker `<AsWfForm>` requires. Pass-through for non-object responses (redirects, primitives), arrays, and already-marked envelopes (`inputRequired` / `finished` / `error` / `sent` / `outlet`). Step handlers complete via `finishWf({ data: { ok: true, ... } })` (see invariant 12) — the helper builds the envelope and the wrap supplies the marker.                                                                                                                             |
 | 12  | **Use `WfFinished` envelope helpers — not raw `useWfFinished`.** `@atscript/moost-wf` ships two helpers: `finishWf(opts?)` and `abortWf(reason, opts?)`. The shared `FinishWfOpts` bag carries `{ data?, message?, next? }`; `abortWf` adds `aborted: true` + `reason`. The `next` field is the `WfNext` discriminated union (`{ trigger: 'immediate' \| 'auto' \| 'manual', ... }`) — the same shape rendered by `<AsWfFinish>`. Reach for raw `useWfFinished().set({ type: 'data', value: envelope, cookies })` only when you need to set response cookies alongside the envelope — cookies are an HTTP-level concern the helpers don't expose. See [finish-screens](references/finish-screens.md).                                           |
 
 ## Key imports
@@ -178,15 +178,16 @@ import { AsWfStore, AsWfStateRecord } from "@atscript/moost-wf/store";
 // Moost framework — @Controller, Resolve, Intercept, useControllerContext live here
 import { Controller, Resolve, Intercept } from "moost";
 
-// Workflow engine — @Workflow, @Step, @WorkflowSchema, @WorkflowParam, useWfFinished,
-// useWfState, useWfOutlet, outletEmail, outletHttp, StepRetriableError, etc. all live here
+// Workflow engine — @Workflow, @Step, @WorkflowSchema, @WorkflowParam,
+// useWfState, useWfOutlet, outletEmail, outletHttp, StepRetriableError, etc. all live here.
+// (To complete a step prefer `finishWf` / `abortWf` from `@atscript/moost-wf` above;
+//  raw `useWfFinished` from `@moostjs/event-wf` is the cookies escape hatch — see server.md.)
 import {
   Workflow,
   Step,
   WorkflowParam,
   WorkflowSchema,
   StepTTL,
-  useWfFinished,
   useWfState,
   useWfOutlet,
   outlet,
@@ -201,7 +202,7 @@ import { StepRetriableError } from "@wooksjs/event-wf";
 | Domain            | File                                                | When                                                                                                                                                                                                                                                                                                                                                   |
 | ----------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | First contact     | [getting-started.md](references/getting-started.md) | Install matrix, two-step "hello" flow end-to-end, minimal client mount                                                                                                                                                                                                                                                                                 |
-| Server authoring  | [server.md](references/server.md)                   | `@Workflow` / `@Step` / `@WorkflowSchema` from `@moostjs/event-wf` (linear vs branched), `@WorkflowParam`, `@WfInput()` auto-validation, `useAtscriptWf().requireInput()` pause signal, `useWfFinished`, conditional steps, action handlers (`@WfAction`), error mapping                                                                               |
+| Server authoring  | [server.md](references/server.md)                   | `@Workflow` / `@Step` / `@WorkflowSchema` from `@moostjs/event-wf` (linear vs branched), `@WorkflowParam`, `@WfInput()` auto-validation, `useAtscriptWf().requireInput()` pause signal, `finishWf` / `abortWf` to complete a step, conditional steps, action handlers (`@WfAction`), error mapping                                                     |
 | Context           | [context.md](references/context.md)                 | The workflow context object, mutation across steps, `@wf.context.pass` whitelist, `extractPassContext`, consuming `formContext` on the client, dynamic step titles via `@ui.form.fn.title` (cross-link to atscript-ui-forms dynamic-fields)                                                                                                            |
 | State persistence | [state.md](references/state.md)                     | `AsWfStore({ table, clock?, actor? })` wiring, `AsWfStateRecord` base schema + extension with `@meta.id`, `@wf.store.fromContext` shadow columns (uses, limits, race-safe `getAndDelete`), `cleanup(retention?)`, `heal(options?)` backfill, CJS limitation                                                                                            |
 | Outlets / resume  | [outlets.md](references/outlets.md)                 | Outlet semantics (`{ sent: true }`, `{ outlet: '<name>' }`), email magic-link pattern with `?wfs=token` resume, webhook resume, token transports (`body` / `cookie` / `query`) — when to pick which, `initialToken` prop                                                                                                                               |

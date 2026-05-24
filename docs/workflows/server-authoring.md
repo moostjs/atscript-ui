@@ -14,7 +14,7 @@ workflow.
 
 ```ts
 import { Controller } from "moost";
-import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
 
 interface LoginCtx {
   userId?: number;
@@ -161,35 +161,60 @@ async enterCredentials(/* ... */) {
 
 ### 3. Finish the workflow
 
-Call `useWfFinished().set(...)` to write the completion payload, then
-return:
+Call `finishWf(opts?)` (or `abortWf(reason, opts?)` for a soft failure)
+from `@atscript/moost-wf` to build the `WfFinished` envelope and end
+the flow:
 
 ```ts
-import { useWfFinished } from "@moostjs/event-wf";
+import { finishWf } from "@atscript/moost-wf";
 
 @Step("login-issue-session")
 issueSession(@WorkflowParam("context") ctx: LoginCtx) {
-  const token = this.sessions.encode({ userId: ctx.userId! /* ... */ });
-  useWfFinished().set({
-    type: "data",
-    value: { ok: true, user: { username: ctx.username! } },
-    cookies: {
-      session: {
-        value: token,
-        options: { httpOnly: true, sameSite: "Lax", path: "/", maxAge: 86_400_000 },
-      },
-    },
+  finishWf({
+    data: { ok: true, user: { username: ctx.username! } },
+    message: { level: "success", text: "Signed in." },
   });
   return;
 }
 ```
 
-The `value` field becomes the response body the client sees on
-`@finished`. The `finished: true` marker `<AsWfForm>` routes on is
-supplied automatically by `handleAsOutletRequest` (see app wiring
-below) — step handlers only return their domain data. `cookies` sets
-`Set-Cookie` headers (the HTTP outlet forwards them — see app wiring
-below for the eventContext caveat).
+`opts.data` becomes the envelope's typed payload the client sees on
+`@finished`. `opts.message` / `opts.next` drive the terminal screen
+(`<AsWfFinish>`) — see [Finish Screens](/workflows/finish-screens) for
+the full envelope shape. The `finished: true` marker `<AsWfForm>`
+routes on is supplied by the helper; `handleAsOutletRequest` only
+wraps step results that don't already carry it (see app wiring below).
+
+Use `abortWf("reason", { message })` when the flow ends in a
+recoverable terminal state (rate-limited, user-cancelled). The envelope
+adds `aborted: true` + `reason` so the client can render the failure
+without treating it as a hard error.
+
+::: tip Setting cookies alongside the envelope
+`finishWf` / `abortWf` cover plain JSON envelopes. To attach
+`Set-Cookie` headers (e.g. a session cookie issued on completion),
+drop down to the raw `useWfFinished` from `@moostjs/event-wf`:
+
+```ts
+import { useWfFinished } from "@moostjs/event-wf";
+
+useWfFinished().set({
+  type: "data",
+  value: { finished: true, data: { ok: true } },
+  cookies: {
+    session: {
+      value: token,
+      options: { httpOnly: true, sameSite: "Lax", path: "/", maxAge: 86_400_000 },
+    },
+  },
+});
+```
+
+The helpers don't expose the `cookies` field — when you need it, build
+the envelope yourself and hand the whole thing to `useWfFinished`.
+The HTTP outlet forwards the cookies (see the eventContext caveat in
+app wiring below).
+:::
 
 ## App wiring
 
@@ -282,10 +307,10 @@ A few things to know:
   default; `cookie` persists across reloads; `query` enables magic
   links (`?wfs=token` in URLs).
 - **`eventContext` forwarding** — the `deps.start`/`deps.resume`
-  wrappers forward the HTTP event context so `useWfFinished().set({
-cookies })` actually writes Set-Cookie on the response. Without
-  this, the WF runs in an isolated context and cookies are silently
-  dropped.
+  wrappers forward the HTTP event context so the cookies-escape-hatch
+  call to `useWfFinished().set({ cookies })` actually writes
+  Set-Cookie on the response. Without this, the WF runs in an isolated
+  context and cookies are silently dropped.
 
 ## Reading the workflow context
 

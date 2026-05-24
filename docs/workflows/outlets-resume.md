@@ -122,8 +122,8 @@ to work without registering a separate outlet.
 
 `handleAsOutletRequest` is the matching trigger: a thin wrapper
 around `handleWfOutletRequest` that supplies the `finished: true`
-marker `<AsWfForm>` reads when a step calls
-`useWfFinished().set({ value })`. Pass-through for non-object
+marker `<AsWfForm>` reads when a step calls `finishWf({ data })`
+(from `@atscript/moost-wf`). Pass-through for non-object
 responses (redirect's empty-string body, primitives), arrays, and
 already-marked envelopes (`inputRequired` / `finished` / `error` /
 `sent` / `outlet`). If you need a bare HTTP outlet + trigger for
@@ -265,8 +265,8 @@ Hours later, from Alice's browser via magic link:
   `ctx.inviteEmailSent` flag is set, so the step `return`s.
 - Engine advances to `invite-accept` → emits the form.
 - Alice fills it in, submits.
-- Engine advances to `invite-issue-session` → `useWfFinished().set()`
-  writes the session cookie.
+- Engine advances to `invite-issue-session` → the step writes the
+  session cookie and calls `finishWf({ data })`.
 - Alice sees `@finished` with the session payload.
 
 ## Custom outlets

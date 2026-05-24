@@ -61,7 +61,7 @@ Every round-trip is one POST. The response is one of:
   flow's result payload (session cookie set, redirect URL, …). The
   `finished: true` marker is supplied by `handleAsOutletRequest`, so
   step handlers only return their domain data via
-  `useWfFinished().set({ value })`.
+  `finishWf({ data })` (from `@atscript/moost-wf`).
 - `{ sent: true }` / `{ outlet: "..." }` — flow paused waiting for
   an external event (email link clicked, webhook fired). The current
   HTTP session is done; resume happens later via the token.

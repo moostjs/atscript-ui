@@ -223,10 +223,7 @@ if (action === "resend") {
 if (action === "forgotPassword") {
   // Finish the current flow with a "redirect" payload — let the client
   // mount a different workflow.
-  useWfFinished().set({
-    type: "data",
-    value: { redirect: "/recover" },
-  });
+  finishWf({ data: { redirect: "/recover" } });
   return;
 }
 ```
@@ -241,8 +238,8 @@ if (action === "useBackup") {
 ```
 
 The action handler can do anything a normal step can — call
-`useWfFinished()`, mutate context to flip a branch condition, or
-re-pause the same form. The flow stays a flow.
+`finishWf()` / `abortWf()`, mutate context to flip a branch condition,
+or re-pause the same form. The flow stays a flow.
 
 ## Where to go next
 

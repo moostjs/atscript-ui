@@ -60,15 +60,8 @@ declared once, lifted out by the build, consumed by both ends.
 
 ```ts
 import { Controller } from "moost";
-import {
-  Workflow,
-  Step,
-  WorkflowSchema,
-  WorkflowParam,
-  useWfFinished,
-  outletHttp,
-} from "@moostjs/event-wf";
-import { serializeFormSchema, extractPassContext } from "@atscript/moost-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam, outletHttp } from "@moostjs/event-wf";
+import { serializeFormSchema, extractPassContext, finishWf } from "@atscript/moost-wf";
 import { HelloForm } from "../../shared/forms/hello.as";
 
 interface HelloCtx {
@@ -95,10 +88,7 @@ export class HelloWorkflow {
 
   @Step("greet")
   greet(@WorkflowParam("context") ctx: HelloCtx) {
-    useWfFinished().set({
-      type: "data",
-      value: { message: `Hello, ${ctx.name}!` },
-    });
+    finishWf({ data: { message: `Hello, ${ctx.name}!` } });
     return;
   }
 }
@@ -159,9 +149,8 @@ The HTTP controller forwards every `POST /wf` to the workflow engine
 via `handleAsOutletRequest` — a thin wrapper around
 `handleWfOutletRequest` that supplies the `finished: true` marker
 `<AsWfForm>` reads, so step handlers can return plain domain data via
-`useWfFinished().set({ value })`. The wrapper reads the body, routes to
-start vs resume, runs the matched step, and serializes the outlet
-response. We use `EncapsulatedStateStrategy` here: the state token
+`finishWf({ data })`. The wrapper reads the body, routes to start vs
+resume, runs the matched step, and serializes the outlet response. We use `EncapsulatedStateStrategy` here: the state token
 is a signed, self-contained blob; no DB needed. See
 [State Persistence](/workflows/state-persistence) for the durable
 option.

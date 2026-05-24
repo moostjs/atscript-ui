@@ -54,8 +54,8 @@ export interface HelloName {
 ```typescript
 // src/wf/hello.workflow.ts
 import { Controller } from "moost";
-import { Workflow, Step, WorkflowSchema, WorkflowParam, useWfFinished } from "@moostjs/event-wf";
-import { WfInput } from "@atscript/moost-wf";
+import { Workflow, Step, WorkflowSchema, WorkflowParam } from "@moostjs/event-wf";
+import { WfInput, finishWf } from "@atscript/moost-wf";
 import { HelloName } from "./forms.as";
 
 interface Ctx {
@@ -77,18 +77,15 @@ export class HelloWorkflow {
 
   @Step("greet")
   greet(@WorkflowParam("context") ctx: Ctx) {
-    useWfFinished().set({
-      type: "data",
-      value: { greeting: `Hello, ${ctx.name}!` },
-    });
+    finishWf({ data: { greeting: `Hello, ${ctx.name}!` } });
   }
 }
 ```
 
 Key shapes:
 
-- `Workflow`, `Step`, `WorkflowSchema`, `WorkflowParam`, `useWfFinished` come from **`@moostjs/event-wf`**, not from `moost`. Only `@Controller()` comes from `moost`.
-- `WfInput`, `WfAction`, `useAtscriptWf`, `serializeFormSchema`, `extractPassContext`, `createAsHttpOutlet`, `handleAsOutletRequest` come from **`@atscript/moost-wf`**.
+- `Workflow`, `Step`, `WorkflowSchema`, `WorkflowParam` come from **`@moostjs/event-wf`**, not from `moost`. Only `@Controller()` comes from `moost`.
+- `WfInput`, `WfAction`, `useAtscriptWf`, `finishWf`, `abortWf`, `serializeFormSchema`, `extractPassContext`, `createAsHttpOutlet`, `handleAsOutletRequest` come from **`@atscript/moost-wf`**.
 
 ### 3. App bootstrap
 
@@ -112,7 +109,7 @@ global interceptor mount is required.
 
 ### 4. HTTP trigger
 
-Expose `POST /wf/trigger` that forwards the request body to the workflow engine (start by `wfid`, resume by `wfs`). Register `createAsHttpOutlet()` in the outlet list so `outletHttp(...)` returns the `inputRequired` envelope `<AsWfForm>` expects, and use `handleAsOutletRequest` as the trigger so `useWfFinished().set({ value })` reaches the client with the `finished: true` marker `<AsWfForm>` routes on:
+Expose `POST /wf/trigger` that forwards the request body to the workflow engine (start by `wfid`, resume by `wfs`). Register `createAsHttpOutlet()` in the outlet list so `outletHttp(...)` returns the `inputRequired` envelope `<AsWfForm>` expects, and use `handleAsOutletRequest` as the trigger so the envelope `finishWf(...)` writes reaches the client with the `finished: true` marker `<AsWfForm>` routes on:
 
 ```typescript
 import { EncapsulatedStateStrategy } from "@moostjs/event-wf";
