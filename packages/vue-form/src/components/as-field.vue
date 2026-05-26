@@ -804,7 +804,7 @@ const componentProps = computed(() => {
     v-bind="componentProps"
     @action="handleAction"
   />
-  <div v-else>
+  <div v-else class="as-field-missing">
     [{{ unwrap(label) }}] No component for type "{{ field.customType ?? field.type }}"{{
       componentName ? ` (component "${componentName}" not supplied)` : ""
     }}

@@ -38,7 +38,7 @@ import { inputBase } from "./_shared";
 // pill, with the shell's own `px-$xs` carrying the outer padding. Any inner
 // horizontal padding leaks visible whitespace between digits and the dot.
 const innerInputReset =
-  "!w-auto !bg-transparent !border-0 !outline-0 !ring-0 !shadow-none !h-full !px-0 !layer-0 font-mono text-scope-dark-0 dark:text-scope-light-0";
+  "!w-auto !bg-transparent !border-0 !outline-0 !ring-0 !shadow-none !h-full !px-0 !layer-0 font-mono";
 
 // `flex w-full` — fill the available width of the form's input row so the
 // inner integer input has room to flex-grow. `inline-flex` made the shell

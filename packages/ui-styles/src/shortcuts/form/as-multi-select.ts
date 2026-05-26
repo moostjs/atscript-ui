@@ -31,7 +31,7 @@ export const asMultiSelectShortcuts = defineShortcuts({
     "hover:not-disabled:": "scope-error text-current-hl bg-current-hl/10",
     "disabled:": "cursor-not-allowed opacity-40",
   },
-  "as-multi-select-input": `${innerInputReset} flex-1 min-w-[4em] text-scope-dark-0 dark:text-scope-light-0`,
+  "as-multi-select-input": `${innerInputReset} flex-1 min-w-[4em]`,
   "as-multi-select-clear": {
     "": "inline-flex items-center justify-center w-[1.4em] h-[1.4em] rounded-full p-0 border-0 bg-transparent text-current/50 cursor-pointer leading-none shrink-0",
     "hover:": "scope-error text-current-hl bg-current-hl/10",

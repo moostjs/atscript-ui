@@ -78,7 +78,7 @@ export const asTableShortcuts = defineShortcuts({
   // its content without clipping labels or wasting space on icons.
   "as-th-fixed": "!cursor-default !p-0 !text-center",
   "as-table-checkbox": {
-    "": "scope-primary inline-flex align-middle text-body size-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] items-center justify-center layer-0 cursor-pointer transition-all duration-120",
+    "": "scope-primary inline-flex align-middle text-body size-[1.25em] border-1 rounded-[0.2em] items-center justify-center layer-0 cursor-pointer transition-all duration-120",
     "[tr[data-state=checked]_&]:": "bg-current-hl border-current-hl",
     "[tr[aria-selected=true]_&]:": "bg-current-hl border-current-hl",
   },

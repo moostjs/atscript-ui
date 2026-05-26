@@ -83,25 +83,31 @@ describe("AsPasswordRules", () => {
     expect(rows[1].attributes("data-passed")).toBe("false");
   });
 
-  it("renders the empty placeholder when policies is an empty array", () => {
+  it("renders nothing when policies is an empty array", () => {
     // WHY: zero-policy is a real state on a freshly-loaded form before the
-    // server has populated the workflow context. We should fail soft
-    // (placeholder) rather than render a blank gap or crash.
+    // server has populated the workflow context. Rendering any placeholder
+    // (label, border, dashed empty box) reserves layout space and reads as
+    // a broken/empty field; rendering nothing keeps the form clean until
+    // real rules arrive. Asserting the root `as-password-rules` class is
+    // absent proves the entire `AsFieldShell` (chrome + label + slot) was
+    // skipped, not just the inner list.
     const wrapper = mount(AsPasswordRules, {
       props: baseProps({ policies: [], password: "" }),
     });
-    expect(wrapper.find(".as-password-rules-empty").exists()).toBe(true);
+    expect(wrapper.find(".as-password-rules").exists()).toBe(false);
     expect(wrapper.find(".as-password-rules-list").exists()).toBe(false);
   });
 
-  it("renders the empty placeholder when policies is undefined", () => {
+  it("renders nothing when policies is undefined", () => {
     // WHY: defensive against transient renders before `@ui.form.fn.attr`
     // resolves its sibling/context read. The component must not crash on
-    // `policies = undefined`.
+    // `policies = undefined` AND must not flash an empty shell. Distinct
+    // from the empty-array case because the input path is different
+    // (`?? []` fallback vs. preserved empty array).
     const wrapper = mount(AsPasswordRules, {
       props: baseProps({ password: "" }),
     });
-    expect(wrapper.find(".as-password-rules-empty").exists()).toBe(true);
+    expect(wrapper.find(".as-password-rules").exists()).toBe(false);
     expect(wrapper.find(".as-password-rules-list").exists()).toBe(false);
   });
 });

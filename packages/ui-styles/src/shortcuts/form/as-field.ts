@@ -37,16 +37,18 @@ export const asFieldShortcuts = defineShortcuts({
     "[&_input[type=number]]:": "text-right",
 
     // `<select>` element-specific overrides:
-    // - `!bg-current` + `!text-scope-dark-0` (light) / `!text-scope-light-0`
-    //   (dark) — Chromium ships native form widgets with an internal
+    // - `!bg-current` — Chromium ships native form widgets with an internal
     //   "appearance: auto" fallback that paints the closed-select chrome with
-    //   browser-default colors even after `appearance:none` AND explicit
-    //   `background-color` set non-importantly. The `!important` qualifiers
-    //   make the cascade beat that internal styling.
+    //   browser-default colors even after `appearance:none` AND an explicit
+    //   non-`!important` background. The `!` qualifier wins the cascade.
+    //   Text color is inherited from `layer-0` (applied via `inputBase` on the
+    //   shared input/select/textarea selector above) — under vunor 0.2.1 each
+    //   layer paints `--current-text` to its primary text color, so no
+    //   explicit `!text-*` override is needed here.
     // - `[color-scheme:light_dark]` declares the element supports both
     //   schemes so the browser doesn't auto-adapt native widgets behind our
-    //   back. With both this AND the bg/text overrides, the closed select
-    //   matches the surrounding `<input>`s on every browser/OS combination.
+    //   back. With this plus `!bg-current`, the closed select matches the
+    //   surrounding `<input>`s on every browser/OS combination.
     // - The dropdown caret is painted by `<span class="as-select-caret …">`
     //   inside the `as-select-wrap` container — see `as-select.vue`.
     "[&_select]:":
@@ -99,4 +101,12 @@ export const asFieldShortcuts = defineShortcuts({
     "hover:not-disabled:": clearBtnHover,
   },
   "as-field-remove-btn-icon": "i-as-close text-[1em]",
+
+  // Fallback rendered by `as-field.vue` when no component is registered for
+  // a field's type (custom type without a `:components` entry). Mirrors
+  // `as-collapsible-error`: `as-grid-item` claims a full grid row (matching
+  // the regular `as-default-field` footprint this replaces) and the error
+  // text recipe (`scope-error text-callout text-current-hl`) matches both
+  // `as-array-error` and `as-collapsible-error`.
+  "as-field-missing": "as-grid-item scope-error text-callout text-current-hl",
 });

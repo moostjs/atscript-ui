@@ -26,7 +26,7 @@ export const asOrderableListShortcuts = defineShortcuts({
     "inline-grid place-items-center size-[0.8em] text-current/40 cursor-grab active:cursor-grabbing shrink-0 text-[1.25em] hover:text-current/70",
   "as-orderable-list-grip-disabled": "opacity-40 cursor-default pointer-events-none",
   "as-orderable-list-checkbox": {
-    "": "scope-primary text-body size-[1.25em] border-1 border-scope-light-3 dark:border-scope-dark-3 rounded-[0.2em] flex items-center justify-center flex-shrink-0 cursor-pointer layer-0 transition-all duration-120",
+    "": "scope-primary text-body size-[1.25em] border-1 rounded-[0.2em] flex items-center justify-center flex-shrink-0 cursor-pointer layer-0 transition-all duration-120",
     "group-data-[state=checked]:": "bg-current-hl border-current-hl text-white",
     "group-aria-selected:": "bg-current-hl border-current-hl text-white",
   },

@@ -79,9 +79,13 @@ const evaluated = computed<EvaluatedPolicy[]>(() => {
 </script>
 
 <template>
-  <AsFieldShell v-bind="$props" :chromeless="true" field-class="as-password-rules">
-    <div v-if="evaluated.length === 0" class="as-password-rules-empty">No password rules</div>
-    <div v-else class="as-password-rules-list">
+  <AsFieldShell
+    v-if="evaluated.length > 0"
+    v-bind="$props"
+    :chromeless="true"
+    field-class="as-password-rules"
+  >
+    <div class="as-password-rules-list">
       <div
         v-for="(policy, index) in evaluated"
         :key="index"

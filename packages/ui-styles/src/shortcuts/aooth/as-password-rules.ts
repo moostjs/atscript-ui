@@ -21,8 +21,4 @@ export const asPasswordRulesShortcuts = defineShortcuts({
     "[[data-passed='true']>&]:": "i-as-check",
   },
   "as-password-rules-text": "flex-1 min-w-0",
-  // Same dashed-placeholder shape as `as-consent-array-empty` for visual
-  // consistency between the two aooth empty states.
-  "as-password-rules-empty":
-    "flex items-center justify-center gap-$s h-fingertip-m px-$m w-full border-1 border-dashed rounded-base bg-transparent text-current/60 text-callout",
 });
