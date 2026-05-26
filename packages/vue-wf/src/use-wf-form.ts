@@ -252,7 +252,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
 
       if (!res.ok) {
         const errData = data as { error?: string; message?: string } | null;
-        const msg = errData?.error ?? errData?.message ?? friendlyMessageForStatus(res.status);
+        const msg = errData?.message ?? errData?.error ?? friendlyMessageForStatus(res.status);
         error.value = { message: msg, status: res.status };
         return;
       }

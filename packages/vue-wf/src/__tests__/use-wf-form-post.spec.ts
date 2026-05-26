@@ -301,11 +301,18 @@ describe("useWfForm — error response handling", () => {
     expect(result.error.value).toMatchObject({ message: "Custom error", status: 400 });
   });
 
-  // WHY: pin precedence so engine emissions always win. If both fields are
-  // present, the engine's `error` is the authoritative one — `message` is a
-  // compatibility fallback for non-engine callers and must not shadow it.
-  it("prefers `error` over `message` when both present", async () => {
-    const fetchMock = makeFetchMock({ error: "engine-msg", message: "ignored" }, 410, "Gone");
+  // WHY: pin precedence so the human-readable application message always wins.
+  // In a wooksjs `HttpError` envelope, `message` carries application intent
+  // ("what the backend wanted the user to see") while `error` carries the HTTP
+  // reason phrase mechanically derived from the status code ("Conflict",
+  // "Forbidden"). When both are present, `message` must surface; `error` is
+  // only a fallback for legacy callers that omitted `message`.
+  it("prefers `message` over `error` when both present", async () => {
+    const fetchMock = makeFetchMock(
+      { error: "Conflict", message: "human-readable" },
+      409,
+      "Conflict",
+    );
     const { result } = mountComposable({
       path: "/api/wf",
       name: "auth/login",
@@ -316,7 +323,35 @@ describe("useWfForm — error response handling", () => {
     await result.start();
     await flushPromises();
 
-    expect(result.error.value).toMatchObject({ message: "engine-msg", status: 410 });
+    expect(result.error.value).toMatchObject({ message: "human-readable", status: 409 });
+  });
+
+  // WHY: this is the dominant production failure case — every
+  // `HttpError(status, message)` throw across the Moost stack serializes with
+  // `{ statusCode, message: <human text>, error: <HTTP reason phrase> }`. A
+  // regression that re-flips the precedence would surface the literal
+  // reason phrase ("Forbidden") to the user instead of the backend's intended
+  // message ("Invite cancellation is disabled").
+  it("surfaces `message` from a wooksjs HttpError envelope shape", async () => {
+    const fetchMock = makeFetchMock(
+      { statusCode: 403, message: "Invite cancellation is disabled", error: "Forbidden" },
+      403,
+      "Forbidden",
+    );
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toMatchObject({
+      message: "Invite cancellation is disabled",
+      status: 403,
+    });
   });
 
   // WHY: primary fallback regression — the HTTP reason phrase ("Gone") must
