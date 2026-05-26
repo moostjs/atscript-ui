@@ -18,7 +18,7 @@ type Pkg = (typeof componentPackages)[string];
 const cmpEn = (a: string, b: string) => a.localeCompare(b, "en");
 
 const allComponents = Object.keys(componentClasses).toSorted(cmpEn);
-const byPkg: Record<Pkg, string[]> = { form: [], table: [], wf: [] };
+const byPkg: Record<Pkg, string[]> = { form: [], table: [], wf: [], aooth: [] };
 for (const c of allComponents) byPkg[componentPackages[c]]?.push(c);
 
 const baseConfig = createAsBaseUnoConfig({});
@@ -51,6 +51,7 @@ const targets: Array<[string, string[]]> = [
   ["form", byPkg.form],
   ["table", byPkg.table],
   ["wf", byPkg.wf],
+  ["aooth", byPkg.aooth],
 ];
 
 const results = await Promise.all(targets.map(([n, c]) => build(n, c)));

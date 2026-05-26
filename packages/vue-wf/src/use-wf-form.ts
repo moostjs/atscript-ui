@@ -5,6 +5,34 @@ import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 import { onMounted, onUnmounted, reactive, ref, shallowRef, type Ref, type ShallowRef } from "vue";
 
+const FRIENDLY_STATUS_MESSAGES: Readonly<Record<number, string>> = {
+  // Client errors that map to specific user actions
+  400: "The request was invalid. Please check your input and try again.",
+  401: "You need to sign in to continue.",
+  403: "You don't have permission to do that.",
+  404: "We couldn't find what you're looking for.",
+  408: "The request took too long. Please try again.",
+  409: "There's a conflict with the current state. Please refresh and try again.",
+  410: "This session has expired. Please start over.",
+  422: "Some of the information you provided couldn't be processed.",
+  423: "This account is temporarily locked. Please try again later.",
+  429: "Too many requests. Please wait a moment and try again.",
+
+  // Server errors — generic but human
+  500: "Something went wrong on our end. Please try again in a moment.",
+  502: "We're having trouble reaching the server. Please try again shortly.",
+  503: "The service is temporarily unavailable. Please try again in a few minutes.",
+  504: "The server took too long to respond. Please try again.",
+};
+
+function friendlyMessageForStatus(status: number): string {
+  const mapped = FRIENDLY_STATUS_MESSAGES[status];
+  if (mapped) return mapped;
+  if (status >= 500) return FRIENDLY_STATUS_MESSAGES[500];
+  if (status >= 400) return "Something went wrong with that request. Please try again.";
+  return "Unexpected response from the server.";
+}
+
 export interface UseWfFormOptions {
   /** HTTP endpoint for the workflow trigger (e.g., '/api/auth/flow') */
   path: string;
@@ -223,7 +251,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
       }
 
       if (!res.ok) {
-        const msg = (data as { message?: string } | null)?.message ?? res.statusText;
+        const errData = data as { error?: string; message?: string } | null;
+        const msg = errData?.error ?? errData?.message ?? friendlyMessageForStatus(res.status);
         error.value = { message: msg, status: res.status };
         return;
       }

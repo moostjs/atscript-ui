@@ -79,6 +79,26 @@ agreeToTerms: ui.checkbox
 Multiple custom validators on one field run in order — the first
 failing one short-circuits.
 
+#### Cross-field validators
+
+The second argument is the full (unwrapped) form data — read sibling
+fields to express constraints across the form. The same rule runs on
+every keystroke (subject to the `firstValidation` strategy) and on
+submit, so the field stays in sync as either side changes.
+
+```atscript
+@meta.label 'New password'
+newPassword: string
+
+@meta.label 'Confirm password'
+@ui.form.validate '(v, data) => v === data.newPassword || "Passwords must match"'
+confirmPassword: string
+```
+
+For a constraint that depends on multiple fields at once, prefer a
+[form-level validator](#form-level-errors) — it runs once at submit
+and reports through `__form`.
+
 ## A complete example
 
 A `ValidationForm.as` schema that exercises all three layers in one type:

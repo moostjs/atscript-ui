@@ -47,12 +47,12 @@ export function createAsExtractor(opts: AsExtractorOptions = {}): Extractor {
       };
 
       for (const [, name] of code.matchAll(
-        /['"]@atscript\/(?:vue-form|vue-table|vue-wf)\/(as-[\w-]+)['"]/g,
+        /['"]@atscript\/(?:vue-form|vue-table|vue-wf|vue-aooth)\/(as-[\w-]+)['"]/g,
       ))
         addClassesFor(name);
 
       for (const [, names] of code.matchAll(
-        /import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*['"]@atscript\/(?:vue-form|vue-table|vue-wf)['"]/g,
+        /import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*['"]@atscript\/(?:vue-form|vue-table|vue-wf|vue-aooth)['"]/g,
       )) {
         for (const ident of names.split(",")) {
           const name = ident.trim().split(/\s+as\s+/)[0];

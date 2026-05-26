@@ -284,6 +284,65 @@ Notes:
 - Wire `aria-describedby="ariaDescribedBy"` so screen readers reach the error/hint/description container set up by `AsFieldShell`.
 - `inputId` / `descId` / `errorId` are pre-resolved on the props — AsFieldShell defaults use them, custom components should too.
 
+## Custom field-level rules from inside a component
+
+`useAsField` is safe to call from any custom field component rendered as
+a descendant of `<AsForm>` — even one that already lives under an
+`<AsField>` parent. Field-state registrations are keyed by symbol, so
+multiple registrations at the same path coexist; every registered rule
+runs at submit. Use this when a component owns a constraint that can't
+be expressed as a single `@ui.form.validate` expression on the schema
+(e.g. an array field whose items each carry their own per-item required
+flag):
+
+```ts
+import { useAsField } from "@atscript/vue-form";
+
+const { error, onBlur } = useAsField<string[]>({
+  getValue: () => props.model.value ?? [],
+  setValue: (v) => {
+    props.model.value = v;
+  },
+  rules: [
+    (value) => {
+      for (const item of items.value) {
+        if (item.required && !value.includes(item.id)) return item.required;
+      }
+      return true;
+    },
+  ],
+  path: () => props.path,
+  resetValue: [],
+});
+```
+
+## Re-using the ui-fns compiler from a custom component
+
+When a custom component receives an array of policy / rule objects via
+`@ui.form.fn.attr` (i.e. the consumer supplies `{ rule: string, ... }[]`
+where `rule` is itself a function string), evaluate those strings
+through the same compiler the framework uses — don't allocate a new
+`FNPool` or hand-roll `new Function`. `compileFieldFn` from
+`@atscript/ui-fns` honors the shared cache and security model:
+
+```ts
+import { compileFieldFn } from "@atscript/ui-fns";
+
+function evalRule(rule: string, value: string): boolean {
+  return !!compileFieldFn<boolean>(rule)({
+    v: value,
+    data: {},
+    context: {},
+    entry: undefined,
+  });
+}
+```
+
+The scope object must include every key the compiled body references —
+the compiler wraps the call in a `with()` block, so missing keys throw a
+`ReferenceError` at evaluation time. Pass `entry: undefined` even when
+the rule body doesn't read it.
+
 ## Composables for custom components
 
 Available from `@atscript/vue-form`:

@@ -146,6 +146,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/custom-components.vue"),
   },
   {
+    path: "/forms-demo/aooth-components",
+    name: "forms-demo-aooth-components",
+    component: () => import("./client/pages/forms-demo/aooth-components.vue"),
+  },
+  {
     path: "/forms-demo/dynamic-form",
     name: "forms-demo-dynamic-form",
     component: () => import("./client/pages/forms-demo/dynamic-form.vue"),

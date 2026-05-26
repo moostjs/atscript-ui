@@ -247,3 +247,161 @@ describe("useWfForm — dev warning for unused magic-link token", () => {
     expect(warn).not.toHaveBeenCalled();
   });
 });
+
+describe("useWfForm — error response handling", () => {
+  function makeFetchMock(body: unknown, status: number, statusText: string) {
+    return vi.fn(
+      async () =>
+        ({
+          ok: false,
+          status,
+          statusText,
+          json: async () => body,
+        }) as unknown as Response,
+    );
+  }
+
+  // WHY: regression for the field-name mismatch — `@wooksjs/event-wf` emits
+  // failed-response bodies as `{ error: string }`, but the SPA used to read
+  // `data.message`. Engine emissions MUST surface verbatim instead of falling
+  // through to the HTTP reason phrase.
+  it("surfaces engine `error` field when server returns 4xx with `{ error: ... }`", async () => {
+    const fetchMock = makeFetchMock({ error: "Invalid or expired workflow state" }, 410, "Gone");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toMatchObject({
+      message: "Invalid or expired workflow state",
+      status: 410,
+    });
+  });
+
+  // WHY: pin dual-field tolerance for `HttpError`-shaped responses from
+  // non-engine handlers (e.g. moost-http's auto-serialized `{ message }`
+  // bodies). Either shape must produce a usable message.
+  it("falls back to `message` field when `error` is absent", async () => {
+    const fetchMock = makeFetchMock({ message: "Custom error" }, 400, "Bad Request");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toMatchObject({ message: "Custom error", status: 400 });
+  });
+
+  // WHY: pin precedence so engine emissions always win. If both fields are
+  // present, the engine's `error` is the authoritative one — `message` is a
+  // compatibility fallback for non-engine callers and must not shadow it.
+  it("prefers `error` over `message` when both present", async () => {
+    const fetchMock = makeFetchMock({ error: "engine-msg", message: "ignored" }, 410, "Gone");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toMatchObject({ message: "engine-msg", status: 410 });
+  });
+
+  // WHY: primary fallback regression — the HTTP reason phrase ("Gone") must
+  // never reach the user-facing error slot. A friendly mapped message is the
+  // baseline UX when the server didn't supply a body.
+  it("falls back to friendly 410 message when body has neither field", async () => {
+    const fetchMock = makeFetchMock(null, 410, "Gone");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    const err = result.error.value as { message: string; status: number };
+    expect(err.message).toBe("This session has expired. Please start over.");
+    expect(err.message).not.toBe("Gone");
+    expect(err.status).toBe(410);
+  });
+
+  // WHY: covers the whole user-facing 4xx surface so a typo in any entry of
+  // FRIENDLY_STATUS_MESSAGES surfaces in CI rather than in a customer's UI.
+  it.each([
+    [400, "The request was invalid. Please check your input and try again."],
+    [401, "You need to sign in to continue."],
+    [403, "You don't have permission to do that."],
+    [404, "We couldn't find what you're looking for."],
+    [410, "This session has expired. Please start over."],
+    [429, "Too many requests. Please wait a moment and try again."],
+  ])("falls back to friendly mapped message for status %i", async (status, expected) => {
+    const fetchMock = makeFetchMock(null, status, "X");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toMatchObject({ message: expected, status });
+  });
+
+  // WHY: ensure unmapped 4xx codes hit the `>= 400` generic branch rather
+  // than the 5xx branch or leaking the raw statusText ("I'm a teapot").
+  it("falls back to friendly 4xx default for unmapped 4xx status", async () => {
+    const fetchMock = makeFetchMock(null, 418, "I'm a teapot");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    const err = result.error.value as { message: string; status: number };
+    expect(err.message).toBe("Something went wrong with that request. Please try again.");
+    expect(err.message).not.toBe("I'm a teapot");
+    expect(err.status).toBe(418);
+  });
+
+  // WHY: pin the 5xx branch including non-IANA codes (Cloudflare-style 599).
+  // All server errors must collapse to a generic "try again" message — no
+  // HTTP jargon leakage regardless of code.
+  it("falls back to friendly 5xx default for any 5xx", async () => {
+    const fetchMock = makeFetchMock(null, 599, "Network Connect Timeout Error");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toMatchObject({
+      message: "Something went wrong on our end. Please try again in a moment.",
+      status: 599,
+    });
+  });
+});

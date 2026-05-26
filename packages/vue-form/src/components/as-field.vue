@@ -632,11 +632,28 @@ if (props.field.allStatic) {
 }
 
 // ── Validation rule (shared by both paths) ──────────────────
+// Always thread the form-data + context through the validator: even when
+// THIS field has no `@ui.form.validate`, a nested descendant might
+// (the root field's validator recurses through every child, and the
+// `@atscript/ui-fns` validator plugin reads `ctx.context.data` to peek
+// at sibling fields). Gating on `hasCustomValidators` here would make
+// the live-validation path leave `ctx.context` undefined for those
+// descendants — `data.fieldName` would resolve to `undefined` and a
+// cross-field rule like `(v, data) => v === data.newPassword` would
+// always fail on the live path even when the values match.
+//
+// Unwrap the form-data wrapper (`{ value: domain }`) before passing
+// it so `data.fieldName` resolves to the domain field. The submit-time
+// path (`useAsForm.submitValidator`) already passes the unwrapped
+// domain via `getDomainData()`; mirroring that here keeps validator
+// authors writing `data.field` uniformly across paths. Matches every
+// other call site of `rootFormData()` in the codebase — all walk
+// through `.value` before reading domain fields.
 function formRule(v: unknown) {
-  return formValidate(
-    v,
-    hasCustomValidators ? { data: rootFormData(), context: formContext.value } : undefined,
-  );
+  return formValidate(v, {
+    data: (rootFormData() as { value: Record<string, unknown> }).value ?? {},
+    context: formContext.value,
+  });
 }
 
 // ── Field composable ────────────────────────────────────────

@@ -1,7 +1,7 @@
 import atscript from "unplugin-atscript/vite";
 import swc from "unplugin-swc";
 import vue from "@vitejs/plugin-vue";
-import { defineConfig } from "vite";
+import { defineConfig } from "vite-plus";
 
 export default defineConfig({
   plugins: [atscript() as any, vue(), swc.vite()],

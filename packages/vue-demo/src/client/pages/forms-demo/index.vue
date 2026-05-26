@@ -102,6 +102,13 @@ const variations: Variation[] = [
       "Form title / submit button / per-field label, description, hint, placeholder, visibility, options, value, classes, styles and a custom validate string — every @ui.form.fn.* annotation, end-to-end.",
     status: "ready",
   },
+  {
+    to: "/forms-demo/aooth-components",
+    title: "Aooth components",
+    description:
+      "Backend-driven consent checkboxes (AsConsentArray) and live password-policy fulfillment (AsPasswordRules) from @atscript/vue-aooth — both wired via @ui.form.component + @ui.form.attr / @ui.form.fn.attr.",
+    status: "ready",
+  },
 ];
 </script>
 

@@ -7,6 +7,7 @@ const PKG_TO_NPM = {
   form: "@atscript/vue-form",
   table: "@atscript/vue-table",
   wf: "@atscript/vue-wf",
+  aooth: "@atscript/vue-aooth",
 } as const;
 
 const AS_TAG = /^As[A-Z]/;

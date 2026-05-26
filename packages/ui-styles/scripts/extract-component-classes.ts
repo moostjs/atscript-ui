@@ -29,7 +29,7 @@ import { createGenerator } from "unocss";
 import { kebabize } from "../src/kebab";
 import { createAsBaseUnoConfig } from "../src/preset";
 
-const PKG_KEYS = ["form", "table", "wf"] as const;
+const PKG_KEYS = ["form", "table", "wf", "aooth"] as const;
 type PkgKey = (typeof PKG_KEYS)[number];
 
 type Tier = "primary" | "default";
@@ -48,6 +48,7 @@ const PKG_DIRS: Record<PkgKey, string> = {
   form: path.join(REPO_PACKAGES, "vue-form"),
   table: path.join(REPO_PACKAGES, "vue-table"),
   wf: path.join(REPO_PACKAGES, "vue-wf"),
+  aooth: path.join(REPO_PACKAGES, "vue-aooth"),
 };
 
 const cmpEn = (a: string, b: string) => a.localeCompare(b, "en");
@@ -90,7 +91,7 @@ async function main() {
 
   const publicNames = Object.keys(entries).toSorted(cmpEn);
 
-  const counts: Record<PkgKey, number> = { form: 0, table: 0, wf: 0 };
+  const counts: Record<PkgKey, number> = { form: 0, table: 0, wf: 0, aooth: 0 };
   for (const n of publicNames) counts[entries[n].pkg]++;
   console.log(
     `[extract-classes] Discovered ${publicNames.length} public components (` +

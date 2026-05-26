@@ -40,6 +40,7 @@
     "./css/form": "./dist/css/form.css",
     "./css/table": "./dist/css/table.css",
     "./css/wf": "./dist/css/wf.css",
+    "./css/aooth": "./dist/css/aooth.css",
     "./vite": {
       "types": "./dist/vite.d.mts",
       "import": "./dist/vite.mjs",
@@ -60,6 +61,7 @@
     "@iconify/utils": "catalog:"
   },
   "devDependencies": {
+    "@atscript/vue-aooth": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@atscript/vue-table": "workspace:^",
     "@atscript/vue-wf": "workspace:^",

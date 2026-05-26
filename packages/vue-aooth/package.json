@@ -1,0 +1,81 @@
+{
+  "name": "@atscript/vue-aooth",
+  "version": "0.1.74",
+  "description": "Custom form components for the Aooth auth system, built on @atscript/vue-form",
+  "keywords": [
+    "aooth",
+    "atscript",
+    "auth",
+    "components",
+    "form",
+    "vue",
+    "vue3"
+  ],
+  "homepage": "https://github.com/moostjs/atscript-ui/tree/main/packages/vue-aooth#readme",
+  "bugs": {
+    "url": "https://github.com/moostjs/atscript-ui/issues"
+  },
+  "license": "MIT",
+  "author": "Artem Maltsev <artem@maltsev.nl>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/moostjs/atscript-ui.git",
+    "directory": "packages/vue-aooth"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "main": "dist/index.mjs",
+  "types": "dist/index.d.mts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./as-consent-array": {
+      "types": "./dist/as-consent-array.d.mts",
+      "import": "./dist/as-consent-array.mjs",
+      "require": "./dist/as-consent-array.cjs"
+    },
+    "./as-password-rules": {
+      "types": "./dist/as-password-rules.d.mts",
+      "import": "./dist/as-password-rules.mjs",
+      "require": "./dist/as-password-rules.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "node ../../scripts/gen-exports.mjs && vp pack",
+    "dev": "vp pack --watch",
+    "test": "vp test",
+    "check": "vp check"
+  },
+  "dependencies": {
+    "@atscript/ui": "workspace:^",
+    "@atscript/vue-form": "workspace:^"
+  },
+  "devDependencies": {
+    "@atscript/core": "catalog:",
+    "@atscript/typescript": "catalog:",
+    "@atscript/ui-fns": "workspace:^",
+    "@tsdown/css": "catalog:",
+    "@vitejs/plugin-vue": "catalog:",
+    "@vue/test-utils": "catalog:",
+    "happy-dom": "catalog:",
+    "unplugin-atscript": "catalog:",
+    "vitest": "catalog:",
+    "vue": "catalog:",
+    "vue-tsc": "catalog:",
+    "vunor": "catalog:"
+  },
+  "peerDependencies": {
+    "@atscript/ui-fns": "workspace:^",
+    "@atscript/vue-form": "workspace:^",
+    "vue": "catalog:"
+  }
+}

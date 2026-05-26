@@ -31,7 +31,9 @@
       "@atscript/moost-wf": ["./packages/moost-wf/src"],
       "@atscript/moost-wf/*": ["./packages/moost-wf/src/*"],
       "@atscript/vue-wf": ["./packages/vue-wf/src"],
-      "@atscript/vue-wf/*": ["./packages/vue-wf/src/*"]
+      "@atscript/vue-wf/*": ["./packages/vue-wf/src/*"],
+      "@atscript/vue-aooth": ["./packages/vue-aooth/src"],
+      "@atscript/vue-aooth/*": ["./packages/vue-aooth/src/*"]
     }
   }
 }
