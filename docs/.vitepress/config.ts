@@ -308,6 +308,7 @@ const apiSidebar = [
       { text: "@atscript/vue-form", link: "/api/vue-form" },
       { text: "@atscript/vue-table", link: "/api/vue-table" },
       { text: "@atscript/vue-wf", link: "/api/vue-wf" },
+      { text: "@atscript/vue-aooth", link: "/api/vue-aooth" },
     ],
   },
   {

@@ -43,6 +43,9 @@ The boundary is clean — atscript doesn't know about HTTP, atscript-db doesn't 
   ├─ @atscript/vue-wf       ← Vue 3 workflow form: HTTP round-trip loop
   │                          driven by atscript metadata
   │
+  ├─ @atscript/vue-aooth    ← Aooth-flavoured custom field components
+  │                          (consent + password rules)
+  │
   ├─ @atscript/moost-wf     ← Moost server-side workflow:
   │                          decorators, interceptors, AsWfStore
   │
@@ -54,6 +57,7 @@ External deps each package leans on:
 
 - All client packages depend on Vue 3 and consume `@atscript/ui-styles`.
 - `vue-wf` and `vue-table` also consume `@atscript/vue-form` (the form is how steps and value-help dialogs render).
+- `vue-aooth` consumes `@atscript/vue-form` (its components implement `TAsComponentProps`) and `@atscript/ui-fns` (for evaluating policy rule strings via `compileFieldFn`).
 - `moost-wf` and `moost-ui-presets` depend on [Moost](https://moost.org/) and live alongside any server adapter you already use.
 - `vue-table`'s URL data path expects a [`moost-db`](https://db.atscript.dev/http/) compatible endpoint. Any `(params) => { data, total }` function works as an alternative — see [Tables: Query function](/tables/query-function).
 
@@ -64,6 +68,7 @@ External deps each package leans on:
 | Just forms (no tables, no workflows)                  | `@atscript/ui` `@atscript/ui-styles` `@atscript/vue-form`                                                                                                              |
 | Forms + tables                                        | + `@atscript/ui-table` `@atscript/vue-table`                                                                                                                           |
 | Forms + tables + HTTP workflows                       | + `@atscript/vue-wf` (client), `@atscript/moost-wf` (server)                                                                                                           |
+| Aooth consent + password-policy UI in those forms     | + `@atscript/vue-aooth`                                                                                                                                                |
 | Server-side preset persistence (saved-views per user) | + `@atscript/moost-ui-presets`                                                                                                                                         |
 | Dynamic, schema-defined computed props (`@ui.fn.*`)   | + `@atscript/ui-fns` (and call `installDynamicResolver()`)                                                                                                             |
 | My own framework binding (React / Solid / Svelte)     | Port from `@atscript/ui` + `@atscript/ui-table`. Re-use `@atscript/ui-styles`' pre-built CSS (`@atscript/ui-styles/css/all`) or the UnoCSS preset.                     |

@@ -286,6 +286,15 @@ Full contract for custom components (`TAsComponentProps`, `TAsComponentEmits`, l
 
 If you swap `AsSelect` for a custom dropdown, the `as-select-*` shortcuts the default tagged drop out of your bundle automatically. Keep the default when its styling already fits your design system; for granular opt-out, see `atscript-ui-styles` (`allShortcuts` super-merge, swap in a narrower subset).
 
+### In-tree examples
+
+`@atscript/vue-aooth` ships two production examples of the patterns covered in [customization.md](references/customization.md):
+
+- `AsConsentArray` — wraps `useAsField` to add per-instance rules alongside the schema-level pipeline.
+- `AsPasswordRules` — re-uses `compileFieldFn` from `@atscript/ui-fns` to evaluate consumer-supplied policy rule strings.
+
+Full API: https://ui.atscript.dev/api/vue-aooth.
+
 ## See also
 
 Reference docs: https://ui.atscript.dev/forms/. Source: https://github.com/moostjs/atscript-ui.
