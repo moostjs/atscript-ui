@@ -9,6 +9,7 @@
 - [Slots](#slots)
 - [useWfForm(options) composable](#usewfformoptions-composable)
 - [UseWfFormOptions](#usewfformoptions)
+- [Error message resolution](#error-message-resolution)
 - [Auth — custom fetch override](#auth--custom-fetch-override)
 - [Same-form re-validation behavior](#same-form-re-validation-behavior)
 - [AbortController behavior](#abortcontroller-behavior)
@@ -40,13 +41,13 @@
 
 ## Emits
 
-| Event      | Signature                                                   | Fires when                                                                                          |
-| ---------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `finished` | `(response: unknown) => void`                               | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`) |
-| `error`    | `(error: { message: string; status?: number }) => void`     | network failure, non-2xx response, or `{ error: {...} }` body                                       |
-| `form`     | `(def: FormDef, context?: Record<string, unknown>) => void` | each time the rendered form / context changes (initial render, schema swap, re-validation)          |
-| `submit`   | `(data: unknown) => void`                                   | user submitted the form (fires **before** the HTTP request is sent)                                 |
-| `loading`  | `(isLoading: boolean) => void`                              | request lifecycle — `true` on send, `false` on response/error                                       |
+| Event      | Signature                                                   | Fires when                                                                                                                |
+| ---------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `finished` | `(response: unknown) => void`                               | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`)                       |
+| `error`    | `(error: { message: string; status?: number }) => void`     | network failure, non-2xx response, or `{ error: {...} }` body (see [Error message resolution](#error-message-resolution)) |
+| `form`     | `(def: FormDef, context?: Record<string, unknown>) => void` | each time the rendered form / context changes (initial render, schema swap, re-validation)                                |
+| `submit`   | `(data: unknown) => void`                                   | user submitted the form (fires **before** the HTTP request is sent)                                                       |
+| `loading`  | `(isLoading: boolean) => void`                              | request lifecycle — `true` on send, `false` on response/error                                                             |
 
 Side-effects are wired internally via watchers that translate composable refs to emits.
 
@@ -185,6 +186,18 @@ interface UseWfFormOptions {
 ```
 
 Options mirror `<AsWfForm>` props (minus rendering-related `types`, `firstValidation`, `components`, `clientFactory`).
+
+## Error message resolution
+
+On a non-2xx response the composable sets `error.value` to `{ message, status }`. The message is resolved from the JSON body in this order:
+
+1. `body.message` — application intent. Wooksjs `HttpError(status, message)` puts the user-facing copy here.
+2. `body.error` — fallback. The wf-trigger engine emits `{ error: "Invalid or expired workflow state" }` for expired/consumed state tokens.
+3. Friendly status-keyed default (e.g. `410` → "This session has expired. Please start over.", `403` → "You don't have permission to do that."). Unmapped 4xx fall through to a generic 4xx string; any 5xx collapses to a generic "try again" string.
+
+`message` wins over `error` because in a wooksjs `HttpError` envelope `error` carries the HTTP reason phrase (`"Forbidden"`, `"Conflict"`) while `message` carries the backend's user-facing copy.
+
+`error.value.status` is the HTTP status code regardless of which clause supplied the message. Network failures (no response, non-`AbortError` exceptions) surface as `{ message }` with no `status` field.
 
 ## Auth — custom fetch override
 

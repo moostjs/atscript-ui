@@ -7,6 +7,7 @@ Vue 3 client for the HTTP workflow loop. One component (`AsWfForm`) and one comp
 - [Subpath](#subpath)
 - [Component — AsWfForm](#component-aswfform)
 - [Composable — useWfForm](#composable-usewfform)
+- [Error resolution](#error-resolution)
 - [Types](#types)
 
 ## Subpath
@@ -214,6 +215,24 @@ function onSubmit(data: unknown) {
   />
 </template>
 ```
+
+## Error resolution
+
+When a request returns a non-2xx response, `error.value` is set to `{ message, status }`. The message is resolved from the response body in this priority order:
+
+1. `body.message` — the human-readable application intent. This is what `HttpError(status, message)` ships as `body.message` across the Wooks/Moost stack.
+2. `body.error` — fallback when `message` is absent. The workflow-trigger engine emits `{ error: "Invalid or expired workflow state" }` (and similar) when state tokens are consumed or expired — this clause picks those up.
+3. A friendly message keyed off the HTTP status code — used when the body is missing, empty, or has neither field. Examples:
+   - `401` → "You need to sign in to continue."
+   - `403` → "You don't have permission to do that."
+   - `410` → "This session has expired. Please start over."
+   - `429` → "Too many requests. Please wait a moment and try again."
+   - Unmapped 4xx → "Something went wrong with that request. Please try again."
+   - Any 5xx → "Something went wrong on our end. Please try again in a moment."
+
+`message` wins over `error` because, in a wooksjs `HttpError` envelope, `error` carries the HTTP reason phrase mechanically derived from the status (`"Forbidden"`, `"Conflict"`), while `message` carries the application's intended user-facing copy.
+
+`error.value.status` is the HTTP status code regardless of which clause supplied the message. Network failures (no response, non-`AbortError` exceptions) surface as `{ message }` with no `status` field.
 
 ## Types
 
