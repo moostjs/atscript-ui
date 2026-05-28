@@ -39,10 +39,20 @@
       "import": "./dist/as-consent-array.mjs",
       "require": "./dist/as-consent-array.cjs"
     },
+    "./as-copy": {
+      "types": "./dist/as-copy.d.mts",
+      "import": "./dist/as-copy.mjs",
+      "require": "./dist/as-copy.cjs"
+    },
     "./as-password-rules": {
       "types": "./dist/as-password-rules.d.mts",
       "import": "./dist/as-password-rules.mjs",
       "require": "./dist/as-password-rules.cjs"
+    },
+    "./as-qr-code": {
+      "types": "./dist/as-qr-code.d.mts",
+      "import": "./dist/as-qr-code.mjs",
+      "require": "./dist/as-qr-code.cjs"
     },
     "./package.json": "./package.json"
   },
@@ -64,9 +74,11 @@
     "@atscript/typescript": "catalog:",
     "@atscript/ui-fns": "workspace:^",
     "@tsdown/css": "catalog:",
+    "@types/qrcode": "^1.5.5",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
     "happy-dom": "catalog:",
+    "qrcode": "^1.5.4",
     "unplugin-atscript": "catalog:",
     "vitest": "catalog:",
     "vue": "catalog:",
@@ -76,6 +88,12 @@
   "peerDependencies": {
     "@atscript/ui-fns": "workspace:^",
     "@atscript/vue-form": "workspace:^",
+    "qrcode": "^1.5.4",
     "vue": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "qrcode": {
+      "optional": true
+    }
   }
 }

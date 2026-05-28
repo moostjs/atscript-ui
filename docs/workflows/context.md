@@ -174,6 +174,63 @@ Use this for:
 - **Conditional descriptions** — `"Sent to ${ctx.maskedPhone}"`.
 - **Action labels** — `"Resend to ${ctx.email}"`.
 
+## Display-only fields backed by context
+
+When a step needs to **show** something the server computed — a TOTP
+enrolment URI, a one-shot magic link, a masked phone number — without
+asking the user to edit it, combine context-pass with a phantom field
+typed as `ui.paragraph` and a `@ui.form.fn.value` resolver.
+
+```atscript
+@wf.context.pass 'totpUri'
+@wf.context.pass 'magicLink'
+@meta.label 'Activate TOTP & share invite link'
+@ui.form.submit.text 'Continue'
+export interface QrCopyDemoForm {
+    @meta.label 'Scan with your authenticator app'
+    @ui.form.fn.value '(v, data, ctx) => ctx.totpUri'
+    @ui.form.component 'qr-code'
+    totpUri: ui.paragraph
+
+    @meta.label 'Magic link'
+    @ui.form.fn.value '(v, data, ctx) => ctx.magicLink'
+    @ui.form.component 'copy'
+    magicLink: ui.paragraph
+}
+```
+
+What each piece does:
+
+- `@wf.context.pass 'totpUri' / 'magicLink'` whitelists the two keys
+  into `formContext`. Without them, `ctx.totpUri` / `ctx.magicLink`
+  would be `undefined` on the client.
+- `ui.paragraph` marks the field as **phantom**. The form treats it as
+  non-data chrome — no slot is allocated in `formData`, and the value
+  never crosses back to the server on submit. Phantom values reach the
+  renderer through `props.value`, not `props.model.value`.
+- `@ui.form.fn.value` resolves the displayed value from the context.
+  Combine with `@ui.form.component 'qr-code'` / `'copy'` from
+  [`@atscript/vue-aooth`](/forms/aooth-components) — those components
+  read `props.value ?? props.model?.value`, so the same renderer works
+  for phantom and data-bound fields.
+
+::: warning Field-level fn signature
+Field-level functions are `(v, data, ctx, entry)`. Writing
+`'(_, ctx) => ctx.totpUri'` silently routes `formData` into `ctx` and
+the real context goes unread. Only **form-level** keys
+(`@ui.form.fn.title`, `@ui.form.fn.submit.text`,
+`@ui.form.fn.submit.disabled`) use the two-argument `(data, ctx)`
+shape. See [Dynamic Fields](/forms/dynamic-fields#scope-passed-to-every-function).
+:::
+
+When the resolved value should land in the bound data slot — because a
+downstream column, audit log, or schema expects it — use a data field
+with `@meta.readonly` + `@ui.form.fn.value` instead of a phantom one.
+`AsField` resolves the function and writes the result into the bound
+path through a watcher (see the "Readonly watcher" block in
+`packages/vue-form/src/components/as-field.vue`). Phantom is the
+cleaner shape whenever the value is purely display.
+
 ## What stays server-side
 
 Anything **not** in `@wf.context.pass` never crosses the wire:

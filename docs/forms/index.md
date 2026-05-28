@@ -71,6 +71,9 @@ Tier 2 when you want to replace a default renderer; reach for the
 - [Customization](/forms/customization),
   [Custom Components](/forms/custom-components),
   [Locale](/forms/locale) — make it yours.
+- [Aooth Components](/forms/aooth-components) — pre-built field
+  components for consent collection, password rules, QR-code enrolment
+  and one-shot copy values, shipped by `@atscript/vue-aooth`.
 
 ::: tip Related ecosystem docs
 The `.as` language, `asc` CLI, `@meta.*`, `@expect.*` and validators

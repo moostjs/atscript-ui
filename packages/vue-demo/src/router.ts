@@ -81,6 +81,11 @@ const routes = [
     component: () => import("./client/pages/wf-demo/outlet-pause.vue"),
   },
   {
+    path: "/wf-demo/qr-and-copy",
+    name: "wf-demo-qr-and-copy",
+    component: () => import("./client/pages/wf-demo/qr-and-copy.vue"),
+  },
+  {
     path: "/forms-demo/nested-collapsible",
     name: "forms-demo-nested-collapsible",
     component: () => import("./client/pages/forms-demo/nested-collapsible.vue"),

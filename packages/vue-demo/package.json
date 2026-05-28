@@ -22,6 +22,7 @@
     "@atscript/vue-wf": "workspace:^",
     "@unocss/reset": "catalog:",
     "@vueuse/core": "catalog:",
+    "qrcode": "^1.5.4",
     "reka-ui": "catalog:",
     "sirv": "catalog:",
     "unocss": "catalog:",

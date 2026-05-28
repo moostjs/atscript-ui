@@ -40,6 +40,7 @@ const ALLOWED_WORKFLOWS = [
   "api/wf-demo/multi-step",
   "api/wf-demo/validation-errors",
   "api/wf-demo/outlet-pause",
+  "api/wf-demo/qr-and-copy",
 ] as const;
 
 // Workflows whose state must survive process restart (durable handle persistence).

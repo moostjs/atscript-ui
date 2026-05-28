@@ -39,6 +39,7 @@ import { WfFinishAbortedDemoWorkflow } from "./workflows/wf-demo/finish-aborted.
 import { WfMultiStepDemoWorkflow } from "./workflows/wf-demo/multi-step.workflow";
 import { WfValidationErrorsDemoWorkflow } from "./workflows/wf-demo/validation-errors.workflow";
 import { WfOutletPauseDemoWorkflow } from "./workflows/wf-demo/outlet-pause.workflow";
+import { WfQrAndCopyDemoWorkflow } from "./workflows/wf-demo/qr-and-copy.workflow";
 import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import { auditInterceptor } from "./auth/audit";
@@ -86,6 +87,7 @@ app.registerControllers(
   WfMultiStepDemoWorkflow,
   WfValidationErrorsDemoWorkflow,
   WfOutletPauseDemoWorkflow,
+  WfQrAndCopyDemoWorkflow,
   UsersController,
   RolesController,
   CategoriesController,

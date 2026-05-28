@@ -72,6 +72,13 @@ const variations: Variation[] = [
       "Workflow emits outletEmail; client sees { sent: true } and treats the session as finished. Real resumption happens out-of-band.",
     badge: "pattern: outlet",
   },
+  {
+    to: "/wf-demo/qr-and-copy",
+    title: "QR code + copy field",
+    description:
+      "Server pre-fills two phantom field values via @wf.context.pass + @ui.form.fn.value; AsQrCode renders an SVG QR for a TOTP URI, AsCopy renders a copyable input for a magic link.",
+    badge: "components: qr+copy",
+  },
 ];
 </script>
 

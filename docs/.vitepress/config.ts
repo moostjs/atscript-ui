@@ -215,6 +215,7 @@ const formsSidebar = [
     items: [
       { text: "Three Levels of Override", link: "/forms/customization" },
       { text: "Custom Components", link: "/forms/custom-components" },
+      { text: "Aooth Components", link: "/forms/aooth-components" },
       { text: "Locale & Currency", link: "/forms/locale" },
     ],
   },
