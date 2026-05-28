@@ -7,7 +7,6 @@ import {
   EncapsulatedStateStrategy,
   HandleStateStrategy,
   type WfOutletTriggerDeps,
-  type WfStateStrategy,
 } from "@moostjs/event-wf";
 import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 import { AsWfStore } from "@atscript/moost-wf/store";
@@ -71,22 +70,13 @@ setInterval(() => {
 const encapsulatedStrategy = new EncapsulatedStateStrategy({ secret: WF_SECRET });
 const handleStrategy = new HandleStateStrategy({ store: wfStore });
 
-// `HandleStateStrategy` mints crypto.randomUUID() handles (8-4-4-4-12 hex);
-// `EncapsulatedStateStrategy` mints base64url AES-GCM blobs that never match.
-// Resume requests carry only `wfs` (no `wfid`), so we dispatch on token shape.
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const pickByToken = (token: string) =>
-  UUID_RE.test(token) ? handleStrategy : encapsulatedStrategy;
-
-// Dispatcher for the resume path (no `wfid`). `persist` is never reached here:
-// the framework re-resolves with `state.schemaId` after consume (see
-// `@wooksjs/event-wf` `handleWfOutletRequest`), so we fall back to encapsulated
-// as a safe default.
-const dispatchingStrategy: WfStateStrategy = {
-  persist: (state, options) => encapsulatedStrategy.persist(state, options),
-  retrieve: (token) => pickByToken(token).retrieve(token),
-  consume: (token) => pickByToken(token).consume(token),
-};
+// Named strategy registry (since `@wooksjs/event-wf` 0.7.16). Tokens are
+// prefixed `<name>.<raw>` so resume auto-dispatches via the registry — no
+// more sniffing UUID vs base64 on the resume path. The `default` selector
+// only runs on a fresh start (when `wfid` is known).
+const strategies = { encapsulated: encapsulatedStrategy, handle: handleStrategy } as const;
+const pickDefault = (wfid: string): keyof typeof strategies =>
+  HANDLE_STATE_WFIDS.has(wfid) ? "handle" : "encapsulated";
 
 @Controller()
 export class WorkflowsController {
@@ -104,27 +94,22 @@ export class WorkflowsController {
         wfApp.start(schemaId, context as never, {
           input: opts?.input,
           eventContext: opts?.eventContext as never,
+          strategy: opts?.strategy,
         }),
       resume: (state, opts) =>
         wfApp.resume(state as { schemaId: string; indexes: number[]; context: never }, {
           input: opts?.input,
           eventContext: opts?.eventContext as never,
+          strategy: opts?.strategy,
         }),
     };
     return await handleAsOutletRequest(
       {
         allow: [...ALLOWED_WORKFLOWS],
-        // Per-call strategy selection: the framework calls this with `wfid`
-        // (fresh start) or `""` (resume — no wfid in body). On resume,
-        // `dispatchingStrategy` inspects token shape to pick the right backend;
-        // after consume the framework re-resolves with `state.schemaId`, so the
-        // next persist hits the schema-correct strategy.
-        state: (wfid) =>
-          wfid
-            ? HANDLE_STATE_WFIDS.has(wfid)
-              ? handleStrategy
-              : encapsulatedStrategy
-            : dispatchingStrategy,
+        // Named registry — the trigger unwraps `<name>.<raw>` from the token
+        // on resume and routes to `strategies[name]` automatically. The
+        // `default` selector only runs on a fresh start when `wfid` is set.
+        state: { strategies, default: pickDefault },
         outlets: [createAsHttpOutlet(), createEmailOutlet(consoleEmailSender)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },

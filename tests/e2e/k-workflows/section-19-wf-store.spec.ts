@@ -164,8 +164,8 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
     await resetSeed();
   });
 
-  test.describe("19.W1 — invite handle is single-use (race-safety)", () => {
-    test("19.W1 raw — two parallel resumes on the same wfs: one wins, one 410s", async () => {
+  test.describe("19.W1 — invite handle is a stable credential (post 0.7.14)", () => {
+    test("19.W1 raw — two parallel resumes on the same wfs both succeed and yield the same wfs", async () => {
       const id = uniq();
       const email = `race-${id}@demo.test`;
 
@@ -188,48 +188,41 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         });
         if (!entry.link) throw new Error("user-invite outlet had no link line");
         wfs = extractWfsFromLink(entry.link);
-        // Sanity: HandleStateStrategy mints UUIDs (8-4-4-4-12 hex) — proves
-        // the dispatcher routed `api/users/invite` to the handle store.
-        expect(wfs).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+        // Sanity: the wooks 0.7.16+ named-registry token format is
+        // `<name>.<raw>`. Our controller registers HandleStateStrategy under
+        // the name `handle`, and it mints UUIDs (8-4-4-4-12 hex) — the prefix
+        // proves the registry routed `api/users/invite` to the handle store.
+        expect(wfs).toMatch(
+          /^handle\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        );
       } finally {
         await adminCtx.dispose();
       }
 
       // Two parallel anon contexts replay the same wfs at the same time.
-      // `getAndDelete` does findOne + deleteMany; `deletedCount === 1` is the
-      // race-safety guard — exactly one caller should win.
+      // Post `@wooksjs/event-wf` 0.7.14 the `wfs` is a stable credential for
+      // HandleStateStrategy — it persists under the same handle on every
+      // resume, so a magic-link replay (refresh, bookmark, re-open) keeps
+      // working with the same URL. Both parallel resumes are expected to
+      // succeed against the still-paused `invite-accept` step (which fetches
+      // the form without mutating state) and to echo back the same wfs.
       const ctxA = await newAnonRequestContext();
       const ctxB = await newAnonRequestContext();
       try {
         const [a, b] = await Promise.all([postWf(ctxA, { wfs }), postWf(ctxB, { wfs })]);
         const responses = [a, b];
 
-        // Exactly one resume must surface the InviteAcceptForm payload (200-
-        // ish, `inputRequired` with username/password fields).
-        const winners = responses.filter(
-          (r) => r.status >= 200 && r.status < 300 && r.json.inputRequired !== undefined,
-        );
-        // The other must be 410 with the expired/invalid sentinel body.
-        const losers = responses.filter((r) => r.status === 410);
-
-        expect(winners).toHaveLength(1);
-        expect(losers).toHaveLength(1);
-
-        const winner = winners[0]!;
-        // Resume lands at `invite-accept` whose form requires username +
-        // password — proves the wf state actually advanced past invite-send.
-        const ctxKeys = Object.keys(winner.json.inputRequired?.context ?? {});
-        // The form should be back; errors should not be set on a fresh resume.
-        expect(winner.json.inputRequired?.context?.errors).toBeUndefined();
-        // No info-leak about which token was consumed — winner doesn't echo
-        // the raw token in the response body.
-        expect(JSON.stringify(winner.json)).not.toContain(wfs);
-        // Just a defensive sanity assertion against ctxKeys being weirdly empty.
-        expect(ctxKeys.length).toBeGreaterThanOrEqual(0);
-
-        const loser = losers[0]!;
-        const errMsg = typeof loser.json.error === "string" ? loser.json.error : "";
-        expect(errMsg).toMatch(/expired|invalid/i);
+        // Both must surface the InviteAcceptForm payload — stable credential
+        // means neither caller is locked out.
+        for (const r of responses) {
+          expect(r.status).toBeGreaterThanOrEqual(200);
+          expect(r.status).toBeLessThan(300);
+          expect(r.json.inputRequired).toBeDefined();
+          // Should also re-emit the same wfs — proves handle is reused.
+          expect(r.json.wfs).toBe(wfs);
+          // Errors must not be set on a fresh, never-submitted resume.
+          expect(r.json.inputRequired?.context?.errors).toBeUndefined();
+        }
       } finally {
         await ctxA.dispose();
         await ctxB.dispose();
