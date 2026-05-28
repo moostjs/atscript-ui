@@ -1,6 +1,6 @@
 {
   "name": "@atscript/vue-aooth",
-  "version": "0.1.79",
+  "version": "0.1.80",
   "description": "Custom form components for the Aooth auth system, built on @atscript/vue-form",
   "keywords": [
     "aooth",
