@@ -244,9 +244,10 @@ export class WorkflowsController {
     return handleAsOutletRequest(
       {
         allow: ["auth/invite" /* ... */],
-        // Per-call strategy selection. Return the same `handleStrategy` to use
-        // AsWfStore on every flow, or branch by `wfid` for mixed persistence.
-        state: () => handleStrategy,
+        // Single-strategy shortcut: pass the instance directly (registered as
+        // name 'default'). Use AsWfStore on every flow. For mixed persistence
+        // use the named registry — see the note below.
+        state: handleStrategy,
         outlets: [createAsHttpOutlet(), createEmailOutlet(sendEmail)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },
@@ -256,7 +257,16 @@ export class WorkflowsController {
 }
 ```
 
-The `state` callback fires for every request; return one strategy instance for all flows or pick by `wfid` (e.g. `HandleStateStrategy` for outlet-resumable flows, `EncapsulatedStateStrategy` for stateless ones). `AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`; `HandleStateStrategy` accepts any `WfStateStore` implementation. Adapter bootstrap stays vanilla: `app.adapter(new MoostWf())` with no options.
+`state` accepts a single `WfStateStrategy` instance (auto-registered as name `'default'`) or a named registry `{ strategies: Record<name, WfStateStrategy>, default: name | ((wfid) => name) }`. Mix `HandleStateStrategy` (outlet-resumable, durable) with `EncapsulatedStateStrategy` (stateless) by registering both and routing per `wfid`:
+
+```typescript
+state: {
+  strategies: { handle: handleStrategy, encapsulated: encapsulatedStrategy },
+  default: (wfid) => (RESUMABLE.has(wfid) ? "handle" : "encapsulated"),
+},
+```
+
+The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always re-selects the strategy that persisted the state — each can keep its own storage. Names must match `/^[A-Za-z0-9_-]+$/`. The old `(wfid) => WfStateStrategy` callback form was removed in `@wooksjs/event-wf` 0.7.16 (`@moostjs/event-wf` 0.6.18); a step can also escalate at runtime via `swapStrategy('name')`. Full registry reference: the `moostjs` skill (`event-wf.md` · State strategies). `AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`; `HandleStateStrategy` accepts any `WfStateStore` implementation. Adapter bootstrap stays vanilla: `app.adapter(new MoostWf())` with no options.
 
 ## Recipe — invite + register flow with shadow column lookup
 

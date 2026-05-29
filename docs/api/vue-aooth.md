@@ -1,26 +1,30 @@
 # @atscript/vue-aooth
 
-Custom Vue 3 form-field components for [Aooth](https://aooth.moost.org)-flavoured flows — multi-consent collection and password-policy display. Both components implement the `TAsComponentProps` contract from [`@atscript/vue-form`](/api/vue-form) and drop into `<AsForm :components>` via the `@ui.form.component` annotation. Typically paired with [`@atscript/vue-wf`](/api/vue-wf) when the consents and policies arrive as part of a workflow `formContext`.
+Custom Vue 3 form-field components for [Aooth](https://aooth.moost.org)-flavoured flows — multi-consent collection, password-policy display, QR-code enrolment, and one-shot link/token sharing. All four implement the `TAsComponentProps` contract from [`@atscript/vue-form`](/api/vue-form) and drop into `<AsForm :components>` via the `@ui.form.component` annotation. Typically paired with [`@atscript/vue-wf`](/api/vue-wf) when the consents, policies, TOTP URIs, or magic links arrive as part of a workflow `formContext`.
 
 ## Contents
 
 - [Subpath](#subpath)
 - [Component — AsConsentArray](#component-asconsentarray)
 - [Component — AsPasswordRules](#component-aspasswordrules)
+- [Component — AsQrCode](#component-asqrcode)
+- [Component — AsCopy](#component-ascopy)
 - [Custom-component patterns used](#custom-component-patterns-used)
 
 ## Subpath
 
 ```typescript
 // barrel
-import { AsConsentArray, AsPasswordRules } from "@atscript/vue-aooth";
+import { AsConsentArray, AsCopy, AsPasswordRules, AsQrCode } from "@atscript/vue-aooth";
 
 // per-component (for granular bundling)
 import AsConsentArray from "@atscript/vue-aooth/as-consent-array";
+import AsCopy from "@atscript/vue-aooth/as-copy";
 import AsPasswordRules from "@atscript/vue-aooth/as-password-rules";
+import AsQrCode from "@atscript/vue-aooth/as-qr-code";
 ```
 
-Neither component is auto-resolved — both are Tier-2 swap targets. Register them by name in `<AsForm :components>` and tag the field with `@ui.form.component`.
+None of the four are auto-resolved — all are Tier-2 swap targets. Register them by name in `<AsForm :components>` and tag the field with `@ui.form.component`. The narrative guide with end-to-end examples lives at [Forms · Aooth components](/forms/aooth-components).
 
 ## Component — AsConsentArray
 
@@ -189,12 +193,96 @@ const formContext = {
 </template>
 ```
 
+## Component — AsQrCode
+
+Phantom field that renders an SVG QR code from any string. Primarily used for TOTP enrolment: for `otpauth://` URIs it also surfaces the `?secret=` query param beneath the SVG as a manual-entry fallback for users who can't scan.
+
+### Props
+
+`TAsComponentProps<string | undefined>` plus:
+
+```typescript
+interface AsQrCodeProps extends TAsComponentProps<string | undefined> {
+  /** SVG width in px. Default 192. */
+  size?: number;
+  /** QR error-correction level. Default "M". */
+  errorCorrection?: "L" | "M" | "Q" | "H";
+  /**
+   * Show the parsed `?secret=` fallback for `otpauth://` values.
+   * Default true — set false when surfacing the secret defeats the
+   * threat model (e.g. screen-sharing demos).
+   */
+  manualSecret?: boolean;
+}
+```
+
+### Behaviour
+
+- The value is read as `props.value ?? props.model?.value`. Phantom registrations (`ui.paragraph` + `@ui.form.fn.value`) push through `props.value`; data-bound fields use `model.value`.
+- `qrcode` is an **optional peer dependency** — install it in the consumer app only for flows that use `AsQrCode`. The module is dynamic-imported, so apps without the dep pay no bundle cost.
+- For `otpauth://` URIs the parsed secret renders as plain text beneath the SVG unless `:manualSecret="false"`.
+
+```bash
+npm install qrcode
+```
+
+### How to wire
+
+```atscript
+// enrol-step.as
+export interface EnrolStep {
+    @meta.label 'Scan with your authenticator app'
+    @ui.form.fn.value '(v, data, ctx) => ctx.totpUri'
+    @ui.form.component 'AsQrCode'
+    totpUri: ui.paragraph
+}
+```
+
+`totpUri` is supplied from `formContext` (server-side via `@wf.context.pass 'totpUri'` on a workflow form). See [Phantom vs data-bound](/forms/aooth-components#phantom-vs-data-bound) for the full pattern.
+
+## Component — AsCopy
+
+Phantom field that surfaces a one-shot string with a read-only input and a Copy button. Click writes through `navigator.clipboard.writeText` and swaps the button label to "Copied" for ~1.5 s; focusing the input selects the full value for fallback Ctrl+C / Cmd+C copy.
+
+### Props
+
+`TAsComponentProps<string | undefined>` plus:
+
+```typescript
+interface AsCopyProps extends TAsComponentProps<string | undefined> {
+  /** Idle button label. Default "Copy". */
+  copyLabel?: string;
+  /** Post-copy button label. Default "Copied". */
+  copiedLabel?: string;
+}
+```
+
+### Behaviour
+
+- Value is read as `props.value ?? props.model?.value` — same phantom + data-bound dual mode as `AsQrCode`.
+- Failed clipboard writes (no permission, no API) flip the button back and surface "Copy failed — select and copy manually" through the field's error slot.
+
+### How to wire
+
+```atscript
+// share-step.as
+export interface ShareStep {
+    @meta.label 'Magic link'
+    @ui.form.fn.value '(v, data, ctx) => ctx.magicLink'
+    @ui.form.component 'AsCopy'
+    magicLink: ui.paragraph
+}
+```
+
+Use it for magic links, share tokens, generated identifiers — any one-off value the user needs to paste somewhere else.
+
 ## Custom-component patterns used
 
-Both components are production examples of the patterns documented in [Custom Field Components](/forms/custom-components):
+The four components are production examples of the patterns documented in [Custom Field Components](/forms/custom-components):
 
 - **`AsConsentArray`** demonstrates the "`useAsField` inside a custom component" pattern — registering an extra field-state rule alongside the one `<AsField>` already provides, so per-item required validation runs at submit alongside the schema-level pipeline.
 - **`AsPasswordRules`** demonstrates the "re-use `compileFieldFn` for fn-string arrays" pattern — evaluating consumer-supplied policy rule strings through the framework's shared FNPool instead of allocating a private one.
+- **`AsQrCode`** and **`AsCopy`** demonstrate the **phantom display field** pattern — `ui.paragraph` + `@ui.form.fn.value` reading from `formContext`, so a server-supplied value renders without ever entering the bound data.
 
 ## Cross-links
 

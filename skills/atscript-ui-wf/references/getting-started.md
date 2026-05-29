@@ -119,7 +119,7 @@ import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 return handleAsOutletRequest(
   {
     allow: ["hello"],
-    state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
+    state: new EncapsulatedStateStrategy({ secret: WF_SECRET }),
     outlets: [createAsHttpOutlet()],
     token: { read: ["body"], write: "body", name: "wfs" },
   },

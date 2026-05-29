@@ -46,7 +46,9 @@ might come back after the browser tab is gone.
 
 ## Picking per workflow
 
-The HTTP controller can select the strategy per call:
+`state` accepts either a single `WfStateStrategy` instance (the
+shortcut — auto-registered under the name `'default'`) or a **named
+registry** when you want to mix strategies across flows:
 
 ```ts
 const encapsulatedStrategy = new EncapsulatedStateStrategy({ secret: WF_SECRET });
@@ -60,8 +62,10 @@ async handle() {
   return handleAsOutletRequest(
     {
       allow: ALLOWED_WORKFLOWS,
-      state: (wfid) =>
-        wfid && HANDLE_STATE_WFIDS.has(wfid) ? handleStrategy : encapsulatedStrategy,
+      state: {
+        strategies: { handle: handleStrategy, encapsulated: encapsulatedStrategy },
+        default: (wfid) => (HANDLE_STATE_WFIDS.has(wfid) ? "handle" : "encapsulated"),
+      },
       // ...
     },
     deps,
@@ -69,10 +73,21 @@ async handle() {
 }
 ```
 
-The `state` callback runs per request. On _resume_ (no `wfid` in the
-body — only the token) it's called with `""`; if your two strategies
-mint visibly different tokens (UUID vs base64url) you can dispatch
-by shape.
+`default` picks the strategy name when a flow **starts** — a plain
+string or a `(wfid) => name` function. The chosen name is embedded in
+the issued token as `<name>.<raw>`, so on **resume** the framework
+re-selects the strategy that persisted the state automatically — no
+need to inspect token shape. Each strategy keeps its own independent
+storage; names must match `/^[A-Za-z0-9_-]+$/`.
+
+::: tip Version note
+The named registry landed in `@wooksjs/event-wf` 0.7.16
+(`@moostjs/event-wf` 0.6.18) and **replaced** the old
+`state: (wfid) => WfStateStrategy` callback form, which was removed.
+A step can also escalate at runtime with `swapStrategy('name')` (it
+applies to the next pause). See the Moost docs for the full registry
+contract.
+:::
 
 ## Wiring `AsWfStore`
 

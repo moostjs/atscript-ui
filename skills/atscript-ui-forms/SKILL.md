@@ -9,8 +9,9 @@ description: >-
   (`@ui.form.action`) or FK value-help (`@db.rel.FK` → `AsRef`); when overriding
   defaults via `:types` (built-in renderers) or `:components` (custom widgets);
   when implementing custom field components against `TAsComponentProps` /
-  `AsFieldShell`; or when calling `useAsForm` / `useAsField` / `useAsArray` /
-  `useAsUnion` / `useAsTuple` / `useAsLocale` / `useAsData`. Out of scope:
+  `AsFieldShell` (incl. prebuilt `@atscript/vue-aooth` field components);
+  or when calling `useAsForm` / `useAsField` / `useAsArray` / `useAsUnion` /
+  `useAsTuple` / `useAsData`. Out of scope:
   tables (use `atscript-ui-tables`), HTTP workflow forms (use `atscript-ui-wf`),
   styling and `as-*` shortcuts (use `atscript-ui-styles`), framework-agnostic
   primitives like `createFormDef` (use the general `atscript-ui` skill).
@@ -182,6 +183,7 @@ import type {
 | Dynamic fields       | [dynamic-fields.md](references/dynamic-fields.md)       | `@atscript/ui-fns`: `installDynamicResolver()`, `@ui.form.fn.*` (label, hidden, disabled, readonly, options, value, attr, classes, styles, title, submit.text, submit.disabled), `@ui.form.validate`, `TFnScope` (`v` / `data` / `context` / `entry`), security model, FNPool caching |
 | Customization        | [customization.md](references/customization.md)         | Three-level override: `:types` (built-in id swap) → `:components` (custom name + `@ui.form.component`) → `AsFieldShell` wrap → fully custom root via `useAsForm`. `TAsComponentProps` contract for custom components. Locale providers (`provideAsLocale`, currency, units).          |
 | Actions + refs       | [actions-refs.md](references/actions-refs.md)           | `@ui.form.action` + `AsAction` (single + multi-action forms, submit text, conditional disable), `@db.rel.FK` + `AsRef` value-help (`@db.http.path`, `@ui.dict.*` on target, `clientFactory` for auth headers, `ValueHelpClient` flow)                                                 |
+| Aooth components     | [aooth-components.md](references/aooth-components.md)   | Reaching for the prebuilt `@atscript/vue-aooth` field components — `AsConsentArray`, `AsPasswordRules`, `AsQrCode`, `AsCopy` — or building a phantom display field driven by workflow context (`ui.paragraph` + `@ui.form.fn.value` + `@wf.context.pass`)                             |
 
 ## OCC-enabled edit forms
 
@@ -288,12 +290,7 @@ If you swap `AsSelect` for a custom dropdown, the `as-select-*` shortcuts the de
 
 ### In-tree examples
 
-`@atscript/vue-aooth` ships two production examples of the patterns covered in [customization.md](references/customization.md):
-
-- `AsConsentArray` — wraps `useAsField` to add per-instance rules alongside the schema-level pipeline.
-- `AsPasswordRules` — re-uses `compileFieldFn` from `@atscript/ui-fns` to evaluate consumer-supplied policy rule strings.
-
-Full API: https://ui.atscript.dev/api/vue-aooth.
+`@atscript/vue-aooth` ships four production examples of the custom-component and phantom-field patterns — `AsConsentArray`, `AsPasswordRules`, `AsQrCode`, `AsCopy`. They demonstrate `useAsField` inside a component, re-using `compileFieldFn` from `@atscript/ui-fns` for fn-string arrays, and the phantom (`ui.paragraph` + `@ui.form.fn.value` + `@wf.context.pass`) display pattern. See [aooth-components.md](references/aooth-components.md).
 
 ## See also
 

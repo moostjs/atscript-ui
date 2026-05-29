@@ -5,17 +5,16 @@ description: >-
   from `.as` annotated types with `@atscript/vue-table` + `@atscript/ui-table`.
   Use when working with `<AsTableRoot>`, `<AsTable>`, `<AsWindowTable>`,
   `<AsFilters>`, `<AsPresetPicker>`, `<AsConfigDialog>`, or `<AsTableActions>`;
-  when writing `.as` types with `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*`
-  annotations; when wiring a `queryFn` (custom) or a `moost-db` URL (default);
-  when implementing custom cells via `@ui.table.component` and the `:components`
-  map (with `provideCellLocale` for locale/timezone); when persisting state to
-  URL (`useTableUrlQuery`) or to presets (`PresetSnapshot`, `useLocalDraft`,
-  `usePresets`, `useAppPrefs`, `AsPresetPicker`) — including server-side via
-  `AsPresetsController` from `@atscript/moost-ui-presets`; when wiring row /
-  table actions (`AsActionFormDialog`) and selection (`state.selectedRows`,
-  `togglePk`, `trimSelection`); or when tuning virtualization (`AsWindowTable`,
-  block-aligned fetching). Out of scope: forms (use `atscript-ui-forms`),
-  HTTP workflow forms (use `atscript-ui-wf`), styling (use `atscript-ui-styles`).
+  when writing `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*` annotations;
+  when wiring a custom `queryFn` or a `moost-db` URL; when building custom
+  cells via `@ui.table.component` + `:components` (and `provideCellLocale`);
+  when persisting state to the URL (`useTableUrlQuery`) or to presets
+  (`usePresets`, `useLocalDraft`, `useAppPrefs`, `AsPresetPicker`), including
+  server-side via `AsPresetsController` from `@atscript/moost-ui-presets`;
+  when wiring row/table actions (`AsActionFormDialog`) and selection
+  (`togglePk`, `trimSelection`); or when tuning virtualization and
+  block-aligned fetching. Out of scope: forms (use `atscript-ui-forms`),
+  workflow forms (use `atscript-ui-wf`), styling (use `atscript-ui-styles`).
 ---
 
 # atscript-ui-tables

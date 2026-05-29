@@ -102,7 +102,7 @@ import { consoleEmailSender } from "../workflows/email-sender";
 return handleAsOutletRequest(
   {
     allow: ALLOWED_WORKFLOWS,
-    state: () => handleStrategy,
+    state: handleStrategy,
     outlets: [createAsHttpOutlet(), createEmailOutlet(consoleEmailSender)],
     token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
   },

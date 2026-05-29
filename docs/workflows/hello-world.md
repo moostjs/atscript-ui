@@ -126,10 +126,9 @@ class WfController {
     return handleAsOutletRequest(
       {
         allow: ["hello"],
-        state: () =>
-          new EncapsulatedStateStrategy({
-            secret: Buffer.from(process.env.WF_SECRET!, "hex"),
-          }),
+        state: new EncapsulatedStateStrategy({
+          secret: Buffer.from(process.env.WF_SECRET!, "hex"),
+        }),
         outlets: [createAsHttpOutlet()],
         token: { read: ["body"], write: "body", name: "wfs" },
       },

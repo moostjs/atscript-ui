@@ -3,14 +3,12 @@ name: atscript-ui-styles
 description: >-
   Style atscript-ui components with `@atscript/ui-styles` — the UnoCSS preset
   + `AsResolver` for `unplugin-vue-components` + the `as-*` shortcut tree +
-  baked semantic icons + pre-built CSS bundles. Use when wiring `asPresetVunor()`
-  into `uno.config.ts`; when registering `AsResolver()` from
+  baked semantic icons + pre-built CSS bundles. Use when wiring
+  `asPresetVunor()` into `uno.config.ts`; when registering `AsResolver()` from
   `@atscript/ui-styles/vite` so Tier-1 components (`<AsForm>`, `<AsTable>`,
-  `<AsField>`, `<AsIterator>`, `<AsTableRoot>`, `<AsTable>`, `<AsWindowTable>`,
-  `<AsFilters>`, `<AsPresetPicker>`, `<AsTableActions>`, `<AsWfForm>`)
-  auto-import; when tuning the vunor palette / `baseRadius` / `fingertip` /
-  `typography` (all accepted flat at `asPresetVunor`'s top level) / dark mode; when
-  overriding individual icons via `iconOverrides` or adding new ones via
+  `<AsWfForm>`, …) auto-import; when tuning the vunor palette / `baseRadius` /
+  `fingertip` / `typography` (all flat at `asPresetVunor`'s top level) / dark
+  mode; when overriding icons via `iconOverrides` or adding new ones via
   `@unocss/preset-icons`; when extending the shortcut tree with
   `mergeVunorShortcuts(allShortcuts, defineShortcuts({...}))`; when shipping
   without UnoCSS via `@atscript/ui-styles/css/{all,form,table,wf}`; or when

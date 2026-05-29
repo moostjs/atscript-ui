@@ -1,26 +1,21 @@
 ---
 name: atscript-ui-wf
 description: >-
-  Build HTTP round-trip multi-step workflow forms with `@atscript/vue-wf` (client)
-  + `@atscript/moost-wf` (server). Use when working with `<AsWfForm>` or
-  `useWfForm` on the client; when declaring server flows via `@Workflow` /
+  Build HTTP round-trip multi-step workflow forms with `@atscript/vue-wf`
+  (client) + `@atscript/moost-wf` (server). Use when working with `<AsWfForm>`
+  or `useWfForm` on the client; when declaring server flows via `@Workflow` /
   `@Step` / `@WorkflowSchema` / `@WfInput` / `@WfAction` on top of
-  `@moostjs/event-wf`; when calling `useAtscriptWf(Type)` /
-  `useWfActionSlot` composables inside step handlers; when serializing forms via
-  `serializeFormSchema` / `extractPassContext`; when passing context across
-  steps via `@wf.context.pass`; when implementing action-with-data via
-  `@wf.action.withData`; when persisting workflow state via `AsWfStore` +
-  `@wf.store.fromContext` shadow columns (with `cleanup` / `heal` /
-  `getAndDelete`); when implementing outlets (email magic link, webhook) with
-  resume via `initialToken` (body / cookie / query transport); when emitting a
-  unified `WfFinished` envelope via `finishWf(opts)` or `abortWf(reason, opts)`
-  (auto-redirect with countdown, manual choice, dismiss, aborted soft-failure);
-  when overriding the `<AsWfFinish>` slots (`wf.finish.message` /
-  `wf.finish.countdown` / `wf.finish.skip` / `wf.finish.primary` /
-  `wf.finish.option`), wiring the `navigate` prop to your router, or
-  hooking `@dismiss` / `@action`;
-  or when debugging the wire envelope. Out of scope: plain forms (use
-  `atscript-ui-forms`), tables (use `atscript-ui-tables`), styling.
+  `@moostjs/event-wf`; when calling `useAtscriptWf(Type)` inside step handlers;
+  when serializing forms (`serializeFormSchema`, `extractPassContext`) or
+  passing context across steps via `@wf.context.pass`; when implementing
+  action-with-data via `@wf.action.withData`; when persisting workflow state
+  via `AsWfStore` + `@wf.store.fromContext` shadow columns; when implementing
+  outlets (email magic link, webhook) with
+  resume via `initialToken`; when emitting a `WfFinished` envelope via
+  `finishWf` / `abortWf`; or when overriding the `<AsWfFinish>` finish-screen
+  slots and `navigate` prop. Out of scope: plain forms (use
+  `atscript-ui-forms`), tables (use `atscript-ui-tables`), styling (use
+  `atscript-ui-styles`).
 ---
 
 # atscript-ui-wf

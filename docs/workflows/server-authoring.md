@@ -271,7 +271,7 @@ export class WorkflowsController {
     return handleAsOutletRequest(
       {
         allow: ["auth/login", "auth/register"],
-        state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
+        state: new EncapsulatedStateStrategy({ secret: WF_SECRET }),
         outlets: [createAsHttpOutlet(), createEmailOutlet(sendEmail)],
         token: { read: ["body", "query", "cookie"], write: "body", name: "wfs" },
       },
@@ -287,17 +287,17 @@ A few things to know:
   is constructed with `new Moost({ globalPrefix: "api" })`, every
   `@Workflow("auth/login")` registers as `api/auth/login`. The
   `allow` whitelist and the client's `name` prop on `<AsWfForm>` must
-  match the prefixed id. The demo handles this by listing `api/auth/login`
-  etc. in its allow-list (see
-  `packages/vue-demo/src/server/controllers/workflows.controller.ts:29-35`).
+  match the prefixed id.
 - **`allow`** — the whitelist of workflow IDs the endpoint accepts.
   Without this, anyone with the URL could trigger any registered
   workflow.
-- **`state`** — picks the state strategy per request. Two built-ins:
+- **`state`** — the state strategy. Pass a single `WfStateStrategy`
+  instance (auto-registered as name `'default'`), or a named registry
+  `{ strategies, default }` to mix strategies per flow. Two built-ins:
   `EncapsulatedStateStrategy` (token is a signed self-contained blob,
-  no DB) and `HandleStateStrategy` (token is a UUID; row lives in
+  no DB) and `HandleStateStrategy` (token is a handle; row lives in
   the store). See [State Persistence](/workflows/state-persistence)
-  for swapping in `AsWfStore`.
+  for swapping in `AsWfStore` and the named-registry form.
 - **`outlets`** — register HTTP (always) and any other outlet the
   workflows use (email magic links, webhooks). Use
   `createAsHttpOutlet()` from `@atscript/moost-wf` so HTTP responses
