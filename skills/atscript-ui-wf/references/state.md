@@ -266,7 +266,7 @@ state: {
 },
 ```
 
-The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always re-selects the strategy that persisted the state — each can keep its own storage. Names must match `/^[A-Za-z0-9_-]+$/`. The old `(wfid) => WfStateStrategy` callback form was removed in `@wooksjs/event-wf` 0.7.16 (`@moostjs/event-wf` 0.6.18); a step can also escalate at runtime via `swapStrategy('name')`. Full registry reference: the `moostjs` skill (`event-wf.md` · State strategies). `AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`; `HandleStateStrategy` accepts any `WfStateStore` implementation. Adapter bootstrap stays vanilla: `app.adapter(new MoostWf())` with no options.
+The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always re-selects the strategy that persisted the state — each can keep its own storage. Names must match `/^[A-Za-z0-9_-]+$/`. A step can also escalate at runtime via `swapStrategy('name')`. Full registry reference: the `moostjs` skill (`event-wf.md` · State strategies). `AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`; `HandleStateStrategy` accepts any `WfStateStore` implementation. Adapter bootstrap stays vanilla: `app.adapter(new MoostWf())` with no options.
 
 ## Recipe — invite + register flow with shadow column lookup
 

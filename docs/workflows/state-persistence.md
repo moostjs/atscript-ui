@@ -82,7 +82,7 @@ storage; names must match `/^[A-Za-z0-9_-]+$/`.
 
 ::: tip Version note
 The named registry landed in `@wooksjs/event-wf` 0.7.16
-(`@moostjs/event-wf` 0.6.18) and **replaced** the old
+(`@moostjs/event-wf` 0.6.20) and **replaced** the old
 `state: (wfid) => WfStateStrategy` callback form, which was removed.
 A step can also escalate at runtime with `swapStrategy('name')` (it
 applies to the next pause). See the Moost docs for the full registry
