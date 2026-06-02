@@ -1,6 +1,6 @@
 {
   "name": "@atscript/moost-wf",
-  "version": "0.1.81",
+  "version": "0.1.82",
   "description": "Workflow form integration for moost — decorators, interceptors, and serialization driven by atscript type metadata",
   "keywords": [
     "atscript",
