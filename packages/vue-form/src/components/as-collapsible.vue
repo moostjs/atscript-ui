@@ -9,35 +9,16 @@ import { computed, inject, onBeforeUnmount, onMounted } from "vue";
 import {
   DESCENDANT_ERROR_COUNTS_KEY,
   useAsNestedSectionsStore,
-} from "../../composables/use-as-nested-sections-store";
-import { useAsFocusFirstAfter } from "../../composables/focus-after-toggle";
-import { formatIndexedLabelParts } from "../../composables/use-form-context";
+} from "../composables/use-as-nested-sections-store";
+import { useAsFocusFirstAfter } from "../composables/focus-after-toggle";
+import { formatIndexedLabelParts } from "../composables/use-form-context";
+import type { TAsCollapsibleProps, TAsCollapsibleSlots } from "./types";
 
-const props = withDefaults(
-  defineProps<{
-    title?: string;
-    description?: string;
-    level: number;
-    optional: boolean;
-    optionalEnabled: boolean;
-    path: string;
-    error?: string;
-    defaultOpen?: boolean;
-    hidden?: boolean;
-    arrayIndex?: number;
-  }>(),
-  { defaultOpen: false },
-);
+const props = withDefaults(defineProps<TAsCollapsibleProps>(), { defaultOpen: false });
 
 const titleParts = computed(() => formatIndexedLabelParts(props.title, props.arrayIndex));
 
-defineSlots<{
-  "title-extras"(): unknown;
-  badges(): unknown;
-  actions(): unknown;
-  body(): unknown;
-  empty(): unknown;
-}>();
+defineSlots<TAsCollapsibleSlots>();
 
 // Alternation rule (see COLLAPSIBLE_NESTED.md):
 //   L0          → root (no chrome, just render body)

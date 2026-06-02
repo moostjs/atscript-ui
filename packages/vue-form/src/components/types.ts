@@ -238,3 +238,30 @@ export interface TAsUnionContext {
   /** Switch to a different variant (rewrites model data). */
   changeVariant: (index: number) => void;
 }
+
+/**
+ * Public props contract for the standalone `AsCollapsible` section component.
+ */
+export interface TAsCollapsibleProps {
+  title?: string;
+  description?: string;
+  level: number;
+  optional: boolean;
+  optionalEnabled: boolean;
+  path: string;
+  error?: string;
+  defaultOpen?: boolean;
+  hidden?: boolean;
+  arrayIndex?: number;
+}
+
+/**
+ * Slots exposed by `AsCollapsible` — all header slots render inside `<summary>`.
+ */
+export interface TAsCollapsibleSlots {
+  "title-extras"(): unknown;
+  badges(): unknown;
+  actions(): unknown;
+  body(): unknown;
+  empty(): unknown;
+}

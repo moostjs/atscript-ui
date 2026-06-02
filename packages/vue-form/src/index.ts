@@ -2,6 +2,7 @@
 export { default as AsForm } from "./components/as-form.vue";
 export { default as AsField } from "./components/as-field.vue";
 export { default as AsIterator } from "./components/as-iterator.vue";
+export { default as AsCollapsible } from "./components/as-collapsible.vue";
 
 // Default type components
 export {
@@ -32,6 +33,8 @@ export type {
   TAsTypeComponents,
   TAsUnionContext,
   TAsChangeType,
+  TAsCollapsibleProps,
+  TAsCollapsibleSlots,
 } from "./components/types";
 
 // Factories

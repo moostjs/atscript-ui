@@ -7,7 +7,7 @@ import { useAsArray } from "../../composables/use-as-array";
 import { useAsDropdown } from "../../composables/use-as-dropdown";
 import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import AsField from "../as-field.vue";
-import AsCollapsible from "../internal/as-collapsible.vue";
+import AsCollapsible from "../as-collapsible.vue";
 import AsItemsChip from "../internal/as-items-chip.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";

@@ -5,7 +5,7 @@ import type { TAsComponentEmits, TAsComponentProps } from "../types";
 import { useAsUnionVariant } from "../../composables/use-form-context";
 import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import AsIterator from "../as-iterator.vue";
-import AsCollapsible from "../internal/as-collapsible.vue";
+import AsCollapsible from "../as-collapsible.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
 

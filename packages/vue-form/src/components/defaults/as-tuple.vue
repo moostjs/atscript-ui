@@ -6,7 +6,7 @@ import { useAsUnionVariant } from "../../composables/use-form-context";
 import { useAsTuple } from "../../composables/use-as-tuple";
 import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import AsField from "../as-field.vue";
-import AsCollapsible from "../internal/as-collapsible.vue";
+import AsCollapsible from "../as-collapsible.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
 

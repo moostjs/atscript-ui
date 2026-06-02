@@ -52,6 +52,11 @@
       "import": "./dist/as-checkbox.mjs",
       "require": "./dist/as-checkbox.cjs"
     },
+    "./as-collapsible": {
+      "types": "./dist/as-collapsible.d.mts",
+      "import": "./dist/as-collapsible.mjs",
+      "require": "./dist/as-collapsible.cjs"
+    },
     "./as-date": {
       "types": "./dist/as-date.d.mts",
       "import": "./dist/as-date.mjs",
