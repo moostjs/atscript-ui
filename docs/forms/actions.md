@@ -81,6 +81,53 @@ saveDraft: ui.action
 discard: ui.action
 ```
 
+## Placing actions below the submit button
+
+Action fields render in the form grid **above** the submit button by default, in
+declaration order. Add `@ui.form.pushDown` to move a field into its own grid
+**below** the submit button instead — the classic "Already have an account?
+Sign in" affordance under a sign-up button. Pushed-down fields keep the same
+12-column grid, so `@ui.form.order` and `@ui.form.grid.*` apply there too.
+
+```atscript
+@meta.label 'Create account'
+@ui.form.submit.text 'Create account'
+export interface SignUpForm {
+    @meta.label 'Email'
+    email: string.email
+
+    @meta.label 'Password'
+    @ui.type 'password'
+    password: string
+
+    @ui.form.pushDown
+    @ui.form.attr 'text', 'Already have an account?'
+    @ui.form.attr 'align', 'center'
+    @ui.form.action 'sign-in', 'Sign in'
+    signIn: ui.action
+}
+```
+
+### Alt-action text and alignment
+
+The default `AsAction` reads two optional props off `@ui.form.attr`, which
+forwards arbitrary name/value pairs to the field component:
+
+| `@ui.form.attr`                          | Effect                                                |
+| ---------------------------------------- | ----------------------------------------------------- |
+| `'text', 'Already have an account?'`     | Text rendered before the action link → `text [link]`. |
+| `'align', 'left' \| 'center' \| 'right'` | Alignment of the text + link row. Defaults to `left`. |
+
+`text` / `align` apply to `ui.action` phantom fields (rendered by `AsAction`),
+not to the inline-on-input variant below. `@ui.form.pushDown` only controls
+_where_ a field renders, not _how_ — combine the two for the centred,
+below-submit sign-in link shown above.
+
+These annotations carry into `<AsWfForm>` unchanged: workflow forms render
+through `<AsForm>`, and `@atscript/moost-wf` serializes `@ui.form.pushDown` /
+`@ui.form.attr` over the HTTP round-trip, so a pushed-down centred alt-action
+behaves identically server-driven.
+
 ## Inline action on an input field
 
 `@ui.form.action` may also sit on a regular input field (string, password,
@@ -176,11 +223,11 @@ full picture.
 ## The AsAction component
 
 The default `AsAction` component (Tier 2 swap target) is intentionally minimal:
-a `<button type="button">` that emits `action` with its `formAction.id`. Out of
-the box it is styled to **match the inline alt-action link** on an input
-field's footer — left-aligned, link-styled (`as-field-action-link`) — so phantom
-action fields read as secondary affordances next to the form's primary submit.
-Swap it through the `:types` map to use your design system's button:
+an optional prefix `text`, then a `<button type="button">` that emits `action`
+with its `formAction.id`. The link styling (`as-field-action-link`) sits on the
+button itself, so its hover/focus underline stays scoped to the link — not the
+whole row — and the row's `align` (left by default) positions it. Swap the
+component through the `:types` map to use your design system's button:
 
 ```vue
 <script setup lang="ts">

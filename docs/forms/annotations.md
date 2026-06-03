@@ -179,14 +179,17 @@ below.
 
 ### Actions
 
-| Annotation                      | Effect                                                                                  |
-| ------------------------------- | --------------------------------------------------------------------------------------- |
-| `@ui.type 'action'`             | renders the field as an action button (uses `AsAction`)                                 |
-| `@ui.form.action { id, label }` | declares the action's id + label; `AsForm` emits `action` with the form data when fired |
-| `@ui.form.submit.text 'Save'`   | on the type itself — submit button text                                                 |
+| Annotation                                             | Effect                                                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `@ui.type 'action'`                                    | renders the field as an action button (uses `AsAction`)                                 |
+| `@ui.form.action { id, label }`                        | declares the action's id + label; `AsForm` emits `action` with the form data when fired |
+| `@ui.form.pushDown`                                    | render this field in its own grid **below** the submit button instead of above it       |
+| `@ui.form.attr 'text', '…'`                            | on an action field — text rendered before the link (e.g. "Already have an account?")    |
+| `@ui.form.attr 'align', 'left' \| 'center' \| 'right'` | on an action field — alignment of the text + link row (default `left`)                  |
+| `@ui.form.submit.text 'Save'`                          | on the type itself — submit button text                                                 |
 
-See [Actions](/forms/actions) for the action lifecycle and how
-`AsWfForm` extends this with workflow round-trips.
+See [Actions](/forms/actions) for the action lifecycle, below-submit placement,
+and how `AsWfForm` extends this with workflow round-trips.
 
 ### Choice fields
 

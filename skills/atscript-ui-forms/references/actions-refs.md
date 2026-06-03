@@ -7,6 +7,7 @@ Form actions (`@ui.form.action` + `AsAction`), multi-action forms, submit-button
 - [Form actions — @ui.form.action](#form-actions--uiformaction)
 - [AsAction default component](#asaction-default-component)
 - [Multi-action forms](#multi-action-forms)
+- [Below-submit placement + alt-action text/align](#below-submit-placement--alt-action-textalign)
 - [Inline action on an input field](#inline-action-on-an-input-field)
 - [Submit button controls](#submit-button-controls)
 - [FK references — @db.rel.FK](#fk-references--dbrelfk)
@@ -69,13 +70,25 @@ const emit = defineEmits<{ (e: "action", name: string): void }>();
 </script>
 
 <template>
-  <div class="as-default-field as-action-field" :class="$props.class" v-show="!hidden">
-    <button type="button" @click="formAction && emit('action', formAction.id)">
+  <!-- optional `text` prefix, then the link button; `align` → as-action-{left,center,right} -->
+  <div
+    class="as-action-field"
+    :class="[$props.class, `as-action-${align ?? 'left'}`]"
+    v-show="!hidden"
+  >
+    <span v-if="text" class="as-action-text">{{ text }}</span>
+    <button
+      type="button"
+      class="as-field-action-link"
+      @click="formAction && emit('action', formAction.id)"
+    >
       {{ formAction?.label }}
     </button>
   </div>
 </template>
 ```
+
+`text` / `align` arrive as props from `@ui.form.attr` (see [Below-submit placement + alt-action text/align](#below-submit-placement--alt-action-textalign)). The link class (`as-field-action-link`) is on the `<button>` so its hover/focus underline binds to the link alone, not the row.
 
 Swap globally:
 
@@ -139,6 +152,31 @@ function supportsAction(def: FormDef, actionId: string): boolean {
 ```
 
 Useful when shared chrome (e.g. a workflow root) dispatches actions through the form and you need to differentiate "I forgot to wire this" from "no field claims this id".
+
+## Below-submit placement + alt-action text/align
+
+`@ui.form.pushDown` moves a field into its own grid **below** the submit button instead of inline above it. The default `AsAction` also reads `text` and `align` off `@ui.form.attr`. Together they produce the centred "Already have an account? Sign in" link under a sign-up button.
+
+```atscript
+@ui.form.pushDown
+@ui.form.attr 'text', 'Already have an account?'
+@ui.form.attr 'align', 'center'
+@ui.form.action 'sign-in', 'Sign in'
+signIn: ui.action
+```
+
+| Annotation                                             | Effect                                                                                                                                                                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.form.pushDown`                                    | Field renders in a second `as-form-grid` below submit (same 12-col grid; `@ui.form.order` / `@ui.form.grid.*` honoured). `FormDef` exposes the partition as `def.mainFields` (above) / `def.pushDownFields` (below). |
+| `@ui.form.attr 'text', '…'`                            | Text before the link → `text [link]`. `AsAction` reads it as the `text` prop.                                                                                                                                        |
+| `@ui.form.attr 'align', 'left' \| 'center' \| 'right'` | Row alignment → `as-action-{left,center,right}` (safelisted in the ui-styles preset). Default `left`.                                                                                                                |
+
+Rules:
+
+- `text` / `align` are consumed by the default `AsAction` only (`ui.action` phantom fields). The inline-on-input action (field footer) ignores them.
+- `@ui.form.pushDown` changes placement only — the `action` emit contract is unchanged. It is a per-field flag on `FormFieldDef.pushDown`; only top-level fields are partitioned (nested object grids render all their fields).
+- `@ui.form.attr` forwards arbitrary name/value pairs as component props (`multiple`, `mergeStrategy: replace`) — the same mechanism custom components use; nothing in core special-cases `text` / `align`.
+- All three work unchanged in `<AsWfForm>`: it renders through `<AsForm>`, and `@atscript/moost-wf` serializes `ui.form.pushDown` / `ui.form.attr` over the wire.
 
 ## Inline action on an input field
 
