@@ -1,6 +1,6 @@
 {
   "name": "@atscript/vue-wf",
-  "version": "0.1.84",
+  "version": "0.1.85",
   "description": "Workflow form integration for Vue 3 — HTTP round-trip loop driven by atscript type metadata",
   "keywords": [
     "atscript",
