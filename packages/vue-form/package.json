@@ -1,6 +1,6 @@
 {
   "name": "@atscript/vue-form",
-  "version": "0.1.83",
+  "version": "0.1.84",
   "description": "Type-driven form rendering for Atscript with Vue 3",
   "keywords": [
     "atscript",
