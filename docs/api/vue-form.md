@@ -84,6 +84,47 @@ interface AsIteratorProps {
 }
 ```
 
+### `AsCollapsible`
+
+Section chrome with a collapsible `<summary>` header plus
+`actions` / `badges` / `title-extras` / `body` / `empty` slots.
+`AsObject` / `AsArray` / `AsTuple` render nested structures through it.
+Public so a custom `@ui.form.component` can own its own section header and
+inject header-row actions. See [Collapsible Sections](/forms/collapsible-sections)
+for the narrative.
+
+```typescript
+interface AsCollapsibleProps {
+  /** Header heading text. */
+  title?: string;
+  /** Sub-text under the title. */
+  description?: string;
+  /** REQUIRED. ≤0 → root (no chrome), odd → section, even → island. */
+  level: number;
+  /** When true and not enabled, the `empty` slot renders instead of the section. Default `false`. */
+  optional?: boolean;
+  /** Gates the `empty` slot — shown when `optional && !optionalEnabled`. Default `false`. */
+  optionalEnabled?: boolean;
+  /** Unique key registered with the sections store (expand/collapse + auto-open). */
+  path: string;
+  /** Renders an alert row at the top of the body. */
+  error?: string;
+  /** Open on first mount. Defaults to `false`. */
+  defaultOpen?: boolean;
+  /** Hides via `v-show` — stays mounted and registered. */
+  hidden?: boolean;
+  /** Appends a `#N` suffix to the title. */
+  arrayIndex?: number;
+}
+```
+
+**Slots**: `title-extras`, `badges`, `actions` (all render inside `<summary>`),
+`body`, `empty`.
+
+**Expose**: `runAndFocus(fn)` / `runAndFocusNew(fn)` — open-then-focus helpers
+(focus first / first-new focusable inside after toggle). Used by array/optional
+add-flows; rarely needed directly.
+
 ## Tier 2 — Default field components
 
 Default swap targets for the `types` map. Importable both via the package root and the kebab subpath used by `AsResolver`.
@@ -619,6 +660,26 @@ interface TAsUnionContext {
   variants: FormUnionVariant[];
   currentIndex: Ref<number>;
   changeVariant: (index: number) => void;
+}
+```
+
+### `TAsCollapsibleProps`
+
+Exported. Public props contract for the standalone [`AsCollapsible`](#ascollapsible)
+section component — see that entry for the annotated interface.
+
+### `TAsCollapsibleSlots`
+
+Exported. Slot contract for `AsCollapsible`: `title-extras`, `badges`,
+`actions`, `body`, `empty` — every header slot renders inside `<summary>`.
+
+```typescript
+interface TAsCollapsibleSlots {
+  "title-extras"(): unknown;
+  badges(): unknown;
+  actions(): unknown;
+  body(): unknown;
+  empty(): unknown;
 }
 ```
 

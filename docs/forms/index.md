@@ -38,7 +38,9 @@ Every component in `vue-form` lives in one of three tiers (see
 `CLAUDE.md`):
 
 - **Tier 1 — Primary.** What users tag in templates: `AsForm`,
-  `AsField`, `AsIterator`. Auto-resolved by `AsResolver()`.
+  `AsField`, `AsIterator`, and `AsCollapsible` (the auto-resolved
+  section-chrome component for custom layouts). Auto-resolved by
+  `AsResolver()`.
 - **Tier 2 — Defaults.** Swappable via `:types` or `:components`:
   `AsInput`, `AsNumber`, `AsDecimal`, `AsSelect`, `AsRadio`,
   `AsCheckbox`, `AsDate`, `AsDatetime`, `AsTime`, `AsParagraph`,
@@ -71,6 +73,8 @@ Tier 2 when you want to replace a default renderer; reach for the
 - [Customization](/forms/customization),
   [Custom Components](/forms/custom-components),
   [Locale](/forms/locale) — make it yours.
+- [Collapsible Sections](/forms/collapsible-sections) — wrap a custom
+  component in `AsObject`'s section chrome with your own header actions.
 - [Aooth Components](/forms/aooth-components) — pre-built field
   components for consent collection, password rules, QR-code enrolment
   and one-shot copy values, shipped by `@atscript/vue-aooth`.

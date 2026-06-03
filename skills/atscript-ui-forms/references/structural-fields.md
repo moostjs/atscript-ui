@@ -185,6 +185,8 @@ const sections = provideAsNestedSectionsStore();
 
 `AsForm` also auto-opens every ancestor of an error path so users see invalid fields immediately.
 
+To use the same collapsible chrome standalone in a custom display component — with a header-row action — render `AsCollapsible` directly: see [collapsible-sections.md](collapsible-sections.md).
+
 ## Discriminated unions — AsUnion
 
 A union field renders one variant at a time. Variant detection happens by required-prop fingerprinting: at mount, `detectUnionVariant(modelValue, variants)` picks the variant whose required props all exist on the current value.

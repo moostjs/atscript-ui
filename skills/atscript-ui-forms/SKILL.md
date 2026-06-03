@@ -76,7 +76,7 @@ function onSubmit(data: Contact) {
 </template>
 ```
 
-`AsResolver()` from `@atscript/ui-styles/vite` auto-imports `AsForm`, `AsField`, `AsIterator`
+`AsResolver()` from `@atscript/ui-styles/vite` auto-imports `AsForm`, `AsField`, `AsIterator`, `AsCollapsible`
 in templates — no manual import needed if `unplugin-vue-components` is wired.
 
 ## Invariants
@@ -98,7 +98,7 @@ in templates — no manual import needed if `unplugin-vue-components` is wired.
 
 ```ts
 // Tier 1 — primary (auto-imported by AsResolver)
-import { AsForm, AsField, AsIterator } from "@atscript/vue-form";
+import { AsForm, AsField, AsIterator, AsCollapsible } from "@atscript/vue-form";
 
 // Tier 2 — defaults (swap targets; subpath imports also available)
 import {
@@ -161,6 +161,8 @@ import {
 import type {
   TAsComponentProps,
   TAsComponentEmits,
+  TAsCollapsibleProps,
+  TAsCollapsibleSlots,
   TAsChangeType,
   TAsTypeComponents,
   TAsUnionContext,
@@ -175,15 +177,16 @@ import type {
 
 ## References — load only what's needed
 
-| Domain               | File                                                    | When                                                                                                                                                                                                                                                                                  |
-| -------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| First contact        | [getting-started.md](references/getting-started.md)     | Minimal mount, `createAsFormDef`, `:types` / `:components` / `:errors` props, the submit/action emit contract                                                                                                                                                                         |
-| `<AsForm>` reference | [forms.md](references/forms.md)                         | AsForm/AsField/AsIterator props/emits/slots, default type map, validation (`@expect.*`, `@meta.required`, `firstValidation` strategies, fresh-fields suppression, external errors, `__form` banner)                                                                                   |
-| Structural fields    | [structural-fields.md](references/structural-fields.md) | Arrays (scalar/object/nested, union-item), nested objects (collapsible, path nesting, `provideAsNestedSectionsStore`), discriminated unions (variant detection, `useAsUnion` stash), tuples (`useAsTuple.fillMissing`, positional labels)                                             |
-| Dynamic fields       | [dynamic-fields.md](references/dynamic-fields.md)       | `@atscript/ui-fns`: `installDynamicResolver()`, `@ui.form.fn.*` (label, hidden, disabled, readonly, options, value, attr, classes, styles, title, submit.text, submit.disabled), `@ui.form.validate`, `TFnScope` (`v` / `data` / `context` / `entry`), security model, FNPool caching |
-| Customization        | [customization.md](references/customization.md)         | Three-level override: `:types` (built-in id swap) → `:components` (custom name + `@ui.form.component`) → `AsFieldShell` wrap → fully custom root via `useAsForm`. `TAsComponentProps` contract for custom components. Locale providers (`provideAsLocale`, currency, units).          |
-| Actions + refs       | [actions-refs.md](references/actions-refs.md)           | `@ui.form.action` + `AsAction` (single + multi-action forms, submit text, conditional disable), `@db.rel.FK` + `AsRef` value-help (`@db.http.path`, `@ui.dict.*` on target, `clientFactory` for auth headers, `ValueHelpClient` flow)                                                 |
-| Aooth components     | [aooth-components.md](references/aooth-components.md)   | Reaching for the prebuilt `@atscript/vue-aooth` field components — `AsConsentArray`, `AsPasswordRules`, `AsQrCode`, `AsCopy` — or building a phantom display field driven by workflow context (`ui.paragraph` + `@ui.form.fn.value` + `@wf.context.pass`)                             |
+| Domain               | File                                                          | When                                                                                                                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| First contact        | [getting-started.md](references/getting-started.md)           | Minimal mount, `createAsFormDef`, `:types` / `:components` / `:errors` props, the submit/action emit contract                                                                                                                                                                         |
+| `<AsForm>` reference | [forms.md](references/forms.md)                               | AsForm/AsField/AsIterator props/emits/slots, default type map, validation (`@expect.*`, `@meta.required`, `firstValidation` strategies, fresh-fields suppression, external errors, `__form` banner)                                                                                   |
+| Structural fields    | [structural-fields.md](references/structural-fields.md)       | Arrays (scalar/object/nested, union-item), nested objects (collapsible, path nesting, `provideAsNestedSectionsStore`), discriminated unions (variant detection, `useAsUnion` stash), tuples (`useAsTuple.fillMissing`, positional labels)                                             |
+| Dynamic fields       | [dynamic-fields.md](references/dynamic-fields.md)             | `@atscript/ui-fns`: `installDynamicResolver()`, `@ui.form.fn.*` (label, hidden, disabled, readonly, options, value, attr, classes, styles, title, submit.text, submit.disabled), `@ui.form.validate`, `TFnScope` (`v` / `data` / `context` / `entry`), security model, FNPool caching |
+| Customization        | [customization.md](references/customization.md)               | Three-level override: `:types` (built-in id swap) → `:components` (custom name + `@ui.form.component`) → `AsFieldShell` wrap → fully custom root via `useAsForm`. `TAsComponentProps` contract for custom components. Locale providers (`provideAsLocale`, currency, units).          |
+| Actions + refs       | [actions-refs.md](references/actions-refs.md)                 | `@ui.form.action` + `AsAction` (single + multi-action forms, submit text, conditional disable), `@db.rel.FK` + `AsRef` value-help (`@db.http.path`, `@ui.dict.*` on target, `clientFactory` for auth headers, `ValueHelpClient` flow)                                                 |
+| Aooth components     | [aooth-components.md](references/aooth-components.md)         | Reaching for the prebuilt `@atscript/vue-aooth` field components — `AsConsentArray`, `AsPasswordRules`, `AsQrCode`, `AsCopy` — or building a phantom display field driven by workflow context (`ui.paragraph` + `@ui.form.fn.value` + `@wf.context.pass`)                             |
+| Collapsible sections | [collapsible-sections.md](references/collapsible-sections.md) | Wrapping a custom component in section chrome / adding a header-row action to a section / using `<AsCollapsible>` directly                                                                                                                                                            |
 
 ## OCC-enabled edit forms
 
@@ -281,6 +284,8 @@ defineProps<TAsComponentProps<string>>();
   </AsFieldShell>
 </template>
 ```
+
+If instead you render a **bare root** (no `AsFieldShell` — e.g. a section or media block that doesn't want the label/error chrome), you must bind `:class="props.class"` (and `:style="props.style"`) on that root yourself. `class`/`style` are _declared_ props on `TAsComponentProps`, so they arrive as `props.class` — not `$attrs` — and are not auto-applied to the root; `AsFieldShell` does this for you. Omit it and the field loses its `@ui.form.grid.colSpan`/`.rowSpan` placement (renders at the wrong width).
 
 Full contract for custom components (`TAsComponentProps`, `TAsComponentEmits`, locale providers) lives in [customization.md](references/customization.md).
 
