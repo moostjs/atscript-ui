@@ -246,8 +246,8 @@ export interface TAsCollapsibleProps {
   title?: string;
   description?: string;
   level: number;
-  optional: boolean;
-  optionalEnabled: boolean;
+  optional?: boolean;
+  optionalEnabled?: boolean;
   path: string;
   error?: string;
   defaultOpen?: boolean;

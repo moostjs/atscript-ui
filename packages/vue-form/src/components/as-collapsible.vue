@@ -14,7 +14,11 @@ import { useAsFocusFirstAfter } from "../composables/focus-after-toggle";
 import { formatIndexedLabelParts } from "../composables/use-form-context";
 import type { TAsCollapsibleProps, TAsCollapsibleSlots } from "./types";
 
-const props = withDefaults(defineProps<TAsCollapsibleProps>(), { defaultOpen: false });
+const props = withDefaults(defineProps<TAsCollapsibleProps>(), {
+  defaultOpen: false,
+  optional: false,
+  optionalEnabled: false,
+});
 
 const titleParts = computed(() => formatIndexedLabelParts(props.title, props.arrayIndex));
 
