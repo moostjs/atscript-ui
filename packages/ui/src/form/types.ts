@@ -41,6 +41,13 @@ export interface FormFieldDef {
   name: string;
   /** True when no `ui.fn.*` metadata keys exist. Vue perf flag. */
   allStatic: boolean;
+  /**
+   * `@ui.form.pushDown` — render this field below the submit button in its
+   * own grid, instead of in the main field grid above submit. Set on
+   * top-level form fields (typically secondary `ui.action` links). The field
+   * stays in `fields[]` for validation/data; only its render slot moves.
+   */
+  pushDown: boolean;
 }
 
 /**
@@ -52,6 +59,15 @@ export interface FormDef {
   /** Root field representing the entire form. For interface types this is `type='object'`; for single-type forms it is a leaf field. */
   rootField: FormFieldDef;
   fields: FormFieldDef[];
+  /**
+   * Render partition of `fields` by `@ui.form.pushDown`, precomputed once so
+   * the renderer never re-scans per frame. `mainFields` (above submit) plus
+   * `pushDownFields` (below submit) cover `fields` exactly once. In the common
+   * case nothing is pushed down: `mainFields === fields` (same ref) and
+   * `pushDownFields` is empty.
+   */
+  mainFields: FormFieldDef[];
+  pushDownFields: FormFieldDef[];
   flatMap: Map<string, TAtscriptAnnotatedType>;
 }
 

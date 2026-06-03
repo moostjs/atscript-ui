@@ -2,6 +2,7 @@
 import { useAsForm } from "../composables/use-as-form";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
+import AsIterator from "./as-iterator.vue";
 import type { ClientFactory, FormDef } from "@atscript/ui";
 import type { Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
@@ -141,6 +142,10 @@ const form = useAsForm<TFormData, TFormContext>({
         {{ form.submitText.value }}
       </button>
     </slot>
+    <!-- `@ui.form.pushDown` fields render in their own grid below submit. -->
+    <div v-if="def.pushDownFields.length" class="as-form-grid">
+      <AsIterator :def="def" :fields="def.pushDownFields" />
+    </div>
     <slot
       name="form.footer"
       :disabled="form.submitDisabled.value"

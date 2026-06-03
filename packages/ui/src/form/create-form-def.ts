@@ -28,6 +28,7 @@ import {
   UI_FORM_PREFIX,
   UI_FORM_PREFIX_ICON,
   UI_FORM_PREFIX_REF,
+  UI_FORM_PUSH_DOWN,
   UI_FORM_SUFFIX,
   UI_FORM_SUFFIX_ICON,
   UI_FORM_SUFFIX_REF,
@@ -55,10 +56,11 @@ export function createFormDef(
   type: TAtscriptAnnotatedType,
   opts?: { versionColumn?: string },
 ): FormDef {
-  // Non-object types: single leaf field
+  // Non-object types: single leaf field (never pushed down)
   if (type.type.kind !== "object") {
     const rootField = createFieldDef("", type);
-    return { type, rootField, fields: [rootField], flatMap: new Map() };
+    const fields = [rootField];
+    return { type, rootField, fields, mainFields: fields, pushDownFields: [], flatMap: new Map() };
   }
 
   // Object types: flatten and iterate props
@@ -111,8 +113,19 @@ export function createFormDef(
     phantom: false,
     name: "",
     allStatic: false,
+    pushDown: false,
   } as FormObjectFieldDef;
-  const def: FormDef = { type, rootField, fields, flatMap };
+
+  // Partition by `@ui.form.pushDown` once. Common case (nothing pushed down):
+  // reuse `fields` as `mainFields` to avoid a copy; only split when needed.
+  let mainFields = fields;
+  const pushDownFields: FormFieldDef[] = [];
+  if (fields.some((f) => f.pushDown)) {
+    mainFields = [];
+    for (const f of fields) (f.pushDown ? pushDownFields : mainFields).push(f);
+  }
+
+  const def: FormDef = { type, rootField, fields, mainFields, pushDownFields, flatMap };
   rootField.objectDef = def;
   return def;
 }
@@ -127,7 +140,8 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
   const uiType =
     (getFieldMeta(prop, UI_FORM_TYPE) as string | undefined) ??
     (getFieldMeta(prop, UI_TYPE) as string | undefined);
-  const base = { path, prop, phantom: false, name, allStatic };
+  const pushDown = getFieldMeta(prop, UI_FORM_PUSH_DOWN) !== undefined;
+  const base = { path, prop, phantom: false, name, allStatic, pushDown };
   // Structured kinds (array, object, tuple, multi-variant union) need to
   // keep `type` equal to the kind so the `isArrayField` / `isObjectField`
   // / `isTupleField` / `isUnionField` guards (and the validator / path-
@@ -183,7 +197,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
       return { ...base, type: "union", customType, unionVariants } as FormUnionFieldDef;
     }
     const v = unionVariants[0];
-    if (v?.itemField) return { ...v.itemField, path, name, allStatic };
+    if (v?.itemField) return { ...v.itemField, path, name, allStatic, pushDown };
     if (v?.def) {
       return {
         ...base,

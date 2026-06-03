@@ -48,8 +48,10 @@ function handleAddData(): void {
   <template v-if="isRoot">
     <h2 v-if="title" class="as-form-title">{{ title }}</h2>
     <p v-if="description" class="as-form-description">{{ description }}</p>
+    <!-- Root grid renders the above-submit partition; `@ui.form.pushDown`
+         fields go to AsForm's below-submit grid via `def.pushDownFields`. -->
     <div v-if="objectDef" class="as-form-grid" :class="$props.class">
-      <AsIterator :def="objectDef" />
+      <AsIterator :def="objectDef" :fields="objectDef.mainFields" />
     </div>
   </template>
 

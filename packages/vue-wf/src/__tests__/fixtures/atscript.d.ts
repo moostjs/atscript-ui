@@ -47,6 +47,7 @@ declare global {
     "ui.form.grid.rowSpan": { desktop: string, narrow?: string }
     "ui.form.submit.text": string
     "ui.form.label.singular": string
+    "ui.form.pushDown": boolean
     "ui.form.action": { id: string, label?: string }
     "ui.form.prefix": string
     "ui.form.prefix.ref": string

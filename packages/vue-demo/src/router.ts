@@ -111,6 +111,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/grid-layout.vue"),
   },
   {
+    path: "/forms-demo/alt-actions",
+    name: "forms-demo-alt-actions",
+    component: () => import("./client/pages/forms-demo/alt-actions.vue"),
+  },
+  {
     path: "/forms-demo/array-showcase",
     name: "forms-demo-array-showcase",
     component: () => import("./client/pages/forms-demo/array-showcase.vue"),

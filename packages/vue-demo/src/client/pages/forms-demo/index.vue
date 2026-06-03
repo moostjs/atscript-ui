@@ -43,6 +43,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/alt-actions",
+    title: "Alt actions · text, push-down & align",
+    description:
+      "@ui.form.action links with a text prefix, pushed below the submit button via @ui.form.pushDown, and left/center/right aligned via @ui.form.attr.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/array-showcase",
     title: "Array showcase",
     description: "Optional and required arrays of primitives and objects, plus a nested array.",

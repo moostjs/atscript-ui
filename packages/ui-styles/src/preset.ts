@@ -237,6 +237,12 @@ const FORM_GRID_SAFELIST: string[] = (() => {
   return list;
 })();
 
+// `@ui.form.attr 'align', '...'` stamps `as-action-{left,center,right}`
+// dynamically on the alt-action row. Like the grid spans above, the static
+// extractor cannot see the interpolated class in source, so the same safelist
+// mechanism keeps them in the consumer's generated CSS.
+const AS_ACTION_ALIGN_SAFELIST = ["as-action-left", "as-action-center", "as-action-right"];
+
 const formGridSafelistPreset: Preset = {
   name: "atscript-ui-form-grid",
   variants: [
@@ -256,7 +262,7 @@ const formGridSafelistPreset: Preset = {
       },
     },
   ],
-  safelist: FORM_GRID_SAFELIST,
+  safelist: [...FORM_GRID_SAFELIST, ...AS_ACTION_ALIGN_SAFELIST],
 };
 
 /**

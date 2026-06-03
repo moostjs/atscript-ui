@@ -13,6 +13,7 @@ export const UI_FORM_ORDER = "ui.form.order" as const;
 export const UI_FORM_TYPE = "ui.form.type" as const;
 export const UI_FORM_COMPONENT = "ui.form.component" as const;
 export const UI_FORM_HIDDEN = "ui.form.hidden" as const;
+export const UI_FORM_PUSH_DOWN = "ui.form.pushDown" as const;
 export const UI_FORM_ATTR = "ui.form.attr" as const;
 export const UI_FORM_GRID_COL_SPAN = "ui.form.grid.colSpan" as const;
 export const UI_FORM_GRID_ROW_SPAN = "ui.form.grid.rowSpan" as const;

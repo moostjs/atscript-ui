@@ -342,6 +342,24 @@ export const uiAnnotations: TAnnotationsTree = {
         }),
       },
 
+      pushDown: new AnnotationSpec({
+        description:
+          "Render this field below the form's submit button instead of above " +
+          "it. Pushed-down fields collect into their own grid (same 12-column " +
+          "layout, `@ui.form.order`/`@ui.form.grid.*` honoured) that sits under " +
+          "the submit action. Typical use: a secondary `ui.action` link such as " +
+          '"Already have an account? Sign in" beneath a Sign-up button.' +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@ui.form.pushDown\n" +
+          "@ui.form.attr 'text', 'Already have an account?'\n" +
+          "@ui.form.attr 'align', 'center'\n" +
+          "@ui.form.action 'signin', 'Sign in'\n" +
+          "signinAction: ui.action\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+      }),
+
       action: new AnnotationSpec({
         description: "Form action button for this field.",
         nodeType: ["prop", "type"],
