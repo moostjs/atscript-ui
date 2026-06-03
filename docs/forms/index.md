@@ -74,7 +74,8 @@ Tier 2 when you want to replace a default renderer; reach for the
   [Custom Components](/forms/custom-components),
   [Locale](/forms/locale) — make it yours.
 - [Collapsible Sections](/forms/collapsible-sections) — wrap a custom
-  component in `AsObject`'s section chrome with your own header actions.
+  component in `AsObject`'s section chrome with your own header actions, and
+  full-bleed section dividers to a padded card's edges (`--as-inset`).
 - [Aooth Components](/forms/aooth-components) — pre-built field
   components for consent collection, password rules, QR-code enrolment
   and one-shot copy values, shipped by `@atscript/vue-aooth`.

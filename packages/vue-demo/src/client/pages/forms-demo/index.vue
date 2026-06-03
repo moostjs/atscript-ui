@@ -16,6 +16,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/card-wrapped",
+    title: "Card-wrapped form · full-bleed dividers",
+    description:
+      "Whole form inside a padded card. Toggle the --as-inset contract to make root-level section dividers span the card edges while plain fields stay padded.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/optional-fields",
     title: "Optional fields · all types",
     description:

@@ -161,6 +161,34 @@ descendant-error-count badge when collapsed. This works as long as an
 [Nested Objects](/forms/nested-objects#error-aware-auto-open); this page
 only consumes them.
 
+## Full-bleed dividers in a padded card
+
+A **section** (odd `level`) draws only top/bottom dividers, so it inlines into
+the surrounding form. By default those dividers stop at the padded content box
+of whatever wraps the section. Set the inherited `--as-inset` CSS variable to
+the wrapper's horizontal padding and the dividers full-bleed to its edges,
+while the section's own title and fields stay aligned inside the padding.
+
+**Nested inside an island — automatic.** Each **island** (even `level`)
+declares `--as-inset` equal to its own padding, so a section nested in it
+bleeds its dividers to the island's inner edges with no extra work.
+
+**A whole form inside your own card — opt in.** Set `--as-inset` on the card
+to match its horizontal padding:
+
+```vue
+<div class="layer-0 border-1 rounded-r2 p-$m [--as-inset:1em]">
+  <AsForm :def="def" :form-data="formData" :types="types" />
+</div>
+```
+
+`p-$m` is `1em`, so `[--as-inset:1em]` matches it. Top-level section dividers
+now span the card's edges; plain fields and nested islands stay inside the
+padding. For a different padding token, set `--as-inset` to that value (e.g.
+`[--as-inset:var(--card-spacing)]` with Vunor's `card`). When `--as-inset` is
+unset it resolves to `0px`, so nothing changes — the feature is opt-in, and
+only the **section** variant bleeds; the **island** keeps its full border.
+
 ## DOs and DON'Ts
 
 - **DO pick a unique `path`.** The store keys open-state by `path`. A `path`
@@ -176,6 +204,10 @@ only consumes them.
   `AsFieldShell` — so it does **not** auto-apply the field's grid
   placement. The bare-root rule is covered in
   [Custom Components](/forms/custom-components).
+- **DO match `--as-inset` to the wrapper's horizontal padding** when you wrap
+  a form for full-bleed dividers. Larger than the padding overflows the card;
+  smaller leaves the divider short. The value is `em`-based, so keep the card
+  and form at the same font size.
 
 ## See also
 

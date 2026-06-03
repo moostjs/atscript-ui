@@ -6,10 +6,25 @@ export const asCollapsibleShortcuts = defineShortcuts({
   // separating space, and the next section's `border-t-1` is the divider.
   // Stacking pb + gap + pt would over-pad the visual gap. Underscore in
   // `+_` is UnoCSS's space-escape inside arbitrary selectors.
+  //
+  // Full-bleed contract via the inherited `--as-inset` var: a container
+  // that pads its children declares `--as-inset` = its horizontal padding;
+  // the section then breaks out by that amount (negative `margin-inline`)
+  // and pads its own summary + body content back by the same amount
+  // (`padding-inline`) so text stays aligned with the surrounding fields
+  // while the top/bottom dividers run edge-to-edge. Default is unset → the
+  // var resolves to `0px` → zero visual change (fully backward compatible).
+  // The island below sets it; a consumer wrapping the root form in a padded
+  // card sets `--as-inset` on that card to get edge-to-edge dividers too.
   "as-collapsible-section":
-    "border-t-1 first:border-t-0 pt-$m [&:not(:has(+_.as-collapsible-section))]:(pb-$m border-b-1) [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden",
+    "border-t-1 first:border-t-0 pt-$m [&:not(:has(+_.as-collapsible-section))]:(pb-$m border-b-1) [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden [margin-inline:calc(var(--as-inset,0px)*-1)] [padding-inline:var(--as-inset,0px)]",
+  // `[--as-inset:1em]` MUST stay in sync with this island's own `p-$m`
+  // (`$m` === `1em` in vunor's spacing scale) so nested
+  // `as-collapsible-section`s full-bleed to the island's inner edges: both
+  // are `em` at the same inherited font-size, so the section's negative
+  // `margin-inline` cancels the island's padding exactly.
   "as-collapsible-island":
-    "border-1 rounded-r2 p-$m [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden",
+    "border-1 rounded-r2 p-$m [--as-inset:1em] [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden",
   "as-collapsible-island-even": "layer-0",
   "as-collapsible-island-odd": "layer-1",
 

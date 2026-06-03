@@ -91,6 +91,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/nested-collapsible.vue"),
   },
   {
+    path: "/forms-demo/card-wrapped",
+    name: "forms-demo-card-wrapped",
+    component: () => import("./client/pages/forms-demo/card-wrapped.vue"),
+  },
+  {
     path: "/forms-demo/optional-fields",
     name: "forms-demo-optional-fields",
     component: () => import("./client/pages/forms-demo/optional-fields.vue"),
