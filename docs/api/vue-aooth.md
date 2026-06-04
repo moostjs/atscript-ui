@@ -1,6 +1,6 @@
 # @atscript/vue-aooth
 
-Custom Vue 3 form-field components for [Aooth](https://aooth.moost.org)-flavoured flows — multi-consent collection, password-policy display, QR-code enrolment, and one-shot link/token sharing. All four implement the `TAsComponentProps` contract from [`@atscript/vue-form`](/api/vue-form) and drop into `<AsForm :components>` via the `@ui.form.component` annotation. Typically paired with [`@atscript/vue-wf`](/api/vue-wf) when the consents, policies, TOTP URIs, or magic links arrive as part of a workflow `formContext`.
+Custom Vue 3 form-field components for [Aooth](https://aooth.moost.org)-flavoured flows — multi-consent collection, password-policy display, QR-code enrolment, one-shot link/token sharing, and SSO / social-login provider picking. All five implement the `TAsComponentProps` contract from [`@atscript/vue-form`](/api/vue-form) and drop into `<AsForm :components>` via the `@ui.form.component` annotation. Typically paired with [`@atscript/vue-wf`](/api/vue-wf) when the consents, policies, TOTP URIs, or magic links arrive as part of a workflow `formContext`.
 
 ## Contents
 
@@ -9,22 +9,30 @@ Custom Vue 3 form-field components for [Aooth](https://aooth.moost.org)-flavoure
 - [Component — AsPasswordRules](#component-aspasswordrules)
 - [Component — AsQrCode](#component-asqrcode)
 - [Component — AsCopy](#component-ascopy)
+- [Component — AsSsoProviders](#component-asssoproviders)
 - [Custom-component patterns used](#custom-component-patterns-used)
 
 ## Subpath
 
 ```typescript
 // barrel
-import { AsConsentArray, AsCopy, AsPasswordRules, AsQrCode } from "@atscript/vue-aooth";
+import {
+  AsConsentArray,
+  AsCopy,
+  AsPasswordRules,
+  AsQrCode,
+  AsSsoProviders,
+} from "@atscript/vue-aooth";
 
 // per-component (for granular bundling)
 import AsConsentArray from "@atscript/vue-aooth/as-consent-array";
 import AsCopy from "@atscript/vue-aooth/as-copy";
 import AsPasswordRules from "@atscript/vue-aooth/as-password-rules";
 import AsQrCode from "@atscript/vue-aooth/as-qr-code";
+import AsSsoProviders from "@atscript/vue-aooth/as-sso-providers";
 ```
 
-None of the four are auto-resolved — all are Tier-2 swap targets. Register them by name in `<AsForm :components>` and tag the field with `@ui.form.component`. The narrative guide with end-to-end examples lives at [Forms · Aooth components](/forms/aooth-components).
+None of the five are auto-resolved — all are Tier-2 swap targets. Register them by name in `<AsForm :components>` and tag the field with `@ui.form.component`. The narrative guide with end-to-end examples lives at [Forms · Aooth components](/forms/aooth-components).
 
 ## Component — AsConsentArray
 
@@ -70,7 +78,7 @@ export interface SignupStep {
     email: string.email
 
     @ui.form.component 'AsConsentArray'
-    @ui.form.fn.attr 'pendingConsents', '(_, _, ctx) => ctx.pendingConsents'
+    @ui.form.fn.attr 'pendingConsents', '(_v, _d, ctx) => ctx.pendingConsents'
     consents: string[]
 }
 ```
@@ -155,7 +163,7 @@ export interface PasswordStep {
 
     @ui.form.type 'paragraph'
     @ui.form.component 'AsPasswordRules'
-    @ui.form.fn.attr 'policies', '(_, _, ctx) => ctx.passwordPolicies'
+    @ui.form.fn.attr 'policies', '(_v, _d, ctx) => ctx.passwordPolicies'
     @ui.form.fn.attr 'password', '(_, data) => data.newPassword'
     passwordHints: string
 }
@@ -276,13 +284,110 @@ export interface ShareStep {
 
 Use it for magic links, share tokens, generated identifiers — any one-off value the user needs to paste somewhere else.
 
+## Component — AsSsoProviders
+
+SSO / social-login provider picker. Renders providers as a main stack of full-width buttons; any provider flagged `secondary: true` drops below an "or" divider as a compact chip. Each provider button is a one-click action — clicking selects the provider (writes its id to the bound model) _and_ fires the field's `@ui.form.action` in a single click, so there is no separate submit button. The bound value is the selected provider id. When the source list is empty the entire field is suppressed.
+
+### Props
+
+`TAsComponentProps<string | undefined>` with one custom prop fed via `@ui.form.attr` / `@ui.form.fn.attr`:
+
+```typescript
+interface AsSsoProvider {
+  /** Committed to the bound model (`model.value = id`) on click and carried by the fired form action. */
+  id: string;
+  /**
+   * Rendered VERBATIM. The backend owns the full display string (e.g.
+   * "Continue with Google" for a main-stack button, "Discord" for a
+   * secondary chip). The component never composes a "Continue with {name}" prefix.
+   */
+  text: string;
+  /**
+   * Optional CSS class painting the brand glyph (e.g. `i-logos-google-icon`).
+   * Applied as-is; the consumer owns the icon collection / safelist coverage,
+   * same contract as `prefixIcon`.
+   */
+  icon?: string;
+  /**
+   * `true` ⇒ renders as a compact chip below the "or" divider; omitted / false
+   * ⇒ renders as a full-width button in the main stack (the default).
+   */
+  secondary?: boolean;
+}
+
+interface AsSsoProvidersProps extends TAsComponentProps<string | undefined> {
+  providers?: AsSsoProvider[];
+}
+```
+
+### Behaviour
+
+- One-click contract: a click sets `model.value = provider.id` then emits the form `action` declared by `@ui.form.action` on the field. `<AsForm>` surfaces it as `@action(name, data)` with the selected provider already in `data`. Without a wired `@ui.form.action` the click still commits the id but emits nothing.
+- Providers default to the prominent main stack (full-width buttons); only `secondary: true` opts into the compact chip group below the "or" divider. The "or" divider renders only when _both_ groups are non-empty — a lone group never dangles a divider.
+- `text` is rendered verbatim. The component never prefixes "Continue with …"; the backend supplies the complete string per provider.
+- `icon` is applied as-is. Icon classes referenced from `.as` files aren't seen by the static class extractor, so safelist whatever collection you ship.
+- Empty or missing `providers` hides the whole field — the same render-only-when-the-backend-supplied-providers pattern as `AsConsentArray`. This also guards the transient first render before `@ui.form.fn.attr` resolves.
+- No separate submit / "Continue" control: the component renders chromeless and suppresses the shell's footer action link, since the provider buttons themselves _are_ the action.
+
+### How to wire
+
+```atscript
+// login-step.as
+export interface LoginStep {
+    @ui.form.component 'AsSsoProviders'
+    @ui.form.action 'sso', 'Continue'
+    @ui.form.fn.attr 'providers', '(_v, _d, ctx) => ctx.ssoProviders'
+    ssoProvider?: string
+}
+```
+
+The provider list comes from the form's `formContext` — typically supplied by the backend through `<AsWfForm>`'s server round-trip, so the same field schema works whether you offer one provider or ten. In a workflow form, add `@wf.action.withData 'sso'` on the same field so the chosen `ssoProvider` is submitted with the action (the same mechanism `forgotPassword` uses to carry a typed value). An optional `ssoProvider?` won't block a password login that submits without one.
+
+```vue
+<script setup lang="ts">
+import { AsForm, createAsFormDef, createDefaultTypes } from "@atscript/vue-form";
+import { AsSsoProviders } from "@atscript/vue-aooth";
+import { LoginStep } from "./login-step.as";
+
+const { def, formData } = createAsFormDef(LoginStep);
+const types = createDefaultTypes();
+const components = { AsSsoProviders };
+
+// In a real app, formContext is whatever the server sends back.
+// Icon classes are whatever icon collection your app ships + safelists.
+const formContext = {
+  ssoProviders: [
+    { id: "google", text: "Continue with Google", icon: "i-logos:google-logo" },
+    { id: "discord", text: "Discord", icon: "i-logos:discord-logo", secondary: true },
+  ],
+};
+
+function onAction(name: string, data: { ssoProvider?: string }) {
+  // name === "sso"; data.ssoProvider is the clicked provider id, e.g. "google".
+  console.log("SSO provider selected:", data.ssoProvider);
+}
+</script>
+
+<template>
+  <AsForm
+    :def="def"
+    :form-data="formData"
+    :form-context="formContext"
+    :types="types"
+    :components="components"
+    @action="onAction"
+  />
+</template>
+```
+
 ## Custom-component patterns used
 
-The four components are production examples of the patterns documented in [Custom Field Components](/forms/custom-components):
+These components are production examples of the patterns documented in [Custom Field Components](/forms/custom-components):
 
 - **`AsConsentArray`** demonstrates the "`useAsField` inside a custom component" pattern — registering an extra field-state rule alongside the one `<AsField>` already provides, so per-item required validation runs at submit alongside the schema-level pipeline.
 - **`AsPasswordRules`** demonstrates the "re-use `compileFieldFn` for fn-string arrays" pattern — evaluating consumer-supplied policy rule strings through the framework's shared FNPool instead of allocating a private one.
 - **`AsQrCode`** and **`AsCopy`** demonstrate the **phantom display field** pattern — `ui.paragraph` + `@ui.form.fn.value` reading from `formContext`, so a server-supplied value renders without ever entering the bound data.
+- **`AsSsoProviders`** demonstrates emitting a **form action from a custom component** — one-click select + fire `@ui.form.action` in a single click — together with the `@wf.action.withData` data-carrying-action pattern for workflow forms.
 
 ## Cross-links
 

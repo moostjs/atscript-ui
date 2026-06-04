@@ -77,8 +77,9 @@ Tier 2 when you want to replace a default renderer; reach for the
   component in `AsObject`'s section chrome with your own header actions, and
   full-bleed section dividers to a padded card's edges (`--as-inset`).
 - [Aooth Components](/forms/aooth-components) — pre-built field
-  components for consent collection, password rules, QR-code enrolment
-  and one-shot copy values, shipped by `@atscript/vue-aooth`.
+  components for consent collection, password rules, QR-code enrolment,
+  one-shot copy values and SSO/social-login provider picking, shipped by
+  `@atscript/vue-aooth`.
 
 ::: tip Related ecosystem docs
 The `.as` language, `asc` CLI, `@meta.*`, `@expect.*` and validators

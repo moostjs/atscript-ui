@@ -6,8 +6,9 @@ outline: deep
 
 `@atscript/vue-aooth` ships a small set of pre-built custom field components
 used across [Aooth](https://aooth.moost.org) flows — multi-consent collection,
-password-policy display, QR-code enrolment, and one-shot link/token sharing.
-All four implement the `TAsComponentProps` contract from
+password-policy display, QR-code enrolment, one-shot link/token sharing, and
+SSO / social-login provider picking.
+All five implement the `TAsComponentProps` contract from
 [`@atscript/vue-form`](/forms/custom-components) and drop into
 `<AsForm :components>` via the `@ui.form.component` annotation.
 
@@ -17,13 +18,20 @@ match whichever convention you prefer (`'AsConsentArray'`, `'consent-array'`,
 `'consents'` — pick one, stay consistent).
 
 ```ts
-import { AsConsentArray, AsCopy, AsPasswordRules, AsQrCode } from "@atscript/vue-aooth";
+import {
+  AsConsentArray,
+  AsCopy,
+  AsPasswordRules,
+  AsQrCode,
+  AsSsoProviders,
+} from "@atscript/vue-aooth";
 
 const components = {
   "consent-array": AsConsentArray,
   copy: AsCopy,
   "password-rules": AsPasswordRules,
   "qr-code": AsQrCode,
+  "sso-providers": AsSsoProviders,
 };
 ```
 
@@ -178,6 +186,61 @@ magicLink: ui.paragraph
 
 Use it for magic links, share tokens, generated identifiers — any one-off
 value the user needs to paste somewhere else.
+
+## AsSsoProviders
+
+SSO / social-login provider picker. Renders providers as a main stack of
+full-width buttons, with any flagged `secondary: true` dropping below an "or"
+divider as compact chips. Each button is a **one-click action**: clicking
+selects the provider id _and_ fires the form action in a single click — there
+is no separate submit button. The bound value is the selected provider id
+(`string | undefined`).
+
+Source: `packages/vue-aooth/src/components/as-sso-providers.vue`.
+
+```ts
+interface AsSsoProvider {
+  id: string; // committed to the model on click AND carried by the fired action
+  text: string; // rendered verbatim — the backend owns the full display string
+  icon?: string; // CSS class for the brand glyph, applied as-is (same contract as prefixIcon)
+  secondary?: boolean; // true ⇒ compact chip below the "or" divider; omitted ⇒ full-width button (default)
+}
+
+interface AsSsoProvidersProps extends TAsComponentProps<string | undefined> {
+  providers?: AsSsoProvider[];
+}
+```
+
+- One-click: a click sets `model.value = provider.id` then emits the form
+  `action` declared by `@ui.form.action` on the field. `<AsForm>` surfaces it
+  as `@action(name, data)` with the selected provider in `data`. Without a
+  wired `@ui.form.action` the click still selects but emits nothing.
+- Default providers land in the prominent main stack; `secondary: true` drops
+  to compact chips below the "or" divider. The divider renders only when
+  _both_ groups are non-empty.
+- `text` is rendered verbatim — the component never composes a
+  "Continue with {name}" prefix; the backend supplies the full string.
+- `icon` is applied as-is — you manage the icon collection and UnoCSS
+  safelist (icon classes referenced from `.as` files aren't seen by the static
+  extractor; safelist them).
+- Empty / missing `providers` hides the whole field — same "render only when
+  the backend supplied providers" pattern as `AsConsentArray`.
+- No separate submit / "Continue" button — the provider buttons _are_ the
+  action (the component renders chromeless and suppresses the shell's footer
+  action link).
+
+```atscript
+@ui.form.component 'sso-providers'
+@ui.form.action 'sso', 'Continue'
+@ui.form.fn.attr 'providers', '(_v, _d, ctx) => ctx.ssoProviders'
+ssoProvider?: string
+```
+
+In a workflow form add `@wf.action.withData 'sso'` on the same field so the
+chosen provider rides the submission (the same mechanism `forgotPassword`
+uses to carry a typed value). The full reference, plus a Vue mount showing the
+`@action` handler, lives at
+[@atscript/vue-aooth](/api/vue-aooth#component-asssoproviders).
 
 ## Phantom vs data-bound
 
