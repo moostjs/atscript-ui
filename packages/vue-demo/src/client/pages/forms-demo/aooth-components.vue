@@ -2,8 +2,8 @@
 import { ref } from "vue";
 import { useRoute } from "vue-router";
 import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
-import { AsConsentArray, AsPasswordRules } from "@atscript/vue-aooth";
-import { ConsentReviewForm, SetPasswordForm } from "./schemas/aooth-components.as";
+import { AsConsentArray, AsPasswordRules, AsSsoProviders } from "@atscript/vue-aooth";
+import { ConsentReviewForm, SetPasswordForm, SsoLoginForm } from "./schemas/aooth-components.as";
 import DarkToggle from "./_dark-toggle.vue";
 
 // ── Section A — Backend-driven consent checkboxes ────────────────
@@ -43,11 +43,32 @@ const { def: defB, formData: modelB } = createAsFormDef(SetPasswordForm);
 const typesB = createDefaultTypes();
 const componentsB = { AsPasswordRules };
 
+// ── Section C — Backend-driven SSO provider picker ───────────────
+// `AsSsoProviders` is wired by `@ui.form.component 'AsSsoProviders'`
+// on the `ssoProvider?: string` field. The provider list comes from
+// the backend via `@ui.form.fn.attr 'providers'` (an array of
+// `{ id, text, icon, secondary }`). Clicking a provider writes its id
+// to the bound model AND fires the form action declared by
+// `@ui.form.action 'sso', 'Continue'` — a one-click submit path, no
+// separate submit button needed.
+const { def: defC, formData: modelC } = createAsFormDef(SsoLoginForm);
+const typesC = createDefaultTypes();
+const componentsC = { AsSsoProviders };
+
+const lastActionC = ref<{ name: string; data: unknown } | undefined>();
+
 function onSubmitA(data: unknown) {
   console.log("ConsentReviewForm submitted:", data);
 }
 function onSubmitB(data: unknown) {
   console.log("SetPasswordForm submitted:", data);
+}
+function onActionC(name: string, data: unknown) {
+  console.log("SsoLoginForm action:", name, data);
+  lastActionC.value = { name, data };
+}
+function onSubmitC(data: unknown) {
+  console.log("SsoLoginForm submitted:", data);
 }
 </script>
 
@@ -65,11 +86,13 @@ function onSubmitB(data: unknown) {
         </div>
         <h1 class="text-h3 m-0">Aooth components</h1>
         <p class="text-callout text-current-muted m-0 mt-$xxs">
-          Two Tier-1 components from <code>@atscript/vue-aooth</code>:
+          Three Tier-1 components from <code>@atscript/vue-aooth</code>:
           <code>AsConsentArray</code> renders a backend-supplied list of consent checkboxes bound to
-          a <code>string[]</code> (Section A), and <code>AsPasswordRules</code> evaluates serialized
-          policy expressions against a sibling password field on every keystroke (Section B). Both
-          are wired through <code>@ui.form.component</code> + <code>@ui.form.fn.attr</code>.
+          a <code>string[]</code> (Section A), <code>AsPasswordRules</code> evaluates serialized
+          policy expressions against a sibling password field on every keystroke (Section B), and
+          <code>AsSsoProviders</code> renders a backend-supplied SSO provider list where one click
+          both selects a provider and fires the form action (Section C). All three are wired through
+          <code>@ui.form.component</code> + <code>@ui.form.fn.attr</code>.
         </p>
         <RouterLink
           to="/forms-demo"
@@ -160,6 +183,56 @@ function onSubmitB(data: unknown) {
             class="mt-$s overflow-auto text-callout"
             data-testid="aooth-components-section-b-preview"
             >{{ JSON.stringify(modelB, null, 2) }}</pre
+          >
+        </details>
+      </section>
+
+      <section class="flex flex-col gap-$m">
+        <div class="flex flex-col gap-$xxs">
+          <h2 class="text-h5 m-0">Section C — SSO provider picker</h2>
+          <p class="text-callout text-current-muted m-0">
+            The <code>ssoProvider?: string</code> field is rendered by
+            <code>AsSsoProviders</code> via <code>@ui.form.component</code>. The provider list —
+            main full-width buttons plus <code>secondary</code> chips — is supplied as a typed array
+            of <code>{ id, text, icon, secondary }</code> through
+            <code>@ui.form.fn.attr 'providers'</code>. Each provider button is a one-click action:
+            clicking writes its <code>id</code> to the bound model and fires the
+            <code>@ui.form.action 'sso'</code> action, surfaced here as
+            <code>@action(name, data)</code>. No separate submit button is shown — the provider
+            buttons <em>are</em> the action.
+          </p>
+        </div>
+        <AsForm
+          :def="defC"
+          :form-data="modelC"
+          :types="typesC"
+          :components="componentsC"
+          hide-root-title
+          hide-submit
+          first-validation="on-submit"
+          data-testid="aooth-components-section-c-form"
+          @action="onActionC"
+          @submit="onSubmitC"
+        />
+        <div
+          class="layer-0 border-1 rounded-r2 p-$m text-callout"
+          data-testid="aooth-components-section-c-action"
+        >
+          <span class="font-600 text-current-muted">Last fired action:</span>
+          <span v-if="lastActionC" class="ml-$xs">
+            <code>{{ lastActionC.name }}</code> → provider
+            <code>{{ (lastActionC.data as { ssoProvider?: string })?.ssoProvider }}</code>
+          </span>
+          <span v-else class="ml-$xs text-current/60">none yet — click a provider above</span>
+        </div>
+        <details class="layer-0 border-1 rounded-r2 p-$m text-callout">
+          <summary class="cursor-pointer font-600 text-current-muted">
+            Section C · model preview
+          </summary>
+          <pre
+            class="mt-$s overflow-auto text-callout"
+            data-testid="aooth-components-section-c-preview"
+            >{{ JSON.stringify(modelC, null, 2) }}</pre
           >
         </details>
       </section>

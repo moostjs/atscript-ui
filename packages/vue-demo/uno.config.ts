@@ -10,6 +10,22 @@ import { vunorShortcuts } from "vunor/theme";
 
 const hereDir = fileURLToPath(new URL(".", import.meta.url));
 
+// Phosphor brand/UI glyphs (i-ph:*) used across the demo (e.g. the
+// demo-card arrow, the SSO provider icons in Section C of the aooth page).
+// `asPresetVunor()` already registers a presetIcons for the baked `as`
+// collection under the default name `@unocss/preset-icons`; a second bare
+// `presetIcons()` would be deduped away (same preset name), so we give this
+// one a unique name and explicitly load the installed @iconify-json/ph
+// collection. Without this, every `i-ph:*` class silently renders 0×0.
+const phosphorIcons = {
+  ...presetIcons({
+    collections: {
+      ph: () => import("@iconify-json/ph/icons.json").then((m) => m.default),
+    },
+  }),
+  name: "preset-icons-ph",
+};
+
 const demoShortcuts = defineShortcuts({
   /* ────────── Page-level containers ────────── */
   /** Narrow reading column for single-record edit / form pages. */
@@ -80,7 +96,7 @@ export default defineConfig({
   content: {
     filesystem: [`${hereDir}src/**/*.{vue,ts,tsx}`],
   },
-  presets: [...asPresetVunor(), presetIcons()],
+  presets: [...asPresetVunor(), phosphorIcons],
   shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, demoShortcuts]))],
   // `@ui.form.{prefix,suffix}.icon` paints its value verbatim as a class on
   // the icon span. UnoCSS' static extractor doesn't scan `.as` files, so any
@@ -91,5 +107,12 @@ export default defineConfig({
     "i-as-check-square",
     "i-as-search",
     "i-as-check",
+    // SsoLoginForm provider glyphs referenced from aooth-components.as.
+    "i-ph:google-logo",
+    "i-ph:apple-logo",
+    "i-ph:phone",
+    "i-ph:discord-logo",
+    "i-ph:facebook-logo",
+    "i-ph:windows-logo",
   ],
 });

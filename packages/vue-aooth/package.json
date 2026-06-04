@@ -54,6 +54,11 @@
       "import": "./dist/as-qr-code.mjs",
       "require": "./dist/as-qr-code.cjs"
     },
+    "./as-sso-providers": {
+      "types": "./dist/as-sso-providers.d.mts",
+      "import": "./dist/as-sso-providers.mjs",
+      "require": "./dist/as-sso-providers.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {

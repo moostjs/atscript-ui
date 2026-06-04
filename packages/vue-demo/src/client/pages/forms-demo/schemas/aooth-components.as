@@ -32,3 +32,16 @@ export interface SetPasswordForm {
     @ui.form.grid.colSpan '12'
     rules: ui.paragraph
 }
+
+@meta.label 'Sign in'
+@meta.description 'A backend-driven SSO provider picker rendered by AsSsoProviders. The provider list is supplied via @ui.form.fn.attr; clicking a provider writes its id to ssoProvider and fires the form action in one click.'
+export interface SsoLoginForm {
+    @ui.form.component 'AsSsoProviders'
+    @ui.form.action 'sso', 'Continue'
+    // Phosphor monochrome glyphs are used here to avoid adding a demo
+    // dependency; real consumers would supply full-color brand logos
+    // (e.g. @iconify-json/logos → "i-logos-google-icon").
+    @ui.form.fn.attr 'providers', '() => [{ id: "google", text: "Continue with Google", icon: "i-ph:google-logo" }, { id: "apple", text: "Continue with Apple", icon: "i-ph:apple-logo" }, { id: "phone", text: "Continue with Phone", icon: "i-ph:phone" }, { id: "discord", text: "Discord", icon: "i-ph:discord-logo", secondary: true }, { id: "facebook", text: "Facebook", icon: "i-ph:facebook-logo", secondary: true }, { id: "microsoft", text: "Microsoft", icon: "i-ph:windows-logo", secondary: true }]'
+    @ui.form.grid.colSpan '12'
+    ssoProvider?: string
+}
