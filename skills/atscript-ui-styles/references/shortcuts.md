@@ -8,6 +8,7 @@ The `as-*` shortcut tree, how to read it, and how to extend it without forking. 
 - [Reading a shortcut's body](#reading-a-shortcuts-body)
 - [Composing from vunor primitives (recommended)](#composing-from-vunor-primitives-recommended)
 - [Extending the shortcut tree](#extending-the-shortcut-tree)
+- [Overriding a built-in shortcut](#overriding-a-built-in-shortcut)
 - [Variant overrides](#variant-overrides)
 - [Reka-UI state attributes](#reka-ui-state-attributes)
 - [excludeComponents — drop unused classes](#excludecomponents--drop-unused-classes)
@@ -186,9 +187,57 @@ export default defineConfig({
 
 `defineShortcuts` and `mergeVunorShortcuts` are re-exported from `vunor/theme` via `@atscript/ui-styles` — one import covers preset, allShortcuts, and authoring helpers.
 
+## Overriding a built-in shortcut
+
+This section is the **single source of truth** for restyling a bundled `as-*` hook (the forms and wf customization refs link here — they don't restate it). Use it when you want to keep a built-in component but change one of its baked classes (title weight, remove the required asterisk, recolor a focus ring). For brand-wide palette/radius tuning go through `asPresetVunor` ([theming.md](theming.md)); to replace a whole renderer use the `:types` / `:components` prop map ([forms customization](../../atscript-ui-forms/references/customization.md)).
+
+### Wiring
+
+```ts
+import {
+  allShortcuts,
+  asPresetVunor,
+  defineShortcuts,
+  mergeVunorShortcuts,
+} from "@atscript/ui-styles";
+import { vunorShortcuts } from "vunor/theme";
+import { defineConfig } from "unocss";
+
+const shortcutOverrides = defineShortcuts({
+  btn: { "": "fw-400" },
+  "as-collapsible-title": { "": "text-h3 !font-100" }, // ! beats baked font-600 (numeric order)
+  "as-form-title": { "": "text-h2 !font-100" },
+  // remove required asterisk: as-default-field bakes [&.required .as-field-label]::after{content:" *"}
+  "as-default-field": { "[&.required_.as-field-label]:after:": "!content-['']" },
+});
+
+export default defineConfig({
+  presets: [...asPresetVunor()],
+  shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, shortcutOverrides]))],
+});
+```
+
+- `allShortcuts`, `defineShortcuts`, `mergeVunorShortcuts`, `asPresetVunor` — all from `@atscript/ui-styles`.
+- `vunorShortcuts` — from `vunor/theme` (ui-styles does NOT re-export it; this is the one import that must come straight from vunor).
+- `defineShortcuts` is an identity/typing helper — it only types the map; it emits nothing on its own.
+
+### Invariant table — the override gotchas
+
+| #   | Rule                                                                                                                                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **`mergeVunorShortcuts` APPENDS — it does not replace.** For a shared `as-*` name it flattens both shortcut objects to utility strings and concatenates `base + " " + override`. Both the baked utilities and yours land on the same element.                                    |
+| 2   | **Write ONLY the one variant key you're changing.** Because of rule 1 the shortcut's other keys survive in the base string. Do NOT re-declare the whole shortcut — list just the `""` (base) or the specific `"hover:"` / `"[&.required …]:after:"` variant you want to repaint. |
+| 3   | **The override must WIN over the baked utility → use `!` (important).** Both utilities are emitted on the same element, so without `!` the cascade is a coin-flip. Make every overriding utility important.                                                                      |
+| 4   | **Font weights need `!` too — UnoCSS emits `font-<n>` in numeric order.** Plain `font-100` is emitted before the baked `font-600`/`font-700` and loses. Write `!font-100`. (Same trap for any token UnoCSS sorts numerically.)                                                   |
+| 5   | **Blank a pseudo-element with `content-['']`, never `""`.** Empty content (`content-['']`) erases the baked `::after { content: " *" }`. An empty _value_ (`""`) compiles to a selector with no utility — invalid / no-op, the asterisk stays.                                   |
+
+### Why `!font-100` and not `font-100`
+
+`as-collapsible-title` bakes `font-600`; `as-form-title` bakes `font-700`. After the merge the element carries both the baked weight and yours. UnoCSS sorts `font-*` numerically, so `font-100` is written to the stylesheet _before_ the baked weight and is overridden by it. `!font-100` lifts your rule above the cascade regardless of source order. The same reasoning drives `!content-['']` for the asterisk.
+
 ## Variant overrides
 
-To paint over an existing shortcut's state without replacing its base, target a variant key when defining your own slice. Example — change the focus ring on `as-fpill` from the bundled scope-primary to a `scope-good`:
+The override section above is the full mechanism; this is the short form for the most common case — repainting **one state** of an existing shortcut. Target a single variant key in your slice. Example — change the focus ring on `as-fpill` from the bundled scope-primary to a `scope-good`:
 
 ```typescript
 defineShortcuts({

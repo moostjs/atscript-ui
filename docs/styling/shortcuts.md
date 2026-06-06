@@ -90,6 +90,94 @@ Two patterns and when to reach for each:
 
 `mergeVunorShortcuts` is associative, so `[allShortcuts, appShortcuts]` and `[appShortcuts, allShortcuts]` produce different results. Order matters: **put your overrides last** so they win.
 
+## Overriding a built-in `as-*` shortcut
+
+Extending adds a _new_ class. Overriding repaints an _existing_ one — change the form title's weight, drop the required-field asterisk, retint a section heading — without forking the whole shortcut body. This is the most common customization once the brand palette is set.
+
+### Wiring
+
+Same merged-shortcuts recipe as extending. The override object goes **last** in the `mergeVunorShortcuts` array so it wins:
+
+```ts
+import {
+  allShortcuts,
+  asPresetVunor,
+  defineShortcuts,
+  mergeVunorShortcuts,
+} from "@atscript/ui-styles";
+import { vunorShortcuts } from "vunor/theme";
+import { defineConfig } from "unocss";
+
+const shortcutOverrides = defineShortcuts({
+  // Append a weight onto vunor's baked `btn`.
+  btn: { "": "fw-400" },
+  // `as-collapsible-title` bakes `text-body-l font-600`; remap to your h3 scale.
+  // `!` is needed because UnoCSS emits `font-<n>` in numeric order, so a plain
+  // `font-100` would lose to the baked `font-600`.
+  "as-collapsible-title": { "": "text-h3 !font-100" },
+  // Form root title bakes `text-[1.54em] font-700`; map to your h2, force weight 100.
+  "as-form-title": { "": "text-h2 !font-100" },
+  // Remove the required-field red asterisk. `as-default-field` renders it via
+  // `[&.required .as-field-label]::after { content: " *" }`; blank the content on
+  // that exact variant. `!` beats the baked content declaration (merge = append).
+  "as-default-field": { "[&.required_.as-field-label]:after:": "!content-['']" },
+});
+
+export default defineConfig({
+  presets: asPresetVunor(),
+  shortcuts: [vunorShortcuts(mergeVunorShortcuts([allShortcuts, shortcutOverrides]))],
+});
+```
+
+The import paths are the same as everywhere else on this page: `allShortcuts`, `asPresetVunor`, `defineShortcuts`, and `mergeVunorShortcuts` come from `@atscript/ui-styles`; `vunorShortcuts` comes from `vunor/theme` (ui-styles re-exports the other three vunor helpers but **not** `vunorShortcuts`). `defineShortcuts` is an identity/typing helper — it returns its input unchanged and only gives your editor the `TVunorShortcut` type.
+
+### The key mechanic — merge is APPEND, not replace
+
+When `allShortcuts` (the base) and your override both define the same `as-*` name, `mergeVunorShortcuts` does **not** swap the base body for yours. It flattens each shortcut to a utility string and **concatenates** them — `base + " " + override` — per variant key. Two consequences you must internalize:
+
+1. **You only write the one variant key you want to change.** The shortcut's other keys stay in the base string untouched — no need to copy the whole body. In the example above, `as-form-title` keeps its baked `tracking-[-0.02em]`; you only restated `text-*`/`font-*`.
+2. **Both the baked utility AND your override land on the same element**, so your override must _win the CSS cascade_. Specificity is equal (both are plain utilities), so reach for `!` (important) on the property you're replacing.
+
+#### Font-weight gotcha
+
+UnoCSS emits `font-<n>` rules in **numeric order**, not source order. A plain `font-100` appended after a baked `font-600` still loses — `font-600` sorts later in the stylesheet. Force it with `!font-100`.
+
+#### Blanking a pseudo-element
+
+To clear `::before` / `::after` content (e.g. the required-field asterisk), set the content to an _empty string literal_ — `content-['']` — not an empty value string `""`. An empty value produces a selector with no utility attached, which UnoCSS silently drops (no-op), leaving the baked content in place. Pair it with `!` so it beats the base `content-["_*"]` declaration.
+
+### When to override a shortcut vs. tune the theme vs. swap a component
+
+Three levers, smallest first:
+
+| Goal                                                           | Lever                                               | Where                                         |
+| -------------------------------------------------------------- | --------------------------------------------------- | --------------------------------------------- |
+| Brand colors, radius, spacing, fingertip ladder                | `asPresetVunor({ palette, baseRadius, fingertip })` | [Theme & Palette](/styling/theme)             |
+| Restyle a specific `as-*` hook (weight, asterisk, one variant) | Shortcut override (this section)                    | here                                          |
+| Replace a field renderer entirely (custom widget)              | `:types` / `:components` prop map                   | [Forms — Customization](/forms/customization) |
+
+Theme tuning is the broadest brush — it repaints everything at once and needs no shortcut knowledge. Override a shortcut when the palette is right but one visual rule isn't. Swap a component when no amount of CSS gets you there and you need different markup.
+
+### DOs and DON'Ts
+
+- **DO** put `!` (important) on the property you're replacing — merge appends, so a plain utility ties on specificity and may lose. **DON'T** expect `font-100` to beat a baked `font-600`.
+- **DO** blank pseudo-content with `content-['']`. **DON'T** use `""` (an empty value string) — it compiles to nothing and the baked content survives.
+- **DO** override just the one variant key you're changing. **DON'T** re-declare the whole shortcut body — you'd fork it and stop inheriting future palette / dark-mode fixes to the base.
+
+### Overridable label / field hooks
+
+The handful you'll reach for most when restyling form chrome:
+
+| Shortcut               | Bakes                                | Override to…                                       |
+| ---------------------- | ------------------------------------ | -------------------------------------------------- |
+| `as-form-title`        | `text-[1.54em] font-700`             | remap the form header to your type scale           |
+| `as-collapsible-title` | `text-body-l font-600`               | retint section headings                            |
+| `as-default-field`     | layout + label/input/error variants  | repaint the required asterisk, label, or any input |
+| `as-field-label`       | (via `as-default-field` `[&_label]`) | label weight / casing                              |
+| `as-field-description` | `as-description` + offset            | description text styling                           |
+
+`as-field-label`, `as-field-description`, `as-error-slot`, and `as-field-header-row` are reachable the same way. For the complete catalog of every `as-*` shortcut name, see the [`@atscript/ui-styles` API reference](/api/ui-styles#shortcuts) and the [source shortcut tree](https://github.com/moostjs/atscript-ui/tree/main/packages/ui-styles/src/shortcuts).
+
 ## Composing with vunor primitives
 
 When you add a new `as-*` shortcut and want it to inherit palette, dark mode, and scope tinting, compose its body from vunor primitives instead of pixel literals or hex colors. The library's own shortcut tree follows the same approach — that's what lets a single `palette.colors.primary` change in `presetVunor()` repaint everything downstream. If you'd rather hardcode values in a particular shortcut, that's fine too; just know that shortcut won't follow palette changes.

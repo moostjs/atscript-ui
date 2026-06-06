@@ -20,22 +20,25 @@
 
 ## <AsWfForm> props
 
-| Prop              | Type                            | Default            | Purpose                                                                                             |
-| ----------------- | ------------------------------- | ------------------ | --------------------------------------------------------------------------------------------------- |
-| `path`            | `string`                        | (required)         | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                     |
-| `name`            | `string`                        | (required)         | Workflow id (`wfid`) to start (e.g. `'auth/login'`)                                                 |
-| `input`           | `Record<string, unknown>`       | `undefined`        | Initial input sent with the `start` request                                                         |
-| `tokenTransport`  | `'body' \| 'cookie' \| 'query'` | `'body'`           | Where to read / write the state token                                                               |
-| `tokenName`       | `string`                        | `'wfs'`            | Token field name in JSON body / URL query                                                           |
-| `wfidName`        | `string`                        | `'wfid'`           | Workflow-id field name in the JSON body                                                             |
-| `fetchOptions`    | `RequestInit`                   | `{}`               | Static `fetch` options (headers, credentials, etc.) merged into every request                       |
-| `fetch`           | `typeof fetch`                  | `globalThis.fetch` | Override `fetch` itself — for auth wrappers / status bus                                            |
-| `autoStart`       | `boolean`                       | `true`             | Auto-call `start(input)` on mount                                                                   |
-| `initialToken`    | `string`                        | `undefined`        | Pre-existing state token (resume). Takes precedence over `tokenTransport: 'query'` auto-detection   |
-| `types`           | `TAsTypeComponents`             | (required)         | Type-to-component map for `AsForm` rendering (use `createDefaultTypes()` from `@atscript/vue-form`) |
-| `firstValidation` | `TFormState['firstValidation']` | undefined          | First-validation strategy forwarded to `AsForm` (see `atscript-ui-forms` skill)                     |
-| `components`      | `Record<string, Component>`     | undefined          | Custom components map forwarded to `AsForm`                                                         |
-| `clientFactory`   | `ClientFactory`                 | undefined          | Per-form FK value-help client factory forwarded to `AsForm`                                         |
+| Prop              | Type                                     | Default            | Purpose                                                                                                                                                                                            |
+| ----------------- | ---------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`            | `string`                                 | (required)         | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                                                                                                                    |
+| `name`            | `string`                                 | (required)         | Workflow id (`wfid`) to start (e.g. `'auth/login'`)                                                                                                                                                |
+| `input`           | `Record<string, unknown>`                | `undefined`        | Initial input sent with the `start` request                                                                                                                                                        |
+| `tokenTransport`  | `'body' \| 'cookie' \| 'query'`          | `'body'`           | Where to read / write the state token                                                                                                                                                              |
+| `tokenName`       | `string`                                 | `'wfs'`            | Token field name in JSON body / URL query                                                                                                                                                          |
+| `wfidName`        | `string`                                 | `'wfid'`           | Workflow-id field name in the JSON body                                                                                                                                                            |
+| `fetchOptions`    | `RequestInit`                            | `{}`               | Static `fetch` options (headers, credentials, etc.) merged into every request                                                                                                                      |
+| `fetch`           | `typeof fetch`                           | `globalThis.fetch` | Override `fetch` itself — for auth wrappers / status bus                                                                                                                                           |
+| `autoStart`       | `boolean`                                | `true`             | Auto-call `start(input)` on mount                                                                                                                                                                  |
+| `initialToken`    | `string`                                 | `undefined`        | Pre-existing state token (resume). Takes precedence over `tokenTransport: 'query'` auto-detection                                                                                                  |
+| `types`           | `TAsTypeComponents`                      | (required)         | Type-to-component map for `AsForm` rendering (use `createDefaultTypes()` from `@atscript/vue-form`)                                                                                                |
+| `firstValidation` | `TFormState['firstValidation']`          | undefined          | First-validation strategy forwarded to `AsForm` (see `atscript-ui-forms` skill)                                                                                                                    |
+| `components`      | `Record<string, Component>`              | undefined          | Custom components map forwarded to `AsForm`                                                                                                                                                        |
+| `clientFactory`   | `ClientFactory`                          | undefined          | Per-form FK value-help client factory forwarded to `AsForm`                                                                                                                                        |
+| `hideRootTitle`   | `boolean`                                | `false`            | Forwarded to the inner `AsForm` — suppress the root field's `@meta.label` heading (title only; description still renders)                                                                          |
+| `hideSubmit`      | `boolean`                                | `false`            | Forwarded to the inner `AsForm` — suppress the default submit button                                                                                                                               |
+| `navigate`        | `(url: string) => void \| Promise<void>` | undefined          | Redirect handler for finish-screen `redirect` actions — see [finish-screens.md](finish-screens.md). Matches `@atscript/db-client`'s `Client({ navigate })`. Falls back to `window.location.assign` |
 
 `path`, `name`, `types` are the only required props.
 
@@ -79,7 +82,7 @@ When you supply the default slot's contents, you take over the entire layout. Th
 | Slot          | Slot props                                                                                                                               | When                                                                                                                                                                                                                         |
 | ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `wf.loading`  | (none)                                                                                                                                   | initial load (no form yet) — default fallback renders an `as-form-overlay` spinner inside a `min-h-[100px]` wrapper, matching the overlay shown between subsequent round-trips. Override only to swap in a custom indicator. |
-| `wf.error`    | `{ error, retry }`                                                                                                                       | error before any form rendered                                                                                                                                                                                               |
+| `wf.error`    | `{ error, retry }`                                                                                                                       | transport error — renders **both** before the form loads (no form yet) AND as a banner above an already-mounted form when a round-trip fails. (Field-level validation errors render inline on the form, not here.)           |
 | `wf.finished` | `{ response, payload }` — `payload: WfFinished \| null` is the typed envelope; `response` is the same data untyped, kept for back-compat | flow finished. Default renders `<AsWfFinish :payload>` — override to opt out and render fully custom.                                                                                                                        |
 
 ```vue
@@ -99,7 +102,7 @@ When you supply the default slot's contents, you take over the entire layout. Th
 
 ### Form-level slots — forwarded to inner AsForm
 
-These pass through to the `AsForm` component (see `atscript-ui-forms` skill). The vue-wf wrapper adds `loading` to each slot prop.
+These pass through to the `AsForm` component and carry the same **slot-props bag** (`title`, `data`, `errors`, `submit`, `submitText`, …) documented in [atscript-ui-forms customization.md → AsForm slot-props bag](../../atscript-ui-forms/references/customization.md#asform-slot-props-bag). The vue-wf wrapper adds `loading` to each slot prop.
 
 | Slot          | Slot props (added)                       | Purpose                                                  |
 | ------------- | ---------------------------------------- | -------------------------------------------------------- |
@@ -119,6 +122,10 @@ These pass through to the `AsForm` component (see `atscript-ui-forms` skill). Th
   </template>
 </AsWfForm>
 ```
+
+### Style overrides
+
+The form chrome and finish screen emit only `as-*` shortcuts. Restyle a built-in hook (e.g. `as-wf-finish-*`, `as-form-*`) exactly as for a plain form — the override mechanics (append-not-replace merge, `!`-important, single-variant-key) live once in [atscript-ui-styles shortcuts.md → Overriding a built-in shortcut](../../atscript-ui-styles/references/shortcuts.md#overriding-a-built-in-shortcut).
 
 ## useWfForm(options) composable
 

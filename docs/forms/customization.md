@@ -218,6 +218,82 @@ For lower-level access — replacing `<AsField>` itself with your own per-field
 component that calls `useAsField()` — see
 [Custom field components](/forms/custom-components).
 
+## Slots & the `slotProps` bag
+
+Short of taking over the whole render loop, `<AsForm>` exposes named slots for
+the chrome around the field tree — header, footer, error banner, submit button,
+loading overlay. Every one receives the **same unified `slotProps` bag**, so you
+can read form state from any slot without prop drilling.
+
+The bag every slot gets:
+
+| Key                                         | What it is                                             |
+| ------------------------------------------- | ------------------------------------------------------ |
+| `title` / `description`                     | Resolved form header text (`@meta.label` / fn variant) |
+| `data`                                      | The reactive form-data container `{ value }`           |
+| `errors` / `formError`                      | External leaf errors + the form-level message          |
+| `disabled` / `loading`                      | Submit-disabled flag and busy state                    |
+| `submitText`                                | Resolved submit-button label                           |
+| `submit` / `reset`                          | Trigger submit / reset the form                        |
+| `clearErrors` / `setErrors`                 | Imperative error control                               |
+| `dismissError(path)` / `dismissFormError()` | Dismiss a leaf error or the banner                     |
+| `formContext`                               | The reactive form context                              |
+
+Slot list (each gets the bag, plus the extras noted):
+
+| Slot           | Extra scope props    | Renders                         |
+| -------------- | -------------------- | ------------------------------- |
+| `form.header`  | —                    | Above the field tree            |
+| `form.before`  | —                    | Inside the form, above fields   |
+| `form.after`   | —                    | Inside the form, below fields   |
+| `form.error`   | `message`, `dismiss` | Form-level error banner         |
+| `form.submit`  | `text`               | The submit button               |
+| `form.footer`  | —                    | Below the submit row            |
+| `form.loading` | —                    | Contents of the loading overlay |
+
+```vue
+<template>
+  <AsForm :def="def" :form-data="formData" :types="types">
+    <template #form.header="{ title, description }">
+      <h2 class="as-form-title">{{ title }}</h2>
+      <p v-if="description" class="as-form-description">{{ description }}</p>
+    </template>
+  </AsForm>
+</template>
+```
+
+The full bag type lives in the [`useAsForm` return](/api/vue-form#useasform-options)
+(API reference) — narrative pages link rather than restate it.
+
+### Hide props
+
+Three booleans on `<AsForm>` control the default chrome:
+
+- **`hideRootTitle`** — suppress the root field's title (use when the host
+  chrome already shows the form's `@meta.label`, e.g. a dialog header) — this
+  hides the title only; the field's `@meta.description` still renders. There is
+  no built-in switch to hide both; render your own header via the `form.header`
+  slot if you need full control.
+- **`hideSubmit`** — suppress the default submit button (use when the host owns
+  the submit affordance).
+- **`loading`** — freeze the form: the body becomes `inert` and a loading
+  overlay paints over the whole form area. `<AsWfForm>` wires this to its
+  server round-trip.
+
+::: warning Empty slot ≠ hidden
+Vue 3 treats an empty `<template #form.submit />` as **"slot provided"**, which
+suppresses the default button's fallback content but still renders the slot
+wrapper. To actually drop the default submit button, use the `hideSubmit` prop —
+not an empty slot.
+:::
+
+### Restyling the chrome
+
+To restyle (not replace) the header, footer, submit, or error banner, override
+their `as-*` shortcuts — `as-form-title`, `as-form-description`, `as-submit-btn`,
+`as-form-error` — instead of writing a slot. See
+[Overriding a built-in `as-*` shortcut](/styling/shortcuts#overriding-a-built-in-as-shortcut).
+
 ## Worked example — combining levels
 
 A page can run two forms side-by-side to exercise multiple override

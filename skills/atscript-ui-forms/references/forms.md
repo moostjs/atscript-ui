@@ -47,7 +47,7 @@ Root component. Renders an HTML `<form>`, owns the form-state machine, wires pro
 
 ### Slots
 
-All slots receive submit-related scoped bindings (`clearErrors`, `reset`, `setErrors`, `disabled`, `formContext`).
+Every slot is spread with the full `useAsForm` **slot-props bag** (`title`, `description`, `data`, `errors`, `formError`, `disabled`, `loading`, `submitText`, `submit`, `reset`, `clearErrors`, `setErrors`, `dismissError`, `dismissFormError`, `formContext`) — documented once in [customization.md → AsForm slot-props bag](customization.md#asform-slot-props-bag). The per-slot extras below layer on top of it.
 
 | Slot           | When                                                                                                                   | Default                                |
 | -------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |

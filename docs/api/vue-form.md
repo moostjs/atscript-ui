@@ -36,6 +36,7 @@ interface AsFormProps {
   errors?: Record<string, string | undefined>;
   firstValidation?: "on-change" | "touched-on-blur" | "on-blur" | "on-submit";
   hideRootTitle?: boolean;
+  hideSubmit?: boolean;
   loading?: boolean;
   clientFactory?: ClientFactory;
 }
@@ -49,7 +50,7 @@ interface AsFormProps {
 - `unsupportedAction(name, data)` — action name not declared on the form's type.
 - `change(type, path, value, data)` — granular per-field change; `type` is `TAsChangeType`.
 
-**Slots**: `form.header`, `form.before`, `form.after`, `form.submit`, `form.footer`.
+**Slots**: `form.header`, `form.before`, `form.after`, `form.error`, `form.submit`, `form.footer`, `form.loading`. Every slot receives the unified `slotProps` bag (see [`useAsForm` return](#useasform-options)); `form.error` also gets `message` / `dismiss`, `form.submit` also gets `text`. See [Forms — Slots & the slotProps bag](/forms/customization#slots-the-slotprops-bag).
 
 ### `AsField`
 
@@ -249,6 +250,28 @@ interface UseAsFormReturn<TFormData, TFormContext> {
   onSubmit: () => void;
   submitText: ComputedRef<string>;
   submitDisabled: ComputedRef<boolean>;
+  /** Resolved form-level title (`@ui.form.fn.title` / `@meta.label`); may be `undefined`. */
+  title: ComputedRef<string | undefined>;
+  /** Resolved form-level description (`@ui.form.fn.description` / `@meta.description`). */
+  description: ComputedRef<string | undefined>;
+  /** Unified slot-props bag spread onto every `<AsForm>` slot via `v-bind`. */
+  slotProps: ComputedRef<{
+    title: string | undefined;
+    description: string | undefined;
+    data: TFormData;
+    errors: Record<string, string | undefined> | undefined;
+    formError: string | undefined;
+    disabled: boolean;
+    loading: boolean;
+    submitText: string;
+    submit: () => void;
+    reset: () => Promise<void>;
+    clearErrors: () => void;
+    setErrors: (errors: Record<string, string>) => void;
+    dismissError: (path: string) => void;
+    dismissFormError: () => void;
+    formContext: TFormContext | undefined;
+  }>;
   invokeAction: (name: string) => void;
   dismissError: (path: string) => void;
   dismissFormError: () => void;

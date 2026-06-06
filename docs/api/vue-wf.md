@@ -66,6 +66,16 @@ interface AsWfFormProps {
   components?: Record<string, Component>;
   /** Per-form value-help client factory. */
   clientFactory?: ClientFactory;
+  /** Forwarded to `<AsForm>`. Suppress the root field's title only (the description still renders). */
+  hideRootTitle?: boolean;
+  /** Forwarded to `<AsForm>`. Suppress the default submit button. */
+  hideSubmit?: boolean;
+  /**
+   * Forwarded to `<AsWfFinish>`. Invoked with the redirect target URL when a
+   * `redirect` action fires. Pairs with `@atscript/db-client`'s
+   * `Client({ navigate })` so one handler covers both.
+   */
+  navigate?: (url: string) => void | Promise<void>;
 }
 ```
 
@@ -78,23 +88,34 @@ interface AsWfFormProps {
   form:     (def: FormDef, context?: Record<string, unknown>) => void;
   submit:   (data: unknown) => void;
   loading:  (isLoading: boolean) => void;
+  // Fired by the default AsWfFinish screen — see Finish Screens.
+  dismiss:  () => void;
+  action:   (action: WfActionRequest) => void;
 }
 ```
 
 ### Slots
 
-| Slot          | Scope                                             | Purpose                                                                                                                                                                                        |
-| ------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| default       | `{ form, state, actions }`                        | Wraps everything below — opt into a fully custom shell. `form` = `{ def, formData, formContext }`, `state` = `{ loading, error, finished, response }`, `actions` = `{ start, submit, retry }`. |
-| `wf.loading`  | —                                                 | First-load placeholder (only fires before the first FormDef arrives).                                                                                                                          |
-| `wf.error`    | `{ error, retry }`                                | Transport / 4xx fallback shown when there's no form yet.                                                                                                                                       |
-| `wf.finished` | `{ response }`                                    | Terminal state.                                                                                                                                                                                |
-| `form.error`  | `{ error, retry }`                                | Server-supplied form-level error (rendered alongside the form).                                                                                                                                |
-| `form.header` | AsForm's `form.header` slot props + `{ loading }` | Form chrome above the fields.                                                                                                                                                                  |
-| `form.before` | AsForm's `form.before` slot props + `{ loading }` | Above the field tree.                                                                                                                                                                          |
-| `form.after`  | AsForm's `form.after` slot props + `{ loading }`  | Below the field tree.                                                                                                                                                                          |
-| `form.submit` | AsForm's `form.submit` slot props + `{ loading }` | Replace the submit button. Default: `<button :disabled="loading">{{ text }}</button>`.                                                                                                         |
-| `form.footer` | AsForm's `form.footer` slot props + `{ loading }` | Below the submit row.                                                                                                                                                                          |
+| Slot           | Scope                      | Purpose                                                                                                                                                                                        |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| default        | `{ form, state, actions }` | Wraps everything below — opt into a fully custom shell. `form` = `{ def, formData, formContext }`, `state` = `{ loading, error, finished, response }`, `actions` = `{ start, submit, retry }`. |
+| `wf.loading`   | —                          | First-load placeholder (only fires before the first FormDef arrives).                                                                                                                          |
+| `wf.error`     | `{ error, retry }`         | Transport / 4xx error. Renders both before a form loads AND as a banner above a mounted form.                                                                                                  |
+| `wf.finished`  | `{ response, payload }`    | Terminal state. `payload` is the typed `WfFinished` envelope. See [Finish Screens](/workflows/finish-screens) for the `wf.finish.*` sub-slots.                                                 |
+| `form.header`  | AsForm `slotProps` bag     | Form chrome above the fields.                                                                                                                                                                  |
+| `form.before`  | AsForm `slotProps` bag     | Above the field tree.                                                                                                                                                                          |
+| `form.after`   | AsForm `slotProps` bag     | Below the field tree.                                                                                                                                                                          |
+| `form.error`   | bag + `message`, `dismiss` | AsForm's own form-level error banner (distinct from the transport-level `wf.error`).                                                                                                           |
+| `form.submit`  | bag + `text`               | Replace the submit button.                                                                                                                                                                     |
+| `form.footer`  | AsForm `slotProps` bag     | Below the submit row.                                                                                                                                                                          |
+| `form.loading` | AsForm `slotProps` bag     | Contents of the loading overlay.                                                                                                                                                               |
+
+The `form.*` slots are forwarded verbatim to the inner `<AsForm>`, so each
+carries that component's unified `slotProps` bag — documented once in
+[Forms — Slots & the slotProps bag](/forms/customization#slots-the-slotprops-bag).
+The `wf.finish.*` sub-slots live on the [Finish Screens](/workflows/finish-screens)
+page. For the narrative on every slot (with defaults and examples), see
+[Client: AsWfForm](/workflows/client).
 
 ### Example
 
@@ -114,8 +135,8 @@ const types = createDefaultTypes();
     @finished="onLogin"
     @error="onError"
   >
-    <template #wf.finished="{ response }">
-      <p>Welcome back, {{ response.user.email }}!</p>
+    <template #wf.finished="{ payload }">
+      <p>Welcome back, {{ payload?.data?.user?.email }}!</p>
     </template>
   </AsWfForm>
 </template>

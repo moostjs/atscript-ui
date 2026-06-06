@@ -72,6 +72,10 @@ interface AsWfFormProps {
   components?: Record<string, Component>;
   /** Per-form client factory (FK value-help). */
   clientFactory?: ClientFactory;
+  /** Forwarded to `<AsForm>`. Suppress the root field's title only (the description still renders). */
+  hideRootTitle?: boolean;
+  /** Forwarded to `<AsForm>`. Suppress the default submit button. */
+  hideSubmit?: boolean;
 
   // ── Finish screen routing ──────────────────────────────────
   /**
@@ -140,22 +144,35 @@ When the default slot is **not** overridden (the usual case), the
 component renders one of these named slots based on the current
 state, with sensible fallbacks:
 
-| Slot                  | When                                      | Slot props                                                                                                                |
-| --------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `wf.loading`          | First load (no formDef yet)               | — (default: `as-form-overlay` spinner on a `min-h-[100px]` wrapper, matching the overlay shown on subsequent round-trips) |
-| `wf.error`            | Top-level error, no formDef               | `{ error, retry }`                                                                                                        |
-| `wf.finished`         | `finished === true`                       | `{ response, payload }`                                                                                                   |
-| `wf.finish.message`   | finished with `message`                   | `{ message }`                                                                                                             |
-| `wf.finish.countdown` | finished with `next.trigger === 'auto'`   | `{ secondsRemaining, totalSeconds, skip, cancel }`                                                                        |
-| `wf.finish.skip`      | finished with `auto` next + `skipButton`  | `{ button, trigger }`                                                                                                     |
-| `wf.finish.primary`   | finished with `next.trigger === 'manual'` | `{ button, trigger }`                                                                                                     |
-| `wf.finish.option`    | finished with `manual` next (each option) | `{ button, index, trigger }`                                                                                              |
-| `form.error`          | Mid-flow error (formDef exists)           | `{ error, retry }`                                                                                                        |
-| `form.header`         | Above the rendered form                   | Forwarded from `AsForm` + `{ loading }`                                                                                   |
-| `form.before`         | Inside the form, above fields             | "                                                                                                                         |
-| `form.after`          | Inside the form, below fields             | "                                                                                                                         |
-| `form.submit`         | Replace the submit button                 | `{ text, disabled, loading }`                                                                                             |
-| `form.footer`         | Below the form                            | "                                                                                                                         |
+| Slot                  | When                                                                            | Slot props                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `wf.loading`          | First load (no formDef yet)                                                     | — (default: `as-form-overlay` spinner on a `min-h-[100px]` wrapper, matching the overlay shown on subsequent round-trips) |
+| `wf.error`            | Transport error — both before a form loads AND as a banner above a mounted form | `{ error, retry }`                                                                                                        |
+| `wf.finished`         | `finished === true`                                                             | `{ response, payload }`                                                                                                   |
+| `wf.finish.message`   | finished with `message`                                                         | `{ message }`                                                                                                             |
+| `wf.finish.countdown` | finished with `next.trigger === 'auto'`                                         | `{ secondsRemaining, totalSeconds, skip, cancel }`                                                                        |
+| `wf.finish.skip`      | finished with `auto` next + `skipButton`                                        | `{ button, trigger }`                                                                                                     |
+| `wf.finish.primary`   | finished with `next.trigger === 'manual'`                                       | `{ button, trigger }`                                                                                                     |
+| `wf.finish.option`    | finished with `manual` next (each option)                                       | `{ button, index, trigger }`                                                                                              |
+| `form.header`         | Above the rendered form                                                         | The forwarded `AsForm` `slotProps` bag                                                                                    |
+| `form.before`         | Inside the form, above fields                                                   | "                                                                                                                         |
+| `form.after`          | Inside the form, below fields                                                   | "                                                                                                                         |
+| `form.error`          | `AsForm` form-level error banner                                                | bag + `message`, `dismiss`                                                                                                |
+| `form.submit`         | Replace the submit button                                                       | bag + `text`                                                                                                              |
+| `form.footer`         | Below the form                                                                  | "                                                                                                                         |
+| `form.loading`        | Contents of the loading overlay                                                 | "                                                                                                                         |
+
+The `form.*` slots are forwarded straight through to the inner
+`<AsForm>`, so each receives the **same `slotProps` bag** an AsForm slot
+gets (`title`, `description`, `data`, `errors`, `formError`, `loading`,
+`submit`, `reset`, …). See
+[Forms — Slots & the slotProps bag](/forms/customization#slots-the-slotprops-bag)
+for the full bag — it isn't restated here. `hideRootTitle` and
+`hideSubmit` are likewise forwarded to `<AsForm>` (`hideRootTitle` hides the
+root title only — the `@meta.description` still renders; see
+[Forms — Hide props](/forms/customization#hide-props)), and **styling a wf form
+is identical to styling any form** — override the relevant `as-*`
+shortcut (see [Overriding a built-in `as-*` shortcut](/styling/shortcuts#overriding-a-built-in-as-shortcut)).
 
 The `wf.finished` slot's `payload` is the typed `WfFinished` envelope
 (`response` is the same value, kept for back-compat). When the

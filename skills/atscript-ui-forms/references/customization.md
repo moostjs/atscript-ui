@@ -9,6 +9,7 @@ Four levels of customization, the `TAsComponentProps` contract for custom compon
 - [Level 2 — Per-field named component](#level-2--per-field-named-component)
 - [Level 3 — Wrap with AsFieldShell](#level-3--wrap-with-asfieldshell)
 - [Level 4 — Fully custom root](#level-4--fully-custom-root)
+- [AsForm slot-props bag](#asform-slot-props-bag)
 - [TAsComponentProps contract](#tascomponentprops-contract)
 - [TAsComponentEmits](#tascomponentemits)
 - [Custom component skeleton](#custom-component-skeleton)
@@ -177,6 +178,44 @@ const form = useAsForm<Contact>({
 `useAsForm` MUST be called from `<script setup>` of a component (it issues `provide()` calls). Its return is shaped to back the `<AsForm>` template; reach for it only when you need a non-form root element or radically different layout.
 
 `createFormDef(type, { versionColumn })` — pass the second argument when consuming meta from an OCC-protected table (`@db.column.version`). The version column is excluded from `fields[]` so renderers don't paint it as an input, but stays in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift. See the OCC edit pattern in [`atscript-ui-forms/SKILL.md`](../SKILL.md) and the `atscript-db` skill's OCC reference.
+
+## AsForm slot-props bag
+
+`useAsForm` returns a `slotProps` bag (a `ComputedRef`) that `<AsForm>` spreads onto **every** slot. Reach for it when overriding a form slot (custom header, error banner, submit button) or when building a fully custom root with `useAsForm` — read keys off the bag instead of re-deriving form state.
+
+Bag keys (don't paste the TS type — read them off `slotProps`):
+
+| Key                | What it is                                                                     |
+| ------------------ | ------------------------------------------------------------------------------ |
+| `title`            | Resolved root `@meta.label` heading (`undefined` when suppressed).             |
+| `description`      | Resolved root description.                                                     |
+| `data`             | Current unwrapped domain data (`TFormData`).                                   |
+| `errors`           | External-errors map keyed by absolute path (`undefined` when none).            |
+| `formError`        | Resolved `__form` banner message (`undefined` when none).                      |
+| `disabled`         | Submit-disabled state (validation / `@ui.form.fn.submitDisabled` / `loading`). |
+| `loading`          | `true` when the `loading` prop is set (overlay shown).                         |
+| `submitText`       | Resolved submit-button label (`@ui.form.submit.text` / fn).                    |
+| `submit`           | `() => void` — trigger submit.                                                 |
+| `reset`            | `() => Promise<void>` — re-apply defaults + clear errors.                      |
+| `clearErrors`      | `() => void`.                                                                  |
+| `setErrors`        | `(errors: Record<string, string>) => void`.                                    |
+| `dismissError`     | `(path: string) => void` — dismiss one leaf error.                             |
+| `dismissFormError` | `() => void` — dismiss the `__form` banner.                                    |
+| `formContext`      | The provided `formContext` (or `undefined`).                                   |
+
+Per-slot extras layered on top of the bag:
+
+| Slot                                                                          | Bag + extras               |
+| ----------------------------------------------------------------------------- | -------------------------- |
+| `form.header` / `form.before` / `form.after` / `form.footer` / `form.loading` | bag (no extras)            |
+| `form.error`                                                                  | bag + `message`, `dismiss` |
+| `form.submit`                                                                 | bag + `text`               |
+
+Hide props (booleans on `<AsForm>`): `hideRootTitle`, `hideSubmit`, `loading`.
+
+> **`hideRootTitle` hides the root TITLE only** — the root `@meta.description` still renders. No prop hides both; use the `form.header` slot for a fully custom header.
+
+> **Empty slot ≠ hidden.** `<template #form.submit />` is read by Vue as "slot provided" and _suppresses the default submit button without rendering anything_. To hide the submit, use `hide-submit`; to hide the root title, use `hide-root-title`. Never blank a slot to hide its default.
 
 ## TAsComponentProps contract
 
