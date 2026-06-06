@@ -14,10 +14,15 @@ import {
   getFormValidator,
   iteratePathAncestors,
   mergeErrorMaps,
+  resolveFieldProp,
   resolveFormProp,
+  META_DESCRIPTION,
+  META_LABEL,
   UI_FORM_ACTION,
+  UI_FORM_FN_DESCRIPTION,
   UI_FORM_FN_SUBMIT_DISABLED,
   UI_FORM_FN_SUBMIT_TEXT,
+  UI_FORM_FN_TITLE,
   UI_FORM_SUBMIT_TEXT,
   WF_ACTION_WITH_DATA,
   type ClientFactory,
@@ -134,6 +139,28 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   submitText: ComputedRef<string>;
   /** Resolved submit-button disabled state (`@ui.form.fn.submitDisabled`). */
   submitDisabled: ComputedRef<boolean>;
+  /** Resolved form-level title (`@ui.form.fn.title` / `@meta.label`); may be `undefined`. */
+  title: ComputedRef<string | undefined>;
+  /** Resolved form-level description (`@ui.form.fn.description` / `@meta.description`). */
+  description: ComputedRef<string | undefined>;
+  /** Unified slot-props bag spread onto every `<AsForm>` slot. */
+  slotProps: ComputedRef<{
+    title: string | undefined;
+    description: string | undefined;
+    data: TFormData;
+    errors: Record<string, string | undefined> | undefined;
+    formError: string | undefined;
+    disabled: boolean;
+    loading: boolean;
+    submitText: string;
+    submit: () => void;
+    reset: () => Promise<void>;
+    clearErrors: () => void;
+    setErrors: (errors: Record<string, string>) => void;
+    dismissError: (path: string) => void;
+    dismissFormError: () => void;
+    formContext: TFormContext | undefined;
+  }>;
   /** Dispatch an action — invoked by `<AsAction>`. */
   invokeAction: (name: string) => void;
   /** Dismiss a single external leaf error. */
@@ -288,6 +315,38 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         false),
   );
 
+  // ── Form-level title / description (root field, fn-aware) ──
+  // Mirror as-field.vue's resolution but WITHOUT the field-name fallback:
+  // a form header title may legitimately be undefined.
+  const resolveRootProp = (fnKey: string, staticKey: string): string | undefined => {
+    const root = options.def().rootField;
+    return root ? resolveFieldProp<string>(root.prop, fnKey, staticKey, ctx.value) : undefined;
+  };
+  const title = computed(() => resolveRootProp(UI_FORM_FN_TITLE, META_LABEL));
+  const description = computed(() => resolveRootProp(UI_FORM_FN_DESCRIPTION, META_DESCRIPTION));
+
+  // ── Unified slot-props bag ─────────────────────────────────
+  // The single bag every `<AsForm>` slot receives (spread via `v-bind`).
+  // Reactive computeds are unwrapped to plain values; function references
+  // pass through as-is.
+  const slotProps = computed(() => ({
+    title: title.value,
+    description: description.value,
+    data: data.value,
+    errors: ext.effective.value,
+    formError: ext.formError.value,
+    disabled: submitDisabled.value,
+    loading: options.loading?.() === true,
+    submitText: submitText.value,
+    submit: onSubmit,
+    reset: resetState,
+    clearErrors,
+    setErrors,
+    dismissError: ext.dismissAt,
+    dismissFormError: ext.dismissForm,
+    formContext: formContext.value,
+  }));
+
   // ── Action handler (provided to AsField tree) ──────────────
   function supportsAction(def: FormDef, actionId: string): boolean {
     return def.fields.some((f) => {
@@ -358,6 +417,9 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     onSubmit,
     submitText,
     submitDisabled,
+    title,
+    description,
+    slotProps,
     invokeAction,
     dismissError: ext.dismissAt,
     dismissFormError: ext.dismissForm,

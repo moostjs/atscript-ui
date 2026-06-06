@@ -18,6 +18,10 @@ interface AsWfFormProps extends UseWfFormOptions {
   components?: Record<string, Component>;
   /** Per-form client factory override (FK value-help). Forwarded to AsForm. */
   clientFactory?: ClientFactory;
+  /** Forwarded to `<AsForm>`. Suppress the root field's title (e.g. when a chrome already shows the form label). */
+  hideRootTitle?: boolean;
+  /** Forwarded to `<AsForm>`. Suppress the default submit button when the host owns the submit affordance. */
+  hideSubmit?: boolean;
   /**
    * Consumer-provided navigation handler forwarded to `<AsWfFinish>`. Pairs
    * with `@atscript/db-client`'s `Client({ navigate })` option so one handler
@@ -159,7 +163,7 @@ function onAction(name: string, data: unknown) {
     </div>
 
     <div v-else-if="wf.formDef.value && wf.formData.value">
-      <slot v-if="wf.error.value" name="form.error" :error="wf.error.value" :retry="wf.retry">
+      <slot v-if="wf.error.value" name="wf.error" :error="wf.error.value" :retry="wf.retry">
         <div role="alert" class="as-wf-form-error">
           {{ (wf.error.value as { message?: string })?.message ?? "Error" }}
         </div>
@@ -174,25 +178,33 @@ function onAction(name: string, data: unknown) {
         :first-validation="firstValidation"
         :components="components"
         :client-factory="clientFactory"
+        :hide-root-title="hideRootTitle"
+        :hide-submit="hideSubmit"
         :loading="wf.loading.value"
         @submit="onSubmit"
         @action="onAction"
         @unsupported-action="onAction"
       >
-        <template #form.header="slotProps">
-          <slot name="form.header" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        <template v-if="$slots['form.header']" #form.header="slotProps">
+          <slot name="form.header" v-bind="slotProps" />
         </template>
-        <template #form.before="slotProps">
-          <slot name="form.before" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        <template v-if="$slots['form.before']" #form.before="slotProps">
+          <slot name="form.before" v-bind="slotProps" />
         </template>
-        <template #form.after="slotProps">
-          <slot name="form.after" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        <template v-if="$slots['form.after']" #form.after="slotProps">
+          <slot name="form.after" v-bind="slotProps" />
+        </template>
+        <template v-if="$slots['form.error']" #form.error="slotProps">
+          <slot name="form.error" v-bind="slotProps" />
         </template>
         <template v-if="$slots['form.submit']" #form.submit="slotProps">
-          <slot name="form.submit" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+          <slot name="form.submit" v-bind="slotProps" />
         </template>
-        <template #form.footer="slotProps">
-          <slot name="form.footer" v-bind="{ ...slotProps, loading: wf.loading.value }" />
+        <template v-if="$slots['form.footer']" #form.footer="slotProps">
+          <slot name="form.footer" v-bind="slotProps" />
+        </template>
+        <template v-if="$slots['form.loading']" #form.loading="slotProps">
+          <slot name="form.loading" v-bind="slotProps" />
         </template>
       </AsForm>
     </div>

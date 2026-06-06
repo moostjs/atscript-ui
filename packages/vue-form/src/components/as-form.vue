@@ -85,38 +85,17 @@ const form = useAsForm<TFormData, TFormContext>({
 
 <template>
   <form class="as-form" :inert="loading" @submit.prevent="form.onSubmit">
-    <slot
-      name="form.header"
-      :clear-errors="form.clearErrors"
-      :reset="form.reset"
-      :set-errors="form.setErrors"
-      :formContext="formContext"
-      :disabled="form.submitDisabled.value"
-    >
-    </slot>
-    <slot
-      name="form.before"
-      :clear-errors="form.clearErrors"
-      :reset="form.reset"
-      :set-errors="form.setErrors"
-      :formContext="formContext"
-      :disabled="form.submitDisabled.value"
-    ></slot>
+    <slot name="form.header" v-bind="form.slotProps.value"></slot>
+    <slot name="form.before" v-bind="form.slotProps.value"></slot>
 
     <AsField :field="def.rootField" />
 
-    <slot
-      name="form.after"
-      :clear-errors="form.clearErrors"
-      :reset="form.reset"
-      :set-errors="form.setErrors"
-      :disabled="form.submitDisabled.value"
-      :formContext="formContext"
-    ></slot>
+    <slot name="form.after" v-bind="form.slotProps.value"></slot>
 
     <slot
       v-if="form.formError.value"
       name="form.error"
+      v-bind="form.slotProps.value"
       :message="form.formError.value"
       :dismiss="form.dismissFormError"
     >
@@ -131,12 +110,8 @@ const form = useAsForm<TFormData, TFormContext>({
     <slot
       v-if="!hideSubmit"
       name="form.submit"
-      :disabled="form.submitDisabled.value"
+      v-bind="form.slotProps.value"
       :text="form.submitText.value"
-      :clear-errors="form.clearErrors"
-      :reset="form.reset"
-      :set-errors="form.setErrors"
-      :formContext="formContext"
     >
       <button class="as-submit-btn" :disabled="form.submitDisabled.value">
         {{ form.submitText.value }}
@@ -146,16 +121,9 @@ const form = useAsForm<TFormData, TFormContext>({
     <div v-if="def.pushDownFields.length" class="as-form-grid">
       <AsIterator :def="def" :fields="def.pushDownFields" />
     </div>
-    <slot
-      name="form.footer"
-      :disabled="form.submitDisabled.value"
-      :clear-errors="form.clearErrors"
-      :reset="form.reset"
-      :set-errors="form.setErrors"
-      :formContext="formContext"
-    ></slot>
+    <slot name="form.footer" v-bind="form.slotProps.value"></slot>
     <div v-if="loading" class="as-form-overlay">
-      <slot name="form.loading">
+      <slot name="form.loading" v-bind="form.slotProps.value">
         <span class="as-form-overlay-icon" aria-hidden="true" />
       </slot>
     </div>
