@@ -101,6 +101,7 @@ declare global {
     "ui.form.grid.rowSpan": { desktop: string, narrow?: string }
     "ui.form.submit.text": string
     "ui.form.label.singular": string
+    "ui.form.pushDown": boolean
     "ui.form.action": { id: string, label?: string }
     "ui.form.prefix": string
     "ui.form.prefix.ref": string
@@ -113,6 +114,7 @@ declare global {
     "ui.table.hidden": boolean
     "ui.table.attr": ({ name: string, value: string })[]
     "ui.table.classes": (string)[]
+    "ui.table.selectWith": (string)[]
     "ui.table.styles": (string)[]
     "ui.table.type": string
     "ui.table.order": number

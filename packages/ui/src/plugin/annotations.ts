@@ -569,6 +569,28 @@ export const uiAnnotations: TAnnotationsTree = {
         },
       }),
 
+      selectWith: new AnnotationSpec({
+        description:
+          "Extra sibling leaf field paths to include in the table `$select` whenever this " +
+          "column is displayed. These fields are fetched but never rendered as their own " +
+          "columns — use them to back a custom cell renderer or formatter. " +
+          "Multiple `@ui.table.selectWith` annotations are appended." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          '@ui.table.selectWith "firstName"\n' +
+          '@ui.table.selectWith "lastName"\n' +
+          "fullName: string\n" +
+          "```\n",
+        nodeType: ["prop", "type", "interface"],
+        multiple: true,
+        mergeStrategy: "append",
+        argument: {
+          name: "path",
+          type: "string",
+          description: "Sibling leaf field path to fetch alongside this column.",
+        },
+      }),
+
       styles: new AnnotationSpec({
         description:
           "Inline CSS styles applied to the rendered `<td>` for this column's cells. " +

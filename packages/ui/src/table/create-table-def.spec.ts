@@ -139,6 +139,25 @@ describe("createTableDef", () => {
     expect(def.columns[0]!.width).toBe("240px");
   });
 
+  it("collects @ui.table.selectWith into column.selectWith", async () => {
+    const { WithSelectWith } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithSelectWith), ["fullName", "plain"]);
+    const def = createTableDef(meta);
+
+    expect(def.columns.find((c) => c.path === "fullName")!.selectWith).toEqual([
+      "firstName",
+      "lastName",
+    ]);
+  });
+
+  it("column.selectWith is undefined when no @ui.table.selectWith", async () => {
+    const { WithSelectWith } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithSelectWith), ["fullName", "plain"]);
+    const def = createTableDef(meta);
+
+    expect(def.columns.find((c) => c.path === "plain")!.selectWith).toBeUndefined();
+  });
+
   it("reads sortable/filterable from meta.fields", async () => {
     const { NameAndAge } = await import(F);
     const meta = buildMeta(serializeAnnotatedType(NameAndAge), ["name", "age"], {

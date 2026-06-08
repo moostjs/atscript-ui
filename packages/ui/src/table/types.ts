@@ -111,6 +111,11 @@ export interface ColumnDef {
   type: string;
   /** Named component override from @ui.table.component — looked up in the table components map. */
   component?: string;
+  /**
+   * Extra leaf field paths to include in `$select` whenever this column is displayed.
+   * Never rendered as columns; declared via @ui.table.selectWith.
+   */
+  selectWith?: string[];
   /** Whether this column supports sorting. */
   sortable: boolean;
   /** Whether this column supports filtering. */

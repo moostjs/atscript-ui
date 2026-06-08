@@ -123,6 +123,11 @@ export interface TableQueryOptions {
   forceFilters?: FilterExpr;
   /** Always-applied sorters (prepended before user sorters). */
   forceSorters?: SortControl[];
+  /**
+   * Leaf field paths always added to `$select` (deduped, gated by available
+   * meta), regardless of which columns are visible. Additive only.
+   */
+  alwaysSelected?: string[];
   /** When true, all triggers (query/queryNext/loadRange) early-return. */
   blockQuery?: boolean;
   /** Auto-query when metadata loads (default: true). */
@@ -375,8 +380,16 @@ export function createTableState(opts: CreateTableStateOptions): {
   let skipPaginationWatch = 0;
 
   function buildCurrentQuery(): Uniquery {
+    const available = new Set(allColumns.value.map((c) => c.path)); // narrowed-meta gate (incl. hidden cols)
+    const extra = new Set<string>();
+    for (const c of columns.value) // selectWith: VISIBLE columns only
+      for (const p of c.selectWith ?? []) if (available.has(p)) extra.add(p);
+    if (queryOpts?.alwaysSelected)
+      // alwaysSelected: same gate
+      for (const p of queryOpts.alwaysSelected) if (available.has(p)) extra.add(p);
     return buildTableQuery({
       visibleColumnPaths: columnNames.value,
+      extraSelect: extra.size ? [...extra] : undefined,
       sorters: sorters.value,
       forceSorters: queryOpts?.forceSorters,
       filters: filters.value,

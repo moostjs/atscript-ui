@@ -68,6 +68,11 @@ export interface UseTableOptions {
   forceFilters?: FilterExpr;
   /** Always-applied sorters (prepended before user sorters). */
   forceSorters?: SortControl[];
+  /**
+   * Leaf field paths always added to `$select` (deduped, gated by available
+   * meta), regardless of which columns are visible. Additive only.
+   */
+  alwaysSelected?: string[];
   /** Override the default query function. */
   queryFn?: QueryFn;
   /** Auto-query when metadata loads (default: true). */
@@ -186,6 +191,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       fn: opts?.queryFn,
       forceFilters: opts?.forceFilters,
       forceSorters: opts?.forceSorters,
+      alwaysSelected: opts?.alwaysSelected,
       blockQuery: opts?.blockQuery,
       queryOnMount: opts?.queryOnMount,
       urlQueryReady: opts?.urlQueryReady,

@@ -114,6 +114,7 @@ declare global {
     "ui.table.hidden": boolean
     "ui.table.attr": ({ name: string, value: string })[]
     "ui.table.classes": (string)[]
+    "ui.table.selectWith": (string)[]
     "ui.table.styles": (string)[]
     "ui.table.type": string
     "ui.table.order": number

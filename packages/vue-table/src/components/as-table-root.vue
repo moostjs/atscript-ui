@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch, type Component } from "vue";
+import { computed, defineAsyncComponent, ref, watch, type Component, type Ref } from "vue";
 import type { SortControl, ClientFactory } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
@@ -17,7 +17,16 @@ import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
 import type { PageResult } from "@atscript/db-client";
-import { AsConfigDialog, AsConfirmDialog, AsFilterDialog, AsPresetDialog } from "./defaults";
+// `AsConfirmDialog` stays a static import — it's tiny and core to the
+// prompt/confirm path. The config / filter / preset dialogs each pull in a
+// heavier subtree, so they're lazy-loaded and only mounted once their open
+// state first flips true (see the `everOpened*` latches below). Consumers who
+// want eager loading or a custom dialog assign `controls.X` to override.
+import { AsConfirmDialog } from "./defaults";
+
+const AsConfigDialog = defineAsyncComponent(() => import("./defaults/as-config-dialog.vue"));
+const AsFilterDialog = defineAsyncComponent(() => import("./defaults/as-filter-dialog.vue"));
+const AsPresetDialog = defineAsyncComponent(() => import("./defaults/as-preset-dialog.vue"));
 
 // `AsActionFormDialog` pulls in the whole `@atscript/vue-form` runtime, so
 // it's lazy-loaded and only mounted when `hasInputFormActions` flips true
@@ -50,6 +59,11 @@ const props = withDefaults(
     limit?: number;
     forceFilters?: FilterExpr;
     forceSorters?: SortControl[];
+    /**
+     * Leaf field paths always added to `$select` (deduped, gated by available
+     * meta), regardless of which columns are visible. Additive only.
+     */
+    alwaysSelected?: string[];
     queryOnMount?: boolean;
     queryFn?: (
       query: Uniquery,
@@ -141,6 +155,7 @@ const state = useTable(props.url, {
   selectionPersistence: props.selectionPersistence,
   forceFilters: props.forceFilters,
   forceSorters: props.forceSorters,
+  alwaysSelected: props.alwaysSelected,
   queryFn: props.queryFn,
   queryOnMount: props.queryOnMount,
   blockQuery: props.blockQuery,
@@ -191,6 +206,22 @@ useRegisterMainActionListener(
 );
 
 const navBridge = useTableNavBridge(state);
+
+// First-open latches: keep each lazy dialog unmounted (chunk unfetched) until
+// the user first opens it, then leave it mounted so its close animation can
+// play on dismiss. A plain `v-if="isOpen"` would tear the dialog out before
+// the transition runs. The latch sticks to `true` once the source first goes
+// truthy, so a plain `computed` won't do.
+function latchOpened(source: () => unknown): Ref<boolean> {
+  const latched = ref(false);
+  watch(source, (v) => {
+    if (v) latched.value = true;
+  });
+  return latched;
+}
+const everOpenedConfig = latchOpened(() => state.configDialogOpen.value);
+const everOpenedFilter = latchOpened(() => state.filterDialogColumn.value);
+const everOpenedPreset = latchOpened(() => state.preset.dialogOpen.value);
 
 // Gates the lazy dialog mount so its chunk fetch overlaps the table's
 // first render rather than waiting for a user click.
@@ -244,11 +275,17 @@ defineExpose({ state, navBridge });
     :prompt="state.prompt"
   />
 
-  <component :is="props.controls?.filterDialog ?? AsFilterDialog" />
-  <component :is="props.controls?.configDialog ?? AsConfigDialog" />
+  <component
+    v-if="everOpenedFilter || props.controls?.filterDialog"
+    :is="props.controls?.filterDialog ?? AsFilterDialog"
+  />
+  <component
+    v-if="everOpenedConfig || props.controls?.configDialog"
+    :is="props.controls?.configDialog ?? AsConfigDialog"
+  />
   <component :is="props.controls?.confirmDialog ?? AsConfirmDialog" />
   <component
-    v-if="state.preset.available.value"
+    v-if="state.preset.available.value && (everOpenedPreset || props.controls?.presetDialog)"
     :is="props.controls?.presetDialog ?? AsPresetDialog"
   />
 

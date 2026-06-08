@@ -190,6 +190,7 @@ type MountTableStateOptions = {
   blockQuery?: boolean;
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
+  alwaysSelected?: string[];
   queryFn?: QueryFn;
   /** URL bridge: gate first query until ref is `true`. */
   urlQueryReady?: import("vue").Ref<boolean>;
@@ -233,6 +234,7 @@ function mountWith(
             blockQuery: opts.blockQuery,
             forceFilters: opts.forceFilters,
             forceSorters: opts.forceSorters,
+            alwaysSelected: opts.alwaysSelected,
             fn: opts.queryFn,
             urlQueryReady: opts.urlQueryReady,
             onUrlQueryChange: opts.onUrlQueryChange,

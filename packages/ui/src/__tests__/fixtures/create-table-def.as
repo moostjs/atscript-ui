@@ -90,6 +90,18 @@ export interface WithTableWidth {
     name: string
 }
 
+/// Repeated `@ui.table.selectWith` appends sibling leaf paths onto
+/// `column.selectWith`; a column without the annotation stays `undefined`. Backs:
+///   - "collects @ui.table.selectWith into column.selectWith"
+///   - "column.selectWith is undefined when no @ui.table.selectWith"
+export interface WithSelectWith {
+    @ui.table.selectWith 'firstName'
+    @ui.table.selectWith 'lastName'
+    fullName: string
+
+    plain: string
+}
+
 /// Two-prop fixture used for sortable/filterable meta.fields wiring. Backs:
 ///   - "reads sortable/filterable from meta.fields"
 export interface NameAndAge {

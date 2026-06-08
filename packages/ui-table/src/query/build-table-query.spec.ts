@@ -24,6 +24,52 @@ describe("buildTableQuery", () => {
     expect(q.controls!.$select).toEqual(["name", "age", "address.city"]);
   });
 
+  it("unions extraSelect with visible columns into $select (deduped)", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: ["name", "age"],
+      extraSelect: ["address.city", "id"],
+      sorters: [],
+      filters: emptyFilters,
+    });
+    expect(q.controls!.$select).toEqual(["name", "age", "address.city", "id"]);
+  });
+
+  it("dedups an overlapping extraSelect path so it appears once", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: ["name", "age"],
+      extraSelect: ["age", "id"],
+      sorters: [],
+      filters: emptyFilters,
+    });
+    expect(q.controls!.$select).toEqual(["name", "age", "id"]);
+  });
+
+  it("sets $select from extraSelect alone when no visible columns", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      extraSelect: ["id", "tenant"],
+      sorters: [],
+      filters: emptyFilters,
+    });
+    expect(q.controls!.$select).toEqual(["id", "tenant"]);
+  });
+
+  it("leaves $select untouched when extraSelect is absent or empty", () => {
+    const base = buildTableQuery({
+      visibleColumnPaths: ["name", "age"],
+      sorters: [],
+      filters: emptyFilters,
+    });
+    const empty = buildTableQuery({
+      visibleColumnPaths: ["name", "age"],
+      extraSelect: [],
+      sorters: [],
+      filters: emptyFilters,
+    });
+    expect(base.controls!.$select).toEqual(["name", "age"]);
+    expect(empty.controls!.$select).toEqual(["name", "age"]);
+  });
+
   it("converts sorters to $sort", () => {
     const sorters: SortControl[] = [
       { field: "name", direction: "asc" },

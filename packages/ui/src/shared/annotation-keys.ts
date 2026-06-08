@@ -30,6 +30,7 @@ export const UI_FORM_SUFFIX_ICON = "ui.form.suffix.icon" as const;
 // ── Table static (registered by @atscript/ui plugin) ─────────
 export const UI_TABLE_WIDTH = "ui.table.width" as const;
 export const UI_TABLE_COMPONENT = "ui.table.component" as const;
+export const UI_TABLE_SELECT_WITH = "ui.table.selectWith" as const;
 export const UI_TABLE_HIDDEN = "ui.table.hidden" as const;
 export const UI_TABLE_ATTR = "ui.table.attr" as const;
 export const UI_TABLE_CLASSES = "ui.table.classes" as const;

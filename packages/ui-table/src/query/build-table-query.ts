@@ -9,6 +9,8 @@ import { mergeFilters } from "./merge-filters";
 export interface BuildTableQueryOptions {
   /** Paths of visible columns — used for `$select` projection. */
   visibleColumnPaths: string[];
+  /** Extra leaf paths unioned (deduped) into `$select` beyond the visible columns. Never rendered as columns. */
+  extraSelect?: string[];
   /** User-configured sorters. */
   sorters: SortControl[];
   /** Always-applied sorters (prepended before user sorters). */
@@ -52,9 +54,10 @@ export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
 
   const controls: Uniquery["controls"] = {};
 
-  if (opts.visibleColumnPaths.length > 0) {
-    controls.$select = opts.visibleColumnPaths;
-  }
+  const sel = opts.extraSelect?.length
+    ? [...new Set([...opts.visibleColumnPaths, ...opts.extraSelect])]
+    : opts.visibleColumnPaths;
+  if (sel.length > 0) controls.$select = sel;
 
   if (sorters.length > 0) {
     controls.$sort = $sort;
