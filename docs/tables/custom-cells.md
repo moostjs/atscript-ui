@@ -239,6 +239,134 @@ const components = { statusBadge: StatusBadgeCell };
 Every order row now shows a coloured status pill; the rest of the
 table stays on the default renderers.
 
+## Fetching sibling fields a cell needs
+
+A custom cell can only read fields that are present in the row object —
+and that object is exactly the **visible** columns. The table projects
+just the displayed columns into `$select`, so if your cell tries to
+composite a sibling field that isn't its own column, that field is
+absent from `row` and the cell renders blank.
+
+The classic case is an **identity cell**: a single `username` column
+that paints an avatar plus a formatted "First Last". The `avatar`,
+`firstName`, and `lastName` fields are never columns of their own — but
+the cell needs all three to render.
+
+### Per-column deps — `@ui.table.selectWith`
+
+Co-locate `@ui.table.selectWith 'field'` on the field your cell
+renders. Each annotation names one sibling **leaf** field path to also
+fetch whenever the owning column is displayed; repeat it once per extra
+field. The extra fields ride along in the row payload but are never
+rendered as columns, never toggleable, and never appear in the config
+dialog.
+
+```atscript
+@db.table 'users'
+export interface UsersTable {
+    @meta.id id: string
+
+    @meta.label 'User'
+    @ui.table.component 'identity'
+    @ui.table.selectWith 'avatar'
+    @ui.table.selectWith 'firstName'
+    @ui.table.selectWith 'lastName'
+    username: string
+
+    @ui.table.hidden
+    avatar: string
+
+    @ui.table.hidden
+    firstName: string
+
+    @ui.table.hidden
+    lastName: string
+}
+```
+
+The `identity` cell now reads `avatar` / `firstName` / `lastName`
+straight off `row`:
+
+```vue
+<!-- cells/IdentityCell.vue -->
+<script setup lang="ts">
+import { computed } from "vue";
+import { getCellValue } from "@atscript/vue-table";
+import type { ColumnDef } from "@atscript/ui";
+
+const props = defineProps<{
+  row: Record<string, unknown>;
+  column: ColumnDef;
+}>();
+
+const avatar = computed(() => getCellValue(props.row, "avatar"));
+const name = computed(
+  () => `${getCellValue(props.row, "firstName")} ${getCellValue(props.row, "lastName")}`,
+);
+</script>
+
+<template>
+  <td>
+    <img :src="String(avatar)" class="as-identity-avatar" alt="" />
+    <span>{{ name }}</span>
+  </td>
+</template>
+```
+
+The deps are harvested from the visible columns: they ride **only**
+while `username` is displayed, and disappear if the user toggles that
+column off. The `@ui.table.hidden` keeps `avatar` / `firstName` /
+`lastName` from showing as their own columns — `@ui.table.selectWith`
+is what makes them ride in the payload.
+
+### Headless renderers — `alwaysSelected`
+
+When you skip `ColumnDef` entirely — a fully custom renderer built on
+`<AsTableRoot>`'s default slot — there's no column to hang
+`@ui.table.selectWith` on. Use the table-level `alwaysSelected` prop to
+add leaf paths to `$select` unconditionally, regardless of which
+columns are visible:
+
+```vue
+<AsTableRoot url="/db/users" :always-selected="['avatar', 'firstName', 'lastName']">
+  <template #default="{ results }">
+    <article v-for="row in results" :key="String(row.id)" class="as-user-card">
+      <img :src="String(row.avatar)" alt="" />
+      <span>{{ row.firstName }} {{ row.lastName }}</span>
+    </article>
+  </template>
+</AsTableRoot>
+```
+
+`alwaysSelected` is additive — it only unions extra paths into the
+projection; it never restricts or removes anything. (Same option is
+available on `useTable()`'s query options.)
+
+### DOs and DON'Ts
+
+- **DO** co-locate per-column deps with `@ui.table.selectWith` — they
+  ride exactly when the owning column is visible.
+- **DO** reach for `alwaysSelected` when a headless / default-slot
+  renderer needs fields unconditionally, with no column to attach deps
+  to.
+- **DON'T** use either for a number cell's currency or unit sibling
+  (`@db.amount.currency.ref` / `@db.unit.ref`). moost-db already
+  includes those server-side whenever the amount is projected — they
+  ride for free.
+- **DON'T** expect the extra fields to surface as columns, appear in the
+  config dialog, or ride while the owning column is hidden. Need them
+  unconditionally? Use `alwaysSelected`.
+
+Both sources degrade gracefully: a declared dep that the (possibly
+access-narrowed) metadata doesn't expose — e.g. a field removed by
+server-side access control for the current user — is silently dropped
+rather than requested, so projecting a field the user can't see never
+errors.
+
+See the [Annotations Reference](/tables/annotations) for the
+`@ui.table.selectWith` row and [@atscript/vue-table](/api/vue-table)
+for the `alwaysSelected` prop signature.
+
 ## Next steps
 
 - [Cells](/tables/cells) — the built-in cell library and locale

@@ -75,13 +75,13 @@ interface PageResult<T> {
 
 The Uniquery object carries:
 
-| Key                                     | Origin                                                                             |
-| --------------------------------------- | ---------------------------------------------------------------------------------- |
-| `filter`                                | `mergeFilters(forceFilters, filtersToUniqueryFilter(state.filters))`               |
-| `controls.$select`                      | `state.columnNames` (visible columns)                                              |
-| `controls.$sort`                        | `mergeSorters(forceSorters, state.sorters)` → `{ field: 1\|-1 }` map               |
-| `controls.$search` or `$search:<index>` | `state.searchTerm` (omitted when empty)                                            |
-| `controls.$actions`                     | `true` when at least one row-actions column is rendered AND row/rows actions exist |
+| Key                                     | Origin                                                                                                                                                                                      |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filter`                                | `mergeFilters(forceFilters, filtersToUniqueryFilter(state.filters))`                                                                                                                        |
+| `controls.$select`                      | `state.columnNames` (visible columns) + `@ui.table.selectWith` deps of visible columns + `alwaysSelected`, all gated by available meta — see [cells.md](cells.md) (fetching sibling fields) |
+| `controls.$sort`                        | `mergeSorters(forceSorters, state.sorters)` → `{ field: 1\|-1 }` map                                                                                                                        |
+| `controls.$search` or `$search:<index>` | `state.searchTerm` (omitted when empty)                                                                                                                                                     |
+| `controls.$actions`                     | `true` when at least one row-actions column is rendered AND row/rows actions exist                                                                                                          |
 
 `page` is 1-based. Window mode rounds `page` against `blockSize`. Cross-link the atscript-db skill for the `Uniquery` shape and `$with` / relation expansion.
 

@@ -33,6 +33,8 @@ interface AsTableRootProps {
   selectionPersistence?: "clear" | "trim" | "persist";
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
+  /** Leaf paths always added to `$select`, regardless of visible columns — for headless cell renderers. */
+  alwaysSelected?: string[];
   queryFn?: (
     query: Uniquery,
     page: number,
@@ -207,6 +209,8 @@ interface UseTableOptions {
   selectedRows?: Ref<unknown[]>;
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
+  /** Leaf paths always added to `$select`, regardless of visible columns — see [Custom Cells](/tables/custom-cells). */
+  alwaysSelected?: string[];
   queryFn?: QueryFn;
   queryOnMount?: boolean;
   blockQuery?: boolean;

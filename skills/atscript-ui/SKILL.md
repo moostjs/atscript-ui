@@ -146,6 +146,7 @@ import {
   UI_FORM_LABEL_SINGULAR,
   UI_FORM_PLACEHOLDER,
   UI_TABLE_WIDTH,
+  UI_TABLE_SELECT_WITH,
   UI_DICT_LABEL,
   // utilities
   asArray,

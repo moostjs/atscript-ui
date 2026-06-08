@@ -31,6 +31,7 @@ Annotations cluster into five namespaces:
 | -------------------------------- | -------------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@ui.table.type "type"`          | built-in renderer id       | `prop`, `type`              | Flips the built-in cell renderer. Built-in ids: `text`, `number`, `boolean`, `date`, `datetime`, `relative`, `array`, `object`, `union`, `enum`, `ref`. Reserved for built-ins — for custom cells use `@ui.table.component`. Wins over `@ui.type`. |
 | `@ui.table.component "name"`     | component name             | `prop`, `type`, `interface` | Named component override for custom cells — looked up in the `:components` map passed to `<AsTableRoot>`. The dedicated mechanism for hand-rolled renderers. Wins over `@ui.table.type` when both resolve.                                         |
+| `@ui.table.selectWith "field"`   | sibling leaf field path    | `prop`, `type`              | Extra sibling leaf field a custom cell needs, fetched into `$select` whenever this column is visible. Never a column itself. Repeatable; see [Custom Cells](/tables/custom-cells).                                                                 |
 | `@ui.table.width "240px"`        | CSS width string           | `prop`, `type`              | Default column width. Double-clicking the resize handle auto-fits to content; the column menu's _Reset width_ entry restores this value.                                                                                                           |
 | `@ui.table.hidden`               | —                          | `prop`, `type`              | Column hidden by default. User can re-enable via _Columns_ in the config dialog (it still appears in `state.allColumns`).                                                                                                                          |
 | `@ui.table.order N`              | `number`                   | `prop`, `type`              | Initial column ordering. Lower values appear first. User-driven reorder still mutates `state.columnNames` and is preserved per-preset / per-URL-state.                                                                                             |
@@ -43,6 +44,11 @@ Annotations cluster into five namespaces:
 @ui.table.order 1
 @ui.table.classes "font-mono"
 sku: string
+
+@ui.table.component 'identity'
+@ui.table.selectWith 'firstName'
+@ui.table.selectWith 'lastName'
+username: string
 ```
 
 ## `@ui.table.fn.*` — dynamic column annotations

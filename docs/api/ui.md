@@ -224,6 +224,8 @@ interface ColumnDef {
   label: string;
   type: string;
   component?: string;
+  /** Extra sibling leaf paths to fetch when this column is visible — see [Custom Cells](/tables/custom-cells). */
+  selectWith?: string[];
   sortable: boolean;
   filterable: boolean;
   nullable: boolean;
@@ -424,7 +426,7 @@ Every supported annotation has a stringly-typed constant exported from `@atscrip
 
 ### Table static keys
 
-`UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_HIDDEN`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER`.
+`UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_SELECT_WITH`, `UI_TABLE_HIDDEN`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER`.
 
 ### Table dynamic keys
 
