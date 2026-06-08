@@ -29,10 +29,14 @@ const DATETIME_OPTS: Intl.DateTimeFormatOptions = {
 const date = computed<Date | undefined>(() => {
   const v = getCellValue(props.row, props.column.path);
   if (v === null || v === undefined || v === "") return undefined;
-  if (v instanceof Date) return Number.isFinite(v.getTime()) ? v : undefined;
+  if (v instanceof Date) {
+    const t = v.getTime();
+    return Number.isFinite(t) && t !== 0 ? v : undefined;
+  }
   if (typeof v === "number" || typeof v === "string") {
     const d = new Date(v);
-    return Number.isFinite(d.getTime()) ? d : undefined;
+    const t = d.getTime();
+    return Number.isFinite(t) && t !== 0 ? d : undefined;
   }
   return undefined;
 });

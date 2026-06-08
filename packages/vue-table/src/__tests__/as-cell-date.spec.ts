@@ -80,6 +80,16 @@ describe("AsCellDate", () => {
     expect(mountCell({ ts: NaN }, makeColumn("date")).find("td").text()).toBe("");
   });
 
+  it("renders empty cell for the Unix epoch sentinel (timestamp 0)", () => {
+    expect(mountCell({ ts: 0 }, makeColumn("datetime"), "en-US", "UTC").find("td").text()).toBe("");
+    expect(mountCell({ ts: 0 }, makeColumn("date"), "en-US", "UTC").find("td").text()).toBe("");
+    expect(
+      mountCell({ ts: new Date(0) }, makeColumn("datetime"), "en-US", "UTC")
+        .find("td")
+        .text(),
+    ).toBe("");
+  });
+
   describe("relative cell-type", () => {
     beforeEach(() => {
       vi.useFakeTimers();
