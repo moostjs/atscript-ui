@@ -284,10 +284,14 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // Widen `TFnScope` to `Record<string, unknown>` for the resolver boundary —
   // ui-fns' DynamicFieldResolver does the same cast internally; the static
   // resolver ignores the scope entirely.
+  // `v` mirrors the root field's value, which IS the domain data — root-level
+  // `@ui.form.fn.*` strings are field fns whose first arg is the field value,
+  // so `(data) => data.firstName` on the interface receives the form data.
+  // Top-level fns (`submit.text` / `submit.disabled`) ignore `v` entirely.
   const ctx = computed<Record<string, unknown>>(
     () =>
       ({
-        v: undefined,
+        v: getDomainData(),
         data: getDomainData(),
         context: (formContext.value ?? {}) as Record<string, unknown>,
         entry: undefined,
