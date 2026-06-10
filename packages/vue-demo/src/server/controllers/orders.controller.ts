@@ -9,12 +9,12 @@ import {
   perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
-import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
+import { ArbacAuthorize, ArbacResource, ArbacAction } from "@aooth/arbac-moost";
 import { ordersTable } from "../db";
 import type { OrdersTable } from "../schemas/orders.as";
 import { CancelOrdersInput } from "../schemas/action-forms.as";
 import { SessionGuard } from "../auth/session.guard";
-import { AsArbacDbController } from "../auth/arbac-db.controller";
+import { DemoArbacDbController } from "../auth/arbac-db.controller";
 
 /**
  * Order lifecycle:
@@ -49,7 +49,7 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
     default: true,
   },
 })
-export class OrdersController extends AsArbacDbController<typeof OrdersTable> {
+export class OrdersController extends DemoArbacDbController<typeof OrdersTable> {
   /** `pending` → `processing`. */
   @Post("actions/process")
   @DbAction<typeof OrdersTable, ["status"]>("process", {

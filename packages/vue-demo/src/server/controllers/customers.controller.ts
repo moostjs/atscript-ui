@@ -1,10 +1,10 @@
 import { DbRowActions, TableController } from "@atscript/moost-db";
 import { Authenticate } from "@moostjs/event-http";
-import { ArbacAuthorize, ArbacResource } from "@moostjs/arbac";
+import { ArbacAuthorize, ArbacResource } from "@aooth/arbac-moost";
 import { customersTable } from "../db";
 import type { CustomersTable } from "../schemas/customers.as";
 import { SessionGuard } from "../auth/session.guard";
-import { AsArbacDbController } from "../auth/arbac-db.controller";
+import { DemoArbacDbController } from "../auth/arbac-db.controller";
 
 @Authenticate(SessionGuard)
 @ArbacAuthorize()
@@ -26,4 +26,4 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
     default: true,
   },
 })
-export class CustomersController extends AsArbacDbController<typeof CustomersTable> {}
+export class CustomersController extends DemoArbacDbController<typeof CustomersTable> {}

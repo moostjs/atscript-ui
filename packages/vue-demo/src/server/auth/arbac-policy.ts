@@ -1,7 +1,7 @@
-import type { MoostArbac } from "@moostjs/arbac";
-import type { DemoScope, DemoUserAttrs } from "./arbac-scope";
-
-type Role = Parameters<MoostArbac<DemoUserAttrs, DemoScope>["registerRole"]>[0];
+import { allowTableAction, allowTableRead, allowTableWrite, defineRole } from "@aooth/arbac";
+import type { TProjection } from "@aooth/arbac";
+import type { ArbacDbScope, MoostArbac } from "@aooth/arbac-moost";
+import type { DemoUserAttrs } from "./arbac-scope";
 
 /**
  * Logical action groups mapped onto the HTTP method names emitted by
@@ -9,9 +9,9 @@ type Role = Parameters<MoostArbac<DemoUserAttrs, DemoScope>["registerRole"]>[0];
  *
  * NOTE: The ARBAC action defaults to the controller method name
  * (see `useArbac().action` fallback: `mMeta.arbacActionId || cc.getMethod()`).
- * Rather than overriding every CRUD method on the mixin just to apply
- * `@ArbacAction`, we encode action groups as a list of method names and
- * expand them into multiple rules at registration time.
+ * `allowTableRead` / `allowTableWrite` expand to one rule per method name;
+ * these groups stay exported so tests and `/me` can probe one representative
+ * method per group.
  */
 const READ_METHODS = ["query", "pages", "getOne", "getOneComposite", "meta"] as const;
 const WRITE_METHODS = ["insert", "replace", "update", "remove", "removeComposite"] as const;
@@ -57,68 +57,82 @@ const VIEWER_ORDERS_COLS = [
   "createdAt",
 ];
 
-type Rule = Role["rules"][number];
-
-function allowAll(resource: string, actions: readonly string[]): Rule[] {
-  return actions.map((action) => ({ resource, action, scope: () => ({}) }));
+/** Column whitelist → inclusion-mode `TProjection` (`{ col: 1, ... }`). */
+function proj(columns: readonly string[]): TProjection {
+  const p: TProjection = {};
+  for (const c of columns) p[c] = 1;
+  return p;
 }
 
-function allowWithColumns(resource: string, actions: readonly string[], columns: string[]): Rule[] {
-  return actions.map((action) => ({ resource, action, scope: () => ({ columns }) }));
-}
+/**
+ * Class-level `@DbTableActions` / `@DbRowActions` entries (`invite-user`,
+ * `export-csv`, `edit`, …) carry no method handler and no `@ArbacAction`, so
+ * `AsArbacDbController.applyMetaOverlay` evaluates them by their declared
+ * name. Grant them to every non-admin role: they are navigate/custom
+ * client-side processors whose destination routes enforce their own ARBAC.
+ */
+const DECLARATIVE_ACTIONS = [
+  allowTableAction<DemoUserAttrs, ArbacDbScope>("users", [
+    "invite-user",
+    "export-csv",
+    "edit",
+    "copy-invite-link",
+  ]),
+  allowTableAction<DemoUserAttrs, ArbacDbScope>("orders", ["export-csv", "open"]),
+  allowTableAction<DemoUserAttrs, ArbacDbScope>("products", ["export-csv", "edit"]),
+  allowTableAction<DemoUserAttrs, ArbacDbScope>("customers", ["view-orders"]),
+];
 
-function denyAll(resource: string, actions: readonly string[]): Rule[] {
-  return actions.map((action) => ({ resource, action, effect: "deny" as const }));
-}
+const adminRole = defineRole<DemoUserAttrs, ArbacDbScope>()
+  .id("admin")
+  // Admin can do any action on any resource; scope-less allow contributes the
+  // `{}` universe sentinel = no row/column narrowing.
+  .allow("*", "**")
+  .build();
 
-const adminRole: Role = {
-  id: "admin",
-  rules: [
-    // Admin can do any action on any resource; empty scope = no column narrowing.
-    { resource: "*", action: "*", scope: () => ({}) },
-  ],
-};
-
-const managerRole: Role = {
-  id: "manager",
-  rules: [
-    // users: read + write, narrowed to MANAGER_USERS_COLS
-    ...allowWithColumns("users", READ_METHODS, MANAGER_USERS_COLS),
-    ...allowWithColumns("users", WRITE_METHODS, MANAGER_USERS_COLS),
+const managerRole = defineRole<DemoUserAttrs, ArbacDbScope>()
+  .id("manager")
+  .use(
+    // users: read + write, narrowed to MANAGER_USERS_COLS — `projection`
+    // narrows reads + /meta fields, `allowedFields` strips write payloads.
+    allowTableWrite("users", {
+      scope: () => ({
+        projection: proj(MANAGER_USERS_COLS),
+        allowedFields: [...MANAGER_USERS_COLS],
+      }),
+    }),
     // roles: read-only, no narrowing
-    ...allowAll("roles", READ_METHODS),
+    allowTableRead("roles"),
     // categories/products/customers/orders: read + write, no narrowing
-    ...allowAll("categories", READ_METHODS),
-    ...allowAll("categories", WRITE_METHODS),
-    ...allowAll("products", READ_METHODS),
-    ...allowAll("products", WRITE_METHODS),
-    ...allowAll("customers", READ_METHODS),
-    ...allowAll("customers", WRITE_METHODS),
-    ...allowAll("orders", READ_METHODS),
-    ...allowAll("orders", WRITE_METHODS),
+    allowTableWrite("categories"),
+    allowTableWrite("products"),
+    allowTableWrite("customers"),
+    allowTableWrite("orders"),
     // audit_log: read-only
-    ...allowAll("audit_log", READ_METHODS),
+    allowTableRead("audit_log"),
     // wf_states intentionally omitted — admin-only via the admin wildcard.
-  ],
-};
+    ...DECLARATIVE_ACTIONS,
+  )
+  .build();
 
-const viewerRole: Role = {
-  id: "viewer",
-  rules: [
+const viewerBuilder = defineRole<DemoUserAttrs, ArbacDbScope>()
+  .id("viewer")
+  .use(
     // users: narrow read only
-    ...allowWithColumns("users", READ_METHODS, VIEWER_USERS_COLS),
+    allowTableRead("users", { scope: () => ({ projection: proj(VIEWER_USERS_COLS) }) }),
     // roles, categories: read, no narrowing
-    ...allowAll("roles", READ_METHODS),
-    ...allowAll("categories", READ_METHODS),
+    allowTableRead("roles"),
+    allowTableRead("categories"),
     // products, customers, orders: narrow reads
-    ...allowWithColumns("products", READ_METHODS, VIEWER_PRODUCTS_COLS),
-    ...allowWithColumns("customers", READ_METHODS, VIEWER_CUSTOMERS_COLS),
-    ...allowWithColumns("orders", READ_METHODS, VIEWER_ORDERS_COLS),
+    allowTableRead("products", { scope: () => ({ projection: proj(VIEWER_PRODUCTS_COLS) }) }),
+    allowTableRead("customers", { scope: () => ({ projection: proj(VIEWER_CUSTOMERS_COLS) }) }),
+    allowTableRead("orders", { scope: () => ({ projection: proj(VIEWER_ORDERS_COLS) }) }),
     // audit_log: no rule → implicit 403.
-    // Any write on any resource: explicit deny.
-    ...denyAll("*", WRITE_METHODS),
-  ],
-};
+    ...DECLARATIVE_ACTIONS,
+  );
+// Any write on any resource: explicit deny.
+for (const action of WRITE_METHODS) viewerBuilder.deny("*", action);
+const viewerRole = viewerBuilder.build();
 
 /**
  * Convenience export: the two action groups. Used by tests that want to
@@ -133,7 +147,7 @@ export const DEMO_ACTION_GROUPS = {
 /**
  * Seeds the three demo roles (admin/manager/viewer) into a MoostArbac instance.
  */
-export function registerDemoRoles(arbac: MoostArbac<DemoUserAttrs, DemoScope>) {
+export function registerDemoRoles(arbac: MoostArbac<DemoUserAttrs, ArbacDbScope>) {
   arbac.registerRole(adminRole);
   arbac.registerRole(managerRole);
   arbac.registerRole(viewerRole);

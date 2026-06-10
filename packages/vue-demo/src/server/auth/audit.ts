@@ -1,5 +1,5 @@
 import { defineInterceptor, TInterceptorPriority, useControllerContext } from "moost";
-import { useArbac } from "@moostjs/arbac";
+import { useArbac } from "@aooth/arbac-moost";
 import type { TDbActionMeta } from "@atscript/moost-db";
 import { auditLogTable } from "../db";
 import { useSession } from "./use-session";

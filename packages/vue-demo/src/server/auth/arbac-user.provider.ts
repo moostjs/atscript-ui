@@ -1,5 +1,5 @@
 import { Injectable } from "moost";
-import { ArbacUserProvider } from "@moostjs/arbac";
+import { ArbacUserProvider } from "@aooth/arbac-moost";
 import { useSession } from "./use-session";
 import type { DemoUserAttrs } from "./arbac-scope";
 

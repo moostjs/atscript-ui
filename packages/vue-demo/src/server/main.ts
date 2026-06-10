@@ -1,7 +1,7 @@
-import { Moost, createProvideRegistry } from "moost";
+import { Moost, createProvideRegistry, createReplaceRegistry } from "moost";
 import { MoostHttp } from "@moostjs/event-http";
 import { MoostWf } from "@moostjs/event-wf";
-import { MoostArbac, ArbacUserProvider } from "@moostjs/arbac";
+import { MoostArbac, ArbacUserProviderToken } from "@aooth/arbac-moost";
 import { validatorPipe } from "@atscript/moost-validator";
 // Use moost-db's `validationErrorTransform` (BEFORE_ALL priority) instead of
 // moost-validator's (CATCH_ERROR). The BEFORE_ALL variant registers its
@@ -44,18 +44,18 @@ import { DemoArbacUserProvider } from "./auth/arbac-user.provider";
 import { registerDemoRoles } from "./auth/arbac-policy";
 import { auditInterceptor } from "./auth/audit";
 import { latencyInterceptor } from "./interceptors/latency";
-import type { DemoScope, DemoUserAttrs } from "./auth/arbac-scope";
+import type { ArbacDbScope } from "@aooth/arbac-moost";
+import type { DemoUserAttrs } from "./auth/arbac-scope";
 
-const arbac = new MoostArbac<DemoUserAttrs, DemoScope>();
+const arbac = new MoostArbac<DemoUserAttrs, ArbacDbScope>();
 registerDemoRoles(arbac);
 
 const app = new Moost({ globalPrefix: "api" });
-app.setProvideRegistry(
-  createProvideRegistry(
-    [MoostArbac, () => arbac],
-    [ArbacUserProvider, () => new DemoArbacUserProvider()],
-  ),
-);
+app.setProvideRegistry(createProvideRegistry([MoostArbac, () => arbac]));
+// `ArbacUserProvider` is abstract — `useArbac()` instantiates it through the
+// `ArbacUserProviderToken` alias, so the concrete provider is bound via the
+// replace registry (see aooth e2e-demo).
+app.setReplaceRegistry(createReplaceRegistry([ArbacUserProviderToken, DemoArbacUserProvider]));
 const PORT = Number(process.env.PORT ?? 3200);
 void app.adapter(new MoostHttp()).listen(PORT);
 app.adapter(new MoostWf());

@@ -8,11 +8,11 @@ import {
   perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
-import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
+import { ArbacAuthorize, ArbacResource, ArbacAction } from "@aooth/arbac-moost";
 import { productsTable } from "../db";
 import type { ProductsTable } from "../schemas/products.as";
 import { SessionGuard } from "../auth/session.guard";
-import { AsArbacDbController } from "../auth/arbac-db.controller";
+import { DemoArbacDbController } from "../auth/arbac-db.controller";
 
 @Authenticate(SessionGuard)
 @ArbacAuthorize()
@@ -37,7 +37,7 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
     default: true,
   },
 })
-export class ProductsController extends AsArbacDbController<typeof ProductsTable> {
+export class ProductsController extends DemoArbacDbController<typeof ProductsTable> {
   /** Sets `publishedAt = now` if currently null. */
   @Post("actions/publish")
   @DbAction<typeof ProductsTable, ["id", "sku", "publishedAt"]>("publish", {

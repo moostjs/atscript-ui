@@ -1,13 +1,8 @@
 /**
- * ARBAC scope/attribute types for the AtShop demo.
- *
- * A `DemoScope` optionally narrows column access via `columns` — when
- * undefined, the scope grants access to all columns of the resource.
+ * ARBAC user attributes for the AtShop demo. Scopes use the upstream
+ * `ArbacDbScope` shape from `@aooth/arbac-moost` (`projection` narrows
+ * reads + /meta fields, `allowedFields` strips write payloads).
  */
-export interface DemoScope {
-  columns?: string[];
-}
-
 export interface DemoUserAttrs {
   userId: number;
   username: string;

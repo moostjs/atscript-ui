@@ -9,12 +9,12 @@ import {
   perRow,
 } from "@atscript/moost-db";
 import { Post, Authenticate } from "@moostjs/event-http";
-import { ArbacAuthorize, ArbacResource, ArbacAction } from "@moostjs/arbac";
+import { ArbacAuthorize, ArbacResource, ArbacAction } from "@aooth/arbac-moost";
 import { usersTable } from "../db";
 import type { UsersTable } from "../schemas/users.as";
 import { ResendInviteInput, SuspendUsersInput } from "../schemas/action-forms.as";
 import { SessionGuard } from "../auth/session.guard";
-import { AsArbacDbController } from "../auth/arbac-db.controller";
+import { DemoArbacDbController } from "../auth/arbac-db.controller";
 
 @Authenticate(SessionGuard)
 @ArbacAuthorize()
@@ -54,7 +54,7 @@ import { AsArbacDbController } from "../auth/arbac-db.controller";
     description: "Copy /invite/<id> to clipboard via @action event",
   },
 })
-export class UsersController extends AsArbacDbController<typeof UsersTable> {
+export class UsersController extends DemoArbacDbController<typeof UsersTable> {
   /** `pending`/`suspended` → `active`. */
   @Post("actions/activate")
   @DbAction<typeof UsersTable, ["id", "username", "status"]>("activate", {

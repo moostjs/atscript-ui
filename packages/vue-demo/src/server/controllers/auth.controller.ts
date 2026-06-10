@@ -10,11 +10,12 @@ import {
   type TCookieAttributes,
   type TCookieRef,
 } from "@moostjs/event-http";
-import { MoostArbac } from "@moostjs/arbac";
+import { getProjectionMode, unionProjections } from "@aooth/arbac";
+import { type ArbacDbScope, MoostArbac } from "@aooth/arbac-moost";
 import { SESSION_COOKIE } from "../auth/session-payload";
 import { SessionGuard } from "../auth/session.guard";
 import { useSession } from "../auth/use-session";
-import type { DemoScope, DemoUserAttrs } from "../auth/arbac-scope";
+import type { DemoUserAttrs } from "../auth/arbac-scope";
 import { DEMO_ACTION_GROUPS } from "../auth/arbac-policy";
 
 @Controller("auth")
@@ -51,18 +52,16 @@ type PermEntry = { read: boolean; write: boolean; columns?: string[] };
 
 /**
  * Collapse a list of scope objects into a single `columns` whitelist.
- * - Returns `undefined` when at least one scope grants all columns — the
- *   client side treats "no columns key" as "no restriction".
- * - Otherwise returns the union of `columns` across all scopes.
+ * - Returns `undefined` when at least one scope grants all columns (no
+ *   `projection`, or the union resolves to the universe) — the client side
+ *   treats "no columns key" as "no restriction".
+ * - Otherwise returns the union of projected columns across all scopes.
  */
-function columnsOfScopes(scopes: DemoScope[] | undefined): string[] | undefined {
+function columnsOfScopes(scopes: ArbacDbScope[] | undefined): string[] | undefined {
   if (!scopes || scopes.length === 0) return undefined;
-  if (scopes.some((s) => !s.columns)) return undefined;
-  const set = new Set<string>();
-  for (const s of scopes) {
-    for (const c of s.columns!) set.add(c);
-  }
-  return Array.from(set);
+  const union = unionProjections(...scopes.map((s) => s.projection ?? {}));
+  if (getProjectionMode(union) !== "include") return undefined;
+  return Object.keys(union);
 }
 
 /**
@@ -72,7 +71,7 @@ function columnsOfScopes(scopes: DemoScope[] | undefined): string[] | undefined 
 @Authenticate(SessionGuard)
 @Controller("")
 export class MeController {
-  constructor(private readonly arbac: MoostArbac<DemoUserAttrs, DemoScope>) {}
+  constructor(private readonly arbac: MoostArbac<DemoUserAttrs, ArbacDbScope>) {}
 
   @Get("me")
   async me() {
