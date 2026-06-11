@@ -26,7 +26,8 @@
   },
   "files": [
     "dist",
-    "src/store/as-wf-state.as"
+    "src/store/as-wf-state.as",
+    "src/store/as-wf-state.as.d.ts"
   ],
   "type": "module",
   "sideEffects": false,
@@ -45,7 +46,10 @@
       "types": "./dist/store.d.mts",
       "import": "./dist/store.mjs"
     },
-    "./store.as": "./src/store/as-wf-state.as",
+    "./store.as": {
+      "types": "./src/store/as-wf-state.as.d.ts",
+      "default": "./src/store/as-wf-state.as"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
