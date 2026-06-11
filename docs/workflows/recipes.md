@@ -147,7 +147,7 @@ sendInvite(@WorkflowParam("context") ctx: InviteCtx) {
 ```
 
 ```atscript
-import { AsWfStateRecord } from '@atscript/moost-wf/store'
+import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {

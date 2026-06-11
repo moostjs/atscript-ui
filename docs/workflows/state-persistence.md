@@ -102,7 +102,9 @@ Create a `.as` file that extends the base record with your
 below):
 
 ```atscript
-import { AsWfStateRecord } from '@atscript/moost-wf/store'
+// `.as` files import the model from `/store.as` (raw atscript source);
+// `.ts` files import the runtime class from `/store`.
+import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {
