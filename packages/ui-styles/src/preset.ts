@@ -3,6 +3,7 @@ import type { Preset } from "unocss";
 import { presetVunor, vunorShortcuts } from "vunor/theme";
 import { createAsExtractor } from "./extractor";
 import { bakedIcons } from "./generated/baked-icons";
+import type { AsComponentName } from "./generated/component-classes";
 import { allShortcuts } from "./shortcuts";
 
 /**
@@ -125,9 +126,18 @@ export interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
    * Kebab-case component names whose classes the extractor should drop from
    * the safelist (post-match). Use when the consumer has replaced a built-in
    * default with their own implementation and wants to shed the unused styles.
+   *
+   * Typed against {@link AsComponentName} — a union generated from the
+   * published component set — so editors autocomplete the names and typos
+   * fail the build instead of silently no-opping.
+   *
+   * Also applies to companions — components a matched component pulls in
+   * (statically or lazily). E.g. excluding `as-config-dialog` /
+   * `as-filter-dialog` / `as-preset-dialog` sheds those dialogs' CSS for
+   * apps that mount `<AsTableRoot>` but never open them or supply their own.
    * See STYLES.md Decision 15.
    */
-  excludeComponents?: string[];
+  excludeComponents?: AsComponentName[];
   /**
    * Replace any of our built-in `i-as-<name>` icons with custom SVG strings.
    * Keys are the semantic names listed in `bakedIcons` (e.g. `search`,

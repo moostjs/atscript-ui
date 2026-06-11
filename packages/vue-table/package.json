@@ -31,6 +31,9 @@
     "styles.d.ts"
   ],
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
   "main": "dist/index.mjs",
   "types": "dist/index.d.mts",
   "exports": {

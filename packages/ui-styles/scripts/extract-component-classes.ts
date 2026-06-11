@@ -7,10 +7,16 @@
  *   2. Build a module graph via rolldown's experimental scan().
  *   3. For each public entry, walk the graph to collect every reachable
  *      .vue file, concatenate their source, run UnoCSS, capture matched
- *      classes.
+ *      classes. The walk stops at any edge (static or dynamic) that lands
+ *      in ANOTHER tracked public component: that component is recorded in
+ *      componentCompanions instead of folding its classes into the parent,
+ *      so the runtime extractor can veto it per `excludeComponents`.
+ *      Modules without their own entry (internal components, composables)
+ *      keep folding into the parent.
  *   4. Parse each helper at <pkg>/src/composables/create-*.ts to derive
  *      helperAliases (Decision 17).
- *   5. Emit a deterministic, LF-newline file with three maps + two helpers.
+ *   5. Emit a deterministic, LF-newline file with the AsComponentName union,
+ *      four maps, and two helpers.
  *
  * Run via: pnpm --filter @atscript/ui-styles run extract-classes
  */
@@ -175,9 +181,16 @@ async function main() {
   const SOURCE_EXT_RE = /\.(vue|ts|tsx|mts|cts)$/;
   const TEST_SUFFIX_RE = /\.(spec|test|d)\.(ts|tsx|mts|cts)$/;
 
-  function collectSourceFiles(entryId: string): Set<string> {
+  const fileToName = new Map<string, string>();
+  for (const name of publicNames) fileToName.set(entries[name].file, name);
+
+  function collectSourceFiles(
+    name: string,
+    entryId: string,
+  ): { sourceFiles: Set<string>; companions: Set<string> } {
     const visited = new Set<string>();
     const sourceFiles = new Set<string>();
+    const companions = new Set<string>();
     const stack = [entryId];
 
     while (stack.length > 0) {
@@ -186,6 +199,17 @@ async function main() {
       visited.add(id);
 
       const cleanId = stripQueryParams(id);
+
+      // Boundary: another tracked public component. Record it as a companion
+      // and do not traverse into it — its classes live under its own entry
+      // and are re-attached at runtime via componentCompanions, where each
+      // companion is independently veto-able by `excludeComponents`.
+      const owner = fileToName.get(cleanId);
+      if (owner !== undefined && owner !== name) {
+        companions.add(owner);
+        continue;
+      }
+
       if (SOURCE_EXT_RE.test(cleanId) && !TEST_SUFFIX_RE.test(cleanId) && !cleanId.includes("\0")) {
         sourceFiles.add(cleanId);
       }
@@ -198,7 +222,7 @@ async function main() {
       }
     }
 
-    return sourceFiles;
+    return { sourceFiles, companions };
   }
 
   // 4. Run UnoCSS generator → componentClasses -----------------------------
@@ -219,6 +243,7 @@ async function main() {
   };
 
   const componentClasses: Record<string, string[]> = {};
+  const componentCompanions: Record<string, string[]> = {};
 
   // Keep only `as-*` and `i-as-*` matches. UnoCSS's default extractor
   // tokenizes the entire source — including JS identifiers and JSDoc
@@ -236,12 +261,14 @@ async function main() {
     const entryId = entryIdMap.get(name);
     if (!entryId) {
       componentClasses[name] = [];
+      componentCompanions[name] = [];
       continue;
     }
-    const sourceFiles = [...collectSourceFiles(entryId)].toSorted(cmpEn);
-    const code = sourceFiles.map(readSourceFile).join("\n");
+    const { sourceFiles, companions } = collectSourceFiles(name, entryId);
+    const code = [...sourceFiles].toSorted(cmpEn).map(readSourceFile).join("\n");
     const { matched } = await uno.generate(code, { preflights: false });
     componentClasses[name] = [...matched].filter((c) => KEEP_RE.test(c)).toSorted(cmpEn);
+    componentCompanions[name] = [...companions].toSorted(cmpEn);
   }
 
   // 5. Helper-alias parsing (Decision 17) ----------------------------------
@@ -318,14 +345,27 @@ async function main() {
   // 6. Emit generated module ------------------------------------------------
 
   const lines: string[] = [];
+  const sortedComponentNames = Object.keys(componentClasses).toSorted(cmpEn);
   lines.push(
     "// GENERATED — DO NOT EDIT BY HAND.",
     "// Run `pnpm --filter @atscript/ui-styles run extract-classes` to regenerate.",
     "",
-    "export const componentClasses: Record<string, readonly string[]> = {",
+    'import { expandComponentClasses } from "../companions";',
+    "",
+    "/**",
+    " * Union of every published kebab-case component name, generated from the",
+    " * public component set. Powers autocomplete (and typo rejection) on knobs",
+    " * like `excludeComponents`.",
+    " */",
+    "export type AsComponentName =",
   );
+  for (let i = 0; i < sortedComponentNames.length; i++) {
+    const last = i === sortedComponentNames.length - 1;
+    lines.push(`  | ${JSON.stringify(sortedComponentNames[i])}${last ? ";" : ""}`);
+  }
+  lines.push("", "export const componentClasses: Record<string, readonly string[]> = {");
 
-  for (const name of Object.keys(componentClasses).toSorted(cmpEn)) {
+  for (const name of sortedComponentNames) {
     const list = componentClasses[name];
     if (list.length === 0) {
       lines.push(`  ${JSON.stringify(name)}: [],`);
@@ -337,7 +377,25 @@ async function main() {
   }
 
   lines.push("};", "");
-  lines.push("export const helperAliases: Record<string, readonly string[]> = {");
+
+  // Companions: tracked components reachable from a component's module graph
+  // (static or dynamic imports). Their classes are NOT folded into the
+  // parent's entry above — consumers expand them (see getComponentClasses /
+  // createAsExtractor), where each companion can be vetoed individually.
+  // Only non-empty lists are emitted.
+  lines.push(
+    "export const componentCompanions: Readonly<Partial<Record<AsComponentName, readonly AsComponentName[]>>> = {",
+  );
+  for (const name of Object.keys(componentCompanions).toSorted(cmpEn)) {
+    const list = componentCompanions[name];
+    if (list.length === 0) continue;
+    lines.push(`  ${JSON.stringify(name)}: [`);
+    for (const companion of list) lines.push(`    ${JSON.stringify(companion)},`);
+    lines.push("  ],");
+  }
+  lines.push("};", "");
+
+  lines.push("export const helperAliases: Record<string, readonly AsComponentName[]> = {");
   for (const name of Object.keys(helperAliases).toSorted(cmpEn)) {
     lines.push(`  ${JSON.stringify(name)}: [`);
     for (const cls of helperAliases[name]) lines.push(`    ${JSON.stringify(cls)},`);
@@ -365,18 +423,20 @@ async function main() {
   lines.push("]);", "");
 
   lines.push(
-    "export function getComponentClasses(...names: string[]): string[] {",
-    "  const set = new Set<string>();",
-    "  for (const name of names) {",
-    "    for (const cls of componentClasses[name] ?? []) set.add(cls);",
-    "  }",
-    "  return [...set];",
+    "/**",
+    " * Own classes + transitively expanded companions for the given components.",
+    " * An excluded name contributes nothing and is not traversed through —",
+    " * see expandComponentClasses for the exact semantics.",
+    " */",
+    "export function getComponentClasses(",
+    "  names: readonly string[],",
+    "  exclude?: ReadonlySet<string>,",
+    "): string[] {",
+    "  return [...expandComponentClasses(names, componentClasses, componentCompanions, exclude)];",
     "}",
     "",
     "export function getHelperClasses(...helpers: string[]): string[] {",
-    "  return getComponentClasses(",
-    "    ...helpers.flatMap((h) => helperAliases[h] ?? []),",
-    "  );",
+    "  return getComponentClasses(helpers.flatMap((h) => helperAliases[h] ?? []));",
     "}",
     "",
   );
@@ -402,7 +462,9 @@ async function main() {
   );
 
   for (const name of Object.keys(componentClasses).toSorted(cmpEn)) {
-    console.log(`  ${name}: ${componentClasses[name].length} classes`);
+    const companions = componentCompanions[name];
+    const suffix = companions.length > 0 ? ` + ${companions.length} companions` : "";
+    console.log(`  ${name}: ${componentClasses[name].length} classes${suffix}`);
   }
   for (const name of Object.keys(helperAliases).toSorted(cmpEn)) {
     console.log(`  helper ${name}: ${helperAliases[name].length} aliases`);

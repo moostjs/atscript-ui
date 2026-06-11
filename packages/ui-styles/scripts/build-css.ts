@@ -7,7 +7,11 @@ import { fileURLToPath } from "node:url";
 
 import { createGenerator } from "unocss";
 
-import { componentClasses, componentPackages } from "../src/generated/component-classes";
+import {
+  componentClasses,
+  componentPackages,
+  getComponentClasses,
+} from "../src/generated/component-classes";
 import { createAsBaseUnoConfig } from "../src/preset";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -24,9 +28,10 @@ for (const c of allComponents) byPkg[componentPackages[c]]?.push(c);
 const baseConfig = createAsBaseUnoConfig({});
 
 async function build(name: string, components: string[]) {
-  const safelist = [...new Set(components.flatMap((c) => componentClasses[c] ?? []))].toSorted(
-    cmpEn,
-  );
+  // getComponentClasses expands companions (tracked components pulled in by
+  // another component, e.g. lazily-mounted dialogs). Prebuilt CSS cannot know
+  // usage, so it must keep including lazy-chrome styles.
+  const safelist = getComponentClasses(components).toSorted(cmpEn);
 
   const uno = await createGenerator({
     presets: baseConfig.presets,

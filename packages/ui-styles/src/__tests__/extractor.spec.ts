@@ -1,13 +1,39 @@
 import { describe, expect, it } from "vitest";
-import { createAsExtractor } from "../extractor";
-import { componentClasses, helperAliases } from "../generated/component-classes";
+import { type AsExtractorOptions, createAsExtractor } from "../extractor";
+import {
+  type AsComponentName,
+  componentClasses,
+  componentCompanions,
+  getComponentClasses,
+  helperAliases,
+} from "../generated/component-classes";
 
-function run(code: string, opts?: { excludeComponents?: string[] }): Set<string> | undefined {
+function run(code: string, opts?: AsExtractorOptions): Set<string> | undefined {
   const extract = createAsExtractor(opts).extract!;
   const result = extract({ code } as Parameters<typeof extract>[0]);
   if (result == null) return undefined;
   if (result instanceof Set) return result as Set<string>;
   return new Set<string>(result as Iterable<string>);
+}
+
+/** Independent oracle mirroring the expansion semantics: own classes +
+ * transitively expanded companions, each veto-able by `exclude`. Kept
+ * deliberately separate from the runtime walk (companions.ts) so the
+ * exclude-aware assertions don't compare the implementation to itself. */
+function expand(names: readonly string[], exclude: readonly string[] = []): Set<string> {
+  const excluded = new Set(exclude);
+  const out = new Set<string>();
+  const visited = new Set<string>();
+  const stack = [...names];
+  while (stack.length > 0) {
+    const name = stack.pop() as string;
+    if (visited.has(name) || excluded.has(name)) continue;
+    visited.add(name);
+    for (const cls of componentClasses[name] ?? []) out.add(cls);
+    for (const companion of componentCompanions[name as AsComponentName] ?? [])
+      stack.push(companion);
+  }
+  return out;
 }
 
 const expectAllOf = (set: Set<string> | undefined, classes: readonly string[]) => {
@@ -97,9 +123,11 @@ describe("createAsExtractor", () => {
       expectAllOf(out, componentClasses["as-form"]);
       // `createDefaultTypes` here is just imported (no parens), so the helper-call
       // pattern must NOT fire and the helper's expansion must NOT be in the set.
-      const helperOnly = helperAliases.createDefaultTypes
-        .flatMap((n) => componentClasses[n])
-        .filter((cls) => !componentClasses["as-form"].includes(cls));
+      const formExpansion = new Set(getComponentClasses(["as-form"]));
+      const helperOnly = getComponentClasses(helperAliases.createDefaultTypes).filter(
+        (cls) => !formExpansion.has(cls),
+      );
+      expect(helperOnly.length).toBeGreaterThan(0);
       expectNoneOf(out, helperOnly);
     });
   });
@@ -163,16 +191,13 @@ describe("createAsExtractor", () => {
       // Other components still present
       expectAllOf(out, componentClasses["as-config-dialog"]);
       expectAllOf(out, componentClasses["as-column-menu"]);
-      // Excluded component's exclusive classes are not added (a class that
-      // appears in as-filter-dialog and only as-filter-dialog must be absent).
-      const excluded = componentClasses["as-filter-dialog"];
-      const otherHelperClasses = new Set(
-        helperAliases.createDefaultControls
-          .filter((n) => n !== "as-filter-dialog")
-          .flatMap((n) => componentClasses[n]),
-      );
-      const exclusiveToFilterDialog = excluded.filter((c) => !otherHelperClasses.has(c));
+      // Exactly the classes reachable without as-filter-dialog are present;
+      // classes reachable ONLY through it are absent.
+      const full = expand(helperAliases.createDefaultControls);
+      const without = expand(helperAliases.createDefaultControls, ["as-filter-dialog"]);
+      const exclusiveToFilterDialog = [...full].filter((c) => !without.has(c));
       expect(exclusiveToFilterDialog.length).toBeGreaterThan(0);
+      expectAllOf(out, [...without]);
       expectNoneOf(out, exclusiveToFilterDialog);
     });
 
@@ -186,6 +211,82 @@ describe("createAsExtractor", () => {
         excludeComponents: ["as-filter-dialog"],
       });
       expect(out).toBeUndefined();
+    });
+
+    it("rejects names outside the generated AsComponentName union at compile time", () => {
+      const make = () =>
+        createAsExtractor({
+          // @ts-expect-error — typo'd name is not part of the generated union
+          excludeComponents: ["as-filterr-dialog"],
+        });
+      expect(make).not.toThrow();
+    });
+  });
+
+  describe("companion expansion", () => {
+    const dialogs = [
+      "as-action-form-dialog",
+      "as-config-dialog",
+      "as-filter-dialog",
+      "as-preset-dialog",
+    ] as const;
+
+    it("the generated map records the lazy dialogs as companions of as-table-root", () => {
+      for (const dialog of dialogs) {
+        expect(componentCompanions["as-table-root"]).toContain(dialog);
+      }
+    });
+
+    it("matching <AsTableRoot> emits its companions' classes (lazy dialogs included)", () => {
+      const out = run(`<AsTableRoot />`);
+      for (const dialog of dialogs) expectAllOf(out, componentClasses[dialog]);
+      // Full transitive expansion (companions of companions too)
+      expectAllOf(out, getComponentClasses(["as-table-root"]));
+    });
+
+    it("matching the @atscript/vue-table/as-table-root subpath emits companion classes", () => {
+      const out = run(`import AsTableRoot from "@atscript/vue-table/as-table-root";`);
+      for (const dialog of dialogs) expectAllOf(out, componentClasses[dialog]);
+    });
+
+    it("excludeComponents vetoes individual companions while keeping the rest", () => {
+      const excluded: AsComponentName[] = [
+        "as-config-dialog",
+        "as-filter-dialog",
+        "as-preset-dialog",
+      ];
+      const out = run(`<AsTableRoot />`, { excludeComponents: excluded });
+      const full = expand(["as-table-root"]);
+      const kept = expand(["as-table-root"], excluded);
+      const dropped = [...full].filter((c) => !kept.has(c));
+      expect(dropped.length).toBeGreaterThan(0);
+      // Own classes and the remaining companions are intact
+      expectAllOf(out, componentClasses["as-table-root"]);
+      expectAllOf(out, componentClasses["as-action-form-dialog"]);
+      expectAllOf(out, [...kept]);
+      // Nothing reachable only through the excluded dialogs leaks in
+      expectNoneOf(out, dropped);
+    });
+
+    it("excluding the matched component suppresses it and the companions riding under it", () => {
+      expect(run(`<AsTableRoot />`, { excludeComponents: ["as-table-root"] })).toBeUndefined();
+    });
+  });
+
+  describe("getComponentClasses", () => {
+    it("matches the oracle without exclusions", () => {
+      expect(new Set(getComponentClasses(["as-table-root"]))).toEqual(expand(["as-table-root"]));
+    });
+
+    it("exclude drops the component's classes and stops traversal through it", () => {
+      const excluded = ["as-filter-dialog", "as-preset-dialog"];
+      const got = new Set(getComponentClasses(["as-table-root"], new Set(excluded)));
+      expect(got).toEqual(expand(["as-table-root"], excluded));
+      expect(got.size).toBeLessThan(expand(["as-table-root"]).size);
+    });
+
+    it("excluding a start name yields nothing for it", () => {
+      expect(getComponentClasses(["as-form"], new Set(["as-form"]))).toEqual([]);
     });
   });
 

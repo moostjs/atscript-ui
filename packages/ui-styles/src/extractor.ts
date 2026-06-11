@@ -1,5 +1,11 @@
 import type { Extractor } from "unocss";
-import { componentClasses, helperAliases } from "./generated/component-classes";
+import { expandComponentClasses } from "./companions";
+import {
+  type AsComponentName,
+  componentClasses,
+  componentCompanions,
+  helperAliases,
+} from "./generated/component-classes";
 import { kebabize } from "./kebab";
 
 export interface AsExtractorOptions {
@@ -7,12 +13,23 @@ export interface AsExtractorOptions {
    * Kebab-case component names whose classes should NEVER be added to the
    * safelist, even when the extractor matches them. Use to drop styles for
    * default components the consumer has replaced with their own implementation.
+   *
+   * Typed against {@link AsComponentName} — a union generated from the
+   * published component set — so editors autocomplete the names and typos
+   * fail the build instead of silently no-opping.
+   *
+   * Companions are veto-able too: components a matched component pulls in
+   * (statically or lazily — see `componentCompanions`) are expanded
+   * per-component, so excluding e.g. `as-config-dialog` / `as-filter-dialog` /
+   * `as-preset-dialog` sheds those dialogs' CSS even when you only tag
+   * `<AsTableRoot>` — useful when the app never opens them or supplies its
+   * own implementations.
    */
-  excludeComponents?: string[];
+  excludeComponents?: AsComponentName[];
 }
 
 export function createAsExtractor(opts: AsExtractorOptions = {}): Extractor {
-  const exclude = new Set(opts.excludeComponents ?? []);
+  const exclude = new Set<string>(opts.excludeComponents ?? []);
   const helperNames = Object.keys(helperAliases);
   // Leading `(?:^|[^.\w])` instead of `\b` so member calls like
   // `obj.createDefaultTypes()` don't trigger expansion.
@@ -38,12 +55,13 @@ export function createAsExtractor(opts: AsExtractorOptions = {}): Extractor {
         return undefined;
       }
 
-      const matched = new Set<string>();
+      // Collect matched component names first, then expand companions once
+      // at the end via the shared walk (tracked components a match pulls in,
+      // e.g. lazily-mounted dialogs, each independently veto-able via
+      // `excludeComponents`).
+      const names = new Set<string>();
       const addClassesFor = (kebab: string) => {
-        if (exclude.has(kebab)) return;
-        const list = componentClasses[kebab];
-        if (!list) return;
-        for (const cls of list) matched.add(cls);
+        names.add(kebab);
       };
 
       for (const [, name] of code.matchAll(
@@ -69,6 +87,12 @@ export function createAsExtractor(opts: AsExtractorOptions = {}): Extractor {
         }
       }
 
+      const matched = expandComponentClasses(
+        [...names],
+        componentClasses,
+        componentCompanions,
+        exclude,
+      );
       return matched.size > 0 ? matched : undefined;
     },
   };
