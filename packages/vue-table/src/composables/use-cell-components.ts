@@ -23,7 +23,10 @@ export function useCellComponents(
   getColumns: () => ColumnDef[],
 ): ComputedRef<Record<string, Component>> {
   const ctx = useTableContextOptional();
-  const RowActions = useTableComponent("rowActions", ctx?.types?.[ROW_ACTIONS_TYPE] ?? AsRowActions);
+  const RowActions = useTableComponent(
+    "rowActions",
+    ctx?.types?.[ROW_ACTIONS_TYPE] ?? AsRowActions,
+  );
   return computed(() => {
     const out: Record<string, Component> = {};
     for (const col of getColumns()) {
