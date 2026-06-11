@@ -5,7 +5,6 @@ import {
   AsTable,
   AsTableRoot,
   AsWindowTable,
-  createDefaultControls,
   useTableUrlQuery,
   type ActionResult,
   type ColumnMenuConfig,
@@ -28,7 +27,8 @@ import { createDemoTableTypes, createDemoTableComponents } from "../types/demo-t
 // but lands recipients on page 1 instead of pinning them to the linker's page.
 const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 
-const controls = createDefaultControls();
+// No `:controls` map — every chrome slot falls back to its built-in
+// internally, and the dialogs stay lazy (bundled + mounted on first open).
 const types = createDemoTableTypes();
 const components = createDemoTableComponents();
 const rowValueFn = (row: Record<string, unknown>) => row.id;
@@ -227,7 +227,6 @@ watch(
       v-model:url-query="urlQuery"
       :url-query-sync="urlQuerySync"
       :url="`/api/db/tables/${apiPath}`"
-      :controls="controls"
       :types="types"
       :components="components"
       :limit="limit"

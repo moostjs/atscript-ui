@@ -477,8 +477,10 @@ test.describe("Section 19 — workflows", () => {
         await page.getByRole("button", { name: /Register|Submit|Submitting/i }).click();
 
         await expect(page.locator('input[name="code"]')).toBeVisible();
+        // Root `@ui.form.fn.title` is form-level `(data, ctx)` — the heading
+        // must show the email passed via `@wf.context.pass`, not the fallback.
         await expect(
-          page.getByRole("heading", { name: "Enter the code sent to your email" }),
+          page.getByRole("heading", { name: `Enter the code sent to ${email}` }),
         ).toBeVisible();
 
         const entry = await waitForOutletEntry({

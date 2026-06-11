@@ -1,4 +1,4 @@
-import { defineComponent, h } from "vue";
+import { defineComponent, h, ref } from "vue";
 import { describe, it, expect, vi } from "vite-plus/test";
 import { mount, flushPromises } from "@vue/test-utils";
 
@@ -20,6 +20,12 @@ vi.mock("@atscript/typescript/utils", () => ({
 }));
 vi.mock("@atscript/ui", () => ({
   createFormDef: () => ({ fields: [], rootField: { path: "", type: "object" } }),
+}));
+
+// useMe() fires a real fetch("/api/me") on first use — mock it so no
+// request is left in flight when happy-dom tears down (AbortError noise).
+vi.mock("../api/use-me", () => ({
+  useMe: () => ({ me: ref(null) }),
 }));
 
 vi.mock("../api/client-factory", () => ({
