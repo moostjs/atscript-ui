@@ -276,11 +276,14 @@ export interface QrCopyDemoForm {
 
 ::: warning Field-level fn signature
 
-Field-level `@ui.form.fn.*` callbacks are `(v, data, ctx, entry)`. The
+Field-level `@ui.form.fn.*` callbacks are `(v, data, ctx, entry)` — that's
+the full signature, though most usages only consume the first two or three
+arguments (`entry`, the resolved metadata entry, is rarely needed). The
 two-argument shape `(_, ctx) => ...` is **wrong** — the second argument is
 `data`, not the context, and `ctx` would silently resolve to the current
 form-data object. Only **form-level** keys
-(`@ui.form.fn.title`, `@ui.form.fn.submit.text`, `@ui.form.fn.submit.disabled`)
+(`@ui.form.fn.title`, `@ui.form.fn.description`, `@ui.form.fn.submit.text`,
+`@ui.form.fn.submit.disabled`)
 use `(data, ctx)`. See [Dynamic Fields](/forms/dynamic-fields#scope-passed-to-every-function).
 :::
 

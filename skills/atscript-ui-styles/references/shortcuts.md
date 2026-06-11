@@ -308,12 +308,12 @@ import {
   componentClasses, // Record<kebab, readonly string[]>
   componentPackages, // Record<kebab, "form" | "table" | "wf">
   helperAliases, // Record<helperFnName, readonly kebab[]>
-  getComponentClasses, // (...names: string[]) => string[]
+  getComponentClasses, // (names: readonly string[], exclude?: ReadonlySet<string>) => string[]
   getHelperClasses, // (...helpers: string[]) => string[]
 } from "@atscript/ui-styles";
 
 // All classes painted by <AsForm> + <AsField> + <AsIterator>:
-const formClasses = getComponentClasses("as-form", "as-field", "as-iterator");
+const formClasses = getComponentClasses(["as-form", "as-field", "as-iterator"]);
 
 // Classes pulled in when a source file calls `createDefaultTypes()`:
 const helperClasses = getHelperClasses("createDefaultTypes");

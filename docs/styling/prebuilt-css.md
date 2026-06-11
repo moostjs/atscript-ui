@@ -16,13 +16,13 @@ The pre-built bundles are sealed at our publish time. You give up:
 
 - **Theming.** `baseRadius`, palette overrides, `iconOverrides`, and `excludeComponents` all happen at preset registration time. The pre-built CSS is generated against the library's default theme — your brand color can't propagate.
 - **Auto-safelist.** The bundle ships every class for every default component, whether you use it or not. Bundle is larger by design.
-- **Per-component splitting.** You can split by package (`form` / `table` / `wf`) but not by component.
+- **Per-component splitting.** You can split by package (`form` / `table` / `wf` / `aooth`) but not by component.
 
 In return: zero build-time integration. You can paste the stylesheet `<link>` into a static HTML page and it just works.
 
 ## Subpath imports
 
-The package exposes four CSS subpaths:
+The package exposes five CSS subpaths:
 
 | Subpath                         | Contents                                                                    |
 | ------------------------------- | --------------------------------------------------------------------------- |
@@ -30,6 +30,7 @@ The package exposes four CSS subpaths:
 | `@atscript/ui-styles/css/form`  | `commonShortcuts` + `formShortcuts` only — for `@atscript/vue-form` apps.   |
 | `@atscript/ui-styles/css/table` | `commonShortcuts` + `tableShortcuts` only — for `@atscript/vue-table` apps. |
 | `@atscript/ui-styles/css/wf`    | `commonShortcuts` + `wfShortcuts` only — for `@atscript/vue-wf` apps.       |
+| `@atscript/ui-styles/css/aooth` | `commonShortcuts` + `aoothShortcuts` only — for `@atscript/vue-aooth` apps. |
 
 The per-package bundles are **independently complete** — each one ships its own copy of `commonShortcuts` and vunor primitives so it stands alone. That means they overlap on shared rules: **don't combine `form.css` + `table.css`** in the same app, use `all.css` instead.
 
@@ -125,6 +126,7 @@ Rough numbers for the published bundles (post-gzip, varies by version):
 - `css/form` — ~22 KB.
 - `css/table` — ~24 KB.
 - `css/wf` — ~16 KB.
+- `css/aooth` — ~12 KB.
 
 Compare this against an equivalent UnoCSS-generated bundle, which typically lands around 12–18 KB because the extractor strips unused classes. The pre-built path costs you bundle size for the convenience of skipping the build.
 

@@ -113,10 +113,9 @@ A canonical table-page consumer:
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { AsTable, AsTableRoot, useTableUrlQuery, createDefaultControls } from "@atscript/vue-table";
+import { AsTable, AsTableRoot, useTableUrlQuery } from "@atscript/vue-table";
 
 const urlQuery = useTableUrlQuery(useRoute(), useRouter());
-const controls = createDefaultControls();
 
 // Per-table aspect gates from the route's metadata
 const props = defineProps<{ path: string }>();
@@ -132,7 +131,6 @@ const urlQuerySync = computed(() => {
     v-model:url-query="urlQuery"
     :url-query-sync="urlQuerySync"
     :url="`/api/db/tables/${path}`"
-    :controls="controls"
   >
     <AsTable />
   </AsTableRoot>

@@ -5,15 +5,15 @@ outline: deep
 # Actions & Selection
 
 Actions are server-callable operations on a row, on a set of rows,
-or on the table itself. They're declared on the `.as` type and the
-table renders them in the right place — a dropdown in the row, a
-button on the toolbar, or a bulk button that lights up only when
-rows are selected. Each action can declare an `@InputForm` so the
-table opens a form dialog before submitting.
+or on the table itself. They're declared on the server next to the
+table's controller and the table renders them in the right place — a
+dropdown in the row, a button on the toolbar, or a bulk button that
+lights up only when rows are selected. Each action can declare an
+`@InputForm` so the table opens a form dialog before submitting.
 
 ## Action levels
 
-Three scopes, picked by the annotation on the `.as`:
+Three scopes:
 
 | Scope   | Where it renders      | Operates on      |
 | ------- | --------------------- | ---------------- |
@@ -26,30 +26,45 @@ the row has exactly one action, a `…` dropdown when it has more.
 Table and bulk actions render through `<AsTableActions>` in the
 toolbar.
 
-Declaration lives on the `.as` type:
+Declaration lives on the server — `@atscript/moost-db`'s `@DbAction`
+decorator on the table's controller. The level is **inferred** from
+the handler's parameter decorators (`@DbActionID()` → `row`,
+`@DbActionIDs()` → `rows`, neither → `table`), and the table receives
+the finished list — name, label, level, icon, intent — from the
+`/meta` response's `actions` array:
 
-```atscript
-@db.table 'orders'
-export interface Order {
-    @meta.id id: string
+```typescript
+import {
+  AsDbController,
+  TableController,
+  DbAction,
+  DbActionID,
+  DbActionIDs,
+} from "@atscript/moost-db";
+import { Post } from "@moostjs/event-http";
+import { Order } from "./schema/order.as";
+import { ordersTable } from "./db";
 
-    @meta.label 'Status'
-    status: 'open' | 'shipped' | 'cancelled'
+@TableController(ordersTable)
+export class OrdersController extends AsDbController<typeof Order> {
+  @Post("actions/ship")
+  @DbAction("ship", { label: "Ship" })
+  async ship(@DbActionID() id: { id: string }) {
+    // one identifier → level: 'row'
+  }
 
-    @ui.table.action 'row'
-    @db.action 'ship'
-    ship?: never
-
-    @ui.table.action 'rows'
-    @db.action 'export'
-    export?: never
+  @Post("actions/export")
+  @DbAction("export", { label: "Export" })
+  async exportOrders(@DbActionIDs() ids: { id: string }[]) {
+    // identifier array → level: 'rows'
+  }
 }
 ```
 
-`@db.action` is the server-side wiring (handler, input form, intent,
-permissions). See the [db.atscript.dev annotations reference](https://db.atscript.dev)
-for the full surface. `@ui.table.action` is the UI level — picks
-where to render the action.
+`@DbAction` carries the full server-side wiring — handler, input
+form, intent, gating, and the level itself. See the
+[db.atscript.dev annotations reference](https://db.atscript.dev)
+for the full surface. The table just renders what `/meta` reports.
 
 ## Input forms
 
@@ -57,16 +72,20 @@ An action with `@InputForm` declares a `.as` type as its input
 schema:
 
 ```atscript
-@db.action 'refund'
-@db.action.input 'RefundInput'
-refund?: never
-
-interface RefundInput {
+export interface RefundInput {
     @meta.label 'Amount'
     amount: number
 
     @meta.label 'Reason'
     reason: string
+}
+```
+
+```typescript
+@Post("actions/refund")
+@DbAction("refund", { label: "Refund" })
+async refund(@DbActionID() id: { id: string }, @InputForm(RefundInput) input: RefundInput) {
+  // ...
 }
 ```
 

@@ -218,9 +218,9 @@ What each piece does:
 Field-level functions are `(v, data, ctx, entry)`. Writing
 `'(_, ctx) => ctx.totpUri'` silently routes `formData` into `ctx` and
 the real context goes unread. Only **form-level** keys
-(`@ui.form.fn.title`, `@ui.form.fn.submit.text`,
-`@ui.form.fn.submit.disabled`) use the two-argument `(data, ctx)`
-shape. See [Dynamic Fields](/forms/dynamic-fields#scope-passed-to-every-function).
+(`@ui.form.fn.title`, `@ui.form.fn.description`,
+`@ui.form.fn.submit.text`, `@ui.form.fn.submit.disabled`) use the
+two-argument `(data, ctx)` shape. See [Dynamic Fields](/forms/dynamic-fields#scope-passed-to-every-function).
 :::
 
 When the resolved value should land in the bound data slot — because a

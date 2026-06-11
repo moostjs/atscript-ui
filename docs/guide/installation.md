@@ -161,12 +161,6 @@ import { installDynamicResolver } from "@atscript/ui-fns";
 installDynamicResolver();
 ```
 
-Or as a side-effect import:
-
-```ts
-import "@atscript/ui-fns/install";
-```
-
 ::: warning Security
 Both features compile annotation strings into runtime functions via `new Function`. Only enable on builds where every `.as` file is trusted (i.e. your own source tree, vetted dependencies). Do not feed user-authored schemas through the dynamic resolver without sandboxing.
 :::

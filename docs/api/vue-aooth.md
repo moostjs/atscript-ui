@@ -30,9 +30,18 @@ import AsCopy from "@atscript/vue-aooth/as-copy";
 import AsPasswordRules from "@atscript/vue-aooth/as-password-rules";
 import AsQrCode from "@atscript/vue-aooth/as-qr-code";
 import AsSsoProviders from "@atscript/vue-aooth/as-sso-providers";
+
+// descriptor types (prop payload item shapes)
+import type { AsConsentArrayItem, AsPasswordRulesPolicy, AsSsoProvider } from "@atscript/vue-aooth";
 ```
 
 None of the five are auto-resolved — all are Tier-2 swap targets. Register them by name in `<AsForm :components>` and tag the field with `@ui.form.component`. The narrative guide with end-to-end examples lives at [Forms · Aooth components](/forms/aooth-components).
+
+The descriptor types behind the custom props are exported too — use them to type the lists you place on `formContext`:
+
+- `AsConsentArrayItem` — one `pendingConsents` entry for [`AsConsentArray`](#component-asconsentarray).
+- `AsPasswordRulesPolicy` — one `policies` entry for [`AsPasswordRules`](#component-aspasswordrules).
+- `AsSsoProvider` — one `providers` entry for [`AsSsoProviders`](#component-asssoproviders).
 
 ## Component — AsConsentArray
 

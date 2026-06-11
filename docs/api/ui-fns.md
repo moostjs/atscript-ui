@@ -95,7 +95,8 @@ Form-level wrapping — no leaf value or entry:
 return (<fnStr>)(data, context)
 ```
 
-Used for `@ui.form.fn.title`, `@ui.form.fn.submitText`, `@ui.form.fn.submitDisabled`.
+Used for root-interface `@ui.form.fn.title`, `@ui.form.fn.description`,
+`@ui.form.fn.submit.text`, `@ui.form.fn.submit.disabled`.
 
 ### `compileValidatorFn(fnStr)`
 

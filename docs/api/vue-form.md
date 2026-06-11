@@ -138,25 +138,26 @@ import AsInput from "@atscript/vue-form/as-input";
 
 Every component implements `TAsComponentProps`. The columns below list the `@ui.type` value that maps to each component in `createDefaultTypes()`.
 
-| Component      | Default `type` keys            | Notes                                                                                                    |
-| -------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `AsFieldShell` | (all)                          | Chrome wrapper — title, description, error, hint, prefix/suffix. Used internally by every other default. |
-| `AsInput`      | `text`, `textarea`, `password` | Plain string input.                                                                                      |
-| `AsNumber`     | `number`                       | Integer input with prefix/suffix, currency-aware.                                                        |
-| `AsDecimal`    | `decimal`                      | Decimal-string input with `precisionScale` enforcement.                                                  |
-| `AsSelect`     | `select`                       | `<select>` element fed by `options` / value-help.                                                        |
-| `AsRadio`      | `radio`                        | Radio group.                                                                                             |
-| `AsCheckbox`   | `checkbox`                     | Boolean checkbox or tri-state.                                                                           |
-| `AsDate`       | `date`                         | Date-only input.                                                                                         |
-| `AsDatetime`   | `datetime`                     | Date-time input.                                                                                         |
-| `AsTime`       | `time`                         | Time-of-day input.                                                                                       |
-| `AsParagraph`  | `paragraph`                    | Phantom read-only field; renders `value` as text.                                                        |
-| `AsAction`     | `action`                       | Phantom button — emits `action`.                                                                         |
-| `AsObject`     | `object`                       | Iterates over a nested object's fields.                                                                  |
-| `AsArray`      | `array`                        | Renders array items with add/remove affordances.                                                         |
-| `AsUnion`      | `union`                        | Variant picker + nested fields for the active branch.                                                    |
-| `AsTuple`      | `tuple`                        | Positional fields, fixed length.                                                                         |
-| `AsRef`        | `ref`                          | FK input with value-help dropdown.                                                                       |
+| Component       | Default `type` keys            | Notes                                                                                                    |
+| --------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `AsFieldShell`  | (all)                          | Chrome wrapper — title, description, error, hint, prefix/suffix. Used internally by every other default. |
+| `AsInput`       | `text`, `textarea`, `password` | Plain string input.                                                                                      |
+| `AsNumber`      | `number`                       | Integer input with prefix/suffix, currency-aware.                                                        |
+| `AsDecimal`     | `decimal`                      | Decimal-string input with `precisionScale` enforcement.                                                  |
+| `AsSelect`      | `select`                       | `<select>` element fed by `options` / value-help.                                                        |
+| `AsRadio`       | `radio`                        | Radio group.                                                                                             |
+| `AsCheckbox`    | `checkbox`                     | Boolean checkbox or tri-state.                                                                           |
+| `AsMultiSelect` | `multiselect`                  | Multi-select combobox with chip-style selections, bound to `T[]`.                                        |
+| `AsDate`        | `date`                         | Date-only input.                                                                                         |
+| `AsDatetime`    | `datetime`                     | Date-time input.                                                                                         |
+| `AsTime`        | `time`                         | Time-of-day input.                                                                                       |
+| `AsParagraph`   | `paragraph`                    | Phantom read-only field; renders `value` as text.                                                        |
+| `AsAction`      | `action`                       | Phantom button — emits `action`.                                                                         |
+| `AsObject`      | `object`                       | Iterates over a nested object's fields.                                                                  |
+| `AsArray`       | `array`                        | Renders array items with add/remove affordances.                                                         |
+| `AsUnion`       | `union`                        | Variant picker + nested fields for the active branch.                                                    |
+| `AsTuple`       | `tuple`                        | Positional fields, fixed length.                                                                         |
+| `AsRef`         | `ref`                          | FK input with value-help dropdown.                                                                       |
 
 All defaults accept the full `TAsComponentProps` contract — see [Component prop & emit types](#component-prop-emit-types).
 
@@ -226,6 +227,8 @@ interface UseAsFormOptions<TFormData, TFormContext> {
   errors?: () => Record<string, string | undefined> | undefined;
   clientFactory?: () => ClientFactory | undefined;
   hideRootTitle?: () => boolean | undefined;
+  /** Busy flag — locks the form and disables submit while a round-trip is in flight (used by `AsWfForm`). */
+  loading?: () => boolean | undefined;
   emits?: {
     submit?: (data: TFormData) => void;
     error?: (errors: { path: string; message: string }[]) => void;

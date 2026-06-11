@@ -279,6 +279,7 @@ Top-level (declared on the root `interface` / `type`, receives `(data, context)`
 | Annotation                    | Computes                        |
 | ----------------------------- | ------------------------------- |
 | `@ui.form.fn.title`           | dynamic form title              |
+| `@ui.form.fn.description`     | dynamic form description        |
 | `@ui.form.fn.submit.text`     | dynamic submit button text      |
 | `@ui.form.fn.submit.disabled` | dynamic submit-disabled boolean |
 

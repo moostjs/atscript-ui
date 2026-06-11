@@ -30,7 +30,7 @@ Consumers can repaint every description in the UI by overriding `as-description`
 
 ## Shortcut groups
 
-Shortcuts are split into four logical groups. They merge into `allShortcuts` (what `asPresetVunor` registers by default), but you can mount them individually if you only use one package.
+Shortcuts are split into five logical groups. They merge into `allShortcuts` (what `asPresetVunor` registers by default), but you can mount them individually if you only use one package.
 
 | Export            | What it covers                                                                                                                                                                                                                                                                                 |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -38,6 +38,7 @@ Shortcuts are split into four logical groups. They merge into `allShortcuts` (wh
 | `formShortcuts`   | Form chrome: `as-form*`, `as-field*`, `as-default-field`, `as-checkbox-radio*`, `as-array*`, `as-object*`, `as-collapsible*`, `as-decimal-number*`, `as-dropdown*`, `as-ref*`, `as-action*`, `as-no-data*`, `as-form-grid*`.                                                                   |
 | `tableShortcuts`  | Table chrome: `as-table*`, `as-cell-*`, `as-column-menu*`, `as-filter-dialog*`, `as-config-dialog*`, `as-filter-field*`, `as-fpill*`, `as-orderable-list*`, `as-preset-picker*`, `as-window-table*`, `as-window-skeleton*`, `as-row-actions*`, `as-sorter*`, `as-page*`, `as-confirm-dialog*`. |
 | `wfShortcuts`     | Workflow form chrome: `as-wf-form*`.                                                                                                                                                                                                                                                           |
+| `aoothShortcuts`  | Aooth auth-flow field chrome (`@atscript/vue-aooth`): `as-consent-array*`, `as-copy*`, `as-password-rules*`, `as-qr-code*`, `as-sso-provider*`.                                                                                                                                                |
 
 Import them directly when you only need one:
 
@@ -334,13 +335,13 @@ import { getComponentClasses, getHelperClasses, asPresetVunor } from "@atscript/
 export default defineConfig({
   presets: asPresetVunor({}),
   safelist: [
-    ...getComponentClasses("as-form", "as-input", "as-select"),
+    ...getComponentClasses(["as-form", "as-input", "as-select"]),
     ...getHelperClasses("createDefaultTypes"),
   ],
 });
 ```
 
-`getComponentClasses(...kebabNames)` returns a deduped class array for the named components. `getHelperClasses(...helperNames)` does the same for the helper aliases.
+`getComponentClasses(kebabNames, exclude?)` returns a deduped class array for the named components (companions included; an optional `ReadonlySet` of names to exclude prunes them and everything reachable only through them). `getHelperClasses(...helperNames)` does the same for the helper aliases.
 
 ### Excluding defaults you swapped out
 

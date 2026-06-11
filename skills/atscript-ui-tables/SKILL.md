@@ -65,14 +65,13 @@ export interface Product {
 
 ```vue
 <script setup lang="ts">
-import { createDefaultCellTypes, createDefaultControls } from "@atscript/vue-table";
+import { createDefaultCellTypes } from "@atscript/vue-table";
 
 const types = createDefaultCellTypes();
-const controls = createDefaultControls();
 </script>
 
 <template>
-  <AsTableRoot url="/api/db/tables/products" :types="types" :controls="controls" :limit="20">
+  <AsTableRoot url="/api/db/tables/products" :types="types" :limit="20">
     <AsTableActions />
     <AsFilters />
     <AsTable :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }" />
@@ -97,6 +96,7 @@ Replace `url=` with `:query-fn="..."` for a custom backend. See [query.md](refer
 | 9   | **Reserved preset id prefixes**: `sys:` (system, client-only, never persisted), `uc:` (user config, deterministic id `uc:<user>:<app>:<tableKey>`), `ac:` (app config, deterministic `ac:<user>:<app>`). Client writes to `sys:*` are rejected by the server controller.                                                                                                                                                    |
 | 10  | **Server preset read gate**: `user = current OR (type='preset' AND public=true)`. Once-public-always-public — revoking publish permission doesn't unpublish existing rows.                                                                                                                                                                                                                                                  |
 | 11  | **`/meta` response carries `preferredId` on every row-returning read.** `moost-db` widens `$select` automatically; cells/actions/refs can rely on identity. Aggregate (`$groupBy`) and `$count` responses are NOT widened — see atscript-db skill, invariant 10.                                                                                                                                                            |
+| 12  | **`:controls` takes only your overrides.** Every dispatch site falls back internally (`controls[key] ?? default`), so passing `createDefaultControls()` wholesale is redundant AND opts the lazy dialogs into eager bundling+mounting. `rowActions` is not seeded — the `__actions` column resolves `controls.rowActions ?? types.__actions ?? AsRowActions`.                                                               |
 
 ## Key imports
 
@@ -193,17 +193,23 @@ import { AsPresetsController, AsPresetEntry } from "@atscript/moost-ui-presets";
 
 ## References — load only what's needed
 
-| Domain               | File                                                      | When                                                                                                                                                                                                                                                                                      |
-| -------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| First contact        | [getting-started.md](references/getting-started.md)       | Install matrix, `<AsTableRoot>` props, the default `:types` + `:controls` maps, slot binding contract                                                                                                                                                                                     |
-| Query / data wiring  | [query.md](references/query.md)                           | `url=` (moost-db) vs `queryFn` (custom), `buildTableQuery` Uniquery assembly, force filters/sorters, meta endpoint, mutators-are-pure principle in detail                                                                                                                                 |
-| Filtering            | [filtering.md](references/filtering.md)                   | Filter model (`FieldFilters` / `FilterCondition` / 13 condition types), OR/AND semantics, `filtersToUniqueryFilter` translation, `<AsFilters>` / `<AsFilterField>` / `<AsFilterDialog>`, value-help inside filter dialogs                                                                 |
-| Sorting + pagination | [sorting-pagination.md](references/sorting-pagination.md) | Sort model + multi-sort, header click semantics, `<AsConfigDialog>` sorters tab, paginated `<AsTable>` vs virtualized `<AsWindowTable>`, block-aligned fetching, `dragReleaseDebounceMs` tuning                                                                                           |
-| Cells                | [cells.md](references/cells.md)                           | Built-in cell components + default type map, `provideCellLocale` (language + timezone), custom cells via `@ui.table.component` + `:components`, slot API (`#header-<path>`, `#cell-<path>`, `#empty`, `#query-loading`, `#error`), per-cell styling via `@ui.table.{classes,styles,attr}` |
-| State persistence    | [state-persistence.md](references/state-persistence.md)   | `<AsConfigDialog>` tabs (columns/sorters/filters), `useTableUrlQuery` (router two-way bind), client presets (`PresetSnapshot`, `useLocalDraft`, `usePresets`, `useAppPrefs`, `<AsPresetPicker>`, system/user/public, `dateShortcuts`), server presets via `AsPresetsController`           |
-| Actions + selection  | [actions-selection.md](references/actions-selection.md)   | Row / table actions on the `.as` type, `<AsActionFormDialog>` (action input form via vue-form), `state.selectedRows` (`Set<PK>`), `togglePk` / `trimSelection` / `rowsToPks`, `state.actions.invoke(action, pk?, opts?)`, the `__actions` synthetic column                                |
+| Domain               | File                                                                       | When                                                                                                                                                                                                                                                                                      |
+| -------------------- | -------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| First contact        | [getting-started.md](references/getting-started.md)                        | Install matrix, `<AsTableRoot>` props, the default `:types` + `:controls` maps, slot binding contract                                                                                                                                                                                     |
+| Query / data wiring  | [query.md](references/query.md)                                            | `url=` (moost-db) vs `queryFn` (custom), `buildTableQuery` Uniquery assembly, force filters/sorters, meta endpoint, mutators-are-pure principle in detail                                                                                                                                 |
+| Filtering            | [filtering.md](references/filtering.md)                                    | Filter model (`FieldFilters` / `FilterCondition` / 13 condition types), OR/AND semantics, `filtersToUniqueryFilter` translation, `<AsFilters>` / `<AsFilterField>` / `<AsFilterDialog>`, value-help inside filter dialogs                                                                 |
+| Sorting + pagination | [sorting-pagination.md](references/sorting-pagination.md)                  | Sort model + multi-sort, header click semantics, `<AsConfigDialog>` sorters tab, paginated `<AsTable>` vs virtualized `<AsWindowTable>`, block-aligned fetching, `dragReleaseDebounceMs` tuning                                                                                           |
+| Cells                | [cells.md](references/cells.md)                                            | Built-in cell components + default type map, `provideCellLocale` (language + timezone), custom cells via `@ui.table.component` + `:components`, slot API (`#header-<path>`, `#cell-<path>`, `#empty`, `#query-loading`, `#error`), per-cell styling via `@ui.table.{classes,styles,attr}` |
+| State persistence    | [state-persistence.md](references/state-persistence.md)                    | `<AsConfigDialog>` tabs (columns/sorters/filters), `useTableUrlQuery` (router two-way bind), client presets (`PresetSnapshot`, `useLocalDraft`, `usePresets`, `useAppPrefs`, `<AsPresetPicker>`, system/user/public, `dateShortcuts`), server presets via `AsPresetsController`           |
+| Actions + selection  | [actions-selection.md](references/actions-selection.md)                    | Row / table actions on the `.as` type, `<AsActionFormDialog>` (action input form via vue-form), `state.selectedRows` (`Set<PK>`), `togglePk` / `trimSelection` / `rowsToPks`, `state.actions.invoke(action, pk?, opts?)`, the `__actions` synthetic column                                |
+| Customization        | [customization.md](references/customization.md)                            | When swapping table chrome: per-column / state slots (`#cell-*`, `#header-*`, `#empty`, `#error`, `#last-row`), `:types` / `:components` cell swap, replacing dialogs via `:controls` (and which control keys actually dispatch), custom row-actions cell                                 |
+| Edit form + OCC      | [edit-form-occ.md](references/edit-form-occ.md)                            | When building a row-edit `<AsForm>` against an OCC table: `@db.column.version`, `meta.versionColumn` → `createFormDef`, catching `VersionMismatchError` / `currentVersion` on submit                                                                                                      |
+| Annotation catalog   | [annotations.md](../atscript-ui/references/annotations.md)                 | When writing or looking up any `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*` annotation — args, constants, defaults (SSOT lives in the root `atscript-ui` skill)                                                                                                                        |
+| Bundle optimization  | [bundle-optimization.md](../atscript-ui/references/bundle-optimization.md) | When asked about table bundle size: lazy dialog latches, `controls.X` flipping a dialog eager, `AsActionFormDialog` pulling in vue-form, shedding unused chrome CSS via `excludeComponents` (SSOT lives in the root `atscript-ui` skill)                                                  |
 
 ## Customization
+
+Full swap-surface reference (slots, maps, dispatched control keys): [customization.md](references/customization.md).
 
 Tables expose three swap surfaces, layered on the tier model:
 
@@ -252,14 +258,13 @@ Wrap a cell in `useCellLocale` / `provideCellLocale` if it needs locale + timezo
 
 ### Swap a dialog (`controls.*`)
 
-The toolbar, config, filter, and preset dialogs are swappable through `controls`:
+The toolbar, config, filter, and preset dialogs are swappable through `controls`. Pass only the entries you replace — spreading `createDefaultControls()` defeats dialog lazy-loading (see invariant 12):
 
 ```vue
 <script setup lang="ts">
-import { createDefaultControls } from "@atscript/vue-table";
 import MyFilterDialog from "./MyFilterDialog.vue";
 
-const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog };
+const controls = { filterDialog: MyFilterDialog };
 </script>
 
 <template>

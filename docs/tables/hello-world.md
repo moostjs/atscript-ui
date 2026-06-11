@@ -91,17 +91,11 @@ If you don't run moost-db, see
 
 ```vue
 <script setup lang="ts">
-import {
-  AsTableRoot,
-  AsTable,
-  createDefaultControls,
-  createDefaultCellTypes,
-} from "@atscript/vue-table";
+import { AsTableRoot, AsTable, createDefaultCellTypes } from "@atscript/vue-table";
 import TableToolbar from "../../components/TableToolbar.vue";
 import TableFilterBar from "../../components/TableFilterBar.vue";
 import TablePagination from "../../components/TablePagination.vue";
 
-const controls = createDefaultControls();
 const types = createDefaultCellTypes();
 </script>
 
@@ -109,7 +103,6 @@ const types = createDefaultCellTypes();
   <div class="table-page">
     <AsTableRoot
       url="/db/tables/products"
-      :controls="controls"
       :types="types"
       :limit="10"
       v-slot="{ tableDef, loadedCount, totalCount, loadingMetadata }"
@@ -143,18 +136,18 @@ That's the whole client.
 builds the `TableDef`, owns reactive state and exposes everything via a
 slot. Key props:
 
-| Prop           | Purpose                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------- |
-| `url`          | The data endpoint. moost-db serves `/meta` and `/q` (paged data) under the same path.                   |
-| `limit`        | Default page size. Also the block size for `<AsWindowTable>` fetches.                                   |
-| `types`        | Cell-type → component dispatch map. Seed with `createDefaultCellTypes()`, override entries as you go.   |
-| `components`   | Named component overrides looked up via `@ui.table.component "name"`.                                   |
-| `controls`     | Skin-slot map — header cell, column menu, filter dialog, config dialog, etc.                            |
-| `queryFn`      | Replace the built-in moost-db data fetcher with your own. See [Query Function](/tables/query-function). |
-| `forceFilters` | Always-applied `FilterExpr` (Uniquery shape), AND-merged with user filters.                             |
-| `forceSorters` | Always-applied `SortControl[]`, prepended before user sorters; user can't remove them.                  |
-| `preset`       | Opt-in preset configuration. Omit to disable presets.                                                   |
-| `queryOnMount` | Default `true`. Set `false` if you want to defer the first fetch.                                       |
+| Prop           | Purpose                                                                                                                                                                 |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `url`          | The data endpoint. moost-db serves `/meta` and `/q` (paged data) under the same path.                                                                                   |
+| `limit`        | Default page size. Also the block size for `<AsWindowTable>` fetches.                                                                                                   |
+| `types`        | Cell-type → component dispatch map. Seed with `createDefaultCellTypes()`, override entries as you go.                                                                   |
+| `components`   | Named component overrides looked up via `@ui.table.component "name"`.                                                                                                   |
+| `controls`     | Skin-slot overrides — header cell, column menu, filter dialog, config dialog, etc. Pass only the entries you replace; every slot falls back to its built-in internally. |
+| `queryFn`      | Replace the built-in moost-db data fetcher with your own. See [Query Function](/tables/query-function).                                                                 |
+| `forceFilters` | Always-applied `FilterExpr` (Uniquery shape), AND-merged with user filters.                                                                                             |
+| `forceSorters` | Always-applied `SortControl[]`, prepended before user sorters; user can't remove them.                                                                                  |
+| `preset`       | Opt-in preset configuration. Omit to disable presets.                                                                                                                   |
+| `queryOnMount` | Default `true`. Set `false` if you want to defer the first fetch.                                                                                                       |
 
 The default slot exposes the full reactive state — `tableDef`,
 `allColumns`, `columns`, `columnNames`, `columnWidths`,
@@ -189,16 +182,16 @@ column), `:columnMenu` (which entries to show in the header dropdown),
 `<AsWindowTable>` is the virtualised twin. Same context, different
 renderer — see [Pagination & Virtualization](/tables/pagination).
 
-### `createDefaultCellTypes()` and `createDefaultControls()`
+### `createDefaultCellTypes()` and `:controls`
 
-Both helpers return fresh maps you can spread to extend or override:
+`createDefaultCellTypes()` returns a fresh cell-type map you can spread
+to extend or override. For `:controls`, pass only the entries you
+replace — every chrome slot falls back to its built-in internally, so
+spreading defaults is redundant (and opts the lazy dialogs into eager
+bundling):
 
 ```ts
-import {
-  createDefaultCellTypes,
-  createDefaultControls,
-  AsTableCellValue,
-} from "@atscript/vue-table";
+import { createDefaultCellTypes, AsTableCellValue } from "@atscript/vue-table";
 import StatusBadgeCell from "./StatusBadgeCell.vue";
 import MyFilterDialog from "./MyFilterDialog.vue";
 
@@ -207,8 +200,7 @@ const components = {
 };
 
 const controls = {
-  ...createDefaultControls(),
-  filterDialog: MyFilterDialog,
+  filterDialog: MyFilterDialog, // only the overrides — no spreading defaults
 };
 ```
 

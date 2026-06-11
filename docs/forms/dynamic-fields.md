@@ -50,9 +50,12 @@ interface TFnScope<V = unknown> {
 }
 ```
 
-Top-level functions (`@ui.form.fn.title`, `@ui.form.fn.submit.text`,
-`@ui.form.fn.submit.disabled`) receive only `(data, context)` — there
-is no `v`, `entry`, or `action` at the form-level scope.
+Form-level functions — `@ui.form.fn.title`, `@ui.form.fn.description`,
+`@ui.form.fn.submit.text`, and `@ui.form.fn.submit.disabled` on the root
+`interface` — receive only `(data, context)`; there is no `v`, `entry`, or
+`action` at the form-level scope. The same `fn.title` / `fn.description`
+keys on a **nested object field** (its section header) are field-level and
+use the full `(v, data, context, entry)` signature.
 
 ## Every static prop has a dynamic counterpart
 
@@ -78,6 +81,7 @@ Form-level keys (on the root `interface`):
 | Static                 | Dynamic                       |
 | ---------------------- | ----------------------------- |
 | `@meta.label`          | `@ui.form.fn.title`           |
+| `@meta.description`    | `@ui.form.fn.description`     |
 | `@ui.form.submit.text` | `@ui.form.fn.submit.text`     |
 | —                      | `@ui.form.fn.submit.disabled` |
 
@@ -181,7 +185,7 @@ city: ui.select
 
 ```atscript
 @meta.label 'Welcome'
-@ui.form.fn.title '(_v, _data, ctx) => "Welcome " + ctx.userName'
+@ui.form.fn.title '(data, ctx) => "Welcome " + ctx.userName'
 export interface WelcomeForm { ... }
 ```
 

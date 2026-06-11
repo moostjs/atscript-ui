@@ -63,8 +63,8 @@ export default defineConfig({
     // excludeComponents: ['as-input'],
   }),
   // `allShortcuts` is already a merged `TVunorShortcut[]` (form + table +
-  // wf + common). Wrap it in `vunorShortcuts()` once and hand the result
-  // to UnoCSS.
+  // wf + aooth + common). Wrap it in `vunorShortcuts()` once and hand the
+  // result to UnoCSS.
   shortcuts: [vunorShortcuts(allShortcuts)],
 });
 ```
@@ -79,7 +79,7 @@ export default defineConfig({
 | `typography`        | vunor typography map       | vunor defaults  | Override the typography ladder. Wholesale replacement.                                 |
 | `animation`         | vunor animation map        | vunor defaults  | Override animation tokens. Wholesale replacement.                                      |
 | `iconOverrides`     | `Record<string, string>`   | `undefined`     | Per-alias SVG override merged on top of `bakedIcons`                                   |
-| `excludeComponents` | `string[]`                 | `undefined`     | Kebab component names dropped from the extractor's safelist                            |
+| `excludeComponents` | `AsComponentName[]`        | `undefined`     | Kebab component names dropped from the extractor's safelist                            |
 
 See [theming.md](theming.md) for the full palette/scope/layer/surface story.
 

@@ -143,13 +143,13 @@ operators from the full `FilterConditionType` palette. The dialog
 respects `column.nullable` — `null` / `notNull` are hidden for
 non-nullable columns.
 
-Override it via `:controls.filterDialog`:
+Override it via `:controls.filterDialog` (pass only the override —
+other slots fall back to their built-ins):
 
 ```ts
-import { createDefaultControls } from "@atscript/vue-table";
 import MyFilterDialog from "./MyFilterDialog.vue";
 
-const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog };
+const controls = { filterDialog: MyFilterDialog };
 ```
 
 ### Value-help filters

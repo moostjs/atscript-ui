@@ -102,6 +102,7 @@ Computed at render time. Argument is a JS function string compiled with `new Fun
 | Annotation                         | Constant                     | Return    |
 | ---------------------------------- | ---------------------------- | --------- |
 | `@ui.form.fn.title "fn"`           | `UI_FORM_FN_TITLE`           | `string`  |
+| `@ui.form.fn.description "fn"`     | `UI_FORM_FN_DESCRIPTION`     | `string`  |
 | `@ui.form.fn.submit.text "fn"`     | `UI_FORM_FN_SUBMIT_TEXT`     | `string`  |
 | `@ui.form.fn.submit.disabled "fn"` | `UI_FORM_FN_SUBMIT_DISABLED` | `boolean` |
 

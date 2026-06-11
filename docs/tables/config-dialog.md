@@ -98,10 +98,9 @@ reaction through the same watcher.
 map on the root:
 
 ```ts
-import { createDefaultControls } from "@atscript/vue-table";
 import MyConfigDialog from "./MyConfigDialog.vue";
 
-const controls = { ...createDefaultControls(), configDialog: MyConfigDialog };
+const controls = { configDialog: MyConfigDialog };
 ```
 
 ```vue

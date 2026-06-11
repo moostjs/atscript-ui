@@ -23,7 +23,7 @@ Tune brand colors, radii, dark mode, scope tints, and depth layers via `asPreset
 interface AsBaseUnoConfigOptions extends AsVunorPresetOptions {}
 
 interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
-  excludeComponents?: string[]; // kebab names dropped from extractor safelist
+  excludeComponents?: AsComponentName[]; // kebab names dropped from extractor safelist
   iconOverrides?: Record<string, string>; // alias → SVG string; see icons.md
 }
 ```

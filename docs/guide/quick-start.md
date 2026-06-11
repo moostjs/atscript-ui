@@ -17,8 +17,8 @@ This guide assumes you already have a Vue 3 + Vite project and you're comfortabl
 ## 1. Install
 
 ```bash
-pnpm add @atscript/ui @atscript/ui-styles @atscript/vue-form @atscript/vue-table vunor
-pnpm add -D @atscript/typescript @atscript/ui-fns unplugin-atscript unplugin-vue-components unocss
+pnpm add @atscript/ui @atscript/ui-fns @atscript/ui-styles @atscript/vue-form @atscript/vue-table vunor
+pnpm add -D @atscript/typescript unplugin-atscript unplugin-vue-components unocss
 ```
 
 What each package does:

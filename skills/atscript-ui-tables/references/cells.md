@@ -88,6 +88,8 @@ Money branch wins over precision (CLDR currency fraction digits beat static conf
 
 Reads timezone from `useCellLocale().timezone` (omitted → browser default). `title` attribute always carries the canonical ISO string for e2e tests.
 
+Renders blank for null-like values (`null` / `undefined` / `""` / unparseable) **and** for the Unix epoch sentinel — any value whose timestamp is exactly `0` (`t !== 0` guard in `as-cell-date.vue`). A backend that stores "no date" as epoch 0 gets an empty cell, not `Jan 01, 1970`.
+
 ### AsCellArray
 
 `components/defaults/as-cell-array.vue`. Branches on element type:

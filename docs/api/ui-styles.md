@@ -30,8 +30,9 @@ type AsVunorPresetOptions = NonNullable<Parameters<typeof presetVunor>[0]>;
 interface AsBaseUnoConfigOptions extends AsVunorPresetOptions {}
 
 interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
-  /** Drop a kebab-case component's classes from the safelist when the consumer has replaced it. */
-  excludeComponents?: string[];
+  /** Drop a kebab-case component's classes from the safelist when the consumer has replaced it.
+   *  Typed against the generated `AsComponentName` union — autocompletes, typos fail the build. */
+  excludeComponents?: AsComponentName[];
   /** Replace built-in `i-as-<name>` icons with custom SVG strings. Unknown keys ignored. */
   iconOverrides?: Record<string, string>;
 }
@@ -70,7 +71,7 @@ Builds the UnoCSS source-code extractor that pre-seeds the safelist with every c
 ```typescript
 interface AsExtractorOptions {
   /** Kebab-case component names to drop from the safelist. */
-  excludeComponents?: string[];
+  excludeComponents?: AsComponentName[];
 }
 
 function createAsExtractor(opts?: AsExtractorOptions): {
@@ -99,6 +100,7 @@ import {
   formShortcuts,
   tableShortcuts,
   wfShortcuts,
+  aoothShortcuts,
   allShortcuts,
 } from "@atscript/ui-styles";
 
@@ -106,8 +108,9 @@ const commonShortcuts: TVunorShortcut[];
 const formShortcuts: TVunorShortcut[];
 const tableShortcuts: TVunorShortcut[];
 const wfShortcuts: TVunorShortcut[];
+const aoothShortcuts: TVunorShortcut[];
 
-const allShortcuts: TVunorShortcut[]; // mergeVunorShortcuts of the four above
+const allShortcuts: TVunorShortcut[]; // mergeVunorShortcuts of the five above
 ```
 
 `asPresetVunor()` already injects `allShortcuts`. Spread individual shortcut sets only when assembling a custom preset for a subset of the libraries.
@@ -119,14 +122,26 @@ See [The as-\* Shortcut System](/styling/shortcuts).
 Generated at build time by walking every `as-*.vue` template. Drives the safelist extractor and the optional component-exclusion knob.
 
 ```typescript
-/** Map: kebab-case component name → list of class names it references. */
+/** Union of every published kebab-case component name — generated from the component set; powers `excludeComponents` autocomplete (typos fail the build). */
+type AsComponentName =
+  | "as-action"
+  | "as-array"
+  | /* …every published component… */ "as-window-table";
+
+/** Map: kebab-case component name → list of class names it references (own classes only). */
 const componentClasses: Record<string, readonly string[]>;
+
+/** Map: kebab-case component name → tracked components it renders or lazy-mounts.
+ *  The extractor expands these recursively; each entry is independently veto-able
+ *  via `excludeComponents`. See the Bundle Optimization guide. */
+const componentCompanions: Record<string, readonly string[]>;
 
 /** Map: kebab-case component name → owning package ("form" | "table" | "wf"). */
 const componentPackages: Record<string, "form" | "table" | "wf">;
 
-/** Union of every class referenced by the given kebab-case component names. */
-function getComponentClasses(...names: string[]): string[];
+/** Union of every class referenced by the given kebab-case component names, companions included.
+ *  Names in `exclude` contribute nothing and are not traversed through. */
+function getComponentClasses(names: readonly string[], exclude?: ReadonlySet<string>): string[];
 
 /** Same as `getComponentClasses`, but takes helper-function names and expands them via `helperAliases`. */
 function getHelperClasses(...helpers: string[]): string[];
@@ -206,10 +221,11 @@ For apps that don't run UnoCSS at all, the package ships pre-baked CSS bundles. 
 
 ```typescript
 import "@atscript/ui-styles/css"; // alias for /css/all
-import "@atscript/ui-styles/css/all"; // form + table + wf + common
+import "@atscript/ui-styles/css/all"; // form + table + wf + aooth + common
 import "@atscript/ui-styles/css/form"; // form only
 import "@atscript/ui-styles/css/table"; // table only
 import "@atscript/ui-styles/css/wf"; // wf only
+import "@atscript/ui-styles/css/aooth"; // @atscript/vue-aooth components only
 ```
 
 Caveat: pre-built CSS skips theme tuning. Use `asPresetVunor()` if you want to change the palette, base radius, fingertip ladder, or icon set.
@@ -224,4 +240,5 @@ See [Pre-built CSS](/styling/prebuilt-css).
 - [Styling — Icons](/styling/icons)
 - [Styling — The as-\* Shortcut System](/styling/shortcuts)
 - [Styling — Pre-built CSS](/styling/prebuilt-css)
+- [Guide — Bundle Optimization](/guide/bundle-optimization)
 - vunor — internal shortcuts engine atscript-ui composes against (`vunor`, `vunor/theme`, `vunor/utils`)

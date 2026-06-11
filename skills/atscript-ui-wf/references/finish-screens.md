@@ -170,7 +170,7 @@ analytics emit.
 </AsWfForm>
 ```
 
-> [feedback_vue_empty_slot](file:///Users/mavrik/.claude/projects/-Users-mavrik-code-atscript-ui/memory/feedback_vue_empty_slot.md): `<AsWfForm>` only forwards a `wf.finish.*` slot to `AsWfFinish` when the consumer actually provides one (`$slots['wf.finish.message']` guard). An empty `<template #wf.finish.message />` would otherwise suppress the default fallback — but since the consumer never provided the slot in that case, the guard preserves the default.
+> Note: `<AsWfForm>` only forwards a `wf.finish.*` slot to `AsWfFinish` when the consumer actually provides one (`$slots['wf.finish.message']` guard). An empty `<template #wf.finish.message />` would otherwise suppress the default fallback — but since the consumer never provided the slot in that case, the guard preserves the default.
 
 ## Routing & events — `navigate` prop, `@dismiss`, `@action`
 

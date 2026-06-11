@@ -43,14 +43,13 @@ Vue mount:
 
 ```vue
 <script setup lang="ts">
-import { createDefaultCellTypes, createDefaultControls } from "@atscript/vue-table";
+import { createDefaultCellTypes } from "@atscript/vue-table";
 
 const types = createDefaultCellTypes();
-const controls = createDefaultControls();
 </script>
 
 <template>
-  <AsTableRoot url="/api/db/tables/products" :types="types" :controls="controls" :limit="20">
+  <AsTableRoot url="/api/db/tables/products" :types="types" :limit="20">
     <AsTableActions />
     <AsFilters />
     <AsTable :column-menu="{ sort: true, filters: true, hide: true, resetWidth: true }" />
@@ -69,7 +68,7 @@ const controls = createDefaultControls();
 | `url`                   | `string`                                                           | (required\*)   | moost-db endpoint, e.g. `/api/db/tables/products`. \*Still required even with `queryFn` — drives `/meta`.                                                                                                                                                           |
 | `queryFn`               | `(q: Uniquery, page: number, size: number) => Promise<PageResult>` | —              | Bypass moost-db `client.pages`; provide your own backend. See [query.md](query.md).                                                                                                                                                                                 |
 | `clientFactory`         | `ClientFactory`                                                    | app default    | Override how the underlying `Client` is built. Falls back to `getDefaultClientFactory()`.                                                                                                                                                                           |
-| `controls`              | `TAsTableControls`                                                 | `{}`           | Skin-slot override map (header cell, filter dialog, config dialog, preset picker/dialog, row actions, etc.).                                                                                                                                                        |
+| `controls`              | `TAsTableControls`                                                 | `{}`           | Skin-slot override map (header cell, filter dialog, config dialog, preset picker/dialog, row actions, etc.). Pass only the entries you replace — every slot falls back to its built-in internally.                                                                  |
 | `types`                 | `TAsCellTypeComponents`                                            | —              | Cell-type → component map. Seed with `createDefaultCellTypes()`.                                                                                                                                                                                                    |
 | `components`            | `Record<string, Component>`                                        | —              | Named cell overrides for `@ui.table.component "name"`.                                                                                                                                                                                                              |
 | `formTypes`             | `TAsTypeComponents`                                                | —              | Form-type map for the action-form dialog (`@InputForm`).                                                                                                                                                                                                            |
@@ -142,19 +141,19 @@ Beyond the slot, the full `ReactiveTableState` is exposed via `useTableContext()
 
 ## Default control + cell-type factories
 
-`createDefaultControls()`:
+`createDefaultControls()` (rarely needed — every `controls` slot falls back to its built-in internally; spreading defaults into `:controls` statically bundles and eager-mounts the lazy dialogs):
 
-| Slot key           | Default component        |
-| ------------------ | ------------------------ |
-| `headerCell`       | `AsTableHeaderCell`      |
-| `columnMenu`       | `AsColumnMenu`           |
-| `filterDialog`     | `AsFilterDialog`         |
-| `filterInput`      | `AsFilterInput`          |
-| `filterField`      | `AsFilterField`          |
-| `configDialog`     | `AsConfigDialog`         |
-| `confirmDialog`    | `AsConfirmDialog`        |
-| `rowActions`       | `AsRowActions`           |
-| `actionFormDialog` | (lazy-mounted on demand) |
+| Slot key           | Default component                                                   |
+| ------------------ | ------------------------------------------------------------------- |
+| `headerCell`       | `AsTableHeaderCell`                                                 |
+| `columnMenu`       | `AsColumnMenu`                                                      |
+| `filterDialog`     | `AsFilterDialog`                                                    |
+| `filterInput`      | `AsFilterInput`                                                     |
+| `filterField`      | `AsFilterField`                                                     |
+| `configDialog`     | `AsConfigDialog`                                                    |
+| `confirmDialog`    | `AsConfirmDialog`                                                   |
+| `rowActions`       | (not seeded — falls back to `types.__actions`, then `AsRowActions`) |
+| `actionFormDialog` | (not seeded — lazy-mounted on demand)                               |
 
 `createDefaultCellTypes()`:
 
@@ -173,11 +172,11 @@ Beyond the slot, the full `ReactiveTableState` is exposed via `useTableContext()
 | `ref`       | `AsTableCellValue` |
 | `__actions` | `AsRowActions`     |
 
-Both factories return fresh maps — spread to override:
+Spread the cell-type map to override; for `controls`, pass only your overrides:
 
 ```typescript
 const types = { ...createDefaultCellTypes(), status: StatusBadgeCell };
-const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog };
+const controls = { filterDialog: MyFilterDialog }; // overrides only — don't spread defaults
 ```
 
 ## Tier 1 / 2 / 3

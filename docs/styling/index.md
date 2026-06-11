@@ -58,3 +58,4 @@ The first-class customization vectors are:
 - [Icons](/styling/icons) — swap baked icons, add brand glyphs.
 - [The as-\* Shortcut System](/styling/shortcuts) — extend or compose shortcuts.
 - [Pre-built CSS](/styling/prebuilt-css) — no-UnoCSS integration.
+- [Bundle Optimization](/guide/bundle-optimization) — how the extractor safelists only what you use, companion expansion, `excludeComponents`, per-branch shortcut mounting.

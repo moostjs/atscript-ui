@@ -201,9 +201,14 @@ three-column band in between.
 
 ## Combining with `@ui.form.hidden`
 
-Hidden fields still occupy their grid slot unless removed from the def. Pair
-`@ui.form.fn.hidden` (see [Dynamic fields](/forms/dynamic-fields)) with a small
-`colSpan` to swap fields in/out without reflowing siblings.
+Hidden fields render with `display: none` — the grid cell is released and
+following fields reflow into the gap. The field stays mounted and keeps its
+value in the form data; hiding never clears anything.
+
+To swap fields in and out without disturbing a balanced band, toggle a pair of
+fields with matching spans via `@ui.form.fn.hidden` (see
+[Dynamic fields](/forms/dynamic-fields)) — one shows while the other hides, so
+the band's total span stays constant.
 
 ## Next steps
 

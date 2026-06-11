@@ -494,13 +494,14 @@ function injectPresetsApp(override?: string): string;
 
 ### `createDefaultControls()`
 
-Returns a fresh `TAsTableControls` map pre-filled with the eight always-on Tier-2 defaults: `headerCell`, `columnMenu`, `rowActions`, `filterInput`, `filterDialog`, `filterField`, `configDialog`, `confirmDialog`. The other six slots — `fieldsSelector`, `sortersConfig`, `filterValueHelp`, `presetPicker`, `presetDialog`, `actionFormDialog` — are intentionally **not** seeded: the table root mounts the first five lazily on first open, and `actionFormDialog` is lazy-loaded so it only pulls in `@atscript/vue-form` when an `@InputForm` action is detected. Override a slot by spreading and assigning:
+Returns a fresh `TAsTableControls` map pre-filled with the seven always-on Tier-2 defaults: `headerCell`, `columnMenu`, `filterInput`, `filterDialog`, `filterField`, `configDialog`, `confirmDialog`. The other six slots are intentionally **not** seeded: `rowActions` already falls back to the `types` map's `__actions` entry and then the built-in `AsRowActions` (set `controls.rowActions` only to override explicitly — it wins over the `types` entry); `fieldsSelector`, `sortersConfig`, and `filterValueHelp` default to internal (unexported) components resolved at their mount sites; `presetDialog` is lazy-mounted on first open; and `actionFormDialog` is lazy-loaded so it only pulls in `@atscript/vue-form` when an `@InputForm` action is detected.
+
+You rarely need this helper for `:controls` — every dispatch site falls back to its built-in internally, and passing defaults wholesale statically bundles (and eager-mounts) the lazy dialogs. Pass only the entries you replace:
 
 ```typescript
 function createDefaultControls(): TAsTableControls;
 
 const controls = {
-  ...createDefaultControls(),
   filterDialog: MyFilterDialog,
 };
 ```
@@ -533,7 +534,6 @@ interface TAsTableControls {
   sortersConfig?: Component;
   confirmDialog?: Component;
   actionFormDialog?: Component;
-  presetPicker?: Component;
   presetDialog?: Component;
 }
 ```

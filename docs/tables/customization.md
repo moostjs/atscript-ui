@@ -115,16 +115,16 @@ different renderer.
 ## Controls map (`:controls`)
 
 The chrome map. Replace any of the table's Tier-2 dialogs / header
-parts / row action menu. Use `createDefaultControls()` for a fresh
-seeded map:
+parts / row action menu. Pass **only the entries you replace** — every
+slot falls back to its built-in internally, so spreading
+`createDefaultControls()` is redundant and statically bundles (and
+eager-mounts) the dialogs you didn't touch:
 
 ```ts
-import { createDefaultControls } from "@atscript/vue-table";
 import MyConfigDialog from "./MyConfigDialog.vue";
 import MyRowActions from "./MyRowActions.vue";
 
 const controls = {
-  ...createDefaultControls(),
   configDialog: MyConfigDialog,
   rowActions: MyRowActions,
 };
@@ -150,23 +150,33 @@ The full `TAsTableControls` shape:
 | `sortersConfig`    | (lazy)              | Inner sorters list                         |
 | `confirmDialog`    | `AsConfirmDialog`   | In-app `state.prompt()` dialog             |
 | `actionFormDialog` | (lazy)              | Wraps `<AsForm>` for `@InputForm` actions  |
-| `presetPicker`     | `AsPresetPicker`    | Dropdown for apply / save / manage         |
 | `presetDialog`     | `AsPresetDialog`    | Rename / delete / publish / favorite       |
 
-Lazy entries aren't seeded by `createDefaultControls()` — the table
-root mounts them only when needed (an action declares an
-`@InputForm`, a filter input opens a value-help, etc.). To
-pre-seed, import from the package and assign explicitly:
+The preset **picker** is not a control — `<AsPresetPicker>` is a
+Tier-1 component you mount (or don't) in your own toolbar markup.
+
+The table root bundles and mounts the dialogs lazily — only when
+needed (the dialog first opens, an action declares an `@InputForm`, a
+filter input opens a value-help, etc.). Supplying a dialog in
+`controls` opts it into **eager** bundling and mounting, so pass only
+the dialogs you actually replace. The same applies if you want to
+eager-load a built-in dialog deliberately:
 
 ```ts
 import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
 
-const controls = { ...createDefaultControls(), actionFormDialog: AsActionFormDialog };
+const controls = { actionFormDialog: AsActionFormDialog };
 ```
 
 `AsActionFormDialog` pulls in the full `@atscript/vue-form` runtime,
 so the main entry doesn't export it — import the dedicated subpath
 above when you need to override or eager-load.
+
+::: tip Bundle impact
+Lazy controls download on first open; assigning any `controls.X` makes
+that dialog eager. After replacing a default, shed its now-unused styles
+with `excludeComponents` — see [Bundle Optimization](/guide/bundle-optimization).
+:::
 
 ## Worked example: design-system row actions
 
@@ -218,7 +228,7 @@ function onClick(action: TVueTableActionInfo) {
 ```
 
 ```ts
-const controls = { ...createDefaultControls(), rowActions: DesignSystemRowActions };
+const controls = { rowActions: DesignSystemRowActions };
 ```
 
 `state.actions.cellRow` is the pre-flattened, per-row action list

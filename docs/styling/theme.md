@@ -8,7 +8,7 @@
 
 ```typescript
 interface AsPresetVunorOptions extends /* vunor's presetVunor options */ {
-  excludeComponents?: string[];
+  excludeComponents?: AsComponentName[];
   iconOverrides?: Record<string, string>;
 }
 ```
@@ -27,7 +27,7 @@ Every other field (`baseRadius`, `palette.lightest`, `typography`, `animation`, 
 | `fingertip`         | `{ xs/s/m/l/xl?: string }`              | see below      | Touch-target ladder driving `h-fingertip-*` / `size-fingertip-*`. Per-key merged.                                                            |
 | `typography`        | vunor typography map                    | vunor defaults | Override individual entries in the typography ladder (`body`, `callout`, `h1`, …). Wholesale replacement of the whole map.                   |
 | `animation`         | `{ durations / animation / keyframes }` | vunor defaults | Animation tokens. Wholesale replacement.                                                                                                     |
-| `excludeComponents` | `string[]`                              | `[]`           | Kebab-case component names to drop from the safelist. Use when you swap a default for your own implementation and want to shed unused rules. |
+| `excludeComponents` | `AsComponentName[]`                     | `[]`           | Kebab-case component names to drop from the safelist. Use when you swap a default for your own implementation and want to shed unused rules. |
 | `iconOverrides`     | `Record<string, string>`                | `{}`           | Replace baked icons with custom SVG strings or Iconify IDs. See [Icons](/styling/icons).                                                     |
 
 ## Baked-in defaults

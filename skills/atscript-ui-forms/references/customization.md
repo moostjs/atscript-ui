@@ -14,6 +14,7 @@ Four levels of customization, the `TAsComponentProps` contract for custom compon
 - [TAsComponentEmits](#tascomponentemits)
 - [Custom component skeleton](#custom-component-skeleton)
 - [Composables for custom components](#composables-for-custom-components)
+- [Grid layout](#grid-layout)
 - [Locale & currency](#locale--currency)
 
 ## The two prop maps
@@ -415,6 +416,27 @@ Available from `@atscript/vue-form`:
 | `useAsExternalErrors(opts)`   | `{ effective, formError, isFormDismissed, dismissAt, dismissForm, reset }`                                                 | Manage server errors with local dismissal (used internally by useAsForm).              |
 | `useAsNestedSectionsStore()`  | `AsNestedSectionsStore \| undefined`                                                                                       | Read the open/closed registry for collapsible sections.                                |
 | `useAsUnionVariant()`         | `TAsUnionContext \| undefined`                                                                                             | Consume and clear the union variant picker injection inside a custom variant renderer. |
+
+## Grid layout
+
+Every `AsObject` renders a 12-column CSS grid; fields default to the full row. Two annotations set the footprint:
+
+```atscript
+@ui.form.grid.colSpan '6'          // columns: '1'..'12' or aliases 'full' (12), 'half' (6), 'third' (4)
+@ui.form.grid.rowSpan '2'          // rows: positive numeric strings only, no aliases
+@ui.form.grid.colSpan '4', '6'     // optional 2nd arg = span on narrow containers
+```
+
+| Rule                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Invalid values (`'0'`, negatives, decimals, unknown aliases) silently fall back to the default (col 12 / row 1). Parser: `packages/ui/src/form/grid.ts`.                                                                                |
+| Responsiveness is **container-query** driven, not viewport: `as-narrow:` compiles to `@container as-grid (max-width: 480px)`. The grid registers `container-name: as-grid` via the `as-form-grid` shortcut.                             |
+| Narrow span defaults to `'12'` (auto-stack) regardless of desktop span — never write `'6', '12'` by hand. The narrow 2nd arg exists to opt into something other than full-width.                                                        |
+| A nested `AsObject` re-checks its **own** width: a `colSpan '6'` struct whose inner field is `colSpan '6'` auto-stacks on desktop because the inner container is `< 480px`.                                                             |
+| `col-span-1..12` / `row-span-1..6` (+ `as-narrow:` flavours) are pre-safelisted by `@atscript/ui-styles` — arbitrary spans need no preset edits.                                                                                        |
+| The generated classes ride on the `class` prop — a custom component with a bare root MUST bind `:class="props.class"` or the spans are silently dropped (see the callout in [TAsComponentProps contract](#tascomponentprops-contract)). |
+
+Docs: https://ui.atscript.dev/forms/grid-layout
 
 ## Locale & currency
 

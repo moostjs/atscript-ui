@@ -35,6 +35,10 @@ The seeded entries:
 | `union`                          | `AsCellUnion`      |
 | `__actions` (synthesised pseudo) | `AsRowActions`     |
 
+Every built-in cell is also importable individually via its kebab
+subpath (e.g. `import AsCellDate from "@atscript/vue-table/as-cell-date"`)
+when you'd rather hand-pick entries than spread the full default map.
+
 Pass the map to the table root:
 
 ```vue
@@ -105,6 +109,9 @@ Locale-and-timezone aware. The column type picks the format:
 - `date` → `{ year, month: 'short', day: '2-digit' }`
 - `datetime` → adds `{ hour: '2-digit', minute: '2-digit' }`
 - `relative` → `formatTimeAgoIntl(value)` (e.g. `3 hours ago`).
+
+Null-like values (`null` / `undefined` / `""`) and the Unix-epoch
+sentinel (timestamp `0`) render as blank cells.
 
 The cell always stamps `title` with the absolute ISO string so e2e
 tests can assert the canonical timestamp regardless of locale.

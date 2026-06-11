@@ -90,3 +90,4 @@ The component imports the type, asks the `FieldResolver` for every field's metad
 - [Tables guide](/tables/) — annotations, filtering, sorting, cells, presets.
 - [Workflows guide](/workflows/) — server authoring, client form, state persistence.
 - [Ecosystem map](./ecosystem) — how the packages fit together and when to reach for which.
+- [Bundle optimization](./bundle-optimization) — what you ship and what you don't: per-component subpaths, lazy dialogs, the usage-driven CSS safelist, `excludeComponents`.
