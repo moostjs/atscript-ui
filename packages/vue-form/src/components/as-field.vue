@@ -18,6 +18,7 @@ import {
   isUnionField,
   isTupleField,
   resolveFieldProp,
+  resolveFormProp,
   resolveOptions,
   resolveAttrs,
   resolveSingularLabel,
@@ -136,6 +137,10 @@ const parentLevel = inject(
   computed(() => -1),
 );
 const myLevel = isStructured || isUnion ? parentLevel.value + 1 : -1;
+// Root field marker — the structured field rendered directly under AsForm
+// (its prop IS the form's annotated interface). Root title/description are
+// FORM-level fns `(data, context)`, not field-style fns.
+const isRoot = myLevel === 0;
 
 // Union fields take a level slot too — AsUnion dispatches the variant's
 // component (AsObject / AsArray / etc.) directly, so the variant's chrome
@@ -525,6 +530,16 @@ if (props.field.allStatic) {
   // Safe alias — guaranteed non-null when hasFn.has() is true (implies needsFullScope)
   const fs = scope as ComputedRef<TFnScope>;
 
+  // Root title/description are FORM-level fns `(data, context)` — resolved via
+  // `resolveFormProp` with the bare form scope (`buildScope()` with no args),
+  // mirroring use-as-form.ts. Nested levels keep the field-style
+  // `(v, data, context, entry)` resolution. Static fallbacks read the same keys.
+  const rootScope = isRoot ? computed(() => buildScope()) : undefined;
+  const resolveHeaderProp = (fnKey: string, staticKey: string) =>
+    isRoot
+      ? resolveFormProp<string>(prop, fnKey, staticKey, (rootScope as ComputedRef<TFnScope>).value)
+      : resolveFieldProp<string>(prop, fnKey, staticKey, fs.value);
+
   // ── Display props (full scope phase) ───────────────────────
   label = maybeComputed(
     hasFn.has("label"),
@@ -535,7 +550,7 @@ if (props.field.allStatic) {
 
   description = maybeComputed(
     hasFn.has("description"),
-    () => resolveFieldProp<string>(prop, UI_FORM_FN_DESCRIPTION, META_DESCRIPTION, fs.value),
+    () => resolveHeaderProp(UI_FORM_FN_DESCRIPTION, META_DESCRIPTION),
     getFieldMeta(prop, META_DESCRIPTION),
   );
 
@@ -575,9 +590,7 @@ if (props.field.allStatic) {
     isStructured || isUnion
       ? maybeComputed(
           hasFn.has("title"),
-          () =>
-            resolveFieldProp<string>(prop, UI_FORM_FN_TITLE, META_LABEL, fs.value) ??
-            props.field.name,
+          () => resolveHeaderProp(UI_FORM_FN_TITLE, META_LABEL) ?? props.field.name,
           getFieldMeta(prop, META_LABEL) ?? props.field.name,
         )
       : undefined;
@@ -747,7 +760,7 @@ const invariantProps = {
 // For allStatic fields this computed has zero reactive deps (evaluated
 // once and cached). Error-only changes skip re-evaluating all unwrap() calls.
 const displayProps = computed(() => {
-  const titleValue = myLevel === 0 && hideRootTitle ? undefined : unwrap(title);
+  const titleValue = isRoot && hideRootTitle ? undefined : unwrap(title);
   return {
     value: unwrap(phantomValue),
     label: unwrap(label),

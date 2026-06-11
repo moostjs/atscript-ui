@@ -2,22 +2,7 @@
 import { computed } from "vue";
 import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 import { compileFieldFn } from "@atscript/ui-fns";
-
-/**
- * One password-policy descriptor as sent by the aooth backend.
- *
- * - `rule` — serialized function literal (e.g. `"(p) => p.length >= 8"`).
- *   Compiled + cached via `compileFieldFn` from `@atscript/ui-fns`, which
- *   shares the same FNPool already used for `@ui.form.fn.*` annotations.
- * - `description` — plain label shown to the user.
- * - `errorMessage` — backend-supplied wording reserved for future
- *   "show on submit failure" surfacing; not rendered today.
- */
-export interface AsPasswordRulesPolicy {
-  rule: string;
-  description?: string;
-  errorMessage?: string;
-}
+import type { AsPasswordRulesPolicy } from "../types";
 
 const props = defineProps<
   TAsComponentProps & {

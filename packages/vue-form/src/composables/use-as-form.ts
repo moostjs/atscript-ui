@@ -14,7 +14,6 @@ import {
   getFormValidator,
   iteratePathAncestors,
   mergeErrorMaps,
-  resolveFieldProp,
   resolveFormProp,
   META_DESCRIPTION,
   META_LABEL,
@@ -284,14 +283,14 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // Widen `TFnScope` to `Record<string, unknown>` for the resolver boundary —
   // ui-fns' DynamicFieldResolver does the same cast internally; the static
   // resolver ignores the scope entirely.
-  // `v` mirrors the root field's value, which IS the domain data — root-level
-  // `@ui.form.fn.*` strings are field fns whose first arg is the field value,
-  // so `(data) => data.firstName` on the interface receives the form data.
-  // Top-level fns (`submit.text` / `submit.disabled`) ignore `v` entirely.
+  // Form-level `@ui.form.fn.*` strings (title / description / submit.text /
+  // submit.disabled) compile via ui-fns' `compileTopFn` and are invoked as
+  // `(data, context)`. `v` / `entry` are field-scope concepts and stay
+  // `undefined` here — field fns build their own scope in as-field.vue.
   const ctx = computed<Record<string, unknown>>(
     () =>
       ({
-        v: getDomainData(),
+        v: undefined,
         data: getDomainData(),
         context: (formContext.value ?? {}) as Record<string, unknown>,
         entry: undefined,
@@ -319,13 +318,14 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         false),
   );
 
-  // ── Form-level title / description (root field, fn-aware) ──
-  // Mirror as-field.vue's resolution but WITHOUT the field-name fallback:
-  // a form header title may legitimately be undefined.
-  const resolveRootProp = (fnKey: string, staticKey: string): string | undefined => {
-    const root = options.def().rootField;
-    return root ? resolveFieldProp<string>(root.prop, fnKey, staticKey, ctx.value) : undefined;
-  };
+  // ── Form-level title / description (root interface, fn-aware) ──
+  // Root `@ui.form.fn.title` / `@ui.form.fn.description` are FORM-level fns
+  // `(data, context)` — resolved via `resolveFormProp` like submit.*, NOT
+  // field-style. Static `@meta.label` / `@meta.description` fall back
+  // identically (the root field's prop IS the form's annotated type). No
+  // field-name fallback: a form header title may legitimately be undefined.
+  const resolveRootProp = (fnKey: string, staticKey: string): string | undefined =>
+    resolveFormProp<string>(options.def().type, fnKey, staticKey, ctx.value);
   const title = computed(() => resolveRootProp(UI_FORM_FN_TITLE, META_LABEL));
   const description = computed(() => resolveRootProp(UI_FORM_FN_DESCRIPTION, META_DESCRIPTION));
 

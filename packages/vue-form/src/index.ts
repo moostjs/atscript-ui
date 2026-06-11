@@ -9,6 +9,7 @@ export {
   AsFieldShell,
   AsInput,
   AsSelect,
+  AsMultiSelect,
   AsRadio,
   AsCheckbox,
   AsParagraph,

@@ -24,17 +24,31 @@ function validateFnString(
   return undefined;
 }
 
-function makeFnAnnotation(description: string, mode: "field" | "top"): AnnotationSpec {
+const FN_MODES = {
+  field: {
+    nodeType: ["prop", "type"],
+    argDoc: "(value, data, context, entry) => result",
+  },
+  top: {
+    nodeType: ["interface", "type"],
+    argDoc: "(data, context) => result",
+  },
+  both: {
+    nodeType: ["prop", "interface", "type"],
+    argDoc:
+      "(value, data, context, entry) => result on fields; " +
+      "(data, context) => result on the root interface",
+  },
+} as const;
+
+function makeFnAnnotation(description: string, mode: keyof typeof FN_MODES): AnnotationSpec {
   return new AnnotationSpec({
     description,
-    nodeType: mode === "field" ? ["prop", "type"] : ["interface", "type"],
+    nodeType: [...FN_MODES[mode].nodeType],
     argument: {
       name: "fn",
       type: "string",
-      description:
-        mode === "field"
-          ? "JS function string: (value, data, context, entry) => result"
-          : "JS function string: (data, context) => result",
+      description: `JS function string: ${FN_MODES[mode].argDoc}`,
     },
     validate: validateFirstArg,
   });
@@ -53,6 +67,7 @@ function validateFirstArg(
 
 const fnAnnotation = (description: string) => makeFnAnnotation(description, "field");
 const fnTopAnnotation = (description: string) => makeFnAnnotation(description, "top");
+const fnBothAnnotation = (description: string) => makeFnAnnotation(description, "both");
 
 const TABLE_ROW_SCOPE_DOC =
   "Receives `{ row, ctx }` where `row` is the current row's data object and `ctx` carries " +
@@ -157,9 +172,14 @@ export const uiFnsAnnotations: TAnnotationsTree = {
           disabled: fnTopAnnotation("Computed submit disabled state: (data, context) => boolean"),
         },
 
-        // Field-level computed
+        // Field-level computed (description also allowed on the root
+        // interface, where it is a FORM-level fn `(data, context)` — same
+        // contract as `ui.form.fn.title`)
         label: fnAnnotation("Computed label: (value, data, context, entry) => string"),
-        description: fnAnnotation("Computed description: (value, data, context, entry) => string"),
+        description: fnBothAnnotation(
+          "Computed description: (value, data, context, entry) => string on fields; " +
+            "(data, context) => string on the root interface",
+        ),
         hint: fnAnnotation("Computed hint: (value, data, context, entry) => string"),
         placeholder: fnAnnotation("Computed placeholder: (value, data, context, entry) => string"),
         disabled: fnAnnotation("Computed disabled state: (value, data, context, entry) => boolean"),

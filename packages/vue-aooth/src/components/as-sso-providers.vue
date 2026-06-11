@@ -1,31 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
-
-/**
- * Single SSO provider descriptor — fed via `@ui.form.attr` /
- * `@ui.form.fn.attr` on the consumer's `.as` schema (the aooth backend
- * supplies the resolved list at runtime).
- *
- * - `id` — committed to the bound model (`model.value = id`) on click and
- *   carried by the fired form action; identifies which provider the
- *   workflow should redirect to.
- * - `text` — rendered VERBATIM. The backend owns the full display string
- *   (e.g. "Continue with Google" for a main-stack button, "Discord" for a
- *   secondary chip). We never compose a "Continue with {name}" prefix.
- * - `icon` — optional CSS class painting the brand glyph (e.g.
- *   `i-logos-google-icon`). Applied as-is; the consumer owns the safelist /
- *   preset coverage, same contract as `prefixIcon`.
- * - `secondary` — `true` ⇒ renders as a compact chip below the "or" divider;
- *   omitted/false ⇒ renders as a full-width button in the main stack (the
- *   default).
- */
-export interface AsSsoProvider {
-  id: string;
-  text: string;
-  icon?: string;
-  secondary?: boolean;
-}
+import type { AsSsoProvider } from "../types";
 
 const props = defineProps<
   TAsComponentProps<string | undefined> & {

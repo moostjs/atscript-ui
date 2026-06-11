@@ -55,6 +55,22 @@ declare global {
     "ui.form.suffix": string
     "ui.form.suffix.ref": string
     "ui.form.suffix.icon": string
+    "ui.form.validate": (string)[]
+    "ui.form.fn.title": string
+    "ui.form.fn.submit.text": string
+    "ui.form.fn.submit.disabled": string
+    "ui.form.fn.label": string
+    "ui.form.fn.description": string
+    "ui.form.fn.hint": string
+    "ui.form.fn.placeholder": string
+    "ui.form.fn.disabled": string
+    "ui.form.fn.hidden": string
+    "ui.form.fn.readonly": string
+    "ui.form.fn.value": string
+    "ui.form.fn.classes": string
+    "ui.form.fn.styles": string
+    "ui.form.fn.options": string
+    "ui.form.fn.attr": ({ name: string, fn: string })[]
     "ui.table.width": string
     "ui.table.component": string
     "ui.table.hidden": boolean
@@ -64,6 +80,9 @@ declare global {
     "ui.table.styles": (string)[]
     "ui.table.type": string
     "ui.table.order": number
+    "ui.table.fn.attr": ({ name: string, fn: string })[]
+    "ui.table.fn.classes": string
+    "ui.table.fn.styles": string
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]

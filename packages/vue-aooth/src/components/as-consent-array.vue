@@ -2,21 +2,7 @@
 import { computed } from "vue";
 import { AsFieldShell, useAsField, type TAsComponentProps } from "@atscript/vue-form";
 import { getFieldMeta, META_LABEL } from "@atscript/ui";
-
-/**
- * Single pending consent descriptor — fed via `@ui.form.attr` / `@ui.form.fn.attr`
- * on the consumer's `.as` schema.
- *
- * - `id` — value committed to the bound `string[]` when checked.
- * - `text` — checkbox label.
- * - `required` — non-empty string ⇒ mandatory consent; the string IS the
- *   surfaced error message. Empty/undefined ⇒ optional.
- */
-export interface AsConsentArrayItem {
-  id: string;
-  text: string;
-  required?: string;
-}
+import type { AsConsentArrayItem } from "../types";
 
 const props = defineProps<
   TAsComponentProps<string[]> & {
