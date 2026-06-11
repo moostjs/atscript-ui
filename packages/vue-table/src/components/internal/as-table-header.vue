@@ -4,7 +4,12 @@ import type { ColumnDef, SortControl } from "@atscript/ui";
 import type { ColumnReorderPosition, ColumnWidthsMap, FieldFilters } from "@atscript/ui-table";
 import { ROW_ACTIONS_PATH, type ColumnMenuConfig, type SelectAllState } from "../../types";
 import { useColumnHeaderDragResize } from "../../composables/use-column-header-drag-resize";
+import { useTableComponent } from "../../composables/use-table-component";
 import AsTableHeaderCell from "../defaults/as-table-header-cell.vue";
+
+// Static skin-slot resolution — `controls.headerCell ?? AsTableHeaderCell`.
+// Plain const (no reactivity): controls are captured once at table setup.
+const HeaderCell = useTableComponent("headerCell", AsTableHeaderCell);
 
 const props = withDefaults(
   defineProps<{
@@ -158,7 +163,8 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
         @dragend="col.fixed ? undefined : onHeaderDragEnd()"
       >
         <slot v-if="!col.fixed" :name="`header-${col.path}`" :column="col">
-          <AsTableHeaderCell
+          <component
+            :is="HeaderCell"
             :column="col"
             :sort-direction="sortMap[col.path] ?? null"
             :filters="filters?.[col.path]"

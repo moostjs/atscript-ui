@@ -6,7 +6,6 @@ import {
   AsFilterDialog,
   AsFilterField,
   AsFilterInput,
-  AsRowActions,
   AsTableHeaderCell,
 } from "../components/defaults";
 
@@ -17,6 +16,11 @@ import {
  * ```ts
  * const controls = { ...createDefaultControls(), filterDialog: MyFilterDialog }
  * ```
+ *
+ * `rowActions` is intentionally not seeded — the row-actions column
+ * already falls back to the `types` map's `__actions` entry and then the
+ * built-in renderer. Set `controls.rowActions` only to override explicitly
+ * (it wins over the `types` entry).
  *
  * `actionFormDialog` is intentionally not seeded — the table root
  * lazy-mounts it only when an `@InputForm` action is detected. To override
@@ -32,6 +36,5 @@ export function createDefaultControls(): TAsTableControls {
     filterField: AsFilterField,
     configDialog: AsConfigDialog,
     confirmDialog: AsConfirmDialog,
-    rowActions: AsRowActions,
   };
 }

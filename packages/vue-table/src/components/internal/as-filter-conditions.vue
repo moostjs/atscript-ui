@@ -10,11 +10,15 @@ import {
   type FilterCondition,
   type FilterConditionType,
 } from "@atscript/ui-table";
+import { useTableComponent } from "../../composables/use-table-component";
 import AsFilterInput from "../defaults/as-filter-input.vue";
 
 const props = defineProps<{
   column: ColumnDef;
 }>();
+
+// Static skin-slot resolution — `controls.filterInput ?? AsFilterInput`.
+const FilterInput = useTableComponent("filterInput", AsFilterInput);
 
 const model = defineModel<FilterCondition[]>({ required: true });
 
@@ -61,11 +65,12 @@ function applyShortcut(dates: [string, string]) {
       </option>
     </select>
 
-    <AsFilterInput
+    <component
+      :is="FilterInput"
       :column="column"
       :condition="cond"
       :filter-type="filterType"
-      @update:condition="(c) => updateCondition(index, c)"
+      @update:condition="(c: Partial<FilterCondition>) => updateCondition(index, c)"
     />
 
     <button

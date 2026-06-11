@@ -17,6 +17,7 @@ import {
   ownerNameOf,
   readPresetLabel,
 } from "../../composables/preset-aspect-display";
+import { useSeedOnOpen } from "../../composables/use-seed-on-open";
 
 /**
  * Tier-2 default — preset management dialog. Pending-changes model: pin /
@@ -86,15 +87,14 @@ function syncPendingFromServer() {
   pendingDeleteIds.value = new Set();
 }
 
-watch(isOpen, (open) => {
-  if (open) {
-    syncPendingFromServer();
-    searchQuery.value = "";
-    cancelRename();
-    // Wait one tick so Reka's DialogContent focus-trap settles before
-    // we steal focus to the search input.
-    void nextTick(() => searchInputRef.value?.focus());
-  }
+// On open: snapshot server state into the pending model.
+useSeedOnOpen(isOpen, () => {
+  syncPendingFromServer();
+  searchQuery.value = "";
+  cancelRename();
+  // Wait one tick so Reka's DialogContent focus-trap settles before
+  // we steal focus to the search input.
+  void nextTick(() => searchInputRef.value?.focus());
 });
 
 // Re-sync if server data refreshes while the dialog is open and the user

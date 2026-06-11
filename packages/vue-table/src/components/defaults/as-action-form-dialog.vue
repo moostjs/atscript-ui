@@ -40,37 +40,45 @@ const error = ref<string | null>(null);
 
 const resolvedTypes = formTypes ?? createDefaultTypes();
 
-watch(req, async (next) => {
-  def.value = null;
-  formData.value = null;
-  error.value = null;
-  loading.value = false;
-  if (next === null) return;
-  if (!next.action.inputForm) {
-    error.value = "Action does not declare an input form.";
-    return;
-  }
-  loading.value = true;
-  // A second request supersedes the first — `req.value !== next` short-circuits
-  // every continuation, so the prior in-flight `getActionForm()` can't paint
-  // stale state into the dialog.
-  const stale = () => req.value !== next;
-  try {
-    const annotated = await client.getActionForm(next.action.name);
-    if (stale()) return;
-    if (annotated === null) {
-      error.value = `Form schema "${next.action.inputForm}" not registered on server.`;
+// `immediate: true` — this dialog is lazy-mounted by `<AsTableRoot>`, so a
+// request raised while its chunk is still loading would otherwise be missed
+// (the component mounts with `req` already non-null and no transition to
+// observe). On the eager path the immediate run sees `null` and no-ops.
+watch(
+  req,
+  async (next) => {
+    def.value = null;
+    formData.value = null;
+    error.value = null;
+    loading.value = false;
+    if (next === null) return;
+    if (!next.action.inputForm) {
+      error.value = "Action does not declare an input form.";
       return;
     }
-    def.value = createFormDef(annotated);
-    formData.value = createFormData(annotated) as { value: Record<string, unknown> };
-  } catch (err) {
-    if (stale()) return;
-    error.value = err instanceof Error ? err.message : String(err);
-  } finally {
-    if (!stale()) loading.value = false;
-  }
-});
+    loading.value = true;
+    // A second request supersedes the first — `req.value !== next` short-circuits
+    // every continuation, so the prior in-flight `getActionForm()` can't paint
+    // stale state into the dialog.
+    const stale = () => req.value !== next;
+    try {
+      const annotated = await client.getActionForm(next.action.name);
+      if (stale()) return;
+      if (annotated === null) {
+        error.value = `Form schema "${next.action.inputForm}" not registered on server.`;
+        return;
+      }
+      def.value = createFormDef(annotated);
+      formData.value = createFormData(annotated) as { value: Record<string, unknown> };
+    } catch (err) {
+      if (stale()) return;
+      error.value = err instanceof Error ? err.message : String(err);
+    } finally {
+      if (!stale()) loading.value = false;
+    }
+  },
+  { immediate: true },
+);
 
 // `recomputeFit` breaks at the first overflow, so cap formatting at 50 — a
 // 1000-row bulk action would otherwise format 950 ids + render 950 hidden

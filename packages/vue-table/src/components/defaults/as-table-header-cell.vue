@@ -10,7 +10,12 @@ import type { ColumnDef } from "@atscript/ui";
 import type { ColumnWidthEntry, FilterCondition } from "@atscript/ui-table";
 import { isFilled } from "@atscript/ui-table";
 import type { ColumnMenuConfig } from "../../types";
+import { useTableComponent } from "../../composables/use-table-component";
 import AsColumnMenu from "./as-column-menu.vue";
+
+// Skin-slot for the column-menu COMPONENT (`controls.columnMenu`) — distinct
+// from the `columnMenu` data prop below, which configures menu sections.
+const MenuComponent = useTableComponent("columnMenu", AsColumnMenu);
 
 const props = withDefaults(
   defineProps<{
@@ -58,7 +63,8 @@ function onMenuResetWidth() {
 </script>
 
 <template>
-  <AsColumnMenu
+  <component
+    :is="MenuComponent"
     :column="props.column"
     :order="sortDirection"
     :filters="filters"
@@ -89,5 +95,5 @@ function onMenuResetWidth() {
         />
       </span>
     </button>
-  </AsColumnMenu>
+  </component>
 </template>

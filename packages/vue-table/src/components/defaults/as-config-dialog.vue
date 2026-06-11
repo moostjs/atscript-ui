@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, shallowRef, watch } from "vue";
+import { computed, shallowRef } from "vue";
 import type { SortControl } from "@atscript/ui";
 import {
   DialogRoot,
@@ -16,11 +16,17 @@ import {
 import { arraysEqual, sortersEqual } from "@atscript/ui-table";
 import type { ConfigTab } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
+import { useTableComponent } from "../../composables/use-table-component";
 import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
+import { useSeedOnOpen } from "../../composables/use-seed-on-open";
 import AsFieldsSelector from "../internal/as-fields-selector.vue";
 import AsSortersConfig from "../internal/as-sorters-config.vue";
 
 const { state } = useTableContext();
+// Static skin-slot resolution — `controls.fieldsSelector` / `controls.sortersConfig`
+// replace the internal defaults without them ever being public exports.
+const FieldsSelector = useTableComponent("fieldsSelector", AsFieldsSelector);
+const SortersConfig = useTableComponent("sortersConfig", AsSortersConfig);
 
 // Copy-on-open dialog models
 const columnsModel = shallowRef<string[]>([]);
@@ -41,13 +47,11 @@ const activeTab = computed({
   },
 });
 
-// On open: shallow-copy current state into dialog models
-watch(isOpen, (open) => {
-  if (open) {
-    columnsModel.value = [...state.columnNames.value];
-    filtersModel.value = [...state.filterFields.value];
-    sortersModel.value = state.sorters.value.map((s) => ({ ...s }));
-  }
+// On open: shallow-copy current state into dialog models.
+useSeedOnOpen(isOpen, () => {
+  columnsModel.value = [...state.columnNames.value];
+  filtersModel.value = [...state.filterFields.value];
+  sortersModel.value = state.sorters.value.map((s) => ({ ...s }));
 });
 
 const filterableColumns = computed(() => state.allColumns.value.filter((c) => c.filterable));
@@ -146,11 +150,15 @@ function onOpenAutoFocus(event: Event) {
           </TabsList>
 
           <TabsContent value="columns" class="as-config-tab-content">
-            <AsFieldsSelector :columns="state.allColumns.value" v-model="columnsModel" />
+            <component
+              :is="FieldsSelector"
+              :columns="state.allColumns.value"
+              v-model="columnsModel"
+            />
           </TabsContent>
 
           <TabsContent value="filters" class="as-config-tab-content">
-            <AsFieldsSelector :columns="filterableColumns" v-model="filtersModel">
+            <component :is="FieldsSelector" :columns="filterableColumns" v-model="filtersModel">
               <template #label="{ label, value }">
                 <span class="as-config-field-label-wrap">
                   <span class="as-config-field-label-text">{{ label }}</span>
@@ -159,11 +167,11 @@ function onOpenAutoFocus(event: Event) {
                   </span>
                 </span>
               </template>
-            </AsFieldsSelector>
+            </component>
           </TabsContent>
 
           <TabsContent value="sorters" class="as-config-tab-content">
-            <AsSortersConfig :columns="sortableColumns" v-model="sortersModel" />
+            <component :is="SortersConfig" :columns="sortableColumns" v-model="sortersModel" />
           </TabsContent>
         </TabsRoot>
 

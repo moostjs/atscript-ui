@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { useTableContext } from "../composables/use-table-state";
+import { useTableComponent } from "../composables/use-table-component";
 import AsFilterField from "./defaults/as-filter-field.vue";
 
 const props = defineProps<{
@@ -9,6 +10,8 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+// Static skin-slot resolution — `controls.filterField ?? AsFilterField`.
+const FilterField = useTableComponent("filterField", AsFilterField);
 
 const columnMap = computed(() => {
   const tableDef = state.tableDef.value;
@@ -34,5 +37,11 @@ const activeColumns = computed(() => {
 </script>
 
 <template>
-  <AsFilterField v-for="col in activeColumns" :key="col.path" :column="col" v-bind="$attrs" />
+  <component
+    :is="FilterField"
+    v-for="col in activeColumns"
+    :key="col.path"
+    :column="col"
+    v-bind="$attrs"
+  />
 </template>

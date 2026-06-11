@@ -75,7 +75,10 @@ export function dragEvent(type: string, init: Partial<DragEvent> = {}) {
  * Build a simple MetaResponse for testing.
  * Creates an object type with the given field names (all string, sortable, filterable).
  */
-export function createMockMeta(fieldNames: string[]): MetaResponse {
+export function createMockMeta(
+  fieldNames: string[],
+  opts?: { actions?: MetaResponse["actions"] },
+): MetaResponse {
   const h = defineAnnotatedType("object");
   for (const name of fieldNames) {
     const prop = defineAnnotatedType().designType("string");
@@ -95,7 +98,7 @@ export function createMockMeta(fieldNames: string[]): MetaResponse {
     primaryKeys: ["id"],
     preferredId: ["id"],
     crud: { query: [], pages: [], one: [] },
-    actions: [],
+    actions: opts?.actions ?? [],
     searchable: false,
     vectorSearchable: false,
     searchIndexes: [],

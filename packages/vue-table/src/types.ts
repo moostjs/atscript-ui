@@ -278,8 +278,6 @@ export interface TAsTableControls {
    */
   actionFormDialog?: Component;
 
-  /** Tier-1 dropdown picker. Renders the presets menu (Save / Save as / Reset / Manage). */
-  presetPicker?: Component;
   /** Tier-2 management dialog (rename / delete / public-toggle / favorite / default). */
   presetDialog?: Component;
 }

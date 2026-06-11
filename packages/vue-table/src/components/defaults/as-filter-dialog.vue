@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import {
   columnFilterType,
@@ -23,11 +23,16 @@ import {
   TabsContent,
 } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
+import { useTableComponent } from "../../composables/use-table-component";
 import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
+import { useSeedOnOpen } from "../../composables/use-seed-on-open";
 import AsFilterConditions from "../internal/as-filter-conditions.vue";
 import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
 const { state } = useTableContext();
+// Static skin-slot resolution — `controls.filterValueHelp` replaces the
+// internal default without it ever being a public export.
+const FilterValueHelp = useTableComponent("filterValueHelp", AsFilterValueHelp);
 
 const isOpen = computed({
   get: () => state.filterDialogColumn.value !== null,
@@ -53,8 +58,10 @@ const valueHelpConditions = ref<FilterCondition[]>([]);
 const freeConditions = ref<FilterCondition[]>([]);
 const activeTab = ref<"value-help" | "conditions">("value-help");
 
-watch(column, (col) => {
-  if (!col) return;
+// Seed the draft from the applied filters of the column being edited
+// (re-seeds when the dialog switches to a different column).
+useSeedOnOpen(column, () => {
+  const col = column.value!;
   const existing = state.filters.value[col.path] ?? [];
   if (hasValueHelp.value) {
     valueHelpConditions.value = existing.filter(isSimpleEq);
@@ -225,7 +232,7 @@ function onOpenAutoFocus(event: Event) {
           </TabsList>
 
           <TabsContent value="value-help" class="as-filter-dialog-tab-content">
-            <AsFilterValueHelp :column="column" v-model="valueHelpConditions" />
+            <component :is="FilterValueHelp" :column="column" v-model="valueHelpConditions" />
           </TabsContent>
 
           <TabsContent
