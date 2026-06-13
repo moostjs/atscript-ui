@@ -10,20 +10,18 @@ import {
 } from "vue";
 import {
   buildDescendantErrorCounts,
-  getFieldMeta,
+  getDeclaredFormActions,
   getFormValidator,
   iteratePathAncestors,
   mergeErrorMaps,
   resolveFormProp,
   META_DESCRIPTION,
   META_LABEL,
-  UI_FORM_ACTION,
   UI_FORM_FN_DESCRIPTION,
   UI_FORM_FN_SUBMIT_DISABLED,
   UI_FORM_FN_SUBMIT_TEXT,
   UI_FORM_FN_TITLE,
   UI_FORM_SUBMIT_TEXT,
-  WF_ACTION_WITH_DATA,
   type ClientFactory,
   type FormDef,
 } from "@atscript/ui";
@@ -353,11 +351,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
 
   // ── Action handler (provided to AsField tree) ──────────────
   function supportsAction(def: FormDef, actionId: string): boolean {
-    return def.fields.some((f) => {
-      const a = getFieldMeta(f.prop, UI_FORM_ACTION);
-      if (a?.id === actionId) return true;
-      return getFieldMeta(f.prop, WF_ACTION_WITH_DATA) === actionId;
-    });
+    return getDeclaredFormActions(def).some((a) => a.id === actionId);
   }
 
   function invokeAction(name: string) {

@@ -4,7 +4,7 @@ import { useWfForm } from "../use-wf-form";
 import type { UseWfFormOptions } from "../use-wf-form";
 import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
 import type { FormDef, ClientFactory } from "@atscript/ui";
-import { getFieldMeta, WF_ACTION_WITH_DATA } from "@atscript/ui";
+import { getDeclaredFormActions } from "@atscript/ui";
 import type { TFormState } from "@atscript/vue-form";
 import type { WfActionRequest } from "@atscript/moost-wf";
 import AsWfFinish from "./defaults/as-wf-finish.vue";
@@ -72,15 +72,16 @@ watch([() => wf.formDef.value, () => wf.formContext.value], ([def, ctx]) => {
 });
 
 // ── Action classification ───────────────────────────────────
-// Build a Set of "withData" action IDs from the current FormDef.
-const withDataActions = computed<Set<string>>(() => {
+// Declared actions of the current FormDef — single source of truth (shared
+// with <AsForm>'s supportsAction) for "what actions can the host fire".
+const formActions = computed(() => {
   const def = wf.formDef.value;
-  if (!def) return new Set();
+  return def ? getDeclaredFormActions(def) : [];
+});
+// "withData" action IDs route through actionWithData (send the form payload).
+const withDataActions = computed<Set<string>>(() => {
   const set = new Set<string>();
-  for (const field of def.fields) {
-    const wfAction = getFieldMeta(field.prop, WF_ACTION_WITH_DATA) as string | undefined;
-    if (wfAction) set.add(wfAction);
-  }
+  for (const a of formActions.value) if (a.withData) set.add(a.id);
   return set;
 });
 
@@ -91,13 +92,21 @@ function onSubmit(data: unknown) {
   wf.submit(raw);
 }
 
-function onAction(name: string, data: unknown) {
+function onAction(name: string, data?: unknown) {
   if (withDataActions.value.has(name)) {
     wf.actionWithData(name, toRaw(data) as Record<string, unknown>);
   } else {
     wf.action(name);
   }
 }
+
+/** Whether the current step's form declares this action id (host gating). */
+function supportsAction(name: string): boolean {
+  return formActions.value.some((a) => a.id === name);
+}
+
+// Host-callable surface: a dialog host's `ref` can fire/gate actions.
+defineExpose({ action: onAction, supportsAction });
 </script>
 
 <template>
@@ -113,7 +122,13 @@ function onAction(name: string, data: unknown) {
       finished: wf.finished.value,
       response: wf.response.value,
     }"
-    :actions="{ start: wf.start, submit: onSubmit, retry: wf.retry }"
+    :actions="{
+      start: wf.start,
+      submit: onSubmit,
+      retry: wf.retry,
+      action: onAction,
+      supportsAction,
+    }"
   >
     <div v-if="wf.loading.value && !wf.formDef.value" class="as-wf-form-loading">
       <slot name="wf.loading">

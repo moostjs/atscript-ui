@@ -253,4 +253,56 @@ describe("AsWfForm", () => {
     expect(calls[1]!.body).toHaveProperty("input.action", "saveDraft");
     expect(calls[1]!.body).toHaveProperty("input.formData");
   });
+
+  it("exposes action() that fires a stateless action without formData", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+
+    const { calls } = mockFetch([
+      mockInputRequired(ActionForm, { token: "tok1" }),
+      mockInputRequired(ActionForm, { token: "tok2" }),
+    ]);
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+
+    // Host-fired via the defineExpose surface (no data passed).
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+
+    expect(calls[1]!.body).toHaveProperty("input.action", "resend");
+    expect((calls[1]!.body as { input: Record<string, unknown> }).input).not.toHaveProperty(
+      "formData",
+    );
+  });
+
+  it("exposes action() that routes a withData action through actionWithData", async () => {
+    const { DataActionForm } = await import("./fixtures/action-form.as");
+
+    const { calls } = mockFetch([
+      mockInputRequired(DataActionForm, { token: "tok1" }),
+      mockInputRequired(DataActionForm, { token: "tok2" }),
+    ]);
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+
+    // Host passes data — classifier must send it as formData.
+    (wrapper.vm as any).action("saveDraft", { draft: 1 });
+    await flushPromises();
+
+    expect(calls[1]!.body).toHaveProperty("input.action", "saveDraft");
+    expect(calls[1]!.body).toHaveProperty("input.formData");
+  });
+
+  it("exposes supportsAction reflecting declared action ids", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    mockFetch([mockInputRequired(ActionForm)]);
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+
+    // Gating signal is the declared action id, not the field name.
+    expect((wrapper.vm as any).supportsAction("resend")).toBe(true);
+    expect((wrapper.vm as any).supportsAction("nope")).toBe(false);
+  });
 });

@@ -276,3 +276,16 @@ type Person = {
 export interface PersonStringUnion {
     val: Person | string
 }
+
+// ── Declared form actions ────────────────────────────────────
+
+/// One data field + one `@ui.form.action` field — getDeclaredFormActions must
+/// yield the action id (withData:false) and skip the plain data field.
+export interface FormWithAction {
+    @meta.label 'Username'
+    username: string
+
+    @meta.label 'Resend Code'
+    @ui.form.action 'resend', 'Resend'
+    resendAction: ui.action
+}

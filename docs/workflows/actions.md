@@ -205,6 +205,66 @@ The wf engine wipes `body.input` after each step, so the action is
 cleared for free between in-request step transitions — no cleanup
 interceptor needed.
 
+### From a host around `<AsWfForm>`
+
+Sometimes the affordance that fires an action lives in the **host**,
+not the rendered form — most often a dialog's own _Cancel_ button,
+where closing the dialog should _be_ the `cancel` action. Declare the
+action on the form and hide its built-in button
+(`@ui.form.fn.hidden '() => true'`), then drive it from a `ref` to
+`<AsWfForm>`:
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { AsWfForm } from "@atscript/vue-wf";
+
+const form = ref<InstanceType<typeof AsWfForm>>();
+</script>
+
+<template>
+  <AsWfForm ref="form" path="/api/auth/flow" name="auth/mfa" :types="types" />
+
+  <!-- Host Cancel button — close ≡ cancel. -->
+  <button v-if="form?.supportsAction('cancel')" @click="form.action('cancel')">Cancel</button>
+</template>
+```
+
+`action(name, data?)` auto-classifies: a `@wf.action.withData` action
+ships the current form payload, a plain `@ui.form.action` action ships
+none — the host never needs to know which kind it is.
+
+**Gate on `supportsAction(name)`, always.** It is `true` only when the
+**current** step's form declares that action id; reused challenge steps
+may not whitelist `cancel`, and firing an undeclared action is rejected
+server-side. The id is the value in `@ui.form.action 'cancel'` /
+`@wf.action.withData 'saveDraft'` — **not** the field name (the field is
+typically `cancelAction` while the id is `cancel`), so don't test
+`field.name`; `supportsAction('cancel')` does the meta-based check for you.
+
+The payoff is server-side cleanup the host gets for free: a workflow
+author can wire the `cancel` action to abort the run and finish its
+terminal, so a `swapStrategy("store")`'d wf-state row is reclaimed
+immediately instead of lingering until its TTL. That cleanup is
+author-wired on the server — firing `cancel` doesn't guarantee it — but
+the host needs only to fire the action.
+
+Slot-based hosts get the same two wrappers in the `<AsForm>` slot bag's
+`actions`, so a custom shell can fire and gate inline without a `ref`:
+
+```vue
+<template>
+  <AsWfForm path="/api/auth/flow" name="auth/mfa" :types="types">
+    <template #default="{ actions }">
+      <!-- …custom chrome… -->
+      <button v-if="actions.supportsAction('cancel')" @click="actions.action('cancel')">
+        Cancel
+      </button>
+    </template>
+  </AsWfForm>
+</template>
+```
+
 ## Common patterns
 
 ### Resend a code

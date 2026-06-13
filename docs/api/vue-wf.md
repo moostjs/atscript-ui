@@ -6,6 +6,7 @@ Vue 3 client for the HTTP workflow loop. One component (`AsWfForm`) and one comp
 
 - [Subpath](#subpath)
 - [Component — AsWfForm](#component-aswfform)
+- [Exposed instance methods](#exposed-instance-methods)
 - [Composable — useWfForm](#composable-usewfform)
 - [Error resolution](#error-resolution)
 - [Types](#types)
@@ -96,19 +97,19 @@ interface AsWfFormProps {
 
 ### Slots
 
-| Slot           | Scope                      | Purpose                                                                                                                                                                                        |
-| -------------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| default        | `{ form, state, actions }` | Wraps everything below — opt into a fully custom shell. `form` = `{ def, formData, formContext }`, `state` = `{ loading, error, finished, response }`, `actions` = `{ start, submit, retry }`. |
-| `wf.loading`   | —                          | First-load placeholder (only fires before the first FormDef arrives).                                                                                                                          |
-| `wf.error`     | `{ error, retry }`         | Transport / 4xx error. Renders both before a form loads AND as a banner above a mounted form.                                                                                                  |
-| `wf.finished`  | `{ response, payload }`    | Terminal state. `payload` is the typed `WfFinished` envelope. See [Finish Screens](/workflows/finish-screens) for the `wf.finish.*` sub-slots.                                                 |
-| `form.header`  | AsForm `slotProps` bag     | Form chrome above the fields.                                                                                                                                                                  |
-| `form.before`  | AsForm `slotProps` bag     | Above the field tree.                                                                                                                                                                          |
-| `form.after`   | AsForm `slotProps` bag     | Below the field tree.                                                                                                                                                                          |
-| `form.error`   | bag + `message`, `dismiss` | AsForm's own form-level error banner (distinct from the transport-level `wf.error`).                                                                                                           |
-| `form.submit`  | bag + `text`               | Replace the submit button.                                                                                                                                                                     |
-| `form.footer`  | AsForm `slotProps` bag     | Below the submit row.                                                                                                                                                                          |
-| `form.loading` | AsForm `slotProps` bag     | Contents of the loading overlay.                                                                                                                                                               |
+| Slot           | Scope                      | Purpose                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------------- | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| default        | `{ form, state, actions }` | Wraps everything below — opt into a fully custom shell. `form` = `{ def, formData, formContext }`, `state` = `{ loading, error, finished, response }`, `actions` = `{ start, submit, retry, action, supportsAction }` — `action(name, data?)` fires a workflow action, `supportsAction(name)` gates it against the current step (see [Exposed instance methods](#exposed-instance-methods)). |
+| `wf.loading`   | —                          | First-load placeholder (only fires before the first FormDef arrives).                                                                                                                                                                                                                                                                                                                        |
+| `wf.error`     | `{ error, retry }`         | Transport / 4xx error. Renders both before a form loads AND as a banner above a mounted form.                                                                                                                                                                                                                                                                                                |
+| `wf.finished`  | `{ response, payload }`    | Terminal state. `payload` is the typed `WfFinished` envelope. See [Finish Screens](/workflows/finish-screens) for the `wf.finish.*` sub-slots.                                                                                                                                                                                                                                               |
+| `form.header`  | AsForm `slotProps` bag     | Form chrome above the fields.                                                                                                                                                                                                                                                                                                                                                                |
+| `form.before`  | AsForm `slotProps` bag     | Above the field tree.                                                                                                                                                                                                                                                                                                                                                                        |
+| `form.after`   | AsForm `slotProps` bag     | Below the field tree.                                                                                                                                                                                                                                                                                                                                                                        |
+| `form.error`   | bag + `message`, `dismiss` | AsForm's own form-level error banner (distinct from the transport-level `wf.error`).                                                                                                                                                                                                                                                                                                         |
+| `form.submit`  | bag + `text`               | Replace the submit button.                                                                                                                                                                                                                                                                                                                                                                   |
+| `form.footer`  | AsForm `slotProps` bag     | Below the submit row.                                                                                                                                                                                                                                                                                                                                                                        |
+| `form.loading` | AsForm `slotProps` bag     | Contents of the loading overlay.                                                                                                                                                                                                                                                                                                                                                             |
 
 The `form.*` slots are forwarded verbatim to the inner `<AsForm>`, so each
 carries that component's unified `slotProps` bag — documented once in
@@ -116,6 +117,17 @@ carries that component's unified `slotProps` bag — documented once in
 The `wf.finish.*` sub-slots live on the [Finish Screens](/workflows/finish-screens)
 page. For the narrative on every slot (with defaults and examples), see
 [Client: AsWfForm](/workflows/client).
+
+### Exposed instance methods
+
+Reach these via a component `ref` (`const form = ref<InstanceType<typeof AsWfForm>>()`). The same two are mirrored in the `default` slot bag's `actions`. Lets a host fire a workflow action it renders itself — e.g. a dialog's own _Cancel_ button — without dropping `<AsWfForm>` for the headless [`useWfForm`](#composable-usewfform). See [Calling actions from the client](/workflows/actions#calling-actions-from-the-client) for the pattern.
+
+```typescript
+/** Fire the named workflow action. Auto-classifies: a `@wf.action.withData` action sends the current form payload; a plain `@ui.form.action` action sends none. */
+action(name: string, data?: unknown): void;
+/** `true` only when the current step's form declares that action id (`@ui.form.action` id ∪ `@wf.action.withData` value). Gate the host affordance on this — firing an undeclared action is rejected server-side. */
+supportsAction(name: string): boolean;
+```
 
 ### Example
 

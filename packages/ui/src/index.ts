@@ -105,6 +105,10 @@ export { isArrayField, isObjectField, isUnionField, isTupleField } from "./form/
 // ── Form definition builder ─────────────────────────────────
 export { createFormDef, buildUnionVariants } from "./form/create-form-def";
 
+// ── Declared form actions (host-fired action gating) ────────
+export { getDeclaredFormActions } from "./form/form-actions";
+export type { FormActionInfo } from "./form/form-actions";
+
 // ── Field resolver (extensible) ─────────────────────────────
 export type { FieldResolver, TResolveOptions } from "./shared/field-resolver";
 export {
