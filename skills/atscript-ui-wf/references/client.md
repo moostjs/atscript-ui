@@ -64,18 +64,42 @@ All slots are typed via slot props.
 <AsWfForm v-slot="{ form, state, actions }" path="..." name="..." :types>
   <!-- form: { def, formData, formContext } -->
   <!-- state: { loading, error, finished, response } -->
-  <!-- actions: { start, submit, retry } -->
+  <!-- actions: { start, submit, retry, action, supportsAction } -->
   <pre>{{ form.formContext }}</pre>
 </AsWfForm>
 ```
 
-| Slot prop | Shape                                                                                                       |
-| --------- | ----------------------------------------------------------------------------------------------------------- |
-| `form`    | `{ def: FormDef \| null, formData: Record<string, unknown> \| null, formContext: Record<string, unknown> }` |
-| `state`   | `{ loading: boolean, error: unknown, finished: boolean, response: unknown }`                                |
-| `actions` | `{ start: (input?) => Promise<void>, submit: (data) => void, retry: () => Promise<void> }`                  |
+| Slot prop | Shape                                                                                                                                                        |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `form`    | `{ def: FormDef \| null, formData: Record<string, unknown> \| null, formContext: Record<string, unknown> }`                                                  |
+| `state`   | `{ loading: boolean, error: unknown, finished: boolean, response: unknown }`                                                                                 |
+| `actions` | `{ start: (input?) => Promise<void>, submit: (data) => void, retry: () => Promise<void>, action: (name, data?) => void, supportsAction: (name) => boolean }` |
 
 When you supply the default slot's contents, you take over the entire layout. The component still ships the named slots below for the standard layout — opt-in by **omitting** the default slot.
+
+### Host-fired actions
+
+A host can fire a workflow action it renders itself (e.g. a dialog's own Cancel button) via a component `ref` or the default-slot `actions` bag.
+
+| Member                 | Rule                                                                                                                                                                                                                                                                                                                                |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `action(name, data?)`  | Fires the named action. Auto-classifies — a `@wf.action.withData` action ships the current form payload, a plain `@ui.form.action` action ships none. Host need not know which.                                                                                                                                                     |
+| `supportsAction(name)` | `true` only when the **current** step's form declares that action id. **Gate the host affordance on this** — keyed on the declared action id (`@ui.form.action` id ∪ `@wf.action.withData` value), **NOT** the field name (field is typically `cancelAction`, id is `cancel`); firing an undeclared action is rejected server-side. |
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { AsWfForm } from "@atscript/vue-wf";
+const form = ref<InstanceType<typeof AsWfForm>>();
+</script>
+
+<template>
+  <AsWfForm ref="form" path="/wf/trigger" name="auth/mfa" :types />
+  <button v-if="form?.supportsAction('cancel')" @click="form.action('cancel')">Cancel</button>
+</template>
+```
+
+Full pattern (hidden built-in button, server-side cleanup payoff): [../../atscript-ui-wf docs → from a host](https://ui.atscript.dev/workflows/actions#from-a-host-around-aswfform).
 
 ### Workflow lifecycle slots
 
@@ -302,7 +326,7 @@ const wf = useWfForm({ path: props.path, name: props.name });
 Things `AsWfForm` does for you that you must replicate in a custom shell:
 
 - Bind `:key="wf.formKey.value"` on `AsForm` — without this, same-form re-validation will **not** preserve user input (the diff still bumps the key on schema change; you must wire that to remount).
-- Classify actions: `@wf.action.withData` actions need `actionWithData(name, data)`, plain actions need `action(name)`. The reference component reads `WF_ACTION_WITH_DATA` from `getFieldMeta` to build the set.
+- Classify actions: `@wf.action.withData` actions need `actionWithData(name, data)`, plain actions need `action(name)`. Use the public `getDeclaredFormActions(def)` from `@atscript/ui` (returns `{ id, withData }[]`) to build the set instead of hand-reading field meta.
 - Forward `clientFactory` if your forms have FK pickers.
 
 ## Recipe — minimal mount with custom slots

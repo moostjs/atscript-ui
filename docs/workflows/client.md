@@ -134,6 +134,7 @@ composable's state for total layout control:
 ```vue
 <AsWfForm path="/api/wf" name="hello" :types="types">
   <template #default="{ form, state, actions }">
+    <!-- actions: { start, submit, retry, action, supportsAction } -->
     <pre>{{ form }}</pre>
     <button :disabled="state.loading" @click="actions.retry">Retry</button>
   </template>
@@ -220,6 +221,38 @@ the consumer takes full responsibility for the finish UI (including any
 `next.action` wiring). To keep `AsWfFinish` and only restyle one piece,
 override a `#wf.finish.*` sub-slot instead. See
 [Finish Screens](/workflows/finish-screens) for the sub-slot contract.
+
+## Host-fired actions
+
+Sometimes the button that fires a workflow action lives in the **host**
+around `<AsWfForm>`, not in the rendered form — most often a dialog's own
+_Cancel_ button. Reach the surface via a component `ref`: `action(name, data?)`
+fires the named action (auto-classifying — a `@wf.action.withData` action ships
+the current form payload, a plain `@ui.form.action` action ships none), and
+`supportsAction(name)` gates it. **Gate on the action id, not the field name**
+(the field is typically `cancelAction` while the id is `cancel`); firing an
+undeclared action is rejected server-side.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { AsWfForm } from "@atscript/vue-wf";
+
+const form = ref<InstanceType<typeof AsWfForm>>();
+</script>
+
+<template>
+  <AsWfForm ref="form" path="/api/wf" name="auth/mfa" :types="types" />
+  <button v-if="form?.supportsAction('cancel')" @click="form.action('cancel')">Cancel</button>
+</template>
+```
+
+The same two are exposed in the default-slot `actions` bag
+(`{ start, submit, retry, action, supportsAction }`), so a custom shell can fire
+and gate inline without a `ref`. For the full pattern (hiding the built-in
+button, the server-side cleanup payoff) see
+[Calling actions from the client — from a host](/workflows/actions#from-a-host-around-aswfform);
+for the headless equivalent, see [`useWfForm()`](#usewfform-composable).
 
 ## `useWfForm()` composable
 
