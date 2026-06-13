@@ -1,6 +1,6 @@
 {
   "name": "@atscript/vue-table",
-  "version": "0.1.100",
+  "version": "0.1.101",
   "description": "Type-driven table components for Atscript with Vue 3",
   "keywords": [
     "atscript",
