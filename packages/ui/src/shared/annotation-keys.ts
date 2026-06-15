@@ -55,6 +55,8 @@ export const DB_AMOUNT_CURRENCY_REF = "db.amount.currency.ref" as const;
 export const DB_UNIT = "db.unit" as const;
 export const DB_UNIT_REF = "db.unit.ref" as const;
 export const DB_COLUMN_PRECISION = "db.column.precision" as const;
+export const DB_COLUMN_VERSION = "db.column.version" as const;
+export const DB_PATCH_STRATEGY = "db.patch.strategy" as const;
 
 // ── Workflow annotation keys (registered by @atscript/moost-wf plugin) ──
 export const WF_ACTION_WITH_DATA = "wf.action.withData" as const;
@@ -70,6 +72,8 @@ export const META_SENSITIVE = "meta.sensitive" as const;
 
 // ── Expect annotation keys (exist in @atscript/core) ────────
 export const EXPECT_MAX_LENGTH = "expect.maxLength" as const;
+export const EXPECT_ARRAY_KEY = "expect.array.key" as const;
+export const EXPECT_ARRAY_UNIQUE_ITEMS = "expect.array.uniqueItems" as const;
 
 // ── Form dynamic (registered by @atscript/ui-fns) ───────────
 export const UI_FORM_FN_PREFIX = "ui.form.fn." as const;

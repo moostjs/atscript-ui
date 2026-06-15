@@ -146,6 +146,10 @@ export {
 } from "./form/validate";
 export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/validate";
 
+// ── Form diff engine (framework-agnostic) ───────────────────
+export { buildFormDiff } from "./form/diff";
+export type { FormDiffResult, FormDiffOptions, FormFieldChange } from "./form/diff";
+
 // ── Error-map utilities (framework-agnostic) ────────────────
 export {
   mergeErrorMaps,
