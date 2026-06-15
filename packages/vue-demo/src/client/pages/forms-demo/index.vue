@@ -56,6 +56,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/change-tracking",
+    title: "Change tracking · live patch",
+    description:
+      "<AsForm track-changes> on a pre-loaded order: live @atscript/db patch panel, isDirty-gated Save, keyed-array $update/$insert/$remove, merge-strategy address, and $cas from @db.column.version. Shows both the #form.footer slot props and a parent template ref (getPatch/rebase).",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/tuples",
     title: "Tuples",
     description: "Fixed-length, mixed-type tuples (e.g. [number, string, boolean]).",
