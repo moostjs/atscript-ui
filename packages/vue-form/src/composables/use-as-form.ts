@@ -24,6 +24,8 @@ import {
   UI_FORM_SUBMIT_TEXT,
   type ClientFactory,
   type FormDef,
+  type FormDiffOptions,
+  type FormFieldChange,
 } from "@atscript/ui";
 import type { TFnScope } from "@atscript/ui-fns";
 import {
@@ -32,11 +34,13 @@ import {
   COMPONENTS_KEY,
   DISMISS_EXTERNAL_AT_KEY,
   ERRORS_KEY,
+  FORM_PATCH_KEY,
   HIDE_ROOT_TITLE_KEY,
   PATH_PREFIX_KEY,
   ROOT_DATA_KEY,
   TYPES_KEY,
 } from "./internal-keys";
+import { createAsFormPatch, type AsFormPatchHandle } from "./use-as-form-patch";
 import {
   DESCENDANT_ERROR_COUNTS_KEY,
   provideAsNestedSectionsStore,
@@ -103,6 +107,16 @@ export interface UseAsFormOptions<TFormData = unknown, TFormContext = unknown> {
   loading?: () => boolean | undefined;
 
   /**
+   * Enable change tracking. When `true`, the composable captures a deep-clone
+   * baseline of the form data (the moment it becomes available) and exposes a
+   * {@link AsFormPatchHandle} via `slotProps`, the return value (`patch`), and
+   * `provide(FORM_PATCH_KEY)` (read with `useAsFormPatch()`). When falsy
+   * (default), there is ZERO overhead — no baseline, no deep watch, and
+   * `useAsFormPatch()` throws. Reactive.
+   */
+  trackChanges?: () => boolean | undefined;
+
+  /**
    * Outbound callbacks. Customer form roots typically wire these to
    * `defineEmits`; advanced uses can pass plain functions.
    */
@@ -124,7 +138,11 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   formError: ComputedRef<string | undefined>;
   /** Errors discovered by the local validator on the most-recent submit. */
   internalErrors: Ref<Record<string, string>>;
-  /** Reset internal validator + dismissal state and re-run field defaults. */
+  /**
+   * Reset internal validator + dismissal state and re-run field defaults. When
+   * `trackChanges` is enabled, also re-baselines the change tracker to the
+   * post-reset state (the form becomes clean again).
+   */
   reset: () => Promise<void>;
   /** Imperatively clear errors (matches `useAsState().clearErrors`). */
   clearErrors: () => void;
@@ -157,7 +175,20 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
     dismissError: (path: string) => void;
     dismissFormError: () => void;
     formContext: TFormContext | undefined;
+    /** True when `track-changes` is on AND data differs from baseline. */
+    isDirty: boolean;
+    /** Revert-aware per-field change list (empty when tracking is off). */
+    changes: readonly FormFieldChange[];
+    /** Build the `@atscript/db` patch on demand (`{}` when tracking is off). */
+    getPatch: (opts?: FormDiffOptions) => Record<string, unknown>;
+    /** Build the per-field change list on demand (`[]` when tracking is off). */
+    getChanges: () => FormFieldChange[];
   }>;
+  /**
+   * Change-tracking handle — present ONLY when `trackChanges` is enabled.
+   * `undefined` otherwise. Read it from descendants with `useAsFormPatch()`.
+   */
+  patch: AsFormPatchHandle | undefined;
   /** Dispatch an action — invoked by `<AsAction>`. */
   invokeAction: (name: string) => void;
   /** Dismiss a single external leaf error. */
@@ -169,6 +200,12 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   /** Internal change-dispatcher used by `<AsField>` and structured components. */
   handleChange: (type: TAsChangeType, path: string, value: unknown) => void;
 }
+
+// Stable no-op fallbacks for the change-tracking slot-props when tracking is
+// OFF. Frozen / shared so `slotProps` keeps a constant identity for them.
+const EMPTY_CHANGES: readonly FormFieldChange[] = Object.freeze([]);
+const EMPTY_GET_PATCH = (): Record<string, unknown> => ({});
+const EMPTY_GET_CHANGES = (): FormFieldChange[] => [];
 
 /**
  * Composable backing `<AsForm>`. Owns the entire form state machine —
@@ -225,6 +262,32 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         context: (formContext.value ?? {}) as Record<string, unknown>,
       }),
   });
+
+  // ── Change tracking (opt-in) ────────────────────────────────
+  // Read the flag once at setup (matches `hideRootTitle` handling). OFF means
+  // zero overhead: no baseline snapshot, no deep watch, and `useAsFormPatch()`
+  // throws because FORM_PATCH_KEY is never provided.
+  const patch: AsFormPatchHandle | undefined = options.trackChanges?.()
+    ? createAsFormPatch(
+        () => options.def(),
+        // The WRAPPED container `{ value: domainData }`. Before real data
+        // arrives this is the empty internal fallback `{}` (no `value` key);
+        // the tracker treats that as "no data yet" and defers the baseline.
+        // `buildFormDiff`'s getByPath derefs `.value`.
+        () => data.value as Record<string, unknown>,
+      )
+    : undefined;
+  if (patch) provide(FORM_PATCH_KEY, patch);
+
+  // Re-baseline after a reset: `reset()` restores field defaults (mutating the
+  // model + awaiting nextTick), so the post-reset state becomes the new clean
+  // baseline. No-op when tracking is off.
+  const reset = patch
+    ? async () => {
+        await resetState();
+        patch.rebase();
+      }
+    : resetState;
 
   // ── Provides — root data, prefix, type/component maps ───────
   provide(ROOT_DATA_KEY, data);
@@ -341,12 +404,19 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     loading: options.loading?.() === true,
     submitText: submitText.value,
     submit: onSubmit,
-    reset: resetState,
+    reset,
     clearErrors,
     setErrors,
     dismissError: ext.dismissAt,
     dismissFormError: ext.dismissForm,
     formContext: formContext.value,
+    // Change-tracking surface. When tracking is OFF the form is never dirty,
+    // there are no changes, and the patch builders return empty — so a Save
+    // button gated on `isDirty` simply stays disabled (no crash, no throw).
+    isDirty: patch?.isDirty.value ?? false,
+    changes: patch ? patch.changes.value : EMPTY_CHANGES,
+    getPatch: patch ? patch.getPatch : EMPTY_GET_PATCH,
+    getChanges: patch ? patch.getChanges : EMPTY_GET_CHANGES,
   }));
 
   // ── Action handler (provided to AsField tree) ──────────────
@@ -409,7 +479,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     errors: ext.effective,
     formError: ext.formError,
     internalErrors,
-    reset: resetState,
+    reset,
     clearErrors,
     setErrors,
     onSubmit,
@@ -423,5 +493,6 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     dismissFormError: ext.dismissForm,
     formContext,
     handleChange,
+    patch,
   };
 }

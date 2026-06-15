@@ -50,6 +50,15 @@ export interface Props<TF, TC> {
    * `inner-loading`.
    */
   loading?: boolean;
+  /**
+   * Enable change tracking. When set, the form captures a deep-clone baseline
+   * of its data and surfaces both a changed-fields list and an `@atscript/db`
+   * patch object. The tracking surface (`isDirty` / `changes` / `getPatch` /
+   * `getChanges`) is spread into every slot AND exposed on the component
+   * instance (template ref → `asForm.value.getPatch()`); descendants read it
+   * with `useAsFormPatch()`. Off by default — zero overhead when unset.
+   */
+  trackChanges?: boolean;
 }
 
 const props = defineProps<Props<TFormData, TFormContext>>();
@@ -73,6 +82,7 @@ const form = useAsForm<TFormData, TFormContext>({
   clientFactory: () => props.clientFactory,
   hideRootTitle: () => props.hideRootTitle,
   loading: () => props.loading,
+  trackChanges: () => props.trackChanges,
   emits: {
     submit: (data) => emit("submit", data),
     error: (errors) => emit("error", errors),
@@ -80,6 +90,29 @@ const form = useAsForm<TFormData, TFormContext>({
     unsupportedAction: (name, data) => emit("unsupported-action", name, data),
     change: (type, path, value, formData) => emit("change", type, path, value, formData),
   },
+});
+
+// Imperative surface for a parent template ref (`asForm.value.*`). The change
+// tracker is `undefined` when `track-changes` is off; the getters return empty
+// so a parent can call them unconditionally. `isDirty` / `changes` proxy the
+// reactive tracker (false / [] when off).
+defineExpose({
+  submit: form.onSubmit,
+  reset: form.reset,
+  /** True when `track-changes` is on AND data differs from baseline. */
+  get isDirty() {
+    return form.patch?.isDirty.value ?? false;
+  },
+  /** Revert-aware per-field change list (empty when tracking is off). */
+  get changes() {
+    return form.patch?.changes.value ?? [];
+  },
+  /** Build the `@atscript/db` patch object on demand (`{}` when off). */
+  getPatch: form.patch ? form.patch.getPatch : () => ({}),
+  /** Build the per-field change list on demand (`[]` when off). */
+  getChanges: form.patch ? form.patch.getChanges : () => [],
+  /** Re-baseline to current data after a successful save (no-op when off). */
+  rebase: form.patch ? form.patch.rebase : () => {},
 });
 </script>
 

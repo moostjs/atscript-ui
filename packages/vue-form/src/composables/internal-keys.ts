@@ -1,6 +1,7 @@
 import type { Component, ComputedRef, InjectionKey } from "vue";
 import type { TAsChangeType, TAsUnionContext } from "../components/types";
 import type { TFormState } from "./types";
+import type { AsFormPatchHandle } from "./use-as-form-patch";
 
 /**
  * Typed Vue provide/inject keys used across the form tree.
@@ -19,6 +20,7 @@ import type { TFormState } from "./types";
 //   TYPES_KEY               -> useAsTypeMap
 //   ROOT_DATA_KEY           -> useAsData
 //   DISMISS_EXTERNAL_AT_KEY -> useAsErrorDismiss
+//   FORM_PATCH_KEY          -> useAsFormPatch
 //   FORM_STATE_KEY, FORM_DATA_KEY, FORM_CONTEXT_KEY, ERRORS_KEY,
 //     COMPONENTS_KEY, ACTION_HANDLER_KEY, CHANGE_HANDLER_KEY,
 //     UNION_CONTEXT_KEY, LEVEL_KEY, HIDE_ROOT_TITLE_KEY -> consumed via
@@ -56,3 +58,8 @@ export const DISMISS_EXTERNAL_AT_KEY: InjectionKey<(path: string) => void> = Sym
 
 export const UNION_CONTEXT_KEY: InjectionKey<TAsUnionContext | undefined> =
   Symbol("atui.union-context");
+
+// Change-tracking handle. Present ONLY when `track-changes` is enabled on
+// `<AsForm>` (or `trackChanges` on `useAsForm`). Public reader:
+// `useAsFormPatch()` (throws a clear error when absent).
+export const FORM_PATCH_KEY: InjectionKey<AsFormPatchHandle> = Symbol("atui.form-patch");

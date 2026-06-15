@@ -52,6 +52,7 @@ export function mountForm(
     types?: Record<string, unknown>;
     errors?: Record<string, string>;
     initialValue?: unknown;
+    trackChanges?: boolean;
   },
 ) {
   const def = createFormDef(type);
@@ -68,6 +69,7 @@ export function mountForm(
       formContext: opts?.formContext,
       components: opts?.components,
       errors: opts?.errors,
+      trackChanges: opts?.trackChanges,
     },
   });
 
