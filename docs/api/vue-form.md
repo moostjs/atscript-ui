@@ -8,6 +8,7 @@ Vue 3 form library backed by `@atscript/ui`. Three tiers of components, ~30 comp
 - [Tier 2 — Default field components](#tier-2-default-field-components)
 - [Factories](#factories)
 - [Composables — form / state](#composables-form-state)
+- [Composables — change tracking](#composables-change-tracking)
 - [Composables — field & structure](#composables-field-structure)
 - [Composables — value help / dropdown](#composables-value-help-dropdown)
 - [Composables — choreography](#composables-choreography)
@@ -39,8 +40,12 @@ interface AsFormProps {
   hideSubmit?: boolean;
   loading?: boolean;
   clientFactory?: ClientFactory;
+  /** Opt into change tracking. OFF by default = zero overhead. Unlocks `isDirty` / `changes` / `getPatch` on slots, the `defineExpose` surface, and [`useAsFormPatch()`](#useasformpatch). See [Change tracking](/forms/change-tracking). */
+  trackChanges?: boolean;
 }
 ```
+
+**Expose** (template ref): alongside the form's own controls, the instance carries the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
 
 **Emits**:
 
@@ -314,6 +319,37 @@ interface UseAsExternalErrorsReturn {
   formError: ComputedRef<string | undefined>;
   dismissAt: (path: string) => void;
   dismissForm: () => void;
+}
+```
+
+## Composables — change tracking
+
+### `useAsFormPatch()`
+
+Injects the change-tracking handle from any descendant of an `<AsForm track-changes>` — e.g. a Save button living in a toolbar or dialog rather than a form slot. **Throws a clear error** when called outside a form, or inside a form that did not enable `track-changes`, rather than silently reporting "not dirty". Requires `track-changes` on the form; see [Change tracking](/forms/change-tracking).
+
+```typescript
+function useAsFormPatch(): AsFormPatchHandle;
+```
+
+The returned `AsFormPatchHandle` is the same surface spread onto every `<AsForm>` slot and `defineExpose`d on the instance:
+
+```typescript
+interface AsFormPatchHandle {
+  /** Reactive dirtiness — `true` when current data differs from the baseline (revert-aware). */
+  isDirty: ComputedRef<boolean>;
+  /** Reactive per-field change list (revert-aware). `before` / `after` hold live references. */
+  changes: ComputedRef<FormFieldChange[]>;
+  /**
+   * Builds the `@atscript/db` patch on demand against the baseline. Safe at submit
+   * time (snapshots a frozen, proxy-free copy). `{}` when nothing changed; carries
+   * `$cas` when the form has a `@db.column.version` column and `opts.cas` is on.
+   */
+  getPatch: (opts?: FormDiffOptions) => Record<string, unknown>;
+  /** Builds the per-field change list on demand (same data as `changes`). */
+  getChanges: () => FormFieldChange[];
+  /** Re-baseline to the current data — call after a successful save so the form becomes clean again. */
+  rebase: () => void;
 }
 ```
 
@@ -723,9 +759,15 @@ type TFormRule<TValue, TFormData, TContext> = (
 ) => true | string;
 ```
 
+### `AsFormPatchHandle`
+
+Return type of [`useAsFormPatch()`](#useasformpatch) — the change-tracking surface also spread onto every `<AsForm>` slot and `defineExpose`d on the instance. Documented inline with the composable above. See [Change tracking](/forms/change-tracking).
+
 ### Re-exports from `@atscript/ui`
 
 `setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory` — see [@atscript/ui — Client factory](/api/ui#client-factory).
+
+`FormFieldChange`, `FormDiffOptions` — change-tracking value shapes, re-exported so `useAsFormPatch()` consumers can type holding variables and `getPatch` options without reaching into the transitive `@atscript/ui` dep. See [@atscript/ui — Form diff engine](/api/ui#form-diff-engine).
 
 ## Cross-links
 
@@ -733,6 +775,7 @@ type TFormRule<TValue, TFormData, TContext> = (
 - [Forms — Annotations Reference](/forms/annotations)
 - [Forms — Field Types & Type Map](/forms/field-types)
 - [Forms — Validation](/forms/validation)
+- [Forms — Change tracking](/forms/change-tracking)
 - [Forms — Arrays](/forms/arrays), [Nested Objects](/forms/nested-objects), [Unions](/forms/unions), [Tuples](/forms/tuples)
 - [Forms — Dynamic Fields](/forms/dynamic-fields)
 - [Forms — Grid Layout](/forms/grid-layout)

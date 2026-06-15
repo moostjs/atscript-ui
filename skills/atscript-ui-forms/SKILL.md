@@ -1,21 +1,20 @@
 ---
 name: atscript-ui-forms
 description: >-
-  Render forms from `.as` annotated types with `@atscript/vue-form`. Use when
-  working with `<AsForm>`, `<AsField>`, `<AsIterator>`; when writing `.as` types
-  with `@ui.form.*` / `@ui.form.fn.*` annotations; when handling validation
+  Render forms from `.as` types with `@atscript/vue-form`. Use when working
+  with `<AsForm>`, `<AsField>`, `<AsIterator>`; when writing `.as` types with
+  `@ui.form.*` / `@ui.form.fn.*` annotations; when handling validation
   (`@meta.required`, `@expect.*`, `@ui.form.validate`); when rendering arrays,
-  nested objects, discriminated unions, or tuples; when wiring form actions
-  (`@ui.form.action`, `@ui.form.pushDown`) or FK value-help (`@db.rel.FK` →
-  `AsRef`); when overriding
-  defaults via `:types` (built-in renderers) or `:components` (custom widgets);
-  when implementing custom field components against `TAsComponentProps` /
-  `AsFieldShell` (incl. `@atscript/vue-aooth`);
+  nested objects, unions, or tuples; when wiring form actions
+  (`@ui.form.action`) or FK value-help (`@db.rel.FK` → `AsRef`); when tracking
+  form edits / dirty state or building an `@atscript/db` patch from a form
+  (`track-changes`, `useAsFormPatch`, `getPatch`, `$cas`); when overriding
+  defaults via `:types` / `:components`; when building custom field components
+  against `TAsComponentProps` / `AsFieldShell` (incl. `@atscript/vue-aooth`);
   or when calling `useAsForm` / `useAsField` / `useAsArray` / `useAsUnion` /
-  `useAsTuple` / `useAsData`. Out of scope:
-  tables (use `atscript-ui-tables`), HTTP workflow forms (use `atscript-ui-wf`),
-  styling and `as-*` shortcuts (use `atscript-ui-styles`), framework-agnostic
-  primitives like `createFormDef` (use the general `atscript-ui` skill).
+  `useAsTuple`. Out of scope: tables (`atscript-ui-tables`), HTTP workflow
+  forms (`atscript-ui-wf`), styling / `as-*` shortcuts (`atscript-ui-styles`),
+  primitives like `createFormDef` (the general `atscript-ui` skill).
 ---
 
 # atscript-ui-forms
@@ -127,6 +126,7 @@ import {
 // Composables
 import {
   useAsForm,
+  useAsFormPatch,
   useAsField,
   useAsState,
   useAsArray,
@@ -187,6 +187,7 @@ import type {
 | Dynamic fields       | [dynamic-fields.md](references/dynamic-fields.md)             | `@atscript/ui-fns`: `installDynamicResolver()`, `@ui.form.fn.*` (label, hidden, disabled, readonly, options, value, attr, classes, styles, title, submit.text, submit.disabled), `@ui.form.validate`, `TFnScope` (`v` / `data` / `context` / `entry`), security model, FNPool caching                                                                                                                        |
 | Customization        | [customization.md](references/customization.md)               | Three-level override: `:types` (built-in id swap) → `:components` (custom name + `@ui.form.component`) → `AsFieldShell` wrap → fully custom root via `useAsForm`. The **`<AsForm>` slot-props bag** (canonical key list spread onto every slot) + per-slot extras + the empty-slot-≠-hidden rule. `TAsComponentProps` contract for custom components. Locale providers (`provideAsLocale`, currency, units). |
 | Actions + refs       | [actions-refs.md](references/actions-refs.md)                 | `@ui.form.action` + `AsAction` (single + multi-action forms, submit text, conditional disable, `@ui.form.pushDown` below-submit placement, alt-action `text`/`align` via `@ui.form.attr`), `@db.rel.FK` + `AsRef` value-help (`@db.http.path`, `@ui.dict.*` on target, `clientFactory` for auth headers, `ValueHelpClient` flow)                                                                             |
+| Change tracking      | [form-change-tracking.md](references/form-change-tracking.md) | Tracking form edits / dirty state / `track-changes` prop / `useAsFormPatch`; building an `@atscript/db` patch from a form for `table.updateOne`; gating Save on `isDirty`; `getPatch`/`getChanges`/`rebase`; nested replace-vs-`merge`; keyed-array `$update`/`$insert`/`$remove`; `$cas` OCC from `@db.column.version`                                                                                      |
 | Aooth components     | [aooth-components.md](references/aooth-components.md)         | Reaching for the prebuilt `@atscript/vue-aooth` field components — `AsConsentArray`, `AsPasswordRules`, `AsQrCode`, `AsCopy`, `AsSsoProviders` — or one-click SSO/social-login provider buttons that fire a form action, or building a phantom display field driven by workflow context (`ui.paragraph` + `@ui.form.fn.value` + `@wf.context.pass`)                                                          |
 | Collapsible sections | [collapsible-sections.md](references/collapsible-sections.md) | Wrapping a custom component in section chrome / adding a header-row action to a section / using `<AsCollapsible>` directly / full-bleed section dividers to a padded card or enclosing island (`--as-inset`)                                                                                                                                                                                                 |
 

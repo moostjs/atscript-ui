@@ -209,6 +209,7 @@ const formsSidebar = [
       { text: "Grid Layout", link: "/forms/grid-layout" },
       { text: "Actions", link: "/forms/actions" },
       { text: "References (FK)", link: "/forms/references" },
+      { text: "Change Tracking", link: "/forms/change-tracking" },
     ],
   },
   {

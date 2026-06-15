@@ -12,6 +12,7 @@ Framework-agnostic core for type-driven UIs. Reads compiled Atscript metadata, b
 - [Field resolver](#field-resolver)
 - [Annotation key constants](#annotation-key-constants)
 - [Validators](#validators)
+- [Form diff engine](#form-diff-engine)
 - [Path utilities](#path-utilities)
 - [Value-help](#value-help)
 - [Grid layout](#grid-layout)
@@ -487,6 +488,65 @@ function getDefaultValidatorPlugins(): TValidatorPlugin[];
 ```
 
 See the [Validation guide](/forms/validation) for end-to-end usage.
+
+## Form diff engine
+
+Framework-agnostic change tracking — diffs a form's current data against a baseline snapshot and produces both a changed-fields list and an `@atscript/db` patch object. Vue's [`useAsFormPatch()`](/api/vue-form#useasformpatch) wraps this. See the [Change tracking](/forms/change-tracking) guide.
+
+### `buildFormDiff(def, baseline, current, opts?)`
+
+Diffs `current` against `baseline` (both the WRAPPED `{ value: domainData }` container) and returns the dirty flag, the per-field change list, and a ready-to-ship `@atscript/db` patch. Revert-aware — a value edited back to its baseline produces no change and no patch entry. Lifts a top-level `$cas` sibling for optimistic concurrency when the type has a `@db.column.version` field and `opts.cas !== false`. The result holds live references into `baseline` / `current` — snapshot first if you keep editing (see [Change tracking](/forms/change-tracking)).
+
+```typescript
+function buildFormDiff(
+  def: FormDef,
+  baseline: Record<string, unknown>,
+  current: Record<string, unknown>,
+  opts?: FormDiffOptions,
+): FormDiffResult;
+```
+
+### `FormDiffResult`
+
+```typescript
+interface FormDiffResult {
+  /** True when at least one field changed (revert-aware). */
+  isDirty: boolean;
+  /** Per-field changes (revert-aware — reverted fields are absent). */
+  changes: FormFieldChange[];
+  /** `@atscript/db` patch — flat, keyed by field; `{}` when nothing changed; carries `$cas` when applicable. */
+  patch: Record<string, unknown>;
+}
+```
+
+### `FormDiffOptions`
+
+```typescript
+interface FormDiffOptions {
+  /**
+   * Optimistic-concurrency control. `true` (default) auto-includes a top-level
+   * `$cas: { [versionColumn]: baselineVersion }` whenever the form has a
+   * `@db.column.version` column, the patch is non-empty, and a baseline integer
+   * version exists. `false` suppresses it. The version column is never emitted
+   * as a normal SET regardless. See [Change tracking — `$cas`](/forms/change-tracking#optimistic-concurrency-cas).
+   */
+  cas?: boolean;
+}
+```
+
+### `FormFieldChange`
+
+One field that differs between baseline and current. `kind: 'set'` is a scalar / object / union / tuple field whose whole value changed; `kind: 'array'` is an array whose membership or item content changed. `before` / `after` hold live references into the supplied containers.
+
+```typescript
+interface FormFieldChange {
+  /** Dot-separated path relative to the form root (e.g. `"address.city"`). */
+  path: string;
+  kind: "set" | "array";
+  before: unknown;
+  after: unknown;
+}
+```
 
 ## Path utilities
 

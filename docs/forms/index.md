@@ -70,6 +70,10 @@ Tier 2 when you want to replace a default renderer; reach for the
 - [Grid Layout](/forms/grid-layout), [Actions](/forms/actions),
   [References](/forms/references) — layout, submit/server actions, FK
   pickers.
+- [Change Tracking](/forms/change-tracking) — opt-in dirty state, a
+  changed-fields list, and an `@atscript/db` patch for edit flows
+  (`getPatch()` → `table.updateOne()`), with `$cas` optimistic
+  concurrency.
 - [Customization](/forms/customization),
   [Custom Components](/forms/custom-components),
   [Locale](/forms/locale) — make it yours.
