@@ -12,7 +12,6 @@ function col(overrides: Partial<ColumnDef> & { path: string; type: string }): Co
     sortable: true,
     filterable: true,
     nullable: false,
-    visible: true,
     order: 0,
     ...overrides,
   };
