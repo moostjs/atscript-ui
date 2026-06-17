@@ -85,6 +85,11 @@ export interface TableDef {
    * of re-walking the type.
    */
   flatMap: Map<string, TAtscriptAnnotatedType>;
+  /**
+   * Server-returnable field paths (from meta.fields) — the gate for
+   * @ui.table.selectWith targets, includes @ui.table.exclude fields.
+   */
+  fetchableFields: Set<string>;
   primaryKeys: string[];
   /** Preferred row identifier — see `MetaResponse.preferredId`. */
   preferredId: string[];
@@ -126,8 +131,6 @@ export interface ColumnDef {
    * for non-nullable columns since they can never match.
    */
   nullable: boolean;
-  /** Whether this column is visible by default. */
-  visible: boolean;
   /** Default column width from @ui.table.width. */
   width?: string;
   /** Maximum length constraint from @expect.maxLen — used to derive default column width. */

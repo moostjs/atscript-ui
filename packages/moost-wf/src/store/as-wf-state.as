@@ -7,7 +7,7 @@ export type JsonValue = string | number | boolean | null | JsonValue[] | { [/^.+
 
 export interface AsWfStateRecord {
     // Opaque correlation token — uninteresting in a list view.
-    @ui.table.hidden
+    @ui.table.exclude
     @db.index.unique 'handle_idx'
     @expect.maxLength 256
     handle: string
@@ -17,7 +17,7 @@ export interface AsWfStateRecord {
     schemaId: string
 
     // Large JSON snapshot — too noisy for a list view; fetch via getOne.
-    @ui.table.hidden
+    @ui.table.exclude
     @db.json
     state: {
         context: JsonValue
@@ -34,11 +34,11 @@ export interface AsWfStateRecord {
 
     createdAt: number.timestamp
 
-    @ui.table.hidden
+    @ui.table.exclude
     @expect.maxLength 128
     createdBy?: string
 
-    @ui.table.hidden
+    @ui.table.exclude
     @expect.maxLength 128
     lastUpdatedBy?: string
 }

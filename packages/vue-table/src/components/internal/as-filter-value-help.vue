@@ -74,7 +74,6 @@ if (info) {
       type: "text",
       sortable: true,
       filterable: false,
-      visible: true,
       order: 0,
     },
   ];

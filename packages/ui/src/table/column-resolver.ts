@@ -1,10 +1,5 @@
 import type { ColumnDef, TableDef } from "./types";
 
-/** Get visible columns only, already sorted by order. */
-export function getVisibleColumns(def: TableDef): ColumnDef[] {
-  return def.columns.filter((c) => c.visible);
-}
-
 /** Get sortable columns. */
 export function getSortableColumns(def: TableDef): ColumnDef[] {
   return def.columns.filter((c) => c.sortable);

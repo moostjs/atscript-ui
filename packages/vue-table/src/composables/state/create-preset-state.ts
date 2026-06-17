@@ -37,16 +37,13 @@ export const DEFAULT_AVAILABLE_ASPECTS: PresetAspect[] = [
 
 /**
  * Default `columnNames` for a system preset that doesn't specify them — every
- * column whose schema declares it visible (i.e. lacking `@ui.table.hidden`).
- * Used by both `apply` (no-explicit-columnNames fallback) and `expandDefault`,
- * so the two paths can never drift apart.
+ * column in the table definition. `@ui.table.exclude` fields never become
+ * columns (they stay fetchable for `selectWith` but never enter `allColumns`),
+ * so there's nothing to filter out here. Shared by `apply` (no-explicit-
+ * columnNames fallback) and `expandDefault` so the two paths can't drift apart.
  */
-function defaultVisibleColumnPaths(o: CreatePresetStateOptions): string[] {
-  const out: string[] = [];
-  for (const col of o.allColumns.value) {
-    if (col.visible) out.push(col.path);
-  }
-  return out;
+function defaultColumnPaths(o: CreatePresetStateOptions): string[] {
+  return o.allColumns.value.map((c) => c.path);
 }
 
 export interface CreatePresetStateOptions {
@@ -216,9 +213,9 @@ export function createPresetState(opts: CreatePresetStateOptions): {
         if (!value && !isSystem) return;
         const cols = value as PresetSnapshot["columns"];
         // System preset with no explicit columnNames falls back to the same
-        // visible-only set used by `expandDefault` — `@ui.table.hidden`
-        // columns are not auto-included.
-        const columnNames = cols?.columnNames ?? defaultVisibleColumnPaths(o);
+        // all-columns set used by `expandDefault`. `@ui.table.exclude` fields
+        // are not columns at all, so there's nothing to filter out here.
+        const columnNames = cols?.columnNames ?? defaultColumnPaths(o);
         const columnWidths = cols?.columnWidths;
         o.columnNames.value = [...columnNames];
         // Reset existing widths to defaults, then apply overrides.
@@ -235,7 +232,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
         o.columnWidths.value = next;
       },
       expandDefault(o) {
-        return { columnNames: defaultVisibleColumnPaths(o) };
+        return { columnNames: defaultColumnPaths(o) };
       },
     },
     filters: {

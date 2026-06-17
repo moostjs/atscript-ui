@@ -2,9 +2,9 @@ import { AsWfStateRecord } from '@atscript/moost-wf/store'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {
-    // UUID PK — opaque, hidden from list views.
+    // UUID PK — opaque, excluded from list views.
     @meta.id
-    @ui.table.hidden
+    @ui.table.exclude
     @db.default.uuid
     id: string
 

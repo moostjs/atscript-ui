@@ -273,13 +273,13 @@ export interface UsersTable {
     @ui.table.selectWith 'lastName'
     username: string
 
-    @ui.table.hidden
+    @ui.table.exclude
     avatar: string
 
-    @ui.table.hidden
+    @ui.table.exclude
     firstName: string
 
-    @ui.table.hidden
+    @ui.table.exclude
     lastName: string
 }
 ```
@@ -315,9 +315,11 @@ const name = computed(
 
 The deps are harvested from the visible columns: they ride **only**
 while `username` is displayed, and disappear if the user toggles that
-column off. The `@ui.table.hidden` keeps `avatar` / `firstName` /
-`lastName` from showing as their own columns — `@ui.table.selectWith`
-is what makes them ride in the payload.
+column off. `@ui.table.exclude` removes `avatar` / `firstName` /
+`lastName` from the table entirely — they never become columns, can't
+be added from the config dialog, and aren't filterable or sortable —
+while `@ui.table.selectWith` still pulls their data into the payload so
+the cell can read them.
 
 ### Headless renderers — `alwaysSelected`
 

@@ -316,15 +316,15 @@ export interface User {
     @ui.table.selectWith 'lastName'
     username: string
 
-    @ui.table.hidden
+    @ui.table.exclude
     avatar: string
 
-    @ui.table.hidden firstName: string
-    @ui.table.hidden lastName: string
+    @ui.table.exclude firstName: string
+    @ui.table.exclude lastName: string
 }
 ```
 
-`avatar` / `firstName` / `lastName` ride into `$select` whenever the `username` column is visible; the `identityCell` component reads them off `row` via `getCellValue(row, 'firstName')` etc. Toggle `username` off and the three deps stop being fetched.
+`@ui.table.exclude` keeps `avatar` / `firstName` / `lastName` out of the table entirely — they never become columns, can't be added from the config dialog, and aren't filterable or sortable — while `@ui.table.selectWith` still pulls their data into `$select` whenever the `username` column is visible. The `identityCell` component reads them off `row` via `getCellValue(row, 'firstName')` etc. Toggle `username` off and the three deps stop being fetched.
 
 For a headless renderer with no anchoring column, set the same leaves on the root instead:
 

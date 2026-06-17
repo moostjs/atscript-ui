@@ -69,7 +69,7 @@ export interface CustomersTable {
     @meta.label 'Primary contact'
     @meta.description 'Optional fingerprint union — variant detected by required-prop set.'
     @db.json
-    @ui.table.hidden
+    @ui.table.exclude
     primaryContact?: CustomerEmailContact | CustomerPhoneContact | CustomerPostalContact
 
     @meta.label 'Created'

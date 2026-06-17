@@ -59,7 +59,7 @@ export interface AuditLogTable {
     @meta.label 'Payload'
     @meta.description 'Optional discriminated union — `type` selects the variant.'
     @db.json
-    @ui.table.hidden
+    @ui.table.exclude
     payload?: AuditLoginPayload | AuditLogoutPayload | AuditNotePayload
 
     @meta.label 'At'

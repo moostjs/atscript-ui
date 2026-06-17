@@ -166,7 +166,7 @@ export const DEMO_TABLES: DemoTable[] = [
     ],
   },
   // Workflow state store — admin-only listing of paused workflow rows;
-  // demo for `@wf.store.fromContext` shadow columns and `@ui.table.hidden`.
+  // demo for `@wf.store.fromContext` shadow columns and `@ui.table.exclude`.
   {
     path: "wf_states",
     label: "Workflow States",

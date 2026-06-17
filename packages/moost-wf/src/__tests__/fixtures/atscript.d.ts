@@ -113,7 +113,7 @@ declare global {
     "ui.form.suffix.icon": string
     "ui.table.width": string
     "ui.table.component": string
-    "ui.table.hidden": boolean
+    "ui.table.exclude": boolean
     "ui.table.attr": ({ name: string, value: string })[]
     "ui.table.classes": (string)[]
     "ui.table.selectWith": (string)[]

@@ -20,7 +20,6 @@ describe("AsFilterValueHelp - enum mode", () => {
       sortable: true,
       filterable: true,
       nullable: false,
-      visible: true,
       order: 0,
       options: [
         { key: "pending", label: "Pending" },

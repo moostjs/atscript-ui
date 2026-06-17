@@ -109,7 +109,7 @@ import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {
     @meta.id
-    @ui.table.hidden
+    @ui.table.exclude
     @db.default.uuid
     id: string
 

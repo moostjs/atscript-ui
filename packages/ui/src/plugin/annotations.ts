@@ -524,8 +524,9 @@ export const uiAnnotations: TAnnotationsTree = {
         },
       }),
 
-      hidden: new AnnotationSpec({
-        description: "Hide this column by default in the table.",
+      exclude: new AnnotationSpec({
+        description:
+          "Completely removes this field from the table — not displayable, filterable, or sortable, and not shown in the config dialog. The field stays in the type and remains a valid `@ui.table.selectWith` target so its data can still be fetched for custom cells.",
         nodeType: ["prop", "type"],
       }),
 

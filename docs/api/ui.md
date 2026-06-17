@@ -427,7 +427,7 @@ Every supported annotation has a stringly-typed constant exported from `@atscrip
 
 ### Table static keys
 
-`UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_SELECT_WITH`, `UI_TABLE_HIDDEN`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER`.
+`UI_TABLE_WIDTH`, `UI_TABLE_COMPONENT`, `UI_TABLE_SELECT_WITH`, `UI_TABLE_EXCLUDE`, `UI_TABLE_ATTR`, `UI_TABLE_CLASSES`, `UI_TABLE_STYLES`, `UI_TABLE_TYPE`, `UI_TABLE_ORDER`.
 
 ### Table dynamic keys
 
@@ -737,7 +737,6 @@ function splitDecimalString(value: string): DecimalParts;
 ## Column helpers
 
 ```typescript
-function getVisibleColumns(def: TableDef, hidden?: Set<string>): ColumnDef[];
 function getSortableColumns(def: TableDef): ColumnDef[];
 function getFilterableColumns(def: TableDef): ColumnDef[];
 function getColumn(def: TableDef, path: string): ColumnDef | undefined;

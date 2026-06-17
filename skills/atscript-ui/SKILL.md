@@ -136,7 +136,6 @@ import {
   formatDecimalForDisplay,
   parseDecimalInput,
   // column helpers
-  getVisibleColumns,
   getSortableColumns,
   getFilterableColumns,
   getColumn,

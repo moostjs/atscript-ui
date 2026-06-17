@@ -153,7 +153,6 @@ export function mockColumn(path: string, overrides?: Partial<ColumnDef>): Column
     sortable: true,
     filterable: true,
     nullable: false,
-    visible: true,
     order: 0,
     ...overrides,
   };
@@ -164,12 +163,18 @@ export function rows(start: number, count: number): Record<string, unknown>[] {
   return Array.from({ length: count }, (_, i) => ({ id: start + i }));
 }
 
-/** Create a minimal TableDef for testing. */
-export function mockTableDef(columns: ColumnDef[]): TableDef {
+/**
+ * Create a minimal TableDef for testing. `fetchableFields` seeds from the
+ * column paths plus any `fetchableExtra` paths — the latter models
+ * `@ui.table.exclude` fields that are server-returnable (valid `selectWith`
+ * targets) but never appear as columns.
+ */
+export function mockTableDef(columns: ColumnDef[], fetchableExtra: string[] = []): TableDef {
   return {
     type: defineAnnotatedType("object").$type,
     columns,
     flatMap: new Map(),
+    fetchableFields: new Set([...columns.map((c) => c.path), ...fetchableExtra]),
     primaryKeys: ["id"],
     preferredId: ["id"],
     crud: { query: [], pages: [], one: [] },
@@ -188,6 +193,12 @@ type MountTableStateOptions = {
   pages?: ReturnType<typeof vi.fn>;
   client?: Client;
   columns?: ColumnDef[];
+  /**
+   * Server-returnable field paths that are NOT columns — models
+   * `@ui.table.exclude` fields valid as `selectWith` targets. Seeded into the
+   * def's `fetchableFields` without becoming columns.
+   */
+  fetchableExtra?: string[];
   queryOnMount?: boolean;
   blockSize?: number;
   blockQuery?: boolean;
@@ -210,7 +221,7 @@ function buildClient(
   defaults: { data: Record<string, unknown>[]; count: number },
 ) {
   const cols = opts.columns ?? [mockColumn("name")];
-  const fields = cols.map((c) => c.path);
+  const fields = [...cols.map((c) => c.path), ...(opts.fetchableExtra ?? [])];
   const mock = createMockClient({
     meta: createMockMeta(fields),
     data: opts.data ?? defaults.data,
@@ -269,7 +280,9 @@ export function mountTableState(opts: MountTableStateOptions = {}): {
     count: 10,
   });
   const effective = { ...opts, queryOnMount: opts.queryOnMount ?? false };
-  const state = mountWith(effective, client, ({ init }) => init(mockTableDef(columns)));
+  const state = mountWith(effective, client, ({ init }) =>
+    init(mockTableDef(columns, opts.fetchableExtra)),
+  );
   return { state, pagesFn, client };
 }
 
@@ -292,7 +305,7 @@ export function mountTableStateDeferred(opts: MountTableStateOptions = {}): {
     state,
     pagesFn,
     client,
-    init: (def) => initRef(def ?? mockTableDef(columns)),
+    init: (def) => initRef(def ?? mockTableDef(columns, opts.fetchableExtra)),
   };
 }
 

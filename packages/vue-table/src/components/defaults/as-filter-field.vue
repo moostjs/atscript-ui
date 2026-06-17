@@ -95,7 +95,6 @@ const enumColumns: ColumnDef[] | undefined = hasOptions
         type: "text",
         sortable: false,
         filterable: false,
-        visible: true,
         order: 0,
       },
     ]

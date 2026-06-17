@@ -12,7 +12,6 @@ function makeColumn(): ColumnDef {
     sortable: false,
     filterable: false,
     nullable: false,
-    visible: true,
     order: 0,
   };
 }

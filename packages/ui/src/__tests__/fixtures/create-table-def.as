@@ -67,10 +67,10 @@ export interface WithFormOrder {
     name: string
 }
 
-/// `@ui.table.hidden` flag toggles column visibility. Backs:
-///   - "@ui.table.hidden sets visible: false"
-export interface WithTableHidden {
-    @ui.table.hidden
+/// `@ui.table.exclude` removes the field from the table entirely (still fetchable). Backs:
+///   - "@ui.table.exclude removes the column"
+export interface WithTableExclude {
+    @ui.table.exclude
     secret: string
 
     visible: string
@@ -234,8 +234,7 @@ export interface WithUnion {
 }
 
 /// Three-prop fixture for the column-resolver helper block. Provides
-/// ordered ids, a hidden column, and mixed sortable/filterable flags. Backs:
-///   - "getVisibleColumns filters hidden columns"
+/// ordered ids, an excluded field, and mixed sortable/filterable flags. Backs:
 ///   - "getSortableColumns returns only sortable"
 ///   - "getFilterableColumns returns only filterable"
 ///   - "getColumn finds by path"
@@ -246,7 +245,7 @@ export interface ResolverHelpers {
     @ui.table.order 2
     name: string
 
-    @ui.table.hidden
+    @ui.table.exclude
     @ui.table.order 3
     secret: string
 }

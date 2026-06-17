@@ -14,7 +14,6 @@ import {
   type Ref,
 } from "vue";
 import {
-  getVisibleColumns,
   type ColumnDef,
   type PaginationControl,
   type SortControl,
@@ -380,7 +379,11 @@ export function createTableState(opts: CreateTableStateOptions): {
   let skipPaginationWatch = 0;
 
   function buildCurrentQuery(): Uniquery {
-    const available = new Set(allColumns.value.map((c) => c.path)); // narrowed-meta gate (incl. hidden cols)
+    // narrowed-meta gate over the server-returnable field set (`fetchableFields`,
+    // includes `@ui.table.exclude` fields that are never columns). Falls back to
+    // the column paths when a synthetic def carries no `fetchableFields`.
+    const available =
+      tableDef.value?.fetchableFields ?? new Set(allColumns.value.map((c) => c.path));
     const extra = new Set<string>();
     for (const c of columns.value) // selectWith: VISIBLE columns only
       for (const p of c.selectWith ?? []) if (available.has(p)) extra.add(p);
@@ -966,7 +969,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       const reconciled = reconcileColumnWidthDefaults(def.columns, columnWidths.value);
       if (reconciled !== columnWidths.value) columnWidths.value = reconciled;
       if (columnNames.value.length === 0) {
-        columnNames.value = getVisibleColumns(def).map((c) => c.path);
+        columnNames.value = def.columns.map((c) => c.path);
       }
       tableDef.value = def;
     },
@@ -1018,6 +1021,7 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
     type: undefined as unknown as TableDef["type"],
     columns: opts.columns,
     flatMap: new Map(),
+    fetchableFields: new Set(opts.columns.map((c) => c.path)),
     primaryKeys: [],
     preferredId: [],
     crud: { query: [], pages: [], one: [] },

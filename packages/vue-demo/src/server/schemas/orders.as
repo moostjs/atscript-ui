@@ -95,7 +95,7 @@ export interface OrdersTable {
     @meta.label 'Payment method'
     @meta.description 'Optional discriminated union — `kind` selects the variant.'
     @db.json
-    @ui.table.hidden
+    @ui.table.exclude
     paymentMethod?: OrderPaymentCard | OrderPaymentBank | OrderPaymentInvoice
 
     @meta.label 'Note'

@@ -133,7 +133,6 @@ const actionsCol = computed<ColumnDef>(() => {
     type: ROW_ACTIONS_TYPE,
     sortable: false,
     filterable: false,
-    visible: true,
     order: 0,
     fixed: true,
     width: isLabelOnly ? "8em" : "4em",

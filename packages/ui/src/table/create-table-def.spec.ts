@@ -1,11 +1,6 @@
 import { serializeAnnotatedType, type TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import {
-  getColumn,
-  getFilterableColumns,
-  getSortableColumns,
-  getVisibleColumns,
-} from "./column-resolver";
+import { getColumn, getFilterableColumns, getSortableColumns } from "./column-resolver";
 import { createTableDef } from "./create-table-def";
 import type { MetaResponse } from "./types";
 
@@ -114,13 +109,17 @@ describe("createTableDef", () => {
     expect(def.columns.map((c) => c.path)).toEqual(["email", "name"]);
   });
 
-  it("@ui.table.hidden sets visible: false", async () => {
-    const { WithTableHidden } = await import(F);
-    const meta = buildMeta(serializeAnnotatedType(WithTableHidden), ["secret", "visible"]);
+  it("@ui.table.exclude removes the column", async () => {
+    const { WithTableExclude } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(WithTableExclude), ["secret", "visible"]);
     const def = createTableDef(meta);
 
-    expect(def.columns.find((c) => c.path === "secret")!.visible).toBe(false);
-    expect(def.columns.find((c) => c.path === "visible")!.visible).toBe(true);
+    // Excluded field never becomes a column …
+    expect(def.columns.some((c) => c.path === "secret")).toBe(false);
+    // … but stays fetchable so it remains a valid @ui.table.selectWith target.
+    expect(def.fetchableFields.has("secret")).toBe(true);
+    // Non-excluded sibling stays a column.
+    expect(def.columns.some((c) => c.path === "visible")).toBe(true);
   });
 
   it("@ui.form.hidden does NOT hide the table column", async () => {
@@ -128,7 +127,7 @@ describe("createTableDef", () => {
     const meta = buildMeta(serializeAnnotatedType(WithFormHidden), ["internal"]);
     const def = createTableDef(meta);
 
-    expect(def.columns[0]!.visible).toBe(true);
+    expect(def.columns.some((c) => c.path === "internal")).toBe(true);
   });
 
   it("reads @ui.table.width", async () => {
@@ -452,11 +451,10 @@ describe("column-resolver", () => {
     return createTableDef(meta);
   }
 
-  it("getVisibleColumns filters hidden columns", async () => {
+  it("@ui.table.exclude drops the field from columns but keeps it fetchable", async () => {
     const def = await buildResolverDef();
-    const visible = getVisibleColumns(def);
-    expect(visible).toHaveLength(2);
-    expect(visible.map((c) => c.path)).toEqual(["id", "name"]);
+    expect(def.columns.map((c) => c.path)).toEqual(["id", "name"]);
+    expect(def.fetchableFields.has("secret")).toBe(true);
   });
 
   it("getSortableColumns returns only sortable", async () => {

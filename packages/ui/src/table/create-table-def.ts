@@ -10,7 +10,7 @@ import {
   EXPECT_MAX_LENGTH,
   META_LABEL,
   UI_TABLE_COMPONENT,
-  UI_TABLE_HIDDEN,
+  UI_TABLE_EXCLUDE,
   UI_TABLE_ORDER,
   UI_TABLE_SELECT_WITH,
   UI_TABLE_TYPE,
@@ -59,6 +59,11 @@ export function createTableDef(
       if (path.includes(".") || kind === "object" || kind === "array") continue;
     }
 
+    // `@ui.table.exclude` fields never become columns (not displayable,
+    // filterable, sortable, or shown in the config dialog). They stay in
+    // `fetchableFields` below so they remain valid `@ui.table.selectWith` targets.
+    if (getFieldMeta(prop, UI_TABLE_EXCLUDE) !== undefined) continue;
+
     const fieldMeta = meta.fields[path];
     const options = extractLiteralOptions(prop);
     const valueHelpInfo = extractValueHelp(prop);
@@ -80,7 +85,6 @@ export function createTableDef(
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
       nullable: prop.optional === true,
-      visible: getFieldMeta(prop, UI_TABLE_HIDDEN) === undefined,
       width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
       maxLen: maxLengthMeta?.length,
       order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
@@ -99,6 +103,7 @@ export function createTableDef(
     type,
     columns,
     flatMap,
+    fetchableFields: new Set(Object.keys(meta.fields)),
     primaryKeys: meta.primaryKeys,
     // Older servers / stub fixtures may omit `preferredId` — fall back to PK
     // so identifier extraction and `$1` substitution stay defined.

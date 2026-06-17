@@ -100,14 +100,14 @@ const types = createDefaultCellTypes();
 
 ## AsTableRoot v-models
 
-| v-model                 | Initial     | Purpose                                                                             |
-| ----------------------- | ----------- | ----------------------------------------------------------------------------------- |
-| `v-model:filter-fields` | `[]`        | Visible filter input list. Display state — independent of applied conditions.       |
-| `v-model:column-names`  | `[]`        | Visible columns, in render order. Seeded from `getVisibleColumns(tableDef)`.        |
-| `v-model:column-widths` | `{}`        | `ColumnWidthsMap` — `{ [path]: { w, d } }`. Defaults reconciled against the schema. |
-| `v-model:sorters`       | `[]`        | `SortControl[]` — multi-sort supported.                                             |
-| `v-model:selected-rows` | `[]`        | PK list per `rowValueFn`. Persistence policy controlled by `selectionPersistence`.  |
-| `v-model:url-query`     | `undefined` | Two-way string bridge. Bind via `useTableUrlQuery(useRoute(), useRouter())`.        |
+| v-model                 | Initial     | Purpose                                                                                              |
+| ----------------------- | ----------- | ---------------------------------------------------------------------------------------------------- |
+| `v-model:filter-fields` | `[]`        | Visible filter input list. Display state — independent of applied conditions.                        |
+| `v-model:column-names`  | `[]`        | Visible columns, in render order. Seeded from the table's columns (presets control the default set). |
+| `v-model:column-widths` | `{}`        | `ColumnWidthsMap` — `{ [path]: { w, d } }`. Defaults reconciled against the schema.                  |
+| `v-model:sorters`       | `[]`        | `SortControl[]` — multi-sort supported.                                                              |
+| `v-model:selected-rows` | `[]`        | PK list per `rowValueFn`. Persistence policy controlled by `selectionPersistence`.                   |
+| `v-model:url-query`     | `undefined` | Two-way string bridge. Bind via `useTableUrlQuery(useRoute(), useRouter())`.                         |
 
 ## AsTableRoot emits
 

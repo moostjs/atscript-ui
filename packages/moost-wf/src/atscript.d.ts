@@ -40,6 +40,7 @@ declare global {
     "db.index.plain": ({ name?: string, sort?: string })[]
     "db.index.unique": (string | true)[]
     "db.index.fulltext": ({ name?: string, weight?: number })[]
+    "db.index.geo": string | true
     "db.column": string
     "db.column.renamed": string
     "db.column.collate": string
@@ -48,12 +49,14 @@ declare global {
     "db.column.measure": boolean
     "db.column.filterable": boolean
     "db.column.sortable": boolean
+    "db.column.version": boolean
     "db.default": string
     "db.default.increment": number | true
     "db.default.uuid": boolean
     "db.default.now": boolean
     "db.json": boolean
     "db.ignore": boolean
+    "db.encrypted": boolean
     "db.http.path": string
     "db.sync.method": string
     "db.depth.limit": number
@@ -96,16 +99,24 @@ declare global {
     "ui.form.component": string
     "ui.form.hidden": boolean
     "ui.form.attr": ({ name: string, value: string })[]
-    "ui.form.width": string
-    "ui.form.prefix.icon": string
-    "ui.form.suffix.icon": string
+    "ui.form.grid.colSpan": { desktop: string, narrow?: string }
+    "ui.form.grid.rowSpan": { desktop: string, narrow?: string }
     "ui.form.submit.text": string
+    "ui.form.label.singular": string
+    "ui.form.pushDown": boolean
     "ui.form.action": { id: string, label?: string }
+    "ui.form.prefix": string
+    "ui.form.prefix.ref": string
+    "ui.form.prefix.icon": string
+    "ui.form.suffix": string
+    "ui.form.suffix.ref": string
+    "ui.form.suffix.icon": string
     "ui.table.width": string
     "ui.table.component": string
-    "ui.table.hidden": boolean
+    "ui.table.exclude": boolean
     "ui.table.attr": ({ name: string, value: string })[]
     "ui.table.classes": (string)[]
+    "ui.table.selectWith": (string)[]
     "ui.table.styles": (string)[]
     "ui.table.type": string
     "ui.table.order": number
@@ -121,6 +132,6 @@ declare global {
     "wf.action.withData": string
     "wf.store.fromContext": string
   }
-  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "currencyCode" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
+  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "geoPoint" | "currencyCode" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
 }
 // prettier-ignore-end

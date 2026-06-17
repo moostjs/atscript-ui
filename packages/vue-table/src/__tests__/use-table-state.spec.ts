@@ -72,16 +72,17 @@ describe("createTableState", () => {
       }),
     );
 
-    const cols = [mockColumn("name"), mockColumn("age"), mockColumn("hidden", { visible: false })];
+    const cols = [mockColumn("name"), mockColumn("age"), mockColumn("notes")];
     const def = mockTableDef(cols);
 
     internals.init(def);
 
     expect(state.tableDef.value).toBe(def);
     expect(state.allColumns.value).toEqual(cols);
-    // init() seeds columnNames from getVisibleColumns(def) — visible cols only.
-    expect(state.columnNames.value).toEqual(["name", "age"]);
-    expect(state.columns.value).toEqual([cols[0], cols[1]]);
+    // init() seeds columnNames from every def column (exclusion happens
+    // upstream — excluded fields are never columns).
+    expect(state.columnNames.value).toEqual(["name", "age", "notes"]);
+    expect(state.columns.value).toEqual(cols);
   });
 
   it("columns computed resolves from columnNames + allColumns", () => {
@@ -99,7 +100,7 @@ describe("createTableState", () => {
       }),
     );
 
-    const cols = [mockColumn("name"), mockColumn("age"), mockColumn("hidden", { visible: false })];
+    const cols = [mockColumn("name"), mockColumn("age"), mockColumn("notes")];
     internals.init(mockTableDef(cols));
 
     state.columnNames.value = ["name", "age"];

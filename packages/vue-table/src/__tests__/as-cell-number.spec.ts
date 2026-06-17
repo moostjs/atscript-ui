@@ -13,7 +13,6 @@ function makeColumn(overrides: Partial<ColumnDef> = {}): ColumnDef {
     sortable: false,
     filterable: false,
     nullable: false,
-    visible: true,
     order: 0,
     ...overrides,
   };

@@ -30,7 +30,7 @@ export {
   UI_TABLE_WIDTH,
   UI_TABLE_COMPONENT,
   UI_TABLE_SELECT_WITH,
-  UI_TABLE_HIDDEN,
+  UI_TABLE_EXCLUDE,
   UI_TABLE_ATTR,
   UI_TABLE_CLASSES,
   UI_TABLE_STYLES,
@@ -253,9 +253,4 @@ export type { MetaCacheEntry } from "./shared/meta-cache";
 export { str } from "./shared/str";
 
 // ── Table column helpers ────────────────────────────────────
-export {
-  getVisibleColumns,
-  getSortableColumns,
-  getFilterableColumns,
-  getColumn,
-} from "./table/column-resolver";
+export { getSortableColumns, getFilterableColumns, getColumn } from "./table/column-resolver";

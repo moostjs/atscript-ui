@@ -73,7 +73,7 @@ declare global {
     "ui.form.fn.attr": ({ name: string, fn: string })[]
     "ui.table.width": string
     "ui.table.component": string
-    "ui.table.hidden": boolean
+    "ui.table.exclude": boolean
     "ui.table.attr": ({ name: string, value: string })[]
     "ui.table.classes": (string)[]
     "ui.table.selectWith": (string)[]

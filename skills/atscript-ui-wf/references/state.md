@@ -55,16 +55,16 @@ new AsWfStore({
 
 Exported by `@atscript/moost-wf` as an interface — extend it in your project.
 
-| Column           | Type               | Annotations                                                                  | Notes                                                                     |
-| ---------------- | ------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| `handle`         | `string`           | `@db.index.unique 'handle_idx'`, `@expect.maxLength 256`, `@ui.table.hidden` | engine's state token; primary correlation key                             |
-| `schemaId`       | `string`           | `@db.index.plain 'schema_idx'`, `@expect.maxLength 256`                      | workflow id (e.g. `'auth/login'`)                                         |
-| `state`          | object             | `@db.json`, `@ui.table.hidden`                                               | `{ context: JsonValue, indexes: number[], meta?: ... }` — opaque snapshot |
-| `expiresAt?`     | `number.timestamp` | `@db.index.plain 'expires_idx'`                                              | optional expiry; `cleanup()` deletes past this                            |
-| `updatedAt`      | `number.timestamp` | `@db.default.now`, `@db.index.plain 'updated_idx'`                           | bumped on every `set()`                                                   |
-| `createdAt`      | `number.timestamp` | —                                                                            | set once on insert                                                        |
-| `createdBy?`     | `string`           | `@expect.maxLength 128`, `@ui.table.hidden`                                  | actor at insert                                                           |
-| `lastUpdatedBy?` | `string`           | `@expect.maxLength 128`, `@ui.table.hidden`                                  | actor on each update                                                      |
+| Column           | Type               | Annotations                                                                   | Notes                                                                     |
+| ---------------- | ------------------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `handle`         | `string`           | `@db.index.unique 'handle_idx'`, `@expect.maxLength 256`, `@ui.table.exclude` | engine's state token; primary correlation key                             |
+| `schemaId`       | `string`           | `@db.index.plain 'schema_idx'`, `@expect.maxLength 256`                       | workflow id (e.g. `'auth/login'`)                                         |
+| `state`          | object             | `@db.json`, `@ui.table.exclude`                                               | `{ context: JsonValue, indexes: number[], meta?: ... }` — opaque snapshot |
+| `expiresAt?`     | `number.timestamp` | `@db.index.plain 'expires_idx'`                                               | optional expiry; `cleanup()` deletes past this                            |
+| `updatedAt`      | `number.timestamp` | `@db.default.now`, `@db.index.plain 'updated_idx'`                            | bumped on every `set()`                                                   |
+| `createdAt`      | `number.timestamp` | —                                                                             | set once on insert                                                        |
+| `createdBy?`     | `string`           | `@expect.maxLength 128`, `@ui.table.exclude`                                  | actor at insert                                                           |
+| `lastUpdatedBy?` | `string`           | `@expect.maxLength 128`, `@ui.table.exclude`                                  | actor on each update                                                      |
 
 The schema deliberately **does not declare a primary key**. The consumer's extension adds `@meta.id` on whichever column they choose (`id` UUID is the typical default). The store reads/writes by `handle`, not by `@meta.id`.
 

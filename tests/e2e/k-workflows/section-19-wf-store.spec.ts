@@ -539,15 +539,15 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
     });
   });
 
-  test.describe("19.W7 — /wf_states demo table renders shadow columns and respects @ui.table.hidden", () => {
-    // Hidden in the schema — `state`, `handle`, `createdBy`, `lastUpdatedBy`
+  test.describe("19.W7 — /wf_states demo table renders shadow columns and respects @ui.table.exclude", () => {
+    // Excluded in the schema — `state`, `handle`, `createdBy`, `lastUpdatedBy`
     // come from `AsWfStateRecord` (moost-wf base); `id` is the demo's own
     // re-declared `@meta.id` column.
-    const HIDDEN_COLUMNS = ["state", "handle", "id", "createdBy", "lastUpdatedBy"] as const;
+    const EXCLUDED_COLUMNS = ["state", "handle", "id", "createdBy", "lastUpdatedBy"] as const;
     // Visible — schemaId is inherited (no annotation), shadows are local.
     const VISIBLE_COLUMNS = ["schemaId", "inviteEmail", "inviteRole"] as const;
 
-    test("19.W7 raw — meta payload carries @ui.table.hidden in the type metadata", async () => {
+    test("19.W7 raw — meta payload carries @ui.table.exclude in the type metadata", async () => {
       const adminCtx = await newRequestContext("admin");
       try {
         const res = await adminCtx.get("/api/db/tables/wf_states/meta");
@@ -556,16 +556,16 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
           type: { type: { props: Record<string, { metadata?: Record<string, unknown> }> } };
         };
         const props = meta.type?.type?.props ?? {};
-        for (const col of HIDDEN_COLUMNS) {
+        for (const col of EXCLUDED_COLUMNS) {
           expect(
-            props[col]?.metadata?.["ui.table.hidden"],
-            `${col} must carry ui.table.hidden in wire metadata`,
+            props[col]?.metadata?.["ui.table.exclude"],
+            `${col} must carry ui.table.exclude in wire metadata`,
           ).toBe(true);
         }
         for (const col of VISIBLE_COLUMNS) {
           expect(
-            props[col]?.metadata?.["ui.table.hidden"],
-            `${col} must NOT carry ui.table.hidden`,
+            props[col]?.metadata?.["ui.table.exclude"],
+            `${col} must NOT carry ui.table.exclude`,
           ).toBeUndefined();
         }
       } finally {
@@ -573,7 +573,7 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
       }
     });
 
-    test("19.W7 UI — admin opens /wf_states; thead omits hidden columns, shadow columns reflect a fresh invite", async ({
+    test("19.W7 UI — admin opens /wf_states; thead omits excluded columns, shadow columns reflect a fresh invite", async ({
       browser,
     }) => {
       // Seed: drive one invite so a wf_states row exists with shadow values.
@@ -598,10 +598,10 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         await gotoTable(adminPage, "wf_states");
         const table = adminPage.locator("table[data-as-main-table]");
 
-        for (const col of HIDDEN_COLUMNS) {
+        for (const col of EXCLUDED_COLUMNS) {
           await expect(
             table.locator(`thead th[data-column-path="${col}"]`),
-            `hidden column ${col} must not render a <th>`,
+            `excluded column ${col} must not render a <th>`,
           ).toHaveCount(0);
         }
         for (const col of VISIBLE_COLUMNS) {

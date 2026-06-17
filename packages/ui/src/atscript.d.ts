@@ -40,6 +40,7 @@ declare global {
     "db.index.plain": ({ name?: string, sort?: string })[]
     "db.index.unique": (string | true)[]
     "db.index.fulltext": ({ name?: string, weight?: number })[]
+    "db.index.geo": string | true
     "db.column": string
     "db.column.renamed": string
     "db.column.collate": string
@@ -55,6 +56,7 @@ declare global {
     "db.default.now": boolean
     "db.json": boolean
     "db.ignore": boolean
+    "db.encrypted": boolean
     "db.http.path": string
     "db.sync.method": string
     "db.depth.limit": number
@@ -111,7 +113,7 @@ declare global {
     "ui.form.suffix.icon": string
     "ui.table.width": string
     "ui.table.component": string
-    "ui.table.hidden": boolean
+    "ui.table.exclude": boolean
     "ui.table.attr": ({ name: string, value: string })[]
     "ui.table.classes": (string)[]
     "ui.table.selectWith": (string)[]
@@ -127,6 +129,6 @@ declare global {
     "ui.array.add.label": string
     "ui.array.remove.label": string
   }
-  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "currencyCode" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
+  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "geoPoint" | "currencyCode" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
 }
 // prettier-ignore-end

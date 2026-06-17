@@ -82,38 +82,32 @@ describe("ReactiveTableState — preset surface (no presetsHandle)", () => {
     expect(state.sorters.value).toEqual([{ field: "a", direction: "desc" }]);
   });
 
-  // Regression — applying a system preset whose `columns` aspect declares no
-  // explicit `columnNames` (the default Standard preset, content `{}`) used
-  // to fall back to *all* columns including ones with `@ui.table.hidden`
-  // (where `visible: false`). The fallback now filters by `c.visible`. The
-  // existing `getVisibleColumns` unit test only covered the helper directly,
-  // not the preset-apply path that bootstraps `columnNames` on first load.
-  it("applyPreset(sys:standard) with empty content excludes hidden columns from fallback", async () => {
+  // Applying a system preset whose `columns` aspect declares no explicit
+  // `columnNames` (the default Standard preset, content `{}`) falls back to
+  // ALL columns. Field exclusion (`@ui.table.exclude`) happens upstream in
+  // `@atscript/ui` — excluded fields are never pushed as columns, so every
+  // column the table knows about is part of the fallback set.
+  it("applyPreset(sys:standard) with empty content falls back to all columns", async () => {
     const { state } = mountTableState({
-      columns: [
-        mockColumn("name"),
-        mockColumn("status"),
-        mockColumn("internal", { visible: false }),
-        mockColumn("blob", { visible: false }),
-      ],
+      columns: [mockColumn("name"), mockColumn("status"), mockColumn("notes")],
     });
     state.preset.apply("sys:standard");
     await nextTick();
-    expect(state.columnNames.value).toEqual(["name", "status"]);
+    expect(state.columnNames.value).toEqual(["name", "status", "notes"]);
   });
 
-  it("expandDefault for columns excludes hidden columns (snapshot expansion path)", () => {
+  it("expandDefault for columns is all columns (snapshot expansion path)", () => {
     const { state } = mountTableState({
-      columns: [mockColumn("name"), mockColumn("hidden", { visible: false })],
+      columns: [mockColumn("name"), mockColumn("status")],
     });
     state.preset.activeId.value = "sys:standard";
     // activeSnapshot expands the empty `{}` system preset via
     // `expandDefault` per aspect; isDirty compares it against current state.
     // After applying Standard, no aspect should be dirty against the
-    // expanded default.
+    // expanded default (which is the full column set).
     state.preset.apply("sys:standard");
     expect(state.preset.isDirty.value).toBe(false);
-    expect(state.columnNames.value).toEqual(["name"]);
+    expect(state.columnNames.value).toEqual(["name", "status"]);
   });
 
   it("isDirty defaults to false when no active preset is set", () => {
