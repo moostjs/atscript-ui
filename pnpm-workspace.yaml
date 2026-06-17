@@ -6,11 +6,11 @@ catalog:
   "@aooth/arbac": ^0.1.20
   "@aooth/arbac-moost": ^0.1.20
   "@atscript/core": ^0.1.77
-  "@atscript/db": ^0.1.107
-  "@atscript/db-client": ^0.1.107
-  "@atscript/db-sql-tools": ^0.1.107
-  "@atscript/db-sqlite": ^0.1.107
-  "@atscript/moost-db": ^0.1.107
+  "@atscript/db": ^0.1.108
+  "@atscript/db-client": ^0.1.108
+  "@atscript/db-sql-tools": ^0.1.108
+  "@atscript/db-sqlite": ^0.1.108
+  "@atscript/moost-db": ^0.1.108
   "@atscript/moost-validator": ^0.1.77
   "@atscript/typescript": ^0.1.77
   "@iconify/utils": ^3.1.3
