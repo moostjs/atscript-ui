@@ -3,7 +3,7 @@ import { useAsForm } from "../composables/use-as-form";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import AsIterator from "./as-iterator.vue";
-import type { ClientFactory, FormDef } from "@atscript/ui";
+import type { ClientFactory, FormDef, FormFieldChange } from "@atscript/ui";
 import type { Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
 
@@ -113,6 +113,14 @@ defineExpose({
   getChanges: form.patch ? form.patch.getChanges : () => [],
   /** Re-baseline to current data after a successful save (no-op when off). */
   rebase: form.patch ? form.patch.rebase : () => {},
+  /**
+   * 3-way rebase onto a fresh upstream snapshot (sets baseline := upstream,
+   * reapplies the local diff). Pure no-op returning empty when tracking is off
+   * — NO side effects, mirroring `rebase`/`getPatch`.
+   */
+  rebaseOnto: form.patch
+    ? form.patch.rebaseOnto
+    : () => ({ conflicts: [] as string[], reapplied: [] as FormFieldChange[] }),
 });
 </script>
 
@@ -121,7 +129,7 @@ defineExpose({
     <slot name="form.header" v-bind="form.slotProps.value"></slot>
     <slot name="form.before" v-bind="form.slotProps.value"></slot>
 
-    <AsField :field="def.rootField" />
+    <AsField :key="form.remountKey.value" :field="def.rootField" />
 
     <slot name="form.after" v-bind="form.slotProps.value"></slot>
 

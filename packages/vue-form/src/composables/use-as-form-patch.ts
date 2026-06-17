@@ -1,11 +1,34 @@
 import { computed, inject, ref, toRaw, watch, type ComputedRef } from "vue";
 import {
   buildFormDiff,
+  buildFormRebase,
+  deepClone,
+  detectUnionVariant,
+  getByPath,
+  isObjectField,
+  isUnionField,
+  setByPath,
   type FormDef,
   type FormDiffOptions,
   type FormFieldChange,
+  type FormObjectFieldDef,
+  type FormRebaseOptions,
+  type FormUnionFieldDef,
 } from "@atscript/ui";
 import { FORM_PATCH_KEY } from "./internal-keys";
+
+/**
+ * Result of {@link AsFormPatchHandle.rebaseOnto}. Aliases the `@atscript/ui`
+ * rebase shape (minus `next`, which is written into the live container rather
+ * than returned): the surviving local diff on top of the NEW baseline plus the
+ * conflict paths.
+ */
+export interface RebaseOntoResult {
+  /** Paths changed on both sides to different values, plus ancestor-clear paths. */
+  conflicts: string[];
+  /** Local edits that survive on top of the new (upstream) baseline. */
+  reapplied: FormFieldChange[];
+}
 
 /**
  * Change-tracking handle for a single `<AsForm>`. Exposed three ways:
@@ -47,6 +70,27 @@ export interface AsFormPatchHandle {
    * becomes clean again WITHOUT a remount. No-op when tracking is inactive.
    */
   rebase: () => void;
+  /**
+   * 3-way rebase onto a fresh upstream snapshot. Sets the baseline to
+   * `upstream` and rewrites the live form to `upstream` + the local diff
+   * (current vs. old baseline) reapplied on top:
+   *
+   * - fields the user never touched adopt `upstream`'s value,
+   * - local edits survive,
+   * - fields changed on both sides to a different value are conflicts, resolved
+   *   by `opts.conflict` (`'ours'` default keeps local, `'theirs'` takes
+   *   upstream).
+   *
+   * `upstream` is the WRAPPED form-data container (`{ value }`). The live form
+   * data is rewritten in a SINGLE mutation (the bound `:form-data` container
+   * identity is preserved, so the consumer's ref stays the same object). After
+   * the write the baseline becomes a deep clone of `upstream`, so a subsequent
+   * `getPatch()` carries exactly the surviving local diff (`reapplied`).
+   *
+   * Returns the conflict paths and the surviving local diff. No-op returning
+   * empty when tracking is inactive.
+   */
+  rebaseOnto: (upstream: Record<string, unknown>, opts?: FormRebaseOptions) => RebaseOntoResult;
 }
 
 /**
@@ -78,16 +122,25 @@ export interface AsFormPatchHandle {
  * data (`dataRev`) or the baseline (`baselineRev`) changes, and Vue caches the
  * result between reads.
  *
- * @param def      getter for the form's `FormDef`
- * @param getData  getter for the WRAPPED form-data container `{ value }`. Before
- *                 real domain data arrives `useAsForm` yields the empty internal
- *                 fallback `{}` (no `value` key); the tracker treats that as
- *                 "no data yet" and defers the baseline until a `{ value: … }`
- *                 container appears (the fetch-then-fill flow).
+ * @param def       getter for the form's `FormDef`
+ * @param getData   getter for the WRAPPED form-data container `{ value }`. Before
+ *                  real domain data arrives `useAsForm` yields the empty internal
+ *                  fallback `{}` (no `value` key); the tracker treats that as
+ *                  "no data yet" and defers the baseline until a `{ value: … }`
+ *                  container appears (the fetch-then-fill flow). The SAME
+ *                  container reference is also the write target for
+ *                  `rebaseOnto` — mutating its `.value` preserves the bound
+ *                  `:form-data` identity so the deep watch fires once.
+ * @param onRebased optional callback fired AFTER `rebaseOnto` rewrites the live
+ *                  data, so the host can force-remount the field subtree (e.g.
+ *                  bump a key) when a union variant changed — the variant picker
+ *                  detects its index once at setup and won't re-detect on a
+ *                  data swap. No-op for `rebase()` (which doesn't move data).
  */
 export function createAsFormPatch(
   def: () => FormDef,
   getData: () => Record<string, unknown>,
+  onRebased?: () => void,
 ): AsFormPatchHandle {
   // Deep-clone baseline snapshot. `undefined` until real (wrapped) data first
   // becomes available (async form data). A revision counter bumps the dependent
@@ -110,7 +163,7 @@ export function createAsFormPatch(
   function snapshot(): Record<string, unknown> | undefined {
     const cur = getData();
     if (cur.value === undefined) return undefined;
-    return deepClone(toRaw(cur)) as Record<string, unknown>;
+    return deepClone(cur, toRaw) as Record<string, unknown>;
   }
 
   function capture(): void {
@@ -178,13 +231,13 @@ export function createAsFormPatch(
   // results when tracking has no baseline yet.
   function getPatch(opts?: FormDiffOptions): Record<string, unknown> {
     if (baseline === undefined) return {};
-    const frozen = deepClone(toRaw(getData()));
+    const frozen = deepClone(getData(), toRaw);
     return buildFormDiff(def(), baseline, frozen, opts).patch;
   }
 
   function getChanges(): FormFieldChange[] {
     if (baseline === undefined) return [];
-    const frozen = deepClone(toRaw(getData()));
+    const frozen = deepClone(getData(), toRaw);
     return buildFormDiff(def(), baseline, frozen).changes;
   }
 
@@ -192,31 +245,70 @@ export function createAsFormPatch(
     capture();
   }
 
-  return { isDirty, changes, getPatch, getChanges, rebase };
-}
+  /**
+   * 3-way rebase onto a fresh upstream snapshot (see
+   * {@link AsFormPatchHandle.rebaseOnto}). One reactive write, then an explicit
+   * re-baseline to the upstream snapshot.
+   */
+  function rebaseOnto(
+    upstream: Record<string, unknown>,
+    opts?: FormRebaseOptions,
+  ): RebaseOntoResult {
+    // De-proxy the upstream container so the merge + baseline are proxy-free.
+    const u = deepClone(upstream, toRaw) as Record<string, unknown>;
 
-/**
- * Structural deep clone of plain JSON-ish data (objects / arrays / primitives /
- * Date). Used to freeze the baseline so later edits to the live form data don't
- * mutate it. `structuredClone` would throw on Vue proxies / functions; this
- * walks own-enumerable keys and copies leaves by value.
- */
-function deepClone<T>(value: T): T {
-  if (value === null || typeof value !== "object") return value;
-  if (value instanceof Date) return new Date(value.getTime()) as unknown as T;
-  if (Array.isArray(value)) {
-    const out: unknown[] = [];
-    for (let i = 0; i < value.length; i++) out.push(deepClone(toRaw(value[i])));
-    return out as unknown as T;
+    // Fetch-then-fill defer: no baseline yet → adopt upstream wholesale and let
+    // the deferred-capture watcher (or an explicit capture) baseline it. No
+    // local diff exists to reapply, so there are no conflicts and nothing
+    // reapplied.
+    if (baseline === undefined) {
+      const before = deepClone(getData(), toRaw) as Record<string, unknown>;
+      setByPath(getData(), "", u.value);
+      // The data swap may have landed a different union variant — force-remount.
+      if (unionVariantChanged(def(), before, u)) onRebased?.();
+      // If real data is now present, baseline it immediately (the deferred
+      // watcher also covers the async case where `getData()` is still empty).
+      capture();
+      return { conflicts: [], reapplied: [] };
+    }
+
+    // Normal 3-way merge. Diff the LIVE current against the OLD baseline,
+    // reapply onto a clone of upstream. Same diffOptions the tracker uses for
+    // its own change list (default `buildFormDiff` opts — version-column / $cas
+    // exclusion already baked into the engine).
+    const current = deepClone(getData(), toRaw) as Record<string, unknown>;
+    const { next, conflicts, reapplied } = buildFormRebase(def(), baseline, current, u, opts);
+
+    // Did any union path land a different variant? Compare `next` against the
+    // live `current` — the picker's setup-time index reflects the last-committed
+    // (current) data, so a difference there is exactly when it would show a stale
+    // variant after the write. Detect BEFORE the write.
+    const variantMoved = unionVariantChanged(def(), current, next);
+
+    // SINGLE reactive write — preserve the bound container identity so the
+    // consumer's `:form-data` ref stays the same object and the deep watch fires
+    // once. `next.value` is already a fresh, proxy-free deep clone.
+    setByPath(getData(), "", next.value);
+
+    // Re-baseline EXPLICITLY to the upstream snapshot — NOT `capture()`, which
+    // would snapshot the live container (now holding `next`) and make the
+    // reapplied edits read clean. Assigning `u` directly (no extra clone) is safe:
+    // live edits mutate `next.value` — a SEPARATE deep clone — never `u`; and the
+    // only references shared into `u` are `reapplied[].before`, which alias the
+    // baseline exactly like `changes[].before` do (the same read-only contract),
+    // so an extra clone buys nothing.
+    baseline = u;
+    baselineRev.value++;
+
+    // A landed union variant won't re-detect on a data swap — force-remount the
+    // field subtree only when one actually moved (avoid disrupting focus/scroll
+    // on the common no-variant-change rebase).
+    if (variantMoved) onRebased?.();
+
+    return { conflicts, reapplied };
   }
-  // Own-enumerable keys only (matches the own-key discipline in
-  // `@atscript/ui/src/form/diff.ts`); never walk an accidental prototype.
-  const src = value as Record<string, unknown>;
-  const out: Record<string, unknown> = {};
-  for (const k of Object.keys(src)) {
-    out[k] = deepClone(toRaw(src[k]));
-  }
-  return out as T;
+
+  return { isDirty, changes, getPatch, getChanges, rebase, rebaseOnto };
 }
 
 // ── Public reader ────────────────────────────────────────────
@@ -248,4 +340,58 @@ export function useAsFormPatch(): AsFormPatchHandle {
   const handle = inject(FORM_PATCH_KEY, undefined);
   if (!handle) throw new Error(NOT_TRACKING_MSG);
   return handle;
+}
+
+// ── Union-variant remount detection ──────────────────────────
+
+/**
+ * True when ANY union field in the form resolves to a DIFFERENT discriminated
+ * variant between two wrapped data containers. `<AsUnion>` detects its variant
+ * index once at setup and keys the variant subtree on it, so a rebase that lands
+ * a different variant (via conflict OR an upstream-only switch) needs a remount
+ * to re-detect. This walks union + nested-object fields and compares
+ * `detectUnionVariant` at each union path.
+ *
+ * Scope note (pragmatic): walks standalone + nested-OBJECT union fields. Unions
+ * nested INSIDE array items are not walked. `<AsArray>` keeps a stable per-item
+ * key across in-place value mutations, so an upstream-driven variant flip on an
+ * EXISTING row would not remount its picker — but that collision (a 3-way rebase
+ * landing a different union variant inside an unchanged array row) is a rare
+ * edge. TODO: extend to array-item unions if a real consumer hits a stuck picker
+ * inside an array row.
+ */
+export function unionVariantChanged(
+  def: FormDef,
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): boolean {
+  return walkUnionFields(def.fields, "", before, after);
+}
+
+function walkUnionFields(
+  fields: FormDef["fields"],
+  prefix: string,
+  before: Record<string, unknown>,
+  after: Record<string, unknown>,
+): boolean {
+  for (const field of fields) {
+    if (field.phantom) continue;
+    const fullPath = field.path ? (prefix ? `${prefix}.${field.path}` : field.path) : prefix;
+
+    if (isUnionField(field)) {
+      const variants = (field as FormUnionFieldDef).unionVariants;
+      if (variants.length > 1) {
+        const bi = detectUnionVariant(getByPath(before, fullPath), variants);
+        const ai = detectUnionVariant(getByPath(after, fullPath), variants);
+        if (bi !== ai) return true;
+      }
+      continue;
+    }
+
+    if (isObjectField(field)) {
+      const objectDef = (field as FormObjectFieldDef).objectDef;
+      if (walkUnionFields(objectDef.fields, fullPath, before, after)) return true;
+    }
+  }
+  return false;
 }

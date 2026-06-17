@@ -189,6 +189,12 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
    * `undefined` otherwise. Read it from descendants with `useAsFormPatch()`.
    */
   patch: AsFormPatchHandle | undefined;
+  /**
+   * Remount key for the field subtree. Bound as `:key` on the root `<AsField>`.
+   * Bumped by `patch.rebaseOnto` only when a rebase lands a different union
+   * variant, forcing the variant picker to re-detect. `0` otherwise.
+   */
+  remountKey: Ref<number>;
   /** Dispatch an action — invoked by `<AsAction>`. */
   invokeAction: (name: string) => void;
   /** Dismiss a single external leaf error. */
@@ -267,6 +273,12 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // Read the flag once at setup (matches `hideRootTitle` handling). OFF means
   // zero overhead: no baseline snapshot, no deep watch, and `useAsFormPatch()`
   // throws because FORM_PATCH_KEY is never provided.
+  // Remount key for the field subtree. Bumped by `patch.rebaseOnto` (via the
+  // `onRebased` callback) ONLY when a rebase lands a different union variant —
+  // `<AsUnion>` detects its index once at setup and won't re-detect on a data
+  // swap, so the subtree must remount to re-pick. Stays `0` for the common case
+  // (no union, or no variant change), so non-rebase flows never remount.
+  const remountKey = ref(0);
   const patch: AsFormPatchHandle | undefined = options.trackChanges?.()
     ? createAsFormPatch(
         () => options.def(),
@@ -275,6 +287,9 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         // the tracker treats that as "no data yet" and defers the baseline.
         // `buildFormDiff`'s getByPath derefs `.value`.
         () => data.value as Record<string, unknown>,
+        () => {
+          remountKey.value++;
+        },
       )
     : undefined;
   if (patch) provide(FORM_PATCH_KEY, patch);
@@ -494,5 +509,6 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     formContext,
     handleChange,
     patch,
+    remountKey,
   };
 }

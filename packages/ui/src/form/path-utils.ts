@@ -51,6 +51,36 @@ export function setByPath(obj: Record<string, unknown>, path: string, value: unk
   current[last] = value;
 }
 
+/**
+ * Deletes the own key at a dot-separated path (form-data wrapper aware — derefs
+ * `obj.value` first). Walks to the parent WITHOUT vivifying intermediate nodes:
+ * if any ancestor is missing, the call is a no-op (nothing to delete).
+ *
+ * Unlike `setByPath(obj, path, undefined)`, this leaves NO own key behind — the
+ * leaf reads as absent (`'k' in parent === false`), which keeps `deepEqual`
+ * structural comparisons in sync (a present `undefined` own-key and an absent
+ * key are NOT structurally equal under the own-key walk). Used by
+ * {@link applyFormChanges} to apply a clear-to-`undefined` change as a delete.
+ *
+ * Empty path clears the root domain value (`obj.value = undefined`).
+ */
+export function deleteByPath(obj: Record<string, unknown>, path: string): void {
+  if (!path) {
+    obj.value = undefined;
+    return;
+  }
+  const keys = path.split(".");
+  const last = keys.pop();
+  if (last === undefined) return;
+  let current: unknown = obj.value;
+  for (const key of keys) {
+    if (current === null || current === undefined || typeof current !== "object") return;
+    current = (current as Record<string, unknown>)[key];
+  }
+  if (current === null || current === undefined || typeof current !== "object") return;
+  delete (current as Record<string, unknown>)[last];
+}
+
 // ── createFormData ──────────────────────────────────────────
 
 function parseStaticDefault(raw: unknown, prop: TAtscriptAnnotatedType): unknown {

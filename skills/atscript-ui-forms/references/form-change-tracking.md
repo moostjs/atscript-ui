@@ -2,13 +2,15 @@
 
 Opt-in dirty tracking + `@atscript/db` patch building for `<AsForm>`: enable
 `track-changes`, gate Save on `isDirty`, feed `getPatch()` to
-`table.updateOne()`, `rebase()` after a save. Revert-aware; `$cas` OCC auto-lifts
-from `@db.column.version`.
+`table.updateOne()`, `rebase()` after a save. `rebaseOnto()` (3-way merge) folds
+fresh server data into a form with unsaved edits. Revert-aware; `$cas` OCC
+auto-lifts from `@db.column.version`.
 
 ## Contents
 
 - [Quick start](#quick-start)
 - [Invariants](#invariants)
+- [rebaseOnto — 3-way merge](#rebaseonto--3-way-merge)
 - [Key imports](#key-imports)
 - [References](#references)
 - [See also](#see-also)
@@ -91,16 +93,90 @@ The same four-member tracking surface (`isDirty`, `changes`, `getPatch`,
 | 11  | **`rebase()` after a successful save; `reset()` re-baselines too.** `rebase()` makes current data the new baseline → form clean (`isDirty === false`) without a remount, next edit diffs the just-saved state. `reset()` (re-applies defaults) also re-baselines, so a "discard changes" button is free.                                                                                                                               |
 | 12  | **Baseline is captured once real data is available.** With an async `:form-data` ref the tracker waits for `formData.value` to resolve to real data, so a fetch-then-fill edit page baselines the LOADED row, not the empty placeholder.                                                                                                                                                                                               |
 
+## rebaseOnto — 3-way merge
+
+**What/when:** fold FRESH server data into a form that already has UNSAVED local
+edits — baseline becomes `upstream`, the local diff is reapplied on top, so
+untouched fields adopt the server's new values while the user's edits survive.
+Use for out-of-band server writes to a bound field, post-save reloads that pick
+up server-computed fields while other sections are dirty, and
+concurrent/collaborative edits. NOT the same as `rebase()` (re-baselines to
+CURRENT post-save data) or a hard reset (replaces `formData`, drops edits).
+
+`rebaseOnto` is a METHOD on the `AsFormPatchHandle` — reach it via
+`useAsFormPatch()` (descendant) or the `<AsForm>` template ref (`defineExpose`).
+NOT a slot prop (mirrors `rebase()`; slot props stay `isDirty`/`changes`/`getPatch`/`getChanges`).
+
+```ts
+import { useAsFormPatch } from "@atscript/vue-form";
+import type { FormRebaseOptions, RebaseOntoResult } from "@atscript/vue-form"; // FormRebaseOptions re-exported from @atscript/ui
+// Framework-agnostic engine + helpers it composes:
+import { buildFormRebase, applyFormChanges, deepEqual, deepClone } from "@atscript/ui";
+import type { FormRebaseResult } from "@atscript/ui"; // FormRebaseOptions also origin-exported here (imported above from vue-form)
+```
+
+Signature: `rebaseOnto(upstream, opts?) → { conflicts: string[]; reapplied: FormFieldChange[] }`.
+`upstream` = the WRAPPED `{ value: domainData }` container (same shape as `:form-data`).
+`opts = { conflict?: 'ours' | 'theirs' }`. `conflicts` = paths edited on both
+sides to DIFFERENT values (plus an ancestor path when upstream cleared a subtree
+the user still edited under). `reapplied` = the surviving local diff = what
+`getChanges()` returns after the rebase.
+
+| #   | Invariant                                                                                                                                                                                                                                                                            |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **`upstream` is the WRAPPED container.** Pass `{ value: domainData }` (same shape as `:form-data` / what a table client's `one()` returns), not the bare domain object.                                                                                                              |
+| 2   | **Conflict policy = `opts.conflict`.** `'ours'` (default) keeps the local edit; `'theirs'` takes upstream's value and drops the local edit. EITHER way the path is recorded in `conflicts`. Changed on only ONE side never conflicts (local-only reapplies; upstream-only flows in). |
+| 3   | **Same value on both sides is NOT a conflict.** Revert-aware: if local and upstream landed the identical value it drops out clean (no entry in `conflicts`, `next` already holds it).                                                                                                |
+| 4   | **Keyed arrays merge WHOLE-ARRAY.** If both sides touch the same array it is ONE whole-array conflict resolved by `opts.conflict` — no per-element 3-way merge.                                                                                                                      |
+| 5   | **Nested objects are LEAF-grained.** A local leaf edit + an upstream sibling-leaf change BOTH survive, independent of the field's `@db.patch.strategy` patch granularity.                                                                                                            |
+| 6   | **Fetch-then-fill adopt.** No baseline yet (async data not resolved) → adopts `upstream` wholesale and returns `{ conflicts: [], reapplied: [] }`; no local diff exists to reapply.                                                                                                  |
+| 7   | **Tracking OFF = pure no-op.** Returns `{ conflicts: [], reapplied: [] }` with NO side effects (mirrors `rebase()`/`getPatch()` off). To discard-and-adopt on a non-tracking form, assign your bound ref yourself.                                                                   |
+| 8   | **`$cas` rides the upstream version.** The new baseline carries `upstream`'s `@db.column.version`, so the next `getPatch()` lifts `$cas` against the FRESH version automatically — provided `upstream` carries the version column.                                                   |
+| 9   | **Upstream-introduced values validate IMMEDIATELY** under the default on-change strategy (treated as edits, not suppressed-fresh).                                                                                                                                                   |
+| 10  | **Union variant remount.** If a rebase lands a DIFFERENT discriminated-union variant at a union path, that field subtree force-remounts so the picker re-detects.                                                                                                                    |
+| 11  | **Single reactive write.** The bound `:form-data` container identity is preserved (one mutation, one watch pass); the new baseline is a deep clone of `upstream`, so the next `getPatch()` carries exactly the surviving local diff.                                                 |
+
+```ts
+const fresh = await client.one(id); // wrapped { value }
+const { conflicts } = asForm.value.rebaseOnto(fresh, { conflict: "ours" });
+if (conflicts.length)
+  notify("Some fields changed on the server", "Kept your edits to: " + conflicts.join(", "));
+```
+
+**Non-Vue reuse:** `rebaseOnto` is the thin Vue reactive wrapper over the
+framework-agnostic engine `buildFormRebase(def, baseline, current, upstream, opts?, diffOptions?)`
+in `@atscript/ui` — a pure 3-way merge (all containers wrapped `{ value }`)
+returning `{ next, conflicts, reapplied }` (`next` = rebased container to
+install). Keep `diffOptions` identical to your tracking options (forwarded to
+both internal `buildFormDiff` passes so version/`$cas` exclusion matches).
+`applyFormChanges(def, data, changes)` reapplies a change list onto a wrapped
+container (MUTATING — pass a clone); `deepEqual` / `deepClone` are the shared
+structural comparator / clone (`deepClone(value, unwrap?)` — the `unwrap` hook
+lets a framework strip a reactive proxy, e.g. vue-form passes `toRaw`).
+
 ## Key imports
 
 ```ts
 // Vue surface
 import { useAsFormPatch } from "@atscript/vue-form";
-import type { FormFieldChange, FormDiffOptions } from "@atscript/vue-form"; // re-exported from @atscript/ui
+import type { FormFieldChange, FormDiffOptions, FormRebaseOptions } from "@atscript/vue-form"; // re-exported from @atscript/ui
+import type { RebaseOntoResult } from "@atscript/vue-form"; // vue-form-local rebaseOnto result
 
-// Framework-agnostic engine (the diff behind all of the above)
-import { buildFormDiff } from "@atscript/ui";
-import type { FormFieldChange, FormDiffResult, FormDiffOptions } from "@atscript/ui";
+// Framework-agnostic engine (the diff + 3-way rebase behind all of the above)
+import {
+  buildFormDiff,
+  buildFormRebase,
+  applyFormChanges,
+  deepEqual,
+  deepClone,
+} from "@atscript/ui";
+import type {
+  FormFieldChange,
+  FormDiffResult,
+  FormDiffOptions,
+  FormRebaseOptions,
+  FormRebaseResult,
+} from "@atscript/ui";
 ```
 
 `buildFormDiff(def, baseline, current, opts?)` — `baseline` and `current` are
@@ -112,12 +188,13 @@ is the composable equivalent.
 
 ## References
 
-| Domain                      | File                                                     | When                                                                                           |
-| --------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| Vue handle + provide/inject | `packages/vue-form/src/composables/use-as-form-patch.ts` | `useAsFormPatch()` contract, baseline lifecycle, snapshot/clone semantics, throw-when-off.     |
-| `track-changes` prop wiring | `packages/vue-form/src/components/as-form.vue`           | Where the prop maps to `trackChanges`; the `defineExpose` surface on the instance.             |
-| Slot-prop bag + reset path  | `packages/vue-form/src/composables/use-as-form.ts`       | `isDirty`/`changes`/`getPatch`/`getChanges` in slot props; `reset()` calling `rebase()`.       |
-| Diff engine + patch shape   | `packages/ui/src/form/diff.ts`                           | `buildFormDiff`, nested replace/merge, keyed-array ops, `$cas` lift, version-column exclusion. |
+| Domain                      | File                                                     | When                                                                                                                              |
+| --------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Vue handle + provide/inject | `packages/vue-form/src/composables/use-as-form-patch.ts` | `useAsFormPatch()` + `rebaseOnto()` contract, baseline lifecycle, snapshot/clone semantics, single-write/remount, throw-when-off. |
+| `track-changes` prop wiring | `packages/vue-form/src/components/as-form.vue`           | Where the prop maps to `trackChanges`; the `defineExpose` surface (incl. `rebaseOnto`) on the instance.                           |
+| Slot-prop bag + reset path  | `packages/vue-form/src/composables/use-as-form.ts`       | `isDirty`/`changes`/`getPatch`/`getChanges` in slot props (no `rebase`/`rebaseOnto` there); `reset()` calling `rebase()`.         |
+| Diff engine + patch shape   | `packages/ui/src/form/diff.ts`                           | `buildFormDiff`, nested replace/merge, keyed-array ops, `$cas` lift, version-column exclusion.                                    |
+| Rebase + apply engine       | `packages/ui/src/form/{rebase,apply,clone}.ts`           | `buildFormRebase` 3-way merge (conflict classify, ancestor-clear), `applyFormChanges` write rules, `deepClone`/`deepEqual`.       |
 
 ## See also
 

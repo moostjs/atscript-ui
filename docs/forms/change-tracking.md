@@ -177,8 +177,9 @@ function save() {
 ```
 
 `useAsFormPatch()` returns an `AsFormPatchHandle` — `isDirty` and `changes`
-as `ComputedRef`s, plus `getPatch`, `getChanges` and `rebase`. It **throws
-a clear error** when called outside a form, or inside a form that did not
+as `ComputedRef`s, plus `getPatch`, `getChanges`, `rebase` and
+[`rebaseOnto`](#folding-in-fresh-server-data-rebaseonto). It **throws a
+clear error** when called outside a form, or inside a form that did not
 enable `track-changes`. That's deliberate: a Save button that silently
 reports "not dirty" because tracking was never turned on is worse than one
 that fails loudly at development time.
@@ -196,6 +197,7 @@ asForm.value.changes; // FormFieldChange[]
 asForm.value.getPatch(opts?); // @atscript/db patch
 asForm.value.getChanges(); // FormFieldChange[]
 asForm.value.rebase(); // re-baseline to current data
+asForm.value.rebaseOnto(upstream, opts?); // fold in fresh server data → { conflicts, reapplied }
 ```
 
 When `track-changes` is **off**, these still exist and are safe to call —
@@ -208,6 +210,64 @@ After the server confirms the write, call `rebase()` to make the current
 data the new baseline. The form becomes clean (`isDirty === false`)
 without a remount, and the next edit diffs against the just-saved state.
 `reset()` re-baselines too, so a "discard changes" button is free.
+
+## Folding in fresh server data — `rebaseOnto()`
+
+`rebase()` re-baselines to the form's _current_ data, and a hard reset
+(replacing `formData`) throws unsaved edits away. Neither folds **fresh
+server data into a form that already has unsaved local edits** — which is
+exactly what you need when the server writes to a bound field out of band,
+when a post-save reload picks up server-computed fields while other
+sections are still dirty, or when two people edit the same row at once.
+
+`rebaseOnto()` is that 3-way merge. It sets the baseline to the fresh
+upstream snapshot and reapplies the user's local diff on top: fields the
+user never touched adopt the server's new values, and the user's own edits
+survive — all in a single reactive write, no remount.
+
+```ts
+const fresh = await table.one(props.id); // wrapped { value: domainData }
+const { conflicts } = asForm.value.rebaseOnto(fresh, { conflict: "ours" });
+if (conflicts.length) {
+  notify("Some fields changed on the server", "Kept your edits to: " + conflicts.join(", "));
+}
+```
+
+`upstream` is the **wrapped** container — the same `{ value: domainData }`
+shape you bind to `:form-data`. The call returns
+`{ conflicts, reapplied }`: `conflicts` is the list of paths edited on both
+sides to _different_ values, and `reapplied` is the surviving local diff
+(exactly what `getChanges()` reports after the rebase).
+
+### Conflict policy
+
+A field changed on **only one side** never conflicts — a local-only edit
+reapplies, an upstream-only change flows in. A field changed on **both
+sides to the same value** isn't a conflict either (revert-aware — it drops
+out clean). Only a field changed on both sides to a _different_ value is a
+conflict, and `opts.conflict` decides who wins:
+
+- `'ours'` (default) — keep the local edit; the path is still recorded in
+  `conflicts` so you can tell the user what diverged.
+- `'theirs'` — take upstream's value and drop the local edit; the path is
+  still recorded.
+
+Either way you get the full conflict list back, so a "kept your edits"
+(or "took the server's") toast is one line.
+
+### What to keep in mind
+
+- **Keyed arrays merge whole-array.** If both sides touch the same array,
+  it's one whole-array conflict resolved by `opts.conflict` — there's no
+  per-element 3-way merge. (Nested objects are leaf-grained: a local leaf
+  edit and an upstream sibling-leaf change both survive.)
+- **Tracking off is a no-op.** With no `track-changes`, `rebaseOnto()`
+  returns `{ conflicts: [], reapplied: [] }` and does nothing — mirroring
+  `rebase()` / `getPatch()`. To discard-and-adopt on a non-tracking form,
+  assign your bound ref yourself.
+- **Upstream values validate immediately.** Server-introduced values are
+  treated as edits, so under the default on-change strategy they validate
+  the moment they land — they are not suppressed as "fresh".
 
 ## Optimistic concurrency — `$cas`
 
@@ -235,7 +295,11 @@ asForm.value.getPatch();
 
 The version column is **never emitted as a normal field** — it is
 server-managed, and a direct write to it is rejected. It only ever
-round-trips through `$cas`. The server bumps it on every successful write;
+round-trips through `$cas`. After a
+[`rebaseOnto()`](#folding-in-fresh-server-data-rebaseonto), the new
+baseline carries upstream's version, so the next `getPatch()` lifts `$cas`
+against the fresh version automatically — provided upstream carries the
+version column. The server bumps it on every successful write;
 a stale submission is rejected (your table client surfaces this as a
 version-mismatch error you can catch and turn into a "row changed, reload"
 prompt).
@@ -305,8 +369,13 @@ query selects the version column if you rely on OCC.
   engine behind all of this, exported from `@atscript/ui`. Both
   `baseline` and `current` are the wrapped `{ value: domainData }`
   container. See [API: `@atscript/ui`](/api/ui).
-- `AsFormPatchHandle`, `FormFieldChange`, `FormDiffOptions` — types
-  exported from `@atscript/vue-form` / `@atscript/ui`. See
+- `buildFormRebase` / `applyFormChanges` — the framework-agnostic 3-way
+  merge behind `rebaseOnto()` (and the pure change-list applier it builds
+  on), exported from `@atscript/ui` for non-Vue reuse. See
+  [API: `@atscript/ui`](/api/ui#form-diff-engine).
+- `AsFormPatchHandle`, `RebaseOntoResult`, `FormFieldChange`,
+  `FormDiffOptions`, `FormRebaseOptions` — types exported from
+  `@atscript/vue-form` / `@atscript/ui`. See
   [API: `@atscript/vue-form`](/api/vue-form).
 
 ## Next steps

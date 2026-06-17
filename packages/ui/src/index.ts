@@ -131,11 +131,16 @@ export { optKey, optLabel, parseStaticOptions, resolveOptions } from "./value-he
 export {
   getByPath,
   setByPath,
+  deleteByPath,
   createFormValueResolver,
   createFormData,
   detectUnionVariant,
 } from "./form/path-utils";
 export type { TFormValueResolver } from "./form/path-utils";
+
+// ── Structural deep clone (framework-agnostic) ──────────────
+export { deepClone } from "./form/clone";
+export type { CloneUnwrap } from "./form/clone";
 
 // ── Validation ──────────────────────────────────────────────
 export {
@@ -147,8 +152,13 @@ export {
 export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/validate";
 
 // ── Form diff engine (framework-agnostic) ───────────────────
-export { buildFormDiff } from "./form/diff";
+export { buildFormDiff, deepEqual } from "./form/diff";
 export type { FormDiffResult, FormDiffOptions, FormFieldChange } from "./form/diff";
+
+// ── Form apply + 3-way rebase (framework-agnostic) ──────────
+export { applyFormChanges } from "./form/apply";
+export { buildFormRebase } from "./form/rebase";
+export type { FormRebaseOptions, FormRebaseResult } from "./form/rebase";
 
 // ── Error-map utilities (framework-agnostic) ────────────────
 export {

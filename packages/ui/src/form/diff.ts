@@ -644,8 +644,12 @@ function stableKey(v: unknown): string {
  * Structural deep equality (order-sensitive for arrays). `NaN` equals `NaN`
  * (revert-aware for NaN scalars) while `0` / `-0` stay equal (matches DB
  * intent — `===` treats them equal, only NaN is special-cased).
+ *
+ * The single comparator shared across the form engine: diff, conflict
+ * detection ({@link buildFormRebase}), and apply all route through this — never
+ * reimplement equality elsewhere.
  */
-function deepEqual(a: unknown, b: unknown): boolean {
+export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   // NaN: `===` is false but a value reverted to a NaN baseline is unchanged.
   if (typeof a === "number" && typeof b === "number") return Number.isNaN(a) && Number.isNaN(b);

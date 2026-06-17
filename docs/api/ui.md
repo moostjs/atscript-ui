@@ -491,7 +491,7 @@ See the [Validation guide](/forms/validation) for end-to-end usage.
 
 ## Form diff engine
 
-Framework-agnostic change tracking — diffs a form's current data against a baseline snapshot and produces both a changed-fields list and an `@atscript/db` patch object. Vue's [`useAsFormPatch()`](/api/vue-form#useasformpatch) wraps this. See the [Change tracking](/forms/change-tracking) guide.
+Framework-agnostic change tracking — diffs a form's current data against a baseline snapshot and produces both a changed-fields list and an `@atscript/db` patch object, plus a pure 3-way rebase that folds fresh server data back into a form with unsaved local edits. Vue's [`useAsFormPatch()`](/api/vue-form#useasformpatch) wraps these. See the [Change tracking](/forms/change-tracking) guide.
 
 ### `buildFormDiff(def, baseline, current, opts?)`
 
@@ -546,6 +546,78 @@ interface FormFieldChange {
   before: unknown;
   after: unknown;
 }
+```
+
+### `buildFormRebase(def, baseline, current, upstream, opts?, diffOptions?)`
+
+Pure 3-way merge: given the baseline, the live form, and a fresh `upstream` (all WRAPPED `{ value: domainData }` containers), produces the form rewritten as `upstream` + the local diff reapplied on top. Untouched fields adopt upstream, local edits survive, both-sides edits are conflicts resolved by `opts.conflict`. No input is mutated. `diffOptions` are forwarded to BOTH internal `buildFormDiff` passes — keep them identical to your own tracking options so the version-column / `$cas` exclusion matches on both sides. Vue's [`rebaseOnto()`](/api/vue-form#useasformpatch) is the thin reactive wrapper over this. See the [Change tracking](/forms/change-tracking#folding-in-fresh-server-data-rebaseonto) guide.
+
+```typescript
+function buildFormRebase(
+  def: FormDef,
+  baseline: Record<string, unknown>,
+  current: Record<string, unknown>,
+  upstream: Record<string, unknown>,
+  opts?: FormRebaseOptions,
+  diffOptions?: FormDiffOptions,
+): FormRebaseResult;
+```
+
+### `FormRebaseOptions`
+
+```typescript
+interface FormRebaseOptions {
+  /**
+   * How to resolve a field changed on BOTH sides to a different value:
+   * - `'ours'` (default) — keep the local edit, discard upstream's value.
+   * - `'theirs'` — take upstream's value, discard the local edit.
+   * A field changed on both sides to the SAME value is never a conflict.
+   */
+  conflict?: "ours" | "theirs";
+}
+```
+
+### `FormRebaseResult`
+
+```typescript
+interface FormRebaseResult {
+  /** The rebased WRAPPED container to install — a fresh clone of `upstream` with the local diff reapplied. */
+  next: Record<string, unknown>;
+  /** Paths changed on both sides to different values, plus ancestor-clear paths. De-duplicated. */
+  conflicts: string[];
+  /** The surviving diff of `next` against the new baseline (`upstream`); `[]` when fully clean. */
+  reapplied: FormFieldChange[];
+}
+```
+
+### `applyFormChanges(def, data, changes)`
+
+Reapplies a `FormFieldChange[]` onto a WRAPPED container, MUTATING it in place and returning the same reference — the inverse of `buildFormDiff`. A `set` change with `after === undefined` deletes the key; an `array` change is a whole-array set. Pass a clone, never the live fetched row.
+
+```typescript
+function applyFormChanges(
+  def: FormDef,
+  data: Record<string, unknown>,
+  changes: FormFieldChange[],
+): Record<string, unknown>;
+```
+
+### `deepEqual(a, b)`
+
+Shared structural comparator behind the diff (order-sensitive arrays, `NaN`-equal, own-key structural). Use it for the same equality semantics the change tracker applies.
+
+```typescript
+function deepEqual(a: unknown, b: unknown): boolean;
+```
+
+### `deepClone(value, unwrap?)`
+
+Structural deep clone of plain JSON-ish data (objects / arrays / primitives / `Date`), own-enumerable keys only. The optional `unwrap` hook lets a framework strip a reactive proxy off each visited value first (vue-form passes Vue's `toRaw`). The single deep-clone primitive for the form engine — used by `applyFormChanges`, `buildFormRebase`, and vue-form's baseline snapshot.
+
+```typescript
+type CloneUnwrap = (value: unknown) => unknown;
+
+function deepClone<T>(value: T, unwrap?: CloneUnwrap): T;
 ```
 
 ## Path utilities

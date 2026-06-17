@@ -52,7 +52,7 @@ export type { UseAsStateReturn, TFormSubmitValidator } from "./composables/use-a
 export { useAsForm } from "./composables/use-as-form";
 export type { UseAsFormOptions, UseAsFormReturn } from "./composables/use-as-form";
 export { useAsFormPatch } from "./composables/use-as-form-patch";
-export type { AsFormPatchHandle } from "./composables/use-as-form-patch";
+export type { AsFormPatchHandle, RebaseOntoResult } from "./composables/use-as-form-patch";
 export { useAsExternalErrors } from "./composables/use-as-external-errors";
 export type {
   UseAsExternalErrorsOptions,
@@ -134,7 +134,7 @@ export {
 // `useAsFormPatch()` can type holding variables (`FormFieldChange[]`) and the
 // `getPatch` options (`FormDiffOptions`) without reaching into the transitive
 // `@atscript/ui` dep. Mirrors the `ClientFactory` re-export above.
-export type { FormFieldChange, FormDiffOptions } from "@atscript/ui";
+export type { FormFieldChange, FormDiffOptions, FormRebaseOptions } from "@atscript/ui";
 
 // Composable types (for advanced use)
 export type {

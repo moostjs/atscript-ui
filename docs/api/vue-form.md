@@ -45,7 +45,7 @@ interface AsFormProps {
 }
 ```
 
-**Expose** (template ref): alongside the form's own controls, the instance carries the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
+**Expose** (template ref): alongside the form's own controls, the instance carries the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
 
 **Emits**:
 
@@ -350,8 +350,32 @@ interface AsFormPatchHandle {
   getChanges: () => FormFieldChange[];
   /** Re-baseline to the current data — call after a successful save so the form becomes clean again. */
   rebase: () => void;
+  /**
+   * 3-way rebase onto a fresh upstream snapshot: sets the baseline to `upstream`
+   * and rewrites the live form to `upstream` + the local diff reapplied on top
+   * (untouched fields adopt upstream, local edits survive). `upstream` is the
+   * WRAPPED `{ value }` container. `opts.conflict` resolves both-sides edits
+   * (`'ours'` default keeps local, `'theirs'` takes upstream). No-op returning an
+   * empty result when tracking is inactive. See [Change tracking — `rebaseOnto()`](/forms/change-tracking#folding-in-fresh-server-data-rebaseonto).
+   */
+  rebaseOnto: (upstream: Record<string, unknown>, opts?: FormRebaseOptions) => RebaseOntoResult;
 }
 ```
+
+### `RebaseOntoResult`
+
+Return value of `AsFormPatchHandle.rebaseOnto()`. Aliases the `@atscript/ui` rebase shape minus `next` (which is written into the live container rather than returned).
+
+```typescript
+interface RebaseOntoResult {
+  /** Paths changed on BOTH sides to different values, plus ancestor-clear paths. */
+  conflicts: string[];
+  /** Local edits that survive on top of the new (upstream) baseline — same data `getChanges()` returns after the rebase. */
+  reapplied: FormFieldChange[];
+}
+```
+
+`FormRebaseOptions` (`{ conflict?: 'ours' | 'theirs' }`) is re-exported from `@atscript/ui` — see [@atscript/ui — Form diff engine](/api/ui#form-diff-engine).
 
 ## Composables — field & structure
 
@@ -767,7 +791,7 @@ Return type of [`useAsFormPatch()`](#useasformpatch) — the change-tracking sur
 
 `setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory` — see [@atscript/ui — Client factory](/api/ui#client-factory).
 
-`FormFieldChange`, `FormDiffOptions` — change-tracking value shapes, re-exported so `useAsFormPatch()` consumers can type holding variables and `getPatch` options without reaching into the transitive `@atscript/ui` dep. See [@atscript/ui — Form diff engine](/api/ui#form-diff-engine).
+`FormFieldChange`, `FormDiffOptions`, `FormRebaseOptions` — change-tracking value shapes, re-exported so `useAsFormPatch()` consumers can type holding variables, `getPatch` options, and `rebaseOnto` options without reaching into the transitive `@atscript/ui` dep. See [@atscript/ui — Form diff engine](/api/ui#form-diff-engine).
 
 ## Cross-links
 

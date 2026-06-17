@@ -73,7 +73,8 @@ Tier 2 when you want to replace a default renderer; reach for the
 - [Change Tracking](/forms/change-tracking) — opt-in dirty state, a
   changed-fields list, and an `@atscript/db` patch for edit flows
   (`getPatch()` → `table.updateOne()`), with `$cas` optimistic
-  concurrency.
+  concurrency and a 3-way `rebaseOnto()` that folds fresh server data
+  back into a form with unsaved edits.
 - [Customization](/forms/customization),
   [Custom Components](/forms/custom-components),
   [Locale](/forms/locale) — make it yours.
