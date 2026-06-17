@@ -168,6 +168,19 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
    * annotation is present on the prop.
    */
   hasAdornment?: boolean;
+  /**
+   * Whether this field has changed since the change-tracking baseline.
+   *
+   * `true` only when the enclosing `<AsForm>` has `track-changes` enabled AND
+   * this field's value differs from the baseline; `false` (or absent) when
+   * tracking is off. AsField resolves it from the change list and surfaces it
+   * here so default components — and custom swaps — can drive a visual hook
+   * (the default `AsFieldShell` paints a `data-dirty` attribute from it) without
+   * re-deriving the predicate. Granularity matches the change list: object /
+   * section containers light up via their leaves; whole-array fields exactly;
+   * an array-ITEM field stays `false` (the array container lights up instead).
+   */
+  isDirty?: boolean;
 }
 
 /**

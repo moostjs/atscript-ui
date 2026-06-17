@@ -183,6 +183,8 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
     getPatch: (opts?: FormDiffOptions) => Record<string, unknown>;
     /** Build the per-field change list on demand (`[]` when tracking is off). */
     getChanges: () => FormFieldChange[];
+    /** Per-field dirty predicate (`false` for every path when tracking is off). */
+    isDirtyPath: (path: string) => boolean;
   }>;
   /**
    * Change-tracking handle — present ONLY when `trackChanges` is enabled.
@@ -212,6 +214,7 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
 const EMPTY_CHANGES: readonly FormFieldChange[] = Object.freeze([]);
 const EMPTY_GET_PATCH = (): Record<string, unknown> => ({});
 const EMPTY_GET_CHANGES = (): FormFieldChange[] => [];
+const EMPTY_IS_DIRTY_PATH = (): boolean => false;
 
 /**
  * Composable backing `<AsForm>`. Owns the entire form state machine —
@@ -432,6 +435,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     changes: patch ? patch.changes.value : EMPTY_CHANGES,
     getPatch: patch ? patch.getPatch : EMPTY_GET_PATCH,
     getChanges: patch ? patch.getChanges : EMPTY_GET_CHANGES,
+    isDirtyPath: patch ? patch.isDirtyPath : EMPTY_IS_DIRTY_PATH,
   }));
 
   // ── Action handler (provided to AsField tree) ──────────────

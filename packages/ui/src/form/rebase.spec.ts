@@ -275,4 +275,24 @@ describe("buildFormRebase — input isolation", () => {
     expect(current.value).toEqual({ name: "Grace", age: 30 });
     expect(upstream.value).toEqual({ name: "Ada", age: 31 });
   });
+
+  it("next does not alias current for an array-valued reapply (deep-cloned)", () => {
+    const def = createFormDef(RebaseArrayForm);
+    const baseline = wrap({ items: [{ sku: "A", qty: 1 }] });
+    // Local-only edit produces an ARRAY-valued reapplied change (kind:'array').
+    const current = wrap({ items: [{ sku: "A", qty: 5 }] });
+    const upstream = wrap({ items: [{ sku: "A", qty: 1 }] }); // untouched upstream
+
+    const r = buildFormRebase(def, baseline, current, upstream);
+    expect(r.next.value).toEqual({ items: [{ sku: "A", qty: 5 }] });
+
+    // The reapplied array node must NOT be the same reference as current's node.
+    const nextItems = (r.next.value as { items: unknown[] }).items;
+    const currentItems = (current.value as { items: unknown[] }).items;
+    expect(nextItems).not.toBe(currentItems);
+
+    // Mutating current AFTER the call must not retroactively change next.
+    (current.value as { items: { sku: string; qty: number }[] }).items.push({ sku: "Z", qty: 9 });
+    expect(r.next.value).toEqual({ items: [{ sku: "A", qty: 5 }] });
+  });
 });

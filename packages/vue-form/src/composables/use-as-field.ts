@@ -7,7 +7,7 @@ import {
   type ComputedRef,
   type WritableComputedRef,
 } from "vue";
-import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "./internal-keys";
+import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_PATCH_KEY, FORM_STATE_KEY } from "./internal-keys";
 import type { TFormRule } from "./types";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +25,19 @@ export interface UseAsFieldReturn<TValue = any> {
   model: WritableComputedRef<TValue>;
   error: ComputedRef<string | undefined>;
   onBlur: () => void;
+  /**
+   * Reactive "changed-since-baseline" flag for THIS field. `true` when the
+   * form has `track-changes` enabled AND the field at `opts.path()` differs
+   * from the tracker's baseline. Recomputes whenever the change list does
+   * (delegates to the injected {@link AsFormPatchHandle.isDirtyPath}).
+   *
+   * Always `false` when tracking is off (no patch handle injected) — the
+   * handle is injected OPTIONALLY, so reading `isDirty` never throws.
+   * Granularity matches the change list: object/section containers light up
+   * via their leaves' prefix, whole-array fields via exact match; an
+   * array-ITEM leaf stays `false` (the array container lights up instead).
+   */
+  isDirty: ComputedRef<boolean>;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,6 +47,10 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
   const formState = inject(FORM_STATE_KEY);
   const formData = inject(FORM_DATA_KEY) as ComputedRef<TFormData | undefined> | undefined;
   const formContext = inject(FORM_CONTEXT_KEY) as ComputedRef<TContext | undefined> | undefined;
+  // OPTIONAL inject — absent when `track-changes` is off. Must NOT use
+  // `useAsFormPatch()` here (it THROWS when tracking is disabled); a plain
+  // `inject(..., undefined)` keeps OFF a silent, zero-cost "never dirty".
+  const patch = inject(FORM_PATCH_KEY, undefined);
 
   const id = Symbol("form-field");
   const submitError = ref<string>();
@@ -45,6 +62,13 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
     get: opts.getValue,
     set: opts.setValue,
   });
+
+  // Per-field dirty flag. `opts.path()` is the FULL dot-path in the same
+  // path-space as `FormFieldChange.path` (the same path registered with
+  // `formState` for error mapping), so it feeds the predicate directly.
+  // `false` when tracking is off (no handle). Reading `patch.isDirtyPath`
+  // touches the reactive change list, so this recomputes on every change.
+  const isDirty = computed<boolean>(() => (patch ? patch.isDirtyPath(opts.path()) : false));
 
   watch(
     model,
@@ -141,5 +165,5 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
     formState?.unregister(id);
   });
 
-  return { model, error, onBlur };
+  return { model, error, onBlur, isDirty };
 }

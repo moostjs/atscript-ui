@@ -12,6 +12,24 @@ export const asFieldShortcuts = defineShortcuts({
       'content-["_*"] scope-error text-current-hl font-700 ml-[0.1em]',
     "[&.error_.as-error-slot]:": "scope-error text-current-hl",
 
+    // Changed-since-baseline hook. AsFieldShell paints `data-dirty=""` on the
+    // root when `<AsForm track-changes>` reports this field dirty (see
+    // as-field-shell.vue + useAsField().isDirty). A SUBTLE, restrained accent —
+    // a thin left bar in the primary scope highlight — so a glance shows what
+    // the user touched without a loud full-field treatment. Consumers restyle
+    // the whole look by re-defining just this one variant key via
+    // `vunorShortcuts(overrides)`.
+    //
+    // The self-attribute selector is wrapped in `:is(...)` so the nested `[]`
+    // inside the arbitrary-variant bracket compiles (UnoCSS silently drops a
+    // bare `[&[data-dirty]]:`). The bar is a positioned `::before` (the root is
+    // already `relative`); `bg-current-hl` paints the scope-500 highlight set by
+    // the sibling `scope-primary`, sized in em so it tracks the field's type
+    // scale, and spans the field's full vertical extent.
+    "[&:is([data-dirty])]:": "scope-primary",
+    "[&:is([data-dirty])]:before:":
+      'content-[""] absolute left-[-0.4em] top-0 bottom-0 w-[0.15em] rounded-full bg-current-hl',
+
     // Comma-separated arbitrary-variant selector lists silently break the
     // `dark:` qualifier — UnoCSS only prefixes `.dark ` onto the first
     // selector. Wrap the inner list in `:is(...)` so the variant resolves

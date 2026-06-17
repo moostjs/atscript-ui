@@ -155,10 +155,14 @@ export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/v
 export { buildFormDiff, deepEqual } from "./form/diff";
 export type { FormDiffResult, FormDiffOptions, FormFieldChange } from "./form/diff";
 
+// ── Per-field dirty predicate (framework-agnostic) ──────────
+export { isPathDirty, collectDirtyPaths } from "./form/dirty";
+
 // ── Form apply + 3-way rebase (framework-agnostic) ──────────
 export { applyFormChanges } from "./form/apply";
 export { buildFormRebase } from "./form/rebase";
 export type { FormRebaseOptions, FormRebaseResult } from "./form/rebase";
+export { unionVariantChanged } from "./form/union-detect";
 
 // ── Error-map utilities (framework-agnostic) ────────────────
 export {

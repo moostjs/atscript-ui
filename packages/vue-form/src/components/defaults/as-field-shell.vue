@@ -51,6 +51,7 @@ const showEmptyPlaceholder = computed(
     class="as-default-field"
     :class="[fieldClass, $props.class]"
     :style="$props.style"
+    :data-dirty="isDirty ? '' : undefined"
     v-show="!hidden"
   >
     <!-- Header row: label/header on left, action buttons on right -->

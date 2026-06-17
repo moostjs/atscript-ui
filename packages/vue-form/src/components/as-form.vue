@@ -111,6 +111,11 @@ defineExpose({
   getPatch: form.patch ? form.patch.getPatch : () => ({}),
   /** Build the per-field change list on demand (`[]` when off). */
   getChanges: form.patch ? form.patch.getChanges : () => [],
+  /**
+   * Per-field dirty predicate — `true` when the field at `path` differs from
+   * the baseline (`false` for every path when tracking is off).
+   */
+  isDirtyPath: form.patch ? form.patch.isDirtyPath : () => false,
   /** Re-baseline to current data after a successful save (no-op when off). */
   rebase: form.patch ? form.patch.rebase : () => {},
   /**

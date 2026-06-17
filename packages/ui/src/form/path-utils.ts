@@ -198,8 +198,14 @@ export function detectUnionVariant(value: unknown, variants: FormUnionVariant[])
     const tag = (value as Record<string, unknown>)[disc.propertyName];
     // `String(undefined) === 'undefined'` and won't match any literal key —
     // safe to forward without a guard; fall through to validator on miss.
-    const idx = disc.indexMapping[String(tag)];
-    if (idx !== undefined) return idx;
+    // Only read OWN keys: a tag equal to an `Object.prototype` member name
+    // (`'constructor'`, `'toString'`, …) would otherwise resolve a prototype
+    // function and be returned as a bogus variant index.
+    const key = String(tag);
+    if (Object.prototype.hasOwnProperty.call(disc.indexMapping, key)) {
+      const idx = disc.indexMapping[key];
+      if (idx !== undefined) return idx;
+    }
   }
 
   for (let i = 0; i < variants.length; i++) {

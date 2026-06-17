@@ -2,18 +2,14 @@ import { computed, inject, ref, toRaw, watch, type ComputedRef } from "vue";
 import {
   buildFormDiff,
   buildFormRebase,
+  collectDirtyPaths,
   deepClone,
-  detectUnionVariant,
-  getByPath,
-  isObjectField,
-  isUnionField,
   setByPath,
+  unionVariantChanged,
   type FormDef,
   type FormDiffOptions,
   type FormFieldChange,
-  type FormObjectFieldDef,
   type FormRebaseOptions,
-  type FormUnionFieldDef,
 } from "@atscript/ui";
 import { FORM_PATCH_KEY } from "./internal-keys";
 
@@ -65,6 +61,23 @@ export interface AsFormPatchHandle {
   getPatch: (opts?: FormDiffOptions) => Record<string, unknown>;
   /** Builds the per-field change list on demand (same data as `changes`). */
   getChanges: () => FormFieldChange[];
+  /**
+   * Reactive per-field dirty predicate. `true` when the field at the dot-path
+   * `path` differs from the baseline. Reads the reactive {@link changes} list,
+   * so a per-field `isDirty` derived from this recomputes whenever the change
+   * list does.
+   *
+   * Granularity matches the change list (leaf-grained for scalars/objects,
+   * WHOLE-ARRAY for arrays): a field is dirty iff some change path equals
+   * `path` OR starts with `path + "."`. Object/section containers light up via
+   * the prefix branch; whole-array fields via exact match; an array-ITEM leaf
+   * (e.g. `items.0.qty`) returns `false` (the array container lights up
+   * instead — a known, documented limitation of the array diff). The empty
+   * root path `''` is dirty iff there are ANY changes. Backed by an O(1)
+   * `Set.has` against `@atscript/ui`'s `collectDirtyPaths` precompute, whose
+   * membership matches `isPathDirty` exactly (locked by an invariant test).
+   */
+  isDirtyPath: (path: string) => boolean;
   /**
    * Re-baseline to the current data. Call after a successful save so the form
    * becomes clean again WITHOUT a remount. No-op when tracking is inactive.
@@ -221,6 +234,15 @@ export function createAsFormPatch(
   const isDirty = computed(() => diff.value.isDirty);
   const changes = computed(() => diff.value.changes);
 
+  // Precomputed prefix-closure of the change list (paths + ancestors + root).
+  // Backs `isDirtyPath` with an O(1) `Set.has` instead of a per-call linear
+  // prefix scan, so a form rendering one field per leaf no longer pays
+  // O(fields × changes) per keystroke. Internal to the composable; not exposed
+  // on the public handle. Memoised by Vue — rebuilt only when the change list
+  // invalidates (`collectDirtyPaths` returns the same membership as
+  // `isPathDirty`, locked by an `@atscript/ui` invariant test).
+  const dirtyPaths = computed(() => collectDirtyPaths(changes.value));
+
   // On-demand builders — diff against a frozen RAW clone of the current data so
   // the returned patch/changes are de-aliased and proxy-free. `buildFormDiff`
   // returns LIVE references into its `current` argument ($insert items, $replace
@@ -239,6 +261,16 @@ export function createAsFormPatch(
     if (baseline === undefined) return [];
     const frozen = deepClone(getData(), toRaw);
     return buildFormDiff(def(), baseline, frozen).changes;
+  }
+
+  // O(1) membership against the precomputed dirty-path closure. Reads the
+  // REACTIVE `dirtyPaths` computed so a per-field `isDirty` built on this
+  // re-evaluates whenever the change list invalidates. The closure is built by
+  // `@atscript/ui`'s `collectDirtyPaths` — the prefix logic is never
+  // reimplemented here, and `dirtyPaths.has(p) === isPathDirty(changes, p)` for
+  // every `p` (locked by an `@atscript/ui` invariant test).
+  function isDirtyPath(path: string): boolean {
+    return dirtyPaths.value.has(path);
   }
 
   function rebase(): void {
@@ -308,7 +340,7 @@ export function createAsFormPatch(
     return { conflicts, reapplied };
   }
 
-  return { isDirty, changes, getPatch, getChanges, rebase, rebaseOnto };
+  return { isDirty, changes, getPatch, getChanges, isDirtyPath, rebase, rebaseOnto };
 }
 
 // ── Public reader ────────────────────────────────────────────
@@ -340,58 +372,4 @@ export function useAsFormPatch(): AsFormPatchHandle {
   const handle = inject(FORM_PATCH_KEY, undefined);
   if (!handle) throw new Error(NOT_TRACKING_MSG);
   return handle;
-}
-
-// ── Union-variant remount detection ──────────────────────────
-
-/**
- * True when ANY union field in the form resolves to a DIFFERENT discriminated
- * variant between two wrapped data containers. `<AsUnion>` detects its variant
- * index once at setup and keys the variant subtree on it, so a rebase that lands
- * a different variant (via conflict OR an upstream-only switch) needs a remount
- * to re-detect. This walks union + nested-object fields and compares
- * `detectUnionVariant` at each union path.
- *
- * Scope note (pragmatic): walks standalone + nested-OBJECT union fields. Unions
- * nested INSIDE array items are not walked. `<AsArray>` keeps a stable per-item
- * key across in-place value mutations, so an upstream-driven variant flip on an
- * EXISTING row would not remount its picker — but that collision (a 3-way rebase
- * landing a different union variant inside an unchanged array row) is a rare
- * edge. TODO: extend to array-item unions if a real consumer hits a stuck picker
- * inside an array row.
- */
-export function unionVariantChanged(
-  def: FormDef,
-  before: Record<string, unknown>,
-  after: Record<string, unknown>,
-): boolean {
-  return walkUnionFields(def.fields, "", before, after);
-}
-
-function walkUnionFields(
-  fields: FormDef["fields"],
-  prefix: string,
-  before: Record<string, unknown>,
-  after: Record<string, unknown>,
-): boolean {
-  for (const field of fields) {
-    if (field.phantom) continue;
-    const fullPath = field.path ? (prefix ? `${prefix}.${field.path}` : field.path) : prefix;
-
-    if (isUnionField(field)) {
-      const variants = (field as FormUnionFieldDef).unionVariants;
-      if (variants.length > 1) {
-        const bi = detectUnionVariant(getByPath(before, fullPath), variants);
-        const ai = detectUnionVariant(getByPath(after, fullPath), variants);
-        if (bi !== ai) return true;
-      }
-      continue;
-    }
-
-    if (isObjectField(field)) {
-      const objectDef = (field as FormObjectFieldDef).objectDef;
-      if (walkUnionFields(objectDef.fields, fullPath, before, after)) return true;
-    }
-  }
-  return false;
 }

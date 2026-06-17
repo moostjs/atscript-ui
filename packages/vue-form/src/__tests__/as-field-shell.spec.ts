@@ -69,3 +69,32 @@ describe("AsFieldShell — formAction footer link", () => {
     expect(events![0]).toEqual(["forgot-password"]);
   });
 });
+
+describe("AsFieldShell — data-dirty change-tracking hook", () => {
+  // WHY: Phase-3 styling targets `:is([data-dirty])` on `.as-default-field`.
+  // The attribute must be PRESENT (empty string) when the field is dirty and
+  // ABSENT (not `data-dirty="false"`) when clean — `:undefined` removes it so
+  // the CSS attribute selector never matches a clean field.
+  it("renders data-dirty='' on the field root when isDirty is true", () => {
+    const wrapper = mount(AsFieldShell as any, {
+      props: baseProps({ isDirty: true }),
+      slots: { default: "<input />" },
+    });
+    expect(wrapper.find(".as-default-field").attributes("data-dirty")).toBe("");
+  });
+
+  it("omits data-dirty entirely when isDirty is false/absent", () => {
+    const off = mount(AsFieldShell as any, {
+      props: baseProps({ isDirty: false }),
+      slots: { default: "<input />" },
+    });
+    expect(off.find(".as-default-field").attributes("data-dirty")).toBeUndefined();
+
+    // Default (prop omitted) — tracking off — must also omit the attribute.
+    const unset = mount(AsFieldShell as any, {
+      props: baseProps(),
+      slots: { default: "<input />" },
+    });
+    expect(unset.find(".as-default-field").attributes("data-dirty")).toBeUndefined();
+  });
+});

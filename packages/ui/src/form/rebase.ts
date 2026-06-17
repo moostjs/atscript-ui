@@ -118,13 +118,13 @@ export function buildFormRebase(
     if (uc !== undefined) {
       if (deepEqual(lc.after, uc.after)) continue;
       conflicts.push(lc.path);
-      if (conflictMode === "ours") applyFormChanges(def, next, [lc]);
+      if (conflictMode === "ours") reapply(def, next, lc);
       // 'theirs' → leave `next` at upstream's value (already in the clone).
       continue;
     }
 
     // OTHERWISE: local-only change with parent intact — reapply onto `next`.
-    applyFormChanges(def, next, [lc]);
+    reapply(def, next, lc);
   }
 
   // (e) The surviving diff on top of the new baseline (== upstream). Diff against
@@ -137,6 +137,19 @@ export function buildFormRebase(
   const reapplied = buildFormDiff(def, upstream, deepClone(next), diffOptions).changes;
 
   return { next, conflicts: [...new Set(conflicts)], reapplied };
+}
+
+/**
+ * Reapplies a single local change onto `next`, DEEP-CLONING its `after` value
+ * first. `lc.after` is a LIVE reference into `current` (buildFormDiff holds live
+ * refs), so for a `kind:'array'` or whole-object/union `set` change a raw apply
+ * would make `next.value`'s node `===` `current.value`'s node — violating the
+ * `FormRebaseResult.next` contract ("never aliases any input container"). The
+ * ancestor-clear branch already deep-clones before writing; this keeps the two
+ * leaf-reapply sites consistent.
+ */
+function reapply(def: FormDef, next: Record<string, unknown>, lc: FormFieldChange): void {
+  applyFormChanges(def, next, [{ ...lc, after: deepClone(lc.after) }]);
 }
 
 /**

@@ -70,6 +70,20 @@ describe("detectUnionVariant", () => {
       const variants = discriminatedVariants();
       expect(detectUnionVariant({ url: "https://x" }, variants)).toBe(0);
     });
+
+    it("does not mis-detect when the discriminator value is an Object.prototype member name", () => {
+      // `indexMapping` is a plain `{}` object, so a tag of `'constructor'`
+      // would resolve the prototype function without the own-key guard — and
+      // the `idx !== undefined` check would then return that function as a
+      // bogus variant index. The own-key guard must reject it and fall through
+      // to the validator search (which also rejects → 0), NOT a real variant.
+      const variants = discriminatedVariants();
+      for (const proto of ["constructor", "toString", "valueOf", "hasOwnProperty"]) {
+        expect(detectUnionVariant({ kind: proto }, variants)).toBe(0);
+      }
+      // A real mapped tag still resolves through the fast-path.
+      expect(detectUnionVariant({ kind: "upload", fileId: "abc" }, variants)).toBe(1);
+    });
   });
 
   describe("validator fallback (no discriminator)", () => {

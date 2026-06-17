@@ -674,6 +674,7 @@ const {
   model,
   error: formError,
   onBlur: _onBlur,
+  isDirty,
 } = useAsField({
   getValue: getModel,
   setValue: setModel,
@@ -794,6 +795,12 @@ const displayProps = computed(() => {
 // Grid classes live alongside the base class object: Vue's class binding
 // flattens an array of {object, string} entries. The string is empty for
 // default-footprint fields, which Vue safely skips.
+//
+// `isDirty` is deliberately NOT folded in here — it is bound separately on the
+// <component> (`:is-dirty="isDirty"`) so this computed keeps ZERO reactive deps
+// on the change list for an allStatic field. Folding it in would invalidate
+// EVERY field's display props on every change-list bump (each keystroke);
+// binding it alongside `v-bind` lets Vue patch only that one prop instead.
 const componentProps = computed(() => {
   const dp = displayProps.value;
   const err = mergedError.value;
@@ -815,6 +822,7 @@ const componentProps = computed(() => {
     v-if="resolvedComponent"
     :is="resolvedComponent"
     v-bind="componentProps"
+    :is-dirty="isDirty"
     @action="handleAction"
   />
   <div v-else class="as-field-missing">

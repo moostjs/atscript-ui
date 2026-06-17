@@ -39,3 +39,25 @@ export interface PatchVersionedForm {
     @db.column.version
     version: number
 }
+
+// ── Nested object + keyed array (per-field dirty granularity) ──
+
+/// Nested object container — no change entry at `address` itself, only at its
+/// leaves (`address.city`). Drives the object-container-via-prefix dirty case.
+export interface PatchAddress {
+    city: string
+
+    zip: string
+}
+
+/// Combines a scalar (`name`), a nested object (`address`), and a keyed array
+/// (`items`) so one form exercises every per-field dirty granularity: scalar
+/// leaf, nested leaf, object container (prefix), whole-array (exact), and the
+/// array-ITEM leaf (which stays NOT dirty — the array container lights up).
+export interface PatchNestedForm {
+    name: string
+
+    address: PatchAddress
+
+    items: PatchCartLine[]
+}

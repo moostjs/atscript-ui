@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, reactive, ref } from "vue";
-import { createFormDef } from "@atscript/ui";
+import { createFormDef, unionVariantChanged } from "@atscript/ui";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { useAsForm, type UseAsFormReturn } from "../composables/use-as-form";
-import { unionVariantChanged } from "../composables/use-as-form-patch";
 import { createDefaultTypes } from "../composables/create-default-types";
 import { mountForm } from "./helpers";
 
