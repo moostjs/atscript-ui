@@ -58,14 +58,15 @@ successful save with [`rebase()`](#after-a-successful-save-rebase).
 ## The two outputs
 
 Everywhere the tracking surface is exposed (slots, descendant composable,
-template ref) you get the same four members:
+template ref) you get the same members:
 
-| Member            | Type                                 | What it gives you                                   |
-| ----------------- | ------------------------------------ | --------------------------------------------------- |
-| `isDirty`         | `boolean`                            | `true` when current data differs from the baseline. |
-| `changes`         | `readonly FormFieldChange[]`         | Reactive changed-fields list.                       |
-| `getChanges()`    | `() => FormFieldChange[]`            | Same list, built on demand (snapshot-safe).         |
-| `getPatch(opts?)` | `(opts?) => Record<string, unknown>` | The `@atscript/db` patch object, built on demand.   |
+| Member              | Type                                 | What it gives you                                                                              |
+| ------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------- |
+| `isDirty`           | `boolean`                            | `true` when current data differs from the baseline.                                            |
+| `changes`           | `readonly FormFieldChange[]`         | Reactive changed-fields list.                                                                  |
+| `getChanges()`      | `() => FormFieldChange[]`            | Same list, built on demand (snapshot-safe).                                                    |
+| `getPatch(opts?)`   | `(opts?) => Record<string, unknown>` | The `@atscript/db` patch object, built on demand.                                              |
+| `isDirtyPath(path)` | `(path: string) => boolean`          | Did one specific field change? See [per-field dirty](#marking-changed-fields-per-field-dirty). |
 
 ### The changes list
 
@@ -97,6 +98,86 @@ await table.updateOne({ id, ...patch });
 current data at call time, so they are safe to call at submit time —
 even mid-edit. They never hand a live Vue proxy onto the wire, and a later
 keystroke can't mutate a patch you already built.
+
+## Marking changed fields — per-field dirty
+
+The changes list answers _what_ changed; sometimes you want the inverse — given
+**one field**, did it change? That's what powers a visual mark on every edited
+input (an accent bar, a "modified" badge), so on an edit form the user sees at a
+glance what they touched. Every field can read its own dirty state with zero
+plumbing, derived from the same change model.
+
+Inside a custom field component, [`useAsField()`](/forms/custom-components#useasfield)
+returns an `isDirty` flag alongside `model` / `error` / `onBlur` — bind it to a
+class or marker:
+
+```ts
+const { model, error, isDirty } = useAsField({
+  getValue,
+  setValue,
+  path: () => fullPath,
+});
+// isDirty.value → true once this field differs from the baseline
+```
+
+Anywhere else under the form, ask the handle directly with `isDirtyPath(path)`:
+
+```ts
+const { isDirtyPath } = useAsFormPatch();
+isDirtyPath("address.city"); // boolean
+```
+
+The framework-agnostic predicate behind both is
+[`isPathDirty(changes, path)`](/api/ui#form-diff-engine) — reuse it in a non-Vue
+renderer.
+
+### What lights up
+
+The predicate matches a field against the change list, whose granularity it
+inherits (leaf-grained for scalars/objects, **whole-array** for arrays). A field
+at `path` is dirty iff some change path equals `path` **or** starts with
+`path + "."`:
+
+- **scalar / leaf field** (incl. a nested leaf like `address.city`) — exact
+  match.
+- **object / section container** — _prefix_ match: the container has no change
+  entry of its own, but it lights up because its changed leaves are nested under
+  it.
+- **whole-array field** — exact match: the array diff emits a single change at
+  the array root.
+- **a field rendered for an array-_item_ leaf** (e.g. `items.0.qty`) — **not
+  detectable.** The whole-array diff exposes no per-item paths, so this returns
+  `false`; the array / iterator **container** lights up instead. Known,
+  documented limitation.
+- **empty path `''`** (the wrapped form root) — dirty iff there are _any_
+  changes.
+
+No false positives: a field `item` never matches a change at `items` (the prefix
+is `path + "."`, not a bare string compare). And when `track-changes` is off,
+every path reads `false` and `useAsField().isDirty` stays `false` — the handle is
+injected optionally, so it never throws.
+
+### The default marker (and how to restyle it)
+
+Out of the box, each default field paints `data-dirty=""` on its root when it's
+dirty (the attribute is present when dirty, absent when clean), and
+`@atscript/ui-styles` draws a subtle `scope-primary` left accent bar via the
+`as-default-field` shortcut's `[&:is([data-dirty])]:` variant. It is
+deliberately restrained — a glance, not a shout.
+
+To change or disable the look, override that one shortcut entry in your own
+vunor shortcuts — no need to touch the component:
+
+```ts
+import { defineShortcuts } from "vunor/theme";
+
+defineShortcuts({
+  "as-default-field": {
+    // recolor, swap for a badge, or set to "" to drop the marker entirely
+    "[&:is([data-dirty])]:before:": 'content-[""] absolute ...',
+  },
+});
+```
 
 ## End to end
 
@@ -177,7 +258,8 @@ function save() {
 ```
 
 `useAsFormPatch()` returns an `AsFormPatchHandle` — `isDirty` and `changes`
-as `ComputedRef`s, plus `getPatch`, `getChanges`, `rebase` and
+as `ComputedRef`s, plus `getPatch`, `getChanges`,
+[`isDirtyPath`](#marking-changed-fields-per-field-dirty), `rebase` and
 [`rebaseOnto`](#folding-in-fresh-server-data-rebaseonto). It **throws a
 clear error** when called outside a form, or inside a form that did not
 enable `track-changes`. That's deliberate: a Save button that silently
@@ -196,6 +278,7 @@ asForm.value.isDirty; // boolean
 asForm.value.changes; // FormFieldChange[]
 asForm.value.getPatch(opts?); // @atscript/db patch
 asForm.value.getChanges(); // FormFieldChange[]
+asForm.value.isDirtyPath(path); // did one field change? → boolean
 asForm.value.rebase(); // re-baseline to current data
 asForm.value.rebaseOnto(upstream, opts?); // fold in fresh server data → { conflicts, reapplied }
 ```
@@ -372,6 +455,10 @@ query selects the version column if you rely on OCC.
 - `buildFormRebase` / `applyFormChanges` — the framework-agnostic 3-way
   merge behind `rebaseOnto()` (and the pure change-list applier it builds
   on), exported from `@atscript/ui` for non-Vue reuse. See
+  [API: `@atscript/ui`](/api/ui#form-diff-engine).
+- `isPathDirty(changes, path)` — the framework-agnostic per-field dirty
+  predicate behind `isDirtyPath` / `useAsField().isDirty`, exported from
+  `@atscript/ui` for non-Vue reuse. See
   [API: `@atscript/ui`](/api/ui#form-diff-engine).
 - `AsFormPatchHandle`, `RebaseOntoResult`, `FormFieldChange`,
   `FormDiffOptions`, `FormRebaseOptions` — types exported from

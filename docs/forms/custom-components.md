@@ -136,7 +136,7 @@ import { useAsField } from '@atscript/vue-form'
 
 const props = defineProps<{ field: FormFieldDef; path: string }>()
 
-const { model, error, onBlur } = useAsField<string>({
+const { model, error, onBlur, isDirty } = useAsField<string>({
   getValue: () => /* read your value */,
   setValue: (v) => /* write your value */,
   rules: [(v) => !!v || 'Required'],
@@ -145,10 +145,14 @@ const { model, error, onBlur } = useAsField<string>({
 })
 ```
 
-Returns `{ model, error, onBlur }`. The composable registers with the parent
-`<AsForm>` so the field participates in submit-time validation, reset, and
-external-error wiring. See `packages/vue-form/src/composables/use-as-field.ts`
-for the full options shape.
+Returns `{ model, error, onBlur, isDirty }`. The composable registers with the
+parent `<AsForm>` so the field participates in submit-time validation, reset,
+and external-error wiring. `isDirty` is a reactive per-field
+"changed-since-baseline" flag — `false` unless the form has `track-changes` on —
+so a custom field can mark itself visually; see
+[Change tracking — per-field dirty](/forms/change-tracking#marking-changed-fields-per-field-dirty).
+See `packages/vue-form/src/composables/use-as-field.ts` for the full options
+shape.
 
 ### `useAsData`
 

@@ -548,6 +548,14 @@ interface FormFieldChange {
 }
 ```
 
+### `isPathDirty(changes, path)`
+
+Pure predicate over a `FormFieldChange[]`: `true` when the field at dot-path `path` changed. A field is dirty iff some change path equals `path` OR starts with `path + "."`, so a leaf matches exactly, an object/section container matches via its leaves, and a whole-array field matches at its root. The trailing dot rules out false positives (`item` never matches a change at `items`); the empty root path `''` is dirty iff there are any changes. Reuse this to mark changed fields in a non-Vue renderer; Vue's [`isDirtyPath()`](/api/vue-form#useasformpatch) / [`useAsField().isDirty`](/api/vue-form#useasfield-opts) wrap it over the reactive change list. See [Change tracking — per-field dirty](/forms/change-tracking#marking-changed-fields-per-field-dirty).
+
+```typescript
+function isPathDirty(changes: FormFieldChange[], path: string): boolean;
+```
+
 ### `buildFormRebase(def, baseline, current, upstream, opts?, diffOptions?)`
 
 Pure 3-way merge: given the baseline, the live form, and a fresh `upstream` (all WRAPPED `{ value: domainData }` containers), produces the form rewritten as `upstream` + the local diff reapplied on top. Untouched fields adopt upstream, local edits survive, both-sides edits are conflicts resolved by `opts.conflict`. No input is mutated. `diffOptions` are forwarded to BOTH internal `buildFormDiff` passes — keep them identical to your own tracking options so the version-column / `$cas` exclusion matches on both sides. Vue's [`rebaseOnto()`](/api/vue-form#useasformpatch) is the thin reactive wrapper over this. See the [Change tracking](/forms/change-tracking#folding-in-fresh-server-data-rebaseonto) guide.

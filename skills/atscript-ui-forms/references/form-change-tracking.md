@@ -64,8 +64,9 @@ default button (forms invariant 5) — the footer owns the save affordance.
 
 ### Three surfaces, one handle
 
-The same four-member tracking surface (`isDirty`, `changes`, `getPatch`,
-`getChanges`) reaches you three ways — pick by where the Save control lives:
+The same read-side tracking surface (`isDirty`, `changes`, `getPatch`,
+`getChanges`, `isDirtyPath`) reaches you three ways — pick by where the Save
+control lives:
 
 | Surface                              | Reach it via                                         | When                                                     |
 | ------------------------------------ | ---------------------------------------------------- | -------------------------------------------------------- |
@@ -75,6 +76,61 @@ The same four-member tracking surface (`isDirty`, `changes`, `getPatch`,
 
 `useAsFormPatch()` also exposes `rebase()`; `isDirty`/`changes` arrive as
 `ComputedRef`s there (plain values in slot props / on the instance).
+
+## Per-field dirty
+
+**What/when:** ask whether ONE field changed since baseline — to mark changed
+inputs (an accent/badge). Derived from the same change model; zero plumbing per
+field. OFF (no `track-changes`) ⇒ always `false`, never throws.
+
+Reach it three ways:
+
+| Reach it via                           | Returns                                | When                                              |
+| -------------------------------------- | -------------------------------------- | ------------------------------------------------- |
+| `useAsField().isDirty` (`ComputedRef`) | this field's dirty (its `path()`)      | inside a custom field component (the common case) |
+| handle `isDirtyPath(path)`             | dirty at any dot-path, live (reactive) | check a specific path anywhere under the form     |
+| `isPathDirty(changes, path)`           | pure predicate over a change list      | framework-agnostic / React reuse / a tooling pass |
+
+`isDirtyPath` rides the handle, so it reaches you via `useAsFormPatch()`,
+`<AsForm>` slot props, AND the template ref (`defineExpose`) — same three
+surfaces as `isDirty`/`getPatch`. No-op `() => false` when tracking is off.
+
+### Matching rules — what lights up
+
+| #   | Field kind                                  | Match  | Result                                                                                                                          |
+| --- | ------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | scalar / leaf (incl. nested `address.city`) | EXACT  | dirty iff a change path === the field path.                                                                                     |
+| 2   | object / section container (`address`)      | PREFIX | no change at its own path; its leaves carry changes → dirty via `path + "."` prefix.                                            |
+| 3   | whole-array field (`tags`)                  | EXACT  | the array diff emits ONE change at the array root → exact match.                                                                |
+| 4   | array-ITEM leaf (`items.0.qty`)             | —      | **`false` — known limitation.** The whole-array diff exposes no per-item paths; the array/iterator CONTAINER lights up instead. |
+| 5   | no `item` vs `items` false positive         | PREFIX | prefix is `path + "."`, so field `item` never matches a change at `items`. No false positives.                                  |
+| 6   | empty root path `''`                        | ANY    | dirty iff there are ANY changes (the wrapped form root).                                                                        |
+| 7   | tracking OFF                                | —      | `false` for every path; injected optionally, never throws.                                                                      |
+
+### Default marker + override
+
+`AsFieldShell` sets `data-dirty=""` (empty attr present when dirty, absent when
+clean) on its `as-default-field` root. `@atscript/ui-styles` paints a subtle,
+OVERRIDABLE `scope-primary` left accent bar via the `as-default-field`
+shortcut's `[&:is([data-dirty])]:` variant (+ a `::before` bar). Restyle or
+disable by re-defining just that one variant key in your vunor shortcuts —
+e.g. `vunorShortcuts({ "as-default-field": { "[&:is([data-dirty])]:": "" } })`.
+
+### Usage
+
+```ts
+// custom field component — per-field dirty for free
+const { model, error, isDirty } = useAsField({ getValue, setValue, path: () => fullPath });
+// bind isDirty to a class / badge in the template
+
+// anywhere under the form (descendant / slot / template ref)
+const { isDirtyPath } = useAsFormPatch();
+isDirtyPath("address.city"); // boolean, reactive
+
+// framework-agnostic predicate (React-reusable)
+import { isPathDirty } from "@atscript/ui";
+isPathDirty(changes, "address.city");
+```
 
 ## Invariants
 
@@ -158,15 +214,18 @@ lets a framework strip a reactive proxy, e.g. vue-form passes `toRaw`).
 
 ```ts
 // Vue surface
-import { useAsFormPatch } from "@atscript/vue-form";
+import { useAsFormPatch, useAsField } from "@atscript/vue-form";
 import type { FormFieldChange, FormDiffOptions, FormRebaseOptions } from "@atscript/vue-form"; // re-exported from @atscript/ui
 import type { RebaseOntoResult } from "@atscript/vue-form"; // vue-form-local rebaseOnto result
+// Per-field dirty: handle.isDirtyPath(path) (also on slot props + defineExpose);
+// useAsField().isDirty: ComputedRef<boolean>.
 
 // Framework-agnostic engine (the diff + 3-way rebase behind all of the above)
 import {
   buildFormDiff,
   buildFormRebase,
   applyFormChanges,
+  isPathDirty, // pure per-field dirty predicate: isPathDirty(changes, path)
   deepEqual,
   deepClone,
 } from "@atscript/ui";

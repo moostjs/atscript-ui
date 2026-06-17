@@ -348,6 +348,12 @@ interface AsFormPatchHandle {
   getPatch: (opts?: FormDiffOptions) => Record<string, unknown>;
   /** Builds the per-field change list on demand (same data as `changes`). */
   getChanges: () => FormFieldChange[];
+  /**
+   * Per-field dirty predicate over the reactive change list — `true` when the
+   * field at dot-path `path` differs from the baseline (recomputes live). `() => false`
+   * when tracking is off. See [Change tracking — per-field dirty](/forms/change-tracking#marking-changed-fields-per-field-dirty).
+   */
+  isDirtyPath: (path: string) => boolean;
   /** Re-baseline to the current data — call after a successful save so the form becomes clean again. */
   rebase: () => void;
   /**
@@ -397,6 +403,13 @@ interface UseAsFieldReturn<TValue> {
   model: WritableComputedRef<TValue>;
   error: ComputedRef<string | undefined>;
   onBlur: () => void;
+  /**
+   * Reactive "changed-since-baseline" flag for THIS field — `true` when the form
+   * has `track-changes` on AND the field at `opts.path()` differs from the
+   * baseline. Always `false` when tracking is off (never throws). Bind it to mark
+   * the field visually. See [Change tracking — per-field dirty](/forms/change-tracking#marking-changed-fields-per-field-dirty).
+   */
+  isDirty: ComputedRef<boolean>;
 }
 
 function useAsField<TValue, TFormData, TContext>(
