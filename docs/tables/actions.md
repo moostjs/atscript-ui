@@ -198,14 +198,32 @@ transition auto-clears `selectedRows`; the actions column
 appears / disappears live without a remount; bulk action buttons
 disable when nothing is selected.
 
-## Toggling action-column visibility
+## Per-row action availability
 
 `state.includeActions` is a writable ref controlled by the
 renderer. The `<AsTable :row-actions-column="...">` prop (or
 `<AsWindowTable>`'s equivalent) flips it on when the table has at
 least one row-level action. When on, `buildTableQuery` requests
-per-row `$actions: string[]` from the server so the dropdown can
-hide actions that are server-disabled for this specific row.
+per-row `$actions: string[]` from the server — the names of the
+actions the server evaluated as **enabled** for that row.
+
+The table gates its action chrome against that list:
+
+- **Per-row dropdown** and the **single-selection toolbar** hide any
+  action whose name is absent from that row's `$actions`.
+- **Bulk selection** (≥2 rows) shows a bulk action when **at least
+  one** selected row allows it — the union of the selected rows'
+  `$actions`. An action enabled for only part of the selection stays
+  visible; the server re-filters per row at invoke time, so it simply
+  no-ops on the rows that don't qualify.
+
+Every server-declared action is gated this way **regardless of its
+processor** (`backend`, `navigate`, `custom`). The one exemption is the
+client-synthesised `__remove` (from `:row-delete`): its name never
+appears in `$actions`, so its visibility is governed by the table's
+`canRemove` flag instead — the server still authorises the delete at
+call time. Tables that don't opt into the actions column (no `$actions`
+in the payload) skip gating entirely and render every declared action.
 
 ## Next steps
 

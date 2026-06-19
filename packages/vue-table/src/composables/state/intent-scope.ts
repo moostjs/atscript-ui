@@ -1,4 +1,4 @@
-import { formatIdentifier, type TDbActionInfo, type TDbActionProcessor } from "@atscript/db-client";
+import { formatIdentifier, type TDbActionInfo } from "@atscript/db-client";
 import {
   REMOVE_PROCESSOR,
   type ConfirmScope,
@@ -9,27 +9,38 @@ import {
 type ActionLevel = TVueTableActionInfo["level"];
 
 /**
- * Processors exempt from the per-row `$actions` gate: `navigate`/`custom`
- * have no backend to ask, and `__remove` is synthesised client-side.
+ * Read a row's server-evaluated `$actions: string[]` — the names of NOT-disabled
+ * row/rows-level actions for that row. Returns `null` when the row carries no
+ * `$actions` (legacy server, `?$actions` opt-out, or table-level surfaces) so
+ * callers can skip the filter pass and keep the source-array reference stable.
  */
-const EXEMPT_PROCESSORS = new Set<TDbActionProcessor | typeof REMOVE_PROCESSOR>([
-  "navigate",
-  "custom",
-  REMOVE_PROCESSOR,
-]);
+function actionNamesOf(row: unknown): string[] | null {
+  const raw = (row as { $actions?: unknown } | null | undefined)?.$actions;
+  return Array.isArray(raw) ? (raw as string[]) : null;
+}
 
 /**
- * Build a per-row availability predicate from `row.$actions: string[]`
- * (server-evaluated names of NOT-disabled row/rows-level actions for that
- * row). Returns `null` when the row carries no `$actions` (legacy server,
- * `?$actions` opt-out, or table-level surfaces) so callers can skip the
- * filter pass and keep the source-array reference stable.
+ * Predicate factory: an action is available when its name is in `allowed`. The
+ * synthesised remove action (`REMOVE_PROCESSOR`) is the sole exemption — it is
+ * built client-side and its name never appears in the server's `$actions`, so
+ * its visibility is governed by `canRemove` (the server still authorises the
+ * actual delete at call time). Shared by the single-row and bulk gates.
+ */
+function gateFor(allowed: Set<string>): (a: TVueTableActionInfo) => boolean {
+  return (a) => a.processor === REMOVE_PROCESSOR || allowed.has(a.name);
+}
+
+/**
+ * Build a per-row availability predicate from `row.$actions`. Every
+ * server-declared row/rows action — regardless of processor (`backend`,
+ * `navigate`, `custom`, …) — is gated by its per-row `$actions` verdict: the
+ * server augmenter evaluates each action's `disabled` predicate for the row and
+ * emits the surviving names. Returns `null` when the row carries no `$actions`
+ * (see {@link actionNamesOf}).
  */
 export function rowActionGate(row: unknown): ((a: TVueTableActionInfo) => boolean) | null {
-  const raw = (row as { $actions?: unknown } | null | undefined)?.$actions;
-  if (!Array.isArray(raw)) return null;
-  const allowed = new Set(raw as string[]);
-  return (a) => EXEMPT_PROCESSORS.has(a.processor) || allowed.has(a.name);
+  const names = actionNamesOf(row);
+  return names ? gateFor(new Set(names)) : null;
 }
 
 export interface ActionBuckets {
@@ -39,19 +50,66 @@ export interface ActionBuckets {
 }
 
 /**
- * Apply the per-row `$actions` gate to a `{default, others, rows}` triple.
- * When the row carries no `$actions`, returns the input unchanged so
- * source-array references stay stable downstream (no spurious recomputes
- * in consumers that compare array identity).
+ * Filter a `{default, others, rows}` triple through an availability `gate`.
+ * When `gate` is `null`, returns the input `buckets` reference unchanged so
+ * source-array references stay stable downstream (no spurious recomputes in
+ * consumers that compare array identity). Shared by the single-row
+ * (`applyRowGate`) and bulk (`applyRowsGate`) paths.
  */
-export function applyRowGate(buckets: ActionBuckets, row: unknown): ActionBuckets {
-  const gate = rowActionGate(row);
+function applyGate(
+  buckets: ActionBuckets,
+  gate: ((a: TVueTableActionInfo) => boolean) | null,
+): ActionBuckets {
   if (!gate) return buckets;
   return {
     default: buckets.default && gate(buckets.default) ? buckets.default : undefined,
     others: buckets.others.filter(gate),
     rows: buckets.rows.filter(gate),
   };
+}
+
+/**
+ * Apply the single-row {@link rowActionGate} to a `{default, others, rows}`
+ * triple; identity-stable when the row carries no `$actions` (see {@link applyGate}).
+ */
+export function applyRowGate(buckets: ActionBuckets, row: unknown): ActionBuckets {
+  return applyGate(buckets, rowActionGate(row));
+}
+
+/**
+ * Build a BULK availability predicate from the UNION of every selected row's
+ * server `$actions`: an action is shown when AT LEAST ONE selected row allows
+ * it, even if absent from the rest. This is safe because the `@atscript/db`
+ * layer re-filters each row server-side at invoke time, so a subset-enabled
+ * action simply no-ops on the rows that don't qualify — strictly better UX
+ * than hiding an action a portion of the selection can use. The synthesised
+ * remove action (`REMOVE_PROCESSOR`) is the sole exemption: it is built
+ * client-side and never appears in any server `$actions`. Returns `null` when
+ * NO selected row carries a `$actions` array (legacy server / `?$actions`
+ * opt-out) so callers skip the filter pass and keep array identity stable;
+ * rows with an empty `$actions: []` still count as "the server spoke" and
+ * therefore disable normal actions.
+ */
+export function rowsActionGate(
+  rows: readonly unknown[],
+): ((a: TVueTableActionInfo) => boolean) | null {
+  let union: Set<string> | null = null;
+  for (const row of rows) {
+    const names = actionNamesOf(row);
+    if (!names) continue;
+    if (union === null) union = new Set<string>();
+    for (const name of names) union.add(name);
+  }
+  return union ? gateFor(union) : null;
+}
+
+/**
+ * Apply the BULK union gate to a `{default, others, rows}` triple. See
+ * {@link rowsActionGate} for the union semantics; identity-stable (returns
+ * the input `buckets` reference) when no selected row carries `$actions`.
+ */
+export function applyRowsGate(buckets: ActionBuckets, rows: readonly unknown[]): ActionBuckets {
+  return applyGate(buckets, rowsActionGate(rows));
 }
 
 /**

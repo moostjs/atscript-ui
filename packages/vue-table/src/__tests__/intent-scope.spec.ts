@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  applyRowsGate,
   confirmAction,
   extractIdentifier,
   idsForAction,
   pkForLevel,
+  rowsActionGate,
   substitute,
 } from "../composables/state/intent-scope";
-import type { ReactiveTableState, TVueTableActionInfo } from "../types";
+import { REMOVE_PROCESSOR, type ReactiveTableState, type TVueTableActionInfo } from "../types";
 
 describe("extractIdentifier", () => {
   it("picks preferredId fields from a row-shaped object", () => {
@@ -162,5 +164,59 @@ describe("pkForLevel / idsForAction", () => {
     expect(idsForAction("table", undefined)).toEqual([]);
     expect(idsForAction("row", { id: "a" })).toEqual([{ id: "a" }]);
     expect(idsForAction("rows", [{ id: "a" }, { id: "b" }])).toEqual([{ id: "a" }, { id: "b" }]);
+  });
+});
+
+describe("rowsActionGate / applyRowsGate", () => {
+  function bulkAction(opts: Partial<TVueTableActionInfo> = {}): TVueTableActionInfo {
+    return makeAction({ level: "rows", ...opts });
+  }
+
+  it("returns null when NO selected row carries a $actions array (no gating)", () => {
+    expect(rowsActionGate([{ id: 1 }, { id: 2 }])).toBeNull();
+    expect(rowsActionGate([])).toBeNull();
+  });
+
+  it("unions $actions across rows: shown when AT LEAST ONE selected row allows it", () => {
+    const gate = rowsActionGate([{ $actions: ["a"] }, { $actions: ["b"] }]);
+    expect(gate).not.toBeNull();
+    expect(gate!(bulkAction({ name: "a" }))).toBe(true);
+    expect(gate!(bulkAction({ name: "b" }))).toBe(true);
+    expect(gate!(bulkAction({ name: "c" }))).toBe(false);
+  });
+
+  it("disables a normal action when every selected row spoke with an empty $actions", () => {
+    // Empty arrays still count as "the server spoke" → gate is NOT null.
+    const gate = rowsActionGate([{ $actions: [] }, { $actions: [] }]);
+    expect(gate).not.toBeNull();
+    expect(gate!(bulkAction({ name: "a" }))).toBe(false);
+  });
+
+  it("exempts the synthesised remove action even when absent from every row", () => {
+    const gate = rowsActionGate([{ $actions: [] }, { $actions: ["other"] }]);
+    expect(gate).not.toBeNull();
+    expect(gate!(bulkAction({ name: REMOVE_PROCESSOR, processor: REMOVE_PROCESSOR }))).toBe(true);
+  });
+
+  it("applyRowsGate filters a {default, others, rows} triple by the union", () => {
+    const keep = bulkAction({ name: "a" });
+    const drop = bulkAction({ name: "c" });
+    const out = applyRowsGate({ default: drop, others: [keep, drop], rows: [keep] }, [
+      { $actions: ["a"] },
+      { $actions: ["b"] },
+    ]);
+    expect(out.default).toBeUndefined();
+    expect(out.others).toEqual([keep]);
+    expect(out.rows).toEqual([keep]);
+  });
+
+  it("applyRowsGate returns the SAME buckets reference when gate is null", () => {
+    const buckets = {
+      default: bulkAction({ name: "a" }),
+      others: [bulkAction({ name: "b" })],
+      rows: [],
+    };
+    // Rows without $actions → null gate → identity-stable pass-through.
+    expect(applyRowsGate(buckets, [{ id: 1 }, { id: 2 }])).toBe(buckets);
   });
 });

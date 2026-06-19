@@ -163,6 +163,33 @@ describe("<AsTableActions>", () => {
     expect(actionFn).toHaveBeenCalledWith("bulk-lock", [{ id: "a" }, { id: "b" }], undefined);
   });
 
+  it("level=rows shows a rows action enabled for at least one selected row", () => {
+    const def: TDbActionInfo = { ...rowsBulk, default: true };
+    const { wrapper } = setup({
+      rows: [def],
+      defaultRows: def,
+      // Union over selected rows' `$actions`: "bulk-lock" enabled for row "a"
+      // surfaces the action even though row "b" doesn't allow it.
+      selectedRows: [
+        { id: "a", $actions: ["bulk-lock"] },
+        { id: "b", $actions: [] },
+      ],
+    });
+    expect(wrapper.find("button").text()).toContain("Lock");
+  });
+
+  it("level=rows hides a rows action disabled for every selected row", () => {
+    const { wrapper } = setup({
+      rows: [rowsBulk],
+      // No selected row allows "bulk-lock" → union gate drops it → no buttons.
+      selectedRows: [
+        { id: "a", $actions: [] },
+        { id: "b", $actions: [] },
+      ],
+    });
+    expect(wrapper.findAll("button")).toHaveLength(0);
+  });
+
   it("scoped slot replaces built-in chrome", () => {
     const def: TDbActionInfo = { ...tableExport, default: true };
     const { wrapper } = setup({

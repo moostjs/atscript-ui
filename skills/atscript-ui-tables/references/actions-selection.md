@@ -64,7 +64,7 @@ Reads `state.actions.cellRow` — pre-flattened `[default?, ...others.row, ...ro
 applyRowGate({ default, others, rows }, row);
 ```
 
-Reads the row's server-evaluated `$actions: string[]` field (populated when `state.includeActions=true` → `controls.$actions=true` on the query). Actions named in `$actions` are kept; others are filtered out. Exempt processors (`navigate`, `custom`, `__remove`) skip the gate.
+Reads the row's server-evaluated `$actions: string[]` field (populated when `state.includeActions=true` → `controls.$actions=true` on the query). Actions named in `$actions` are kept; others are filtered out. **Every server-declared action is gated regardless of processor** (`backend`, `navigate`, `custom`). The sole exemption is the client-synthesised `__remove` — its name never appears in `$actions`, so its visibility is governed by `tableDef.canRemove` (the server still authorises the delete at invoke).
 
 Opt in to the synthesized column via `<AsTable :row-actions-column="'first' | 'last' | 'merge-select'">`. The column is locked: no header dropdown, no resize, no drag-reorder, never in `state.columnNames`.
 
@@ -84,6 +84,8 @@ Tier-1 toolbar component. Selection-aware level resolution:
 | `"row"`      | any             | `row`           | (forced) — falls back to active row if selection is empty                                                  |
 
 Renders nothing when no actions are visible. Single-action collapse: a sole non-default entry promotes into the labelled button rather than hiding behind `…`.
+
+**Per-row `$actions` gate.** The `row` surface (1 selected) gates against the active/selected row's `$actions`, same as `<AsRowActions>` (`applyRowGate(buckets, row)`). The `rows` surface (≥2 selected) gates against the **union** of the selected rows' `$actions` via `applyRowsGate(buckets, selectedRows)` — a bulk action shows when **at least one** selected row allows it (the server re-filters per row at invoke, so a subset-enabled action no-ops on the rest). `__remove` is the sole exemption. No `$actions` on any row → no gating (legacy / opt-out).
 
 Slots:
 

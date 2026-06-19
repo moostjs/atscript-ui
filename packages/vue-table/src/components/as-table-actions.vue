@@ -17,6 +17,7 @@ import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-
 import { useTableContext } from "../composables/use-table-state";
 import {
   applyRowGate,
+  applyRowsGate,
   ariaLabelFor,
   collectIdentifiers,
   intentClass,
@@ -121,9 +122,19 @@ const resolved = computed<Resolved>(() => {
       ids: collectIdentifiers(state, [source], pid),
     });
   }
+  // Bulk gate = UNION of selected rows' `$actions` (shown when ≥1 selected
+  // row allows it); the server still filters each row per-row at invoke.
+  const filtered = applyRowsGate(
+    {
+      default: state.actions.default.rows,
+      others: state.actions.others.rows,
+      rows: [],
+    },
+    state.selectedRows.value,
+  );
   return collapseSingle({
-    defaultAction: state.actions.default.rows,
-    otherActions: state.actions.others.rows,
+    defaultAction: filtered.default,
+    otherActions: filtered.others,
     trailingRowActions: [],
     level: "rows",
     ids: collectIdentifiers(state, state.selectedRows.value, pid),

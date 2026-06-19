@@ -228,6 +228,13 @@ describe("<AsRowActions>", () => {
       processor: "navigate",
       value: "/orders/$1/edit",
     };
+    const exportCsv: TDbActionInfo = {
+      name: "export",
+      label: "Export",
+      level: "row",
+      processor: "custom",
+      value: "",
+    };
 
     it("hides backend actions absent from row.$actions", () => {
       const { wrapper } = setup({
@@ -259,15 +266,44 @@ describe("<AsRowActions>", () => {
       expect(wrapper.find(".as-row-actions-more").exists()).toBe(true);
     });
 
-    it("navigate-processor actions are exempt from $actions gating", () => {
-      // editNav (navigate) + ship (backend, not in $actions) → only edit
-      // survives the filter, which collapses to a single labelled button.
+    it("gates navigate-processor actions by $actions like any server action", () => {
+      // editNav (navigate, in $actions) + ship (backend, not in $actions) →
+      // only edit survives the filter, collapsing to a single labelled button.
       const { wrapper } = setup({
         rowActions: [editNav, ship],
-        row: { id: "ord-1", $actions: [] }, // server says nothing allowed
+        row: { id: "ord-1", $actions: ["edit"] },
       });
-      const btn = wrapper.find("button");
-      expect(btn.attributes("aria-label")).toBe("Edit");
+      const buttons = wrapper.findAll("button");
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]!.attributes("aria-label")).toBe("Edit");
+    });
+
+    it("filters a navigate action absent from $actions", () => {
+      const { wrapper } = setup({
+        rowActions: [editNav],
+        row: { id: "ord-1", $actions: [] }, // server gated edit out
+      });
+      expect(wrapper.findAll("button")).toHaveLength(0);
+    });
+
+    it("gates custom-processor actions by $actions like any server action", () => {
+      // exportCsv (custom, in $actions) + ship (backend, not in $actions) →
+      // only export survives, collapsing to a single labelled button.
+      const { wrapper } = setup({
+        rowActions: [exportCsv, ship],
+        row: { id: "ord-1", $actions: ["export"] },
+      });
+      const buttons = wrapper.findAll("button");
+      expect(buttons).toHaveLength(1);
+      expect(buttons[0]!.attributes("aria-label")).toBe("Export");
+    });
+
+    it("filters a custom action absent from $actions", () => {
+      const { wrapper } = setup({
+        rowActions: [exportCsv],
+        row: { id: "ord-1", $actions: [] }, // server gated export out
+      });
+      expect(wrapper.findAll("button")).toHaveLength(0);
     });
 
     it("__remove (synthetic) is exempt from $actions gating", () => {
