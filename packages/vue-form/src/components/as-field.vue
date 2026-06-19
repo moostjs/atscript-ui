@@ -792,9 +792,15 @@ const displayProps = computed(() => {
 });
 
 // ── Final component props — merges invariant + display + error state ──
-// Grid classes live alongside the base class object: Vue's class binding
-// flattens an array of {object, string} entries. The string is empty for
-// default-footprint fields, which Vue safely skips.
+// `as-grid-item` leads the class array so a bare custom root (one that skips
+// AsFieldShell and binds only `props.class`) still gets the default full-width
+// grid placement (`col-span-full row-span-1`). Components rendered through
+// AsFieldShell already carry `as-grid-item` on the shell root, so the duplicate
+// is harmless. `gridClasses` is empty at the default span and only emits a
+// deviation like `col-span-6` — which overrides `as-grid-item` because the
+// standalone `col-span-N` utility lands in UnoCSS's default layer, after the
+// shortcuts layer. Vue flattens this {string, object, string} array and safely
+// skips the empty `gridClasses`.
 //
 // `isDirty` is deliberately NOT folded in here — it is bound separately on the
 // <component> (`:is-dirty="isDirty"`) so this computed keeps ZERO reactive deps
@@ -812,7 +818,7 @@ const componentProps = computed(() => {
     ...dp,
     error: err,
     ariaDescribedBy,
-    class: [{ ...unwrap(classesBase), error: !!err }, gridClasses],
+    class: ["as-grid-item", { ...unwrap(classesBase), error: !!err }, gridClasses],
   };
 });
 </script>

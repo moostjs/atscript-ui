@@ -120,6 +120,33 @@ Notes:
   on your innermost control so the shell's `<label :for>` works.
 - `onBlur` is a prop (not an emit). Call it from your control's blur handler.
 
+## Bare root — skipping `AsFieldShell`
+
+Presentational fields that don't want the standard label/error chrome — a
+section header, a media block, a read-only summary — render their own root
+instead of wrapping `AsFieldShell`. Bind `:class="props.class"` and
+`:style="props.style"` on that outermost element:
+
+```vue
+<script setup lang="ts">
+import type { TAsComponentProps } from "@atscript/vue-form";
+
+const props = defineProps<TAsComponentProps<number>>();
+</script>
+
+<template>
+  <div :class="props.class" :style="props.style">
+    <!-- your content -->
+  </div>
+</template>
+```
+
+`props.class` carries the field's grid placement — the default full-width span
+**and** any `@ui.form.grid.colSpan` / `.rowSpan` override — together with
+`@ui.form.classes`. Binding it is all you need: you never add `as-grid-item` or
+`col-span-*` to the root yourself. Omit the binding and the field collapses to a
+single implicit grid column.
+
 ## Useful composables inside a custom component
 
 These are exported from `@atscript/vue-form` and safe to call inside any custom

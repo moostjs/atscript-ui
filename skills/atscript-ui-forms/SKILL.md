@@ -288,7 +288,7 @@ defineProps<TAsComponentProps<string>>();
 </template>
 ```
 
-If instead you render a **bare root** (no `AsFieldShell` — e.g. a section or media block that doesn't want the label/error chrome), you must bind `:class="props.class"` (and `:style="props.style"`) on that root yourself. `class`/`style` are _declared_ props on `TAsComponentProps`, so they arrive as `props.class` — not `$attrs` — and are not auto-applied to the root; `AsFieldShell` does this for you. Omit it and the field loses its `@ui.form.grid.colSpan`/`.rowSpan` placement (renders at the wrong width).
+If instead you render a **bare root** (no `AsFieldShell` — e.g. a section or media block that doesn't want the label/error chrome), you must bind `:class="props.class"` (and `:style="props.style"`) on that root yourself. `class`/`style` are _declared_ props on `TAsComponentProps`, so they arrive as `props.class` — not `$attrs` — and are not auto-applied to the root; `AsFieldShell` does this for you. Omit it and the field loses its `@ui.form.grid.colSpan`/`.rowSpan` placement (renders at the wrong width). Binding `props.class` is sufficient at every span — the default full-width and any `colSpan` override both ride on it, so you don't add `as-grid-item` or `col-span-*` yourself.
 
 Full contract for custom components (`TAsComponentProps`, `TAsComponentEmits`, locale providers) lives in [customization.md](references/customization.md).
 

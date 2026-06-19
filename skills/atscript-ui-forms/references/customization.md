@@ -280,7 +280,7 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps { 
 > <div class="…your styles…" :class="props.class" :style="props.style">
 > ```
 >
-> Omit `:class="props.class"` and the field silently falls back to the default single-column grid slot: `@ui.form.grid.colSpan` / `.rowSpan` (and `@ui.form.classes`) appear ignored even though `AsField` computed them correctly. This is the most common reason a custom widget renders at the wrong width.
+> Omit `:class="props.class"` and the field silently falls back to the default single-column grid slot: `@ui.form.grid.colSpan` / `.rowSpan` (and `@ui.form.classes`) appear ignored even though `AsField` computed them correctly. This is the most common reason a custom widget renders at the wrong width. Binding it is sufficient at every span — the default full-width placement and any `colSpan` / `rowSpan` override both ride on `props.class`, so you never add `as-grid-item` or `col-span-*` to the root yourself.
 
 ## TAsComponentEmits
 
