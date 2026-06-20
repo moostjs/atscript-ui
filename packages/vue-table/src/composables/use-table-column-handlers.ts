@@ -22,9 +22,7 @@ export interface TableColumnHandlers {
 export function useTableColumnHandlers(state: ReactiveTableState): TableColumnHandlers {
   return {
     onSort(column, direction) {
-      const rest = state.sorters.value.filter((s) => s.field !== column.path);
-      state.sorters.value =
-        direction === null ? rest : [...rest, { field: column.path, direction }];
+      state.sorters.value = direction === null ? [] : [{ field: column.path, direction }];
     },
     onHide(column) {
       state.columnNames.value = state.columnNames.value.filter((n) => n !== column.path);

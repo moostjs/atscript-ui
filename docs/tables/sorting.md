@@ -4,9 +4,12 @@ outline: deep
 
 # Sorting
 
-The sort model is a flat array: `SortControl[]`. Multi-sort is the
-default — later entries break ties of earlier ones. The state contract
-is the same as for filters: pure mutators, single watcher reaction.
+The sort model is a flat array: `SortControl[]` — later entries break
+ties of earlier ones, so the array can express a multi-column sort. A
+header click sets a **single** sort (it replaces the array); multi-column
+sorts are composed in the [config dialog](#the-config-dialog). The state
+contract is the same as for filters: pure mutators, single watcher
+reaction.
 
 ## The sort model
 
@@ -38,21 +41,24 @@ Order matters. The server applies the directives in the same order, so
 
 ### Header click
 
-Clicking a `<AsTableHeaderCell>` toggles the column's position in
-`state.sorters`:
+Clicking a `<AsTableHeaderCell>` **replaces** `state.sorters` with a
+single sort on that column, driven by the column menu's _Ascending_ /
+_Descending_ items:
 
-1. **Not in sorters** → appended as `asc`.
-2. **Already `asc`** → flipped to `desc`.
-3. **Already `desc`** → removed from the array.
+1. **Not sorted (or sorted by another column)** → becomes the sole
+   sorter — `asc`, or `desc` if you pick _Descending_.
+2. **Already `asc`** → pick _Descending_ to flip it to `desc`.
+3. **Pick the direction it already has** → clears the sort entirely.
 
-Shift-click (or repeated clicks while another column is already sorted)
-preserves the rest of the array — that's how the user builds a
-multi-sort.
+A header click is a single-sort control: it discards every other sorter,
+including preset- and `v-model`-sourced ones. To keep more than one
+sorter active, build it in the [config dialog](#the-config-dialog) — that
+is the only surface that composes a multi-column sort.
 
-The header cell only fires the toggle when `column.sortable === true`,
-which itself derives from `meta.fields[path].sortable` (the server flag
-from `@db.index.*` / `@db.column.sortable` / `@db.table.sortable`). For
-non-sortable columns the header is inert.
+The header cell only offers sort when `column.sortable === true`, which
+itself derives from `meta.fields[path].sortable` (the server flag from
+`@db.index.*` / `@db.column.sortable` / `@db.table.sortable`). For
+non-sortable columns the header exposes no sort control.
 
 ### The config dialog
 

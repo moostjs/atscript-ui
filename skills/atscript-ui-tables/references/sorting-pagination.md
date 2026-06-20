@@ -30,17 +30,17 @@ The watcher uses `sortersEqual(prev, next)` for change detection — reassigning
 
 ## Header click semantics
 
-Built into `<AsTableHeaderCell>` via `useTableColumnHandlers`. Default click cycle on a sortable column:
+Built into `<AsTableHeaderCell>` via `useTableColumnHandlers` → `onSort`. A header click is a **single-sort** control: it REPLACES `state.sorters` with one entry (or clears it). It never appends — any preset / `v-model` / other sorters are discarded on click. There is no shift-click multi-sort.
 
-| Current state | Plain click    | Shift-click          |
-| ------------- | -------------- | -------------------- |
-| no entry      | append `asc`   | append `asc` (multi) |
-| `asc`         | flip to `desc` | flip in place        |
-| `desc`        | remove entry   | remove entry         |
+The column menu exposes _Ascending_ / _Descending_ items (`columnMenu.sort: true` on `<AsTable>` / `<AsWindowTable>`); picking a direction sets it, picking the column's current direction clears:
 
-Plain click without shift **clears** other sorters before applying — single-column sort. Shift-click preserves the existing chain and appends / mutates the entry for that column.
+| Picked            | Result on `state.sorters`        |
+| ----------------- | -------------------------------- |
+| Ascending         | `[{ field, direction: "asc" }]`  |
+| Descending        | `[{ field, direction: "desc" }]` |
+| current direction | `[]` (cleared)                   |
 
-Override via the column menu's "Sort ascending" / "Sort descending" items (`columnMenu.sort: true` on `<AsTable>` / `<AsWindowTable>`).
+Multi-column sort is NOT reachable from the header — compose it in the [config dialog Sorters tab](#asconfigdialog-sorters-tab), which writes the whole array directly (bypassing `onSort`).
 
 ## mergeSorters
 
