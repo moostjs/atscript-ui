@@ -321,7 +321,7 @@ be added from the config dialog, and aren't filterable or sortable —
 while `@ui.table.selectWith` still pulls their data into the payload so
 the cell can read them.
 
-### Headless renderers — `alwaysSelected`
+### Renderless renderers — `alwaysSelected`
 
 When you skip `ColumnDef` entirely — a fully custom renderer built on
 `<AsTableRoot>`'s default slot — there's no column to hang
@@ -348,7 +348,7 @@ available on `useTable()`'s query options.)
 
 - **DO** co-locate per-column deps with `@ui.table.selectWith` — they
   ride exactly when the owning column is visible.
-- **DO** reach for `alwaysSelected` when a headless / default-slot
+- **DO** reach for `alwaysSelected` when a renderless / default-slot
   renderer needs fields unconditionally, with no column to attach deps
   to.
 - **DON'T** use either for a number cell's currency or unit sibling

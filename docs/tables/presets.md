@@ -133,7 +133,7 @@ claimed aspects (so the URL bar stays clean once you're "done"
 editing).
 
 Wired automatically when `<AsTableRoot :preset="{ ..., persistDrafts: true }">`
-is set; direct use is for headless setups.
+is set; direct use is for programmatic setups.
 
 ### `useAppPrefs(opts)`
 

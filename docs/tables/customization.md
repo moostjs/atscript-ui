@@ -243,6 +243,39 @@ The default `AsRowActions` does the same thing with vunor's
 chrome — the table's reactivity, confirm dialog, input form
 dialog, and `@action` emit all keep working.
 
+## Headless — no header row
+
+`:headless` renders the table body without a header. It omits `<thead>`
+entirely (it does **not** `display:none` it), which is the right shape for a
+compact, label-less island — e.g. a small read-only grid embedded in a card
+where the column labels add nothing.
+
+```vue
+<AsTable :headless="true" />
+<AsWindowTable :headless="true" />
+```
+
+Works the same on both renderers. Column widths survive without a header:
+they are carried by a `<colgroup>` (not the header `<th>`s), so a column
+annotated `@ui.table.width "32ch"` keeps its width even with no header to
+size from. Without `:headless` the header is the only place those widths
+live, so hiding it with `:deep(thead){display:none}` collapses every column
+to equal width — reach for `:headless` instead of that CSS hack.
+
+::: warning Header-driven interactions go away
+With no header there is no sort/filter/reorder/resize UI or column menu.
+Drive those from elsewhere — a toolbar bound to `state.sorters` /
+`state.filters`, or the [Config Dialog](/tables/config-dialog) — or keep the
+header. `:headless` is for display-only grids, not interactive ones.
+:::
+
+::: tip Not the same as a _renderless_ table
+`:headless` still renders `<AsTable>` — just without the header row. A
+**renderless** table is the opposite layer: you drop `<AsTable>` entirely and
+build your own markup (cards, lists) from `<AsTableRoot>` state — see
+[Renderless renderers](/tables/custom-cells#renderless-renderers-alwaysselected).
+:::
+
 ## Next steps
 
 - [Cells](/tables/cells) — the built-in cell library.

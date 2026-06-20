@@ -289,7 +289,7 @@ A custom cell only receives the row payload, and the payload carries **only the 
 Two sources:
 
 - `@ui.table.selectWith 'path'` (constant `UI_TABLE_SELECT_WITH` from `@atscript/ui`) — co-locate on the owning column; **repeatable**, one leaf path each. Rides only while that column is displayed.
-- `alwaysSelected` prop on `<AsTableRoot>` (and `useTable` query options) — table-level `string[]`, always fetched regardless of visible columns. Use it for a fully headless/custom renderer that drives `<AsTableRoot>`'s default slot with no `ColumnDef` to hang deps on.
+- `alwaysSelected` prop on `<AsTableRoot>` (and `useTable` query options) — table-level `string[]`, always fetched regardless of visible columns. Use it for a fully renderless/custom renderer that drives `<AsTableRoot>`'s default slot with no `ColumnDef` to hang deps on.
 
 | #   | Invariant                                                                                                                                                                                                                             |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -326,7 +326,7 @@ export interface User {
 
 `@ui.table.exclude` keeps `avatar` / `firstName` / `lastName` out of the table entirely — they never become columns, can't be added from the config dialog, and aren't filterable or sortable — while `@ui.table.selectWith` still pulls their data into `$select` whenever the `username` column is visible. The `identityCell` component reads them off `row` via `getCellValue(row, 'firstName')` etc. Toggle `username` off and the three deps stop being fetched.
 
-For a headless renderer with no anchoring column, set the same leaves on the root instead:
+For a renderless renderer with no anchoring column, set the same leaves on the root instead:
 
 ```vue
 <template>

@@ -66,6 +66,19 @@ const controls = { filterDialog: MyFilterDialog }; // overrides only — don't s
 
 `AsActionFormDialog` lives on a dedicated subpath (`@atscript/vue-table/as-action-form-dialog`) — it pulls in the full `@atscript/vue-form` runtime, so the main entry doesn't export it. Assign it to `controls.actionFormDialog` to override or eager-load. Its embedded `<AsForm>` is customized via the separate `formTypes` / `formComponents` props on `<AsTableRoot>` (same shape as vue-form's `:types` / `:components`).
 
+## Headless — no header row
+
+`:headless` on `<AsTable>` / `<AsWindowTable>` renders the body without a header — omits `<thead>` entirely (not `display:none`). For compact, label-less, display-only grids (e.g. a read-only island inside a card).
+
+```vue
+<AsTable :headless="true" />
+<AsWindowTable :headless="true" />
+```
+
+- Column widths survive without a header: they are carried by a `<colgroup>`, not the header `<th>`. A `@ui.table.width "32ch"` column keeps its width with no header. (This is why hiding the header via `:deep(thead){display:none}` collapses columns — those widths only live on the `<th>`. Use `:headless`, not that CSS hack.)
+- No header ⇒ no sort/filter/reorder/resize UI or column menu. Drive sort/filter from a custom toolbar (write `state.sorters` / `state.filters`) or `<AsConfigDialog>`. Display-only, not interactive.
+- **Not** a _renderless_ table: `:headless` still renders `<AsTable>`. Renderless = drop `<AsTable>`, render your own markup from `<AsTableRoot>` state (`alwaysSelected` + default slot) — see [cells.md](cells.md).
+
 ## Invariants
 
 | #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                        |

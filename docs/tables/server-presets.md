@@ -246,7 +246,7 @@ The client points at the controller's URL via the table root's
 </AsTableRoot>
 ```
 
-For headless access — custom picker, programmatic flows — use
+For a custom picker or programmatic flows — use
 `usePresets()`:
 
 ```ts

@@ -33,7 +33,7 @@ interface AsTableRootProps {
   selectionPersistence?: "clear" | "trim" | "persist";
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
-  /** Leaf paths always added to `$select`, regardless of visible columns — for headless cell renderers. */
+  /** Leaf paths always added to `$select`, regardless of visible columns — for renderless cell renderers. */
   alwaysSelected?: string[];
   queryFn?: (
     query: Uniquery,
@@ -77,6 +77,15 @@ interface AsTableProps {
   reorderable?: boolean;
   resizable?: boolean;
   columnMinWidth?: number;
+  /**
+   * Render without a header row — omits `<thead>` entirely (not
+   * `display:none`). Column widths are carried by a `<colgroup>`, so data
+   * columns keep their `@ui.table.width` / seeded widths without a header.
+   * Header-driven interactions (sort/filter/reorder/resize) are unavailable.
+   * Not to be confused with a *renderless* table (drop `<AsTable>` and build
+   * your own UI from `<AsTableRoot>` state).
+   */
+  headless?: boolean;
   /** Selection mode: "none" | "single" | "multi". */
   select?: SelectionMode;
   /** Row-delete opt-in. */
