@@ -61,6 +61,13 @@ const props = withDefaults(
      * compose their own column layout.
      */
     rowActionsColumn?: "first" | "last" | "merge-select" | false;
+    /**
+     * Render without a header row. Omits `<thead>` entirely (not
+     * `display:none`); column widths are carried by the `<colgroup>`, so data
+     * columns keep their annotated/seeded widths. Header-driven interactions
+     * (sort/filter/reorder/resize) are unavailable in headless mode.
+     */
+    headless?: boolean;
   }>(),
   {
     stickyHeader: true,
@@ -71,6 +78,7 @@ const props = withDefaults(
     select: "none",
     rowDelete: false,
     rowActionsColumn: false,
+    headless: false,
   },
 );
 
@@ -185,6 +193,7 @@ function handleDeselectAll() {
       :query-error="state.queryError.value"
       :on-retry="state.query"
       :sticky-header="stickyHeader"
+      :headless="headless"
       :virtual-row-height="virtualRowHeight"
       :virtual-overscan="virtualOverscan"
       :filters="state.filters.value"

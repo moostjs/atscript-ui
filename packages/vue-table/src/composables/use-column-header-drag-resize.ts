@@ -14,6 +14,23 @@ export interface UseColumnHeaderDragResizeOptions {
   onAutoFit?: (th: HTMLTableCellElement, path: string) => void;
 }
 
+/**
+ * Pure width lookup shared by the header `<th>` and the `<colgroup>` `<col>`.
+ * Resolves the applied width for a column from the widths map, falling back to
+ * `col.width` for columns the table-state-side reconcile doesn't see — chiefly
+ * the synthesized `__actions` pseudo-column, which lives in `<AsTable>`'s
+ * `effectiveColumns` but never enters `state.columnWidths` (reconcile runs on
+ * `def.columns` only). Without this fallback the synthesized column collapses
+ * to 0 and its cells become invisible. Both the `<col>` and `<th>` MUST resolve
+ * width through this single function so they never disagree.
+ */
+export function resolveColumnWidth(
+  columnWidths: ColumnWidthsMap,
+  col: ColumnDef,
+): string | undefined {
+  return columnWidths[col.path]?.w ?? col.width;
+}
+
 function pathOf(event: Event): string | null {
   return (event.currentTarget as HTMLElement | null)?.dataset.columnPath ?? null;
 }
@@ -120,16 +137,8 @@ export function useColumnHeaderDragResize(opts: UseColumnHeaderDragResizeOptions
   }
 
   function widthStyle(col: ColumnDef): { width: string } | undefined {
-    const entry = opts.columnWidths()[col.path];
-    if (entry) return { width: entry.w };
-    // Fall back to `col.width` for columns the table-state-side reconcile
-    // doesn't see — chiefly the synthesized `__actions` pseudo-column,
-    // which lives in `<AsTable>`'s `effectiveColumns` but never enters
-    // `state.columnWidths` (reconcile runs on `def.columns` only). Without
-    // this fallback the synthesized column collapses to 0 and its cells
-    // become invisible.
-    if (col.width) return { width: col.width };
-    return undefined;
+    const w = resolveColumnWidth(opts.columnWidths(), col);
+    return w ? { width: w } : undefined;
   }
 
   function thClasses(path: string): Record<string, boolean> {

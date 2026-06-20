@@ -45,6 +45,71 @@ describe("<AsTableBase> column drag-resize", () => {
     expect(thB.style.width).toBe("240px");
   });
 
+  it("renders a <col> per column whose width matches the <th> width", () => {
+    const widths = {
+      a: { w: "100px", d: "100px" },
+      b: { w: "240px", d: "200px" },
+      c: { w: "150px", d: "150px" },
+    };
+    const wrapper = mount(AsTableBase, {
+      props: { columns: cols, rows, sorters: [], stretch: false, columnWidths: widths },
+    });
+    for (const path of ["a", "b", "c"]) {
+      const col = wrapper.element.querySelector(
+        `colgroup col[data-column-path="${path}"]`,
+      ) as HTMLElement;
+      expect(col).not.toBeNull();
+      const th = thByPath(wrapper.element, path);
+      expect(col.style.width).toBe(th.style.width);
+      expect(col.style.width).toBe(widths[path as "a" | "b" | "c"].w);
+    }
+  });
+
+  it("colgroup col order matches body cell order (select + filler placeholders)", () => {
+    const wrapper = mount(AsTableBase, {
+      props: { columns: cols, rows, sorters: [], stretch: true, select: "multi" },
+    });
+    const colEls = [...wrapper.element.querySelectorAll("colgroup col")];
+    // select placeholder, a, b, c, filler placeholder
+    expect(colEls.length).toBe(5);
+    expect(colEls[0]!.classList.contains("as-col-select")).toBe(true);
+    expect((colEls[1] as HTMLElement).dataset.columnPath).toBe("a");
+    expect((colEls[2] as HTMLElement).dataset.columnPath).toBe("b");
+    expect((colEls[3] as HTMLElement).dataset.columnPath).toBe("c");
+    expect(colEls[4]!.classList.contains("as-col-filler")).toBe(true);
+  });
+
+  it("headless omits <thead> but the <colgroup> still carries widths", () => {
+    const widths = {
+      a: { w: "100px", d: "100px" },
+      b: { w: "32ch", d: "32ch" },
+      c: { w: "150px", d: "150px" },
+    };
+    const wrapper = mount(AsTableBase, {
+      props: {
+        columns: cols,
+        rows,
+        sorters: [],
+        stretch: false,
+        headless: true,
+        columnWidths: widths,
+      },
+    });
+    expect(wrapper.element.querySelector("thead")).toBeNull();
+    // The annotated 32ch width survives on the col and is NOT equal-distributed.
+    const colB = wrapper.element.querySelector(`colgroup col[data-column-path="b"]`) as HTMLElement;
+    expect(colB.style.width).toBe("32ch");
+    const colA = wrapper.element.querySelector(`colgroup col[data-column-path="a"]`) as HTMLElement;
+    expect(colA.style.width).toBe("100px");
+  });
+
+  it("renders <thead> when not headless", () => {
+    const wrapper = mount(AsTableBase, {
+      props: { columns: cols, rows, sorters: [], stretch: false },
+    });
+    expect(wrapper.element.querySelector("thead")).not.toBeNull();
+  });
+
   it("emits the final resize width with px shape after pointerup", () => {
     const wrapper = mount(AsTableBase, {
       props: { columns: cols, rows, sorters: [], stretch: false },

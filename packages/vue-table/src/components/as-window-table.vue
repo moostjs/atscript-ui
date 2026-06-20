@@ -62,6 +62,13 @@ const props = withDefaults(
      * a watcher — the action set live-updates as the prop flips.
      */
     rowDelete?: boolean | RowDeleteOpt;
+    /**
+     * Render without a header row. Omits `<thead>` entirely (not
+     * `display:none`); column widths are carried by the `<colgroup>`, so data
+     * columns keep their annotated/seeded widths. Header-driven interactions
+     * (sort/filter/reorder/resize) are unavailable in headless mode.
+     */
+    headless?: boolean;
   }>(),
   {
     rowHeight: DEFAULT_ROW_HEIGHT_PX,
@@ -73,6 +80,7 @@ const props = withDefaults(
     columnMinWidth: 48,
     select: "none",
     rowDelete: false,
+    headless: false,
   },
 );
 
@@ -160,6 +168,7 @@ watch(
       :resizable="resizable"
       :column-min-width="columnMinWidth"
       :select="select"
+      :headless="headless"
       :enter-action="enterAction"
       @row-click="(row: Row, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="(row: Row, ev: MouseEvent) => emit('row-dblclick', row, ev)"

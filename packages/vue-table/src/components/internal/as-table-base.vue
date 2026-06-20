@@ -15,6 +15,7 @@ import { getCellValue } from "../../utils/get-cell-value";
 import { useTableContextOptional } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
 import { useCellComponents } from "../../composables/use-cell-components";
+import AsTableColgroup from "./as-table-colgroup.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
 import AsTableVirtualizer from "./as-table-virtualizer.vue";
@@ -66,6 +67,13 @@ const props = withDefaults(
      * fully populated for every column once the parent has seeded defaults.
      */
     columnWidths?: ColumnWidthsMap;
+    /**
+     * When true, omit the `<thead>` entirely (not `display:none`). Column
+     * widths are carried by the `<colgroup>`, so data columns keep their
+     * annotated/seeded widths without a header. Header-driven interactions
+     * (sort/filter/reorder/resize) simply don't exist in this mode.
+     */
+    headless?: boolean;
   }>(),
   {
     select: "none",
@@ -77,6 +85,7 @@ const props = withDefaults(
     resizable: true,
     columnMinWidth: 48,
     columnWidths: () => ({}),
+    headless: false,
   },
 );
 
@@ -318,7 +327,14 @@ function isActiveRow(index: number): boolean {
       :aria-rowcount="ariaRowCount"
       :aria-multiselectable="isStandalone && select === 'multi' ? 'true' : undefined"
     >
+      <AsTableColgroup
+        :columns="columns"
+        :column-widths="columnWidths"
+        :has-select="hasValue"
+        :with-filler="stretch"
+      />
       <AsTableHeader
+        v-if="!headless"
         :columns="columns"
         :sorters="sorters"
         :filters="filters"

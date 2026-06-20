@@ -114,11 +114,24 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
   const origTableWidth = table.style.width;
   const origTableMinWidth = table.style.minWidth;
   const origThWidth = th.style.width;
+  // The matching `<col>` in the `<colgroup>` pins this column's width via
+  // `table-layout: fixed`. During `auto`-layout measurement it must be
+  // neutralized too — otherwise the pinned col keeps the column from sizing
+  // to its content and we measure the pinned width back, not the natural one.
+  const path = th.dataset.columnPath;
+  const col = path
+    ? (table.querySelector(
+        `colgroup col[data-column-path="${path}"]`,
+      ) as HTMLTableColElement | null)
+    : null;
+  const origColWidth = col?.style.width;
   table.style.tableLayout = "auto";
   table.style.minWidth = "0";
   table.style.width = "max-content";
   th.style.width = "max-content";
+  if (col) col.style.width = "";
   const measured = th.offsetWidth;
+  if (col) col.style.width = origColWidth ?? "";
   th.style.width = origThWidth;
   table.style.width = origTableWidth;
   table.style.minWidth = origTableMinWidth;

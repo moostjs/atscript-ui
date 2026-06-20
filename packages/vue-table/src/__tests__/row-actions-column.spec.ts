@@ -116,7 +116,7 @@ describe("rowActionsColumn — synthesized __actions column", () => {
     const wrapper = mountTable({ rowActionsColumn: "last", url: "/rac-locked" });
     await flushPromises();
     await flushPromises();
-    const th = wrapper.find('[data-column-path="__actions"]');
+    const th = wrapper.find('th[data-column-path="__actions"]');
     expect(th.exists()).toBe(true);
     expect(th.attributes("draggable")).toBeUndefined();
     expect(th.find(".as-th-resize-handle").exists()).toBe(false);
@@ -126,7 +126,7 @@ describe("rowActionsColumn — synthesized __actions column", () => {
     const wrapper = mountTable({ rowActionsColumn: "first", url: "/rac-aria" });
     await flushPromises();
     await flushPromises();
-    const th = wrapper.find('[data-column-path="__actions"]');
+    const th = wrapper.find('th[data-column-path="__actions"]');
     expect(th.attributes("aria-label")).toBe("Actions");
   });
 });

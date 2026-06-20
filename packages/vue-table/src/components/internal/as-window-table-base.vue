@@ -9,6 +9,7 @@ import { useCellComponents } from "../../composables/use-cell-components";
 import { useRafBatch } from "../../composables/use-raf-batch";
 import { useTableColumnHandlers } from "../../composables/use-table-column-handlers";
 import { getCellValue } from "../../utils/get-cell-value";
+import AsTableColgroup from "./as-table-colgroup.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
 import AsWindowSkeletonRow from "./as-window-skeleton-row.vue";
@@ -42,6 +43,13 @@ const props = withDefaults(
      * whether anyone listens for `main-action`.
      */
     enterAction?: EnterAction;
+    /**
+     * When true, omit the `<thead>` entirely (not `display:none`). The
+     * `<colgroup>` carries column widths, so data columns keep their
+     * annotated/seeded widths without a header. Header-driven interactions
+     * (sort/filter/reorder/resize) don't exist in this mode.
+     */
+    headless?: boolean;
   }>(),
   {
     reorderable: true,
@@ -49,6 +57,7 @@ const props = withDefaults(
     columnMinWidth: 48,
     wheelRowsPerTick: 3,
     select: "none",
+    headless: false,
   },
 );
 
@@ -318,7 +327,14 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
         :aria-rowcount="state.totalCount.value + 1"
         :aria-multiselectable="select === 'multi' ? 'true' : undefined"
       >
+        <AsTableColgroup
+          :columns="state.columns.value"
+          :column-widths="state.columnWidths.value"
+          :has-select="hasValue"
+          :with-filler="true"
+        />
         <AsTableHeader
+          v-if="!headless"
           :columns="state.columns.value"
           :sorters="state.sorters.value"
           :filters="state.filters.value"
