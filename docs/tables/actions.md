@@ -193,6 +193,14 @@ path invokes it on `dblclick` or **Enter** when the table is in
 placement / selection — never the default action. The current
 default is exposed as `state.actions.default.row`.
 
+The main-action (and the `@main-action` emit) always operate on the
+currently **active** row, resolved by
+[`state.getActiveRow()`](/api/vue-table#reactivetablestate) — the single
+nav-mode-aware resolver (page-relative in pagination, absolute in
+windowed mode). This resolves correctly on **every page**, including
+page ≥ 2 in paginated tables. The same resolver backs selection and the
+`<AsTableActions level="row">` toolbar, so all three stay in sync.
+
 The selection state is reactive end-to-end: a `multi → none`
 transition auto-clears `selectedRows`; the actions column
 appears / disappears live without a remount; bulk action buttons

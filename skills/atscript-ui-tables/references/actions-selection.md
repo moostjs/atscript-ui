@@ -204,15 +204,22 @@ The `<AsTableRoot @action="(action, ids, result, event) => …">` emit settles *
 
 ## Selection model
 
-| Field / fn                       | Source                                                                                            |
-| -------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `state.selectedRows`             | `ShallowRef<unknown[]>` — PKs derived via `rowValueFn(row)`.                                      |
-| `state.selectedCount`            | `ComputedRef<number>`.                                                                            |
-| `state.isPkSelected(pk)`         | Quick membership check.                                                                           |
-| `state.rowValueFn(row)`          | Default extracts `preferredId` field(s); consumer can override via `<AsTableRoot :row-value-fn>`. |
-| `togglePk(sel, pk, mode)`        | `@atscript/ui-table` helper. `"none"` no-op; `"single"` replaces; `"multi"` toggles.              |
-| `trimSelection(sel, presentPks)` | Drops PKs not in the result set. Identity-stable on no-op.                                        |
-| `rowsToPks(rows, rowValueFn)`    | Map a row array → PK array.                                                                       |
+| Field / fn                       | Source                                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `state.selectedRows`             | `ShallowRef<unknown[]>` — PKs derived via `rowValueFn(row)`.                                                                                     |
+| `state.selectedCount`            | `ComputedRef<number>`.                                                                                                                           |
+| `state.isPkSelected(pk)`         | Quick membership check.                                                                                                                          |
+| `state.getActiveRow()`           | Active-row resolver — nav-mode-aware (see invariant below). Returns `undefined` when `activeIndex < 0`. Signature: API ref `ReactiveTableState`. |
+| `state.rowValueFn(row)`          | Default extracts `preferredId` field(s); consumer can override via `<AsTableRoot :row-value-fn>`.                                                |
+| `togglePk(sel, pk, mode)`        | `@atscript/ui-table` helper. `"none"` no-op; `"single"` replaces; `"multi"` toggles.                                                             |
+| `trimSelection(sel, presentPks)` | Drops PKs not in the result set. Identity-stable on no-op.                                                                                       |
+| `rowsToPks(rows, rowValueFn)`    | Map a row array → PK array.                                                                                                                      |
+
+Invariants:
+
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A   | **`state.getActiveRow()` is the single correct active-row resolver.** Nav-mode-aware: paginated `<AsTable>` → page-relative into `results`; windowed `<AsWindowTable>` → absolute via `windowCache`. Selection, the `@main-action` emit, and the `<AsTableActions level="row">` toolbar all share it — correct on every page (incl. page ≥ 2). Don't index `results` by `absIndex` to find the active row; call `getActiveRow()`. |
 
 Selection persistence policy on every results-replacement (`<AsTableRoot :selection-persistence>`):
 

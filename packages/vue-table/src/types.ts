@@ -408,6 +408,12 @@ export interface ReactiveTableState extends TableStateMethods {
    * unloaded rows still navigable, the windowed renderer fetches them in).
    */
   navMode: Ref<"pagination" | "window">;
+  /**
+   * The currently-active row, resolved correctly for the current nav mode
+   * (page-relative into `results` in pagination, absolute via `dataAt` in
+   * window). `undefined` when no row is active (`activeIndex < 0`).
+   */
+  getActiveRow: () => Record<string, unknown> | undefined;
   /** True when at least one of `<AsTableRoot>` / `<AsTable>` / `<AsWindowTable>` has a `main-action` listener bound. */
   hasMainActionListener: Ref<boolean>;
   /** Build a deterministic DOM `id` for the row at `absIndex` (per-state UID). */

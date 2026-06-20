@@ -575,7 +575,10 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
 - **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`.
-- **Active row / nav**: `activeIndex`, `navMode`, `navViewportRowCount`, `hasMainActionListener`, `rowId`, `setActive`, `clearActive`, `toggleActiveSelection`, `requestMainAction`, `handleNavKey`, `registerMainActionListener`.
+- **Active row / nav**: `activeIndex`, `navMode`, `navViewportRowCount`, `hasMainActionListener`, `rowId`, `getActiveRow`, `setActive`, `clearActive`, `toggleActiveSelection`, `requestMainAction`, `handleNavKey`, `registerMainActionListener`.
+
+  `getActiveRow(): Record<string, unknown> | undefined` resolves the currently-active row — nav-mode-aware: page-relative into `results` for paginated `<AsTable>`, absolute via `windowCache` for `<AsWindowTable>`. Returns `undefined` when no row is active (`activeIndex < 0`). It is the single resolver shared by selection, the `@main-action` emit, and the `level="row"` toolbar.
+
 - **Errors**: `queryError`, `lastError`, `mustRefresh`.
 - **Querying flags**: `querying`, `queryingNext`.
 - **Actions namespace**: `actions: TableActionsState`.
@@ -656,6 +659,7 @@ interface NavKeyOptions {
 }
 
 interface MainActionRequest {
+  /** Active row, resolved nav-mode-aware via `state.getActiveRow()` — the reliable field on every page. */
   row: Record<string, unknown>;
   absIndex: number;
   event: KeyboardEvent | MouseEvent;

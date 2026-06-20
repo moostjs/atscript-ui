@@ -49,6 +49,11 @@ automatically. Filter / sort / search changes reset
 `state.pagination.page` back to 1 (debounced ~500ms for filters so the
 user can type freely before the page reset costs them a re-fetch).
 
+Selection, the active-row main-action, and the `level="row"` toolbar
+resolve the right row on **every page** — the active row is resolved
+page-relative into `results`. See
+[Actions & Selection](/tables/actions#row-level-default-action).
+
 ::: details Build your own pagination
 A `TablePagination.vue` that wraps Reka UI's `PaginationRoot` +
 page-size selector is a one-pager:

@@ -239,4 +239,51 @@ test.describe("Section 10 — Pagination", () => {
     expectPageWire(captured.url, 1, 10);
     await expect(page.locator(".table-pagination-btn-active")).toHaveText("1");
   });
+
+  // -------------------------------------------------------------------
+  // 10.3 — Selection on page ≥2 (regression)
+  //
+  // Guards a now-fixed bug: in a paginated multi-select table, rows that
+  // originate ON page ≥2 were untickable. Active-row resolution used a
+  // page-relative index against the absolute (all-pages) cache space, so
+  // a click on a page-2 row landed on an empty absolute slot and the
+  // toggle was a silent no-op — no `aria-selected`, no count.
+  //
+  // The fix lands the click on the correct page-relative slot, so a row
+  // first encountered on page 2 selects normally. We deliberately do NOT
+  // touch page 1 first (10.1 already covers the select-then-navigate trim
+  // path); selecting must work for rows whose first appearance is page 2.
+
+  test("10.3: rows on page ≥2 are selectable (regression — page-relative active-row resolution)", async ({
+    page,
+  }) => {
+    await gotoTable(page, "products");
+
+    const table = page.locator("table[data-as-main-table]");
+
+    // Enable multi-select on page 1 (no rows selected yet).
+    await toggleSelectMode(page);
+
+    // Navigate to page 2 FIRST — before any selection. Single /pages fire.
+    await expectSinglePages(
+      page,
+      async () => {
+        await clickPaginationPage(page, 2);
+      },
+      { table: "products" },
+    );
+    await expect(page.locator(".table-pagination-btn-active")).toHaveText("2");
+
+    // THIS is the action that used to no-op: select a row that originates
+    // on page 2. On the old code its page-relative active index hit an
+    // empty absolute cache slot → no selection.
+    await selectRowByIndex(table, 0);
+    await expect(table.locator("tbody tr:has(td)[aria-selected='true']")).toHaveCount(1);
+    await expect(page.locator(".as-page-selection-count")).toHaveText("1 selected");
+
+    // Select a second page-2 row to prove it isn't a fluke on one index.
+    await selectRowByIndex(table, 2);
+    await expect(table.locator("tbody tr:has(td)[aria-selected='true']")).toHaveCount(2);
+    await expect(page.locator(".as-page-selection-count")).toHaveText("2 selected");
+  });
 });

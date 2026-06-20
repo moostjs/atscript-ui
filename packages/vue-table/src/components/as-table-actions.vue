@@ -95,12 +95,13 @@ const resolved = computed<Resolved>(() => {
     });
   }
   if (effectiveLevel === "row") {
+    // Resolve via `state.getActiveRow()` so the active row is read in the
+    // right index space for the nav mode (see its definition). Hand-rolling
+    // `results[activeIndex - resultsStart]` here was wrong on page ≥2.
     const source =
       explicit === "auto" && selectedCount === 1
         ? state.selectedRows.value[0]
-        : state.activeIndex.value >= 0
-          ? state.results.value[state.activeIndex.value - state.resultsStart.value]
-          : undefined;
+        : state.getActiveRow();
     // Same `$actions` gate as the per-row dropdown — without it, the toolbar
     // would surface row actions the server has just disabled for that row.
     // Auto + 1 also surfaces bulk actions in the trailing menu so e.g.

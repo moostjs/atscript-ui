@@ -139,6 +139,51 @@ describe("toggleActiveSelection", () => {
     state.toggle();
     expect(state.selectedRows.value).toEqual(["a", "b", "x"]);
   });
+
+  it("resolves the active row on a page past the first (page-relative index vs absolute cache)", () => {
+    // Regression: paginated tables key the window cache by ABSOLUTE row index
+    // (`resultsStart + i`), but the paginated renderer sets `activeIndex`
+    // PAGE-RELATIVE. On page 2 (`resultsStart = 4`) the old `getActiveRow` did
+    // `dataAt(0)` → an empty cache slot → `toggleActiveSelection` silently
+    // no-opped, so rows were untickable on every page but the first.
+    const state = setup("multi");
+    // Page 2 of an 8-row, 4-per-page dataset: the page slice lives in
+    // `results`, the cache is keyed at the ABSOLUTE indices 4..7 (NOT 0..3).
+    const pageRows = [{ id: "e" }, { id: "f" }, { id: "g" }, { id: "h" }];
+    const cache = new Map<number, Record<string, unknown>>();
+    pageRows.forEach((r, i) => cache.set(4 + i, r));
+    state.windowCache.value = cache;
+    state.results.value = pageRows;
+    state.resultsStart.value = 4;
+    state.totalCount.value = 8;
+
+    state.setActive(0); // page-relative → first row of page 2 ("e")
+    state.toggle();
+    expect(state.selectedRows.value).toEqual(["e"]);
+
+    state.setActive(2); // "g"
+    state.toggle();
+    expect(state.selectedRows.value).toEqual(["e", "g"]);
+  });
+
+  it("window mode resolves the active row by ABSOLUTE index via the cache", () => {
+    // Mirror of the page-2 regression for the OTHER nav branch: in window mode
+    // `activeIndex` is ABSOLUTE and rows live in the absolute-keyed
+    // `windowCache`, so `getActiveRow` must resolve via `dataAt(idx)` — not
+    // index into the page-relative `results`.
+    const state = setup("multi");
+    state.navMode.value = "window";
+    const cache = new Map<number, Record<string, unknown>>();
+    const rows = [{ id: "p100" }, { id: "p101" }, { id: "p102" }];
+    rows.forEach((r, i) => cache.set(100 + i, r));
+    state.windowCache.value = cache;
+    state.resultsStart.value = 100;
+    state.totalCount.value = 200;
+
+    state.setActive(102); // absolute index → "p102"
+    state.toggle();
+    expect(state.selectedRows.value).toEqual(["p102"]);
+  });
 });
 
 describe("handleNavKey — three-mode keyboard contract", () => {
@@ -237,6 +282,27 @@ describe("handleNavKey — three-mode keyboard contract", () => {
     const ev = key({ key: " " });
     state.nav(ev);
     expect(state.selectedRows.value).toEqual(["y"]);
+    expect(ev.defaultPrevented).toBe(true);
+  });
+
+  it("Space toggles the correct row when active is on a page past the first", () => {
+    // The reported keystroke: on page 2, pressing Space must select the row
+    // under the page-relative `activeIndex`, not no-op against an empty
+    // absolute-cache slot. Page 2 of an 8-row, 4-per-page dataset: cache is
+    // keyed at the ABSOLUTE indices 4..7, the page slice lives in `results`.
+    const state = setup("multi");
+    const pageRows = [{ id: "e" }, { id: "f" }, { id: "g" }, { id: "h" }];
+    const cache = new Map<number, Record<string, unknown>>();
+    pageRows.forEach((r, i) => cache.set(4 + i, r));
+    state.windowCache.value = cache;
+    state.results.value = pageRows;
+    state.resultsStart.value = 4;
+    state.totalCount.value = 8;
+
+    state.setActive(0); // page-relative → first row of page 2 ("e")
+    const ev = key({ key: " " });
+    state.nav(ev);
+    expect(state.selectedRows.value).toEqual(["e"]);
     expect(ev.defaultPrevented).toBe(true);
   });
 

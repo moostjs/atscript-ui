@@ -421,6 +421,10 @@ export function createTableState(opts: CreateTableStateOptions): {
   // read/write the same ref ───────────────────────────────────────────────
   /** -1 == nothing active. */
   const activeIndex = ref(-1);
+  // Owned here too (not inside the nav controller) so `getActiveRow` below can
+  // read it: the nav mode is what tells `activeIndex` apart as an absolute
+  // (window) vs page-relative (pagination) index. Renderers flip it on mount.
+  const navMode = ref<"pagination" | "window">("pagination");
 
   // ── Sub-factories (constructed in dependency order) ─────────────────────
   // 1. Window fetcher: independent of selection/nav/main-action.
@@ -455,10 +459,22 @@ export function createTableState(opts: CreateTableStateOptions): {
   } = windowFetcher;
 
   // 2. Shared accessor used by selection + main-action.
+  // `activeIndex` lives in two different index spaces depending on nav mode, so
+  // it must be resolved differently:
+  //   • window  → ABSOLUTE row index (the window renderer sets it to
+  //     `topIndex + offset`); rows live in the absolute-keyed window cache,
+  //     so resolve via `dataAt`.
+  //   • pagination → PAGE-RELATIVE index (the paginated renderer sets it to the
+  //     row's position within the page); the current page lives in `results`,
+  //     so index straight into it.
+  // Resolving both through `dataAt(abs)` silently broke pagination past page 1:
+  // there `resultsStart > 0` shifts the cache keys, so a page-relative index
+  // hit an empty slot and selection / main-action no-opped on every page but
+  // the first.
   function getActiveRow(): Row | undefined {
-    const abs = activeIndex.value;
-    if (abs < 0) return undefined;
-    return dataAt(abs);
+    const idx = activeIndex.value;
+    if (idx < 0) return undefined;
+    return navMode.value === "window" ? dataAt(idx) : results.value[idx];
   }
 
   // 3. Selection.
@@ -504,9 +520,10 @@ export function createTableState(opts: CreateTableStateOptions): {
     requestMainAction,
   } = mainAction;
 
-  // 6. Nav controller.
+  // 6. Nav controller — reads/writes the orchestrator-owned `navMode` passed in.
   const nav = createNavController({
     activeIndex,
+    navMode,
     totalCount,
     results,
     viewportRowCount,
@@ -515,7 +532,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     requestMainAction,
     toggleActiveSelection,
   });
-  const { navMode, navViewportRowCount, setActive, clearActive, handleNavKey } = nav;
+  const { navViewportRowCount, setActive, clearActive, handleNavKey } = nav;
 
   // ── Query engine ────────────────────────────────────────────────────────
   async function runQuery(kind: QueryErrorKind) {
@@ -665,6 +682,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     includeActions,
     activeIndex,
     navMode,
+    getActiveRow,
     hasMainActionListener,
     rowId,
 

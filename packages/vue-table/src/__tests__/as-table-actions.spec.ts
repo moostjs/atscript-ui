@@ -40,6 +40,8 @@ interface SetupOpts {
   defaultRows?: TDbActionInfo;
   defaultRow?: TDbActionInfo;
   slot?: (scope: Record<string, unknown>) => unknown;
+  /** Mutate the freshly-built state before the toolbar renders (e.g. seed a paginated page slice + active row). */
+  patchState?: (state: ReactiveTableState) => void;
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -71,6 +73,7 @@ function setup(opts: SetupOpts = {}) {
       };
       internals.init(def);
       if (opts.selectedRows) state.selectedRows.value = opts.selectedRows;
+      opts.patchState?.(state);
       provideTableContext({ state, client, controls: {} });
       return () =>
         h(
@@ -188,6 +191,43 @@ describe("<AsTableActions>", () => {
       ],
     });
     expect(wrapper.findAll("button")).toHaveLength(0);
+  });
+
+  it("level=row resolves the active row on a page past the first (page-relative index)", async () => {
+    // Regression: the toolbar delegates active-row resolution to
+    // `state.getActiveRow()`. On page 2 (`resultsStart = 4`) `activeIndex` is
+    // PAGE-RELATIVE while the cache is keyed by ABSOLUTE index — the old
+    // hand-rolled `results[activeIndex - resultsStart]` math computed a
+    // negative/wrong index and gated/invoked against the wrong (or undefined)
+    // row. The default `rowValueFn = (row) => row`, so the invoked identifier
+    // is `{ id }` lifted from whichever row resolved.
+    const def: TDbActionInfo = { ...rowBlock, default: true };
+    const { wrapper, actionFn } = setup({
+      level: "row",
+      row: [def],
+      defaultRow: def,
+      patchState(state) {
+        // Page 2 of an 8-row, 4-per-page dataset: page slice in `results`,
+        // cache keyed at ABSOLUTE indices 4..7.
+        const pageRows = [
+          { id: "e", $actions: ["block"] },
+          { id: "f", $actions: ["block"] },
+          { id: "g", $actions: ["block"] },
+          { id: "h", $actions: ["block"] },
+        ];
+        const cache = new Map<number, Record<string, unknown>>();
+        pageRows.forEach((r, i) => cache.set(4 + i, r));
+        state.windowCache.value = cache;
+        state.results.value = pageRows;
+        state.resultsStart.value = 4;
+        state.totalCount.value = 8;
+        state.setActive(2); // page-relative → third row of page 2 ("g")
+      },
+    });
+    // The row gate kept "block" (active row "g" allows it) → button renders.
+    await wrapper.find("button").trigger("click");
+    await flushPromises();
+    expect(actionFn).toHaveBeenCalledWith("block", { id: "g" }, undefined);
   });
 
   it("scoped slot replaces built-in chrome", () => {

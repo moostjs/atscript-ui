@@ -8,6 +8,11 @@ export interface NavControllerInputs {
   /** Shared with selection + main-action: orchestrator owns the ref so all
    * four factories read/write the same `activeIndex`. */
   activeIndex: Ref<number>;
+  /** Orchestrator-owned (like `activeIndex`) so `getActiveRow` can read the nav
+   * mode too — it decides whether `activeIndex` is an absolute (window) or a
+   * page-relative (pagination) index. Renderers flip it on mount / restore on
+   * unmount — assumes a single windowed renderer per state. */
+  navMode: Ref<"pagination" | "window">;
   totalCount: Ref<number>;
   results: ShallowRef<Row[]>;
   viewportRowCount: Ref<number>;
@@ -35,7 +40,6 @@ export interface NavKeyCallOptions {
 }
 
 export interface NavController {
-  navMode: Ref<"pagination" | "window">;
   navViewportRowCount: Ref<number>;
   setActive: (absIndex: number) => void;
   clearActive: () => void;
@@ -45,6 +49,7 @@ export interface NavController {
 export function createNavController(inputs: NavControllerInputs): NavController {
   const {
     activeIndex,
+    navMode,
     totalCount,
     results,
     viewportRowCount,
@@ -54,10 +59,8 @@ export function createNavController(inputs: NavControllerInputs): NavController 
     toggleActiveSelection,
   } = inputs;
 
-  // Pagination caps nav by `min(results.length, totalCount)`; window caps by
-  // `totalCount` alone since rows load on demand. Renderers flip this and
-  // restore on unmount — assumes a single windowed renderer per state.
-  const navMode = ref<"pagination" | "window">("pagination");
+  // Clamp rule: pagination caps nav by `min(results.length, totalCount)`;
+  // window caps by `totalCount` alone since rows load on demand.
 
   // Nav-only viewport row count. Pagination renderers write this so PageUp/Down
   // step by visible-row count without going through `viewportRowCount` — that
@@ -216,7 +219,6 @@ export function createNavController(inputs: NavControllerInputs): NavController 
   }
 
   return {
-    navMode,
     navViewportRowCount,
     setActive,
     clearActive,
