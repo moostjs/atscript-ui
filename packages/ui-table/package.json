@@ -1,6 +1,6 @@
 {
   "name": "@atscript/ui-table",
-  "version": "0.1.107",
+  "version": "0.1.108",
   "description": "Framework-agnostic filter model, filter-to-Uniquery conversion, and preset serialization for atscript tables",
   "keywords": [
     "atscript",
