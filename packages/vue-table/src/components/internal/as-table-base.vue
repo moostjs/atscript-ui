@@ -307,6 +307,29 @@ function isActiveRow(index: number): boolean {
   if (!isStandalone.value || !ctx) return false;
   return ctx.state.activeIndex.value === index;
 }
+
+// Raw (unformatted) filter/typeahead text for Reka ComboboxItem. Without an
+// explicit textValue, reka registers the rendered <tr> textContent — i.e.
+// FORMATTED cell output — as the item's filter text.
+// Runs per row per render, so column paths are pre-split once per column set.
+const columnPathKeys = computed(() => props.columns.map((col) => col.path.split(".")));
+
+function rowTextValue(row: Record<string, unknown>): string {
+  let text = "";
+  for (const keys of columnPathKeys.value) {
+    let value: unknown = row;
+    for (const key of keys) {
+      if (value === null || value === undefined || typeof value !== "object") {
+        value = undefined;
+        break;
+      }
+      value = (value as Record<string, unknown>)[key];
+    }
+    if (value === null || value === undefined) continue;
+    text = text ? `${text} ${String(value)}` : String(value);
+  }
+  return text;
+}
 </script>
 
 <template>
@@ -376,6 +399,7 @@ function isActiveRow(index: number): boolean {
               :is="isCombobox ? ComboboxItem : ListboxItem"
               as="tr"
               :value="rowValueFn ? rowValueFn(item) : undefined"
+              :text-value="isCombobox ? rowTextValue(item) : undefined"
               :style="{
                 height: virtualRowHeight ? `${virtualRowHeight}px` : undefined,
                 transform: spaceBefore ? `translateY(${spaceBefore}px)` : undefined,

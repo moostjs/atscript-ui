@@ -32,7 +32,7 @@ export const asFilterFieldShortcuts = defineShortcuts({
     "[.as-filter-field:focus-within_&]:": "text-current-hl",
   },
   "as-filter-field-dropdown":
-    "scope-primary popup-card min-w-[20em] max-w-[36em] flex flex-col outline-none w-[max(var(--reka-popper-anchor-width,320px),320px)]",
+    "scope-primary popup-card min-w-[max(var(--reka-popper-anchor-width,320px),320px)] max-w-[min(36em,var(--reka-popper-available-width,36em))] flex flex-col outline-none",
   "as-filter-field-dropdown-body": "relative flex flex-col min-w-0 min-h-[12em]",
   "as-filter-field-dropdown-footer": {
     "": "flex gap-$s px-$s py-$xs border-t-1 justify-end",

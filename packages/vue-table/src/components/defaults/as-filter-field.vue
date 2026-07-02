@@ -279,12 +279,6 @@ async function doSearch(text: string) {
   } finally {
     innerState.querying.value = false;
   }
-  // Workaround: force Combobox to re-evaluate items
-  dropdownOpen.value = false;
-  await nextTick();
-  await nextTick();
-  await nextTick();
-  dropdownOpen.value = true;
 }
 
 function filterFunction(val: unknown[]): unknown[] {
@@ -388,6 +382,7 @@ function onF4(event: KeyboardEvent) {
         v-model:open="dropdownOpen"
         :multiple="true"
         :reset-search-term-on-blur="false"
+        :ignore-filter="hasValueHelp"
         as-child
       >
         <ComboboxAnchor as-child>
