@@ -159,6 +159,9 @@ onBeforeUnmount(() => {
 });
 
 function onWheel(event: WheelEvent) {
+  // Dominantly-horizontal trackpad gestures fall through (no preventDefault)
+  // to the native horizontal scroller.
+  if (Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
   event.preventDefault();
   const delta = Math.sign(event.deltaY) * props.wheelRowsPerTick;
   const target = pendingTopIndex ?? state.topIndex.value;
