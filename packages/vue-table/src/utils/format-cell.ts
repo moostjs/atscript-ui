@@ -1,6 +1,8 @@
 import { str } from "@atscript/ui";
 
-const numberFmt = new Intl.NumberFormat();
+// Fallback formatter has no column metadata (currency/unit), so it must not
+// group — grouping is reserved for measured values rendered by <AsCellNumber>.
+const numberFmt = new Intl.NumberFormat(undefined, { useGrouping: false });
 const dateFmt = new Intl.DateTimeFormat();
 
 /** Format a cell value based on column type. */

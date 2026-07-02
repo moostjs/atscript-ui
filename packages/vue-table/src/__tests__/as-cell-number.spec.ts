@@ -31,9 +31,9 @@ function mountCell(row: Record<string, unknown>, column: ColumnDef, locale = "en
 }
 
 describe("AsCellNumber", () => {
-  it("formats plain numbers with locale grouping", () => {
+  it("renders plain numbers without grouping", () => {
     const wrapper = mountCell({ value: 1234.5 }, makeColumn(), "en-US");
-    expect(wrapper.find("td").text()).toBe("1,234.5");
+    expect(wrapper.find("td").text()).toBe("1234.5");
   });
 
   it("coerces decimal strings to numbers", () => {
@@ -71,6 +71,12 @@ describe("AsCellNumber", () => {
     const col = makeColumn({ precisionScale: 4 });
     const wrapper = mountCell({ value: "3.1" }, col, "en-US");
     expect(wrapper.find("td").text()).toBe("3.1000");
+  });
+
+  it("groups precision-scaled decimals without currency/unit", () => {
+    const col = makeColumn({ precisionScale: 2 });
+    const wrapper = mountCell({ value: 1234.5 }, col, "en-US");
+    expect(wrapper.find("td").text()).toBe("1,234.50");
   });
 
   it("renders empty for null/undefined/empty-string", () => {

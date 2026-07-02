@@ -121,6 +121,8 @@ export function useAsDecimal(opts: UseAsDecimalOptions): UseAsDecimalReturn {
       value: rawValue.value,
       scale: scale.value,
       locale: locale.value,
+      // Form inputs always group for readability, even without scale/unit.
+      useGrouping: true,
     });
   });
 

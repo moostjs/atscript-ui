@@ -230,8 +230,11 @@ describe("formatDecimalForDisplay", () => {
   it("scale=0 omits decimal", () => {
     expect(formatDecimalForDisplay({ value: "100", scale: 0, locale: "en-US" })).toBe("100");
   });
-  it("scale=undefined preserves raw fractional digits", () => {
-    expect(formatDecimalForDisplay({ value: "1234.567", locale: "en-US" })).toBe("1,234.567");
+  it("scale=undefined preserves raw fractional digits, ungrouped by default", () => {
+    expect(formatDecimalForDisplay({ value: "1234.567", locale: "en-US" })).toBe("1234.567");
+    expect(formatDecimalForDisplay({ value: "1234.567", locale: "en-US", useGrouping: true })).toBe(
+      "1,234.567",
+    );
   });
   it("null / undefined / empty → ''", () => {
     expect(formatDecimalForDisplay({ value: null })).toBe("");

@@ -34,7 +34,11 @@ export interface FormatDecimalOptions {
   currency?: string;
   /** When set (and no currency) → "<formatted> <unit>". */
   unit?: string;
-  /** Whether to group thousands. Defaults to true. */
+  /**
+   * Whether to group thousands. Grouping is reserved for measured values, so
+   * the default is derived: true when `currency`, `unit`, or `scale` is set,
+   * false for plain numbers. Pass explicitly to override.
+   */
   useGrouping?: boolean;
 }
 
@@ -366,7 +370,14 @@ export function joinDecimalString(parts: DecimalParts): string {
 // ── Display formatter (canonical, used by cell + form) ────────
 
 export function formatDecimalForDisplay(opts: FormatDecimalOptions): string {
-  const { value, scale, locale, currency, unit, useGrouping = true } = opts;
+  const {
+    value,
+    scale,
+    locale,
+    currency,
+    unit,
+    useGrouping = currency !== undefined || unit !== undefined || scale !== undefined,
+  } = opts;
   if (value === null || value === undefined || value === "") return "";
 
   // Always canonicalise to a string. Numbers go through `String()` rather

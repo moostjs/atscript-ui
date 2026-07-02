@@ -54,6 +54,7 @@ const formatted = computed(() => {
     // Non-finite raw → render raw string so malformed decimals stay visible.
     return typeof v === "string" ? v : String(v);
   }
+  // Grouping defaults are derived inside `formatDecimalForDisplay`.
   const out = formatDecimalForDisplay({
     value: v,
     scale: props.column.precisionScale,
