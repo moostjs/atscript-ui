@@ -169,6 +169,9 @@ export const uiAnnotations: TAnnotationsTree = {
       disabled: new AnnotationSpec({
         description: "Statically mark this field as disabled in the form.",
         nodeType: ["prop", "type"],
+        // Editability is decided per declaring form (same class as
+        // @meta.readonly in core) — must not ride across refs.
+        passedWhenReferred: false,
       }),
 
       options: new AnnotationSpec({
@@ -195,6 +198,9 @@ export const uiAnnotations: TAnnotationsTree = {
       order: new AnnotationSpec({
         description: "Explicit form-field ordering (lower values render first).",
         nodeType: ["prop", "type"],
+        // Ordering is a decision of the declaring form's layout — a field
+        // referencing this one must not import its position.
+        passedWhenReferred: false,
         argument: {
           name: "order",
           type: "number",
@@ -230,6 +236,9 @@ export const uiAnnotations: TAnnotationsTree = {
       hidden: new AnnotationSpec({
         description: "Statically hide this field in the form.",
         nodeType: ["prop", "type"],
+        // Visibility is decided per declaring form — a referring field must
+        // not silently disappear because its target is hidden elsewhere.
+        passedWhenReferred: false,
       }),
 
       attr: new AnnotationSpec({
@@ -411,6 +420,10 @@ export const uiAnnotations: TAnnotationsTree = {
             "phone: string\n" +
             "```\n",
           nodeType: ["prop", "type"],
+          // Binds to a sibling by name in the DECLARING interface — a
+          // referring field's host may not have that sibling, so the binding
+          // must not travel.
+          passedWhenReferred: false,
           argument: {
             name: "field",
             type: "string",
@@ -467,6 +480,10 @@ export const uiAnnotations: TAnnotationsTree = {
             "weight: number\n" +
             "```\n",
           nodeType: ["prop", "type"],
+          // Binds to a sibling by name in the DECLARING interface — a
+          // referring field's host may not have that sibling, so the binding
+          // must not travel.
+          passedWhenReferred: false,
           argument: {
             name: "field",
             type: "string",
@@ -528,6 +545,9 @@ export const uiAnnotations: TAnnotationsTree = {
         description:
           "Completely removes this field from the table — not displayable, filterable, or sortable, and not shown in the config dialog. The field stays in the type and remains a valid `@ui.table.selectWith` target so its data can still be fetched for custom cells.",
         nodeType: ["prop", "type"],
+        // Exclusion is a decision of the declaring interface's table — a
+        // referring field must not vanish from its own table.
+        passedWhenReferred: false,
       }),
 
       attr: new AnnotationSpec({
@@ -575,7 +595,8 @@ export const uiAnnotations: TAnnotationsTree = {
           "Extra sibling leaf field paths to include in the table `$select` whenever this " +
           "column is displayed. These fields are fetched but never rendered as their own " +
           "columns — use them to back a custom cell renderer or formatter. " +
-          "Multiple `@ui.table.selectWith` annotations are appended." +
+          "Multiple `@ui.table.selectWith` annotations are appended. " +
+          "Names siblings of the DECLARING interface, so it never travels across refs." +
           "\n\n**Example:**\n" +
           "```atscript\n" +
           '@ui.table.selectWith "firstName"\n' +
@@ -590,6 +611,10 @@ export const uiAnnotations: TAnnotationsTree = {
           type: "string",
           description: "Sibling leaf field path to fetch alongside this column.",
         },
+        // Binds to siblings by path in the DECLARING interface — a referring
+        // field's host may not have those siblings, so the binding must not
+        // travel.
+        passedWhenReferred: false,
       }),
 
       styles: new AnnotationSpec({
@@ -630,6 +655,9 @@ export const uiAnnotations: TAnnotationsTree = {
         description:
           "Initial column ordering — lower values appear first; user-driven runtime reorder still mutates table state's `columnNames`.",
         nodeType: ["prop", "type"],
+        // Ordering is a decision of the declaring interface's table — a field
+        // referencing this one must not import its position.
+        passedWhenReferred: false,
         argument: {
           name: "order",
           type: "number",
@@ -648,36 +676,46 @@ export const uiAnnotations: TAnnotationsTree = {
     // wiring of these annotations is required for server-backed dicts.
     // (Same pattern: `AsDbReadableController` emits `meta.fields[*]` from
     // `db.table.filterable/sortable` + `db.column.filterable/sortable`.)
+    // All `ui.dict.*` specs describe the role a field plays when its DECLARING
+    // interface serves as a value-help dictionary — a field referencing a dict
+    // field (e.g. an FK) must not inherit those roles into its own host, hence
+    // passedWhenReferred: false throughout.
     dict: {
       label: new AnnotationSpec({
         description:
           "Marks this field as the primary display label when the table is used as a value-help dictionary",
         nodeType: ["prop"],
+        passedWhenReferred: false,
       }),
       descr: new AnnotationSpec({
         description: "Marks this field as the secondary description in value-help display",
         nodeType: ["prop"],
+        passedWhenReferred: false,
       }),
       attr: new AnnotationSpec({
         description: "Marks this field as an additional attribute column in table-mode value help",
         nodeType: ["prop"],
         multiple: true,
         mergeStrategy: "append",
+        passedWhenReferred: false,
       }),
       filterable: new AnnotationSpec({
         description:
           "Marks this field as filterable in the value-help picker UI. Surfaced via `meta.fields[name].filterable` on value-help `/meta` responses.",
         nodeType: ["prop"],
+        passedWhenReferred: false,
       }),
       sortable: new AnnotationSpec({
         description:
           "Marks this field as sortable in the value-help picker UI. Surfaced via `meta.fields[name].sortable` on value-help `/meta` responses.",
         nodeType: ["prop"],
+        passedWhenReferred: false,
       }),
       searchable: new AnnotationSpec({
         description:
           "Marks a prop as participating in `$search`, or — on an interface — marks every `string` prop on the target as searchable. Surfaced via `meta.searchable` on value-help `/meta` responses.",
         nodeType: ["prop", "interface"],
+        passedWhenReferred: false,
       }),
     },
 

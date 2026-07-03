@@ -70,6 +70,10 @@ export default function wfPlugin(): TAtscriptPlugin {
                   "string | number | boolean. Field must be optional or have a default — " +
                   "context shape varies between flow steps and a path-miss writes null.",
                 nodeType: ["prop"],
+                // Declares a derived shadow column on the DECLARING store
+                // interface — a field referencing it must not inherit the
+                // context-copy behavior into its own table.
+                passedWhenReferred: false,
                 multiple: false,
                 argument: {
                   name: "path",
