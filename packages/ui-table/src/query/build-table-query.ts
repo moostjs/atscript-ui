@@ -15,6 +15,12 @@ export interface BuildTableQueryOptions {
   sorters: SortControl[];
   /** Always-applied sorters (prepended before user sorters). */
   forceSorters?: SortControl[];
+  /**
+   * When true, user `sorters` are omitted from `$sort`; `forceSorters` still
+   * apply. Used to preserve search relevance ranking — the caller computes
+   * the search-active condition; this function just honours the flag.
+   */
+  ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
   /** Always-applied Uniquery filter (AND'd with user filters). */
@@ -43,9 +49,10 @@ export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
   const userFilter = filtersToUniqueryFilter(opts.filters);
   const filter = mergeFilters(opts.forceFilters, userFilter);
 
+  const userSorters = opts.ignoreSorters ? [] : opts.sorters;
   const sorters = opts.forceSorters?.length
-    ? mergeSorters(opts.forceSorters, opts.sorters)
-    : opts.sorters;
+    ? mergeSorters(opts.forceSorters, userSorters)
+    : userSorters;
 
   const $sort: Record<string, 1 | -1> = {};
   for (const s of sorters) {

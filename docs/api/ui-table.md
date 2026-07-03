@@ -482,6 +482,8 @@ interface BuildTableQueryOptions {
   sorters: SortControl[];
   /** Always-applied sorters (prepended before user sorters). */
   forceSorters?: SortControl[];
+  /** When true, user `sorters` are omitted from `$sort`; `forceSorters` still apply. Preserves search relevance ranking — caller computes the search-active condition. */
+  ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
   /** Always-applied Uniquery filter (AND'd with user filters). */
@@ -522,6 +524,8 @@ interface UrlQueryStateLike {
   itemsPerPage?: number;
   /** Full-text search term; omitted when empty. */
   searchTerm?: string;
+  /** Runtime relevance flag. Serialized as `$relevance=1|0` only while a search term is present AND the value differs from `defaultIgnoreSorters`. */
+  ignoreSorters?: boolean;
 }
 
 interface UrlQueryStateSnapshot {
@@ -530,6 +534,8 @@ interface UrlQueryStateSnapshot {
   /** Raw `$skip` offset when present (no page math — recipients divide by their own `itemsPerPage`). */
   skip?: number;
   searchTerm: string;
+  /** Relevance flag decoded from `$relevance`; omitted when the URL carries no explicit value (recipient keeps their default). */
+  ignoreSorters?: boolean;
 }
 
 interface UrlQuerySync {
@@ -537,7 +543,7 @@ interface UrlQuerySync {
   filters?: boolean | string[];
   /** Same `boolean | string[]` semantics; allowlist matches `SortControl.field`. */
   sorters?: boolean | string[];
-  /** Round-trip `searchTerm` as `$search`. Default `true`. */
+  /** Round-trip `searchTerm` as `$search` (and `$relevance`, which rides under this gate). Default `true`. */
   search?: boolean;
   /** Round-trip pagination (`$skip`). Default `true`. */
   pagination?: boolean;
@@ -548,6 +554,8 @@ interface UrlQueryDefaults {
   defaultItemsPerPage: number;
   /** Per-aspect sync gates. Omitted = full sync. */
   sync?: UrlQuerySync;
+  /** Consumer's configured `ignoreSortersWhenSearched` default. `$relevance` is emitted only when the runtime flag differs from this. Default `false`. */
+  defaultIgnoreSorters?: boolean;
 }
 
 interface UrlQueryParseOptions {

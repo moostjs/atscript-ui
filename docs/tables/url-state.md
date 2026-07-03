@@ -47,6 +47,14 @@ Four aspects round-trip:
 Default view (page 1, no filters, no sorters, no search) emits an
 empty string — no `?` in the URL.
 
+Tables that opt into
+[search-relevance suppression](/tables/sorting#search-relevance-sort-suppression)
+add one more token: `$relevance=1` / `$relevance=0`, emitted only while
+a search is active and only when the runtime flag differs from the
+table's configured default. It rides under the `search` gate below —
+turning `search` off drops `$relevance` too — so a link captured
+mid-search reproduces the exact ranking the sharer saw.
+
 The encoder lives in `@atscript/ui-table` as
 `stateToUrlQueryString()`; the decoder is
 `urlQueryStringToState()`. The Vue composable is just a thin

@@ -366,6 +366,16 @@ export interface ReactiveTableState extends TableStateMethods {
   lastError: Ref<{ error: Error; kind: QueryErrorKind } | null>;
   mustRefresh: Ref<boolean>;
   searchTerm: Ref<string>;
+  /**
+   * Runtime "preserve search relevance" flag (a model — read/write). While
+   * `true` AND `searchTerm` is non-empty, user `sorters` are omitted from the
+   * query so the backend's relevance ranking survives; `forceSorters` still
+   * apply and `sorters` itself is never mutated (suppression is query-time
+   * only). Any write to `sorters` during an active search flips this to
+   * `false` for the current search session; a new session (empty →
+   * non-empty `searchTerm`) resets it to the configured default.
+   */
+  ignoreSortersWhenSearched: Ref<boolean>;
   configDialogOpen: Ref<boolean>;
   configTab: Ref<ConfigTab>;
   /** Selected row values (PKs extracted via `rowValueFn`). */

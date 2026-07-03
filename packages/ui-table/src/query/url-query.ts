@@ -15,6 +15,14 @@ export interface UrlQueryStateLike {
   itemsPerPage?: number;
   /** Full-text search term. Omitted from the URL when empty. */
   searchTerm?: string;
+  /**
+   * Runtime "preserve relevance ranking" flag — while true and a search is
+   * active, user sorters are suppressed at query time. Serialized as
+   * `$relevance=1|0` only when a search term is present AND the value differs
+   * from `defaultIgnoreSorters`, so a link shared mid-search reproduces what
+   * the sharer saw.
+   */
+  ignoreSorters?: boolean;
 }
 
 /** Snapshot recovered from a URL string — partial on purpose so callers can layer it onto state. */
@@ -29,6 +37,11 @@ export interface UrlQueryStateSnapshot {
    */
   skip?: number;
   searchTerm: string;
+  /**
+   * Runtime relevance flag decoded from `$relevance` (omitted when the URL
+   * carries no explicit value — the recipient keeps their configured default).
+   */
+  ignoreSorters?: boolean;
 }
 
 /**
@@ -61,6 +74,11 @@ export interface UrlQueryDefaults {
   defaultItemsPerPage: number;
   /** Per-aspect sync gates. Omitted = full sync (existing behaviour). */
   sync?: UrlQuerySync;
+  /**
+   * Consumer's configured `ignoreSortersWhenSearched` default. `$relevance`
+   * is emitted only when the runtime flag differs from this. Default `false`.
+   */
+  defaultIgnoreSorters?: boolean;
 }
 
 /**
@@ -124,6 +142,17 @@ export function stateToUrlQueryString(
     filters,
     search: searchOff ? undefined : state.searchTerm || undefined,
   });
+
+  // `$relevance` rides with `$search` — meaningless without one, and only
+  // when the runtime flag differs from the recipient-side default.
+  if (
+    !searchOff &&
+    state.searchTerm &&
+    state.ignoreSorters !== undefined &&
+    state.ignoreSorters !== (defaults.defaultIgnoreSorters ?? false)
+  ) {
+    query.controls!.$relevance = state.ignoreSorters ? 1 : 0;
+  }
 
   if (!paginationOff) {
     // Emit `$skip` only — `$limit` (page size) is a private user preference,
@@ -217,6 +246,13 @@ export function urlQueryStringToState(
   const searchTerm = !searchOff && typeof $search === "string" ? $search : "";
 
   const out: UrlQueryStateSnapshot = { filters, sorters, searchTerm };
+
+  if (!searchOff) {
+    // `$relevance` round-trips as a string on the wire ("1" / "0").
+    const $relevance = parsed.controls?.$relevance;
+    if ($relevance === "1" || $relevance === 1) out.ignoreSorters = true;
+    else if ($relevance === "0" || $relevance === 0) out.ignoreSorters = false;
+  }
 
   if (!paginationOff) {
     // Decoder returns raw `$skip` only; consumer divides by their own current

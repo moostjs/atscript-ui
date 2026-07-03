@@ -8,6 +8,7 @@ Sort model, pagination vs virtualization, window-mode tuning.
 - [AsTableHeaderCell](#astableheadercell)
 - [AsConfigDialog sorters tab](#asconfigdialog-sorters-tab)
 - [v-model:sorters](#v-modelsorters)
+- [Search relevance suppression](#search-relevance-suppression)
 - [Paginated mode AsTable](#paginated-mode-astable)
 - [Virtualized mode AsWindowTable](#virtualized-mode-aswindowtable)
 - [Invalidation](#invalidation)
@@ -101,7 +102,26 @@ const sorters = ref<SortControl[]>([{ field: "createdAt", direction: "desc" }]);
 </template>
 ```
 
-Same applies to `filterFields`, `columnNames`, `columnWidths`, `selectedRows`.
+Same applies to `filterFields`, `columnNames`, `columnWidths`, `selectedRows`, `ignoreSortersWhenSearched`.
+
+## Search relevance suppression
+
+`ignoreSortersWhenSearched` (default `false`, opt-in per table) suppresses user sorters from `$sort` while a search is active, so a relevance-ranked backend (`$search`) ranks by score instead of the default field order. Without it, a preset/`v-model`/header sort overrides relevance and search returns the right row _set_ in browse order — reads as a broken search.
+
+| #   | Rule                                                                                                                                                                                                                                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Suppression condition = `flag && searchTerm`. Computed in `buildCurrentQuery`, passed to `buildTableQuery({ ignoreSorters })`. Query-time only — `state.sorters` is never mutated, so preset-dirty tracking is unaffected.                                                    |
+| 2   | The flag is a **model**. Any write to `state.sorters` while a search is active flips it to `false` for that session — header click, config dialog, preset apply, `v-model`, or programmatic write, all uniform (no provenance). Root-watcher rule, NOT a mutator side effect. |
+| 3   | A **new search** resets it: `searchTerm` empty→non-empty snaps the flag back to the configured default. Clearing the search resumes emitting whatever `state.sorters` holds.                                                                                                  |
+| 4   | `forceSorters` **always emit** — never suppressed (embed-owner intent, not a browse default).                                                                                                                                                                                 |
+| 5   | Opt in **only** for relevance-ranked search (e.g. Atlas `$search`). Plain `LIKE` / no-score backends → leave `false`, else suppressed results land in undefined order.                                                                                                        |
+
+Config surfaces:
+
+- Prop / model: `<AsTableRoot :ignore-sorters-when-searched>` (plain prop = configured default) or `v-model:ignore-sorters-when-searched` (drive/observe the runtime flag).
+- `useTable({ ignoreSortersWhenSearched: boolean | Ref<boolean> })` — `boolean` = default; `Ref` = external model whose initial value is the default.
+- Runtime: `state.ignoreSortersWhenSearched: Ref<boolean>` (read/write).
+- URL: `$relevance=1|0`, emitted mid-search only when differing from the default; rides under the `search` sync gate — see [state-persistence.md](state-persistence.md).
 
 ## Paginated mode AsTable
 

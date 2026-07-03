@@ -205,6 +205,8 @@ type MountTableStateOptions = {
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
   alwaysSelected?: string[];
+  /** Configured default for the runtime relevance flag. */
+  ignoreSortersWhenSearched?: boolean;
   queryFn?: QueryFn;
   /** URL bridge: gate first query until ref is `true`. */
   urlQueryReady?: import("vue").Ref<boolean>;
@@ -249,6 +251,7 @@ function mountWith(
             forceFilters: opts.forceFilters,
             forceSorters: opts.forceSorters,
             alwaysSelected: opts.alwaysSelected,
+            ignoreSortersWhenSearched: opts.ignoreSortersWhenSearched,
             fn: opts.queryFn,
             urlQueryReady: opts.urlQueryReady,
             onUrlQueryChange: opts.onUrlQueryChange,

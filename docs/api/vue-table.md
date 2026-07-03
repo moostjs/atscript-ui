@@ -33,6 +33,8 @@ interface AsTableRootProps {
   selectionPersistence?: "clear" | "trim" | "persist";
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
+  /** Opt in to suppressing user sorters while a search is active, to preserve relevance ranking. Default `false`. Also a `v-model`. See [Sorting](/tables/sorting#search-relevance-sort-suppression). */
+  ignoreSortersWhenSearched?: boolean;
   /** Leaf paths always added to `$select`, regardless of visible columns — for renderless cell renderers. */
   alwaysSelected?: string[];
   queryFn?: (
@@ -56,7 +58,7 @@ interface AsTableRootProps {
 }
 ```
 
-**v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]).
+**v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]), `ignoreSortersWhenSearched` (boolean).
 
 **Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`.
 
@@ -218,6 +220,8 @@ interface UseTableOptions {
   selectedRows?: Ref<unknown[]>;
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
+  /** Suppress user sorters while searching (preserve relevance). `boolean` = configured default; `Ref<boolean>` = external model whose initial value is the default. Default `false`. */
+  ignoreSortersWhenSearched?: boolean | Ref<boolean>;
   /** Leaf paths always added to `$select`, regardless of visible columns — see [Custom Cells](/tables/custom-cells). */
   alwaysSelected?: string[];
   queryFn?: QueryFn;
@@ -571,7 +575,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 
 - **Metadata**: `tableDef`, `loadingMetadata`, `metadataError`.
 - **Columns**: `columns`, `allColumns`, `columnNames`, `columnWidths`.
-- **Filters / sorters / search**: `filters`, `filterFields`, `sorters`, `searchTerm`.
+- **Filters / sorters / search**: `filters`, `filterFields`, `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
 - **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`.

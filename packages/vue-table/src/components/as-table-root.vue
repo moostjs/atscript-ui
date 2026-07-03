@@ -135,6 +135,16 @@ const columnWidths = defineModel<ColumnWidthsMap>("columnWidths", {
   default: () => ({}),
 });
 const sorters = defineModel<SortControl[]>("sorters", { default: () => [] });
+/**
+ * Opt-in for relevance-ranked backends (e.g. Atlas Search): while true AND a
+ * search term is active, user sorters are omitted from the query so relevance
+ * ranking survives (`forceSorters` still apply). Usable as a plain prop
+ * (`:ignore-sorters-when-searched="true"` sets the configured default) or as
+ * `v-model:ignore-sorters-when-searched` to observe/drive the runtime flag.
+ */
+const ignoreSortersWhenSearched = defineModel<boolean>("ignoreSortersWhenSearched", {
+  default: false,
+});
 const selectedRows = defineModel<unknown[]>("selectedRows", { default: () => [] });
 
 /**
@@ -175,6 +185,7 @@ const state = useTable(props.url, {
   columnNames,
   columnWidths,
   sorters,
+  ignoreSortersWhenSearched,
   selectedRows,
   urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
   onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
@@ -258,6 +269,7 @@ defineExpose({ state, navBridge });
     :metadata-error="state.metadataError.value"
     :must-refresh="state.mustRefresh.value"
     :search-term="state.searchTerm.value"
+    :ignore-sorters-when-searched="state.ignoreSortersWhenSearched.value"
     :selected-rows="state.selectedRows.value"
     :selected-count="state.selectedCount.value"
     :nav-bridge="navBridge"

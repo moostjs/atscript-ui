@@ -362,6 +362,97 @@ describe("round-trip — full state via URL string", () => {
   });
 });
 
+// ── $relevance (ignoreSorters flag) ───────────────────────────
+
+describe("$relevance — ignoreSorters round-trip", () => {
+  it("omits $relevance when the flag equals the default", () => {
+    expect(
+      stateToUrlQueryString(
+        { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: false },
+        DEFAULTS,
+      ),
+    ).toBe("$search=foo");
+    expect(
+      stateToUrlQueryString(
+        { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: true },
+        { ...DEFAULTS, defaultIgnoreSorters: true },
+      ),
+    ).toBe("$search=foo");
+  });
+
+  it("emits $relevance=1 when flag is true and default is false", () => {
+    expect(
+      stateToUrlQueryString(
+        { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: true },
+        DEFAULTS,
+      ),
+    ).toBe("$search=foo&$relevance=1");
+  });
+
+  it("emits $relevance=0 when flag is false and default is true", () => {
+    expect(
+      stateToUrlQueryString(
+        {
+          filters: {},
+          sorters: [{ field: "name", direction: "asc" }],
+          searchTerm: "foo",
+          ignoreSorters: false,
+        },
+        { ...DEFAULTS, defaultIgnoreSorters: true },
+      ),
+    ).toBe("$sort=name&$search=foo&$relevance=0");
+  });
+
+  it("omits $relevance without a search term (flag is meaningless)", () => {
+    expect(
+      stateToUrlQueryString(
+        { filters: {}, sorters: [], searchTerm: "", ignoreSorters: true },
+        DEFAULTS,
+      ),
+    ).toBe("");
+  });
+
+  it("omits $relevance when search sync is off", () => {
+    expect(
+      stateToUrlQueryString(
+        { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: true },
+        { ...DEFAULTS, sync: { search: false } },
+      ),
+    ).toBe("");
+  });
+
+  it("decodes $relevance=1 / $relevance=0", () => {
+    expect(urlQueryStringToState("$search=foo&$relevance=1").ignoreSorters).toBe(true);
+    expect(urlQueryStringToState("$search=foo&$relevance=0").ignoreSorters).toBe(false);
+  });
+
+  it("leaves ignoreSorters undefined when the URL has no $relevance", () => {
+    expect(urlQueryStringToState("$search=foo").ignoreSorters).toBeUndefined();
+  });
+
+  it("ignores $relevance when search sync is off", () => {
+    expect(
+      urlQueryStringToState("$search=foo&$relevance=1", { sync: { search: false } }).ignoreSorters,
+    ).toBeUndefined();
+  });
+
+  it("round-trips mid-search explicit sort + flag", () => {
+    const url = stateToUrlQueryString(
+      {
+        filters: {},
+        sorters: [{ field: "createdAt", direction: "desc" }],
+        searchTerm: "foo",
+        ignoreSorters: true,
+      },
+      DEFAULTS,
+    );
+    const back = urlQueryStringToState(url);
+    expect(back.sorters).toEqual([{ field: "createdAt", direction: "desc" }]);
+    expect(back.searchTerm).toBe("foo");
+    expect(back.ignoreSorters).toBe(true);
+  });
+});
+
 // ── urlQuerySync ──────────────────────────────────────────────
 
 const FULL_STATE = {

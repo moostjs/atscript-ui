@@ -87,8 +87,10 @@ Per-aspect gate via `<AsTableRoot :url-query-sync>` (the `UrlQuerySync` type):
 | ------------ | --------------------- | ------- | ---------------------------------------------------------------------------- |
 | `filters`    | `boolean \| string[]` | `true`  | `false` / `[]` = none; `string[]` = field-path allowlist.                    |
 | `sorters`    | `boolean \| string[]` | `true`  | Same `boolean \| string[]` semantics; allowlist matches `SortControl.field`. |
-| `search`     | `boolean`             | `true`  | Whether `$search` round-trips.                                               |
+| `search`     | `boolean`             | `true`  | Whether `$search` round-trips. Also gates `$relevance` (see below).          |
 | `pagination` | `boolean`             | `true`  | `$skip` + `$limit` together — one knob.                                      |
+
+`$relevance=1\|0` rides under the `search` gate: it round-trips the runtime `ignoreSortersWhenSearched` flag, emitted only while a search term is present AND the flag differs from the table's configured `ignoreSortersWhenSearched` default — so a link shared mid-search reproduces the sharer's ranking. `stateToUrlQueryString` takes it as `state.ignoreSorters` + `defaults.defaultIgnoreSorters`; `urlQueryStringToState` returns it as `snapshot.ignoreSorters` (omitted when the URL carries no explicit value). See [sorting-pagination.md](sorting-pagination.md#search-relevance-suppression).
 
 ## URL helpers
 

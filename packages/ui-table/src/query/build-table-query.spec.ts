@@ -223,6 +223,44 @@ describe("buildTableQuery", () => {
     });
   });
 
+  // ── ignoreSorters (search relevance) ───────────────────────────────────
+
+  it("omits user sorters from $sort when ignoreSorters is true", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [{ field: "name", direction: "asc" }],
+      filters: emptyFilters,
+      search: "hello",
+      ignoreSorters: true,
+    });
+    expect(q.controls!.$sort).toBeUndefined();
+    expect(q.controls!.$search).toBe("hello");
+  });
+
+  it("still emits forceSorters when ignoreSorters is true", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [{ field: "name", direction: "asc" }],
+      forceSorters: [{ field: "id", direction: "desc" }],
+      filters: emptyFilters,
+      search: "hello",
+      ignoreSorters: true,
+    });
+    expect(q.controls!.$sort).toEqual({ id: -1 });
+  });
+
+  it("emits user sorters when ignoreSorters is false or absent", () => {
+    for (const ignoreSorters of [false, undefined]) {
+      const q = buildTableQuery({
+        visibleColumnPaths: [],
+        sorters: [{ field: "name", direction: "asc" }],
+        filters: emptyFilters,
+        ignoreSorters,
+      });
+      expect(q.controls!.$sort).toEqual({ name: 1 });
+    }
+  });
+
   // ── $actions URL control ───────────────────────────────────────────────
 
   it("does not set controls.$actions by default", () => {

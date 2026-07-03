@@ -111,6 +111,12 @@ export interface TableModelRefs {
   columnNames?: Ref<string[]>;
   columnWidths?: Ref<ColumnWidthsMap>;
   sorters?: Ref<SortControl[]>;
+  /**
+   * Runtime "preserve search relevance" flag (see
+   * `ReactiveTableState.ignoreSortersWhenSearched`). Its initial value is the
+   * configured default the flag resets to on every new search session.
+   */
+  ignoreSortersWhenSearched?: Ref<boolean>;
 }
 
 export type TableSelectionOptions = SelectionApiOptions;
@@ -129,6 +135,15 @@ export interface TableQueryOptions {
   alwaysSelected?: string[];
   /** When true, all triggers (query/queryNext/loadRange) early-return. */
   blockQuery?: boolean;
+  /**
+   * Configured default for the runtime `ignoreSortersWhenSearched` flag
+   * (default `false`). Opt-in for relevance-ranked backends: while the
+   * runtime flag is true AND a search term is active, user `sorters` are
+   * omitted from the query (`forceSorters` still apply). Ignored when a
+   * `model.ignoreSortersWhenSearched` ref is wired — the ref's initial
+   * value is the default then.
+   */
+  ignoreSortersWhenSearched?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
   /**
@@ -325,6 +340,33 @@ export function createTableState(opts: CreateTableStateOptions): {
   const mustRefresh = ref(false);
   const searchTerm = ref("");
 
+  // Runtime "preserve search relevance" flag — a model like `sorters`.
+  // Suppression is query-time only: `sorters` itself is never mutated, so
+  // preset-dirty comparisons and restore-on-clear stay untouched.
+  const ignoreSortersDefault =
+    modelOpts?.ignoreSortersWhenSearched?.value ?? queryOpts?.ignoreSortersWhenSearched ?? false;
+  const ignoreSortersWhenSearched =
+    modelOpts?.ignoreSortersWhenSearched ?? ref(ignoreSortersDefault);
+  // Rule-driven flips happen inside watchers/appliers whose triggering
+  // mutation already schedules the query, so the flag watcher must not
+  // double-fire for them. A tick-scoped boolean, NOT a counter: Vue coalesces
+  // ref writes per flush, so two internal writes that net out (e.g. rule-4
+  // reset followed by a URL-carried `$relevance` in `applyUrlQuery`) fire the
+  // watcher zero or one time — a counter would strand increments and silently
+  // eat later external v-model writes.
+  let internalIgnoreSortersWrite = false;
+  function setIgnoreSortersInternal(v: boolean) {
+    if (ignoreSortersWhenSearched.value === v) return;
+    if (!internalIgnoreSortersWrite) {
+      internalIgnoreSortersWrite = true;
+      // Clear after the watcher flush this write triggers.
+      void nextTick(() => {
+        internalIgnoreSortersWrite = false;
+      });
+    }
+    ignoreSortersWhenSearched.value = v;
+  }
+
   const configDialogOpen = ref(false);
   const configTab = ref<ConfigTab>("columns");
   const filterDialogColumn = ref<ColumnDef | null>(null);
@@ -398,6 +440,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       filters: filters.value,
       forceFilters: queryOpts?.forceFilters,
       search: searchTerm.value || undefined,
+      ignoreSorters: ignoreSortersWhenSearched.value && !!searchTerm.value,
       includeActions: includeActions.value,
     });
   }
@@ -671,6 +714,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     lastError,
     mustRefresh,
     searchTerm,
+    ignoreSortersWhenSearched,
     configDialogOpen,
     configTab,
     filterDialogColumn,
@@ -776,8 +820,13 @@ export function createTableState(opts: CreateTableStateOptions): {
         page: pagination.value.page,
         itemsPerPage: pagination.value.itemsPerPage,
         searchTerm: searchTerm.value,
+        ignoreSorters: ignoreSortersWhenSearched.value,
       },
-      { defaultItemsPerPage: urlDefaultItemsPerPage, sync: urlQuerySync },
+      {
+        defaultItemsPerPage: urlDefaultItemsPerPage,
+        defaultIgnoreSorters: ignoreSortersDefault,
+        sync: urlQuerySync,
+      },
     );
   }
 
@@ -844,16 +893,36 @@ export function createTableState(opts: CreateTableStateOptions): {
     // re-specifies, then append URL's. Preserves preset sorters whose field
     // URL is silent on.
     const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
+    let urlSortersChanged = false;
     if (sortersGate !== "none") {
       const urlFields = new Set<string>();
       for (const s of parsed.sorters) urlFields.add(s.field);
       const survivors = sorters.value.filter((s) => !urlFields.has(s.field));
       const merged = [...survivors, ...parsed.sorters];
-      if (!sortersEqual(sorters.value, merged)) sorters.value = merged;
+      if (!sortersEqual(sorters.value, merged)) {
+        sorters.value = merged;
+        urlSortersChanged = true;
+      }
     }
 
+    const searchWasActive = !!searchTerm.value;
     if (urlQuerySync?.search !== false) {
       if (searchTerm.value !== parsed.searchTerm) searchTerm.value = parsed.searchTerm;
+    }
+    const searchNowActive = !!searchTerm.value;
+
+    // Relevance flag — the sorters/searchTerm rule watchers are guarded by
+    // `hydratingFromUrl`, so rules 3/4 are applied explicitly here, then the
+    // URL's explicit `$relevance` (when present) wins over both.
+    if (!searchWasActive && searchNowActive) {
+      // New search session → reset to the configured default (rule 4).
+      setIgnoreSortersInternal(ignoreSortersDefault);
+    } else if (urlSortersChanged && searchWasActive && searchNowActive) {
+      // Sorter write during an active search = explicit intent (rule 3).
+      setIgnoreSortersInternal(false);
+    }
+    if (parsed.ignoreSorters !== undefined) {
+      setIgnoreSortersInternal(parsed.ignoreSorters);
     }
 
     if (urlQuerySync?.pagination !== false) {
@@ -909,10 +978,40 @@ export function createTableState(opts: CreateTableStateOptions): {
     (next, prev) => {
       if (hydratingFromUrl) return;
       if (sortersEqual(prev, next)) return;
+      // Rule 3: ANY sorter write during an active search is explicit intent —
+      // stop suppressing sorters for the current search session. Uniform for
+      // header click / config dialog / preset apply / programmatic writes.
+      if (searchTerm.value) setIgnoreSortersInternal(false);
       if (!queryDetected) return;
       requestRefresh();
     },
     { immediate: false },
+  );
+
+  // Rule 4: a NEW search session (empty → non-empty) resets the runtime
+  // relevance flag to the configured default. Clearing the search just ends
+  // the session — sorters resume being emitted, the flag is left as-is.
+  watch(
+    () => searchTerm.value,
+    (next, prev) => {
+      if (hydratingFromUrl) return;
+      if (!prev && next) setIgnoreSortersInternal(ignoreSortersDefault);
+    },
+  );
+
+  // The runtime flag is a model — an external writer (v-model, devtools,
+  // toolbar toggle) re-queries through this watcher. Rule-driven internal
+  // flips are counter-suppressed: their triggering mutation already schedules
+  // the query with the flipped flag visible (queries build state at run time).
+  watch(
+    () => ignoreSortersWhenSearched.value,
+    () => {
+      if (internalIgnoreSortersWrite) return;
+      if (hydratingFromUrl) return;
+      if (!queryDetected) return;
+      if (!searchTerm.value) return; // no query effect without an active search
+      requestRefresh();
+    },
   );
 
   watch(
@@ -942,7 +1041,13 @@ export function createTableState(opts: CreateTableStateOptions): {
   // URL emitter runs regardless of `queryDetected` so pre-query mutations
   // (bootstrap / hydration) still reflect in the URL.
   watch(
-    [() => filters.value, () => sorters.value, () => searchTerm.value, () => pagination.value],
+    [
+      () => filters.value,
+      () => sorters.value,
+      () => searchTerm.value,
+      () => pagination.value,
+      () => ignoreSortersWhenSearched.value,
+    ],
     () => emitUrlIfChanged(),
   );
 

@@ -59,6 +59,15 @@ export interface UseTableOptions {
   /** External ref for sorters (from defineModel). */
   sorters?: Ref<SortControl[]>;
   /**
+   * Opt-in for relevance-ranked backends: while true AND a search term is
+   * active, user sorters are omitted from the query (`forceSorters` still
+   * apply). Pass a boolean to set the configured default, or a `Ref` (from
+   * `defineModel`) to also v-model the runtime flag — the ref's initial
+   * value is the default the flag resets to on each new search session.
+   * Default `false`.
+   */
+  ignoreSortersWhenSearched?: boolean | Ref<boolean>;
+  /**
    * External ref for selected rows (from `defineModel`/v-model or any external
    * source). Identity is preserved — the framework reads from and writes to
    * this ref directly.
@@ -186,6 +195,10 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       columnNames: opts?.columnNames,
       columnWidths: opts?.columnWidths,
       sorters: opts?.sorters,
+      ignoreSortersWhenSearched:
+        typeof opts?.ignoreSortersWhenSearched === "object"
+          ? opts.ignoreSortersWhenSearched
+          : undefined,
     },
     query: {
       fn: opts?.queryFn,
@@ -194,6 +207,10 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       alwaysSelected: opts?.alwaysSelected,
       blockQuery: opts?.blockQuery,
       queryOnMount: opts?.queryOnMount,
+      ignoreSortersWhenSearched:
+        typeof opts?.ignoreSortersWhenSearched === "boolean"
+          ? opts.ignoreSortersWhenSearched
+          : undefined,
       urlQueryReady: opts?.urlQueryReady,
       onUrlQueryChange: opts?.onUrlQueryChange,
       urlQuerySync: opts?.urlQuerySync,

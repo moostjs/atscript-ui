@@ -173,6 +173,230 @@ describe("createTableState watchers", () => {
     });
   });
 
+  describe("ignoreSortersWhenSearched", () => {
+    function setupRel(opts?: {
+      ignoreSortersWhenSearched?: boolean;
+      forceSorters?: { field: string; direction: "asc" | "desc" }[];
+    }) {
+      const mounted = mountTableStateDeferred({
+        data: rows(0, 50),
+        count: 1000,
+        ignoreSortersWhenSearched: opts?.ignoreSortersWhenSearched,
+        forceSorters: opts?.forceSorters,
+      });
+      return mounted;
+    }
+
+    /** Last dispatched Uniquery. */
+    function lastQuery(pagesFn: ReturnType<typeof vi.fn>) {
+      return pagesFn.mock.calls[pagesFn.mock.calls.length - 1]?.[0];
+    }
+
+    async function typeSearch(state: ReactiveTableState, term: string) {
+      state.searchTerm.value = term;
+      await nextTick();
+      vi.advanceTimersByTime(FILTER_DEBOUNCE_MS + 50);
+      vi.useRealTimers();
+      await flushPromises();
+      vi.useFakeTimers();
+    }
+
+    it("suppresses user sorters in the query while flag + search are active", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      state.sorters.value = [{ field: "name", direction: "desc" }];
+      init();
+      await flushPromises();
+      // Browse mode (no search): sorters emitted.
+      expect(lastQuery(pagesFn).controls.$sort).toEqual({ name: -1 });
+
+      await typeSearch(state, "foo");
+      const q = lastQuery(pagesFn);
+      expect(q.controls.$search).toBe("foo");
+      expect(q.controls.$sort).toBeUndefined();
+      // Suppression is query-time only — state.sorters is untouched.
+      expect(state.sorters.value).toEqual([{ field: "name", direction: "desc" }]);
+      vi.useRealTimers();
+    });
+
+    it("still emits forceSorters while suppressing user sorters", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({
+        ignoreSortersWhenSearched: true,
+        forceSorters: [{ field: "id", direction: "asc" }],
+      });
+      state.sorters.value = [{ field: "name", direction: "desc" }];
+      init();
+      await flushPromises();
+
+      await typeSearch(state, "foo");
+      expect(lastQuery(pagesFn).controls.$sort).toEqual({ id: 1 });
+      vi.useRealTimers();
+    });
+
+    it("a sorter write during an active search flips the flag; query then includes $sort", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+      expect(state.ignoreSortersWhenSearched.value).toBe(true);
+
+      vi.useRealTimers();
+      state.sorters.value = [{ field: "name", direction: "asc" }];
+      await flushPromises();
+      expect(state.ignoreSortersWhenSearched.value).toBe(false);
+      const q = lastQuery(pagesFn);
+      expect(q.controls.$search).toBe("foo");
+      expect(q.controls.$sort).toEqual({ name: 1 });
+    });
+
+    it("clearing the search resumes emitting sorters", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      state.sorters.value = [{ field: "name", direction: "desc" }];
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+      expect(lastQuery(pagesFn).controls.$sort).toBeUndefined();
+
+      await typeSearch(state, "");
+      const q = lastQuery(pagesFn);
+      expect(q.controls.$search).toBeUndefined();
+      expect(q.controls.$sort).toEqual({ name: -1 });
+      vi.useRealTimers();
+    });
+
+    it("a NEW search session resets the flag to the configured default", async () => {
+      vi.useFakeTimers();
+      const { state, init } = setupRel({ ignoreSortersWhenSearched: true });
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+
+      // User sorts mid-search → flag flips off for the session.
+      vi.useRealTimers();
+      state.sorters.value = [{ field: "name", direction: "asc" }];
+      await flushPromises();
+      expect(state.ignoreSortersWhenSearched.value).toBe(false);
+      vi.useFakeTimers();
+
+      // End the session, start a new one → flag back to default (true).
+      await typeSearch(state, "");
+      await typeSearch(state, "bar");
+      expect(state.ignoreSortersWhenSearched.value).toBe(true);
+      vi.useRealTimers();
+    });
+
+    it("default false → behavior unchanged ($sort rides along with $search)", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel();
+      state.sorters.value = [{ field: "name", direction: "desc" }];
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+      const q = lastQuery(pagesFn);
+      expect(q.controls.$search).toBe("foo");
+      expect(q.controls.$sort).toEqual({ name: -1 });
+      vi.useRealTimers();
+    });
+
+    it("URL sorter-merge arriving mid-search flips the flag off (rule 3 via applyUrlQuery)", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+      expect(state.ignoreSortersWhenSearched.value).toBe(true);
+
+      // URL carries a sorter while the same search stays active — a sorter
+      // write during an active session is explicit intent, flag flips off.
+      vi.useRealTimers();
+      state.applyUrlQuery("$sort=-name&$search=foo");
+      await flushPromises();
+      expect(state.ignoreSortersWhenSearched.value).toBe(false);
+      expect(state.sorters.value).toEqual([{ field: "name", direction: "desc" }]);
+      const q = lastQuery(pagesFn);
+      expect(q.controls.$search).toBe("foo");
+      expect(q.controls.$sort).toEqual({ name: -1 });
+    });
+
+    it("URL-carried explicit $relevance wins over the sorter-merge flip rule", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+      expect(state.ignoreSortersWhenSearched.value).toBe(true);
+
+      // Same mid-search sorter merge, but the URL says $relevance=1 — it is
+      // applied AFTER the merge, so the sharer's suppression is reproduced.
+      vi.useRealTimers();
+      state.applyUrlQuery("$sort=-name&$search=foo&$relevance=1");
+      await flushPromises();
+      expect(state.ignoreSortersWhenSearched.value).toBe(true);
+      expect(state.sorters.value).toEqual([{ field: "name", direction: "desc" }]);
+      const q = lastQuery(pagesFn);
+      expect(q.controls.$search).toBe("foo");
+      expect(q.controls.$sort).toBeUndefined();
+    });
+
+    it("URL-applied $relevance never strands suppression — later external toggles still re-query", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      state.sorters.value = [{ field: "name", direction: "asc" }];
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+
+      // Sorter write mid-search flips the flag off; clearing keeps it off.
+      vi.useRealTimers();
+      state.sorters.value = [{ field: "name", direction: "desc" }];
+      await flushPromises();
+      expect(state.ignoreSortersWhenSearched.value).toBe(false);
+      vi.useFakeTimers();
+      await typeSearch(state, "");
+
+      // URL starts a new search with explicit $relevance=0: internally the
+      // flag resets to the default (true) then applies the URL's false —
+      // a net no-op the flag watcher never observes.
+      vi.useRealTimers();
+      state.applyUrlQuery("$search=bar&$relevance=0");
+      await flushPromises();
+      expect(state.ignoreSortersWhenSearched.value).toBe(false);
+      expect(state.searchTerm.value).toBe("bar");
+
+      // External v-model toggles after that must still re-query.
+      pagesFn.mockClear();
+      state.ignoreSortersWhenSearched.value = true;
+      await flushPromises();
+      expect(pagesFn).toHaveBeenCalled();
+      expect(lastQuery(pagesFn).controls.$sort).toBeUndefined();
+
+      pagesFn.mockClear();
+      state.ignoreSortersWhenSearched.value = false;
+      await flushPromises();
+      expect(pagesFn).toHaveBeenCalled();
+      expect(lastQuery(pagesFn).controls.$sort).toEqual({ name: -1 });
+    });
+
+    it("external flag toggle mid-search re-queries (model-driven)", async () => {
+      vi.useFakeTimers();
+      const { state, init, pagesFn } = setupRel({ ignoreSortersWhenSearched: true });
+      state.sorters.value = [{ field: "name", direction: "desc" }];
+      init();
+      await flushPromises();
+      await typeSearch(state, "foo");
+      pagesFn.mockClear();
+
+      vi.useRealTimers();
+      state.ignoreSortersWhenSearched.value = false;
+      await flushPromises();
+      expect(pagesFn).toHaveBeenCalled();
+      expect(lastQuery(pagesFn).controls.$sort).toEqual({ name: -1 });
+    });
+  });
+
   describe("columnNames watcher", () => {
     it("reorder (same set) is a no-op — does not fire query", async () => {
       const mock = createMockClient({
