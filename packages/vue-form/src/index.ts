@@ -80,6 +80,7 @@ export {
   useAsDescendantErrorCounts,
   type AsNestedSectionsStore,
 } from "./composables/use-as-nested-sections-store";
+export { provideAsNestedLevel } from "./composables/use-as-nested-level";
 
 // Composables — focus utilities
 export {
