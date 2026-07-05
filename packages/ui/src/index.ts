@@ -268,3 +268,6 @@ export { str } from "./shared/str";
 
 // ── Table column helpers ────────────────────────────────────
 export { getSortableColumns, getFilterableColumns, getColumn } from "./table/column-resolver";
+
+// ── Navigate-action href (render-time `$1` interpolation) ───
+export { navigateHrefFor } from "./table/navigate-href";

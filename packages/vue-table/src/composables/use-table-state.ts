@@ -178,6 +178,12 @@ export interface TableActionsOptions {
   /** Refetch policy: when `true` (default), successful backend / __remove invocations call `state.query()`. */
   refreshOnAction?: () => boolean;
   /**
+   * Maps a navigate action's href before it lands in an anchor's `href` /
+   * a mod-click `window.open` target (e.g. router base-path resolution).
+   * Plain function passthrough — see `ReactiveTableState.resolveHref`.
+   */
+  resolveHref?: (url: string) => string;
+  /**
    * Bridge for `<AsTableRoot>`'s `@action` emit. Called once per settled
    * `invoke` (success, error, custom). `ids` is the level-derived list:
    * `'row'` → `[pk]`, `'rows'` → `pk` if array else `[pk]`, `'table'` → `[]`.
@@ -721,6 +727,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     selectedRows,
     selectedCount,
     rowValueFn,
+    resolveHref: opts.actions?.resolveHref ?? ((url: string) => url),
     isPkSelected,
     rowDelete,
     includeActions,

@@ -11,10 +11,18 @@ const props = defineProps<{
   defaultMarker?: TVueTableActionInfo;
   /** Class prefix shared with the consumer (`as-row-actions` / `as-table-actions`). */
   prefix: string;
+  /**
+   * Per-action resolved navigate href (see `actionHref`). `undefined` (per
+   * action or wholesale) keeps the classic menu item + `select` path; a
+   * string turns navigate items into real anchors / new-tab-able prompts.
+   */
+  hrefFor?: (action: TVueTableActionInfo) => string | undefined;
 }>();
 
 defineEmits<{
   (e: "select", action: TVueTableActionInfo, event: KeyboardEvent | MouseEvent): void;
+  /** Mod/middle-click on a promptText navigate item — confirm → `window.open`. */
+  (e: "newtab", action: TVueTableActionInfo): void;
 }>();
 
 const slots = useSlots();
@@ -31,7 +39,9 @@ const visibleGroups = computed(() => props.groups.filter((g) => g.length > 0));
         :action="action"
         :prefix="prefix"
         :default="action === defaultMarker"
+        :href="hrefFor?.(action)"
         @select="$emit('select', action, $event as KeyboardEvent | MouseEvent)"
+        @newtab="$emit('newtab', action)"
       >
         <template v-if="slots['menu-item']" #default="slotProps">
           <slot name="menu-item" :action="slotProps.action" />

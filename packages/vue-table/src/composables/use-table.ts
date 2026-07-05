@@ -114,6 +114,13 @@ export interface UseTableOptions {
    * successful `'backend'` / `'__remove'` invocations call `state.query()`.
    */
   refreshOnAction?: () => boolean;
+  /**
+   * Maps a navigate action's href before it is used as an anchor `href` /
+   * mod-click `window.open` target (e.g. `router.resolve(url).href` under a
+   * base path). Never applied on the plain-left-click invoke path. Default:
+   * identity.
+   */
+  resolveHref?: (url: string) => string;
   /** Bridge for `<AsTableRoot>`'s `@action` emit; see `TableActionsOptions.onResolved`. */
   onActionResolved?: (
     action: TVueTableActionInfo,
@@ -221,6 +228,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     },
     actions: {
       refreshOnAction: opts?.refreshOnAction,
+      resolveHref: opts?.resolveHref,
       onResolved: opts?.onActionResolved,
     },
     preset: {

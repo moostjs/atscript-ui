@@ -63,6 +63,10 @@ test.describe("Section 8.14 — Row-actions cell render branches", () => {
     await expect(btn).toHaveAttribute("data-default", "true");
     await expect(btn.locator(".as-row-actions-btn-icon")).toHaveCount(0);
     await expect(btn.locator(".as-row-actions-btn-label")).toHaveText("View orders");
+    // Linkable navigate action (no promptText, identifiable row) renders as
+    // a real `<a href>` with the `$1`-interpolated destination.
+    await expect(btn).toHaveJSProperty("tagName", "A");
+    await expect(btn).toHaveAttribute("href", /^\/orders\?customerId=\d+$/u);
     // The `aria-label` / `title` is the action's label.
     await expect(btn).toHaveAttribute("aria-label", "View orders");
     await expect(btn).toHaveAttribute("title", "View orders");

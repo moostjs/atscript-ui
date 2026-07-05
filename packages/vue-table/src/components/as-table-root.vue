@@ -90,6 +90,14 @@ const props = withDefaults(
      */
     refreshOnAction?: boolean;
     /**
+     * Maps a navigate action's interpolated href before it is used as an
+     * anchor's `href` attribute or a mod/middle-click `window.open` target —
+     * e.g. `(url) => router.resolve(url).href` for apps served under a
+     * router base path. NOT applied on the plain-left-click invoke path (the
+     * Client's `navigate` hook owns that URL). Default: identity.
+     */
+    resolveHref?: (url: string) => string;
+    /**
      * Per-aspect opt-in/out for `v-model:url-query`. Default (omitted): full
      * sync — filters, sorters, `searchTerm`, and pagination all round-trip.
      * Set fields to `false`/`true`/`string[]` to gate. Has no effect unless
@@ -178,6 +186,7 @@ const state = useTable(props.url, {
   formTypes: props.formTypes,
   formComponents: props.formComponents,
   refreshOnAction: () => props.refreshOnAction,
+  resolveHref: props.resolveHref,
   onActionResolved: (action, ids, result, event) => {
     emit("action", action, ids, result, event);
   },

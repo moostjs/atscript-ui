@@ -22,8 +22,12 @@ export const asRowActionsShortcuts = defineShortcuts({
   // Sizing: `min-w-fingertip-s` (28px floor) + `h-fingertip-s` keeps
   // icon-only buttons square but lets label-only buttons grow horizontally
   // to fit text.
+  //
+  // `decoration-none`: navigate actions render as real `<a href>` with this
+  // same class — kill the UA underline (no-op on buttons). Link/visited
+  // colors are already neutralized because `c8-flat` sets `text-current*`.
   "as-row-actions-btn": {
-    "": "scope-neutral c8-flat inline-flex items-center justify-center min-w-fingertip-s h-fingertip-s px-$s font-600 cursor-pointer shrink-0 leading-none whitespace-nowrap",
+    "": "scope-neutral c8-flat decoration-none inline-flex items-center justify-center min-w-fingertip-s h-fingertip-s px-$s font-600 cursor-pointer shrink-0 leading-none whitespace-nowrap",
     "[&[data-default]]:": "scope-primary font-500",
   },
   // Modifier applied by `<AsRowActions>` when the single row action has
@@ -39,9 +43,11 @@ export const asRowActionsShortcuts = defineShortcuts({
   "as-row-actions-menu": "scope-primary popup-card whitespace-nowrap py-$xs min-w-[12em]",
   "as-row-actions-menu-separator": "h-0 my-$xs border-t-1",
   // Menu item base. Default-marked items get bold font so the primary CTA
-  // is visually distinct in the dropdown list.
+  // is visually distinct in the dropdown list. `decoration-none`: navigate
+  // items render as `DropdownMenuItem as="a"` — kill the UA underline
+  // (no-op on divs); `text-current` already beats UA link/visited colors.
   "as-row-actions-menu-item": {
-    "": "flex items-center gap-$s w-full px-$m py-$xs border-0 bg-transparent text-current text-left cursor-pointer outline-none",
+    "": "flex items-center gap-$s w-full px-$m py-$xs border-0 bg-transparent text-current decoration-none text-left cursor-pointer outline-none",
     "hover:": "layer-3",
     "data-[highlighted]:": "layer-3",
     "[&[data-default]]:": "font-700",

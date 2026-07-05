@@ -16,10 +16,12 @@ import { computed } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
 import {
+  actionHref,
   applyRowGate,
   applyRowsGate,
   ariaLabelFor,
   collectIdentifiers,
+  createNavigateGestures,
   intentClass,
   triggerAction,
 } from "../composables/state/intent-scope";
@@ -79,7 +81,19 @@ function resolveLevel(
 
 const preferredId = computed(() => state.tableDef.value?.preferredId ?? []);
 
-const resolved = computed<Resolved>(() => {
+const resolved = computed(() => {
+  const r = resolveBuckets();
+  const defaultHref = r.defaultAction ? actionHref(state, r.defaultAction, r.ids[0]) : undefined;
+  return {
+    ...r,
+    defaultHref,
+    // No promptText → real anchor; with promptText the button stays (mod/middle
+    // click on it still confirms → window.open via `defaultHref`).
+    defaultAsLink: defaultHref !== undefined && !r.defaultAction?.promptText,
+  };
+});
+
+function resolveBuckets(): Resolved {
   const selectedCount = state.selectedCount.value;
   const explicit = props.level;
   const effectiveLevel = resolveLevel(explicit, selectedCount);
@@ -140,7 +154,7 @@ const resolved = computed<Resolved>(() => {
     level: "rows",
     ids: collectIdentifiers(state, state.selectedRows.value, pid),
   });
-});
+}
 
 const hasAny = computed(
   () =>
@@ -149,14 +163,24 @@ const hasAny = computed(
     resolved.value.trailingRowActions.length > 0,
 );
 
-async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | KeyboardEvent) {
-  await triggerAction(
-    state,
-    action,
-    { identifiers: resolved.value.ids, preferredId: preferredId.value },
-    event,
-  );
+function promptCtx() {
+  return { identifiers: resolved.value.ids, preferredId: preferredId.value };
 }
+
+async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | KeyboardEvent) {
+  await triggerAction(state, action, promptCtx(), event);
+}
+
+/** Resolved navigate href for `action` against the toolbar's current ids. */
+function hrefFor(action: TVueTableActionInfo): string | undefined {
+  return actionHref(state, action, resolved.value.ids[0]);
+}
+
+const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures(
+  state,
+  promptCtx,
+  hrefFor,
+);
 </script>
 
 <template>
@@ -169,15 +193,32 @@ async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | Keyb
       :ids="resolved.ids"
       :invoke="invokeWith"
     >
-      <button
+      <component
+        :is="resolved.defaultAsLink ? 'a' : 'button'"
         v-if="resolved.defaultAction"
-        type="button"
+        :href="resolved.defaultAsLink ? resolved.defaultHref : undefined"
+        :type="resolved.defaultAsLink ? undefined : 'button'"
         class="as-table-actions-btn"
         :class="intentClass('as-table-actions', resolved.defaultAction)"
         data-default
         :aria-label="ariaLabelFor(resolved.defaultAction)"
         :title="ariaLabelFor(resolved.defaultAction)"
-        @click="invokeWith(resolved.defaultAction, $event)"
+        @click="
+          onTriggerClick(
+            resolved.defaultAction,
+            resolved.defaultHref,
+            resolved.defaultAsLink,
+            $event,
+          )
+        "
+        @auxclick="
+          onTriggerAuxClick(
+            resolved.defaultAction,
+            resolved.defaultHref,
+            resolved.defaultAsLink,
+            $event,
+          )
+        "
       >
         <slot name="button" :action="resolved.defaultAction">
           <span
@@ -189,7 +230,7 @@ async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | Keyb
             resolved.defaultAction.label || resolved.defaultAction.name
           }}</span>
         </slot>
-      </button>
+      </component>
 
       <DropdownMenuRoot
         v-if="resolved.otherActions.length > 0 || resolved.trailingRowActions.length > 0"
@@ -209,7 +250,9 @@ async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | Keyb
           <AsActionMenuContent
             :groups="[resolved.otherActions, resolved.trailingRowActions]"
             prefix="as-table-actions"
+            :href-for="hrefFor"
             @select="invokeWith"
+            @newtab="openNewTab"
           >
             <template v-if="$slots['menu-item']" #menu-item="slotProps">
               <slot name="menu-item" :action="slotProps.action" />

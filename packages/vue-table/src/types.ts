@@ -384,6 +384,14 @@ export interface ReactiveTableState extends TableStateMethods {
   /** Extract unique value from a row for selection tracking. */
   rowValueFn: (row: Record<string, unknown>) => unknown;
   /**
+   * Map a navigate action's interpolated href before it is used as an
+   * anchor's `href` attribute or a mod/middle-click `window.open` target —
+   * e.g. `router.resolve(url).href` for apps served under a base path.
+   * Identity when not configured. NEVER applied on the plain-left-click
+   * invoke path — the Client's `navigate` hook owns that URL.
+   */
+  resolveHref: (url: string) => string;
+  /**
    * Row-delete opt-in — writable ref owned by the renderer. `<AsTable>` and
    * `<AsWindowTable>` push their `:row-delete` prop into this ref via a
    * watcher; `createActions` reads `.value` inside its computed `groups`,

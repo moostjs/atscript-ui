@@ -16,8 +16,12 @@ interface MountOpts {
   canRemove?: boolean;
   /** Identifier override forwarded to `<AsRowActions>` directly. */
   pk?: Record<string, unknown>;
+  /** Forward NO identifier at all (no `pk`, no `row`) — models a pk-less row. */
+  noPk?: boolean;
   /** Row data forwarded to `<AsRowActions>` (used for `$actions` filtering). */
   row?: Record<string, unknown>;
+  /** Base-path mapper threaded to `state.resolveHref`. */
+  resolveHref?: (url: string) => string;
 }
 
 const block: TDbActionInfo = {
@@ -47,6 +51,7 @@ function setup(opts: MountOpts = {}) {
         query: { queryOnMount: false },
         actions: {
           refreshOnAction: () => true,
+          resolveHref: opts.resolveHref,
         },
       });
       state = s;
@@ -68,7 +73,7 @@ function setup(opts: MountOpts = {}) {
       provideTableContext({ state, client, controls: {} });
       return () =>
         h(AsRowActions, {
-          pk: opts.pk ?? { id: "user-1" },
+          pk: opts.noPk ? undefined : (opts.pk ?? { id: "user-1" }),
           row: opts.row,
         });
     },
@@ -268,14 +273,15 @@ describe("<AsRowActions>", () => {
 
     it("gates navigate-processor actions by $actions like any server action", () => {
       // editNav (navigate, in $actions) + ship (backend, not in $actions) →
-      // only edit survives the filter, collapsing to a single labelled button.
+      // only edit survives the filter, collapsing to the single-action slot —
+      // rendered as a real anchor since navigate actions link when possible.
       const { wrapper } = setup({
         rowActions: [editNav, ship],
         row: { id: "ord-1", $actions: ["edit"] },
       });
-      const buttons = wrapper.findAll("button");
-      expect(buttons).toHaveLength(1);
-      expect(buttons[0]!.attributes("aria-label")).toBe("Edit");
+      const links = wrapper.findAll("a.as-row-actions-btn");
+      expect(links).toHaveLength(1);
+      expect(links[0]!.attributes("aria-label")).toBe("Edit");
     });
 
     it("filters a navigate action absent from $actions", () => {
@@ -357,6 +363,254 @@ describe("<AsRowActions>", () => {
       await wrapper.find("button").trigger("click");
       expect(state.confirmRequest.value?.message).toBe("Delete item ord-7?");
       state.dismissPrompt();
+    });
+  });
+
+  // ── navigate actions rendered as real links ─────────────────────────────
+
+  describe("navigate actions as anchors", () => {
+    const editNav: TDbActionInfo = {
+      name: "edit",
+      label: "Edit",
+      level: "row",
+      processor: "navigate",
+      value: "/orders/$1/edit",
+      icon: "i-as-edit",
+    };
+
+    function clickEvent(init: MouseEventInit = {}) {
+      return new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...init });
+    }
+
+    it("renders an anchor with the interpolated, resolveHref-mapped href", () => {
+      const { wrapper } = setup({
+        rowActions: [editNav],
+        pk: { id: "ord-1" },
+        resolveHref: (url) => `/base${url}`,
+      });
+      expect(wrapper.findAll("button")).toHaveLength(0);
+      const a = wrapper.find("a.as-row-actions-btn");
+      expect(a.exists()).toBe(true);
+      expect(a.attributes("href")).toBe("/base/orders/ord-1/edit");
+      expect(a.attributes("aria-label")).toBe("Edit");
+    });
+
+    it("plain left click on the anchor prevents default and routes through invoke once", async () => {
+      const { wrapper, actionFn } = setup({ rowActions: [editNav], pk: { id: "ord-1" } });
+      const ev = clickEvent();
+      wrapper.find("a").element.dispatchEvent(ev);
+      await flushPromises();
+      expect(ev.defaultPrevented).toBe(true);
+      expect(actionFn).toHaveBeenCalledTimes(1);
+      expect(actionFn).toHaveBeenCalledWith("edit", { id: "ord-1" });
+    });
+
+    it("cmd/ctrl/middle clicks on the anchor stay native — no invoke, default not prevented", async () => {
+      const { wrapper, actionFn } = setup({ rowActions: [editNav], pk: { id: "ord-1" } });
+      const el = wrapper.find("a").element;
+      for (const init of [
+        { metaKey: true },
+        { ctrlKey: true },
+        { button: 1 },
+      ] satisfies MouseEventInit[]) {
+        const ev = clickEvent(init);
+        el.dispatchEvent(ev);
+        await flushPromises();
+        expect(ev.defaultPrevented).toBe(false);
+      }
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("promptText navigate stays a button; mod-click confirms then window.open, no invoke", async () => {
+      const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+      const confirmNav: TDbActionInfo = { ...editNav, promptText: "Open $1?" };
+      const { wrapper, state, actionFn } = setup({
+        rowActions: [confirmNav],
+        pk: { id: "ord-1" },
+        resolveHref: (url) => `/base${url}`,
+      });
+      expect(wrapper.find("a").exists()).toBe(false);
+      const btn = wrapper.find("button");
+      await btn.trigger("click", { ctrlKey: true, button: 0 });
+      expect(state.confirmRequest.value?.message).toBe("Open ord-1?");
+      state.acceptPrompt();
+      await flushPromises();
+      expect(openSpy).toHaveBeenCalledTimes(1);
+      expect(openSpy).toHaveBeenCalledWith(
+        "/base/orders/ord-1/edit",
+        "_blank",
+        "noopener,noreferrer",
+      );
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("promptText navigate: middle-click (auxclick) confirms then window.open; decline does nothing", async () => {
+      const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+      const confirmNav: TDbActionInfo = { ...editNav, promptText: "Open?" };
+      const { wrapper, state, actionFn } = setup({
+        rowActions: [confirmNav],
+        pk: { id: "ord-1" },
+      });
+      const btn = wrapper.find("button");
+
+      await btn.trigger("auxclick", { button: 1 });
+      expect(state.confirmRequest.value?.message).toBe("Open?");
+      state.dismissPrompt();
+      await flushPromises();
+      expect(openSpy).not.toHaveBeenCalled();
+
+      await btn.trigger("auxclick", { button: 1 });
+      state.acceptPrompt();
+      await flushPromises();
+      expect(openSpy).toHaveBeenCalledWith("/orders/ord-1/edit", "_blank", "noopener,noreferrer");
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("promptText navigate: plain click keeps today's confirm → invoke path", async () => {
+      const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+      const confirmNav: TDbActionInfo = { ...editNav, promptText: "Open?" };
+      const { wrapper, state, actionFn } = setup({
+        rowActions: [confirmNav],
+        pk: { id: "ord-1" },
+      });
+      await wrapper.find("button").trigger("click");
+      state.acceptPrompt();
+      await flushPromises();
+      expect(actionFn).toHaveBeenCalledWith("edit", { id: "ord-1" });
+      expect(openSpy).not.toHaveBeenCalled();
+    });
+
+    it("navigate with inputForm falls back to a plain button", () => {
+      const { wrapper } = setup({
+        rowActions: [{ ...editNav, inputForm: "EditForm" }],
+        pk: { id: "ord-1" },
+      });
+      expect(wrapper.find("a").exists()).toBe(false);
+      expect(wrapper.find("button.as-row-actions-btn").exists()).toBe(true);
+    });
+
+    it("navigate without a computable pk falls back to a plain button", () => {
+      const { wrapper } = setup({ rowActions: [editNav], noPk: true });
+      expect(wrapper.find("a").exists()).toBe(false);
+      expect(wrapper.find("button.as-row-actions-btn").exists()).toBe(true);
+    });
+  });
+
+  // ── navigate actions inside the `…` dropdown ────────────────────────────
+
+  describe("navigate actions in the dropdown menu", () => {
+    const editNav: TDbActionInfo = {
+      name: "edit",
+      label: "Edit",
+      level: "row",
+      processor: "navigate",
+      value: "/orders/$1/edit",
+    };
+
+    async function openMenu(wrapper: ReturnType<typeof setup>["wrapper"]) {
+      const trigger = wrapper.find("button.as-row-actions-more");
+      await trigger.trigger("pointerdown", { button: 0, pointerType: "mouse" });
+      await trigger.trigger("click");
+      await flushPromises();
+      return document.body.querySelectorAll('[role="menuitem"]');
+    }
+
+    afterEach(() => {
+      document.body.innerHTML = "";
+    });
+
+    it("navigate item without promptText renders as an anchor with the mapped href", async () => {
+      const { wrapper } = setup({
+        rowActions: [editNav, block],
+        pk: { id: "ord-1" },
+        resolveHref: (url) => `/base${url}`,
+      });
+      const items = await openMenu(wrapper);
+      expect(items.length).toBe(2);
+      const anchor = Array.from(items).find((el) => el.tagName === "A");
+      expect(anchor).toBeDefined();
+      expect(anchor!.getAttribute("href")).toBe("/base/orders/ord-1/edit");
+      // The backend action stays a non-anchor item.
+      expect(Array.from(items).some((el) => el.tagName !== "A")).toBe(true);
+    });
+
+    it("keyboard select on the anchor item still invokes", async () => {
+      const { wrapper, actionFn } = setup({
+        rowActions: [editNav, block],
+        pk: { id: "ord-1" },
+      });
+      const items = await openMenu(wrapper);
+      const anchor = Array.from(items).find((el) => el.tagName === "A")!;
+      anchor.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+      );
+      await flushPromises();
+      expect(actionFn).toHaveBeenCalledTimes(1);
+      expect(actionFn).toHaveBeenCalledWith("edit", { id: "ord-1" });
+    });
+
+    it("plain left click on the anchor item prevents default and invokes", async () => {
+      const { wrapper, actionFn } = setup({
+        rowActions: [editNav, block],
+        pk: { id: "ord-1" },
+      });
+      const items = await openMenu(wrapper);
+      const anchor = Array.from(items).find((el) => el.tagName === "A")!;
+      anchor.dispatchEvent(
+        new PointerEvent("pointerdown", { button: 0, bubbles: true, cancelable: true }),
+      );
+      const ev = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+      anchor.dispatchEvent(ev);
+      await flushPromises();
+      expect(ev.defaultPrevented).toBe(true);
+      expect(actionFn).toHaveBeenCalledWith("edit", { id: "ord-1" });
+    });
+
+    it("cmd-click on the anchor item skips invoke and keeps native default", async () => {
+      const { wrapper, actionFn } = setup({
+        rowActions: [editNav, block],
+        pk: { id: "ord-1" },
+      });
+      const items = await openMenu(wrapper);
+      const anchor = Array.from(items).find((el) => el.tagName === "A")!;
+      anchor.dispatchEvent(
+        new PointerEvent("pointerdown", {
+          button: 0,
+          metaKey: true,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      const ev = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        metaKey: true,
+      });
+      anchor.dispatchEvent(ev);
+      await flushPromises();
+      expect(ev.defaultPrevented).toBe(false);
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("promptText navigate item stays non-anchor; middle-click confirms then window.open", async () => {
+      const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+      const confirmNav: TDbActionInfo = { ...editNav, promptText: "Open?" };
+      const { wrapper, state, actionFn } = setup({
+        rowActions: [confirmNav, block],
+        pk: { id: "ord-1" },
+      });
+      const items = await openMenu(wrapper);
+      const item = Array.from(items).find((el) => el.textContent?.includes("Edit"))!;
+      expect(item.tagName).not.toBe("A");
+      item.dispatchEvent(
+        new MouseEvent("auxclick", { button: 1, bubbles: true, cancelable: true }),
+      );
+      expect(state.confirmRequest.value?.message).toBe("Open?");
+      state.acceptPrompt();
+      await flushPromises();
+      expect(openSpy).toHaveBeenCalledWith("/orders/ord-1/edit", "_blank", "noopener,noreferrer");
+      expect(actionFn).not.toHaveBeenCalled();
     });
   });
 });

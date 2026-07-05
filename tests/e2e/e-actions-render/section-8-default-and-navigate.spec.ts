@@ -62,6 +62,10 @@ test.describe("Section 8.1 + 8.17 — Default row action via dblclick / main-act
     const editItem = menu.locator(".as-row-actions-menu-item").filter({ hasText: "Edit" });
     await expect(editItem).toHaveCount(1);
     await expect(editItem).toHaveAttribute("data-default", "true");
+    // Linkable navigate menu item renders as a real `<a href>` with the
+    // `$1`-interpolated destination (`/users/$1/edit` → admin's preferredId).
+    await expect(editItem).toHaveJSProperty("tagName", "A");
+    await expect(editItem).toHaveAttribute("href", "/users/admin/edit");
     // Other entries do not carry the default marker.
     const copyItem = menu
       .locator(".as-row-actions-menu-item")
@@ -100,6 +104,9 @@ test.describe("Section 8.1 + 8.17 — Default row action via dblclick / main-act
     await expect(singleBtn).toHaveAttribute("data-default", "true");
     await expect(singleBtn.locator(".as-row-actions-btn-label")).toHaveText("View orders");
     await expect(singleBtn.locator(".as-row-actions-btn-icon")).toHaveCount(0);
+    // Linkable navigate action → real anchor carrying the interpolated href.
+    await expect(singleBtn).toHaveJSProperty("tagName", "A");
+    await expect(singleBtn).toHaveAttribute("href", `/orders?customerId=${firstIdText}`);
 
     // Single-click on the labelled button navigates (it IS the default).
     await Promise.all([

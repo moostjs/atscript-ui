@@ -1,4 +1,5 @@
 import { formatIdentifier, type TDbActionInfo } from "@atscript/db-client";
+import { navigateHrefFor } from "@atscript/ui";
 import {
   REMOVE_PROCESSOR,
   type ConfirmScope,
@@ -218,6 +219,124 @@ export function ariaLabelFor(action: TVueTableActionInfo): string {
  */
 export function intentClass(prefix: string, action: TVueTableActionInfo): string | undefined {
   return action.intent ? `${prefix}-intent-${action.intent}` : undefined;
+}
+
+/**
+ * `true` for an unmodified main-button click — the only click an anchor-mode
+ * navigate action intercepts (preventDefault + SPA invoke path). Modified /
+ * middle / right clicks fall through to native anchor behaviour. Mirrors
+ * vue-router's `guardEvent`, including the bail on an already-handled event.
+ */
+export function isPlainLeftClick(e: MouseEvent): boolean {
+  return (
+    !e.defaultPrevented && e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey
+  );
+}
+
+/** `true` for the "open in new tab" chord on a button: cmd/ctrl + main-button click. */
+export function isModClick(e: MouseEvent): boolean {
+  return e.button === 0 && (e.ctrlKey || e.metaKey);
+}
+
+/**
+ * Render-time href for a `processor: 'navigate'` action, mapped through
+ * `state.resolveHref`. Returns `undefined` when no link is possible —
+ * non-navigate processors, actions with an `inputForm` (the dialog IS the
+ * interaction), or a row-level action without a computable identifier — so
+ * callers keep the plain button + invoke path. Actions WITH `promptText`
+ * still get their href (the button's mod/middle-click new-tab path needs
+ * it); whether to render an anchor is the call site's `promptText` check.
+ */
+export function actionHref(
+  state: ReactiveTableState,
+  action: TVueTableActionInfo,
+  id: Record<string, unknown> | undefined,
+): string | undefined {
+  if (action.processor !== "navigate" || action.inputForm) return undefined;
+  const href = navigateHrefFor(
+    action as TDbActionInfo,
+    id,
+    state.tableDef.value?.preferredId ?? [],
+  );
+  return href === undefined ? undefined : state.resolveHref(href);
+}
+
+/**
+ * "Open in new tab" path for navigate actions: run the action's confirmation
+ * (immediate accept when it declares no `promptText`), then hand the already
+ * `resolveHref`-mapped `href` to the browser via `window.open`. Never touches
+ * `state.actions.invoke` and never reaches the `@action` emit — the browser
+ * owns the navigation.
+ */
+export async function openNavigateInNewTab(
+  state: ReactiveTableState,
+  action: TVueTableActionInfo,
+  ctx: PromptCtx,
+  href: string,
+): Promise<void> {
+  const ok = await confirmAction(state, action, ctx);
+  if (!ok) return;
+  // Navigate URLs can be external — sever the opener link so the new tab
+  // can't reach back into the app (`window.opener`) and sends no referrer.
+  window.open(href, "_blank", "noopener,noreferrer");
+}
+
+/**
+ * Gesture handler set for the primary trigger (single CTA anchor/button)
+ * shared by `<AsRowActions>` and `<AsTableActions>`. Parameterized only by
+ * the surface's prompt-context getter and href resolver so the click-dispatch
+ * policy — plain left → SPA invoke, cmd/ctrl or middle on a promptText
+ * navigate button → confirm → new tab — has a single home.
+ */
+export function createNavigateGestures(
+  state: ReactiveTableState,
+  promptCtx: () => PromptCtx,
+  hrefFor: (action: TVueTableActionInfo) => string | undefined,
+) {
+  return {
+    /**
+     * Unified primary-trigger click. Anchor mode intercepts ONLY plain left
+     * clicks (preventDefault + SPA invoke path) and yields modified clicks
+     * to native anchor behaviour; button mode sends cmd/ctrl-click on a
+     * promptText navigate action (`href` present while not an anchor)
+     * through confirm → new tab, everything else through the invoke path.
+     */
+    onTriggerClick(
+      action: TVueTableActionInfo,
+      href: string | undefined,
+      asLink: boolean,
+      event: MouseEvent,
+    ): void {
+      if (asLink) {
+        if (!isPlainLeftClick(event)) return;
+        event.preventDefault();
+      } else if (href !== undefined && isModClick(event)) {
+        void openNavigateInNewTab(state, action, promptCtx(), href);
+        return;
+      }
+      void triggerAction(state, action, promptCtx(), event);
+    },
+    /**
+     * Middle click on a promptText navigate button → confirm → new tab.
+     * Anchors skip this — the browser's native middle-click handles them.
+     */
+    onTriggerAuxClick(
+      action: TVueTableActionInfo,
+      href: string | undefined,
+      asLink: boolean,
+      event: MouseEvent,
+    ): void {
+      if (asLink || href === undefined || event.button !== 1) return;
+      event.preventDefault();
+      void openNavigateInNewTab(state, action, promptCtx(), href);
+    },
+    /** `newtab` from a promptText navigate menu item — confirm → `window.open`. */
+    openNewTab(action: TVueTableActionInfo): void {
+      const href = hrefFor(action);
+      if (href === undefined) return;
+      void openNavigateInNewTab(state, action, promptCtx(), href);
+    },
+  };
 }
 
 /** Context for prompt-text substitution. */

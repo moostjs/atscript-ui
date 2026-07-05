@@ -42,6 +42,8 @@ interface SetupOpts {
   slot?: (scope: Record<string, unknown>) => unknown;
   /** Mutate the freshly-built state before the toolbar renders (e.g. seed a paginated page slice + active row). */
   patchState?: (state: ReactiveTableState) => void;
+  /** Base-path mapper threaded to `state.resolveHref`. */
+  resolveHref?: (url: string) => string;
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -58,6 +60,7 @@ function setup(opts: SetupOpts = {}) {
       const { state: s, internals } = createTableState({
         client,
         query: { queryOnMount: false },
+        actions: { resolveHref: opts.resolveHref },
       });
       state = s;
       const def = mockTableDef([mockColumn("id"), mockColumn("name")]);
@@ -243,5 +246,72 @@ describe("<AsTableActions>", () => {
     expect(wrapper.find(".custom-slot").exists()).toBe(true);
     expect(wrapper.find(".custom-slot").attributes("data-level")).toBe("table");
     expect(wrapper.findAll("button.as-table-actions-btn")).toHaveLength(0);
+  });
+
+  // ── navigate default action rendered as a real link ─────────────────────
+
+  describe("navigate default action as anchor", () => {
+    const openDash: TDbActionInfo = {
+      name: "dashboard",
+      label: "Dashboard",
+      level: "table",
+      processor: "navigate",
+      value: "/dashboard",
+      default: true,
+    };
+
+    it("table-level navigate default renders an anchor with the resolveHref-mapped href", () => {
+      const { wrapper } = setup({
+        table: [openDash],
+        defaultTable: openDash,
+        resolveHref: (url) => `/base${url}`,
+      });
+      const a = wrapper.find("a.as-table-actions-btn");
+      expect(a.exists()).toBe(true);
+      expect(a.attributes("href")).toBe("/base/dashboard");
+      expect(a.attributes("data-default")).toBeDefined();
+      expect(wrapper.findAll("button.as-table-actions-btn")).toHaveLength(0);
+    });
+
+    it("plain left click on the anchor prevents default and invokes; mod-click stays native", async () => {
+      const { wrapper, actionFn } = setup({ table: [openDash], defaultTable: openDash });
+      const el = wrapper.find("a").element;
+
+      const plain = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 });
+      el.dispatchEvent(plain);
+      await flushPromises();
+      expect(plain.defaultPrevented).toBe(true);
+      expect(actionFn).toHaveBeenCalledTimes(1);
+      expect(actionFn).toHaveBeenCalledWith("dashboard", undefined);
+
+      const mod = new MouseEvent("click", {
+        bubbles: true,
+        cancelable: true,
+        button: 0,
+        metaKey: true,
+      });
+      el.dispatchEvent(mod);
+      await flushPromises();
+      expect(mod.defaultPrevented).toBe(false);
+      expect(actionFn).toHaveBeenCalledTimes(1);
+    });
+
+    it("promptText navigate default keeps the button; mod-click confirms → window.open", async () => {
+      const openSpy = vi.spyOn(window, "open").mockReturnValue(null);
+      const confirmNav: TDbActionInfo = { ...openDash, promptText: "Leave?" };
+      const { wrapper, state, actionFn } = setup({
+        table: [confirmNav],
+        defaultTable: confirmNav,
+        resolveHref: (url) => `/base${url}`,
+      });
+      expect(wrapper.find("a").exists()).toBe(false);
+      await wrapper.find("button").trigger("click", { metaKey: true, button: 0 });
+      expect(state.confirmRequest.value?.message).toBe("Leave?");
+      state.acceptPrompt();
+      await flushPromises();
+      expect(openSpy).toHaveBeenCalledWith("/base/dashboard", "_blank", "noopener,noreferrer");
+      expect(actionFn).not.toHaveBeenCalled();
+      openSpy.mockRestore();
+    });
   });
 });
