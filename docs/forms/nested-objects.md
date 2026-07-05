@@ -164,6 +164,41 @@ This combines with [Validation](/forms/validation) — the user sees
 exactly which field failed without having to hunt through closed
 sections.
 
+### Reading the error counts yourself
+
+The same data that drives the collapsed-section badge is available to
+your own components via `useAsDescendantErrorCounts()`. It returns a
+`ComputedRef<Map<string, number>>` keyed by every dotted-path prefix
+that has at least one error at or below it — so `map.get("address")`
+is the total error count anywhere under `address`. `AsObject` reads
+this map for its badge; you read it to badge a **custom** section shell
+(a tabbed layout, a side-nav) or to jump to the first errored section.
+
+```vue
+<script setup lang="ts">
+import { useAsDescendantErrorCounts } from "@atscript/vue-form";
+
+const errorCounts = useAsDescendantErrorCounts();
+
+function errorsUnder(path: string): number {
+  return errorCounts?.value.get(path) ?? 0;
+}
+</script>
+
+<template>
+  <nav>
+    <a v-for="s of sections" :key="s.path" :href="`#${s.path}`">
+      {{ s.label }}
+      <span v-if="errorsUnder(s.path)" class="badge">{{ errorsUnder(s.path) }}</span>
+    </a>
+  </nav>
+</template>
+```
+
+The composable returns `undefined` when no `<AsForm>` ancestor supplies
+the map — guard the `.value` access as above. The map is computed, so
+the counts update reactively as validation runs.
+
 ## Shared sections store
 
 `AsForm` provides a `AsNestedSectionsStore` so the entire form shares

@@ -146,6 +146,7 @@ import {
   useAsData,
   useAsErrorDismiss,
   useAsNestedSectionsStore,
+  useAsDescendantErrorCounts,
   useAsExternalErrors,
   useAsUnionVariant,
 } from "@atscript/vue-form";

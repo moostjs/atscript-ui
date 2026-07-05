@@ -185,6 +185,15 @@ const sections = provideAsNestedSectionsStore();
 
 `AsForm` also auto-opens every ancestor of an error path so users see invalid fields immediately.
 
+`useAsDescendantErrorCounts()` injects the read-only map that drives the collapsed-section error badge: `ComputedRef<Map<absolutePath, errorCount>> | undefined`, keyed by every dotted-path prefix with ≥1 error at or below it (`map.value.get("address")` = errors anywhere under `address`). Read it from a custom section shell (tabbed / side-nav) to badge your own chrome or jump to the first errored section. Returns `undefined` with no `<AsForm>` ancestor — guard `?.value`.
+
+```typescript
+import { useAsDescendantErrorCounts } from "@atscript/vue-form";
+
+const errorCounts = useAsDescendantErrorCounts();
+const count = errorCounts?.value.get("address") ?? 0;
+```
+
 To use the same collapsible chrome standalone in a custom display component — with a header-row action — render `AsCollapsible` directly: see [collapsible-sections.md](collapsible-sections.md).
 
 ## Discriminated unions — AsUnion

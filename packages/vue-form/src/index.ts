@@ -77,6 +77,7 @@ export { useAsDropdown } from "./composables/use-as-dropdown";
 export {
   provideAsNestedSectionsStore,
   useAsNestedSectionsStore,
+  useAsDescendantErrorCounts,
   type AsNestedSectionsStore,
 } from "./composables/use-as-nested-sections-store";
 

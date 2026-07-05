@@ -95,3 +95,16 @@ export function provideAsNestedSectionsStore(): AsNestedSectionsStore {
 export function useAsNestedSectionsStore(): AsNestedSectionsStore | undefined {
   return inject(STORE_KEY, undefined);
 }
+
+/**
+ * Inject the descendant-error-counts map provided by an ancestor
+ * `<AsForm>`: `Map<absolutePath, errorCount>` keyed by every dotted-path
+ * prefix that has at least one error at-or-below it. This is the same map
+ * `AsObject` reads for its collapsible error badges — custom section
+ * renderers (tabbed shells, side-nav layouts) use it to badge their own
+ * section chrome and jump to the first errored section. Returns
+ * `undefined` if no form is in scope.
+ */
+export function useAsDescendantErrorCounts(): ComputedRef<Map<string, number>> | undefined {
+  return inject(DESCENDANT_ERROR_COUNTS_KEY, undefined);
+}

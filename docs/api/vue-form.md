@@ -651,6 +651,14 @@ function provideAsNestedSectionsStore(): AsNestedSectionsStore;
 function useAsNestedSectionsStore(): AsNestedSectionsStore | undefined;
 ```
 
+### `useAsDescendantErrorCounts()`
+
+Injects the same `Map<absolutePath, errorCount>` `AsObject` reads for its collapsed-section error badges — keyed by every dotted-path prefix that has at least one error at or below it. Read it from a custom section renderer (tabbed shell, side-nav) to badge your own chrome or jump to the first errored section. Returns `undefined` when no `AsForm` is in scope.
+
+```typescript
+function useAsDescendantErrorCounts(): ComputedRef<Map<string, number>> | undefined;
+```
+
 ## Component prop & emit types
 
 ### `TAsComponentProps<V>`
