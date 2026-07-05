@@ -1,5 +1,5 @@
 import { computed, inject, type ComputedRef } from "vue";
-import { getByPath } from "@atscript/ui";
+import { getByPath, joinPath } from "@atscript/ui";
 import { PATH_PREFIX_KEY, ROOT_DATA_KEY } from "./internal-keys";
 
 export interface UseAsDataReturn {
@@ -46,9 +46,7 @@ export function useAsData(): UseAsDataReturn {
     return computed(() => {
       const w = wrapped.value as Record<string, unknown> | undefined;
       if (!w) return undefined;
-      const prefix = pathPrefix.value;
-      const path = prefix ? `${prefix}.${name}` : name;
-      return getByPath(w, path) as T | undefined;
+      return getByPath(w, joinPath(pathPrefix.value, name)) as T | undefined;
     });
   }
 

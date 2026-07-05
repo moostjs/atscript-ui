@@ -111,7 +111,11 @@ The fields you'll set most:
 | `1, 3, 5…` (odd)  | **section** | Clickable `<summary>`, top divider, `<h3>` at level ≤ 1 else `<h4>`. |
 | `2, 4, 6…` (even) | **island**  | Padded card with an even/odd background layer alternating by depth.  |
 
-For a standalone top-level section, pass `level: 1`.
+For a standalone top-level section, pass `level: 1`. If instead you're building
+a container renderer that mounts a structured field's children itself (a tabbed
+shell, side-nav), don't hardcode a level — read and bump it relative to the
+parent with [`useAsLevel` / `provideAsNestedLevel`](/forms/custom-components#level-alternation)
+(or `AsIterator`'s `:levels` prop) so the alternation stays correct at any depth.
 
 ## Slots
 

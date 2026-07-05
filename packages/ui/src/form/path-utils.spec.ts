@@ -1,7 +1,29 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { createFormData, detectUnionVariant } from "./path-utils";
+import { createFormData, detectUnionVariant, joinPath } from "./path-utils";
 import type { FormUnionVariant } from "./types";
+
+describe("joinPath", () => {
+  it("joins a non-empty prefix and segment with a dot", () => {
+    expect(joinPath("a", "b")).toBe("a.b");
+  });
+
+  it("joins dotted prefix and dotted segment", () => {
+    expect(joinPath("a.b", "c.d")).toBe("a.b.c.d");
+  });
+
+  it("returns the prefix as-is when the segment is empty (no trailing dot)", () => {
+    expect(joinPath("a.b", "")).toBe("a.b");
+  });
+
+  it("returns the segment as-is when the prefix is empty (no leading dot)", () => {
+    expect(joinPath("", "c.d")).toBe("c.d");
+  });
+
+  it("returns empty string when both sides are empty", () => {
+    expect(joinPath("", "")).toBe("");
+  });
+});
 
 function literal(value: string) {
   return defineAnnotatedType().designType("string").value(value).$type;

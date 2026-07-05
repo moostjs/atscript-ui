@@ -21,9 +21,10 @@ import type { AsFormPatchHandle } from "./use-as-form-patch";
 //   ROOT_DATA_KEY           -> useAsData
 //   DISMISS_EXTERNAL_AT_KEY -> useAsErrorDismiss
 //   FORM_PATCH_KEY          -> useAsFormPatch
+//   LEVEL_KEY               -> useAsLevel
 //   FORM_STATE_KEY, FORM_DATA_KEY, FORM_CONTEXT_KEY, ERRORS_KEY,
 //     COMPONENTS_KEY, ACTION_HANDLER_KEY, CHANGE_HANDLER_KEY,
-//     UNION_CONTEXT_KEY, LEVEL_KEY, HIDE_ROOT_TITLE_KEY -> consumed via
+//     UNION_CONTEXT_KEY, HIDE_ROOT_TITLE_KEY -> consumed via
 //     useAsField / useAsState / useAsUnionVariant (and via the
 //     internal-only useFormContext); no standalone reader yet.
 //

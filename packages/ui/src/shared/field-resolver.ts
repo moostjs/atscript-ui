@@ -1,5 +1,10 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import { UI_FORM_ATTR, UI_FORM_FN_ATTR } from "./annotation-keys";
+import {
+  UI_FORM_ATTR,
+  UI_FORM_FN_ATTR,
+  UI_FORM_FN_HIDDEN,
+  UI_FORM_HIDDEN,
+} from "./annotation-keys";
 
 // ── Resolve options ──────────────────────────────────────────
 
@@ -132,6 +137,22 @@ export function hasComputedAnnotations(prop: TAtscriptAnnotatedType): boolean {
   return activeResolver.hasComputedAnnotations(prop);
 }
 
+/**
+ * SSOT for field hidden resolution — resolves `@ui.form.fn.hidden`
+ * (dynamic, via the active resolver) with static `@ui.form.hidden`
+ * presence as the fallback. Absent both → `false` (visible).
+ */
+export function isFieldHidden(
+  prop: TAtscriptAnnotatedType,
+  scope: Record<string, unknown>,
+): boolean {
+  return (
+    resolveFieldProp<boolean>(prop, UI_FORM_FN_HIDDEN, UI_FORM_HIDDEN, scope, {
+      staticAsBoolean: true,
+    }) ?? false
+  );
+}
+
 // ── Direct metadata helpers (no resolver needed) ─────────────
 
 /**
@@ -145,6 +166,11 @@ export function getFieldMeta<K extends keyof AtscriptMetadata>(
 export function getFieldMeta(prop: TAtscriptAnnotatedType, key: string): unknown;
 export function getFieldMeta(prop: TAtscriptAnnotatedType, key: string): unknown {
   return prop.metadata.get(key as keyof AtscriptMetadata);
+}
+
+/** Checks whether a metadata key is present on an ATScript prop. */
+export function hasFieldMeta(prop: TAtscriptAnnotatedType, key: string): boolean {
+  return prop.metadata.has(key);
 }
 
 /** Ensures a value is an array — returns as-is if already one, wraps in `[x]` otherwise. */

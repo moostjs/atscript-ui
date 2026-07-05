@@ -80,7 +80,17 @@ export {
   useAsDescendantErrorCounts,
   type AsNestedSectionsStore,
 } from "./composables/use-as-nested-sections-store";
-export { provideAsNestedLevel } from "./composables/use-as-nested-level";
+export { useAsLevel, provideAsNestedLevel } from "./composables/use-as-level";
+
+// Composables — custom container renderers (section/pane replacements)
+export { useAsFieldScope } from "./composables/use-as-field-scope";
+export type {
+  UseAsFieldScopeReturn,
+  TResolveFieldPropOptions,
+} from "./composables/use-as-field-scope";
+export { useAsOptionalField } from "./composables/use-as-optional-field";
+export type { UseAsOptionalFieldReturn } from "./composables/use-as-optional-field";
+export { useAsVisibleFields } from "./composables/use-as-visible-fields";
 
 // Composables — focus utilities
 export {
@@ -132,6 +142,10 @@ export {
   resetDefaultClientFactory,
   type ClientFactory,
 } from "@atscript/ui";
+// Framework-agnostic helpers used alongside the container-renderer
+// composables — re-exported so consumers don't reach into the transitive
+// `@atscript/ui` dep.
+export { joinPath, hasFieldMeta, isFieldHidden } from "@atscript/ui";
 // Change-tracking value shapes — re-exported so a consumer of
 // `useAsFormPatch()` can type holding variables (`FormFieldChange[]`) and the
 // `getPatch` options (`FormDiffOptions`) without reaching into the transitive

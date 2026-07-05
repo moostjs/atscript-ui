@@ -1,17 +1,7 @@
-<script lang="ts">
-import type { TFnScope } from "@atscript/ui-fns";
-
-// Module-level singleton — shared across all AsField instances
-const emptyScope: TFnScope = {
-  v: undefined,
-  data: {} as Record<string, unknown>,
-  context: {} as Record<string, unknown>,
-  entry: undefined,
-};
-</script>
-
 <script setup lang="ts" generic="TFormData = any, TFormContext = any">
 import { useAsField } from "../composables/use-as-field";
+import { emptyScope } from "../composables/use-as-field-scope";
+import { useAsOptionalField } from "../composables/use-as-optional-field";
 import {
   isObjectField,
   isArrayField,
@@ -23,8 +13,8 @@ import {
   resolveAttrs,
   resolveSingularLabel,
   getFieldMeta,
-  createFormData,
-  createFormValueResolver,
+  hasFieldMeta,
+  isFieldHidden,
   createFieldValidator,
   buildGridClasses,
   resolveGridSpec,
@@ -51,7 +41,6 @@ import {
   UI_FORM_FN_CLASSES,
   UI_FORM_FN_DESCRIPTION,
   UI_FORM_FN_DISABLED,
-  UI_FORM_FN_HIDDEN,
   UI_FORM_FN_HINT,
   UI_FORM_FN_LABEL,
   UI_FORM_FN_PLACEHOLDER,
@@ -79,7 +68,7 @@ import {
 } from "@atscript/ui";
 import { useAsData } from "../composables/use-as-data";
 import { useAsLocale } from "../composables/use-as-locale";
-import { buildFieldEntry } from "@atscript/ui-fns";
+import { buildFieldEntry, type TFnScope } from "@atscript/ui-fns";
 import {
   computed,
   inject,
@@ -362,18 +351,7 @@ function setModel(value: unknown) {
 }
 
 // ── Optional toggle ─────────────────────────────────────────
-function toggleOptional(enabled: boolean) {
-  if (enabled) {
-    const resolver = createFormValueResolver(
-      rootFormData().value as Record<string, unknown>,
-      formContext.value,
-    );
-    setModel(createFormData(props.field.prop, resolver).value);
-  } else {
-    setModel(undefined);
-  }
-  handleChange("update", absolutePath.value, getModel());
-}
+const { toggle: toggleOptional } = useAsOptionalField(props.field);
 
 // ── Component resolution ────────────────────────────────────
 // Precedence: @ui.form.component (named) > @ui.form.type / @ui.type
@@ -417,7 +395,7 @@ if (props.field.allStatic) {
 
   // Constraints: static booleans
   disabled = getFieldMeta(prop, UI_FORM_DISABLED) !== undefined;
-  hidden = getFieldMeta(prop, UI_FORM_HIDDEN) !== undefined;
+  hidden = hasFieldMeta(prop, UI_FORM_HIDDEN);
   optional = props.field.prop.optional ?? false;
   readonly = getFieldMeta(prop, META_READONLY) !== undefined;
 
@@ -493,9 +471,7 @@ if (props.field.allStatic) {
 
   hidden = maybeComputed(
     hasFn.has("hidden"),
-    () =>
-      resolveFieldProp<boolean>(prop, UI_FORM_FN_HIDDEN, UI_FORM_HIDDEN, bs.value, boolOpts) ??
-      false,
+    () => isFieldHidden(prop, bs.value),
     getFieldMeta(prop, UI_FORM_HIDDEN) !== undefined,
   );
 

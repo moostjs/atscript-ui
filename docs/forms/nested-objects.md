@@ -280,6 +280,12 @@ const props = defineProps<TAsComponentProps>();
 `AsFieldShell` keeps the label/description/error chrome consistent
 with built-in object fields.
 
+For a renderer that replaces the object's chrome entirely and re-lays-out its
+children — a tabbed shell, side-nav, or wizard — reach for the container-renderer
+kit (`useAsVisibleFields`, `useAsFieldScope`, `useAsOptionalField`,
+`useAsLevel` / `provideAsNestedLevel`, and `AsIterator`'s `:fields` / `:path-prefix`
+/ `:levels` props). See [Container renderers](/forms/custom-components#container-renderers).
+
 ## Dynamic visibility on nested fields
 
 Combine nesting with `@ui.form.fn.*` for context-aware children:

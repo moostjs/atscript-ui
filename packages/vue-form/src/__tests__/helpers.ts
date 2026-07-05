@@ -2,7 +2,7 @@ import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { createFormDef, createFormData } from "@atscript/ui";
 import { mount } from "@vue/test-utils";
-import { reactive } from "vue";
+import { reactive, type VNode } from "vue";
 import AsForm from "../components/as-form.vue";
 import { createDefaultTypes } from "../composables/create-default-types";
 
@@ -53,6 +53,8 @@ export function mountForm(
     errors?: Record<string, string>;
     initialValue?: unknown;
     trackChanges?: boolean;
+    /** Render probe content into the `form.before` slot (inside AsForm providers). */
+    slot?: () => VNode | VNode[];
   },
 ) {
   const def = createFormDef(type);
@@ -71,7 +73,27 @@ export function mountForm(
       errors: opts?.errors,
       trackChanges: opts?.trackChanges,
     },
+    slots: opts?.slot ? { "form.before": opts.slot } : undefined,
   });
 
   return { wrapper, def, formData };
+}
+
+// ── In-form probe mount ─────────────────────────────────────
+
+/**
+ * Mount `<AsForm>` with probe content in the `form.before` slot — a descendant
+ * of AsForm's providers, so composables called inside it resolve the form
+ * context (state, root data, path prefix). Exercises container-renderer
+ * composables outside an AsField.
+ */
+export function mountFormWithProbe(
+  type: TAtscriptAnnotatedType,
+  slot: () => VNode | VNode[],
+  opts?: {
+    formContext?: Record<string, unknown>;
+    initialValue?: unknown;
+  },
+) {
+  return mountForm(type, { ...opts, slot });
 }

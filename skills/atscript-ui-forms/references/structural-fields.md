@@ -129,7 +129,7 @@ Swap it via `:types="{ ...createDefaultTypes(), array: MyDnDList }"` for drag-re
 | Root (`level === 0`) | Flat grid via `AsIterator` | No collapsible wrapper. `hideRootTitle` prop on AsForm suppresses the title. |
 | Nested (`level > 0`) | Wrapped in `AsCollapsible` | Click to expand/collapse. Open state shared via `useAsNestedSectionsStore`.  |
 
-The nesting level is provided downward by AsField via `LEVEL_KEY` — incremented for every nested structured field or union.
+The nesting level is provided downward by AsField via `LEVEL_KEY` — incremented for every nested structured field or union. Read it in a custom container renderer with `useAsLevel(): ComputedRef<number>` (`-1` outside any structured field; root struct = `0`); bump it for a mounted-children subtree with `provideAsNestedLevel(levels = 1)`. Full container-renderer kit in [customization.md](customization.md#container-renderers-custom-section-shells).
 
 ## Path nesting
 

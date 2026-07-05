@@ -1,5 +1,9 @@
 import type { TFieldEvaluated, TFnScope } from "@atscript/ui-fns";
-import { getByPath as _getByPath, setByPath as _setByPath } from "@atscript/ui";
+import {
+  getByPath as _getByPath,
+  joinPath as _joinPath,
+  setByPath as _setByPath,
+} from "@atscript/ui";
 import type { TFormState } from "./types";
 import { computed, inject, provide, type ComputedRef } from "vue";
 import {
@@ -45,17 +49,14 @@ export function useFormContext<TFormData = any, TFormContext = any>(componentNam
 
   // ── Path-join utility (reactive — returns ComputedRef) ────
   function joinPath(segment: string | (() => string)): ComputedRef<string> {
-    return computed(() => {
-      const s = typeof segment === "function" ? segment() : segment;
-      if (!s) return pathPrefix.value;
-      return pathPrefix.value ? `${pathPrefix.value}.${s}` : s;
-    });
+    return computed(() =>
+      _joinPath(pathPrefix.value, typeof segment === "function" ? segment() : segment),
+    );
   }
 
   // ── Path-build utility (non-reactive — plain function) ───
   function buildPath(segment: string): string {
-    if (!segment) return pathPrefix.value;
-    return pathPrefix.value ? `${pathPrefix.value}.${segment}` : segment;
+    return _joinPath(pathPrefix.value, segment);
   }
 
   // ── Path-aware data access (closure over rootFormData) ──────

@@ -407,9 +407,20 @@ function getFieldMeta<K extends keyof AtscriptMetadata>(
   prop: TAtscriptAnnotatedType,
   key: K,
 ): AtscriptMetadata[K] | undefined;
+
+/** Whether a metadata key is present on a prop (no resolver needed). */
+function hasFieldMeta(prop: TAtscriptAnnotatedType, key: string): boolean;
+
+/**
+ * SSOT for field hidden resolution — resolves `@ui.form.fn.hidden` (dynamic, via
+ * the active resolver) with static `@ui.form.hidden` presence as the fallback.
+ * Absent both → `false` (visible). `scope` is the fn scope for the field
+ * (`{ v, data, context, entry }`); dynamic resolution needs `@atscript/ui-fns`.
+ */
+function isFieldHidden(prop: TAtscriptAnnotatedType, scope: Record<string, unknown>): boolean;
 ```
 
-`resolveStatic` is exposed so dynamic resolvers (in `ui-fns`) can fall back to it without duplicating logic.
+`resolveStatic` is exposed so dynamic resolvers (in `ui-fns`) can fall back to it without duplicating logic. `hasFieldMeta` and `isFieldHidden` are shared by `AsField` and vue-form's [`useAsVisibleFields`](/api/vue-form#useasvisiblefields-fields); both are re-exported from `@atscript/vue-form` for container-renderer code.
 
 ### `parseStaticAttrs(value)` / `resolveAttrs(prop, scope, keys?)`
 
@@ -648,6 +659,14 @@ function deepClone<T>(value: T, unwrap?: CloneUnwrap): T;
 ## Path utilities
 
 Form data is wrapped: `{ value: domainData }`. These helpers de-reference the wrapper automatically.
+
+### `joinPath(prefix, segment)`
+
+Joins a dot-separated path prefix with a segment. Empty-safe on both sides: an empty segment returns the prefix as-is, an empty prefix returns the segment as-is (no leading/trailing dots). The single primitive `AsField` / `AsIterator` and container renderers use to build absolute child paths. Re-exported from `@atscript/vue-form` for container-renderer code.
+
+```typescript
+function joinPath(prefix: string, segment: string): string;
+```
 
 ### `getByPath(data, path)` / `setByPath(data, path, value)`
 

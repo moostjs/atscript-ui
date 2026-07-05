@@ -11,6 +11,16 @@ import { resolveFieldProp } from "../shared/field-resolver";
 // ── Path utilities ──────────────────────────────────────────
 
 /**
+ * Joins a dot-separated path prefix with a segment. Empty-safe on both
+ * sides: an empty segment returns the prefix as-is, an empty prefix
+ * returns the segment as-is (no leading/trailing dots).
+ */
+export function joinPath(prefix: string, segment: string): string {
+  if (!segment) return prefix;
+  return prefix ? `${prefix}.${segment}` : segment;
+}
+
+/**
  * Gets a nested value by dot-separated path.
  * Always dereferences `obj.value` first (form data is wrapped in `{ value: domainData }`).
  * When `path` is empty, returns the root domain data (`obj.value`).

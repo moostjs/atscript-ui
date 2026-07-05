@@ -120,7 +120,9 @@ export {
   resolveFormProp,
   resolveStatic,
   hasComputedAnnotations,
+  isFieldHidden,
   getFieldMeta,
+  hasFieldMeta,
   asArray,
   parseStaticAttrs,
   resolveAttrs,
@@ -129,6 +131,7 @@ export { optKey, optLabel, parseStaticOptions, resolveOptions } from "./value-he
 
 // ── Path utilities ──────────────────────────────────────────
 export {
+  joinPath,
   getByPath,
   setByPath,
   deleteByPath,

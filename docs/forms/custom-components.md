@@ -349,8 +349,298 @@ a stepper with `+`/`-` buttons over `number` — direct prop binding
 (`props.model.value = ...`) stays cleaner. A `TagInput` or `NumberStepper`
 typically follows that pattern.
 
+## Container renderers
+
+A custom `@ui.form.component` on a **structured (object) field** replaces that
+field's entire section chrome. Instead of the stock `AsObject` collapsible,
+your component receives the object's `FormObjectFieldDef` (via `props.field`)
+and lays its children out however you like — a tabbed shell, a side-nav, a
+wizard, a two-column split — then re-renders the children yourself. The
+children inherit the form's data binding, validation, path resolution, and
+level-based section/island alternation, so they stay first-class fields.
+
+A small kit of composables plus a few `AsIterator` props make this possible
+without reaching into form internals. All are exported from
+`@atscript/vue-form`:
+
+| Primitive                                                                         | Role in a container renderer                                                                                                                                  |
+| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`useAsVisibleFields`](#partitioning-children-useasvisiblefields)                 | Partition the child list, dropping statically- and dynamically-hidden children (`@ui.form.hidden` / `@ui.form.fn.hidden`) with AsField's exact semantics.     |
+| [`useAsFieldScope`](#reading-custom-metadata-useasfieldscope)                     | Compute a child's absolute path and resolve custom `@ui.*` annotation pairs (static + `fn`) against its live scope — for tab icons, group keys, layout hints. |
+| [`useAsOptionalField`](#optional-sections-useasoptionalfield)                     | Enable (instantiate defaults) or clear an optional object child, without mounting `<AsField>` for it.                                                         |
+| [`useAsLevel`](#level-alternation) + [`provideAsNestedLevel`](#level-alternation) | Read / bump the section nesting level so your chrome slots back into the stock section/island alternation.                                                    |
+| `AsIterator` `:def` / `:path-prefix` / `:fields` / `:levels`                      | Re-render a slice of children through the stock pipeline at the right path prefix and level.                                                                  |
+
+Structural children you don't want to hand-layout — arrays, unions — are best
+[delegated straight to `<AsField>`](#delegating-arrays-and-unions-to-asfield),
+which carries their add/remove affordances and variant pickers for free.
+
+### Worked example — a tabbed object shell
+
+Tag an object whose direct children are themselves objects, and render one tab
+per child section:
+
+```atscript
+@meta.label 'Account settings'
+@ui.form.component 'tabbed'
+settings: {
+    @meta.label 'Profile'
+    profile: {
+        firstName: string
+        lastName: string
+    }
+
+    @meta.label 'Billing'
+    billing: {
+        plan: string
+        seats: number
+    }
+}
+```
+
+```vue
+<!-- TabbedShell.vue -->
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import {
+  AsIterator,
+  useAsVisibleFields,
+  useAsFieldScope,
+  type TAsComponentProps,
+} from "@atscript/vue-form";
+import {
+  isObjectField,
+  META_LABEL,
+  UI_FORM_FN_LABEL,
+  type FormFieldDef,
+  type FormObjectFieldDef,
+} from "@atscript/ui";
+
+const props = defineProps<TAsComponentProps>();
+
+const objectDef = computed(() => (props.field as FormObjectFieldDef).objectDef);
+
+// Drop hidden children (static + dynamic fn.hidden) with AsField's semantics.
+const visible = useAsVisibleFields(() => objectDef.value.fields);
+
+// One tab per nested-object child; leaf children render above the tabs.
+const tabs = computed(() => visible.value.filter(isObjectField));
+const leaves = computed(() => visible.value.filter((f) => !isObjectField(f)));
+
+const { resolveProp } = useAsFieldScope();
+function tabLabel(f: FormFieldDef): string {
+  return resolveProp<string>(f, UI_FORM_FN_LABEL, META_LABEL) ?? f.name;
+}
+
+const active = ref(0);
+</script>
+
+<template>
+  <div :class="props.class">
+    <!-- Leaf fields rendered inline through the stock pipeline. -->
+    <AsIterator v-if="leaves.length" :def="objectDef" :fields="leaves" />
+
+    <nav role="tablist">
+      <button
+        v-for="(t, i) of tabs"
+        :key="t.path"
+        type="button"
+        role="tab"
+        :aria-selected="i === active"
+        @click="active = i"
+      >
+        {{ tabLabel(t) }}
+      </button>
+    </nav>
+
+    <!-- Active tab body: render that child object's fields directly, descending
+         the path prefix into it and bumping one level so its own children
+         alternate exactly as they would inside the stock section. -->
+    <AsIterator
+      v-if="tabs[active]"
+      :def="(tabs[active] as FormObjectFieldDef).objectDef"
+      :path-prefix="tabs[active].name"
+      :levels="1"
+    />
+  </div>
+</template>
+```
+
+Register it in `:components` and the object renders as tabs, each tab body a
+live slice of the form:
+
+```vue
+<AsForm :def="def" :form-data="formData" :types="types" :components="{ tabbed: TabbedShell }" />
+```
+
+Because this is a **bare root** (no `AsFieldShell`), bind `:class="props.class"`
+so the field's grid placement applies — see [Bare root](#bare-root-skipping-asfieldshell).
+
+### Descending into children with `AsIterator`
+
+`AsIterator` is the single primitive for re-rendering a `FormDef`'s fields
+through the stock `AsField` pipeline. Four props control the slice:
+
+- **`:def`** — the `FormDef` to iterate. For the object you replaced, that's
+  `(props.field as FormObjectFieldDef).objectDef`; to descend into a child
+  object, pass that child's `.objectDef`.
+- **`:fields`** — an explicit field list overriding `def.fields`. Feed it a
+  precomputed partition (the visible leaves, one tab's worth of children) so
+  each field renders exactly once.
+- **`:path-prefix`** — a dotted segment prepended to every child's path. When
+  you pass a child object's `.objectDef` as `:def`, add `:path-prefix="child.name"`
+  so the children resolve at their true absolute paths. Identity / non-reactive.
+- **`:levels`** — bump the section nesting level for the rendered children
+  (sugar over `provideAsNestedLevel`, below). Identity / non-reactive.
+
+Paths and levels the container inherits automatically: `AsField` already
+provides the replaced object's absolute path and its nesting level to your
+component's subtree, so an `AsIterator` with no `:path-prefix` / `:levels`
+re-renders the object's own direct children exactly as `AsObject` would.
+
+### Level alternation
+
+Structured sections alternate chrome by depth — odd levels render as
+**sections**, even levels as **islands** (see
+[Collapsible Sections](/forms/collapsible-sections)). `useAsLevel()` reads the
+current level as a `ComputedRef<number>` (`-1` outside any structured field):
+
+```typescript
+import { useAsLevel } from "@atscript/vue-form";
+
+const level = useAsLevel(); // ComputedRef<number>
+```
+
+When your chrome **stands in for** a structural level — you render a child
+object's fields directly rather than letting that child render its own section
+— the children would otherwise land one level too shallow and break the
+alternation. Bump the level for that subtree with `provideAsNestedLevel(levels = 1)`,
+or the equivalent `:levels` prop on `AsIterator`:
+
+```typescript
+import { provideAsNestedLevel } from "@atscript/vue-form";
+
+provideAsNestedLevel(1); // children render at parent + 1
+```
+
+The bump is **relative** to the injected parent level, so the same renderer
+stays correct at any depth — a tabbed shell nested three objects deep resumes
+the alternation from wherever it sits. Pass the number of section levels your
+chrome absorbs (usually `1`). In the tabbed example above, each tab body
+absorbs the child object's own island, so `:levels="1"` keeps the grandchildren
+one step further along the alternation, matching the stock rendering.
+
+### Partitioning children — `useAsVisibleFields`
+
+`useAsVisibleFields(fields)` returns a `ComputedRef<FormFieldDef[]>` with the
+hidden children removed, applying AsField's exact hidden semantics: a static
+`@ui.form.hidden` hides unconditionally; a dynamic `@ui.form.fn.hidden` is
+resolved against the child's live fn scope. It subscribes to form data only
+when some child actually carries a `fn.hidden` key, so a purely static field
+list stays inert.
+
+```typescript
+import { useAsVisibleFields } from "@atscript/vue-form";
+
+// `fields` is a MaybeRefOrGetter — pass a getter to stay reactive.
+const visible = useAsVisibleFields(() => objectDef.value.fields);
+```
+
+Resolving `@ui.form.fn.hidden` (like any `fn` annotation) requires the dynamic
+resolver — call `installDynamicResolver()` from `@atscript/ui-fns` once at app
+startup. Without it, only the static `@ui.form.hidden` presence is honored.
+
+### Reading custom metadata — `useAsFieldScope`
+
+`useAsFieldScope()` returns plain (non-reactive) functions for working with a
+child field's path and annotations. Wrap the calls in your own `computed` to
+inherit reactivity over form data.
+
+```typescript
+import { useAsFieldScope } from "@atscript/vue-form";
+
+const { absolutePath, scopeFor, resolveProp } = useAsFieldScope();
+```
+
+- **`absolutePath(field)`** — the child's absolute dotted path (current prefix
+  joined with `field.path`).
+- **`scopeFor(field, { withEntry? })`** — the fn scope `{ v, data, context }`
+  with `v` read at the child's absolute path. `withEntry` layers the evaluated
+  field `entry` on top (display-style fns take the entry-carrying scope,
+  constraint fns take the bare one — mirrors AsField's dual-scope pattern).
+- **`resolveProp<T>(field, fnKey?, staticKey?, opts?)`** — resolve a custom
+  annotation pair, presence-gated like AsField: neither key present →
+  `undefined` without touching reactive state; only the static key present →
+  resolved against a shared inert scope; the `fn` key present → resolved
+  against the full reactive scope. Use it to read a tab icon, a group key, or
+  any bespoke `@ui.*` annotation you tag on children.
+
+```typescript
+// A custom `@ui.form.tab.icon` (static) / `@ui.form.fn.tab.icon` (dynamic) pair:
+const icon = resolveProp<string>(child, "ui.form.fn.tab.icon", "ui.form.tab.icon");
+```
+
+`fn`-key resolution again requires `installDynamicResolver()` from
+`@atscript/ui-fns`; the static key resolves with or without it.
+
+### Optional sections — `useAsOptionalField`
+
+For an optional object child, `useAsOptionalField(field)` gives you the same
+enable/clear behavior `AsField` wires onto its optional toggle, usable from
+your own chrome (a tab that lights up when its section is enabled, an "Add"
+button on a side-nav item):
+
+```typescript
+import { useAsOptionalField } from "@atscript/vue-form";
+
+const { optional, enabled, toggle } = useAsOptionalField(child);
+// optional: boolean          — declared `optional?` in the type
+// enabled:  ComputedRef<bool> — currently holds a value (`!= null`)
+// toggle(on): void            — on → instantiate annotated defaults; off → clear to undefined
+```
+
+`toggle(true)` initializes the section with its `@meta.default` /
+`@ui.form.fn.value` defaults and emits the blur-committed `update` change for
+the field's absolute path; `toggle(false)` clears it to `undefined`. A
+DB-roundtripped `null` counts as unset.
+
+### Delegating arrays and unions to `<AsField>`
+
+Objects are the natural thing to hand-layout, but array and union children
+carry their own machinery — add/remove affordances honoring
+`@expect.minLength` / `.maxLength`, per-item variant pickers, within-mount
+variant stashes. Rather than reimplement that, render those children through
+`<AsField>` and inherit all of it:
+
+```vue
+<template>
+  <div v-for="child of visible" :key="child.path">
+    <MyObjectPane v-if="isObjectField(child)" :field="child" />
+    <!-- arrays, unions, leaves: let AsField pick the renderer and wire behavior -->
+    <AsField v-else :field="child" />
+  </div>
+</template>
+```
+
+`<AsField>` reads the same provided path prefix and level, so a delegated child
+lands at the correct absolute path and alternation depth with no extra props.
+
+### Badges and expand/collapse
+
+Two already-public composables round out a container renderer's chrome without
+re-explaining here:
+
+- [`useAsDescendantErrorCounts()`](/forms/nested-objects#reading-the-error-counts-yourself)
+  — the `Map<absolutePath, errorCount>` behind collapsed-section error badges.
+  Badge your tabs / nav items, or jump to the first errored section.
+- [`useAsNestedSectionsStore()`](/forms/nested-objects#shared-sections-store) —
+  the shared expand/collapse registry, so your chrome can drive (or read)
+  open state alongside the form's stock sections.
+
 ## Next steps
 
 - [Customization](/forms/customization) — wire your component into the form
+- [Collapsible Sections](/forms/collapsible-sections) — own a section header
+- [Nested Objects](/forms/nested-objects) — how the stock object chrome nests
 - [Locale & currency](/forms/locale) — locale-aware composables
 - [Validation](/forms/validation) — how the `error` prop gets populated

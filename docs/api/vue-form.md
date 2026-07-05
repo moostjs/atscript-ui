@@ -10,6 +10,7 @@ Vue 3 form library backed by `@atscript/ui`. Three tiers of components, ~30 comp
 - [Composables — form / state](#composables-form-state)
 - [Composables — change tracking](#composables-change-tracking)
 - [Composables — field & structure](#composables-field-structure)
+- [Composables — custom container renderers](#composables-custom-container-renderers)
 - [Composables — value help / dropdown](#composables-value-help-dropdown)
 - [Composables — choreography](#composables-choreography)
 - [Composables — date / number / decimal](#composables-date-number-decimal)
@@ -84,6 +85,16 @@ interface AsIteratorProps {
   def: FormDef;
   /** Optional dotted segment to prepend to every child field's path. */
   pathPrefix?: string;
+  /** Explicit field list to render — defaults to `def.fields`. Feed a precomputed partition so each field renders once. */
+  fields?: FormFieldDef[];
+  /**
+   * Bump the nesting level for rendered children RELATIVE to the injected
+   * parent level (sugar over `provideAsNestedLevel`). For custom container
+   * panes standing in for a structured field's section chrome. Setup-time /
+   * non-reactive — an identity of the pane, like `pathPrefix`. See
+   * [Container renderers](/forms/custom-components#level-alternation).
+   */
+  levels?: number;
   onRemove?: () => void;
   canRemove?: boolean;
   removeLabel?: string;
@@ -482,6 +493,118 @@ Reads the current union context (`TAsUnionContext`) injected by the closest `AsU
 function useAsUnionVariant(): TAsUnionContext | undefined;
 ```
 
+## Composables — custom container renderers
+
+Primitives for a custom `@ui.form.component` that **replaces a structured
+(object) field's chrome** — a tabbed shell, side-nav, or wizard — and
+re-renders the object's children itself. See [Container renderers](/forms/custom-components#container-renderers)
+for the narrative and a worked example.
+
+### `useAsLevel()`
+
+Reactive read-only access to the structured-field nesting level at the current
+point in the `<AsForm>` tree. `-1` outside any structured field; the root
+structured field renders at `0`, its structured children at `1`, and so on.
+Drives the section/island alternation (odd → section, even → island).
+
+```typescript
+function useAsLevel(): ComputedRef<number>;
+```
+
+### `provideAsNestedLevel(levels?)`
+
+Bump the structured-field nesting level for the current Vue subtree,
+**relative** to the injected parent level. Call it in a container renderer that
+stands in for a structural section and mounts the children directly, so those
+children resume the stock section/island alternation instead of landing a level
+too shallow. `levels` is the number of section slots your chrome absorbs
+(default `1`). Because the bump is relative, the same renderer stays correct at
+any depth. `AsIterator`'s [`levels` prop](#asiterator) is sugar over this.
+
+```typescript
+function provideAsNestedLevel(levels?: number): void; // default 1
+```
+
+::: warning BREAKING
+`provideAsNestedLevel` changed from **absolute** to **relative** semantics. It
+now reads the injected parent level and provides `parent + levels`, where
+`levels` defaults to `1`. A previous call site that hardcoded
+`provideAsNestedLevel(1)` for a root-level container keeps identical behavior at
+root **and** becomes correct when the container is nested (where the old
+absolute value was wrong).
+:::
+
+### `useAsFieldScope()`
+
+Child-field scope building + annotation resolution for a container renderer,
+without mounting `<AsField>` per child. Returns plain (non-reactive) functions —
+wrap calls in your own `computed` to inherit reactivity over form data.
+
+```typescript
+interface TResolveFieldPropOptions<T> extends TResolveOptions<T> {
+  /** Layer the field's evaluated `entry` into the fn scope (display-style fns). */
+  withEntry?: boolean;
+}
+
+interface UseAsFieldScopeReturn {
+  /** Absolute dotted path of a child field (current prefix + `field.path`). */
+  absolutePath: (field: FormFieldDef) => string;
+  /** Fn scope `{ v, data, context }` with `v` at the child's absolute path; `withEntry` layers the evaluated field entry on top. */
+  scopeFor: (field: FormFieldDef, opts?: { withEntry?: boolean }) => TFnScope;
+  /**
+   * Resolve a `fnKey`/`staticKey` annotation pair, presence-gated like AsField:
+   * neither key present → `undefined` (no reactive read); only the static key →
+   * resolved against a shared inert scope; the fn key present → resolved against
+   * the full reactive scope. Resolving the `fn` key needs `installDynamicResolver()`
+   * from `@atscript/ui-fns`.
+   */
+  resolveProp: <T>(
+    field: FormFieldDef,
+    fnKey?: string,
+    staticKey?: string,
+    opts?: TResolveFieldPropOptions<T>,
+  ) => T | undefined;
+}
+
+function useAsFieldScope(): UseAsFieldScopeReturn;
+```
+
+`TResolveOptions` and `TFnScope` come from `@atscript/ui` and `@atscript/ui-fns`
+respectively.
+
+### `useAsOptionalField(field)`
+
+Enable / clear an optional structured child — the same behavior `AsField` wires
+onto its optional toggle, usable from your own chrome.
+
+```typescript
+interface UseAsOptionalFieldReturn {
+  /** Whether the field is declared optional in its atscript type. */
+  optional: boolean;
+  /** Whether the optional field currently holds a value (`!= null`). */
+  enabled: ComputedRef<boolean>;
+  /** `true` → initialize with annotated defaults; `false` → clear to `undefined`. Emits the blur-committed `update` change. */
+  toggle: (enabled: boolean) => void;
+}
+
+function useAsOptionalField(field: FormFieldDef): UseAsOptionalFieldReturn;
+```
+
+### `useAsVisibleFields(fields)`
+
+Partition a field list down to the currently visible fields with AsField's exact
+hidden semantics: static `@ui.form.hidden` hides unconditionally; dynamic
+`@ui.form.fn.hidden` resolves against the field's live fn scope. Subscribes to
+form data only when some field actually carries a `fn.hidden` key. `fields` is a
+`MaybeRefOrGetter` — pass a getter to stay reactive. `fn.hidden` resolution
+requires `installDynamicResolver()` from `@atscript/ui-fns`.
+
+```typescript
+function useAsVisibleFields(
+  fields: MaybeRefOrGetter<FormFieldDef[] | undefined>,
+): ComputedRef<FormFieldDef[]>;
+```
+
 ## Composables — value help / dropdown
 
 ### `useAsValueHelp(options)`
@@ -813,6 +936,8 @@ Return type of [`useAsFormPatch()`](#useasformpatch) — the change-tracking sur
 `setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory` — see [@atscript/ui — Client factory](/api/ui#client-factory).
 
 `FormFieldChange`, `FormDiffOptions`, `FormRebaseOptions` — change-tracking value shapes, re-exported so `useAsFormPatch()` consumers can type holding variables, `getPatch` options, and `rebaseOnto` options without reaching into the transitive `@atscript/ui` dep. See [@atscript/ui — Form diff engine](/api/ui#form-diff-engine).
+
+`joinPath`, `hasFieldMeta`, `isFieldHidden` — framework-agnostic path/metadata helpers re-exported so container-renderer code can join dotted paths and check hidden state alongside the container composables without a second import. See [@atscript/ui — Path utilities](/api/ui#path-utilities) and [Field resolver](/api/ui#field-resolver).
 
 ## Cross-links
 

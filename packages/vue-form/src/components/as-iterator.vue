@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { FormDef, FormFieldDef } from "@atscript/ui";
+import { joinPath, type FormDef, type FormFieldDef } from "@atscript/ui";
 import { computed, inject, provide } from "vue";
 import { PATH_PREFIX_KEY } from "../composables/internal-keys";
+import { provideAsNestedLevel } from "../composables/use-as-level";
 import AsField from "./as-field.vue";
 
 const props = defineProps<{
@@ -17,6 +18,13 @@ const props = defineProps<{
    * across the two grids without re-scanning per frame.
    */
   fields?: FormFieldDef[];
+  /**
+   * Bump the nesting level for rendered children RELATIVE to the injected
+   * parent level (sugar over `provideAsNestedLevel`). For custom container
+   * panes standing in for a structured field's section chrome. Setup-time /
+   * non-reactive — an identity of the pane, like `pathPrefix`.
+   */
+  levels?: number;
 }>();
 
 // Path prefix management
@@ -26,11 +34,13 @@ const parentPrefix = inject(
 );
 const myPrefix = computed(() => {
   if (props.pathPrefix !== undefined) {
-    return parentPrefix.value ? `${parentPrefix.value}.${props.pathPrefix}` : props.pathPrefix;
+    return joinPath(parentPrefix.value, props.pathPrefix);
   }
   return parentPrefix.value;
 });
 provide(PATH_PREFIX_KEY, myPrefix);
+
+if (props.levels !== undefined) provideAsNestedLevel(props.levels);
 </script>
 
 <template>

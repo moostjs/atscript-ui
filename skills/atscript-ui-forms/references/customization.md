@@ -14,6 +14,7 @@ Four levels of customization, the `TAsComponentProps` contract for custom compon
 - [TAsComponentEmits](#tascomponentemits)
 - [Custom component skeleton](#custom-component-skeleton)
 - [Composables for custom components](#composables-for-custom-components)
+- [Container renderers (custom section shells)](#container-renderers-custom-section-shells)
 - [Grid layout](#grid-layout)
 - [Locale & currency](#locale--currency)
 
@@ -395,27 +396,130 @@ the rule body doesn't read it.
 
 Available from `@atscript/vue-form`:
 
-| Composable                    | Returns                                                                                                                    | Use case                                                                               |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `useAsField(opts)`            | `{ model, error, onBlur }`                                                                                                 | Build a field that isn't backed by an AsField parent.                                  |
-| `useAsForm(opts)`             | Full form state (see [forms.md](forms.md))                                                                                 | Custom form root.                                                                      |
-| `useAsState(opts)`            | `{ formState, clearErrors, reset, submit, setErrors }`                                                                     | Low-level form-state machine without provide/inject.                                   |
-| `useAsPath()`                 | `{ path: ComputedRef<string> }`                                                                                            | Read absolute path prefix without other context.                                       |
-| `useAsTypeMap()`              | `{ types: ComputedRef<Record<string, Component>> }`                                                                        | Read the form's `:types` map (for components that compose).                            |
-| `useAsData()`                 | `{ rootData, getValueAt, siblingValue }`                                                                                   | Reactive read of any value in the form, by path or sibling name.                       |
-| `useAsLocale()`               | `{ locale: ComputedRef<string \| undefined> }`                                                                             | Read provided locale for formatting.                                                   |
-| `useAsErrorDismiss()`         | `(path: string) => void`                                                                                                   | Dismiss a server error from a custom commit path.                                      |
-| `useAsValueHelp(opts)`        | FK picker state (resolved, status, searchText, results, kickoff, selectItem, clear)                                        | Build a custom FK picker.                                                              |
-| `useAsDropdown(containerRef)` | `{ isOpen, toggle, close, select }`                                                                                        | Click-outside-aware dropdown state.                                                    |
-| `useAsOptionalAddFlow(opts)`  | `{ composeAction, runAndFocusNew }`                                                                                        | Choreograph "enable optional + add + focus first new field".                           |
-| `useAsTriStateCheckbox(opts)` | `{ checked, indeterminate, inputRef, onChange }`                                                                           | Boolean field whose model may be `undefined`.                                          |
-| `useAsDate(opts)`             | `{ inputType, displayValue, setFromInput }`                                                                                | HTML5 date / datetime / time mechanics.                                                |
-| `useAsNumber(opts)`           | `{ decimalSeparator, displayValue, rawValue, setFromInput }`                                                               | Locale-aware single-input number control.                                              |
-| `useAsDecimal(opts)`          | `{ scale, storageScale, decimalSeparator, thousandsSeparator, displayValue, rawValue, parts, setFromInput, setFromParts }` | Decimal mechanics with scale + currency awareness.                                     |
-| `useAsDualInput(opts)`        | Integer/decimal half input refs + handlers                                                                                 | Bank-UX two-input pattern (integer + decimal halves).                                  |
-| `useAsExternalErrors(opts)`   | `{ effective, formError, isFormDismissed, dismissAt, dismissForm, reset }`                                                 | Manage server errors with local dismissal (used internally by useAsForm).              |
-| `useAsNestedSectionsStore()`  | `AsNestedSectionsStore \| undefined`                                                                                       | Read the open/closed registry for collapsible sections.                                |
-| `useAsUnionVariant()`         | `TAsUnionContext \| undefined`                                                                                             | Consume and clear the union variant picker injection inside a custom variant renderer. |
+| Composable                    | Returns                                                                                                                    | Use case                                                                                                                           |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `useAsField(opts)`            | `{ model, error, onBlur }`                                                                                                 | Build a field that isn't backed by an AsField parent.                                                                              |
+| `useAsForm(opts)`             | Full form state (see [forms.md](forms.md))                                                                                 | Custom form root.                                                                                                                  |
+| `useAsState(opts)`            | `{ formState, clearErrors, reset, submit, setErrors }`                                                                     | Low-level form-state machine without provide/inject.                                                                               |
+| `useAsPath()`                 | `{ path: ComputedRef<string> }`                                                                                            | Read absolute path prefix without other context.                                                                                   |
+| `useAsTypeMap()`              | `{ types: ComputedRef<Record<string, Component>> }`                                                                        | Read the form's `:types` map (for components that compose).                                                                        |
+| `useAsData()`                 | `{ rootData, getValueAt, siblingValue }`                                                                                   | Reactive read of any value in the form, by path or sibling name.                                                                   |
+| `useAsLocale()`               | `{ locale: ComputedRef<string \| undefined> }`                                                                             | Read provided locale for formatting.                                                                                               |
+| `useAsErrorDismiss()`         | `(path: string) => void`                                                                                                   | Dismiss a server error from a custom commit path.                                                                                  |
+| `useAsValueHelp(opts)`        | FK picker state (resolved, status, searchText, results, kickoff, selectItem, clear)                                        | Build a custom FK picker.                                                                                                          |
+| `useAsDropdown(containerRef)` | `{ isOpen, toggle, close, select }`                                                                                        | Click-outside-aware dropdown state.                                                                                                |
+| `useAsOptionalAddFlow(opts)`  | `{ composeAction, runAndFocusNew }`                                                                                        | Choreograph "enable optional + add + focus first new field".                                                                       |
+| `useAsTriStateCheckbox(opts)` | `{ checked, indeterminate, inputRef, onChange }`                                                                           | Boolean field whose model may be `undefined`.                                                                                      |
+| `useAsDate(opts)`             | `{ inputType, displayValue, setFromInput }`                                                                                | HTML5 date / datetime / time mechanics.                                                                                            |
+| `useAsNumber(opts)`           | `{ decimalSeparator, displayValue, rawValue, setFromInput }`                                                               | Locale-aware single-input number control.                                                                                          |
+| `useAsDecimal(opts)`          | `{ scale, storageScale, decimalSeparator, thousandsSeparator, displayValue, rawValue, parts, setFromInput, setFromParts }` | Decimal mechanics with scale + currency awareness.                                                                                 |
+| `useAsDualInput(opts)`        | Integer/decimal half input refs + handlers                                                                                 | Bank-UX two-input pattern (integer + decimal halves).                                                                              |
+| `useAsExternalErrors(opts)`   | `{ effective, formError, isFormDismissed, dismissAt, dismissForm, reset }`                                                 | Manage server errors with local dismissal (used internally by useAsForm).                                                          |
+| `useAsNestedSectionsStore()`  | `AsNestedSectionsStore \| undefined`                                                                                       | Read the open/closed registry for collapsible sections.                                                                            |
+| `useAsUnionVariant()`         | `TAsUnionContext \| undefined`                                                                                             | Consume and clear the union variant picker injection inside a custom variant renderer.                                             |
+| `useAsVisibleFields(fields)`  | `ComputedRef<FormFieldDef[]>`                                                                                              | [Container renderer](#container-renderers-custom-section-shells): partition out hidden children (`@ui.form.hidden` + `fn.hidden`). |
+| `useAsFieldScope()`           | `{ absolutePath, scopeFor, resolveProp }`                                                                                  | Container renderer: child path + custom-annotation resolution (static + `fn`).                                                     |
+| `useAsOptionalField(field)`   | `{ optional, enabled, toggle }`                                                                                            | Container renderer: enable/clear an optional object child.                                                                         |
+| `useAsLevel()`                | `ComputedRef<number>`                                                                                                      | Read structured-field nesting level (odd=section / even=island).                                                                   |
+| `provideAsNestedLevel(n=1)`   | `void`                                                                                                                     | Bump nesting level RELATIVE to parent for a mounted-children subtree.                                                              |
+
+## Container renderers (custom section shells)
+
+A `@ui.form.component` on a **structured (object) field** replaces that field's whole section chrome (the stock `AsObject` collapsible). The component gets the object's `FormObjectFieldDef` on `props.field` and re-renders the children itself — tabbed shell, side-nav, wizard, split. Children stay first-class fields (data binding, validation, path, level alternation) as long as you route them back through `AsIterator` / `AsField`.
+
+AsField already provides two things to the custom component's subtree (`packages/vue-form/src/components/as-field.vue`): `PATH_PREFIX_KEY` = the object's **absolute path**, and `LEVEL_KEY` = the object's **level**. So an `AsIterator` with no `:path-prefix` / `:levels` re-renders the object's own direct children exactly as `AsObject` would.
+
+Primitives (all exported from `@atscript/vue-form`):
+
+| Primitive                          | Signature / returns                                                              | Use                                                                                                                                                                                                |
+| ---------------------------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useAsVisibleFields(fields)`       | `(MaybeRefOrGetter<FormFieldDef[] \| undefined>) => ComputedRef<FormFieldDef[]>` | Partition out hidden children. Static `@ui.form.hidden` hides unconditionally; `@ui.form.fn.hidden` resolved against live scope. Subscribes to form data only when some child carries `fn.hidden`. |
+| `useAsFieldScope()`                | `{ absolutePath, scopeFor, resolveProp }`                                        | Child path + annotation resolution. Plain functions — wrap in your own `computed` for reactivity.                                                                                                  |
+| `useAsOptionalField(field)`        | `{ optional: boolean, enabled: ComputedRef<boolean>, toggle(on): void }`         | Enable (annotated defaults) / clear (`undefined`) an optional object child. `toggle` emits the blur-committed `update` change. `null` counts as unset.                                             |
+| `useAsLevel()`                     | `ComputedRef<number>`                                                            | Read current nesting level (`-1` outside a structured field; root struct = `0`). Drives odd=section / even=island.                                                                                 |
+| `provideAsNestedLevel(levels = 1)` | `void`                                                                           | Bump level RELATIVE to parent for the current subtree. Call it when your chrome absorbs a structural section and mounts children directly.                                                         |
+
+`useAsFieldScope()` returns:
+
+- `absolutePath(field)` → current prefix joined with `field.path`.
+- `scopeFor(field, { withEntry? })` → fn scope `{ v, data, context }` with `v` at the child's abs path; `withEntry` layers the evaluated field `entry` (display fns take entry scope, constraint fns take bare — AsField's dual-scope pattern).
+- `resolveProp<T>(field, fnKey?, staticKey?, opts?)` → resolve a custom annotation pair, presence-gated like AsField: neither key → `undefined` (no reactive read); only static → inert scope; `fn` present → full reactive scope. For tab icons, group keys, layout hints on children.
+
+`AsIterator` props for re-rendering a slice:
+
+| Prop           | Effect                                                                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `:def`         | The `FormDef` to iterate. Object you replaced: `(props.field as FormObjectFieldDef).objectDef`. Descend into a child object: pass its `.objectDef`.   |
+| `:fields`      | Explicit field list overriding `def.fields` — feed a precomputed partition (visible leaves, one tab's children).                                      |
+| `:path-prefix` | Dotted segment prepended to children's paths. When `:def` is a child object's `.objectDef`, set `:path-prefix="child.name"`. Identity / non-reactive. |
+| `:levels`      | Sugar for `provideAsNestedLevel(n)` scoped to these children. Identity / non-reactive.                                                                |
+
+**Level rule.** When your chrome stands in for a structural section — you render a child object's fields directly instead of letting it render its own section — the children land one level too shallow and break alternation. Bump with `provideAsNestedLevel(1)` (or `AsIterator :levels="1"`) per absorbed section level. The bump is **relative**, so the renderer is correct at any depth.
+
+> **BREAKING:** `provideAsNestedLevel` was **absolute**, now **relative** (`parent + levels`, `levels` default `1`). A `provideAsNestedLevel(1)` call at root is unchanged; nested it now computes the correct (not shallow) level.
+
+**`fn` resolution needs the dynamic resolver.** `@ui.form.fn.hidden` in `useAsVisibleFields`, and any `fn` key in `resolveProp`, only evaluate when `installDynamicResolver()` from `@atscript/ui-fns` ran at startup. Static keys resolve either way.
+
+**Delegate arrays/unions to `<AsField>`.** Don't hand-layout array/union children — `<AsField :field="child" />` carries add/remove (honoring `@expect.minLength`/`.maxLength`), per-item variant pickers, and the within-mount variant stash for free. It reads the same provided prefix + level, so no extra props.
+
+**Chrome extras (already public):** `useAsDescendantErrorCounts()` → `Map<absolutePath, count>` to badge tabs/nav items; `useAsNestedSectionsStore()` → shared expand/collapse registry. Both covered in [structural-fields.md](structural-fields.md#provideasnestedsectionsstore--useasnestedsectionsstore).
+
+Tabbed-shell skeleton:
+
+```vue
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import {
+  AsIterator,
+  useAsVisibleFields,
+  useAsFieldScope,
+  type TAsComponentProps,
+} from "@atscript/vue-form";
+import {
+  isObjectField,
+  META_LABEL,
+  UI_FORM_FN_LABEL,
+  type FormFieldDef,
+  type FormObjectFieldDef,
+} from "@atscript/ui";
+
+const props = defineProps<TAsComponentProps>();
+const objectDef = computed(() => (props.field as FormObjectFieldDef).objectDef);
+const visible = useAsVisibleFields(() => objectDef.value.fields);
+const tabs = computed(() => visible.value.filter(isObjectField));
+const leaves = computed(() => visible.value.filter((f) => !isObjectField(f)));
+const { resolveProp } = useAsFieldScope();
+const tabLabel = (f: FormFieldDef) =>
+  resolveProp<string>(f, UI_FORM_FN_LABEL, META_LABEL) ?? f.name;
+const active = ref(0);
+</script>
+
+<template>
+  <div :class="props.class">
+    <AsIterator v-if="leaves.length" :def="objectDef" :fields="leaves" />
+    <nav role="tablist">
+      <button
+        v-for="(t, i) of tabs"
+        :key="t.path"
+        type="button"
+        role="tab"
+        :aria-selected="i === active"
+        @click="active = i"
+      >
+        {{ tabLabel(t) }}
+      </button>
+    </nav>
+    <AsIterator
+      v-if="tabs[active]"
+      :def="(tabs[active] as FormObjectFieldDef).objectDef"
+      :path-prefix="tabs[active].name"
+      :levels="1"
+    />
+  </div>
+</template>
+```
+
+Bare root → bind `:class="props.class"` for grid placement. Framework-agnostic helpers `joinPath`, `hasFieldMeta`, `isFieldHidden` are also re-exported from `@atscript/vue-form` for container code.
 
 ## Grid layout
 
