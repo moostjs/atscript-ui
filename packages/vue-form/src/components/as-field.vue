@@ -159,16 +159,24 @@ function maybeComputed<T>(
 
 // Optional+required is intentionally treated as not-required here: undefined
 // passes validation, so the `*` marker would mislead the user.
+// `@ui.form.classes` is a `multiple: true` annotation, so its metadata value is
+// an ARRAY of class strings (one per annotation, append-merged) — spreading an
+// array into the object would produce numeric keys ("0", "1") rendered as bogus
+// class names, so normalize it to `{ class: true }` entries first.
 function buildFieldClasses(
   classValue: unknown,
   isDisabled: boolean,
   isRequired: boolean,
   isOptional: boolean,
 ): Record<string, boolean> {
-  return {
-    ...(typeof classValue === "string"
+  const normalized =
+    typeof classValue === "string"
       ? { [classValue]: true }
-      : (classValue as Record<string, boolean> | undefined)),
+      : Array.isArray(classValue)
+        ? Object.fromEntries(classValue.filter((c) => typeof c === "string").map((c) => [c, true]))
+        : (classValue as Record<string, boolean> | undefined);
+  return {
+    ...normalized,
     disabled: isDisabled,
     required: isRequired && !isOptional,
   };
