@@ -55,8 +55,13 @@ Identifier objects are object-only (never bare scalars) — cross-link atscript-
 `components/defaults/as-row-actions.vue`. Renders the cell for the synthesized `__actions` pseudo-column.
 
 - 0 visible actions → empty `<td>` (placeholder for `table-layout: fixed`).
-- 1 action → single button (`label` for label-only actions, icon button otherwise).
-- ≥2 actions → `…` dropdown (`<AsActionMenuContent>`).
+- 1 action → three-way render:
+  - linkable navigate action (`processor: 'navigate'`, no `promptText`, no `inputForm`, href computable) → `<a href>` anchor (real link: middle/cmd-click new-tab, copy link, hover preview);
+  - confirmable navigate action (has `promptText`) → `<button>` (mod/middle-click still confirms → `window.open`);
+  - anything else → plain `<button>` (`label` for label-only actions, icon button otherwise).
+- ≥2 actions → `…` dropdown (`<AsActionMenuContent>`) — linkable navigate items render as `DropdownMenuItem as="a"`.
+
+Href computed via `navigateHrefFor(action, id, preferredId)` (from `@atscript/ui`) then mapped through `resolveHref`. See [Action result processing](#action-result-processing) for click semantics.
 
 Reads `state.actions.cellRow` — pre-flattened `[default?, ...others.row, ...rows]`. Per-row availability gate:
 
@@ -84,6 +89,8 @@ Tier-1 toolbar component. Selection-aware level resolution:
 | `"row"`      | any             | `row`           | (forced) — falls back to active row if selection is empty                                                  |
 
 Renders nothing when no actions are visible. Single-action collapse: a sole non-default entry promotes into the labelled button rather than hiding behind `…`.
+
+The default CTA renders as an `<a href>` anchor when it's a linkable navigate action (same conditions as `<AsRowActions>`); confirmable navigate CTA stays a `<button>`. Menu items follow the same anchor/button split. See [Action result processing](#action-result-processing).
 
 **Per-row `$actions` gate.** The `row` surface (1 selected) gates against the active/selected row's `$actions`, same as `<AsRowActions>` (`applyRowGate(buckets, row)`). The `rows` surface (≥2 selected) gates against the **union** of the selected rows' `$actions` via `applyRowsGate(buckets, selectedRows)` — a bulk action shows when **at least one** selected row allows it (the server re-filters per row at invoke, so a subset-enabled action no-ops on the rest). `__remove` is the sole exemption. No `$actions` on any row → no gating (legacy / opt-out).
 
@@ -188,12 +195,12 @@ type ActionResult =
 
 Processor → result mapping:
 
-| `action.processor`    | Behavior                                                                                                                |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `'backend'` (default) | `client.action(name, pk, opts.input)` → `{ ok: true, kind: 'backend', data, message? }`                                 |
-| `'navigate'`          | `client.action(name, pk)` (server emits redirect) → `{ ok: true, kind: 'navigate' }`                                    |
-| `'__remove'`          | `client.remove(pk)` → `{ ok: true, kind: 'remove', data }`                                                              |
-| `'custom'`            | Bypasses HTTP. `{ ok: true, kind: 'custom', dispatched: true }` — caller writes the side effect via the `@action` emit. |
+| `action.processor`    | Behavior                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `'backend'` (default) | `client.action(name, pk, opts.input)` → `{ ok: true, kind: 'backend', data, message? }`                                                                                   |
+| `'navigate'`          | Renders as `<a href>` (href = `navigateHrefFor` → `resolveHref`). Plain-left-click → invoke → SPA `navigate` hook + `{ ok: true, kind: 'navigate' }`. See gestures below. |
+| `'__remove'`          | `client.remove(pk)` → `{ ok: true, kind: 'remove', data }`                                                                                                                |
+| `'custom'`            | Bypasses HTTP. `{ ok: true, kind: 'custom', dispatched: true }` — caller writes the side effect via the `@action` emit.                                                   |
 
 Refetch policy: post-success refetch only fires for `'backend'` / `'__remove'` and only when:
 
@@ -201,6 +208,28 @@ Refetch policy: post-success refetch only fires for `'backend'` / `'__remove'` a
 - `refreshOnAction()` returns truthy (default `true`).
 
 The `<AsTableRoot @action="(action, ids, result, event) => …">` emit settles **after** the refetch is scheduled — listeners can detect success and run additional UX (toasts, route changes).
+
+### Navigate action rendering & gestures
+
+`import { navigateHrefFor } from "@atscript/ui"` — pure render-time href helper: `navigateHrefFor(action, id, preferredId): string | undefined`. Returns `undefined` (→ render a `<button>`) when the action isn't `navigate` or a row-level action has no identifiable pk. Level `!== 'row'` → `action.value` verbatim; level `'row'` → `$1` replaced with URL-encoded `preferredId`. The built-in components pipe its result through `resolveHref`.
+
+Trigger — user clicks a linkable navigate action (anchor variant):
+
+| Gesture                                                | Effect                                                                                                                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plain left click (main button, no ctrl/meta/shift/alt) | `preventDefault()` → same invoke path (`triggerAction` → `state.actions.invoke`). SPA `navigate` hook runs **and** `@action` fires (`kind: 'navigate'`). |
+| Modified / middle / right click                        | Native browser (new tab, copy link). **No invoke, no `@action` emit.**                                                                                   |
+
+Confirmable navigate action (has `promptText`) stays a `<button>`: plain click → confirm → invoke; middle / cmd(ctrl)+click → same confirm → on accept `window.open(href, "_blank", "noopener,noreferrer")` (no invoke, no emit).
+
+**`resolveHref`** — `<AsTableRoot :resolve-href>` prop / `useTable({ resolveHref })` option, `(url: string) => string`, default identity. Maps the interpolated href for base-path apps (`(url) => router.resolve(url).href`). Applied ONLY to the anchor `href` / `window.open` target — **never** on the invoke path (the client `navigate` hook already accounts for the base).
+
+Invariants:
+
+| #   | Rule                                                                                                                                                                                                                                                                    |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| N1  | **Native new-tab navigations are silent to `@action`.** Only a plain left click on a navigate action invokes + emits (`kind: 'navigate'`). Modified/middle/right clicks are owned by the browser — no `invoke`, no emit. Never hang new-tab side effects off `@action`. |
+| N2  | **`resolveHref` never touches the invoke path.** It maps only the anchor `href` and `window.open` target. The plain-left-click SPA route goes through the client `navigate` hook, which already applies the base path.                                                  |
 
 ## Selection model
 

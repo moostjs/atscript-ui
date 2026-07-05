@@ -185,6 +185,106 @@ The CSV export pattern is straightforward: declare the action as
 `processor: 'custom'` on the `.as`, then match it by name in the
 `@action` handler.
 
+::: warning Native new-tab navigations are silent to `@action`
+When a [navigate action](#navigate-actions) is opened in a new tab
+(middle-click, cmd/ctrl+click), the browser owns the navigation — it
+does **not** call `invoke` and does **not** fire `@action`. Only a
+plain left click on a navigate action routes in-SPA and emits (with
+`kind: 'navigate'`). Don't hang new-tab side effects off `@action`.
+:::
+
+## Navigate actions
+
+An action declared with `processor: 'navigate'` (see the
+[db.atscript.dev annotations reference](https://db.atscript.dev)) sends
+the user to a URL instead of mutating a row. The table renders these as
+real `<a href>` anchors — so all native link affordances work:
+middle-click and cmd/ctrl+click open a new tab, right-click offers "copy
+link address" / "open in new tab", and the URL previews in the status
+bar on hover. Menu items in the `…` dropdown render as links too.
+
+Declare one server-side with `processor: 'navigate'` and a `value`
+template — `$1` is the row identifier placeholder (see the
+[db.atscript.dev annotations reference](https://db.atscript.dev)):
+
+```typescript
+@DbRowActions({
+  view: { label: "View", processor: "navigate", value: "/customers/$1" },
+})
+class CustomersController extends AsDbController<typeof Customer> {}
+```
+
+### When it renders as a link
+
+An action becomes an anchor when **all** hold:
+
+- `processor === 'navigate'`;
+- it has no confirm prompt (`@ui.action.confirm` / `promptText`);
+- it has no `@InputForm`;
+- a href is computable.
+
+The href is computed at render time from the action's `value`. For a
+row-level action, `$1` is replaced with the row's URL-encoded
+`preferredId` — the same interpolation the client performs on invoke.
+A row with no identifiable primary key (empty `preferredId`) yields no
+href and the action falls back to a `<button>`. Confirmable navigate
+actions and `@InputForm` navigate actions also stay buttons.
+
+The signature of the render-time helper —
+[`navigateHrefFor`](/api/ui#navigate-action-hrefs) — is exported from
+`@atscript/ui` for consumers building their own action chrome.
+
+### Click semantics
+
+| Gesture on a linkable navigate action        | What happens                                                                                                                                                   |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Plain left click (no modifier key)           | `preventDefault()` → routed through the normal invoke path. SPA routing runs via the client's `navigate` hook **and** `@action` fires with `kind: 'navigate'`. |
+| Middle click / cmd(ctrl)+click / right click | Native browser behaviour (new tab, copy link, …). No `invoke`, **no `@action` emit** — the current tab's state is unchanged.                                   |
+
+Confirmable navigate actions (those with a confirm prompt) stay
+`<button>`s, because a confirm dialog can't guard a native anchor
+navigation. On them a middle-click / cmd+click runs the **same
+confirmation**, then on accept opens the target in a new tab via
+`window.open(href, "_blank", "noopener,noreferrer")` — still no invoke,
+no emit. A plain left click confirms then invokes, exactly as before.
+
+### DOs and DON'Ts
+
+- **DO** treat a plain left click as the only navigate gesture that
+  reaches your app — SPA routing and `@action` both run there.
+- **DON'T** rely on `@action` to observe new-tab navigations. Modified
+  and middle clicks are native and silent to the emit; put nothing on
+  `@action` that a new-tab open must trigger.
+- **DO** set `resolveHref` when your app is served under a router base
+  path (see below); root-hosted apps need nothing.
+
+### `resolveHref` for base-path apps
+
+`action.value` is interpolated to a raw path like `/customers/1`. When
+your app is served under a router base path, map that raw path to a
+fully-resolved href with the `resolveHref` prop on `<AsTableRoot>` (also
+a `useTable({ resolveHref })` option):
+
+```vue
+<AsTableRoot url="/api/db/tables/customers" :resolve-href="resolveHref" />
+```
+
+```ts
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+const resolveHref = (url: string) => router.resolve(url).href;
+```
+
+`resolveHref` is applied **only** to the anchor's `href` attribute and
+the new-tab `window.open` target — **never** to the plain-left-click
+invoke path. That path goes through the client's `navigate` hook, which
+already accounts for the base. Default is identity `(url) => url`.
+
+Navigate actions are gated by per-row `$actions` exactly like any other
+action (see [Per-row action availability](#per-row-action-availability)),
+and their `ActionResult` on the invoke path is `{ ok: true, kind: 'navigate' }`.
+
 ## Row-level default action
 
 A row action can be marked default. The framework's **main-action**

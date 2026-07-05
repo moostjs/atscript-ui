@@ -54,6 +54,8 @@ interface AsTableRootProps {
   formComponents?: Record<string, Component>;
   preset?: PresetConfig;
   refreshOnAction?: boolean;
+  /** Base-path href mapping for navigate-action anchors (also a `useTable` option). Applied only to the `href` attribute / new-tab target, never to the invoke path. Default: identity. See [Navigate actions](/tables/actions#navigate-actions). */
+  resolveHref?: (url: string) => string;
   urlQuerySync?: UrlQuerySync;
 }
 ```

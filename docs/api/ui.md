@@ -9,6 +9,7 @@ Framework-agnostic core for type-driven UIs. Reads compiled Atscript metadata, b
 - [Form factories](#form-factories)
 - [Table types](#table-types)
 - [Table factory](#table-factory)
+- [Navigate action hrefs](#navigate-action-hrefs)
 - [Field resolver](#field-resolver)
 - [Annotation key constants](#annotation-key-constants)
 - [Validators](#validators)
@@ -333,6 +334,22 @@ function createTableDef(meta: MetaResponse, type: TAtscriptAnnotatedType): Table
 ```
 
 See [Annotations Reference](/tables/annotations) for how `@ui.table.*` and `@db.*` annotations populate `ColumnDef`.
+
+## Navigate action hrefs
+
+### `navigateHrefFor(action, id, preferredId)`
+
+Computes, at render time, the href a `processor: 'navigate'` action would open — interpolating `$1` in `action.value` with the row's URL-encoded `preferredId`. Lets a custom action-chrome renderer produce the same anchor the built-in `<AsRowActions>` / `<AsTableActions>` do. Returns `undefined` when no link is possible (not a navigate action, or a row-level action with no identifiable pk) → render a `<button>` and let the client handle the invoke.
+
+```typescript
+function navigateHrefFor(
+  action: TDbActionInfo,
+  id: Record<string, unknown> | undefined,
+  preferredId: readonly string[],
+): string | undefined;
+```
+
+See [Navigate actions](/tables/actions#navigate-actions) for the rendering and click-semantics narrative.
 
 ## Field resolver
 
