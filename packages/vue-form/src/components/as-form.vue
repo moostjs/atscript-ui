@@ -99,6 +99,10 @@ const form = useAsForm<TFormData, TFormContext>({
 defineExpose({
   submit: form.onSubmit,
   reset: form.reset,
+  /** Clear all error state (per-field + the submit-time map behind badges). */
+  clearErrors: form.clearErrors,
+  /** Set external-error messages by path (e.g. mapping a server 400). */
+  setErrors: form.setErrors,
   /** True when `track-changes` is on AND data differs from baseline. */
   get isDirty() {
     return form.patch?.isDirty.value ?? false;

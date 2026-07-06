@@ -32,6 +32,27 @@ export function mergeErrorMaps(
 }
 
 /**
+ * Return `errors` without the entries whose key is in `paths`.
+ *
+ * Identity-preserving: when no key matches, the ORIGINAL `errors` object
+ * is returned unchanged — callers compare `result !== errors` to detect
+ * that something was pruned and skip spurious reactive writes.
+ */
+export function omitPaths(
+  errors: Record<string, string>,
+  paths: ReadonlySet<string>,
+): Record<string, string> {
+  let pruned: Record<string, string> | null = null;
+  for (const key in errors) {
+    if (paths.has(key)) {
+      pruned ??= { ...errors };
+      delete pruned[key];
+    }
+  }
+  return pruned ?? errors;
+}
+
+/**
  * Yield every ancestor prefix of a dotted path, longest-first
  * (`a.b.c` → `a.b.c`, `a.b`, `a`). Returns the path itself first so
  * callers can include it in the iteration without a special case.

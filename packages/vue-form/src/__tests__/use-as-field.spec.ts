@@ -431,4 +431,26 @@ describe("useAsField", () => {
 
     expect(formState.unregister).toHaveBeenCalledWith(registeredId);
   });
+
+  it("registration getError mirrors the displayed error (live-error feed)", async () => {
+    const { model, formState } = setupFormField({
+      rules: [(v) => (v ? true : "Required")],
+    });
+    const reg = getRegistration(formState);
+
+    // Untouched (on-change gating) → the field displays nothing.
+    expect(reg.callbacks.getError!()).toBeUndefined();
+
+    // Touch then clear → the live rule error is what the field displays.
+    model.value = "x";
+    await nextTick();
+    model.value = "";
+    await nextTick();
+    expect(reg.callbacks.getError!()).toBe("Required");
+
+    // Fixing the value clears it — no submit involved.
+    model.value = "ok";
+    await nextTick();
+    expect(reg.callbacks.getError!()).toBeUndefined();
+  });
 });

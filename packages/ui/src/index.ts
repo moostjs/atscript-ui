@@ -170,6 +170,7 @@ export { unionVariantChanged } from "./form/union-detect";
 // ── Error-map utilities (framework-agnostic) ────────────────
 export {
   mergeErrorMaps,
+  omitPaths,
   iteratePathAncestors,
   buildDescendantErrorCounts,
 } from "./form/error-utils";

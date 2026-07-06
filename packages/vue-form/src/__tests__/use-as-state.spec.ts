@@ -210,4 +210,70 @@ describe("useAsState", () => {
     clearErrors();
     expect(f1.registration.callbacks.clearErrors).not.toHaveBeenCalled();
   });
+
+  // ── live error aggregation ────────────────────────────────
+
+  it("liveErrors collects each field's getError keyed by path", () => {
+    const { liveErrors, formState } = setupFormState();
+    const f1 = mockField("email", { getError: () => "Required" });
+    const f2 = mockField("name", { getError: () => undefined });
+    formState.register(f1.id, f1.registration);
+    formState.register(f2.id, f2.registration);
+
+    expect(liveErrors.value).toEqual({ email: "Required" });
+  });
+
+  it("liveErrors skips registrations without a getError callback", () => {
+    const { liveErrors, formState } = setupFormState();
+    const f1 = mockField("legacy");
+    formState.register(f1.id, f1.registration);
+
+    expect(liveErrors.value).toEqual({});
+  });
+
+  it("liveErrors reacts to a field's error changing (via reactive read)", () => {
+    const { liveErrors, formState, wrapper } = setupFormState();
+    const msg = ref<string | undefined>(undefined);
+    const f1 = mockField("email", { getError: () => msg.value });
+    formState.register(f1.id, f1.registration);
+
+    expect(liveErrors.value).toEqual({});
+    msg.value = "Required";
+    expect(liveErrors.value).toEqual({ email: "Required" });
+    msg.value = undefined;
+    expect(liveErrors.value).toEqual({});
+    wrapper.unmount();
+  });
+
+  it("liveErrors drops entries on unregister", () => {
+    const { liveErrors, formState } = setupFormState();
+    const f1 = mockField("email", { getError: () => "Required" });
+    formState.register(f1.id, f1.registration);
+    expect(liveErrors.value).toEqual({ email: "Required" });
+
+    formState.unregister(f1.id);
+    expect(liveErrors.value).toEqual({});
+  });
+
+  it("two registrations on one path collapse to a single liveErrors entry", () => {
+    const { liveErrors, formState } = setupFormState();
+    const f1 = mockField("consents", { getError: () => "Consent required" });
+    const f2 = mockField("consents", { getError: () => undefined });
+    formState.register(f1.id, f1.registration);
+    formState.register(f2.id, f2.registration);
+
+    expect(liveErrors.value).toEqual({ consents: "Consent required" });
+  });
+
+  it("registeredPaths tracks mounts and unmounts", () => {
+    const { registeredPaths, formState } = setupFormState();
+    const f1 = mockField("email");
+    const f2 = mockField("info.name");
+    formState.register(f1.id, f1.registration);
+    formState.register(f2.id, f2.registration);
+    expect(registeredPaths.value).toEqual(new Set(["email", "info.name"]));
+
+    formState.unregister(f1.id);
+    expect(registeredPaths.value).toEqual(new Set(["info.name"]));
+  });
 });

@@ -275,9 +275,21 @@ The slots on `<AsForm>` expose imperative helpers (see
 ```
 
 - `reset()` — re-applies type defaults, clears all errors.
-- `clearErrors()` — clears internal + external errors only.
+- `clearErrors()` — clears all error state without touching values:
+  per-field (touched / blur / submit / external) plus the form-level
+  submit map that feeds descendant error-count badges.
 - `setErrors({ path: msg })` — push errors from outside the form (e.g.
   after a server response).
+
+`clearErrors` and `setErrors` are also exposed on the `<AsForm>`
+template ref (alongside `submit`, `reset`, and the change-tracking
+surface), so a host shell can drive them without slot plumbing:
+
+```ts
+const formRef = ref<InstanceType<typeof AsForm>>();
+formRef.value?.clearErrors();
+formRef.value?.setErrors({ "address.street": "Unknown address" });
+```
 
 ## Action-vs-submit
 

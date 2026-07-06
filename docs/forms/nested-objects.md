@@ -199,6 +199,15 @@ The composable returns `undefined` when no `<AsForm>` ancestor supplies
 the map — guard the `.value` access as above. The map is computed, so
 the counts update reactively as validation runs.
 
+The map mirrors **what fields display right now**, not just the last
+submit: a live rule error (per the form's `first-validation` gating)
+counts the moment the field shows it, and fixing a value — typed or
+programmatic (e.g. a "discard changes" data restore) — drops the count
+immediately, no second submit needed. Submit-time errors for paths no
+mounted field owns (a not-selected union variant, an optional-disabled
+subtree) stay counted until the data is corrected or the next submit.
+External `:errors` entries count until dismissed by an edit.
+
 ## Shared sections store
 
 `AsForm` provides a `AsNestedSectionsStore` so the entire form shares

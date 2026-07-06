@@ -14,6 +14,7 @@ import {
   getFormValidator,
   iteratePathAncestors,
   mergeErrorMaps,
+  omitPaths,
   resolveFormProp,
   META_DESCRIPTION,
   META_LABEL,
@@ -144,7 +145,11 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
    * post-reset state (the form becomes clean again).
    */
   reset: () => Promise<void>;
-  /** Imperatively clear errors (matches `useAsState().clearErrors`). */
+  /**
+   * Imperatively clear ALL error state: per-field (touched / blur / submit /
+   * external via `useAsState().clearErrors`) plus the form-level submit-time
+   * error map that feeds the descendant-count badges.
+   */
   clearErrors: () => void;
   /** Imperatively set external-error messages by path. */
   setErrors: (errors: Record<string, string>) => void;
@@ -257,10 +262,12 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
 
   // ── Form state composable (also publishes FORM_STATE_KEY etc.) ──
   const {
-    clearErrors,
+    clearErrors: clearFieldErrors,
     reset: resetState,
     submit,
     setErrors,
+    liveErrors,
+    registeredPaths,
   } = useAsState({
     formData: data,
     formContext,
@@ -299,13 +306,14 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
 
   // Re-baseline after a reset: `reset()` restores field defaults (mutating the
   // model + awaiting nextTick), so the post-reset state becomes the new clean
-  // baseline. No-op when tracking is off.
-  const reset = patch
-    ? async () => {
-        await resetState();
-        patch.rebase();
-      }
-    : resetState;
+  // baseline (no-op when tracking is off). Also drops the submit-time error
+  // map — a reset form displays no errors, so the badges must count none
+  // (`internalErrors` is declared below; `reset` only runs post-setup).
+  const reset = async () => {
+    internalErrors.value = {};
+    await resetState();
+    patch?.rebase();
+  };
 
   // ── Provides — root data, prefix, type/component maps ───────
   provide(ROOT_DATA_KEY, data);
@@ -336,10 +344,29 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   const cf = options.clientFactory?.();
   if (cf) provide(CLIENT_FACTORY_KEY, cf);
 
-  // External (post-dismissal) + internal validation merged into a single
-  // map. Drives both the descendant-count badges and the auto-open watcher.
+  // External (post-dismissal) + submit-time + LIVE field errors merged into a
+  // single map. Drives both the descendant-count badges and the auto-open
+  // watcher. For a path with a MOUNTED field, the field's own displayed error
+  // (`liveErrors`) is the truth — the submit-time entry is dropped, so fixing
+  // the value (typed OR programmatic, e.g. a "discard changes" data restore)
+  // clears the badge without waiting for another submit. Submit-time entries
+  // survive only for paths no mounted field owns (a not-selected union
+  // variant, an optional-disabled subtree).
   const internalErrors = ref<Record<string, string>>({});
-  const allErrors = computed(() => mergeErrorMaps(ext.effective.value, internalErrors.value));
+  const orphanInternalErrors = computed(() =>
+    omitPaths(internalErrors.value, registeredPaths.value),
+  );
+  const allErrors = computed(() =>
+    mergeErrorMaps(ext.effective.value, orphanInternalErrors.value, liveErrors.value),
+  );
+
+  // Full clear = per-field state (touched/blur/submit/external) AND the
+  // form-level submit map — without the latter, badges built on `allErrors`
+  // would keep counting errors no field displays anymore.
+  function clearErrors() {
+    internalErrors.value = {};
+    clearFieldErrors();
+  }
 
   const descendantErrorCounts = computed(() => buildDescendantErrorCounts(allErrors.value));
   provide(DESCENDANT_ERROR_COUNTS_KEY, descendantErrorCounts);
@@ -462,16 +489,9 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     // mutates — so drop the changed path + ancestors here. Next submit
     // re-validates.
     const errors = internalErrors.value;
-    let stale: Set<string> | null = null;
-    let next: Record<string, string> | null = null;
-    for (const key in errors) {
-      if (!stale) stale = new Set(iteratePathAncestors(path));
-      if (stale.has(key)) {
-        if (!next) next = { ...errors };
-        delete next[key];
-      }
-    }
-    if (next) {
+    const stale = new Set(iteratePathAncestors(path));
+    const next = omitPaths(errors, stale);
+    if (next !== errors) {
       internalErrors.value = next;
       setErrors(next);
     }

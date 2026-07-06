@@ -157,6 +157,10 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
         setExternalError: (msg?: string) => {
           externalError.value = msg;
         },
+        // Live-error feed: reading the cached `error` computed inside the
+        // form's aggregation computed subscribes it to THIS field's displayed
+        // error, so badges update the moment the display does.
+        getError: () => error.value,
       },
     });
   }

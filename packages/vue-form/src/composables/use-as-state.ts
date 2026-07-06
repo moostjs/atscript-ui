@@ -1,4 +1,14 @@
-import { computed, nextTick, provide, reactive, toValue, watchEffect, type MaybeRef } from "vue";
+import {
+  computed,
+  nextTick,
+  provide,
+  reactive,
+  shallowRef,
+  toValue,
+  watchEffect,
+  type ComputedRef,
+  type MaybeRef,
+} from "vue";
 import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "./internal-keys";
 import type { TFormFieldRegistration, TFormState } from "./types";
 
@@ -11,6 +21,15 @@ export interface UseAsStateReturn {
   reset: () => Promise<void>;
   submit: () => true | { path: string; message: string }[];
   setErrors: (errors: Record<string, string>) => void;
+  /**
+   * What every registered field DISPLAYS right now, keyed by path
+   * (`callbacks.getError` per field; fields without the callback are
+   * skipped). Recomputes when any field's displayed error changes and on
+   * register/unregister — the live source for error-count badges.
+   */
+  liveErrors: ComputedRef<Record<string, string>>;
+  /** Paths of all currently registered (mounted) fields. */
+  registeredPaths: ComputedRef<Set<string>>;
 }
 
 export function useAsState<TFormData, TContext>(opts: {
@@ -21,10 +40,16 @@ export function useAsState<TFormData, TContext>(opts: {
   submitValidator?: TFormSubmitValidator;
 }): UseAsStateReturn {
   const fieldsById = new Map<symbol, TFormFieldRegistration>();
+  // Bumped on register/unregister so the aggregation computeds below see
+  // mounts/unmounts. `fieldsById` itself stays a plain Map — per-edit
+  // reactivity flows through each field's `getError`/`path` (cached computed
+  // reads), not through Map mutation.
+  const fieldsRevision = shallowRef(0);
 
   // Stable functions — outside computed to avoid re-creation on reactivity ticks
   const register = (id: symbol, registration: TFormFieldRegistration) => {
     fieldsById.set(id, registration);
+    fieldsRevision.value++;
     // Fields mounted after the first failed submit start "fresh": live
     // validation stays suppressed until the user edits the field or the
     // next submit fires. Without this, a newly-added array item lights up
@@ -35,6 +60,7 @@ export function useAsState<TFormData, TContext>(opts: {
   };
   const unregister = (id: symbol) => {
     fieldsById.delete(id);
+    fieldsRevision.value++;
     formState.freshFields.delete(id);
   };
 
@@ -117,5 +143,32 @@ export function useAsState<TFormData, TContext>(opts: {
     }
   }
 
-  return { clearErrors, reset, submit, setErrors, formState };
+  // What every mounted field displays right now. Reading `getError()` inside
+  // the computed subscribes it to each field's cached error computed, so it
+  // recomputes exactly when a display changes (and on mount/unmount via the
+  // revision). Two registrations on one path (e.g. a custom field adding a
+  // rule beside its AsField) collapse to one entry — the badge counts paths,
+  // not rules, and an erroring path counts once either way.
+  const liveErrors = computed<Record<string, string>>(() => {
+    void fieldsRevision.value;
+    const errors: Record<string, string> = {};
+    for (const reg of fieldsById.values()) {
+      const msg = reg.callbacks.getError?.();
+      if (msg) errors[reg.path()] = msg;
+    }
+    return errors;
+  });
+
+  // `path()` reads each field's (reactive) absolute path, so the set also
+  // tracks path changes (array reorders), not just mounts/unmounts.
+  const registeredPaths = computed<Set<string>>(() => {
+    void fieldsRevision.value;
+    const paths = new Set<string>();
+    for (const reg of fieldsById.values()) {
+      paths.add(reg.path());
+    }
+    return paths;
+  });
+
+  return { clearErrors, reset, submit, setErrors, formState, liveErrors, registeredPaths };
 }

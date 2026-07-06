@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildDescendantErrorCounts, iteratePathAncestors, mergeErrorMaps } from "./error-utils";
+import {
+  buildDescendantErrorCounts,
+  iteratePathAncestors,
+  mergeErrorMaps,
+  omitPaths,
+} from "./error-utils";
 
 describe("mergeErrorMaps", () => {
   it("merges multiple sources, dropping falsy values", () => {
@@ -15,6 +20,30 @@ describe("mergeErrorMaps", () => {
   it("later non-empty values overwrite earlier ones", () => {
     const merged = mergeErrorMaps({ a: "old" }, { a: "new" });
     expect(merged).toEqual({ a: "new" });
+  });
+});
+
+describe("omitPaths", () => {
+  it("removes the entries whose key is in the set", () => {
+    const errors = { a: "one", b: "two", c: "three" };
+    expect(omitPaths(errors, new Set(["a", "c"]))).toEqual({ b: "two" });
+  });
+
+  it("returns the same reference when nothing matches", () => {
+    const errors = { a: "one", b: "two" };
+    expect(omitPaths(errors, new Set(["x", "y"]))).toBe(errors);
+    expect(omitPaths(errors, new Set())).toBe(errors);
+  });
+
+  it("does not mutate the input map", () => {
+    const errors = { a: "one", b: "two" };
+    omitPaths(errors, new Set(["a"]));
+    expect(errors).toEqual({ a: "one", b: "two" });
+  });
+
+  it("returns the same empty map for an empty input", () => {
+    const errors = {};
+    expect(omitPaths(errors, new Set(["a"]))).toBe(errors);
   });
 });
 
