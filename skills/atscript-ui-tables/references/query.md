@@ -164,30 +164,49 @@ The public state surface exposed via the default slot, `useTableContext().state`
 
 ### Methods
 
-| Method                                                           | Effect                                                                                                                     |
-| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `query()`                                                        | User-initiated refresh. Schedules a query through the same scheduler watchers use.                                         |
-| `queryImmediate()`                                               | Awaitable refresh. Use when you need to `await` the next fetch (tests, programmatic flows).                                |
-| `resetFilters()`                                                 | Set `state.filters = {}`. Watcher re-fetches.                                                                              |
-| `setFieldFilter(path, conditions)`                               | Replace conditions for one field; empty array removes the entry.                                                           |
-| `removeFieldFilter(path)`                                        | Remove conditions key entirely.                                                                                            |
-| `addFilterField(path)` / `removeFilterField(path)`               | Mutate display list `filterFields`. Independent of `filters`.                                                              |
-| `setColumnWidth(path, width)`                                    | Update `columnWidths[path].w`.                                                                                             |
-| `resetColumnWidth(path)`                                         | `columnWidths[path].w = columnWidths[path].d`.                                                                             |
-| `showConfigDialog(tab?)`                                         | Open `<AsConfigDialog>` on a tab. Tab default `"columns"`.                                                                 |
-| `openFilterDialog(column)` / `closeFilterDialog()`               | Drive `<AsFilterDialog>`.                                                                                                  |
-| `applyUrlQuery(urlString)`                                       | Hydrate state from URL string (echo-guarded).                                                                              |
-| `prompt(message, opts?)`                                         | Open the in-app confirm dialog. Resolves `boolean`.                                                                        |
-| `requestActionInput(action, ctx)`                                | Open action-form dialog. Resolves with form payload or `null`.                                                             |
-| `actions.invoke(action, pk?, opts?)`                             | See [actions-selection.md](actions-selection.md).                                                                          |
-| `preset.*`                                                       | See [state-persistence.md](state-persistence.md).                                                                          |
-| `dataAt(absIndex)` / `loadingAt(absIndex)` / `errorAt(absIndex)` | Window-mode row accessors. Use these from a custom virtual renderer; the built-in `<AsWindowTable>` calls them internally. |
+| Method                                                           | Effect                                                                                                                                                        |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query(opts?)`                                                   | User-initiated refresh through the shared scheduler. Pass `{ silent: true }` for timer-driven live refresh — see [Silent live refresh](#silent-live-refresh). |
+| `queryImmediate(opts?)`                                          | Awaitable refresh (fires now, cancels the coalesced query, resolves after the response/error is processed). Also accepts `{ silent: true }`.                  |
+| `resetFilters()`                                                 | Set `state.filters = {}`. Watcher re-fetches.                                                                                                                 |
+| `setFieldFilter(path, conditions)`                               | Replace conditions for one field; empty array removes the entry.                                                                                              |
+| `removeFieldFilter(path)`                                        | Remove conditions key entirely.                                                                                                                               |
+| `addFilterField(path)` / `removeFilterField(path)`               | Mutate display list `filterFields`. Independent of `filters`.                                                                                                 |
+| `setColumnWidth(path, width)`                                    | Update `columnWidths[path].w`.                                                                                                                                |
+| `resetColumnWidth(path)`                                         | `columnWidths[path].w = columnWidths[path].d`.                                                                                                                |
+| `showConfigDialog(tab?)`                                         | Open `<AsConfigDialog>` on a tab. Tab default `"columns"`.                                                                                                    |
+| `openFilterDialog(column)` / `closeFilterDialog()`               | Drive `<AsFilterDialog>`.                                                                                                                                     |
+| `applyUrlQuery(urlString)`                                       | Hydrate state from URL string (echo-guarded).                                                                                                                 |
+| `prompt(message, opts?)`                                         | Open the in-app confirm dialog. Resolves `boolean`.                                                                                                           |
+| `requestActionInput(action, ctx)`                                | Open action-form dialog. Resolves with form payload or `null`.                                                                                                |
+| `actions.invoke(action, pk?, opts?)`                             | See [actions-selection.md](actions-selection.md).                                                                                                             |
+| `preset.*`                                                       | See [state-persistence.md](state-persistence.md).                                                                                                             |
+| `dataAt(absIndex)` / `loadingAt(absIndex)` / `errorAt(absIndex)` | Window-mode row accessors. Use these from a custom virtual renderer; the built-in `<AsWindowTable>` calls them internally.                                    |
+
+### Silent live refresh
+
+`query({ silent: true })` / `queryImmediate({ silent: true })` re-run the **current** query (live filters, sorters, search, pagination, `$actions` — all respected) without any loading affordance. Use it for timer-driven refresh of "ops" grids.
+
+```ts
+import { useIntervalFn } from "@vueuse/core";
+
+useIntervalFn(() => state.query({ silent: true }), 15_000);
+```
+
+Guarantees:
+
+- Never flips `state.querying` — no toolbar spinner, no skeletons, no query overlay.
+- **Loud-wins coalescing** — if a user-initiated (loud) query lands in the same tick as a silent one, the spinner still shows.
+- **Fails safe** — on error, displayed rows / cache / `totalCount` / error state are left untouched; a silent refresh never blanks or toasts the grid.
+- Preserves scroll position — the viewport is never snapped back to top.
+- Relies on **keep-rows-until-settle**: every query (silent or not) keeps prior rows visible until the response settles, then swaps `results` + `totalCount` atomically — results are never pre-wiped. This is what makes silent refresh flicker-free.
+- `QueryOptions` (the `{ silent?: boolean }` shape) is exported from both `@atscript/vue-table` and `@atscript/ui-table`.
 
 ## Mutators are pure
 
 When you build a custom filter dialog, columns dialog, or toolbar, just write the new arrays to the model — `state.filterFields` / `state.filters` / `state.sorters` / `state.columnNames` / `state.pagination` / `state.searchTerm`. The root watcher picks up the change and re-queries. Two things to avoid:
 
-- **Don't call `state.query()` to apply your change.** That's reserved for user-initiated refresh (a refresh button, pull-to-refresh, devtools). Calling it after a model write double-fetches and skips the 500ms search/filter debounce.
+- **Don't call `state.query()` to apply your change.** That's reserved for user-initiated refresh (a refresh button, pull-to-refresh, devtools). Calling it after a model write double-fetches and skips the 500ms search/filter debounce. The one sanctioned exception: re-running the _current_ query on a timer via `query({ silent: true })` — see [Silent live refresh](#silent-live-refresh).
 - **Don't run cleanup loops that mirror display state into applied state.** A "removed from `filterFields`, now delete from `filters`" loop fights the watcher and re-triggers queries.
 
 Public independence guarantee: `filterFields` (display) and `filters` (applied) are independent. Hiding a chip never clears its conditions; clearing conditions never hides the chip. The same rule applies to any future display/applied pair on columns or sorters. Hydration flows (preset apply, URL replay) take advantage of this: they can populate `filters` without forcing the user to open the chip first.
