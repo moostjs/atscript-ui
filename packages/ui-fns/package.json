@@ -1,6 +1,6 @@
 {
   "name": "@atscript/ui-fns",
-  "version": "0.1.118",
+  "version": "0.1.119",
   "description": "Dynamic fn-compiled field properties for @atscript/ui (opt-in, uses new Function)",
   "keywords": [
     "annotations",
