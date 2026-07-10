@@ -133,6 +133,32 @@ export function createMockClient(opts: {
 }
 
 /**
+ * A deferred `pages()` mock: returns a `vi.fn` fetcher whose promise stays
+ * pending until you call `resolve(...)`, letting a test assert mid-flight
+ * state (keep-rows-until-settle, the `querying` flag) before the response
+ * lands. The resolver fills in the fixed `page`/`itemsPerPage`/`pages` fields.
+ */
+export function deferredPages(): {
+  fetchFn: ReturnType<typeof vi.fn>;
+  resolve: (v: { data: unknown[]; count: number }) => void;
+} {
+  let resolveFetch!: (v: { data: unknown[]; count: number }) => void;
+  const fetchFn = vi.fn(
+    () =>
+      new Promise<{
+        data: unknown[];
+        count: number;
+        page: number;
+        itemsPerPage: number;
+        pages: number;
+      }>((res) => {
+        resolveFetch = (v) => res({ ...v, page: 1, itemsPerPage: 50, pages: 1 });
+      }),
+  );
+  return { fetchFn, resolve: (v) => resolveFetch(v) };
+}
+
+/**
  * Minimal stub Client for tests that don't exercise fetch behaviour. Calling
  * `pages` returns an empty page; tests that need real fetch behaviour should
  * use `createMockClient` instead.

@@ -87,6 +87,11 @@ its value, clearing a value does not hide its input.
 button, pull-to-refresh). Never call it to "apply" a state change —
 that path is the watcher's job.
 
+The one sanctioned direct call beyond user-initiated refresh is
+`state.query({ silent: true })` — a live refresh that re-runs the current
+query on a timer without loading affordances. See
+[Silent live refresh](/tables/pagination#silent-live-refresh).
+
 ## Where to go next
 
 - [Hello World](/tables/hello-world) — a full working table in 25 lines.

@@ -591,6 +591,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Prompt / action-form**: `confirmRequest`, `prompt`, `acceptPrompt`, `dismissPrompt`, `actionFormRequest`, `requestActionInput`, `acceptActionForm`, `dismissActionForm`.
 - **Presets namespace**: `preset: PresetSurface`.
 - **URL bridge**: `applyUrlQuery`.
+- **Query methods**: `query(opts?: { silent?: boolean })` (microtask-coalesced refresh; `{ silent: true }` runs the current query with no `querying` flip and leaves rows as-is on failure — for timer-driven live refresh), `queryImmediate(opts?: { silent?: boolean })` (awaitable form, same `silent` semantics), `queryNext()`, `loadRange()`, `invalidate()`. Every query keeps prior rows until the response settles, then swaps `results` + `totalCount` atomically (keep-rows-until-settle contract).
 
 ### `TableActionsState`
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
-import { mockColumn, mountTableState } from "./helpers";
+import { deferredPages, mockColumn, mountTableState } from "./helpers";
 
 function setup(overrides?: {
   data?: Record<string, unknown>[];
@@ -19,20 +19,8 @@ function setup(overrides?: {
 
 describe("state.query()", () => {
   it("does NOT pre-wipe results before response", async () => {
-    let resolveFetch!: (v: { data: unknown[]; count: number }) => void;
-    const slowFetch = vi.fn(
-      () =>
-        new Promise<{
-          data: unknown[];
-          count: number;
-          page: number;
-          itemsPerPage: number;
-          pages: number;
-        }>((res) => {
-          resolveFetch = (v) => res({ ...v, page: 1, itemsPerPage: 50, pages: 1 } as never);
-        }),
-    );
-    const { state } = setup({ pages: slowFetch });
+    const { fetchFn, resolve } = deferredPages();
+    const { state } = setup({ pages: fetchFn });
 
     state.results.value = [{ id: 99 }];
     state.windowCache.value = new Map([[0, { id: 99 }]]);
@@ -45,7 +33,7 @@ describe("state.query()", () => {
     expect(state.querying.value).toBe(true);
     expect(state.windowLoading.value.size).toBe(0);
 
-    resolveFetch({ data: [{ id: 1 }, { id: 2 }], count: 10 });
+    resolve({ data: [{ id: 1 }, { id: 2 }], count: 10 });
     await flushPromises();
     expect(state.querying.value).toBe(false);
   });
@@ -133,26 +121,14 @@ describe("state.query()", () => {
   });
 
   it("stale response after invalidate is discarded", async () => {
-    let resolveFetch!: (v: { data: unknown[]; count: number }) => void;
-    const slowFetch = vi.fn(
-      () =>
-        new Promise<{
-          data: unknown[];
-          count: number;
-          page: number;
-          itemsPerPage: number;
-          pages: number;
-        }>((res) => {
-          resolveFetch = (v) => res({ ...v, page: 1, itemsPerPage: 50, pages: 1 } as never);
-        }),
-    );
-    const { state } = setup({ pages: slowFetch });
+    const { fetchFn, resolve } = deferredPages();
+    const { state } = setup({ pages: fetchFn });
 
     state.query();
     await flushPromises();
     state.invalidate();
     expect(state.results.value).toEqual([]);
-    resolveFetch({ data: [{ id: 1 }, { id: 2 }], count: 10 });
+    resolve({ data: [{ id: 1 }, { id: 2 }], count: 10 });
     await flushPromises();
     // The stale response is discarded — results stay empty.
     expect(state.results.value).toEqual([]);

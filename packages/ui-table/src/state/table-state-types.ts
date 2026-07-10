@@ -84,6 +84,21 @@ export interface TableStateData {
   searchTerm: string;
 }
 
+/** Per-call options for `query()` / `queryImmediate()`. */
+export interface QueryOptions {
+  /**
+   * Run one query cycle WITHOUT loading affordances: the `querying` flag is
+   * never flipped (toolbar spinners, skeletons and the query overlay all key
+   * off it, so they stay quiet), and a failure leaves the currently displayed
+   * rows, `windowCache`, `totalCount` and error state untouched — no blanking,
+   * no error report. Everything else is identical to a normal query: the
+   * generation guard, keep-rows-until-settle swap, and respect of the current
+   * filters / sorters / search / pagination. Designed for timer-driven live
+   * refresh of the standard list view.
+   */
+  silent?: boolean;
+}
+
 /**
  * Methods that any table state implementation must provide.
  *
@@ -100,16 +115,21 @@ export interface TableStateMethods {
    * fetch on the next microtask. Multiple `query()` calls and watcher-driven
    * scheduleQuery calls in the same synchronous block coalesce into one
    * fetch. Use this from dialogs / mutators where you don't need to await.
+   * Pass `{ silent: true }` for a live refresh that runs the current query
+   * without touching the `querying` flag and leaves rows as-is on failure —
+   * see {@link QueryOptions}.
    */
-  query(): void;
+  query(opts?: QueryOptions): void;
   /**
    * Synchronous refresh — fires the fetch now and returns a Promise that
    * settles when the response (or error) has been processed. Cancels any
    * pending coalesced query so we don't double-fire. Honours `blockQuery`,
    * `forceFilters`, `forceSorters`, `queryFn`. Use this from refresh
-   * buttons / programmatic flows that need the result.
+   * buttons / programmatic flows that need the result. Pass `{ silent: true }`
+   * to await a live refresh with no loading flag and no blank-on-error — see
+   * {@link QueryOptions}.
    */
-  queryImmediate(): Promise<void>;
+  queryImmediate(opts?: QueryOptions): Promise<void>;
   /**
    * Append-style extension. Does NOT mutate `pagination.page` (extension
    * runs parallel to pagination). Re-entry guarded via `queryingNext`.

@@ -125,7 +125,12 @@ export type { SelectionMode } from "./selection/selection-fns";
 export { togglePk, trimSelection, rowsToPks } from "./selection/selection-fns";
 
 // ── State types ────────────────────────────────────────────
-export type { ConfigTab, TableStateData, TableStateMethods } from "./state/table-state-types";
+export type {
+  ConfigTab,
+  QueryOptions,
+  TableStateData,
+  TableStateMethods,
+} from "./state/table-state-types";
 
 // ── Window-mode helpers ────────────────────────────────────
 export { DEFAULT_ROW_HEIGHT_PX } from "./state/tokens";

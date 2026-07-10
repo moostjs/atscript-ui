@@ -32,6 +32,7 @@ import {
   type ColumnWidthsMap,
   type FieldFilters,
   type FilterCondition,
+  type QueryOptions,
   type UrlQuerySync,
 } from "@atscript/ui-table";
 import type { Client, PageResult } from "@atscript/db-client";
@@ -584,17 +585,18 @@ export function createTableState(opts: CreateTableStateOptions): {
   const { navViewportRowCount, setActive, clearActive, handleNavKey } = nav;
 
   // ── Query engine ────────────────────────────────────────────────────────
-  async function runQuery(kind: QueryErrorKind) {
+  async function runQuery(kind: QueryErrorKind, silent = false) {
     if (queryOpts?.blockQuery) return;
     mustRefresh.value = false;
     // Snap viewport back to top on a non-initial query so we don't render
-    // past the new dataset's end after the cache wipe.
-    if (kind !== "initial" && topIndex.value !== 0) {
+    // past the new dataset's end after the cache wipe. Skipped for a silent
+    // refresh — it must not disturb the user's current scroll position.
+    if (!silent && kind !== "initial" && topIndex.value !== 0) {
       topIndex.value = 0;
     }
     const thisGen = ++generation;
     clearSettlements();
-    querying.value = true;
+    if (!silent) querying.value = true;
     queryDetected = true;
 
     try {
@@ -621,6 +623,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       queryError.value = null;
     } catch (err) {
       if (thisGen !== generation) return;
+      if (silent) return;
       const error = err instanceof Error ? err : new Error(String(err));
       queryError.value = error;
       results.value = [];
@@ -639,27 +642,39 @@ export function createTableState(opts: CreateTableStateOptions): {
   // Set `querying.value = true` synchronously so consumers checking the flag
   // right after `query()` see the loading state immediately.
   let pendingScheduledKind: QueryErrorKind | null = null;
+  // A coalesced batch is silent only while EVERY scheduled query in it is
+  // silent; the first loud schedule flips it false ("loud wins"), so a user
+  // query landing in the same tick as a silent refresh still shows its spinner.
+  let pendingSilent = true;
   let queryFlushScheduled = false;
 
-  function scheduleQuery(kind: QueryErrorKind = "query"): void {
+  function scheduleQuery(kind: QueryErrorKind = "query", opts?: QueryOptions): void {
     if (queryOpts?.blockQuery) return;
     if (tableDef.value === null) return;
     pendingScheduledKind = pendingScheduledKind ?? kind;
-    querying.value = true;
+    // `opts?.silent ?? false` (NOT `if (opts)`): `query` may be wired straight
+    // to `@click`, which passes a MouseEvent as `opts` — its absent `silent`
+    // correctly reads as a loud query.
+    if (!(opts?.silent ?? false)) {
+      pendingSilent = false;
+      querying.value = true;
+    }
     if (queryFlushScheduled) return;
     queryFlushScheduled = true;
     queueMicrotask(() => {
       queryFlushScheduled = false;
       const k = pendingScheduledKind;
+      const s = pendingSilent;
       pendingScheduledKind = null;
+      pendingSilent = true;
       if (k === null) return;
       if (tableDef.value === null) return;
-      void runQuery(k);
+      void runQuery(k, s);
     });
   }
 
-  function query(): void {
-    scheduleQuery("query");
+  function query(opts?: QueryOptions): void {
+    scheduleQuery("query", opts);
   }
 
   function requestRefresh(): void {
@@ -667,11 +682,12 @@ export function createTableState(opts: CreateTableStateOptions): {
     scheduleQuery();
   }
 
-  async function queryImmediate(): Promise<void> {
+  async function queryImmediate(opts?: QueryOptions): Promise<void> {
     pendingScheduledKind = null;
+    pendingSilent = true;
     if (queryOpts?.blockQuery) return;
     if (tableDef.value === null) return;
-    await runQuery("query");
+    await runQuery("query", opts?.silent ?? false);
   }
 
   function invalidate(): void {

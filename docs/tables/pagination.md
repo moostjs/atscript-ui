@@ -208,6 +208,37 @@ through internal watchers — you don't call `state.query()` to apply
 them. If you find yourself reaching for it after a mutation, the
 watcher is what you actually want.
 
+### Silent live refresh
+
+For live "ops" grids that re-run the current query on a timer, pass
+`{ silent: true }`. It runs the exact same query — current filters,
+sorters, search, pagination and `$actions` all respected — but does
+**not** flip `state.querying`, so no toolbar spinner, skeletons or query
+overlay appear. Rows swap in only once the response settles
+(keep-rows-until-settle, see below), and a failed refresh leaves the
+currently displayed rows untouched — a background refresh never blanks
+or toasts the grid.
+
+```ts
+import { useIntervalFn } from "@vueuse/core";
+
+// Re-run the current query every 15s without loading affordances.
+useIntervalFn(() => state.query({ silent: true }), 15_000);
+```
+
+`state.queryImmediate({ silent: true })` is the awaitable form — it
+returns a `Promise<void>` that settles once the response (or error) has
+been processed, so you can gate the next tick on completion or await it
+in a hidden-tab guard.
+
+#### Keep-rows-until-settle (contract)
+
+Every query — silent or not — keeps the previously loaded rows visible
+until the new response settles, then swaps `results` + `totalCount` in a
+single shot. Results are never pre-wiped on the way out. This is what
+makes a silent refresh flicker-free, and it is a stable contract you can
+rely on.
+
 ## Next steps
 
 - [URL State](/tables/url-state) — pagination is included in the URL

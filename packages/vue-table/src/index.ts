@@ -40,7 +40,7 @@ export { useTableFilter } from "./composables/use-table-filter";
 export { useTableSearch } from "./composables/use-table-search";
 export { useTableActions } from "./composables/use-table-actions";
 export { useTableUrlQuery, type UseTableUrlQueryOptions } from "./composables/use-table-url-query";
-export type { UrlQuerySync } from "@atscript/ui-table";
+export type { QueryOptions, UrlQuerySync } from "@atscript/ui-table";
 
 // ── Presets / app prefs (public dev API) ────────────────────
 export { AS_PRESETS_APP, injectPresetsApp } from "./composables/as-presets-app";
