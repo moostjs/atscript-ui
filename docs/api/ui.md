@@ -866,6 +866,12 @@ function mergeErrorMaps(
   ...maps: Array<Record<string, string | undefined> | undefined>
 ): Record<string, string>;
 
+/** Return `errors` without the entries whose key is in `paths`. Identity-preserving: when no key matches, the ORIGINAL object is returned unchanged — compare `result !== errors` to detect pruning and skip spurious reactive writes. */
+function omitPaths(
+  errors: Record<string, string>,
+  paths: ReadonlySet<string>,
+): Record<string, string>;
+
 /** Yields every ancestor prefix longest-first, including the path itself. `"a.b.c"` → `"a.b.c", "a.b", "a"`. */
 function* iteratePathAncestors(path: string): Generator<string>;
 

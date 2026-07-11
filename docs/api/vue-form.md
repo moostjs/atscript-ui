@@ -46,7 +46,7 @@ interface AsFormProps {
 }
 ```
 
-**Expose** (template ref): alongside the form's own controls, the instance carries the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
+**Expose** (template ref): alongside the form's own controls, the instance carries error control — `clearErrors()`, `setErrors(errors)` (see [External errors](/forms/validation#external-errors)) — and the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
 
 **Emits**:
 

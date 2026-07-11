@@ -37,6 +37,8 @@ Without this:
 - `@ui.form.fn.*` annotations silently evaluate to `undefined` (the static resolver ignores `.fn.` keys).
 - `@ui.form.validate` does nothing — the validator plugin isn't registered.
 
+**SSR**: call it from the **client entry only** (e.g. `entry-client.ts`), never the server/universal entry. Forms render on the client; the resolver has nothing to do on the server, and its `new Function` evaluation in the Node entry widens the schema-injection surface for no upside.
+
 Proof of life — add a hidden-when-empty test to any `.as` file and verify it works after install:
 
 ```atscript

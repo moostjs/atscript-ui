@@ -236,6 +236,14 @@ For arrays / unions / structured fields the dismissal still works —
 any descendant mutation drops the ancestor error from the internal
 map too (`use-as-form.ts:302-323`).
 
+If your host maintains its own `serverErrors` map and prunes entries
+as they get resolved, use
+[`omitPaths(errors, paths)`](/api/ui#error-map-utilities) from
+`@atscript/ui`. It is identity-preserving — when no key matched it
+returns the _same_ object, so a no-op prune doesn't hand the form a
+fresh `:errors` reference and resurrect errors the user already
+dismissed by editing.
+
 ## Form-level errors
 
 A custom `@ui.form.validate` on the type itself becomes a form-level

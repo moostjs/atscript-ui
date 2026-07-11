@@ -239,6 +239,7 @@ Pass server-supplied errors keyed by absolute dotted path:
 - `__form` is reserved — it renders in the form-level banner slot (or default `<div role="alert">`), and never shows up at a leaf path.
 - A leaf error is **dismissed locally** when the user edits that field (model watcher in AsField). The dismissal is in-component state — it resets when a fresh `:errors` object reference arrives.
 - Dismissals do NOT reset on in-place mutation of the same errors object — only on identity change. Treat `errors` as immutable per server response.
+- To prune paths from a host-maintained `:errors` map, use `omitPaths(errors, paths)` from `@atscript/ui` — identity-preserving (returns the SAME object when no key matched), so a no-op prune doesn't create a fresh reference and spuriously reset the dismissals above.
 
 Imperative dismissal from inside a custom component:
 
@@ -278,12 +279,12 @@ const { submit, clearErrors, reset, setErrors } = useAsState({
 
 ## reset / clearErrors / setErrors
 
-Available on the return value of `useAsForm` AND scoped on all `<AsForm>` slots:
+Available on the return value of `useAsForm`, scoped on all `<AsForm>` slots, AND exposed on the `<AsForm>` template ref (alongside `submit`, `reset`, and the change-tracking surface — [form-change-tracking.md](form-change-tracking.md)), so a host shell can push server errors or wipe error state without slot plumbing: `formRef.value?.setErrors({ "address.street": "Unknown address" })`.
 
-| Helper           | Effect                                                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `reset()`        | Run every registered field's `reset()` callback (re-applies defaults), then `clearErrors()`. Async — awaits `nextTick`. |
-| `clearErrors()`  | Reset `firstSubmitHappened`, clear `freshFields`, clear external and submit errors on every registered field.           |
-| `setErrors(map)` | Push `map` into per-field `externalError` state. Each field reads `map[path]` keyed on its absolute path.               |
+| Helper           | Effect                                                                                                                                                              |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reset()`        | Run every registered field's `reset()` callback (re-applies defaults), then `clearErrors()`. Async — awaits `nextTick`.                                             |
+| `clearErrors()`  | Reset `firstSubmitHappened`, clear `freshFields`, clear external and submit errors on every registered field, and wipe the form-level submit map that feeds badges. |
+| `setErrors(map)` | Push `map` into per-field `externalError` state. Each field reads `map[path]` keyed on its absolute path.                                                           |
 
-`useAsForm` additionally exposes `internalErrors: Ref<Record<string, string>>` — the most-recent submit's validator output, merged with `:errors` to drive descendant error-count badges on collapsed objects.
+`useAsForm` additionally exposes `internalErrors: Ref<Record<string, string>>` — the most-recent submit's validator output. Descendant error-count badges on collapsed objects are **live**, not a submit snapshot: the badge map merges external `:errors`, each mounted field's currently displayed error (external > submit > live rule, per `firstValidation` gating), and submit-time entries only for paths no mounted field owns (a not-selected union variant, a disabled optional subtree). Fixing a value — typed or programmatic (e.g. a "discard changes" data restore) — drops the count immediately, no second submit; `clearErrors()` wipes the map including that orphaned submit-time portion.
