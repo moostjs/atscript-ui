@@ -1,8 +1,8 @@
 # SEARCH-SORT: preset sorters ride along with `$search` and discard relevance ranking
 
 Status: **implemented** (2026-07-03) as the consumer-owned flag `ignoreSortersWhenSearched` —
-see "Implemented semantics" below. Originally filed the same day from the rvmode portal, after
-shipping a consumer-side workaround — see "Downstream workaround" below.
+see "Implemented semantics" below. Originally filed the same day from a production consumer
+app, after shipping a consumer-side workaround — see "Downstream workaround" below.
 
 ## The problem
 
@@ -21,8 +21,8 @@ Why this stays hidden, then bites:
 
 - Tight single-token queries look fine (the match set is small; any order of 7 cougar rows reads
   as "working").
-- Multi-token queries expose it dramatically. Real repro from the rvmode portal (2,406-row
-  inventory grid, Atlas Search over `matchInput`, preset `-_id`):
+- Multi-token queries expose it dramatically. Real repro from a production consumer app
+  (2,406-row inventory grid, Atlas Search over `matchInput`, preset `-_id`):
   - `$search=coachmen prism 24fs` **without** `$sort` → `2026 Coachmen Prism 24FS` first, then
     the other Prisms. Perfect.
   - Same `$search` **with** `$sort=-_id` → "2017 Winnebago Spyder 24FQ", "Prime Time Crusader
@@ -96,9 +96,8 @@ Instead of sorter provenance tracking, the fix is a **flag-as-model**:
 
 ## Downstream workaround to revert once this ships
 
-rvmode portal `packages/portal/src/ui/pages/table-collections.ts` — `defaultSorters` were
-REMOVED from the three searchable grids (`inventory-listings` @ 90d79d5+d08d212,
-`match-resolutions` + `vehicles` @ 8c2a2f2), each with a comment pointing at this trade-off.
+In the consumer app, `defaultSorters` were REMOVED from its three searchable grids, each with
+a comment pointing at this trade-off.
 Once preset-suppression lands, those grids should get their browse orders back
 (`-_id` / `-lastSeenAt` / `make,model asc`).
 
