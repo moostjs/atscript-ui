@@ -196,24 +196,26 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     }
   });
 
-  // 20.3 — Column-level narrow on $select.
+  // 20.3 — Column-level narrow: $select of a scope-hidden column is rejected (hidden ≡ nonexistent), not silently dropped.
 
-  test("20.3 — viewer's $select drops password/salt server-side", async () => {
+  test("20.3 — viewer's $select of scope-hidden column → 400 Unknown field (hidden ≡ nonexistent)", async () => {
     const ctx = await newRequestContext("viewer");
     try {
       const res = await ctx.get(
         "/api/db/tables/users/pages?$select=id,username,password,salt&$size=2",
       );
-      expect(res.ok()).toBeTruthy();
-      const body = (await res.json()) as {
+      expect(res.status()).toBe(400);
+      const body = (await res.json()) as { message?: string };
+      expect(body.message).toBe('Unknown field "password"');
+
+      // Granted-column reads still succeed — the 400 above is column-specific, not a blanket viewer block.
+      const ok = await ctx.get("/api/db/tables/users/pages?$select=id,username&$size=2");
+      expect(ok.ok()).toBeTruthy();
+      const okBody = (await ok.json()) as {
         data?: Array<Record<string, unknown>>;
       };
-      const rows = body.data ?? [];
+      const rows = okBody.data ?? [];
       expect(rows.length).toBeGreaterThan(0);
-      for (const row of rows) {
-        expect(row).not.toHaveProperty("password");
-        expect(row).not.toHaveProperty("salt");
-      }
     } finally {
       await ctx.dispose();
     }
