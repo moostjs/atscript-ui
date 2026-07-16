@@ -1,6 +1,6 @@
 {
   "name": "@atscript/ui-styles",
-  "version": "0.1.122",
+  "version": "0.1.123",
   "description": "Shared UnoCSS shortcuts, presets, and icon loader for atscript-ui (vue-form, vue-table, vue-wf)",
   "keywords": [
     "atscript",
