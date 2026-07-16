@@ -70,6 +70,9 @@ declare global {
     "ui.dict.filterable": boolean
     "ui.dict.sortable": boolean
     "ui.dict.searchable": boolean
+    "ui.nav.group": string
+    "ui.nav.order": number
+    "ui.nav.hidden": boolean
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "wf.context.pass": (string)[]

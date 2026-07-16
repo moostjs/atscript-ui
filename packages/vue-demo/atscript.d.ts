@@ -37,6 +37,7 @@ declare global {
     "db.table.renamed": string
     "db.table.preferredId.uniqueIndex": string | true
     "db.schema": string
+    "db.space": string
     "db.index.plain": ({ name?: string, sort?: string })[]
     "db.index.unique": (string | true)[]
     "db.index.fulltext": ({ name?: string, weight?: number })[]
