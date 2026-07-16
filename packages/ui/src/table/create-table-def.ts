@@ -18,6 +18,7 @@ import {
   UI_TYPE,
 } from "../shared/annotation-keys";
 import { extractMeasurement } from "../form/measurement";
+import { humanizePath } from "../shared/str";
 import { extractLiteralOptions } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
 import type { ColumnDef, MetaResponse, TableActionsModel, TableDef } from "./types";
@@ -176,10 +177,4 @@ function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: unknown): 
     return "text";
   }
   return "text";
-}
-
-/** Converts a dot-path to a human-readable label (e.g. 'firstName' → 'First Name'). */
-function humanizePath(path: string): string {
-  const last = path.slice(path.lastIndexOf(".") + 1);
-  return last.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (s) => s.toUpperCase());
 }

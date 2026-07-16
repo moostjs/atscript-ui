@@ -44,6 +44,8 @@ const config: TAtscriptUserConfig = {
 export default config;
 ```
 
+`dbPlugin({ manifest: "src/models.gen.ts" })` additionally emits a generated model manifest module (exports `atscriptModels`, `dbTables`, `dbViews`, `modelsBySpace`) on every atscript build — feed `atscriptModels` to `buildModelRoutes` from `@atscript/ui` to derive router/nav entries from models. See [annotations.md](annotations.md#uinav-model-level-navigation).
+
 ## vite.config.ts
 
 Add the atscript unplugin and (Vue only) the auto-import resolver from `@atscript/ui-styles/vite`. The resolver only auto-imports Tier-1 (`as-*` root) components; Tier-2 defaults stay explicit.

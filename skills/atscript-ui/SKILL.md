@@ -5,8 +5,9 @@ description: >-
   annotated types. Use when working with `@atscript/ui`, `@atscript/ui-fns`, or
   `@atscript/ui-table` framework-agnostic primitives (FormDef, TableDef,
   FieldResolver, FilterCondition, PresetSnapshot, buildTableQuery,
-  ValueHelpClient); when looking up the full `@ui.*` / `@ui.form.*` /
-  `@ui.table.*` / `@ui.dict.*` / `@ui.type` / `@wf.*` annotation reference;
+  ValueHelpClient, buildModelRoutes — app nav/routes from DB models); when
+  looking up the full `@ui.*` / `@ui.form.*` / `@ui.table.*` / `@ui.dict.*` /
+  `@ui.nav.*` / `@ui.type` / `@wf.*` annotation reference;
   when wiring `installDynamicResolver()` from `@atscript/ui-fns`; when porting
   the engine to a non-Vue framework (React, Svelte); or when deciding which
   specialized atscript-ui skill to load (forms / tables / wf / styles). Scope
@@ -31,7 +32,7 @@ One install pulls in 5 sub-skills (`atscript-ui`, `atscript-ui-forms`, `-tables`
 ## Packages (UI side)
 
 ```
-@atscript/ui              framework-agnostic core: FormDef, TableDef, FieldResolver, value-help, validators, decimal helpers
+@atscript/ui              framework-agnostic core: FormDef, TableDef, FieldResolver, value-help, validators, decimal helpers, model nav routes
     ├── @atscript/ui-fns       opt-in dynamic resolver for @ui.fn.* (uses new Function — trusted schemas only)
     ├── @atscript/ui-table     framework-agnostic table model: filter→Uniquery, presets, query builder, window mode
     ├── @atscript/ui-styles    UnoCSS preset + AsResolver + as-* shortcut tree + baked icons
@@ -139,6 +140,9 @@ import {
   getSortableColumns,
   getFilterableColumns,
   getColumn,
+  // model nav routes (feed dbPlugin({ manifest }) output — see annotations.md, @ui.nav.*)
+  buildModelRoutes,
+  // + type TModelRoute
   // annotation key constants (UI_FORM_*, UI_TABLE_*, UI_DICT_*, UI_TYPE — see annotations.md)
   UI_TYPE,
   UI_FORM_FN_LABEL,
@@ -147,6 +151,9 @@ import {
   UI_TABLE_WIDTH,
   UI_TABLE_SELECT_WITH,
   UI_DICT_LABEL,
+  UI_NAV_GROUP,
+  UI_NAV_ORDER,
+  UI_NAV_HIDDEN,
   // utilities
   asArray,
   optKey,
@@ -211,12 +218,12 @@ import {
 
 ## References — load only what's needed
 
-| Domain              | File                                                        | When                                                                                                                                                                                                                                                                 |
-| ------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| First contact       | [getting-started.md](references/getting-started.md)         | Install matrix per use-case, root `atscript.config.ts` (UI plugins), root `vite.config.ts` (unplugin-atscript), `installDynamicResolver()` placement, locale providers, dev-server hooks                                                                             |
-| Ecosystem map       | [ecosystem.md](references/ecosystem.md)                     | Which package solves which problem, dep graph, decision table, glossary, sibling-skill routing                                                                                                                                                                       |
-| `@ui.*` annotations | [annotations.md](references/annotations.md)                 | Full exhaustive reference of every `@ui.*` / `@ui.form.*` / `@ui.form.fn.*` / `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*` / `@ui.type` / `@wf.*` key — argument shape, what reads it, precedence. The fastest grep target for "which annotation does X" queries  |
-| Bundle optimization | [bundle-optimization.md](references/bundle-optimization.md) | When trimming JS or CSS bundle size: subpath/`AsResolver` delivery, `<AsTableRoot>` lazy dialogs + `controls.X` eager flip, `AsActionFormDialog`/vue-form boundary, extractor match channels, `componentCompanions` + `excludeComponents`, pre-built CSS granularity |
+| Domain              | File                                                        | When                                                                                                                                                                                                                                                                                                                                             |
+| ------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| First contact       | [getting-started.md](references/getting-started.md)         | Install matrix per use-case, root `atscript.config.ts` (UI plugins), root `vite.config.ts` (unplugin-atscript), `installDynamicResolver()` placement, locale providers, dev-server hooks                                                                                                                                                         |
+| Ecosystem map       | [ecosystem.md](references/ecosystem.md)                     | Which package solves which problem, dep graph, decision table, glossary, sibling-skill routing                                                                                                                                                                                                                                                   |
+| `@ui.*` annotations | [annotations.md](references/annotations.md)                 | Full exhaustive reference of every `@ui.*` / `@ui.form.*` / `@ui.form.fn.*` / `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*` / `@ui.nav.*` / `@ui.type` / `@wf.*` key — argument shape, what reads it, precedence. Also `buildModelRoutes` (model manifest → nav/route registry). The fastest grep target for "which annotation does X" queries |
+| Bundle optimization | [bundle-optimization.md](references/bundle-optimization.md) | When trimming JS or CSS bundle size: subpath/`AsResolver` delivery, `<AsTableRoot>` lazy dialogs + `controls.X` eager flip, `AsActionFormDialog`/vue-form boundary, extractor match channels, `componentCompanions` + `excludeComponents`, pre-built CSS granularity                                                                             |
 
 ## Customization
 

@@ -105,6 +105,8 @@ query on a timer without loading affordances. See
   interactions.
 - [Pagination & Virtualization](/tables/pagination) — choosing between
   `<AsTable>` and `<AsWindowTable>`, tuning block size.
+- [Model Routes & Nav](/tables/model-routes) — generate router entries
+  and side-nav items for every DB model with `buildModelRoutes`.
 
 ::: tip Related ecosystem docs
 The `.as` language, `asc` CLI and the core `@meta.*` / `@expect.*`

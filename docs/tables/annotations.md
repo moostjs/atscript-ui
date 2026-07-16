@@ -19,6 +19,8 @@ Annotations cluster into five namespaces:
   picker UI.
 - **`@ui.type`** — cross-cutting renderer override (applies wherever
   there's no surface-specific override).
+- **`@ui.nav.*`** — model-level navigation metadata, read by
+  `buildModelRoutes` when generating app navigation from models.
 - **`@meta.*`** / **`@expect.*`** — generic atscript metadata read by
   the table (labels, IDs, max length, nullability).
 - **`@db.*`** — DB-layer annotations read indirectly via the moost-db
@@ -133,6 +135,32 @@ status badge, rating, …), use `@ui.form.component` on the form side
 and `@ui.table.component` on the table side. Both annotations look up
 in their own `:components` map and are the dedicated mechanism for
 hand-rolled widgets.
+
+## `@ui.nav.*` — model-level navigation
+
+These sit on the **interface** (not on a prop) and describe how the
+declaring model appears in navigation generated from model metadata by
+[`buildModelRoutes`](/tables/model-routes). They don't change how the
+table itself renders.
+
+| Annotation             | Arg(s) | Where               | Controls                                                                                                                           |
+| ---------------------- | ------ | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.nav.group 'name'` | string | `interface`, `type` | Nav section the model belongs to (`route.group`). Models sharing a value render under one section; grouping is the consumer's job. |
+| `@ui.nav.order N`      | number | `interface`, `type` | Position in generated nav (`route.order`) — lower first; models without an order sort last in input order.                         |
+| `@ui.nav.hidden`       | —      | `interface`, `type` | Opts the model out of generated nav (API-only models). The route is still returned with `hidden: true`; consumers filter.          |
+
+```atscript
+@db.table 'orders'
+@ui.nav.group 'Sales'
+@ui.nav.order 1
+export interface OrdersTable {
+    // ...
+}
+```
+
+See [Model Routes & Nav](/tables/model-routes) for the full
+manifest → routes → router pipeline and the path/label derivation
+contract.
 
 ## `@meta.*` and `@expect.*` — read by the table
 

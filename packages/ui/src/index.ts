@@ -43,6 +43,10 @@ export {
   UI_DICT_FILTERABLE,
   UI_DICT_SORTABLE,
   UI_DICT_SEARCHABLE,
+  // Navigation
+  UI_NAV_GROUP,
+  UI_NAV_ORDER,
+  UI_NAV_HIDDEN,
   // DB
   DB_REL_FK,
   DB_HTTP_PATH,
@@ -275,3 +279,7 @@ export { getSortableColumns, getFilterableColumns, getColumn } from "./table/col
 
 // ── Navigate-action href (render-time `$1` interpolation) ───
 export { navigateHrefFor } from "./table/navigate-href";
+
+// ── Model nav routes (metadata-driven app navigation) ───────
+export { buildModelRoutes } from "./nav/model-routes";
+export type { TModelRoute } from "./nav/model-routes";

@@ -46,6 +46,7 @@ const ROW_SPAN_VALUES: string[] = ["1", "2", "3", "4", "5", "6"];
  * - `ui.form.<key>`   — form-only static
  * - `ui.table.<key>`  — table-only static
  * - `ui.dict.<key>`   — value-help annotations
+ * - `ui.nav.<key>`    — model-level navigation annotations
  * - `ui.array.<key>`  — array control annotations
  *
  * The dynamic `ui.form.fn.*` / `ui.table.fn.*` and `ui.form.validate` specs
@@ -715,6 +716,68 @@ export const uiAnnotations: TAnnotationsTree = {
         description:
           "Marks a prop as participating in `$search`, or — on an interface — marks every `string` prop on the target as searchable. Surfaced via `meta.searchable` on value-help `/meta` responses.",
         nodeType: ["prop", "interface"],
+        passedWhenReferred: false,
+      }),
+    },
+
+    // ── Navigation annotations (model-level, read by buildModelRoutes) ──
+    //
+    // All `ui.nav.*` specs describe how the DECLARING model appears in
+    // app navigation generated from model metadata — a field referencing
+    // the model must not import its nav placement, hence
+    // passedWhenReferred: false throughout.
+    nav: {
+      group: new AnnotationSpec({
+        description:
+          "Navigation section this model belongs to when the app generates navigation from model " +
+          "metadata (`buildModelRoutes`). Models sharing a group value are meant to render under " +
+          "one nav section — grouping itself is left to the consumer." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@db.table 'orders'\n" +
+          "@ui.nav.group 'Sales'\n" +
+          "export interface Order {\n" +
+          "```\n",
+        nodeType: ["interface", "type"],
+        passedWhenReferred: false,
+        argument: {
+          name: "group",
+          type: "string",
+          description: "Nav section name shared by related models.",
+        },
+      }),
+
+      order: new AnnotationSpec({
+        description:
+          "Position of this model in generated navigation — lower values appear first; models " +
+          "without an order sort last (in input order)." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@db.table 'orders'\n" +
+          "@ui.nav.order 1\n" +
+          "export interface Order {\n" +
+          "```\n",
+        nodeType: ["interface", "type"],
+        passedWhenReferred: false,
+        argument: {
+          name: "order",
+          type: "number",
+          description: "Numeric order (lower = earlier)",
+        },
+      }),
+
+      hidden: new AnnotationSpec({
+        description:
+          "Opts this model out of generated navigation (e.g. API-only models). " +
+          "`buildModelRoutes` still returns the route flagged `hidden: true` — filtering is the " +
+          "consumer's decision." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@db.table 'audit_log'\n" +
+          "@ui.nav.hidden\n" +
+          "export interface AuditLog {\n" +
+          "```\n",
+        nodeType: ["interface", "type"],
         passedWhenReferred: false,
       }),
     },

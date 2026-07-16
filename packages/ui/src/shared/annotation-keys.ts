@@ -46,8 +46,16 @@ export const UI_DICT_FILTERABLE = "ui.dict.filterable" as const;
 export const UI_DICT_SORTABLE = "ui.dict.sortable" as const;
 export const UI_DICT_SEARCHABLE = "ui.dict.searchable" as const;
 
+// ── Navigation annotations (registered by @atscript/ui plugin) ──
+export const UI_NAV_GROUP = "ui.nav.group" as const;
+export const UI_NAV_ORDER = "ui.nav.order" as const;
+export const UI_NAV_HIDDEN = "ui.nav.hidden" as const;
+
 // ── DB annotation keys (registered by @atscript/db plugin) ──
 export const DB_REL_FK = "db.rel.FK" as const;
+export const DB_TABLE = "db.table" as const;
+export const DB_VIEW = "db.view" as const;
+export const DB_VIEW_FOR = "db.view.for" as const;
 export const DB_HTTP_PATH = "db.http.path" as const;
 export const DB_JSON = "db.json" as const;
 export const DB_AMOUNT_CURRENCY = "db.amount.currency" as const;

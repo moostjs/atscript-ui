@@ -68,14 +68,15 @@ Full list: [atscript.dev](https://atscript.dev).
 
 UI-specific configuration. The `@atscript/ui/plugin` registers the namespace; every component in atscript-ui reads its values through the `FieldResolver`.
 
-Three sub-namespaces show up most:
+These sub-namespaces show up most:
 
-| Sub-namespace | Used by                        | Common keys                                                                                           |
-| ------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| `@ui.form.*`  | `<AsForm>`, `<AsField>`        | `placeholder`, `hint`, `order`, `hidden`, `disabled`, `grid.colSpan`, `submit.text`, `label.singular` |
-| `@ui.table.*` | `<AsTable>`, `<AsFilters>`     | `hidden`, `order`, `width`, `align`, `cell`, `headerCell`                                             |
-| `@ui.type`    | both                           | The UI type id: `text`, `password`, `number`, `textarea`, `select`, `radio`, `checkbox`, …            |
-| `@ui.fn.*`    | both (with `ui-fns` installed) | Dynamic computed properties: function-string body that reads `{ formData, row, … }`.                  |
+| Sub-namespace | Used by                             | Common keys                                                                                           |
+| ------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `@ui.form.*`  | `<AsForm>`, `<AsField>`             | `placeholder`, `hint`, `order`, `hidden`, `disabled`, `grid.colSpan`, `submit.text`, `label.singular` |
+| `@ui.table.*` | `<AsTable>`, `<AsFilters>`          | `hidden`, `order`, `width`, `align`, `cell`, `headerCell`                                             |
+| `@ui.type`    | both                                | The UI type id: `text`, `password`, `number`, `textarea`, `select`, `radio`, `checkbox`, …            |
+| `@ui.fn.*`    | both (with `ui-fns` installed)      | Dynamic computed properties: function-string body that reads `{ formData, row, … }`.                  |
+| `@ui.nav.*`   | your app shell (`buildModelRoutes`) | `group`, `order`, `hidden` — how a DB model appears in navigation generated from model metadata.      |
 
 The full list per-component lives in the [Forms annotations](/forms/annotations) and [Tables annotations](/tables/annotations) guides.
 

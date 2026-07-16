@@ -20,7 +20,7 @@ const { CustomersTable } = await import("./schemas/customers.as");
 const { OrdersTable } = await import("./schemas/orders.as");
 const { AuditLogTable } = await import("./schemas/audit-log.as");
 const { AsPresetEntry } = await import("@atscript/moost-ui-presets");
-const { WfStateRow } = await import("./schemas/wf-state.as");
+const { atscriptModels } = await import("./atscript.models.gen");
 const {
   seedRoles,
   seedUsers,
@@ -31,21 +31,9 @@ const {
   seedAuditLog,
 } = await import("./seed");
 
-const result = await syncSchema(
-  db,
-  [
-    RolesTable,
-    UsersTable,
-    CategoriesTable,
-    ProductsTable,
-    CustomersTable,
-    OrdersTable,
-    AuditLogTable,
-    AsPresetEntry,
-    WfStateRow,
-  ],
-  { force: true },
-);
+const result = await syncSchema(db, [...atscriptModels, AsPresetEntry], {
+  force: true,
+});
 console.log(`✅ Schema synced: ${result.status}`);
 
 const rolesT = db.getTable(RolesTable);
