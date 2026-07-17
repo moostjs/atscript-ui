@@ -414,7 +414,11 @@ if (props.field.allStatic) {
   label = getFieldMeta(prop, META_LABEL) ?? props.field.name;
   description = getFieldMeta(prop, META_DESCRIPTION);
   hint = getFieldMeta(prop, UI_FORM_HINT);
-  placeholder = getFieldMeta(prop, UI_FORM_PLACEHOLDER);
+  // @db.writeOnly fields are sealed out of reads — the input always starts
+  // empty, so default a set-only affordance unless a placeholder is declared.
+  placeholder =
+    getFieldMeta(prop, UI_FORM_PLACEHOLDER) ??
+    (prop.metadata.has("db.writeOnly") ? "(hidden — enter a value to replace)" : undefined);
   styles = getFieldMeta(prop, UI_FORM_STYLES);
   options = resolveOptions(prop, emptyScope);
   attrs =

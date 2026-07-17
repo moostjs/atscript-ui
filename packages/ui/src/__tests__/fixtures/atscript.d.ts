@@ -50,6 +50,7 @@ declare global {
     "db.column.measure": boolean
     "db.column.filterable": boolean
     "db.column.sortable": boolean
+    "db.column.searchable": boolean
     "db.column.version": boolean
     "db.default": string
     "db.default.increment": number | true
@@ -58,6 +59,7 @@ declare global {
     "db.json": boolean
     "db.ignore": boolean
     "db.encrypted": boolean
+    "db.writeOnly": boolean
     "db.http.path": string
     "db.sync.method": string
     "db.depth.limit": number
