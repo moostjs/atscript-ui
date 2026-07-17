@@ -95,6 +95,10 @@ Precedence:
 
 If no entry matches, AsField renders an inline diagnostic `[Label] No component for type "X" (component "Y" not supplied)`.
 
+### Write-only fields (`db.writeOnly`)
+
+Fields whose prop metadata carries `db.writeOnly` (from `@db.writeOnly` on the model or an ARBAC overlay stamp — the server never returns their value) render as **set-only inputs**: the placeholder defaults to `(hidden — enter a value to replace)` unless `@ui.form.placeholder` overrides it. The input always starts empty (reads never populate it); leaving it untouched keeps the key absent from the model, so an edit-submit omits it and the stored value is preserved. Entering a value writes it. No special component is needed — this is default AsField behavior.
+
 ### What AsField provides downward
 
 When the field is structured (object/array/tuple) or a union, AsField provides:
