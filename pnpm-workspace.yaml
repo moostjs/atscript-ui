@@ -3,14 +3,14 @@ packages:
   - docs
 
 catalog:
-  "@aooth/arbac": ^0.1.54
-  "@aooth/arbac-moost": ^0.1.54
+  "@aooth/arbac": ^0.1.55
+  "@aooth/arbac-moost": ^0.1.55
   "@atscript/core": ^0.1.85
-  "@atscript/db": ^0.1.121
-  "@atscript/db-client": ^0.1.121
-  "@atscript/db-sql-tools": ^0.1.121
-  "@atscript/db-sqlite": ^0.1.121
-  "@atscript/moost-db": ^0.1.121
+  "@atscript/db": ^0.1.122
+  "@atscript/db-client": ^0.1.122
+  "@atscript/db-sql-tools": ^0.1.122
+  "@atscript/db-sqlite": ^0.1.122
+  "@atscript/moost-db": ^0.1.122
   "@atscript/moost-validator": ^0.1.85
   "@atscript/typescript": ^0.1.85
   "@iconify/utils": ^3.1.3
