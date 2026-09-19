@@ -8,7 +8,7 @@ import {
   serializeDraft,
   stableStringify,
 } from "@atscript/ui-table";
-import { type Ref, isRef, watch } from "vue";
+import { type MaybeRefOrGetter, type Ref, isRef, toValue, watch } from "vue";
 
 const DEFAULT_DEBOUNCE_MS = 300;
 
@@ -19,6 +19,14 @@ export interface UseLocalDraftOptions {
   enabled: Ref<boolean> | boolean;
   /** Persisted-aspect gate — drafts only persist aspects in this set. */
   availableAspects: readonly PresetAspect[];
+  /**
+   * Identity the draft is keyed under — pass the signed-in user's id so a
+   * shared browser never restores the previous user's draft. Reactive: when
+   * it changes, reads and writes move to the new key and the old scope's
+   * draft is neither read nor overwritten. Omitted (or `undefined`) keeps
+   * the pre-0.1.133 unscoped key. Since 0.1.133.
+   */
+  scope?: MaybeRefOrGetter<string | undefined>;
   /** Optional debounce override (default 300ms). */
   debounceMs?: number;
   /**
@@ -62,11 +70,18 @@ export interface UseLocalDraftReturn {
 
 /**
  * localStorage overlay manager for table presets. One overlay per
- * `(app, tableKey)`; switching presets clears it (caller's responsibility
- * — this composable only tracks state, not which preset is active).
+ * `(app, scope, tableKey)`; switching presets clears it (caller's
+ * responsibility — this composable only tracks state, not which preset is
+ * active).
  */
 export function useLocalDraft(opts: UseLocalDraftOptions): UseLocalDraftReturn {
-  const key = `as-table-draft:${opts.app}:${opts.tableKey}`;
+  /** Resolved per call — `scope` is reactive. */
+  function storageKey(): string {
+    const scope = toValue(opts.scope);
+    return scope
+      ? `as-table-draft:${opts.app}:${scope}:${opts.tableKey}`
+      : `as-table-draft:${opts.app}:${opts.tableKey}`;
+  }
   const debounceMs = opts.debounceMs ?? DEFAULT_DEBOUNCE_MS;
   const storage = resolveStorage(opts.storage);
 
@@ -79,7 +94,7 @@ export function useLocalDraft(opts: UseLocalDraftOptions): UseLocalDraftReturn {
   function readDraft(): PresetDraft | null {
     if (!storage) return null;
     try {
-      const raw = storage.getItem(key);
+      const raw = storage.getItem(storageKey());
       if (!raw) return null;
       const parsed = JSON.parse(raw);
       if (!parsed || typeof parsed !== "object") return null;
@@ -94,7 +109,7 @@ export function useLocalDraft(opts: UseLocalDraftOptions): UseLocalDraftReturn {
   function writeDraft(draft: PresetDraft): void {
     if (!storage) return;
     try {
-      storage.setItem(key, JSON.stringify(draft));
+      storage.setItem(storageKey(), JSON.stringify(draft));
     } catch (err) {
       // eslint-disable-next-line no-console
       console.warn("[vue-table] useLocalDraft: localStorage write failed", err);
@@ -104,7 +119,7 @@ export function useLocalDraft(opts: UseLocalDraftOptions): UseLocalDraftReturn {
   function clear(): void {
     if (!storage) return;
     try {
-      storage.removeItem(key);
+      storage.removeItem(storageKey());
     } catch {
       // ignore — quota / SSR / etc.
     }
@@ -158,15 +173,37 @@ export function useLocalDraft(opts: UseLocalDraftOptions): UseLocalDraftReturn {
 
     // Source returns fresh objects on every run, so reference inequality
     // already fires the handler — `deep: true` would only add wasted
-    // traversal.
+    // traversal. `scope` is NOT a source: a flip must not schedule a write,
+    // or the old identity's snapshot lands under the new identity's key.
     const stop = watch(
       () => [currentSnapshot(), activePresetSnapshot()] as const,
       ([current, preset]) => flushDebounced(current, preset),
       { flush: "post" },
     );
+
+    // Identity change: adopt the new key without writing anything to it.
+    const stopScope = watch(
+      () => toValue(opts.scope),
+      () => {
+        // A debounced flush still in the queue was composed for the PREVIOUS
+        // user's state — dropping it is the whole point.
+        flushDebounced.cancel();
+        // The caches describe the old key; they must neither suppress nor
+        // leak into the new one.
+        lastPresetRef = null;
+        lastPresetSerialized = "";
+        // Prime from whatever the new identity already has stored, so their
+        // own draft is not rewritten byte-for-byte on the next change.
+        const existing = readDraft();
+        lastDraftSerialized = existing && !isEmptyDraft(existing) ? stableStringify(existing) : "";
+      },
+      { flush: "post" },
+    );
+
     return () => {
       flushDebounced.cancel();
       stop();
+      stopScope();
     };
   }
 

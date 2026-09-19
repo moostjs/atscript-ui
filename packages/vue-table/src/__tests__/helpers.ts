@@ -1,10 +1,14 @@
 import type { ColumnDef, MetaResponse, TableDef } from "@atscript/ui";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import type { Client } from "@atscript/db-client";
-import { mount } from "@vue/test-utils";
-import { defineComponent, h } from "vue";
+import { mount, type VueWrapper } from "@vue/test-utils";
+import { defineComponent, h, type Slots } from "vue";
 import { vi } from "vitest";
-import { createTableState, type QueryFn } from "../composables/use-table-state";
+import {
+  createTableState,
+  provideTableContext,
+  type QueryFn,
+} from "../composables/use-table-state";
 import type { MainActionRequest, ReactiveTableState } from "../types";
 import type { FilterExpr } from "@uniqu/core";
 import type { SortControl } from "@atscript/ui";
@@ -163,10 +167,11 @@ export function deferredPages(): {
  * `pages` returns an empty page; tests that need real fetch behaviour should
  * use `createMockClient` instead.
  */
-export function stubClient(): Client {
+export function stubClient(overrides?: Partial<Client>): Client {
   return {
     meta: () => Promise.resolve({} as never),
     pages: () => Promise.resolve({ data: [], count: 0, page: 1, itemsPerPage: 50, pages: 1 }),
+    ...overrides,
   } as unknown as Client;
 }
 
@@ -227,7 +232,7 @@ type MountTableStateOptions = {
   fetchableExtra?: string[];
   queryOnMount?: boolean;
   blockSize?: number;
-  blockQuery?: boolean;
+  blockQuery?: boolean | (() => boolean);
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
   alwaysSelected?: string[];
@@ -242,6 +247,8 @@ type MountTableStateOptions = {
   urlQuerySync?: import("@atscript/ui-table").UrlQuerySync;
   /** Default page size — also used as the URL bridge's default items-per-page. */
   limit?: number;
+  /** Selection options (notably `rowValueFn`). */
+  selection?: import("../composables/use-table-state").TableSelectionOptions;
 };
 
 function buildClient(
@@ -262,15 +269,18 @@ function buildClient(
 function mountWith(
   opts: MountTableStateOptions,
   client: Client,
-  initFn: (internals: { init: (def: TableDef) => void }) => void,
-): ReactiveTableState {
+  initFn: (internals: { init: (def: TableDef) => void }, state: ReactiveTableState) => void,
+  render?: () => unknown,
+  attachTo?: boolean,
+): { state: ReactiveTableState; wrapper: VueWrapper } {
   let state!: ReactiveTableState;
-  mount(
+  const wrapper = mount(
     defineComponent({
       setup() {
         const { state: s, internals } = createTableState({
           client: opts.client ?? client,
           limit: opts.limit,
+          selection: opts.selection,
           query: {
             queryOnMount: opts.queryOnMount,
             blockQuery: opts.blockQuery,
@@ -286,12 +296,65 @@ function mountWith(
           window: { blockSize: opts.blockSize },
         });
         state = s;
-        initFn(internals);
-        return () => h("div");
+        initFn(internals, s);
+        if (!render) return () => h("div");
+        provideTableContext({ state, client: opts.client ?? client, controls: {} });
+        return () => render() as ReturnType<typeof h>;
       },
     }),
+    attachTo ? { attachTo: document.body } : undefined,
   );
-  return state;
+  return { state, wrapper };
+}
+
+export interface MountWithContextOptions extends MountTableStateOptions {
+  /** Props handed to the mounted component. */
+  props?: Record<string, unknown>;
+  /** Slots handed to the mounted component. */
+  slots?: Record<string, (...args: never[]) => unknown>;
+  /** Rows seeded into `windowCache`/`results`/`totalCount` before first render. */
+  seedRows?: Record<string, unknown>[];
+  /** Total count to seed alongside `seedRows`. Defaults to `seedRows.length`. */
+  totalCount?: number;
+  /** Mount into `document.body` (portals, focus, `getComputedStyle`). Default true. */
+  attachTo?: boolean;
+  /** Mutate the synthesised `TableDef` (actions, `canRemove`, …) before init. */
+  decorateDef?: (def: TableDef) => void;
+  /** Run against the state after init + seeding, before the first render. */
+  onReady?: (state: ReactiveTableState) => void;
+}
+
+/**
+ * Mount a component INSIDE a fresh table context: builds the state the way
+ * `mountTableState` does, seeds optional rows, provides the context, then
+ * renders `component` with `props` / `slots`. Use for any component test that
+ * would otherwise hand-roll a `defineComponent` host + `provideTableContext`.
+ */
+export function mountWithTableContext(
+  component: unknown,
+  opts: MountWithContextOptions = {},
+): {
+  state: ReactiveTableState;
+  wrapper: VueWrapper;
+  client: Client;
+  pagesFn: ReturnType<typeof vi.fn>;
+} {
+  const { client, pagesFn, columns } = buildClient(opts, { data: [], count: 0 });
+  const effective = { ...opts, queryOnMount: opts.queryOnMount ?? false };
+  const { state, wrapper } = mountWith(
+    effective,
+    client,
+    ({ init }, s) => {
+      const def = mockTableDef(columns, opts.fetchableExtra);
+      opts.decorateDef?.(def);
+      init(def);
+      if (opts.seedRows) seedWindowCache(s, opts.seedRows, opts.totalCount ?? opts.seedRows.length);
+      opts.onReady?.(s);
+    },
+    () => h(component as Parameters<typeof h>[0], opts.props, opts.slots as unknown as Slots),
+    opts.attachTo ?? true,
+  );
+  return { state, wrapper, client: opts.client ?? client, pagesFn };
 }
 
 /**
@@ -309,7 +372,7 @@ export function mountTableState(opts: MountTableStateOptions = {}): {
     count: 10,
   });
   const effective = { ...opts, queryOnMount: opts.queryOnMount ?? false };
-  const state = mountWith(effective, client, ({ init }) =>
+  const { state } = mountWith(effective, client, ({ init }) =>
     init(mockTableDef(columns, opts.fetchableExtra)),
   );
   return { state, pagesFn, client };
@@ -327,7 +390,7 @@ export function mountTableStateDeferred(opts: MountTableStateOptions = {}): {
 } {
   const { client, pagesFn, columns } = buildClient(opts, { data: [], count: 0 });
   let initRef!: (def: TableDef) => void;
-  const state = mountWith(opts, client, ({ init }) => {
+  const { state } = mountWith(opts, client, ({ init }) => {
     initRef = init;
   });
   return {

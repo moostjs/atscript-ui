@@ -1,7 +1,7 @@
 import {
   PresetsClient,
   STANDARD_PRESET_ID,
-  isAuthError,
+  isUnavailableError,
   isSystemPresetId,
   resolveSystemPresets,
   type AsPresetEntryRow,
@@ -44,6 +44,11 @@ export interface UsePresetsReturn {
   /** False on 401/403 from initial load — UI hides itself. */
   available: ComputedRef<boolean>;
   loading: Ref<boolean>;
+  /**
+   * Load failure from `reload()`, or null. Mutator failures are NOT recorded
+   * here — they rethrow, and the table-state slice's
+   * `state.preset.lastError` is the single channel UI renders.
+   */
   error: Ref<unknown>;
   /**
    * Authoritative current-user id. `capabilities.userId` when caps are
@@ -239,7 +244,7 @@ export function usePresets(opts: UsePresetsOptions): UsePresetsReturn {
       // the cached value rather than clearing it.
       if (result.capabilities !== undefined) capabilities.value = result.capabilities;
     } catch (err) {
-      if (isAuthError(err)) {
+      if (isUnavailableError(err)) {
         denied.value = true;
         presets.value = [];
         userConf.value = null;

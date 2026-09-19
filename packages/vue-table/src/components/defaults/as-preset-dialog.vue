@@ -2,6 +2,7 @@
 import {
   DialogClose,
   DialogContent,
+  DialogDescription,
   DialogOverlay,
   DialogPortal,
   DialogRoot,
@@ -9,11 +10,11 @@ import {
 } from "reka-ui";
 import { computed, nextTick, ref, watch } from "vue";
 import { type PresetAspect, isSystemPresetId, setsEqual } from "@atscript/ui-table";
+import { errorMessage } from "../../utils/error-message";
 import { useTableContext } from "../../composables/use-table-state";
 import {
   ASPECT_ICONS,
   ASPECT_LABELS,
-  aspectsOf,
   ownerNameOf,
   readPresetLabel,
 } from "../../composables/preset-aspect-display";
@@ -144,7 +145,7 @@ const allRows = computed<DialogRow[]>(() => {
       kind: "system",
       isPublic: false,
       ownerLabel: "—",
-      aspects: [...state.preset.availableAspects],
+      aspects: state.preset.ownedAspects(sp.id),
       pendingLabel: false,
     });
   }
@@ -162,7 +163,7 @@ const allRows = computed<DialogRow[]>(() => {
       kind: isOwned ? "owned" : "public",
       isPublic: pendingPublicIds.value.has(row.id),
       ownerLabel: isOwned ? "you" : ownerNameOf(row, "—"),
-      aspects: aspectsOf(row, state.preset.availableAspects),
+      aspects: state.preset.ownedAspects(row.id),
       pendingLabel: pending !== undefined && pending !== original,
     });
   }
@@ -299,10 +300,19 @@ function commitRename() {
 }
 
 const saving = ref(false);
+// Failure copy rendered in the footer. Cleared on every Save attempt and
+// whenever the dialog re-seeds from the server.
+const errorText = ref("");
 
 async function save() {
   if (!isDirty.value || saving.value) return;
   saving.value = true;
+  errorText.value = "";
+  // Writes that failed: their staged edit is kept so the user can retry.
+  const failedLabels = new Map<string, string>();
+  const failedPublicIds = new Set<string>();
+  const failedDeleteIds = new Set<string>();
+  const failures: string[] = [];
   try {
     // batch() defers the per-mutator reload so N renames + M public flips +
     // K deletes + fav/default writes collapse into ONE round-trip.
@@ -319,7 +329,11 @@ async function save() {
           if (state.preset.isOwned(id)) continue;
           cleaned.push(id);
         }
-        await state.preset.setFavorites(cleaned);
+        try {
+          await state.preset.setFavorites(cleaned);
+        } catch (err) {
+          failures.push(errorMessage(err, "The change could not be saved."));
+        }
       }
       if (pendingDefaultId.value !== serverDefaultId.value) {
         const next =
@@ -327,7 +341,11 @@ async function save() {
             ? null
             : pendingDefaultId.value;
         if (next !== serverDefaultId.value) {
-          await state.preset.setDefault(next);
+          try {
+            await state.preset.setDefault(next);
+          } catch (err) {
+            failures.push(errorMessage(err, "The change could not be saved."));
+          }
         }
       }
       if (pendingLabels.value.size > 0) {
@@ -335,8 +353,10 @@ async function save() {
           if (deleted.has(id)) continue;
           try {
             await state.preset.rename(id, label);
-          } catch (_err) {
-            // 409 / forbidden — keep the batch going.
+          } catch (err) {
+            // 409 / forbidden — keep the batch going; the edit stays staged.
+            failedLabels.set(id, label);
+            failures.push(errorMessage(err, "The change could not be saved."));
           }
         }
       }
@@ -353,8 +373,9 @@ async function save() {
         for (const id of flips) {
           try {
             await state.preset.togglePublic(id);
-          } catch (_err) {
-            // 409 / forbidden — keep the batch going.
+          } catch (err) {
+            failedPublicIds.add(id);
+            failures.push(errorMessage(err, "The change could not be saved."));
           }
         }
       }
@@ -362,12 +383,38 @@ async function save() {
         for (const id of deleted) {
           try {
             await state.preset.remove(id);
-          } catch (_err) {
-            // 403 / 404 — keep the batch going.
+          } catch (err) {
+            failedDeleteIds.add(id);
+            failures.push(errorMessage(err, "The change could not be saved."));
           }
         }
       }
     });
+    if (failures.length > 0) {
+      // Something did not land: re-seed from the server so committed writes
+      // drop out of the pending sets, then re-stage only what failed, and
+      // keep the dialog open with the reason on screen.
+      syncPendingFromServer();
+      if (failedLabels.size > 0) {
+        const labels = new Map(pendingLabels.value);
+        for (const [id, label] of failedLabels) labels.set(id, label);
+        pendingLabels.value = labels;
+      }
+      if (failedPublicIds.size > 0) {
+        const publics = new Set(pendingPublicIds.value);
+        for (const id of failedPublicIds) {
+          if (publics.has(id)) publics.delete(id);
+          else publics.add(id);
+        }
+        pendingPublicIds.value = publics;
+      }
+      if (failedDeleteIds.size > 0) {
+        pendingDeleteIds.value = new Set([...pendingDeleteIds.value, ...failedDeleteIds]);
+      }
+      errorText.value =
+        failures.length === 1 ? failures[0] : `${failures.length} changes could not be saved.`;
+      return;
+    }
     // Apply the picked preset last so its post-rename label / post-flip
     // public state takes effect. Skip when it's queued for delete.
     if (
@@ -387,6 +434,7 @@ async function save() {
 // confirmation prompt — Cancel IS the discard.
 function discardOrClose() {
   syncPendingFromServer();
+  errorText.value = "";
   state.preset.dialogOpen.value = false;
 }
 
@@ -438,6 +486,9 @@ function canToggleRowPublic(row: DialogRow): boolean {
       >
         <header class="as-preset-dialog-header">
           <DialogTitle class="as-preset-dialog-title">Presets</DialogTitle>
+          <DialogDescription class="sr-only">
+            Rename, share, favorite, pin as default or delete your saved table views.
+          </DialogDescription>
           <span class="as-preset-dialog-counter">{{ counterText }}</span>
           <DialogClose
             class="as-preset-dialog-close"
@@ -628,7 +679,10 @@ function canToggleRowPublic(row: DialogRow): boolean {
 
         <footer class="as-preset-dialog-footer">
           <div class="as-preset-dialog-footer-status">
-            <span v-if="isDirty" class="as-preset-dialog-footer-unsaved">
+            <span v-if="errorText" class="as-preset-dialog-footer-error" role="alert">{{
+              errorText
+            }}</span>
+            <span v-else-if="isDirty" class="as-preset-dialog-footer-unsaved">
               <span class="as-preset-dialog-footer-unsaved-dot" aria-hidden="true" />
               unsaved changes
             </span>

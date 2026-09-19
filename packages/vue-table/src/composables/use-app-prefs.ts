@@ -2,7 +2,7 @@ import {
   AppPrefsClient,
   type AppConfData,
   type AsPresetEntryRow,
-  isAuthError,
+  isUnavailableError,
 } from "@atscript/ui-table";
 import { type ClientFactory } from "@atscript/ui";
 import { type EventBusKey, StorageSerializers, useEventBus, useStorage } from "@vueuse/core";
@@ -209,7 +209,7 @@ function createInstance(app: string, opts: UseAppPrefsOptions): AppPrefsInstance
         cache.value = { ...result.prefs };
         existing.value = result.row;
       } catch (err) {
-        if (isAuthError(err)) {
+        if (isUnavailableError(err)) {
           denied.value = true;
           clearCache();
           existing.value = null;

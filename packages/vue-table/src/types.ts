@@ -1,4 +1,4 @@
-import type { Component, ShallowRef, Ref, ComputedRef } from "vue";
+import type { Component, ShallowRef, Ref, ComputedRef, MaybeRefOrGetter } from "vue";
 import type {
   ClientError,
   TDbActionInfo,
@@ -216,17 +216,79 @@ export interface PresetConfig {
    */
   aspects?: PresetAspect[];
   /**
+   * Aspects a SYSTEM preset owns. Intersected with `aspects`; defaults to all
+   * of them. Narrow it to e.g. `['filterOps']` when system presets are
+   * filter-only views that must not reset the user's columns, displayed
+   * filters, sorters or page size. Since 0.1.133.
+   */
+  systemAspects?: PresetAspect[];
+  /**
    * Opt-in localStorage overlay for the user's in-flight tweaks (default
    * `false`). Persists `columns` / `filters` / `sorters` / opt-in
    * `itemsPerPage`; `filterOps` / `searchTerm` / pagination are NOT persisted.
    */
   persistDrafts?: boolean;
+  /**
+   * Identity the draft is stored under — pass the signed-in user's id
+   * whenever `persistDrafts` is on, so a shared browser never restores the
+   * previous user's draft. Omitted keeps the pre-0.1.133 unscoped key.
+   * Since 0.1.133.
+   */
+  draftScope?: MaybeRefOrGetter<string | undefined>;
 }
 
 export type QueryErrorKind = "initial" | "query" | "queryNext" | "loadRange";
 
 /** Tri-state for the multi-select header checkbox. Window mode never reaches "all". */
 export type SelectAllState = "none" | "some" | "all";
+
+/**
+ * Context handed to the per-row hooks of `<AsTable>` (`rowSelectable`,
+ * `rowClass`, `rowAttrs`). Since 0.1.133.
+ */
+export interface RowHookContext {
+  /** Position of the row in the rows the renderer is currently rendering. */
+  index: number;
+  /**
+   * Whether the row's pk is in `state.selectedRows` right now. A getter —
+   * reading it subscribes that hook call to the selection, so predicates
+   * that ignore it are not re-run when the selection changes.
+   */
+  readonly selected: boolean;
+}
+
+/**
+ * Per-row selectability predicate. Return `false` — or a string, which is
+ * surfaced as the disabled reason on the selection control — to make the row
+ * not selectable; `true` (or omitting the prop) keeps it selectable.
+ * Since 0.1.133.
+ */
+export type RowSelectableHook = (
+  row: Record<string, unknown>,
+  ctx: RowHookContext,
+) => boolean | string | undefined | void;
+
+/** Extra classes for the row element. Since 0.1.133. */
+export type RowClassHook = (
+  row: Record<string, unknown>,
+  ctx: RowHookContext,
+) => string | string[] | Record<string, boolean> | undefined;
+
+/**
+ * Extra attributes for the row element. The framework's own `id`, `role`,
+ * `aria-*`, `data-*`, `class` and `style` always win. Since 0.1.133.
+ */
+export type RowAttrsHook = (
+  row: Record<string, unknown>,
+  ctx: RowHookContext,
+) => Record<string, unknown> | undefined;
+
+/** Normalised {@link RowSelectableHook} verdict. */
+export interface RowSelectableVerdict {
+  ok: boolean;
+  /** Disabled reason, when the predicate returned a string. */
+  reason?: string;
+}
 
 /** Controls which sections appear in the column header dropdown menu. */
 export interface ColumnMenuConfig {
@@ -414,6 +476,34 @@ export interface ReactiveTableState extends TableStateMethods {
    * naturally without consulting mode.
    */
   isPkSelected: (pk: unknown) => boolean;
+  /**
+   * Per-row selectability predicate — writable ref owned by the renderer,
+   * like {@link rowDelete}. `<AsTable>` / `<AsWindowTable>` push their
+   * `:row-selectable` prop into it, and every selection path in the model
+   * gates on it. Since 0.1.133.
+   */
+  rowSelectable: Ref<RowSelectableHook | undefined>;
+  /**
+   * Normalised `rowSelectable` verdict for one row. `index` is the row's
+   * position in what the renderer renders (absolute in window mode).
+   * Since 0.1.133.
+   */
+  isRowSelectable: (row: Record<string, unknown>, index: number) => RowSelectableVerdict;
+  /** The subset of `rows` the `rowSelectable` predicate lets through. Since 0.1.133. */
+  selectableRows: (rows: readonly Record<string, unknown>[]) => Record<string, unknown>[];
+  /** How many of `rows` the `rowSelectable` predicate lets through. Since 0.1.133. */
+  selectableCount: (rows: readonly Record<string, unknown>[]) => number;
+  /**
+   * Select every eligible row in `rows`. An ineligible row that is already
+   * selected stays selected. `indexOf` maps a position in `rows` to the
+   * index the `rowSelectable` predicate sees — windowed callers pass it
+   * because their rows come from a cache keyed by absolute index.
+   * Since 0.1.133.
+   */
+  selectAll: (
+    rows: readonly Record<string, unknown>[],
+    indexOf?: (position: number) => number,
+  ) => void;
   /** Column currently open in the filter dialog (null when closed). */
   filterDialogColumn: Ref<ColumnDef | null>;
 
@@ -441,7 +531,10 @@ export interface ReactiveTableState extends TableStateMethods {
   setActive: (absIndex: number) => void;
   /** Reset the active-row index to `-1`. */
   clearActive: () => void;
-  /** Toggle selection of the active row's PK in `selectedRows`. */
+  /**
+   * Toggle selection of the active row's PK in `selectedRows`. No-op in
+   * `select="none"` and on a row the `rowSelectable` predicate rejects.
+   */
   toggleActiveSelection: (mode: SelectionMode) => void;
   /** Ask the rendering component to emit `main-action` for the active row. */
   requestMainAction: (event: KeyboardEvent | MouseEvent) => void;
@@ -461,6 +554,12 @@ export interface ReactiveTableState extends TableStateMethods {
    */
   confirmRequest: Ref<ConfirmRequest | null>;
   /**
+   * The prompt request the dialog SURFACE renders: the last non-null
+   * `confirmRequest`, retained after it is answered so the copy survives the
+   * exit animation. Internal — used by the dialog. @since 0.1.133
+   */
+  confirmDisplay: Ref<ConfirmRequest | null>;
+  /**
    * Open the in-app confirm dialog with `message` as the body. Resolves
    * `true` on accept, `false` on cancel/dismiss. Public — consumers can
    * reuse this for their own confirmation flows; the dialog is rendered
@@ -476,6 +575,12 @@ export interface ReactiveTableState extends TableStateMethods {
   acceptPrompt: () => void;
   /** Resolve the active prompt with `false`. Internal — used by the dialog. */
   dismissPrompt: () => void;
+  /**
+   * Clear `confirmDisplay` once the dialog surface has left (bound to the
+   * content's `after-leave`). A no-op while a prompt is pending. Internal.
+   * @since 0.1.133
+   */
+  releaseConfirm: () => void;
 
   /**
    * Currently pending action-form request — `null` when no form is open.
@@ -483,6 +588,12 @@ export interface ReactiveTableState extends TableStateMethods {
    * `dismissActionForm()`; consumers should not mutate directly.
    */
   actionFormRequest: Ref<ActionFormRequest | null>;
+  /**
+   * The form request the dialog SURFACE renders: the last non-null
+   * `actionFormRequest`, retained after it is answered so the title, id chips
+   * and form survive the exit animation. Internal. @since 0.1.133
+   */
+  actionFormDisplay: Ref<ActionFormRequest | null>;
   /**
    * Open the action-form dialog. Resolves with the submitted form payload
    * on accept, or `null` on cancel/dismiss.
@@ -495,6 +606,12 @@ export interface ReactiveTableState extends TableStateMethods {
   acceptActionForm: (input: unknown) => void;
   /** Resolve the active form request with `null`. Internal — used by the dialog. */
   dismissActionForm: () => void;
+  /**
+   * Clear `actionFormDisplay` (and the loaded schema/draft) once the dialog
+   * surface has left. A no-op while a request is pending. Internal.
+   * @since 0.1.133
+   */
+  releaseActionForm: () => void;
   /**
    * Hydrate state from a URL query string produced by `stateToUrlQueryString`.
    * Replaces filters / sorters / search / pagination with values decoded from
@@ -536,8 +653,21 @@ export interface PresetSurface {
    */
   availableAspects: PresetAspect[];
   /**
+   * Aspects a SYSTEM preset owns — subset of `availableAspects`, equal to it
+   * unless `preset.systemAspects` narrowed it. Drives apply/reset, the dirty
+   * baseline, the picker/dialog badges and the Save-As defaults for system
+   * presets. Since 0.1.133.
+   */
+  systemAspects: PresetAspect[];
+  /**
+   * Aspects the preset `id` owns — the ones applying it writes. System →
+   * `systemAspects`, stored → what its snapshot claims, `null` (or an id
+   * with no row) → `availableAspects`. Since 0.1.133.
+   */
+  ownedAspects: (id: string | null) => PresetAspect[];
+  /**
    * False when `preset` config is absent OR the initial load returned
-   * 401/403 OR any other error. The picker / dialog should hide their UI.
+   * 401/403/404 OR any other error. The picker / dialog should hide their UI.
    */
   available: ComputedRef<boolean>;
   /** Currently active preset id (system `'sys:*'` or stored). null = no active. */
@@ -596,4 +726,13 @@ export interface PresetSurface {
    * feature is off.
    */
   batch: <T>(fn: () => Promise<T>) => Promise<T>;
+  /**
+   * Error thrown by the most recent mutator, or null — the SINGLE channel
+   * for preset write failures. Cleared when an OUTERMOST mutator starts, so
+   * a `batch()` counts as one user action: a failure early in a batch is not
+   * wiped by a later write inside it, and the batch's last failure wins.
+   * Mutators rethrow as well, so a caller can handle a single call; this ref
+   * is for UI that only needs to render the failure. Since 0.1.133.
+   */
+  lastError: Ref<Error | null>;
 }

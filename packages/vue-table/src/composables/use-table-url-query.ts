@@ -1,4 +1,5 @@
 import { computed, type WritableComputedRef } from "vue";
+import { urlQueryConsumesKey } from "@atscript/ui-table";
 import type { Router, RouteLocationNormalizedLoaded } from "vue-router";
 
 /** Options for {@link useTableUrlQuery}. */
@@ -13,6 +14,14 @@ export interface UseTableUrlQueryOptions {
    *   navigation-recoverable.
    */
   mode?: "replace" | "push";
+  /**
+   * Namespace for this table's query keys. With `prefix: "t1"` every key the
+   * bridge writes becomes `t1.<key>` (`t1.$skip`, `t1.status`, `t1.total>100`)
+   * and only keys under that prefix are read back or removed. Keys with no
+   * prefix — or another table's prefix — are foreign and preserved untouched,
+   * so two tables can share one route. Since 0.1.133.
+   */
+  prefix?: string;
 }
 
 /**
@@ -69,11 +78,19 @@ function findCleanEq(segment: string): number {
  * dependency on `vue-router` is added to `@atscript/vue-table`. Consumers
  * pass in their already-resolved `useRoute()` and `useRouter()` instances.
  *
- * Scope: **owns the whole query string**. The getter returns the entire
- * `route.query` serialized; the setter replaces `route.query` wholesale.
- * Apps that need the table to coexist with non-table query params should
- * write their own `computed` instead — that pattern is small and keeps the
- * library's contract crisp.
+ * Scope: the bridge owns **only what the table reads back** (since 0.1.133).
+ * A key is the table's iff `urlQueryStringToState` would consume it — see
+ * `urlQueryConsumesKey` — or the bridge has written it before. Read and
+ * write therefore agree in both directions: a key the parser ignores (a host
+ * flag, an unrecognised `$control`) is never removed, and a key the parser
+ * reads is the bridge's to remove. Every write merges into the current
+ * `route.query`, in place.
+ *
+ * Without a `prefix` the bridge cannot tell a plain `field=value` filter from
+ * a page-owned flag of the same shape, so a plain key that was already in the
+ * URL when the bridge mounted counts as foreign until the bridge writes it
+ * itself. Pass `prefix` when a route carries a host key that could collide
+ * with a column path, or when it carries two tables.
  *
  * @example
  * ```vue
@@ -81,6 +98,9 @@ function findCleanEq(segment: string): number {
  * import { useRoute, useRouter } from 'vue-router';
  * import { useTableUrlQuery } from '@atscript/vue-table';
  * const urlQuery = useTableUrlQuery(useRoute(), useRouter());
+ * // Two tables on one route:
+ * // const left = useTableUrlQuery(useRoute(), useRouter(), { prefix: 'a' });
+ * // const right = useTableUrlQuery(useRoute(), useRouter(), { prefix: 'b' });
  * </script>
  * <template>
  *   <AsTableRoot v-model:url-query="urlQuery" url="/db/products" .../>
@@ -94,35 +114,61 @@ export function useTableUrlQuery(
 ): WritableComputedRef<string> {
   const navigate =
     (opts.mode ?? "replace") === "push" ? router.push.bind(router) : router.replace.bind(router);
+  const prefix = opts.prefix ? `${opts.prefix}.` : "";
+
+  // Keys this bridge has written, in their on-the-wire (prefixed) form. A key
+  // that drops out of a later write is removed from the query; keys never
+  // written by the bridge belong to the page and survive every write.
+  const written = new Set<string>();
+
+  function isOwn(key: string): boolean {
+    if (prefix) return key.startsWith(prefix);
+    return written.has(key) || urlQueryConsumesKey(key);
+  }
 
   return computed<string>({
     get: () => {
       const q = route.query;
       const parts: string[] = [];
       for (const key in q) {
+        if (prefix && !key.startsWith(prefix)) continue;
+        const own = prefix ? key.slice(prefix.length) : key;
         const v = q[key];
         if (Array.isArray(v)) {
           for (const item of v) {
-            parts.push(item == null ? key : `${key}=${item}`);
+            parts.push(item == null ? own : `${own}=${item}`);
           }
         } else if (v == null) {
-          parts.push(key);
+          parts.push(own);
         } else {
-          parts.push(`${key}=${v}`);
+          parts.push(`${own}=${v}`);
         }
       }
       return parts.join("&");
     },
     set: (urlString) => {
-      const query: Record<string, string | null> = {};
+      const serialized = new Map<string, string | null>();
       for (const segment of splitSegments(urlString)) {
         const eqIdx = findCleanEq(segment);
-        if (eqIdx > 0) {
-          query[segment.slice(0, eqIdx)] = segment.slice(eqIdx + 1);
-        } else {
-          query[segment] = null;
-        }
+        const key = eqIdx > 0 ? `${prefix}${segment.slice(0, eqIdx)}` : `${prefix}${segment}`;
+        serialized.set(key, eqIdx > 0 ? segment.slice(eqIdx + 1) : null);
+        written.add(key);
       }
+
+      // Merge, preserving the position of every key that stays.
+      const query: Record<string, string | string[] | null> = {};
+      for (const key in route.query) {
+        if (!isOwn(key)) {
+          query[key] = route.query[key] as string | string[] | null;
+          continue;
+        }
+        if (serialized.has(key)) {
+          query[key] = serialized.get(key)!;
+          serialized.delete(key);
+        }
+        // Own key absent from this write → dropped.
+      }
+      for (const [key, value] of serialized) query[key] = value;
       void navigate({ query });
     },
   });

@@ -176,7 +176,9 @@ const state = useTable(props.url, {
   alwaysSelected: props.alwaysSelected,
   queryFn: props.queryFn,
   queryOnMount: props.queryOnMount,
-  blockQuery: props.blockQuery,
+  // Getter, not a snapshot: a table mounted while blocked must start fetching
+  // as soon as the host clears the flag.
+  blockQuery: () => props.blockQuery === true,
   blockSize: props.blockSize,
   dragReleaseDebounceMs: props.dragReleaseDebounceMs,
   clientFactory: props.clientFactory,

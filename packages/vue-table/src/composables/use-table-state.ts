@@ -134,8 +134,12 @@ export interface TableQueryOptions {
    * meta), regardless of which columns are visible. Additive only.
    */
   alwaysSelected?: string[];
-  /** When true, all triggers (query/queryNext/loadRange) early-return. */
-  blockQuery?: boolean;
+  /**
+   * When true, all triggers (query/queryNext/loadRange) early-return. Pass a
+   * getter (or a ref) to keep it reactive: when it flips back to `false` the
+   * table runs the query it was holding back, once. Since 0.1.133.
+   */
+  blockQuery?: boolean | (() => boolean);
   /**
    * Configured default for the runtime `ignoreSortersWhenSearched` flag
    * (default `false`). Opt-in for relevance-ranked backends: while the
@@ -205,6 +209,8 @@ export interface TablePresetOptions {
   draftHandle?: UseLocalDraftReturn | null;
   /** App-declared aspect set; default `['columns','filters','filterOps','sorters']`. */
   availableAspects?: PresetAspect[];
+  /** Aspects a system preset owns; intersected with `availableAspects`, default all. */
+  systemAspects?: PresetAspect[];
   /** Static fallback for system presets when no `presetsHandle` is wired. */
   fallbackSystemPresets?: SystemPreset[];
   /** Whether localStorage drafts should be hydrated + persisted on bootstrap. */
@@ -242,9 +248,22 @@ type Row = Record<string, unknown>;
 
 interface RequestSlot<TBody, TResolved> {
   ref: Ref<(TBody & { resolve: (value: TResolved) => void }) | null>;
+  /**
+   * The request a dialog SURFACE renders: the last non-null `ref` value, kept
+   * alive after `ref` is nulled. `ref` empties the instant the user answers,
+   * but the dialog stays mounted until its exit animation ends — rendering
+   * `ref` there blanks the copy while the dialog is still visibly fading out.
+   */
+  display: Ref<(TBody & { resolve: (value: TResolved) => void }) | null>;
   request: (body: TBody) => Promise<TResolved>;
   accept: (value: TResolved) => void;
   dismiss: () => void;
+  /**
+   * Drop the retained `display` once the surface has left. A no-op while a
+   * request is pending, so a late release from a previous exit cycle can
+   * never wipe a request raised while the old surface was still leaving.
+   */
+  release: () => void;
 }
 
 /**
@@ -260,14 +279,17 @@ function createRequestSlot<TBody, TResolved>(
   // hold large `identifiers[]` arrays for `rows`-level actions — deep-tracking
   // each identifier object would be wasted reactive overhead.
   const r = shallowRef<Req | null>(null) as Ref<Req | null>;
+  const display = shallowRef<Req | null>(null) as Ref<Req | null>;
   function request(body: TBody): Promise<TResolved> {
     if (r.value) {
       r.value.resolve(cancelValue);
       r.value = null;
     }
-    return new Promise<TResolved>((resolve) => {
+    const promise = new Promise<TResolved>((resolve) => {
       r.value = { ...body, resolve } as Req;
     });
+    display.value = r.value;
+    return promise;
   }
   function accept(value: TResolved) {
     const req = r.value;
@@ -281,7 +303,10 @@ function createRequestSlot<TBody, TResolved>(
     r.value = null;
     req.resolve(cancelValue);
   }
-  return { ref: r, request, accept, dismiss };
+  function release() {
+    if (r.value === null) display.value = null;
+  }
+  return { ref: r, display, request, accept, dismiss, release };
 }
 
 export function createTableState(opts: CreateTableStateOptions): {
@@ -389,6 +414,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     presetsHandle: opts.preset?.presetsHandle,
     draftHandle: opts.preset?.draftHandle,
     availableAspects: opts.preset?.availableAspects,
+    systemAspects: opts.preset?.systemAspects,
     persistDrafts: opts.preset?.persistDrafts,
     fallbackSystemPresets: opts.preset?.fallbackSystemPresets,
   });
@@ -400,8 +426,10 @@ export function createTableState(opts: CreateTableStateOptions): {
   function promptFn(message: string, opts: ConfirmOptions = {}): Promise<boolean> {
     return promptSlot.request({ ...opts, message });
   }
+  const confirmDisplay = promptSlot.display;
   const acceptPrompt = () => promptSlot.accept(true);
   const dismissPrompt = promptSlot.dismiss;
+  const releaseConfirm = promptSlot.release;
 
   const formSlot = createRequestSlot<Omit<ActionFormRequest, "resolve">, unknown>(null);
   const actionFormRequest = formSlot.ref;
@@ -412,8 +440,10 @@ export function createTableState(opts: CreateTableStateOptions): {
       preferredId: ctx.preferredId,
     });
   }
+  const actionFormDisplay = formSlot.display;
   const acceptActionForm = formSlot.accept;
   const dismissActionForm = formSlot.dismiss;
+  const releaseActionForm = formSlot.release;
 
   // Stable per-state UID so deterministic row IDs survive remount of consuming
   // components without colliding across multi-table pages.
@@ -477,6 +507,13 @@ export function createTableState(opts: CreateTableStateOptions): {
   const navMode = ref<"pagination" | "window">("pagination");
 
   // ── Sub-factories (constructed in dependency order) ─────────────────────
+  // `blockQuery` is reactive — a table mounted while blocked must run its
+  // first query as soon as the host unblocks it.
+  const isQueryBlocked = computed(() => {
+    const blocked = queryOpts?.blockQuery;
+    return typeof blocked === "function" ? !!blocked() : !!blocked;
+  });
+
   // 1. Window fetcher: independent of selection/nav/main-action.
   const windowFetcher = createWindowFetcher({
     blockSize,
@@ -487,7 +524,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     resultsStart,
     queryingNext,
     getGeneration: () => generation,
-    isQueryBlocked: () => !!queryOpts?.blockQuery,
+    isQueryBlocked: () => isQueryBlocked.value,
     buildCurrentQuery,
     dispatchPages,
     reportError,
@@ -528,9 +565,19 @@ export function createTableState(opts: CreateTableStateOptions): {
   }
 
   // 3. Selection.
-  const selection = createSelectionApi(selectionOpts, getActiveRow);
-  const { selectedRows, selectedCount, rowValueFn, isPkSelected, toggleActiveSelection } =
-    selection;
+  const selection = createSelectionApi(selectionOpts, getActiveRow, activeIndex);
+  const {
+    selectedRows,
+    selectedCount,
+    rowValueFn,
+    isPkSelected,
+    rowSelectable,
+    isRowSelectable,
+    selectableRows,
+    selectableCount,
+    selectAll,
+    toggleActiveSelection,
+  } = selection;
 
   // 4. Actions namespace. Built before `mainAction` so the registry's fallback
   // path can resolve `actions.default.row` and call `actions.invoke`. Refetch
@@ -586,7 +633,7 @@ export function createTableState(opts: CreateTableStateOptions): {
 
   // ── Query engine ────────────────────────────────────────────────────────
   async function runQuery(kind: QueryErrorKind, silent = false) {
-    if (queryOpts?.blockQuery) return;
+    if (isQueryBlocked.value) return;
     mustRefresh.value = false;
     // Snap viewport back to top on a non-initial query so we don't render
     // past the new dataset's end after the cache wipe. Skipped for a silent
@@ -649,7 +696,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   let queryFlushScheduled = false;
 
   function scheduleQuery(kind: QueryErrorKind = "query", opts?: QueryOptions): void {
-    if (queryOpts?.blockQuery) return;
+    if (isQueryBlocked.value) return;
     if (tableDef.value === null) return;
     pendingScheduledKind = pendingScheduledKind ?? kind;
     // `opts?.silent ?? false` (NOT `if (opts)`): `query` may be wired straight
@@ -685,7 +732,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   async function queryImmediate(opts?: QueryOptions): Promise<void> {
     pendingScheduledKind = null;
     pendingSilent = true;
-    if (queryOpts?.blockQuery) return;
+    if (isQueryBlocked.value) return;
     if (tableDef.value === null) return;
     await runQuery("query", opts?.silent ?? false);
   }
@@ -745,6 +792,11 @@ export function createTableState(opts: CreateTableStateOptions): {
     rowValueFn,
     resolveHref: opts.actions?.resolveHref ?? ((url: string) => url),
     isPkSelected,
+    rowSelectable,
+    isRowSelectable,
+    selectableRows,
+    selectableCount,
+    selectAll,
     rowDelete,
     includeActions,
     activeIndex,
@@ -761,13 +813,17 @@ export function createTableState(opts: CreateTableStateOptions): {
     registerMainActionListener,
     actions,
     confirmRequest,
+    confirmDisplay,
     prompt: promptFn,
     acceptPrompt,
     dismissPrompt,
+    releaseConfirm,
     actionFormRequest,
+    actionFormDisplay,
     requestActionInput,
     acceptActionForm,
     dismissActionForm,
+    releaseActionForm,
 
     query,
     queryImmediate,
@@ -975,7 +1031,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     // doesn't schedule — the urlQueryReady-gate watcher owns the initial query.
     void nextTick(() => {
       hydratingFromUrl = false;
-      if (wasQueryDetected && !queryOpts?.blockQuery && tableDef.value !== null) {
+      if (wasQueryDetected && !isQueryBlocked.value && tableDef.value !== null) {
         scheduleQuery();
       }
     });
@@ -1086,15 +1142,35 @@ export function createTableState(opts: CreateTableStateOptions): {
   // bootstrap fires as soon as tableDef has loaded.
   const presetGateOpen = () => (opts.preset?.presetsHandle ? presetInternals.gate.value : true);
   watch(
-    [() => tableDef.value, () => queryOpts?.urlQueryReady?.value ?? true, presetGateOpen],
-    ([def, urlReady, presetReady]) => {
+    [
+      () => tableDef.value,
+      () => queryOpts?.urlQueryReady?.value ?? true,
+      presetGateOpen,
+      () => isQueryBlocked.value,
+    ],
+    ([def, urlReady, presetReady, blocked]) => {
       if (queryDetected) return;
+      // Stay un-detected while blocked, so unblocking re-runs this bootstrap
+      // instead of leaving the table empty forever.
+      if (blocked) return;
       if (def === null || !urlReady || !presetReady) return;
       if (queryOpts?.queryOnMount === false) return;
       if (allColumns.value.length === 0) return;
       if (results.value.length !== 0) return;
       queryDetected = true;
       scheduleQuery("initial");
+    },
+  );
+
+  // Unblocking a table that already ran at least one query replays the query
+  // for whatever state changed while it was blocked. `scheduleQuery` coalesces
+  // with the bootstrap watcher above, so an unblock costs exactly one fetch.
+  watch(
+    () => isQueryBlocked.value,
+    (blocked) => {
+      if (blocked || !queryDetected) return;
+      if (tableDef.value === null) return;
+      scheduleQuery();
     },
   );
 

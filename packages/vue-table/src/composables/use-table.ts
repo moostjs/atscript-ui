@@ -86,8 +86,12 @@ export interface UseTableOptions {
   queryFn?: QueryFn;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
-  /** When true, all triggers (query/queryNext/loadRange) early-return. */
-  blockQuery?: boolean;
+  /**
+   * When true, all triggers (query/queryNext/loadRange) early-return. Pass a
+   * getter to keep it reactive — the held-back query runs once when it flips
+   * back to `false`. Since 0.1.133.
+   */
+  blockQuery?: boolean | (() => boolean);
   /** Page-alignment unit for `loadRange` and the `queryNext` extension. */
   blockSize?: number;
   /** Debounce window for the topIndex/viewportRowCount watcher. */
@@ -187,6 +191,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
         tableKey: preset.tableKey,
         enabled: preset.persistDrafts ?? false,
         availableAspects: preset.aspects ?? DEFAULT_AVAILABLE_ASPECTS,
+        scope: preset.draftScope,
       })
     : null;
 
@@ -235,6 +240,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       presetsHandle,
       draftHandle,
       availableAspects: preset?.aspects,
+      systemAspects: preset?.systemAspects,
       persistDrafts: preset?.persistDrafts ?? false,
     },
   });

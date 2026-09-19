@@ -75,24 +75,67 @@ describe("useTableUrlQuery", () => {
     expect(router.push).toHaveBeenCalledWith({ query: { status: "active" } });
   });
 
-  it("replaces the entire query — clobbers existing keys", () => {
+  it("preserves host-owned query keys it never wrote", () => {
     const route = createMockRoute({ existing: "preserved" });
     const router = createMockRouter(route);
     const urlQuery = useTableUrlQuery(route, router);
 
     urlQuery.value = "status=active";
 
-    expect(router.replace).toHaveBeenCalledWith({ query: { status: "active" } });
+    expect(router.replace).toHaveBeenCalledWith({
+      query: { existing: "preserved", status: "active" },
+    });
   });
 
-  it("setting empty string clears all query params", () => {
-    const route = createMockRoute({ status: "active" });
+  it("removes its own keys that are no longer set, keeping foreign keys", () => {
+    const route = createMockRoute({ demo: "1" });
     const router = createMockRouter(route);
     const urlQuery = useTableUrlQuery(route, router);
 
+    urlQuery.value = "status=active&$skip=50";
+    expect(route.query).toEqual({ demo: "1", status: "active", $skip: "50" });
+
     urlQuery.value = "";
 
-    expect(router.replace).toHaveBeenCalledWith({ query: {} });
+    expect(router.replace).toHaveBeenLastCalledWith({ query: { demo: "1" } });
+  });
+
+  it("removes keys the parser consumed, without a prior write", () => {
+    // `$skip` is read by `urlQueryStringToState` and `total>100` can only
+    // come from a table, so both are owned even though this bridge instance
+    // never wrote them.
+    const route = createMockRoute({ $skip: "50", "total>100": null, demo: "1" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=active";
+
+    expect(router.replace).toHaveBeenCalledWith({ query: { demo: "1", status: "active" } });
+  });
+
+  it("keeps a $control the parser does not consume", () => {
+    // Read and write agree: `urlQueryStringToState` ignores `$weird`, so the
+    // bridge must not delete it either — it belongs to the page.
+    const route = createMockRoute({ $weird: "42", $search: "abc", demo: "1" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=active";
+
+    expect(router.replace).toHaveBeenCalledWith({
+      query: { $weird: "42", demo: "1", status: "active" },
+    });
+  });
+
+  it("keeps the position of keys that survive a write", () => {
+    const route = createMockRoute({ demo: "1" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=active";
+    urlQuery.value = "status=archived";
+
+    expect(Object.keys(route.query as object)).toEqual(["demo", "status"]);
   });
 
   it("is reactive to external route changes", () => {
@@ -211,5 +254,54 @@ describe("useTableUrlQuery — operator-bearing keys", () => {
     const urlQuery = useTableUrlQuery(route, router);
 
     expect(urlQuery.value).toBe("total>100&status=active");
+  });
+});
+
+describe("useTableUrlQuery — prefix (two tables on one route)", () => {
+  it("writes and reads only its own prefixed keys", () => {
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { prefix: "t1" });
+
+    urlQuery.value = "status=active&$skip=50";
+
+    expect(route.query).toEqual({ "t1.status": "active", "t1.$skip": "50" });
+    expect(urlQuery.value).toBe("status=active&$skip=50");
+  });
+
+  it("two bridges on one query object never clobber each other or the page", () => {
+    const route = createMockRoute({ demo: "1" });
+    const router = createMockRouter(route);
+    const a = useTableUrlQuery(route, router, { prefix: "a" });
+    const b = useTableUrlQuery(route, router, { prefix: "b" });
+
+    a.value = "status=active";
+    b.value = "kind=open&total>100";
+
+    expect(route.query).toEqual({
+      demo: "1",
+      "a.status": "active",
+      "b.kind": "open",
+      "b.total>100": null,
+    });
+    expect(a.value).toBe("status=active");
+    expect(b.value).toBe("kind=open&total>100");
+
+    // Clearing one table leaves the other and the page key alone.
+    a.value = "";
+
+    expect(route.query).toEqual({ demo: "1", "b.kind": "open", "b.total>100": null });
+    expect(b.value).toBe("kind=open&total>100");
+  });
+
+  it("does not treat unprefixed $controls as its own", () => {
+    const route = createMockRoute({ $skip: "50" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { prefix: "t1" });
+
+    expect(urlQuery.value).toBe("");
+    urlQuery.value = "status=active";
+
+    expect(route.query).toEqual({ $skip: "50", "t1.status": "active" });
   });
 });

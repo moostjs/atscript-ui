@@ -1,4 +1,4 @@
-import type { Client } from "@atscript/db-client";
+import { ClientError, type Client } from "@atscript/db-client";
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -319,6 +319,46 @@ describe("usePresets", () => {
         id: "uc:alice:demo:products",
         data: { favPresetIds: [] },
       });
+    } finally {
+      globalThis.fetch = restoreFetch;
+    }
+  });
+
+  // Regression: a 404 means the presets controller is not mounted on this
+  // server — the same "feature unavailable" case as 401/403, not an error.
+  it("treats a 404 from the list query as unavailable, not an error", async () => {
+    const client = makeMockClient();
+    client.query.mockRejectedValue(
+      new ClientError(404, { message: "not found", statusCode: 404, errors: [] }),
+    );
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { ret, restoreFetch } = setup(client);
+    try {
+      await flushPromises();
+      expect(ret.available.value).toBe(false);
+      expect(ret.error.value).toBeNull();
+      expect(ret.presets.value).toEqual([]);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+      globalThis.fetch = restoreFetch;
+    }
+  });
+
+  // `error` is the LOAD channel only: mutator failures rethrow and are
+  // recorded once, by the table-state slice (`state.preset.lastError`).
+  // Reporting them here too was the second half of a double try/catch.
+  it("leaves `error` alone when a mutator fails (it only rethrows)", async () => {
+    const client = makeMockClient();
+    const { ret, restoreFetch } = setup(client);
+    try {
+      await flushPromises();
+      expect(ret.error.value).toBeNull();
+      client.update.mockRejectedValue(new Error("server said no"));
+
+      await expect(ret.renamePreset("p1", "X")).rejects.toThrow("server said no");
+
+      expect(ret.error.value).toBeNull();
     } finally {
       globalThis.fetch = restoreFetch;
     }

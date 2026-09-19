@@ -25,6 +25,7 @@ import {
   watch,
 } from "vue";
 
+import { aspectsOf } from "../preset-aspect-display";
 import type { UseLocalDraftReturn } from "../use-local-draft";
 import type { UsePresetsReturn } from "../use-presets";
 
@@ -64,6 +65,16 @@ export interface CreatePresetStateOptions {
   /** App-level aspect availability. Default `['columns','filters','filterOps','sorters']`. */
   availableAspects?: PresetAspect[];
 
+  /**
+   * Aspects a SYSTEM preset owns. Intersected with `availableAspects`;
+   * defaults to all of them (unchanged behaviour). Narrow it — e.g. to
+   * `['filterOps']` — when system presets are filter-only views that must
+   * not reset the user's columns, displayed filters, sorters or page size.
+   * User and public presets keep owning whatever their snapshot claims.
+   * Since 0.1.133.
+   */
+  systemAspects?: PresetAspect[];
+
   /** Static fallback for system presets when `presetsHandle` is null. */
   fallbackSystemPresets?: SystemPreset[];
 
@@ -82,6 +93,14 @@ export interface PresetStateSlice {
   /** Lookup table for system presets — O(1) by id. */
   systemPresetsById: ComputedRef<Map<string, SystemPreset>>;
   availableAspects: PresetAspect[];
+  /** Aspects a system preset owns. Subset of `availableAspects`. Since 0.1.133. */
+  systemAspects: PresetAspect[];
+  /**
+   * Aspects the preset `id` owns — the ones applying it may write. System
+   * → `systemAspects`, stored → what its snapshot claims, `null` (or an
+   * unknown id) → `availableAspects`. Since 0.1.133.
+   */
+  ownedAspects: (id: string | null) => PresetAspect[];
   available: ComputedRef<boolean>;
   activeId: Ref<string | null>;
   /** Snapshot of the active preset (system presets are aspect-expanded). */
@@ -124,6 +143,15 @@ export interface PresetStateSlice {
    * preset feature is off, `fn` runs directly.
    */
   batch: <T>(fn: () => Promise<T>) => Promise<T>;
+  /**
+   * Error from the most recent mutator call, or null — the SINGLE channel
+   * for preset write failures. Cleared when an outermost mutator starts, so
+   * a `batch()` of writes is one user action: an early failure inside it
+   * survives later successful writes, and the LAST failure wins. Mutators
+   * also rethrow, so callers can react per call; this ref is for UI that
+   * just renders "what went wrong". Since 0.1.133.
+   */
+  lastError: Ref<Error | null>;
 }
 
 /** Internal handle for `createTableState` — holds the gate ref the bootstrap watcher reads. */
@@ -152,6 +180,35 @@ export function createPresetState(opts: CreatePresetStateOptions): {
 } {
   const availableAspects = opts.availableAspects ?? DEFAULT_AVAILABLE_ASPECTS;
   const availableSet = new Set<PresetAspect>(availableAspects);
+  // System presets own their own aspect set — never wider than what the app
+  // makes available. Default: everything, i.e. pre-0.1.133 behaviour.
+  const systemAspects = opts.systemAspects
+    ? availableAspects.filter((a) => opts.systemAspects!.includes(a))
+    : availableAspects;
+
+  const lastError = ref<Error | null>(null);
+  // Not public: only the OUTERMOST frame clears `lastError`. `batch()` is a
+  // frame too, so a failure early in a batch is not wiped by a later write
+  // in the same batch — the last failure of the batch is what remains.
+  let trackDepth = 0;
+
+  /**
+   * Every public mutator runs through here: it is the one place a preset
+   * write failure is recorded. Clears `lastError` on the outermost entry,
+   * records the failure and RETHROWS so the caller can react too.
+   */
+  async function track<T>(fn: () => Promise<T>): Promise<T> {
+    if (trackDepth === 0) lastError.value = null;
+    trackDepth++;
+    try {
+      return await fn();
+    } catch (err) {
+      lastError.value = err instanceof Error ? err : new Error(String(err));
+      throw err;
+    } finally {
+      trackDepth--;
+    }
+  }
 
   const dialogOpen = ref(false);
   const gate = ref(false);
@@ -280,6 +337,21 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     return mask[aspect] === true;
   }
 
+  /**
+   * Aspects the preset `id` OWNS, i.e. the ones applying it may write:
+   * a system preset owns `systemAspects`, a stored preset owns what its
+   * snapshot claims, and "no preset" (a raw snapshot, or an id with no row)
+   * owns everything available. The one answer every aspect-scoped surface
+   * asks for — apply, system-snapshot expansion, the picker badges and
+   * Save-as mask, the manage dialog rows.
+   */
+  function ownedAspects(id: string | null): PresetAspect[] {
+    if (!id) return availableAspects;
+    if (isSystemPresetId(id)) return systemAspects;
+    const row = presetsById.value.get(id);
+    return row ? aspectsOf(row, availableAspects) : availableAspects;
+  }
+
   function captureSnapshot(mask?: AspectMask): PresetSnapshot {
     const out: PresetSnapshot = {};
     for (const aspect of availableAspects) {
@@ -320,7 +392,9 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     const isSystem =
       typeof idOrSnapshot === "string" && nextActiveId !== null && isSystemPresetId(nextActiveId);
 
-    for (const aspect of availableAspects) {
+    // Each preset writes only the aspects it owns; everything else (the
+    // user's columns, displayed filters, sorters, page size) is left alone.
+    for (const aspect of ownedAspects(nextActiveId)) {
       const value = (snapshot as Record<string, unknown>)[aspect];
       ASPECT_HANDLERS[aspect].apply(opts, value, isSystem);
     }
@@ -353,9 +427,18 @@ export function createPresetState(opts: CreatePresetStateOptions): {
    * "claims all aspects in `availableAspects`" per spec §3.7. Stored presets
    * keep dict-form opt-in (untouched).
    */
-  function expandSystemSnapshot(snapshot: PresetSnapshot): PresetSnapshot {
-    const out: PresetSnapshot = { ...snapshot };
-    for (const aspect of availableAspects) {
+  function expandSystemSnapshot(snapshot: PresetSnapshot, id: string): PresetSnapshot {
+    const out: PresetSnapshot = {};
+    const owned = ownedAspects(id);
+    const ownedSet = new Set<PresetAspect>(owned);
+    // Aspects the preset does not own are dropped, not defaulted: they are
+    // not its to own, so they must not enter the dirty baseline either.
+    for (const [key, value] of Object.entries(snapshot)) {
+      if (ownedSet.has(key as PresetAspect)) {
+        (out as Record<string, unknown>)[key] = value;
+      }
+    }
+    for (const aspect of owned) {
       const handler = ASPECT_HANDLERS[aspect];
       if (!handler.expandDefault) continue;
       if ((out as Record<string, unknown>)[aspect] !== undefined) continue;
@@ -369,7 +452,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     if (!id) return {};
     if (isSystemPresetId(id)) {
       const sp = systemPresetsById.value.get(id);
-      return expandSystemSnapshot(sp?.content ?? {});
+      return expandSystemSnapshot(sp?.content ?? {}, id);
     }
     const row = presetsById.value.get(id);
     if (!row) return {};
@@ -387,70 +470,88 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     return opts.presetsHandle;
   }
 
-  async function saveActive(): Promise<void> {
-    const handle = requirePresets();
-    const id = activeId.value;
-    if (!id) throw new Error("[vue-table] saveActive: no active preset");
-    if (isSystemPresetId(id)) {
-      throw new Error("[vue-table] saveActive: system presets cannot be overwritten");
-    }
-    // Reuse the active preset's existing aspect mask — never widens.
-    const existing = activeSnapshot.value;
-    const mask: AspectMask = {};
-    for (const aspect of availableAspects) {
-      if ((existing as Record<string, unknown>)[aspect] !== undefined) mask[aspect] = true;
-    }
-    await handle.savePreset(captureSnapshot(mask));
-    clearLocalDraft();
+  function saveActive(): Promise<void> {
+    return track(async () => {
+      const handle = requirePresets();
+      const id = activeId.value;
+      if (!id) throw new Error("[vue-table] saveActive: no active preset");
+      if (isSystemPresetId(id)) {
+        throw new Error("[vue-table] saveActive: system presets cannot be overwritten");
+      }
+      // Reuse the active preset's existing aspect mask — never widens.
+      const existing = activeSnapshot.value;
+      const mask: AspectMask = {};
+      for (const aspect of availableAspects) {
+        if ((existing as Record<string, unknown>)[aspect] !== undefined) mask[aspect] = true;
+      }
+      await handle.savePreset(captureSnapshot(mask));
+      clearLocalDraft();
+    });
   }
 
-  async function saveAs(
+  function saveAs(
     label: string,
     saveOpts: { aspects?: AspectMask; public?: boolean } = {},
   ): Promise<string> {
-    const handle = requirePresets();
-    const id = await handle.savePresetAs(label, captureSnapshot(saveOpts.aspects), {
-      public: saveOpts.public,
-    });
-    clearLocalDraft();
-    return id;
-  }
-
-  async function rename(id: string, label: string): Promise<void> {
-    await requirePresets().renamePreset(id, label);
-  }
-
-  async function remove(id: string): Promise<void> {
-    const handle = requirePresets();
-    const wasActive = activeId.value === id;
-    await handle.deletePreset(id);
-    if (wasActive) {
-      // Re-apply Standard so state arrays reset to baseline.
-      apply(STANDARD_PRESET_ID);
+    return track(async () => {
+      const handle = requirePresets();
+      const id = await handle.savePresetAs(label, captureSnapshot(saveOpts.aspects), {
+        public: saveOpts.public,
+      });
       clearLocalDraft();
-    }
+      return id;
+    });
   }
 
-  async function togglePublic(id: string): Promise<void> {
-    await requirePresets().togglePublic(id);
+  function rename(id: string, label: string): Promise<void> {
+    return track(async () => {
+      await requirePresets().renamePreset(id, label);
+    });
   }
 
-  async function setDefault(id: string | null): Promise<void> {
-    await requirePresets().setDefault(id);
+  function remove(id: string): Promise<void> {
+    return track(async () => {
+      const handle = requirePresets();
+      const wasActive = activeId.value === id;
+      await handle.deletePreset(id);
+      if (wasActive) {
+        // Re-apply Standard so state arrays reset to baseline.
+        apply(STANDARD_PRESET_ID);
+        clearLocalDraft();
+      }
+    });
   }
 
-  async function toggleFav(id: string): Promise<void> {
-    await requirePresets().toggleFav(id);
+  function togglePublic(id: string): Promise<void> {
+    return track(async () => {
+      await requirePresets().togglePublic(id);
+    });
   }
 
-  async function setFavorites(ids: string[]): Promise<void> {
-    await requirePresets().setFavorites(ids);
+  function setDefault(id: string | null): Promise<void> {
+    return track(async () => {
+      await requirePresets().setDefault(id);
+    });
+  }
+
+  function toggleFav(id: string): Promise<void> {
+    return track(async () => {
+      await requirePresets().toggleFav(id);
+    });
+  }
+
+  function setFavorites(ids: string[]): Promise<void> {
+    return track(async () => {
+      await requirePresets().setFavorites(ids);
+    });
   }
 
   // When the preset feature is off, batch is a pass-through so callers can
   // wrap unconditionally without checking `available`.
   function batch<T>(fn: () => Promise<T>): Promise<T> {
-    return opts.presetsHandle ? opts.presetsHandle.batch(fn) : fn();
+    // Tracked like a mutator so the whole batch is ONE error frame: the
+    // mutators inside it are nested and never clear an earlier failure.
+    return track(() => (opts.presetsHandle ? opts.presetsHandle.batch(fn) : fn()));
   }
 
   function resolveDefaultId(): string {
@@ -475,7 +576,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
         // once — halves per-aspect ref writes vs two back-to-back applies.
         const id = resolveDefaultId();
         const { snapshot, nextActiveId } = resolveSnapshot(id);
-        const base = isSystemPresetId(id) ? expandSystemSnapshot(snapshot) : snapshot;
+        const base = isSystemPresetId(id) ? expandSystemSnapshot(snapshot, id) : snapshot;
         const draftEnabled = !!(opts.draftHandle && opts.persistDrafts);
         const merged = draftEnabled
           ? (opts.draftHandle as UseLocalDraftReturn).hydrate(base)
@@ -506,6 +607,8 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     systemPresets,
     systemPresetsById,
     availableAspects,
+    systemAspects,
+    ownedAspects,
     available,
     activeId,
     activeSnapshot,
@@ -529,6 +632,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     toggleFav,
     setFavorites,
     batch,
+    lastError,
   };
 
   return { slice, internals: { gate, bootstrap } };

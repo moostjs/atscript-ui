@@ -7,7 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "reka-ui";
-import { computed, nextTick, onScopeDispose, ref, watch } from "vue";
+import { computed, h, nextTick, onScopeDispose, ref, shallowRef, watch } from "vue";
 import {
   type AsPresetEntryRow,
   type AspectMask,
@@ -16,10 +16,10 @@ import {
   isSystemPresetId,
 } from "@atscript/ui-table";
 import { useTableContext } from "../composables/use-table-state";
+import { errorMessage } from "../utils/error-message";
 import {
   ASPECT_ICONS,
   ASPECT_LABELS,
-  aspectsOf,
   ownerNameOf,
   readPresetLabel,
 } from "../composables/preset-aspect-display";
@@ -80,6 +80,30 @@ watch(saveAsOpen, (open) => {
 });
 
 const aspects = computed<PresetAspect[]>(() => state.preset.availableAspects);
+// Mutation failure surfaced inline: the popover/menu must not close silently
+// on a 409 / forbidden / offline write. The failure itself is recorded ONCE,
+// by the preset slice (`state.preset.lastError`); this component only decides
+// whether it is still worth showing. `dismissed` is the last error the user
+// has already navigated away from, so reopening the menu starts clean.
+const dismissed = shallowRef<Error | null>(null);
+function clearError() {
+  dismissed.value = state.preset.lastError.value;
+}
+const errorText = computed(() => {
+  const err = state.preset.lastError.value;
+  if (!err || err === dismissed.value) return "";
+  return errorMessage(err, "Could not save the preset.");
+});
+
+/**
+ * The one error block. The menu and the Save-as popover are mutually
+ * exclusive branches, so it renders through a local function instead of
+ * being duplicated in both templates.
+ */
+function ErrorNote() {
+  if (!errorText.value) return null;
+  return h("div", { class: "as-preset-picker-error", role: "alert" }, errorText.value);
+}
 
 function resetSaveAsForm() {
   // "Copy of …" prefill makes branching from an existing preset legible;
@@ -93,28 +117,27 @@ function resetSaveAsForm() {
   saveAsAspectsMask.value = initial;
 }
 
-const activePresetClaimedAspects = computed<Set<PresetAspect>>(() => {
-  const id = state.preset.activeId.value;
-  // System presets claim every available aspect (spec §3.7); same default
-  // when there's no active preset (Save-as prefills from current state).
-  if (!id || isSystemPresetId(id)) return new Set(aspects.value);
-  const row = state.preset.presetsById.value.get(id);
-  if (!row) return new Set(aspects.value);
-  return new Set(aspectsOf(row, aspects.value));
-});
+// Save-as prefills the mask from what the ACTIVE preset owns; with no
+// active preset that is everything available, i.e. the current state.
+const activePresetClaimedAspects = computed<Set<PresetAspect>>(
+  () => new Set(state.preset.ownedAspects(state.preset.activeId.value)),
+);
 
 function openSaveAs() {
   resetSaveAsForm();
+  clearError();
   saveAsOpen.value = true;
 }
 
 function cancelSaveAs() {
+  clearError();
   saveAsOpen.value = false;
 }
 
 async function commitSaveAs() {
   const label = saveAsLabel.value.trim();
   if (!label) return;
+  clearError();
   try {
     await state.preset.saveAs(label, {
       aspects: saveAsAspectsMask.value,
@@ -122,9 +145,9 @@ async function commitSaveAs() {
     });
     saveAsOpen.value = false;
     open.value = false;
-  } catch (_err) {
-    // Surface upstream via state.lastError; keep the popover open so the
-    // user can retry or tweak the label after a 409 / publish-name conflict.
+  } catch {
+    // Keep the popover open so the user can retry or tweak the label after a
+    // 409 / publish-name conflict; `errorText` says what went wrong.
   }
 }
 
@@ -153,14 +176,7 @@ function authorMeta(row: AsPresetEntryRow): string {
 }
 
 function systemItem(p: SystemPreset, fav?: boolean): PresetItem {
-  return {
-    id: p.id,
-    label: p.label,
-    system: true,
-    fav,
-    // Spec §3.7 — system presets claim every available aspect.
-    aspects: [...state.preset.availableAspects],
-  };
+  return { id: p.id, label: p.label, system: true, fav, aspects: state.preset.ownedAspects(p.id) };
 }
 
 function storedItem(row: AsPresetEntryRow, fav: boolean, meta?: string): PresetItem {
@@ -169,7 +185,7 @@ function storedItem(row: AsPresetEntryRow, fav: boolean, meta?: string): PresetI
     label: readPresetLabel(row),
     fav,
     meta,
-    aspects: aspectsOf(row, state.preset.availableAspects),
+    aspects: state.preset.ownedAspects(row.id),
   };
 }
 
@@ -231,11 +247,12 @@ function applyId(id: string) {
 }
 
 async function saveActive() {
+  clearError();
   try {
     await state.preset.saveActive();
     open.value = false;
-  } catch (_err) {
-    // Same as save-as: error surfaces via state.lastError; keep the menu open.
+  } catch {
+    // Same as save-as: keep the menu open; `errorText` shows the reason.
   }
 }
 
@@ -273,7 +290,10 @@ function onMenuKeydown(ev: KeyboardEvent) {
 }
 watch(open, (isOpen) => {
   if (isOpen) window.addEventListener("keydown", onMenuKeydown);
-  else window.removeEventListener("keydown", onMenuKeydown);
+  else {
+    window.removeEventListener("keydown", onMenuKeydown);
+    clearError();
+  }
 });
 // Belt-and-braces: if the component unmounts while open, the watcher's
 // cleanup never fires, so the listener would leak.
@@ -332,6 +352,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
 
         <!-- Action row -->
         <DropdownMenuSeparator class="as-preset-picker-separator" />
+        <ErrorNote />
         <DropdownMenuItem
           v-if="state.preset.isDirty.value && state.preset.canSaveActive.value"
           class="as-preset-picker-action as-preset-picker-action-primary"
@@ -424,6 +445,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
               Make public
             </label>
           </template>
+          <ErrorNote />
           <div class="as-preset-picker-popover-footer">
             <button type="button" class="as-preset-picker-popover-cancel" @click="cancelSaveAs">
               Cancel
