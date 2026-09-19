@@ -129,6 +129,16 @@ Swap it via `:types="{ ...createDefaultTypes(), array: MyDnDList }"` for drag-re
 | Root (`level === 0`) | Flat grid via `AsIterator` | No collapsible wrapper. `hideRootTitle` prop on AsForm suppresses the title. |
 | Nested (`level > 0`) | Wrapped in `AsCollapsible` | Click to expand/collapse. Open state shared via `useAsNestedSectionsStore`.  |
 
+### Section or namespace
+
+A nested object only becomes a field — and therefore a section — when it carries an annotation addressing the object itself: **any `@ui.form.*`** key, plus `@meta.label`, `@meta.description` and `@ui.type`. With none of them it is a **namespace**: `createFormDef` drops it and its children render inline in the parent's grid at their full dotted paths (`address.street`), which is what stops a DB-flattened struct from growing chrome nobody asked for. A promoted section with no label titles itself from the prop name.
+
+It makes no difference whether the object is written inline (`address: { … }`) or as a referenced interface (`address: Address`) — annotations on the referenced declaration count as if written at the prop.
+
+Placement keys are the exception: `@ui.form.order` and `@ui.form.grid.*` position a field among its siblings, and a namespace has no position of its own — its children carry their own. `@db.*`, `@expect.*` and the rest of `@meta.*` are not triggers either, since a DB-flattened struct carries exactly those.
+
+0.1.135 replaced a two-key allow-list (label/component) with this rule. Before it every other key was read off a prop that never became a field: a `@meta.description` vanished, a `@ui.form.type` component never mounted, `@ui.form.pushDown` never pushed down, and a `@ui.form.hidden` struct rendered every one of its children.
+
 Under `<AsForm track-changes>` (0.1.133+) `AsObject` / `AsArray` / `AsTuple` also forward their `isDirty` prop into `AsCollapsible`, which paints `data-dirty=""` on the section root and its heading only — see [collapsible-sections.md](collapsible-sections.md) and [form-change-tracking.md](form-change-tracking.md).
 
 The nesting level is provided downward by AsField via `LEVEL_KEY` — incremented for every nested structured field or union. Read it in a custom container renderer with `useAsLevel(): ComputedRef<number>` (`-1` outside any structured field; root struct = `0`); bump it for a mounted-children subtree with `provideAsNestedLevel(levels = 1)`. Full container-renderer kit in [customization.md](customization.md#container-renderers-custom-section-shells).

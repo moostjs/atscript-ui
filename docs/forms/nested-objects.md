@@ -4,10 +4,60 @@ outline: deep
 
 # Nested Objects
 
-Inline object literals in `.as` types nest naturally. `AsObject` renders
-the root field as an iterator grid and every deeper level as a
-collapsible section, with path-aware children that compute absolute
-paths automatically.
+Object types in `.as` schemas nest naturally. `AsObject` renders the
+root field as an iterator grid and every deeper **section** as a
+collapsible, with path-aware children that compute absolute paths
+automatically.
+
+## Section or namespace
+
+Not every nested object becomes a section. An object prop is a
+**section** when it carries at least one annotation that gives it an
+identity of its own:
+
+| Annotation                               | Effect                                     |
+| ---------------------------------------- | ------------------------------------------ |
+| `@meta.label`                            | Section with that title                    |
+| `@meta.description`                      | Section with a description under the title |
+| `@ui.form.component`                     | Your component renders the whole object    |
+| `@ui.form.type` / `@ui.type`             | Dispatches to that entry in the types map  |
+| `@ui.form.hidden` / `@ui.form.fn.hidden` | The object and everything under it hides   |
+
+An object with none of them is a **namespace**: it is not a field, and
+its children render inline in the parent's grid at their full dotted
+paths. That is what keeps a DB-flattened struct (`addr.street` stored
+as `addr__street`) from growing chrome nobody asked for.
+
+```atscript
+export interface Example {
+    // Namespace — renders `street` and `city` straight into the parent grid
+    address: {
+        street: string
+        city: string
+    }
+
+    // Section — renders a collapsible titled "Billing"
+    @meta.label 'Billing'
+    billing: {
+        iban: string
+    }
+}
+```
+
+Without a label, a section falls back to the prop name as its title.
+
+::: tip It makes no difference whether the object is written inline or
+referenced
+`address: Address` and `address: { … }` follow exactly the same rule.
+Annotations on the referenced declaration count as if written at the
+prop, so an `@meta.label`-annotated interface is a section everywhere
+it is used.
+:::
+
+`@ui.form.order` is **not** in the table: order positions a field among
+its siblings, and a namespace object has no position of its own — its
+children carry their own order. Give the object a label if you want to
+place it as a unit.
 
 ## The canonical example
 
@@ -37,6 +87,7 @@ export interface NestedForm {
         @meta.required 'ZIP code is required'
         zip: string
 
+        @meta.label 'Country'
         country: {
             @meta.label 'Country Name'
             @meta.required 'Country name is required'
@@ -49,6 +100,7 @@ export interface NestedForm {
         }
     }
 
+    @meta.label 'Contact'
     @ui.form.order 10
     contact: {
         @meta.label 'Contact First Name'
@@ -63,6 +115,7 @@ export interface NestedForm {
             '(v, data) => data.contact?.firstName ? "Email for " + data.contact.firstName : "Contact email address"'
         email?: string.email
 
+        @meta.label 'Department'
         department: {
             @meta.label 'Department Name'
             name?: string
@@ -105,6 +158,8 @@ const { def, formData } = createAsFormDef(NestedForm);
   shared sections store (see below).
 - **Deeper levels** (`address.country`, `contact.department`) render
   as their own collapsible sections — nested inside the parent's body.
+  Drop their `@meta.label` and they stop being sections: `country.name`
+  and `country.code` would render straight into the `address` grid.
 
 Each `AsObject` shows a header with the field's label, an
 error-count badge (if any descendants have errors), and a toggle

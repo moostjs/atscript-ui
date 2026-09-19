@@ -174,13 +174,20 @@ the local sorter takes effect at its own priority. So
 `[name asc, margin asc]` orders by name and breaks ties by margin, while
 `[margin asc, name asc]` re-orders the page.
 
-Local sorting is a **paged-table** feature. `<AsWindowTable>` caches rows
-by absolute index and drops them as the viewport moves, so there is no
-page to re-order — it does not offer the sort affordance for a display
-column, in the header or in the config dialog. An in-memory table
-(`<AsTableRoot :rows>`) sorts its whole dataset in the query function
-instead, so a display column with `sortValue` sorts across every row
-there, not just the visible page.
+An in-memory table (`<AsTableRoot :rows>`) does better than page-local:
+it sorts the whole dataset in its query function before slicing a page
+out of it, so a display column with `sortValue` orders **every** row,
+not just the visible one. That holds in `<AsWindowTable>` too — every
+absolute index the window asks for already arrives in place.
+
+Behind a **server** fetcher, `<AsWindowTable>` is the one place local
+sorting is unavailable: it caches rows by absolute index and drops them
+as the viewport moves, so there is no page to re-order and the ordering
+would shift under the user as they scrolled. The sort affordance for a
+display column is withheld there, in the header and in the config dialog
+alike. One rule decides it for both — `state.localSortAvailable`. Since
+0.1.135 the exclusion is scoped to the server case; before it, in-memory
+window tables were caught by it too.
 
 An unknown key in a stored preset is ignored, so removing a display
 column later doesn't break saved views.

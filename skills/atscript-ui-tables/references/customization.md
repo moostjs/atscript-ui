@@ -57,7 +57,7 @@ interface DisplayColumnDef {
   label: string;
   width?: string;
   order?: number; // position among server columns; appended when omitted
-  sortable?: false | "local"; // 'local' = client-side, PAGE-LOCAL; paged tables only
+  sortable?: false | "local"; // 'local' = client-side; page-local, or whole-dataset in-memory
   sortValue?: (row: Record<string, unknown>) => unknown; // what 'local' orders by; default row[key]
   component?: string; // named component from `:components`
   type?: string; // cell type for `:types`; default "text"
@@ -80,7 +80,8 @@ Gotchas:
 - The column's value is not fetched. Render it from data already in the row, or pull the source field in with `:always-selected`.
 - `sortable: 'local'` orders the LOADED page. Give it `sortValue: (row) => …` when the value is computed in the slot; without one it reads `row[key]`, which only works when the key names a field in the payload.
 - The page is re-sorted by the WHOLE sorter list, so a server sorter before the local one keeps its ordering and the local sorter acts as a tiebreak.
-- Local sorting is paged-tables-only: `<AsWindowTable>` caches rows by absolute index, so it does not offer the affordance (header or config dialog). An in-memory table (`<AsTableRoot :rows>`) sorts the whole dataset in its query function instead.
+- An in-memory table (`<AsTableRoot :rows>`) sorts the whole dataset in its query function rather than one page, so a display column orders every row — in `<AsWindowTable>` too, since every absolute index the window asks for then arrives already in place (`state.localSortAvailable`, since 0.1.135).
+- Behind a SERVER fetcher, `<AsWindowTable>` is the one place local sorting is unavailable: rows are cached by absolute index and dropped as the viewport moves, so the affordance is withheld in the header and the config dialog alike. Before 0.1.135 that exclusion caught in-memory window tables too.
 - Exports leave display columns out of `columns: "visible"` unless `formatters[path]` fills them — see [export.md](export.md).
 - An unknown key in a stored preset is ignored, so removing a display column later does not break saved views.
 - Pure helper in `@atscript/ui-table`: `mergeDisplayColumns`; `ColumnDef` gained `local` (a `local` column with `sortable: true` is ordered in memory).
