@@ -168,3 +168,22 @@ export { debounce } from "./utils/debounce";
 export { arraysEqual, sameColumnSet, setsEqual, sortersEqual } from "./utils/equality";
 export type { ColumnReorderPosition } from "./utils/reorder-column-names";
 export { reorderColumnNames } from "./utils/reorder-column-names";
+
+// ── Export (CSV writer + paging iterator) ──────────────────
+export type { CsvOptions, ExportScalar } from "./export/csv";
+export { csvCell, toCsv } from "./export/csv";
+export type { ExportPage, ExportPageFetcher } from "./export/export-paging";
+export {
+  DEFAULT_EXPORT_PAGE_SIZE,
+  ExportAbortError,
+  collectExportRows,
+  withStableOrder,
+} from "./export/export-paging";
+export { resolveExportValue } from "./export/export-value";
+
+// ── Client-owned (display-only) columns ────────────────────
+export type { DisplayColumnDef } from "./columns/display-columns";
+export { mergeDisplayColumns } from "./columns/display-columns";
+
+// ── Local (in-memory) row sorting ──────────────────────────
+export { cellAsString, sortRowsLocally } from "./utils/sort-rows";
