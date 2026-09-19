@@ -51,21 +51,29 @@ export interface ActionBuckets {
 }
 
 /**
- * Filter a `{default, others, rows}` triple through an availability `gate`.
- * When `gate` is `null`, returns the input `buckets` reference unchanged so
- * source-array references stay stable downstream (no spurious recomputes in
- * consumers that compare array identity). Shared by the single-row
- * (`applyRowGate`) and bulk (`applyRowsGate`) paths.
+ * Walk a `{default, others, rows}` triple once: keep the actions `gate`
+ * admits, then run each survivor through `map`. Both are optional — with
+ * neither, the input `buckets` reference comes back unchanged so source-array
+ * references stay stable downstream (no spurious recomputes in consumers that
+ * compare array identity). Shared by the single-row (`applyRowGate`), bulk
+ * (`applyRowsGate`) and per-screen-policy paths.
  */
-function applyGate(
+export function applyGate(
   buckets: ActionBuckets,
   gate: ((a: TVueTableActionInfo) => boolean) | null,
+  map?: (a: TVueTableActionInfo) => TVueTableActionInfo,
 ): ActionBuckets {
-  if (!gate) return buckets;
+  if (!gate && !map) return buckets;
+  const keep = gate ?? (() => true);
+  const walk = (list: TVueTableActionInfo[]) => {
+    const kept = gate ? list.filter(keep) : list;
+    return map ? kept.map(map) : kept;
+  };
+  const def = buckets.default;
   return {
-    default: buckets.default && gate(buckets.default) ? buckets.default : undefined,
-    others: buckets.others.filter(gate),
-    rows: buckets.rows.filter(gate),
+    default: def && keep(def) ? (map ? map(def) : def) : undefined,
+    others: walk(buckets.others),
+    rows: walk(buckets.rows),
   };
 }
 
@@ -345,6 +353,11 @@ export interface PromptCtx {
   identifiers: Record<string, unknown>[];
   /** Preferred-id field order, used to render `$1`. */
   preferredId: readonly string[];
+  /**
+   * The row the action was triggered from, forwarded to `invoke` so a
+   * client-only row action's `onInvoke(row, pk)` receives it. Since 0.1.134.
+   */
+  row?: Record<string, unknown>;
 }
 
 /**
@@ -392,12 +405,12 @@ export async function triggerAction(
   if (action.inputForm) {
     const input = await state.requestActionInput(action, ctx);
     if (input === null) return;
-    void state.actions.invoke(action, pk, { event, input });
+    void state.actions.invoke(action, pk, { event, input, row: ctx.row });
     return;
   }
   const ok = await confirmAction(state, action, ctx);
   if (!ok) return;
-  void state.actions.invoke(action, pk, { event });
+  void state.actions.invoke(action, pk, { event, row: ctx.row });
 }
 
 /**

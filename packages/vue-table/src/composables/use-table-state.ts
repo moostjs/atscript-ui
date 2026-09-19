@@ -21,15 +21,20 @@ import {
 } from "@atscript/ui";
 import {
   buildTableQuery,
+  cellAsString,
   debounce,
   isFilled,
+  mergeDisplayColumns,
+  mergeSorters,
   reconcileColumnWidthDefaults,
   resolveAspectGate,
   sameColumnSet,
+  sortRowsLocally,
   sortersEqual,
   stateToUrlQueryString,
   urlQueryStringToState,
   type ColumnWidthsMap,
+  type DisplayColumnDef,
   type FieldFilters,
   type FilterCondition,
   type QueryOptions,
@@ -47,6 +52,7 @@ import type {
   MainActionRequest,
   QueryErrorKind,
   ReactiveTableState,
+  RowActionsConfig,
   RowDeleteOpt,
   TAsCellTypeComponents,
   TAsTableControls,
@@ -58,7 +64,9 @@ import { createMainActionRegistry } from "./state/create-main-action-registry";
 import { createNavController } from "./state/create-nav-controller";
 import { createPresetState } from "./state/create-preset-state";
 import { createWindowFetcher } from "./state/create-window-fetcher";
+import { compileRowActionsConfig } from "./state/row-actions-config";
 import { collectIdentifiers, triggerAction, type PromptCtx } from "./state/intent-scope";
+import { getCellValue } from "../utils/get-cell-value";
 import type { UseLocalDraftReturn } from "./use-local-draft";
 import type { UsePresetsReturn } from "./use-presets";
 import type { PresetAspect, SystemPreset } from "@atscript/ui-table";
@@ -71,17 +79,24 @@ const DEFAULT_ITEMS_PER_PAGE = 25;
 
 let _tblUid = 0;
 
+/** Shared empty sorter list — keeps `splitSorters` identity-stable. */
+const EMPTY_SORTERS: SortControl[] = Object.freeze([]) as unknown as SortControl[];
+
 /**
- * Coerce a primitive cell value to a string for the static-mode query
- * function's substring search and locale-aware sort. Objects fall back to
- * `""` so `'[object Object]'` never leaks into the search index. Module
- * scope so it's not recreated on every fetch.
+ * Build the value reader used for in-memory sorting: a display column's
+ * `sortValue(row)` wins for its own key, everything else reads the row by
+ * path. Returns `getCellValue` itself when no display column defines one.
  */
-function cellAsString(v: unknown): string {
-  if (v == null) return "";
-  if (typeof v === "string") return v;
-  if (typeof v === "number" || typeof v === "boolean") return v.toString();
-  return "";
+function createSortValueReader(
+  display?: readonly DisplayColumnDef[],
+): (row: Record<string, unknown>, field: string) => unknown {
+  const map = new Map<string, (row: Record<string, unknown>) => unknown>();
+  for (const d of display ?? []) if (d.sortValue) map.set(d.key, d.sortValue);
+  if (map.size === 0) return getCellValue;
+  return (row, field) => {
+    const fn = map.get(field);
+    return fn ? fn(row) : getCellValue(row, field);
+  };
 }
 
 /** Everything provided by as-table-root to its subtree. */
@@ -105,6 +120,17 @@ export type QueryFn = (
   page: number,
   size: number,
 ) => Promise<PageResult<Record<string, unknown>>>;
+
+/** Per-call overrides for `state.buildQuery()`. Since 0.1.134. */
+export interface BuildQueryOptions {
+  /**
+   * Column paths to project instead of the visible ones. Client-owned
+   * (`local`) columns are dropped from the result either way.
+   */
+  columnPaths?: string[];
+  /** Override the `$actions` opt-in (default: whatever the renderer asked for). */
+  includeActions?: boolean;
+}
 
 /** External refs the consumer wires up via `defineModel` (or otherwise). */
 export interface TableModelRefs {
@@ -151,6 +177,12 @@ export interface TableQueryOptions {
   ignoreSortersWhenSearched?: boolean;
   /** Auto-query when metadata loads (default: true). */
   queryOnMount?: boolean;
+  /**
+   * The query function already returns its rows ordered by every active
+   * sorter, so `applyLocalSort` must not re-order the page on top of it. Set
+   * by the in-memory (`createStaticTableState`) path. Since 0.1.134.
+   */
+  preSorted?: boolean;
   /**
    * Gate the initial `scheduleQuery("initial")` until this ref flips to
    * `true`. Used by `<AsTableRoot>` when `v-model:urlQuery` is bound, to
@@ -234,6 +266,11 @@ export interface CreateTableStateOptions {
   actions?: TableActionsOptions;
   /** Preset settings. */
   preset?: TablePresetOptions;
+  /**
+   * Client-owned columns merged into the server's column list. Captured once
+   * at setup — to change the set, re-mount. Since 0.1.134.
+   */
+  displayColumns?: readonly DisplayColumnDef[];
 }
 
 /** Internal handles returned alongside the public state. */
@@ -348,6 +385,13 @@ export function createTableState(opts: CreateTableStateOptions): {
   // Renderer-owned: pushed in by `<AsTable>` / `<AsWindowTable>` watchers.
   const rowDelete = ref<boolean | RowDeleteOpt>(false);
   const includeActions = ref(false);
+  const rowActions = ref<RowActionsConfig | undefined>(undefined);
+  /**
+   * The per-screen row-action policy, compiled once per config change instead
+   * of once per row per render — and read by every surface that renders row
+   * actions, so the cell and the selection toolbar can't drift apart.
+   */
+  const rowActionsPolicy = computed(() => compileRowActionsConfig(rowActions.value));
 
   const filters = shallowRef<FieldFilters>({});
   const results = shallowRef<Row[]>([]);
@@ -457,7 +501,56 @@ export function createTableState(opts: CreateTableStateOptions): {
   let queryDetected = false;
   let skipPaginationWatch = 0;
 
-  function buildCurrentQuery(): Uniquery {
+  /**
+   * Paths of client-owned columns — they have no server field behind them, so
+   * they are stripped from `$select` and from `$sort`. Recomputed only when
+   * the column set changes.
+   */
+  const localColumnPaths = computed(() => {
+    const out = new Set<string>();
+    for (const c of allColumns.value) if (c.local) out.add(c.path);
+    return out;
+  });
+
+  /**
+   * The active sorters split by who applies them: `server` goes into `$sort`,
+   * `local` targets a client-owned column and is applied in memory. One pass,
+   * one dependency — the two halves are complements.
+   */
+  const splitSorters = computed<{ local: SortControl[]; server: SortControl[] }>(() => {
+    const paths = localColumnPaths.value;
+    if (paths.size === 0) return { local: EMPTY_SORTERS, server: sorters.value };
+    const local: SortControl[] = [];
+    const server: SortControl[] = [];
+    for (const s of sorters.value) (paths.has(s.field) ? local : server).push(s);
+    return { local, server };
+  });
+
+  /** `true` while the query deliberately drops user sorters to keep search relevance. */
+  function sortersIgnored(): boolean {
+    return ignoreSortersWhenSearched.value && !!searchTerm.value;
+  }
+
+  /** Reads the value a sorter orders by — a display column's `sortValue` wins. */
+  const sortValueOf = createSortValueReader(opts.displayColumns);
+
+  function applyLocalSort<T extends Record<string, unknown>>(rows: T[]): T[] {
+    // A query function that owns its ordering (static/local mode) has already
+    // sorted the whole dataset by every sorter — re-sorting the page here
+    // would repeat the work and, past page 1, contradict it.
+    if (queryOpts?.preSorted) return rows;
+    if (splitSorters.value.local.length === 0 || sortersIgnored()) return rows;
+    // Sort by the FULL sorter list, in the same merge order the query uses:
+    // the server already ordered the page by its own fields, so those are a
+    // no-op tiebreak here, and a local sorter slots in at its real priority
+    // instead of overriding everything before it.
+    const merged = queryOpts?.forceSorters?.length
+      ? mergeSorters(queryOpts.forceSorters, sorters.value)
+      : sorters.value;
+    return sortRowsLocally(rows, merged, sortValueOf);
+  }
+
+  function buildCurrentQuery(buildOpts?: BuildQueryOptions): Uniquery {
     // narrowed-meta gate over the server-returnable field set (`fetchableFields`,
     // includes `@ui.table.exclude` fields that are never columns). Falls back to
     // the column paths when a synthetic def carries no `fetchableFields`.
@@ -469,16 +562,21 @@ export function createTableState(opts: CreateTableStateOptions): {
     if (queryOpts?.alwaysSelected)
       // alwaysSelected: same gate
       for (const p of queryOpts.alwaysSelected) if (available.has(p)) extra.add(p);
+    const localPaths = localColumnPaths.value;
+    const requested = buildOpts?.columnPaths ?? columnNames.value;
+    const visibleColumnPaths = localPaths.size
+      ? requested.filter((p) => !localPaths.has(p))
+      : requested;
     return buildTableQuery({
-      visibleColumnPaths: columnNames.value,
+      visibleColumnPaths,
       extraSelect: extra.size ? [...extra] : undefined,
-      sorters: sorters.value,
+      sorters: splitSorters.value.server,
       forceSorters: queryOpts?.forceSorters,
       filters: filters.value,
       forceFilters: queryOpts?.forceFilters,
       search: searchTerm.value || undefined,
-      ignoreSorters: ignoreSortersWhenSearched.value && !!searchTerm.value,
-      includeActions: includeActions.value,
+      ignoreSorters: sortersIgnored(),
+      includeActions: buildOpts?.includeActions ?? includeActions.value,
     });
   }
 
@@ -798,6 +896,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     selectableCount,
     selectAll,
     rowDelete,
+    rowActions,
     includeActions,
     activeIndex,
     navMode,
@@ -830,6 +929,11 @@ export function createTableState(opts: CreateTableStateOptions): {
     queryNext,
     loadRange,
     invalidate,
+    buildQuery: buildCurrentQuery,
+    fetchPage: dispatchPages,
+    localColumnPaths,
+    applyLocalSort,
+    rowActionsPolicy,
     dataAt,
     loadingAt,
     errorAt,
@@ -1062,6 +1166,14 @@ export function createTableState(opts: CreateTableStateOptions): {
       // header click / config dialog / preset apply / programmatic writes.
       if (searchTerm.value) setIgnoreSortersInternal(false);
       if (!queryDetected) return;
+      // A sorter that only targets a client-owned column never reaches the
+      // server — `applyLocalSort` re-orders the loaded page instead, so a
+      // refetch would send the identical query.
+      const paths = localColumnPaths.value;
+      if (paths.size > 0) {
+        const keep = (s: SortControl) => !paths.has(s.field);
+        if (sortersEqual(prev.filter(keep), next.filter(keep))) return;
+      }
       requestRefresh();
     },
     { immediate: false },
@@ -1187,11 +1299,14 @@ export function createTableState(opts: CreateTableStateOptions): {
       // Order matters: tableDef LAST so the auto-bootstrap watcher fires after
       // columnNames is seeded; allColumns FIRST so the `columns` computed has
       // both halves ready. Vue flushes watchers in source-mutation order.
-      allColumns.value = def.columns;
-      const reconciled = reconcileColumnWidthDefaults(def.columns, columnWidths.value);
+      // Client-owned columns are merged in here so every downstream consumer
+      // (widths, config dialog, presets, `columns`) sees one column list.
+      const merged = mergeDisplayColumns(def.columns, opts.displayColumns ?? []);
+      allColumns.value = merged;
+      const reconciled = reconcileColumnWidthDefaults(merged, columnWidths.value);
       if (reconciled !== columnWidths.value) columnWidths.value = reconciled;
       if (columnNames.value.length === 0) {
-        columnNames.value = def.columns.map((c) => c.path);
+        columnNames.value = merged.map((c) => c.path);
       }
       tableDef.value = def;
     },
@@ -1202,8 +1317,12 @@ export function createTableState(opts: CreateTableStateOptions): {
 }
 
 export interface CreateStaticTableStateOptions {
-  /** All rows in the dataset. Sorting/searching is applied locally. */
-  rows: Record<string, unknown>[];
+  /**
+   * All rows in the dataset. Sorting/searching is applied locally. Pass a
+   * getter (or a ref) to keep it reactive — every local "fetch" re-reads it,
+   * so replacing the array and calling `state.query()` re-renders the table.
+   */
+  rows: MaybeRefOrGetter<Record<string, unknown>[]>;
   /** Columns to render. Used to synthesize a minimal `TableDef`. */
   columns: ColumnDef[];
   /** Field paths matched (substring, case-insensitive) by `searchTerm`. */
@@ -1212,6 +1331,23 @@ export interface CreateStaticTableStateOptions {
   selection?: TableSelectionOptions;
   /** Default page size (`pagination.itemsPerPage`). */
   limit?: number;
+  /**
+   * Sort `rows` in memory from the active sorters (default `true`). Set
+   * `false` when `rows` already arrives in the order it should render and the
+   * header's sort affordance is purely cosmetic. Since 0.1.134.
+   */
+  localSort?: boolean;
+  /** Client-owned columns merged into `columns`. Since 0.1.134. */
+  displayColumns?: readonly DisplayColumnDef[];
+  /** External refs from `defineModel` — same contract as `createTableState`. Since 0.1.134. */
+  model?: TableModelRefs;
+  /** Auto-query once the synthetic definition is in place (default: true). Since 0.1.134. */
+  queryOnMount?: boolean;
+  /**
+   * Action settings. Only the client-free parts apply — there is no client to
+   * invoke a server action with. Since 0.1.134.
+   */
+  actions?: TableActionsOptions;
 }
 
 /**
@@ -1224,18 +1360,27 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
   internals: TableStateInternals;
 } {
   // queryFn captures `_state` by closure before `createTableState` returns.
+  // The real fetcher is built once, on first use — it memoizes the sorted
+  // dataset, which a per-call rebuild would throw away.
   let _state: ReactiveTableState | null = null;
+  let fetcher: QueryFn | null = null;
   const queryFn: QueryFn = (q, page, size) => {
     if (!_state) {
       return Promise.resolve({ data: [], count: 0, page, itemsPerPage: size, pages: 1 });
     }
-    return buildStaticQueryFn(opts, _state)(q, page, size);
+    fetcher ??= buildStaticQueryFn(opts, _state);
+    return fetcher(q, page, size);
   };
   const result = createTableState({
     client: {} as Client,
     selection: opts.selection,
     limit: opts.limit,
-    query: { fn: queryFn },
+    displayColumns: opts.displayColumns,
+    model: opts.model,
+    actions: opts.actions,
+    // `preSorted`: the query function below sorts the whole dataset by every
+    // sorter, so the renderer must not re-sort the page on top of it.
+    query: { fn: queryFn, queryOnMount: opts.queryOnMount, preSorted: true },
   });
   _state = result.state;
   result.state.loadingMetadata.value = false;
@@ -1262,31 +1407,34 @@ function buildStaticQueryFn(
   state: ReactiveTableState,
 ): QueryFn {
   const searchPaths = opts.searchPaths ?? [];
+  const sortValueOf = createSortValueReader(opts.displayColumns);
+
+  // Sorting the whole dataset is the expensive half, and it only changes when
+  // the row array or the sorter list is replaced — so a keystroke re-filters
+  // but never re-sorts.
+  let sortedFrom: Row[] | null = null;
+  let sortedBy: readonly SortControl[] | null = null;
+  let sorted: Row[] = [];
+  function sortedRows(all: Row[]): Row[] {
+    const by = state.sorters.value;
+    if (all !== sortedFrom || by !== sortedBy) {
+      sorted = sortRowsLocally(all, by, sortValueOf);
+      sortedFrom = all;
+      sortedBy = by;
+    }
+    return sorted;
+  }
+
   return (_query, page, size) => {
-    let filtered: Row[] = opts.rows;
+    const all: Row[] = toValue(opts.rows);
+    // Sort first, filter second — filtering preserves order, so the sorted
+    // array survives every keystroke.
+    let filtered = opts.localSort === false ? all : sortedRows(all);
     const term = state.searchTerm.value.trim().toLowerCase();
     if (term && searchPaths.length > 0) {
       filtered = filtered.filter((row) =>
-        searchPaths.some((p) => cellAsString(row[p]).toLowerCase().includes(term)),
+        searchPaths.some((p) => cellAsString(getCellValue(row, p)).toLowerCase().includes(term)),
       );
-    }
-    const active = state.sorters.value;
-    if (active.length > 0) {
-      filtered = filtered.toSorted((a, b) => {
-        for (const s of active) {
-          const dir = s.direction === "desc" ? -1 : 1;
-          const av = a[s.field];
-          const bv = b[s.field];
-          if (typeof av === "number" && typeof bv === "number") {
-            if (av < bv) return -dir;
-            if (av > bv) return dir;
-          } else {
-            const cmp = cellAsString(av).localeCompare(cellAsString(bv));
-            if (cmp !== 0) return cmp * dir;
-          }
-        }
-        return 0;
-      });
     }
     const start = (page - 1) * size;
     return Promise.resolve({

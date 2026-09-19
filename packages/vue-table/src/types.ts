@@ -1,10 +1,12 @@
 import type { Component, ShallowRef, Ref, ComputedRef, MaybeRefOrGetter } from "vue";
 import type {
   ClientError,
+  PageResult,
   TDbActionInfo,
   TDbActionProcessor,
   TDbDeleteResult,
 } from "@atscript/db-client";
+import type { Uniquery } from "@uniqu/core";
 
 /** UI-side sentinel for the synthesised row-delete processor. */
 export const REMOVE_PROCESSOR = "__remove";
@@ -35,6 +37,57 @@ export interface InvokeOpts {
    * actions without a form.
    */
   input?: unknown;
+  /**
+   * The row the action was triggered from. Only consumed by client-only row
+   * actions (`RowActionsConfig.extra`), whose `onInvoke(row, pk)` receives it.
+   * Since 0.1.134.
+   */
+  row?: Record<string, unknown>;
+}
+
+/**
+ * A row action the APP owns — it has no server counterpart, so the backend
+ * never gates it. Either `href` (rendered as a real anchor, mapped through
+ * `state.resolveHref`) or `onInvoke` (runs locally, then settles as an
+ * `@action` emit with `kind: 'custom'`). Since 0.1.134.
+ */
+export interface LocalRowAction {
+  /** Unique among the row actions; also the `@action` emit's `action.name`. */
+  name: string;
+  label: string;
+  icon?: string;
+  intent?: TDbActionInfo["intent"];
+  /** Confirmation copy — same `$1` / `$N` substitution as a server action. */
+  promptText?: string | [string, string];
+  /** Link target for the row. Rendered as an anchor, mapped through `state.resolveHref`. */
+  href?: (row: Record<string, unknown>) => string;
+  /** Local handler. Awaited; a rejection settles the action as an error result. */
+  onInvoke?: (row: Record<string, unknown>, pk?: Record<string, unknown>) => void | Promise<void>;
+  /** Per-row gate. Returning `false` hides the action for that row. */
+  enabled?: (row: Record<string, unknown>) => boolean;
+}
+
+/**
+ * Per-screen presentation policy for the row-actions cell. Narrows and
+ * relabels what the server declared, and appends app-owned actions.
+ *
+ * Backend eligibility stays authoritative: `include` / `exclude` can only
+ * narrow the set a row's `$actions` already allows, and `overrides` only
+ * change how an action looks — neither can surface an action the server
+ * gated away. Since 0.1.134.
+ */
+export interface RowActionsConfig {
+  /** Allowlist of server action names. Omitted = every eligible action. */
+  include?: string[];
+  /** Denylist of server action names, applied after `include`. */
+  exclude?: string[];
+  /** Presentation overrides keyed by server action name. */
+  overrides?: Record<
+    string,
+    Partial<Pick<TVueTableActionInfo, "label" | "icon" | "intent" | "promptText">>
+  >;
+  /** App-owned actions appended after the server ones. */
+  extra?: LocalRowAction[];
 }
 
 /** Discriminated result returned by `state.actions.invoke`. Never throws. */
@@ -179,6 +232,7 @@ export interface TableNavBridge {
   clearActive: () => void;
 }
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
+import type { RowActionsPolicy } from "./composables/state/row-actions-config";
 import type {
   AspectMask,
   AsPresetEntryRow,
@@ -462,6 +516,13 @@ export interface ReactiveTableState extends TableStateMethods {
    */
   rowDelete: Ref<boolean | RowDeleteOpt>;
   /**
+   * Per-screen row-action policy — writable ref owned by `<AsTableRoot>`,
+   * like {@link rowDelete}. `<AsRowActions>` reads it from the context, so a
+   * standalone `<AsRowActions>` inside the table honours it too (an explicit
+   * `:actions` prop on that component wins). Since 0.1.134.
+   */
+  rowActions: Ref<RowActionsConfig | undefined>;
+  /**
    * `?$actions=true` opt-in — writable ref owned by the renderer.
    * `<AsTable>` / `<AsWindowTable>` flip this on whenever their
    * `:row-actions-column` prop is non-`false` AND the table has at least one
@@ -620,6 +681,45 @@ export interface ReactiveTableState extends TableStateMethods {
    * watchers refetch in reaction to the writes.
    */
   applyUrlQuery: (urlString: string) => void;
+
+  /**
+   * Build the Uniquery the table's own fetch would send right now — same
+   * filters, sorters, search, force-filters and `$select` projection. Used by
+   * `useTableExport` so an export never drifts from what is on screen.
+   * Since 0.1.134.
+   */
+  buildQuery: (opts?: { columnPaths?: string[]; includeActions?: boolean }) => Uniquery;
+  /**
+   * Run one page through the table's configured query function (or its
+   * client). The single fetch path — a custom `queryFn` is honoured here too.
+   * Since 0.1.134.
+   */
+  fetchPage: (
+    query: Uniquery,
+    page: number,
+    size: number,
+  ) => Promise<PageResult<Record<string, unknown>>>;
+  /**
+   * Paths of the client-owned (`local`) columns — the ones no server field
+   * backs, so they never enter `$select`, `$sort` or filters. Since 0.1.134.
+   */
+  localColumnPaths: ComputedRef<Set<string>>;
+  /**
+   * Re-order already-loaded rows so a sorter on a client-owned column takes
+   * effect: the page is sorted by the FULL sorter list, which leaves the
+   * server's own ordering intact and slots the local sorter in at its real
+   * priority. Page-local by definition — it can only order what is loaded —
+   * and a no-op (returns the input reference) without a local sorter, in
+   * window mode, or when the rows arrive pre-sorted. Since 0.1.134.
+   */
+  applyLocalSort: <T extends Record<string, unknown>>(rows: T[]) => T[];
+  /**
+   * The row-action policy from {@link rowActions}, compiled once per config
+   * change. Every surface that renders row actions reads it — the row-actions
+   * cell and the selection toolbar — so they cannot show different sets.
+   * Since 0.1.134.
+   */
+  rowActionsPolicy: ComputedRef<RowActionsPolicy>;
 
   /**
    * Preset feature surface. Always present; inert (`available=false`,

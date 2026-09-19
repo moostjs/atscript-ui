@@ -10,6 +10,7 @@ import {
   type TVueTableActionInfo,
 } from "../../types";
 import { idsForAction } from "./intent-scope";
+import { localActionOf } from "./row-actions-config";
 
 const REMOVE_NAME = REMOVE_PROCESSOR;
 
@@ -111,6 +112,17 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
     try {
       switch (action.processor) {
         case "custom": {
+          // A client-only row action (`RowActionsConfig.extra`) carries its
+          // handler on the descriptor; run it here so a rejection settles as
+          // an error result like any other invoke, and the `@action` emit
+          // still fires once with `kind: 'custom'`.
+          const local = localActionOf(action);
+          if (local?.onInvoke) {
+            await local.onInvoke(
+              callOpts?.row ?? {},
+              Array.isArray(pk) ? pk[0] : (pk as Record<string, unknown> | undefined),
+            );
+          }
           result = { ok: true, kind: "custom", dispatched: true };
           break;
         }

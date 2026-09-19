@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, ref, watch, type Component, type Ref } from "vue";
-import type { SortControl, ClientFactory } from "@atscript/ui";
+import type { ColumnDef, SortControl, ClientFactory } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
-import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
+import type { ColumnWidthsMap, DisplayColumnDef, UrlQuerySync } from "@atscript/ui-table";
 import type {
   ActionResult,
   PresetConfig,
+  ReactiveTableState,
+  RowActionsConfig,
   TAsCellTypeComponents,
   TAsTableControls,
   TVueTableActionInfo,
 } from "../types";
-import { useTable } from "../composables/use-table";
-import { useRegisterMainActionListener } from "../composables/use-table-state";
+import { finalizeTableState, useTable } from "../composables/use-table";
+import {
+  createStaticTableState,
+  useRegisterMainActionListener,
+} from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
+import { DEV } from "../utils/dev";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
-import type { PageResult } from "@atscript/db-client";
+import type { Client, PageResult } from "@atscript/db-client";
 // `AsConfirmDialog` stays a static import — it's tiny and core to the
 // prompt/confirm path. The config / filter / preset dialogs each pull in a
 // heavier subtree, so they're lazy-loaded and only mounted once their open
@@ -39,8 +45,46 @@ const LazyActionFormDialog = defineAsyncComponent(
 
 const props = withDefaults(
   defineProps<{
-    /** Table endpoint URL (e.g. "/db/tables/products"). */
-    url: string;
+    /**
+     * Table endpoint URL (e.g. "/db/tables/products"). Omit it — and pass
+     * `:rows` + `:columns` instead — to run the table in local mode over an
+     * already-loaded array.
+     */
+    url?: string;
+    /**
+     * Local mode: render these rows instead of fetching. No client, no
+     * `/meta` request and no metadata cache entry. Reactive — replacing the
+     * array re-runs the local query (search / sort / paging stay live).
+     * Requires `:columns`. Since 0.1.134.
+     */
+    rows?: Record<string, unknown>[];
+    /**
+     * Local mode: the columns to render. Read once at setup. Since 0.1.134.
+     */
+    columns?: ColumnDef[];
+    /**
+     * Local mode: field paths the search term matches (substring,
+     * case-insensitive). Omit to disable search. Since 0.1.134.
+     */
+    searchPaths?: string[];
+    /**
+     * Local mode: sort `rows` in memory from the active sorters (default
+     * `true`). Since 0.1.134.
+     */
+    localSort?: boolean;
+    /**
+     * Client-owned columns merged into the server's column list — labelled,
+     * hideable, reorderable and preset-persisted like any column, but never
+     * part of `$select`, server sorting or filters. Since 0.1.134.
+     */
+    displayColumns?: DisplayColumnDef[];
+    /**
+     * Per-screen policy for the row-actions cell: narrow the server's action
+     * set (`include` / `exclude`), relabel it (`overrides`), and append
+     * app-owned actions (`extra`). The server stays authoritative — an action
+     * a row's `$actions` gated away never appears. Since 0.1.134.
+     */
+    rowActions?: RowActionsConfig;
     /** Factory to create a client from a URL. Falls back to the app-wide default set via `setDefaultClientFactory` (or the built-in `new Client(url)` factory if unset). */
     clientFactory?: ClientFactory;
     /** Skin-slot overrides for table chrome — header cells, filter dialog, column menu, etc. Use {@link createDefaultControls} to seed defaults. */
@@ -118,6 +162,9 @@ const props = withDefaults(
     queryOnMount: true,
     selectionPersistence: "trim",
     refreshOnAction: true,
+    // Explicit: Vue casts an absent Boolean prop to `false`, which would
+    // silently disable local sorting for every local-mode table.
+    localSort: true,
   },
 );
 
@@ -166,45 +213,128 @@ const urlQuery = defineModel<string | undefined>("urlQuery", {
 const urlQueryActive = useHasEmitListener("onUpdate:urlQuery").value;
 const urlQueryReady = ref(!urlQueryActive);
 
-const state = useTable(props.url, {
-  limit: props.limit,
-  // `select` is owned by `<AsTable>` / `<AsWindowTable>`, not the orchestrator.
-  rowValueFn: props.rowValueFn,
-  selectionPersistence: props.selectionPersistence,
-  forceFilters: props.forceFilters,
-  forceSorters: props.forceSorters,
-  alwaysSelected: props.alwaysSelected,
-  queryFn: props.queryFn,
-  queryOnMount: props.queryOnMount,
-  // Getter, not a snapshot: a table mounted while blocked must start fetching
-  // as soon as the host clears the flag.
-  blockQuery: () => props.blockQuery === true,
-  blockSize: props.blockSize,
-  dragReleaseDebounceMs: props.dragReleaseDebounceMs,
-  clientFactory: props.clientFactory,
-  controls: props.controls,
-  types: props.types,
-  components: props.components,
-  formTypes: props.formTypes,
-  formComponents: props.formComponents,
-  refreshOnAction: () => props.refreshOnAction,
-  resolveHref: props.resolveHref,
-  onActionResolved: (action, ids, result, event) => {
-    emit("action", action, ids, result, event);
-  },
-  filterFields,
-  columnNames,
-  columnWidths,
-  sorters,
-  ignoreSortersWhenSearched,
-  selectedRows,
-  urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
-  onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
-  urlQuerySync: props.urlQuerySync,
-  preset: props.preset,
-});
+/**
+ * Local mode is decided once, at setup: `:rows` present means "render this
+ * array", which is a different state factory (no client, no metadata fetch).
+ * It cannot flip at runtime — a table that changes data source re-mounts.
+ */
+const localMode = props.rows !== undefined;
 
-if (urlQueryActive) {
+if (!localMode && !props.url) {
+  throw new Error("[vue-table] <AsTableRoot> requires either :url or :rows (local mode).");
+}
+
+/**
+ * Build the local-mode state: a `createStaticTableState` over the `:rows`
+ * array, provided to the subtree exactly like the fetching path so cells,
+ * keyboard nav, header slots, selection and the config dialog all work.
+ * Features that need a client are inert here and warned about once.
+ */
+function createLocalState(): ReactiveTableState {
+  // Dev-only: these are authoring mistakes, and the strings have no business
+  // in a production bundle.
+  if (DEV) {
+    if (props.url) {
+      console.warn("[vue-table] <AsTableRoot>: :rows is set, so :url is ignored (local mode).");
+    }
+    if (props.preset) {
+      console.warn("[vue-table] <AsTableRoot>: presets need a server and are off in local mode.");
+    }
+    if (urlQueryActive) {
+      console.warn("[vue-table] <AsTableRoot>: v-model:urlQuery is not wired in local mode.");
+    }
+    if (props.queryFn) {
+      console.warn("[vue-table] <AsTableRoot>: :queryFn is ignored in local mode.");
+    }
+  }
+
+  const { state: localState } = createStaticTableState({
+    // Getter, not a snapshot: the local query function re-reads it, so a new
+    // array is enough to re-render.
+    rows: () => props.rows ?? [],
+    columns: props.columns ?? [],
+    searchPaths: props.searchPaths,
+    localSort: props.localSort,
+    displayColumns: props.displayColumns,
+    limit: props.limit,
+    queryOnMount: props.queryOnMount,
+    selection: { rowValueFn: props.rowValueFn, selectedRows },
+    model: { filterFields, columnNames, columnWidths, sorters },
+    actions: {
+      resolveHref: props.resolveHref,
+      onResolved: (action, ids, result, event) => emit("action", action, ids, result, event),
+    },
+  });
+
+  // Same tail as the fetching path (`useTable`): selection persistence, then
+  // the context every child injects.
+  finalizeTableState(localState, {} as Client, {
+    selectionPersistence: props.selectionPersistence,
+    controls: props.controls,
+    types: props.types,
+    components: props.components,
+    formTypes: props.formTypes,
+    formComponents: props.formComponents,
+  });
+  watch(
+    () => props.rows,
+    () => localState.query({ silent: true }),
+  );
+  return localState;
+}
+
+const state = localMode
+  ? createLocalState()
+  : useTable(props.url!, {
+      limit: props.limit,
+      // `select` is owned by `<AsTable>` / `<AsWindowTable>`, not the orchestrator.
+      rowValueFn: props.rowValueFn,
+      selectionPersistence: props.selectionPersistence,
+      forceFilters: props.forceFilters,
+      forceSorters: props.forceSorters,
+      alwaysSelected: props.alwaysSelected,
+      queryFn: props.queryFn,
+      queryOnMount: props.queryOnMount,
+      // Getter, not a snapshot: a table mounted while blocked must start fetching
+      // as soon as the host clears the flag.
+      blockQuery: () => props.blockQuery === true,
+      blockSize: props.blockSize,
+      dragReleaseDebounceMs: props.dragReleaseDebounceMs,
+      clientFactory: props.clientFactory,
+      controls: props.controls,
+      types: props.types,
+      components: props.components,
+      formTypes: props.formTypes,
+      formComponents: props.formComponents,
+      refreshOnAction: () => props.refreshOnAction,
+      resolveHref: props.resolveHref,
+      onActionResolved: (action, ids, result, event) => {
+        emit("action", action, ids, result, event);
+      },
+      filterFields,
+      columnNames,
+      columnWidths,
+      sorters,
+      ignoreSortersWhenSearched,
+      selectedRows,
+      urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
+      onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
+      urlQuerySync: props.urlQuerySync,
+      preset: props.preset,
+      displayColumns: props.displayColumns,
+    });
+
+// Renderer-pushed, like `<AsTable :row-delete>`: the row-actions cell reads
+// the policy off the state so a standalone `<AsRowActions>` honours it too.
+watch(
+  () => props.rowActions,
+  (value) => {
+    state.rowActions.value = value;
+  },
+  { immediate: true },
+);
+
+if (urlQueryActive && !localMode) {
   // Wait for tableDef (schema-driven parsing) AND preset bootstrap. Preset
   // writes its baseline first, URL overlays per-field on top — so a deep
   // link survives a preset that would otherwise clear filters, and preset's

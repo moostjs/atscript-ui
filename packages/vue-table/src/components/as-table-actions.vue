@@ -16,7 +16,6 @@ import { computed, ref, watch } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
 import {
-  actionHref,
   applyRowGate,
   applyRowsGate,
   ariaLabelFor,
@@ -25,6 +24,7 @@ import {
   intentClass,
   triggerAction,
 } from "../composables/state/intent-scope";
+import { rowActionHref } from "../composables/state/row-actions-config";
 import AsActionMenuContent from "./internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../types";
 
@@ -57,6 +57,11 @@ interface Resolved {
   trailingRowActions: TVueTableActionInfo[];
   level: "table" | "rows" | "row";
   ids: Record<string, unknown>[];
+  /**
+   * The row the `'row'` level resolved to — forwarded to `invoke` so a
+   * client-only action's `onInvoke(row, pk)` and `href(row)` see it.
+   */
+  row?: Record<string, unknown>;
 }
 
 // Promote a sole non-default entry into `defaultAction` so it renders as a
@@ -83,7 +88,9 @@ const preferredId = computed(() => state.tableDef.value?.preferredId ?? []);
 
 const resolved = computed(() => {
   const r = resolveBuckets();
-  const defaultHref = r.defaultAction ? actionHref(state, r.defaultAction, r.ids[0]) : undefined;
+  const defaultHref = r.defaultAction
+    ? rowActionHref(state, r.defaultAction, r.ids[0], r.row)
+    : undefined;
   return {
     ...r,
     defaultHref,
@@ -121,20 +128,30 @@ function resolveBuckets(): Resolved {
     // Auto + 1 also surfaces bulk actions in the trailing menu so e.g.
     // "Suspend selected" stays reachable while the row default renders as
     // the CTA.
-    const filtered = applyRowGate(
-      {
-        default: state.actions.default.row,
-        others: state.actions.others.row,
-        rows: explicit === "auto" && selectedCount === 1 ? state.actions.rows : [],
-      },
-      source,
+    // …and the same per-screen policy as the cell: one compiled view, so an
+    // action the screen excluded or relabelled cannot come back here.
+    const policy = state.rowActionsPolicy.value;
+    const filtered = policy.apply(
+      applyRowGate(
+        {
+          default: state.actions.default.row,
+          others: state.actions.others.row,
+          rows: explicit === "auto" && selectedCount === 1 ? state.actions.rows : [],
+        },
+        source,
+      ),
     );
+    const row = source as Record<string, unknown> | undefined;
+    const extra = policy.extra(row);
     return collapseSingle({
       defaultAction: filtered.default,
-      otherActions: filtered.others,
+      // Keep the source reference when there is nothing to append — consumers
+      // compare array identity.
+      otherActions: extra.length > 0 ? [...filtered.others, ...extra] : filtered.others,
       trailingRowActions: filtered.rows,
       level: "row",
       ids: collectIdentifiers(state, [source], pid),
+      row,
     });
   }
   // Bulk gate = UNION of selected rows' `$actions` (shown when ≥1 selected
@@ -164,7 +181,11 @@ const hasAny = computed(
 );
 
 function promptCtx() {
-  return { identifiers: resolved.value.ids, preferredId: preferredId.value };
+  return {
+    identifiers: resolved.value.ids,
+    preferredId: preferredId.value,
+    row: resolved.value.row,
+  };
 }
 
 async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | KeyboardEvent) {
@@ -173,7 +194,7 @@ async function invokeWith(action: TVueTableActionInfo, event?: MouseEvent | Keyb
 
 /** Resolved navigate href for `action` against the toolbar's current ids. */
 function hrefFor(action: TVueTableActionInfo): string | undefined {
-  return actionHref(state, action, resolved.value.ids[0]);
+  return rowActionHref(state, action, resolved.value.ids[0], resolved.value.row);
 }
 
 const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures(

@@ -17,7 +17,6 @@ import { computed } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
 import {
-  actionHref,
   applyRowGate,
   ariaLabelFor,
   createNavigateGestures,
@@ -25,12 +24,20 @@ import {
   intentClass,
   triggerAction,
 } from "../../composables/state/intent-scope";
+import { rowActionHref } from "../../composables/state/row-actions-config";
 import AsActionMenuContent from "../internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../../types";
 
 const props = defineProps<{
   row?: Record<string, unknown>;
   pk?: Record<string, unknown>;
+  /**
+   * Render exactly these actions, bypassing the server's action set AND the
+   * root's `:row-actions` policy. For a standalone `<AsRowActions>` that must
+   * show a hand-picked list; omit it inside the table so the shared policy
+   * applies. Since 0.1.134.
+   */
+  actions?: TVueTableActionInfo[];
 }>();
 
 const { state } = useTableContext();
@@ -46,23 +53,37 @@ function promptCtx() {
   return {
     identifiers: id === undefined ? [] : [id],
     preferredId: state.tableDef.value?.preferredId ?? [],
+    row: props.row,
   };
 }
 
 const view = computed(() => {
-  const sourceDefault = state.actions.default.row;
-  const filtered = applyRowGate(
-    {
-      default: sourceDefault,
-      others: state.actions.others.row,
-      rows: state.actions.rows,
-    },
-    props.row,
-  );
-  const total = (filtered.default ? 1 : 0) + filtered.others.length + filtered.rows.length;
+  const explicit = props.actions;
+  const sourceDefault = explicit ? undefined : state.actions.default.row;
+  const policy = state.rowActionsPolicy.value;
+  // Backend gate FIRST, per-screen policy second: `include` can only narrow
+  // what the server allowed for this row, and `overrides` never re-enable a
+  // gated action.
+  const filtered = explicit
+    ? { default: undefined, others: explicit, rows: [] }
+    : policy.apply(
+        applyRowGate(
+          {
+            default: sourceDefault,
+            others: state.actions.others.row,
+            rows: state.actions.rows,
+          },
+          props.row,
+        ),
+      );
+  const extra = explicit ? [] : policy.extra(props.row);
+  const total =
+    (filtered.default ? 1 : 0) + filtered.others.length + filtered.rows.length + extra.length;
   const single =
-    total === 1 ? (filtered.default ?? filtered.others[0] ?? filtered.rows[0]) : undefined;
-  const singleHref = single ? actionHref(state, single, identifierOf()) : undefined;
+    total === 1
+      ? (filtered.default ?? filtered.others[0] ?? filtered.rows[0] ?? extra[0])
+      : undefined;
+  const singleHref = single ? hrefFor(single) : undefined;
 
   return {
     total,
@@ -76,7 +97,7 @@ const view = computed(() => {
     // guard navigation, so the action stays a button (mod/middle-click on it
     // still confirms → window.open via `singleHref`).
     singleAsLink: singleHref !== undefined && !single?.promptText,
-    menuGroups: [filtered.default ? [filtered.default] : [], filtered.others, filtered.rows],
+    menuGroups: [filtered.default ? [filtered.default] : [], filtered.others, filtered.rows, extra],
   };
 });
 
@@ -85,7 +106,7 @@ async function trigger(action: TVueTableActionInfo, event?: MouseEvent | Keyboar
 }
 
 function hrefFor(action: TVueTableActionInfo): string | undefined {
-  return actionHref(state, action, identifierOf());
+  return rowActionHref(state, action, identifierOf(), props.row);
 }
 
 const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures(

@@ -249,6 +249,8 @@ type MountTableStateOptions = {
   limit?: number;
   /** Selection options (notably `rowValueFn`). */
   selection?: import("../composables/use-table-state").TableSelectionOptions;
+  /** Client-owned columns merged into the def's columns. */
+  displayColumns?: readonly import("@atscript/ui-table").DisplayColumnDef[];
 };
 
 function buildClient(
@@ -281,6 +283,7 @@ function mountWith(
           client: opts.client ?? client,
           limit: opts.limit,
           selection: opts.selection,
+          displayColumns: opts.displayColumns,
           query: {
             queryOnMount: opts.queryOnMount,
             blockQuery: opts.blockQuery,

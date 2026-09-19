@@ -95,6 +95,14 @@ const { state } = useTableContext();
 const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(() => state.tableDef.value);
 const cellComponents = useCellComponents(() => state.columns.value);
 
+// A client-owned column sorts in memory over the rows of one loaded PAGE.
+// Window mode has no page — it caches rows by absolute index and drops them
+// as the viewport moves — so the ordering would be undefined. Drop the
+// affordance in the header instead of offering a sort that does nothing.
+const headerColumns = computed(() =>
+  state.columns.value.map((c) => (c.local && c.sortable ? { ...c, sortable: false } : c)),
+);
+
 const hasValue = computed(() => props.select !== "none");
 const hasActiveFilters = computed(() => filledFilterCount(state.filters.value) > 0);
 
@@ -403,7 +411,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
         />
         <AsTableHeader
           v-if="!headless"
-          :columns="state.columns.value"
+          :columns="headerColumns"
           :sorters="state.sorters.value"
           :filters="state.filters.value"
           :column-menu="columnMenu"

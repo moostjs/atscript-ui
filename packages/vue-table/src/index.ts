@@ -19,6 +19,8 @@ export type {
   ActionResult,
   InvokeOpts,
   RowDeleteOpt,
+  LocalRowAction,
+  RowActionsConfig,
 } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
@@ -30,22 +32,42 @@ export {
   type ClientFactory,
 } from "@atscript/ui";
 export {
+  provideTableContext,
   useTableContext,
   useTableContextOptional,
   createTableState,
   createStaticTableState,
   type TableContext,
+  type BuildQueryOptions,
   type CreateTableStateOptions,
   type CreateStaticTableStateOptions,
+  type QueryFn,
+  type TableModelRefs,
   type TableStateInternals,
 } from "./composables/use-table-state";
+export {
+  useTableExport,
+  downloadExport,
+  type ExportCellFormatter,
+  type ExportProgress,
+  type ExportResult,
+  type ExportRowsOptions,
+  type UseTableExportReturn,
+} from "./composables/use-table-export";
 export { useTableSelection, type SelectionPersistence } from "./composables/use-table-selection";
 export { useTableNavBridge } from "./composables/use-table-nav-bridge";
 export { useTableFilter } from "./composables/use-table-filter";
 export { useTableSearch } from "./composables/use-table-search";
 export { useTableActions } from "./composables/use-table-actions";
 export { useTableUrlQuery, type UseTableUrlQueryOptions } from "./composables/use-table-url-query";
-export type { QueryOptions, UrlQuerySync } from "@atscript/ui-table";
+export type {
+  CsvOptions,
+  DisplayColumnDef,
+  ExportScalar,
+  QueryOptions,
+  UrlQuerySync,
+} from "@atscript/ui-table";
+export { ExportAbortError } from "@atscript/ui-table";
 
 // ── Presets / app prefs (public dev API) ────────────────────
 export { AS_PRESETS_APP, injectPresetsApp } from "./composables/as-presets-app";

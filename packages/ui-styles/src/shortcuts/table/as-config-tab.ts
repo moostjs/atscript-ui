@@ -24,6 +24,10 @@ export const asConfigTabShortcuts = defineShortcuts({
   "as-config-field-count": {
     "": "scope-primary inline-flex items-center justify-center min-w-[18px] h-[18px] px-$xs rounded-full bg-current-hl/10 text-current-hl text-callout font-500 leading-none flex-shrink-0",
   },
+  // Badge marking a client-owned (`:display-columns`) column in the columns tab.
+  "as-config-field-hint": {
+    "": "inline-flex items-center px-$xs rounded-full layer-2 text-caption text-current/60 uppercase tracking-wide leading-none flex-shrink-0",
+  },
   "as-config-field-label-wrap": "flex items-center gap-$xs flex-1 min-w-0",
   "as-config-field-label-text": "overflow-hidden text-ellipsis whitespace-nowrap min-w-0",
 });

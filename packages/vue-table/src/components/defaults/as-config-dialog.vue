@@ -56,7 +56,13 @@ useSeedOnOpen(isOpen, () => {
 });
 
 const filterableColumns = computed(() => state.allColumns.value.filter((c) => c.filterable));
-const sortableColumns = computed(() => state.allColumns.value.filter((c) => c.sortable));
+// A client-owned column sorts in memory over the loaded page, which window
+// mode (rows cached by absolute index) has no notion of — don't offer it there.
+const sortableColumns = computed(() =>
+  state.allColumns.value.filter(
+    (c) => c.sortable && !(c.local && state.navMode.value === "window"),
+  ),
+);
 
 function filterCount(path: string): number {
   return state.filters.value[path]?.length ?? 0;
@@ -163,7 +169,19 @@ function onOpenAutoFocus(event: Event) {
               :is="FieldsSelector"
               :columns="state.allColumns.value"
               v-model="columnsModel"
-            />
+            >
+              <template #label="{ label, value }">
+                <span class="as-config-field-label-wrap">
+                  <span class="as-config-field-label-text">{{ label }}</span>
+                  <!-- Client-owned (`:display-columns`) columns are rendered by
+                       the app, not fetched — say so, so nobody hunts for a
+                       missing field on the server. -->
+                  <span v-if="state.localColumnPaths.value.has(value)" class="as-config-field-hint"
+                    >client</span
+                  >
+                </span>
+              </template>
+            </component>
           </TabsContent>
 
           <TabsContent value="filters" class="as-config-tab-content">

@@ -9,7 +9,7 @@ import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { Client } from "@atscript/db-client";
 import type { Component, Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
-import type { ColumnWidthsMap, UrlQuerySync } from "@atscript/ui-table";
+import type { ColumnWidthsMap, DisplayColumnDef, UrlQuerySync } from "@atscript/ui-table";
 import type {
   ActionResult,
   PresetConfig,
@@ -157,6 +157,44 @@ export interface UseTableOptions {
    * `url` and `tableKey` are required.
    */
   preset?: PresetConfig;
+
+  /**
+   * Client-owned columns merged into the server's column list — see
+   * {@link DisplayColumnDef}. Captured once at setup. Since 0.1.134.
+   */
+  displayColumns?: readonly DisplayColumnDef[];
+}
+
+/**
+ * The tail every table setup shares: wire selection persistence, then publish
+ * the context to the subtree. Split out so the local (`:rows`) path in
+ * `<AsTableRoot>` and `useTable` cannot drift on which keys get provided.
+ */
+export function finalizeTableState(
+  state: ReactiveTableState,
+  client: Client,
+  opts?: Pick<
+    UseTableOptions,
+    | "selectionPersistence"
+    | "provideContext"
+    | "controls"
+    | "types"
+    | "components"
+    | "formTypes"
+    | "formComponents"
+  >,
+): void {
+  useTableSelection(state, { mode: opts?.selectionPersistence ?? "trim" });
+  if (opts?.provideContext === false) return;
+  provideTableContext({
+    state,
+    client,
+    controls: opts?.controls ?? {},
+    types: opts?.types,
+    components: opts?.components,
+    formTypes: opts?.formTypes,
+    formComponents: opts?.formComponents,
+  });
 }
 
 /**
@@ -236,6 +274,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       resolveHref: opts?.resolveHref,
       onResolved: opts?.onActionResolved,
     },
+    displayColumns: opts?.displayColumns,
     preset: {
       presetsHandle,
       draftHandle,
@@ -245,18 +284,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     },
   });
 
-  useTableSelection(state, { mode: opts?.selectionPersistence ?? "trim" });
-  if (opts?.provideContext !== false) {
-    provideTableContext({
-      state,
-      client: client as Client,
-      controls: opts?.controls ?? {},
-      types: opts?.types,
-      components: opts?.components,
-      formTypes: opts?.formTypes,
-      formComponents: opts?.formComponents,
-    });
-  }
+  finalizeTableState(state, client as Client, opts);
 
   defPromise
     .then((def) => {

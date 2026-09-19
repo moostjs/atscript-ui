@@ -157,7 +157,13 @@ watch(
   { immediate: true },
 );
 
-const effectiveRows = computed(() => props.rows ?? state.results.value);
+// `applyLocalSort` re-orders the loaded page by any sorter that targets a
+// client-owned (`:display-columns`) column — those never reach the server, so
+// the renderer is where they take effect. A no-op (same array reference) for
+// tables without such a sorter.
+const effectiveRows = computed<Record<string, unknown>[]>(() =>
+  state.applyLocalSort(props.rows ?? state.results.value),
+);
 
 // Synthesized actions column. Width adapts to the row-action shape so it
 // hugs its content:
