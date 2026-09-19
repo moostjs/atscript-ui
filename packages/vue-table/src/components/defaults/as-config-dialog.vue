@@ -7,6 +7,7 @@ import {
   DialogOverlay,
   DialogContent,
   DialogTitle,
+  DialogDescription,
   DialogClose,
   TabsRoot,
   TabsList,
@@ -111,6 +112,14 @@ function onOpenAutoFocus(event: Event) {
       >
         <div class="as-config-dialog-header">
           <DialogTitle class="as-config-dialog-title">Table Settings</DialogTitle>
+          <!-- Reka requires a description on every DialogContent — without it
+               it logs a warning and leaves `aria-describedby="undefined"` on
+               the surface. The dialog has no visible sub-heading, so the copy
+               is screen-reader-only. -->
+          <DialogDescription class="sr-only">
+            Choose which columns are visible, which fields appear in the filter bar, and the sort
+            order of the table.
+          </DialogDescription>
           <DialogClose class="as-config-dialog-close" aria-label="Close">
             <span class="i-as-close" aria-hidden="true" />
           </DialogClose>

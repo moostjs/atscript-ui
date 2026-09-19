@@ -2,12 +2,20 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
 import { clampTopIndex, filledFilterCount, type SelectionMode } from "@atscript/ui-table";
-import type { ColumnMenuConfig, EnterAction, SelectAllState } from "../../types";
+import type {
+  ColumnMenuConfig,
+  EnterAction,
+  RowAttrsHook,
+  RowClassHook,
+  RowSelectableVerdict,
+  SelectAllState,
+} from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
 import { useCellComponents } from "../../composables/use-cell-components";
 import { useRafBatch } from "../../composables/use-raf-batch";
 import { useTableColumnHandlers } from "../../composables/use-table-column-handlers";
+import { onSelectControlKeydown } from "../../composables/state/create-nav-controller";
 import { getCellValue } from "../../utils/get-cell-value";
 import AsTableColgroup from "./as-table-colgroup.vue";
 import AsTableHeader from "./as-table-header.vue";
@@ -50,6 +58,13 @@ const props = withDefaults(
      * (sort/filter/reorder/resize) don't exist in this mode.
      */
     headless?: boolean;
+    /** Extra classes for the row element. Since 0.1.133. */
+    rowClass?: RowClassHook;
+    /**
+     * Extra attributes for the row element; the framework's own `id`, `role`,
+     * `aria-*`, `data-*`, `class` and `style` win. Since 0.1.133.
+     */
+    rowAttrs?: RowAttrsHook;
   }>(),
   {
     reorderable: true,
@@ -97,6 +112,15 @@ const cellSlotFlags = computed(() => {
 
 const rowStyle = computed(() => ({ height: `${props.rowHeight}px` }));
 
+/** Shared "selectable" verdict — frozen, so a hookless pool allocates nothing. */
+const SELECTABLE: RowSelectableVerdict = Object.freeze({ ok: true });
+
+/** Accessible name for a row's selection control, carrying the disabled reason. */
+function selectLabel(verdict: RowSelectableVerdict): string {
+  if (verdict.ok) return "Select row";
+  return verdict.reason ? `Select row, ${verdict.reason}` : "Select row, not selectable";
+}
+
 const visibleSlots = computed(() => {
   const viewport = state.viewportRowCount.value;
   if (viewport <= 0) return [];
@@ -106,6 +130,9 @@ const visibleSlots = computed(() => {
   const rowValueFn = state.rowValueFn;
   const hasSelection = props.select !== "none";
   const selectedSet = hasSelection ? new Set(state.selectedRows.value) : null;
+  // Same three per-row hooks as `<AsTableBase>`, resolved once per slot pass.
+  const gated = !!state.rowSelectable.value;
+  const hasHooks = gated || !!props.rowClass || !!props.rowAttrs;
   const out: {
     s: number;
     row: Row | undefined;
@@ -113,12 +140,31 @@ const visibleSlots = computed(() => {
     errored: boolean;
     selected: boolean;
     ariaSelected: "true" | "false" | undefined;
+    selectable: RowSelectableVerdict;
+    cls: ReturnType<RowClassHook> | undefined;
+    attrs: Record<string, unknown> | undefined;
   }[] = [];
   for (let s = 0; s < count; s++) {
     const abs = top + s;
     const row = state.dataAt(abs);
     const pk = row === undefined ? undefined : rowValueFn(row);
     const selected = selectedSet !== null && row !== undefined && selectedSet.has(pk);
+    let selectable = SELECTABLE;
+    let cls: ReturnType<RowClassHook> | undefined;
+    let attrs: Record<string, unknown> | undefined;
+    if (hasHooks && row !== undefined) {
+      // `index` is the ABSOLUTE row index in window mode — that is the only
+      // index that identifies a row in an unbounded dataset.
+      const hookCtx = {
+        index: abs,
+        get selected() {
+          return selected;
+        },
+      };
+      if (gated) selectable = state.isRowSelectable(row, abs);
+      cls = props.rowClass?.(row, hookCtx);
+      attrs = props.rowAttrs?.(row, hookCtx);
+    }
     out.push({
       s,
       row,
@@ -126,6 +172,9 @@ const visibleSlots = computed(() => {
       errored: row === undefined && state.errorAt(abs) !== null,
       selected,
       ariaSelected: hasSelection ? (selected ? "true" : "false") : undefined,
+      selectable,
+      cls,
+      attrs,
     });
   }
   return out;
@@ -169,7 +218,18 @@ function onWheel(event: WheelEvent) {
 }
 
 function onKeydown(event: KeyboardEvent) {
-  state.handleNavKey(event, { enterAction: props.enterAction, mode: props.select });
+  // Enter / Space on a control inside a cell stays with that control — the
+  // nav handler guards them against interactive targets (see
+  // `isInteractiveKeyTarget`), walking up to the element this handler is
+  // bound on.
+  state.handleNavKey(event, {
+    enterAction: props.enterAction,
+    mode: props.select,
+  });
+}
+
+function onSelectCellKeydown(event: KeyboardEvent, absIdx: number) {
+  onSelectControlKeydown(event, absIdx, props.select, state);
 }
 
 // Keep the active row inside `[topIndex, topIndex + viewportRowCount)` so
@@ -219,6 +279,7 @@ function onRowClick(row: Row, event: MouseEvent, absIdx: number) {
   // and Enter (per the keyboard contract). In `select="none"` click just
   // sets the active row; in select mode click toggles.
   if (props.select === "none") return;
+  // `toggleActiveSelection` gates on `rowSelectable` itself.
   state.toggleActiveSelection(props.select);
 }
 
@@ -233,13 +294,17 @@ function onRowDblClick(row: Row, event: MouseEvent, absIdx: number) {
 // 'some' deselects, 'none' selects what's currently in windowCache. 'all' is
 // unreachable here since the dataset is unbounded.
 function onSelectAllToggle(headerState: SelectAllState) {
-  if (headerState === "none") {
-    const pks: unknown[] = [];
-    for (const row of state.windowCache.value.values()) pks.push(state.rowValueFn(row));
-    state.selectedRows.value = pks;
-  } else {
+  if (headerState !== "none") {
     state.selectedRows.value = [];
+    return;
   }
+  // The cache is keyed by ABSOLUTE index and iterates in insertion order —
+  // sort so the predicate sees rows (and their indexes) in row order.
+  const entries = [...state.windowCache.value.entries()].toSorted((a, b) => a[0] - b[0]);
+  state.selectAll(
+    entries.map((e) => e[1]),
+    (i) => entries[i]![0],
+  );
 }
 
 const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClearFilters } =
@@ -378,13 +443,23 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
           @touchend="onTouchEnd"
         >
           <template v-for="slot in visibleSlots" :key="`slot-${slot.s}`">
+            <!--
+              `v-bind="slot.attrs"` comes FIRST so every framework binding
+              after it wins — consumer attrs decorate a row, never rewrite its
+              id / role / aria / data contract.
+            -->
             <tr
               v-if="slot.row !== undefined"
+              v-bind="slot.attrs"
               :id="state.rowId(state.topIndex.value + slot.s)"
-              class="as-window-data-row"
-              :class="{
-                'as-table-row-active': state.activeIndex.value === state.topIndex.value + slot.s,
-              }"
+              :class="[
+                'as-window-data-row',
+                {
+                  'as-table-row-active': state.activeIndex.value === state.topIndex.value + slot.s,
+                },
+                slot.cls,
+              ]"
+              :data-selectable="slot.selectable.ok ? undefined : 'false'"
               role="row"
               :aria-rowindex="state.topIndex.value + slot.s + 2"
               :aria-selected="slot.ariaSelected"
@@ -396,9 +471,16 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
                 <span
                   class="as-table-checkbox"
                   role="checkbox"
-                  tabindex="0"
-                  :class="{ 'as-table-checkbox-checked': slot.selected }"
+                  :tabindex="slot.selectable.ok ? 0 : undefined"
+                  :aria-label="selectLabel(slot.selectable)"
+                  :title="slot.selectable.reason"
+                  :class="{
+                    'as-table-checkbox-checked': slot.selected,
+                    'as-table-checkbox-disabled': !slot.selectable.ok,
+                  }"
                   :aria-checked="slot.selected ? 'true' : 'false'"
+                  :aria-disabled="slot.selectable.ok ? undefined : 'true'"
+                  @keydown="onSelectCellKeydown($event, state.topIndex.value + slot.s)"
                 >
                   <span v-if="slot.selected" class="as-table-checkbox-tick" aria-hidden="true" />
                 </span>

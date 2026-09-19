@@ -9,12 +9,19 @@ import {
   type ColumnWidthsMap,
   type FieldFilters,
 } from "@atscript/ui-table";
-import type { ColumnMenuConfig, SelectAllState } from "../../types";
+import type {
+  ColumnMenuConfig,
+  RowAttrsHook,
+  RowClassHook,
+  RowSelectableVerdict,
+  SelectAllState,
+} from "../../types";
 import { ComboboxItem, ComboboxItemIndicator, ListboxItem, ListboxItemIndicator } from "reka-ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import { useTableContextOptional } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
 import { useCellComponents } from "../../composables/use-cell-components";
+import { onSelectControlKeydown } from "../../composables/state/create-nav-controller";
 import AsTableColgroup from "./as-table-colgroup.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
@@ -74,6 +81,14 @@ const props = withDefaults(
      * (sort/filter/reorder/resize) simply don't exist in this mode.
      */
     headless?: boolean;
+    /** Extra classes for the row element. Standalone only. Since 0.1.133. */
+    rowClass?: RowClassHook;
+    /**
+     * Extra attributes for the row element; the framework's own `id`, `role`,
+     * `aria-*`, `data-*`, `class` and `style` win. Standalone only.
+     * Since 0.1.133.
+     */
+    rowAttrs?: RowAttrsHook;
   }>(),
   {
     select: "none",
@@ -102,6 +117,72 @@ const isRekaWrapped = computed(() => isCombobox.value || isListbox.value);
 
 const hasValue = computed(() => isRekaWrapped.value || props.select !== "none");
 
+const SELECTABLE: RowSelectableVerdict = Object.freeze({ ok: true });
+
+interface RowMeta {
+  selectable: RowSelectableVerdict;
+  cls: ReturnType<RowClassHook> | undefined;
+  attrs: Record<string, unknown> | undefined;
+}
+const DEFAULT_ROW_META: RowMeta = Object.freeze({
+  selectable: SELECTABLE,
+  cls: undefined,
+  attrs: undefined,
+});
+
+// One pass per rows/hook change instead of three hook calls per row per
+// render. Skipped entirely (and never allocated) when no hook is supplied,
+// so the common table pays nothing. `selectable` comes from the SELECTION
+// MODEL — `state.rowSelectable`, which every selection path already gates
+// on — so the renderer never re-implements the rule, only paints it.
+const rowHooks = computed<{ metas: RowMeta[]; selectable: number; selected: number }>(() => {
+  const rows = props.rows;
+  // Row hooks are a standalone-rendering concern: the Reka-wrapped modes let
+  // their own root own selection.
+  if (!isStandalone.value) return { metas: [], selectable: rows.length, selected: 0 };
+  const gated = !!ctx?.state.rowSelectable.value;
+  if (!gated && !props.rowClass && !props.rowAttrs) {
+    // No hooks at all: every rendered row is selectable, and "all" is
+    // measured against the rendered rows that are actually selected.
+    let selected = 0;
+    for (const row of rows) if (isPkSelected(row)) selected++;
+    return { metas: [], selectable: rows.length, selected };
+  }
+  let selectable = 0;
+  let selected = 0;
+  const metas = rows.map((row, index) => {
+    // A getter, not a value: a predicate that ignores `selected` must not be
+    // re-run on every selection change.
+    const hookCtx = {
+      index,
+      get selected() {
+        return isPkSelected(row);
+      },
+    };
+    const verdict = gated ? ctx!.state.isRowSelectable(row, index) : SELECTABLE;
+    if (verdict.ok) {
+      selectable++;
+      if (isPkSelected(row)) selected++;
+    }
+    return {
+      selectable: verdict,
+      cls: props.rowClass?.(row, hookCtx),
+      attrs: props.rowAttrs?.(row, hookCtx),
+    };
+  });
+  return { metas, selectable, selected };
+});
+
+function metaFor(index: number): RowMeta {
+  return rowHooks.value.metas[index] ?? DEFAULT_ROW_META;
+}
+
+/** Accessible name for a row's selection control, carrying the disabled reason. */
+function selectLabel(verdict: RowSelectableVerdict): string {
+  if (verdict.ok) return "Select row";
+  return verdict.reason ? `Select row, ${verdict.reason}` : "Select row, not selectable";
+}
+
 const hasActiveFilters = computed(() =>
   props.filters ? filledFilterCount(props.filters) > 0 : false,
 );
@@ -112,10 +193,12 @@ const showSelectAllCheckbox = computed(
 
 const selectAllState = computed<SelectAllState | undefined>(() => {
   if (!showSelectAllCheckbox.value) return undefined;
-  const sel = props.selectedRows ?? [];
-  if (sel.length === 0) return "none";
-  if (sel.length === props.rows.length && props.rows.length > 0) return "all";
-  return "some";
+  if ((props.selectedRows ?? []).length === 0) return "none";
+  // Counted against the SELECTABLE rows only — with a `rowSelectable`
+  // predicate in play, "all" is reached once every eligible row is picked,
+  // and an ineligible pk left in the selection never blocks it.
+  const { selectable, selected } = rowHooks.value;
+  return selectable > 0 && selected >= selectable ? "all" : "some";
 });
 
 const emit = defineEmits<{
@@ -161,6 +244,7 @@ function onRowClick(row: Record<string, unknown>, event: MouseEvent, index: numb
   // active-row pointer.
   if (props.select === "none") return;
   if (!ctx) return;
+  // `toggleActiveSelection` gates on `rowSelectable` itself.
   ctx.state.toggleActiveSelection(props.select);
 }
 
@@ -182,7 +266,20 @@ function onSelectAllToggle(state: SelectAllState) {
 
 function onTbodyKeydown(event: KeyboardEvent) {
   if (!isStandalone.value || !ctx) return;
+  // Space / Enter on an ineligible ACTIVE row is still consumed by the nav
+  // handler; `toggleActiveSelection` then no-ops on the predicate, so the
+  // keyboard path matches the click path without a second rule here.
+  // Enter / Space on a control inside a cell stays with that control — the
+  // nav handler guards them against interactive targets (see
+  // `isInteractiveKeyTarget`); this handler is bound on the `<tbody>`, which
+  // is the boundary the guard walks up to.
   ctx.state.handleNavKey(event, { mode: props.select });
+}
+
+/** Space on a row's selection control toggles just that row. */
+function onSelectCellKeydown(event: KeyboardEvent, index: number) {
+  if (!ctx) return;
+  onSelectControlKeydown(event, index, props.select, ctx.state);
 }
 
 const scrollContainerRef = ref<HTMLElement | null>(null);
@@ -469,31 +566,75 @@ function rowTextValue(row: Record<string, unknown>): string {
         @keydown="onTbodyKeydown"
       >
         <template #default="{ item, index, spaceBefore }">
-          <tr
-            :id="rowIdFor(index)"
-            :role="'row'"
-            :aria-rowindex="index + 2"
-            :aria-selected="ariaSelectedFor(item)"
-            :class="{ 'as-table-row-active': isActiveRow(index) }"
-            :style="{
-              height: virtualRowHeight ? `${virtualRowHeight}px` : undefined,
-              transform: spaceBefore ? `translateY(${spaceBefore}px)` : undefined,
-            }"
-            @click="onRowClick(item, $event, index)"
-            @dblclick="onRowDblClick(item, $event, index)"
-          >
-            <td v-if="hasValue" class="as-td-select" role="gridcell">
-              <span
-                class="as-table-checkbox"
-                :class="{ 'as-table-checkbox-checked': isPkSelected(item) }"
-              >
-                <span v-if="isPkSelected(item)" class="as-table-checkbox-tick" aria-hidden="true" />
-              </span>
-            </td>
-            <template v-if="hasAnyCellBindings">
-              <template v-for="col in columns" :key="col.path">
-                <template v-for="bindings in [cellResolver(col, item, index)]" :key="0">
-                  <td v-if="cellSlotFlags[col.path]" role="gridcell" v-bind="bindings">
+          <!--
+            `meta` is resolved ONCE per row (the row's hook results + its
+            selectability verdict); `v-bind="meta.attrs"` comes FIRST so every
+            framework binding after it wins — consumer attrs can decorate a
+            row but can never rewrite its id / role / aria / data contract.
+          -->
+          <template v-for="meta in [metaFor(index)]" :key="0">
+            <tr
+              v-bind="meta.attrs"
+              :id="rowIdFor(index)"
+              :role="'row'"
+              :aria-rowindex="index + 2"
+              :aria-selected="ariaSelectedFor(item)"
+              :data-selectable="meta.selectable.ok ? undefined : 'false'"
+              :class="[{ 'as-table-row-active': isActiveRow(index) }, meta.cls]"
+              :style="{
+                height: virtualRowHeight ? `${virtualRowHeight}px` : undefined,
+                transform: spaceBefore ? `translateY(${spaceBefore}px)` : undefined,
+              }"
+              @click="onRowClick(item, $event, index)"
+              @dblclick="onRowDblClick(item, $event, index)"
+            >
+              <td v-if="hasValue" class="as-td-select" role="gridcell">
+                <span
+                  class="as-table-checkbox"
+                  :class="{
+                    'as-table-checkbox-checked': isPkSelected(item),
+                    'as-table-checkbox-disabled': !meta.selectable.ok,
+                  }"
+                  role="checkbox"
+                  :tabindex="meta.selectable.ok ? 0 : undefined"
+                  :aria-checked="isPkSelected(item) ? 'true' : 'false'"
+                  :aria-disabled="meta.selectable.ok ? undefined : 'true'"
+                  :aria-label="selectLabel(meta.selectable)"
+                  :title="meta.selectable.reason"
+                  @keydown="onSelectCellKeydown($event, index)"
+                >
+                  <span
+                    v-if="isPkSelected(item)"
+                    class="as-table-checkbox-tick"
+                    aria-hidden="true"
+                  />
+                </span>
+              </td>
+              <template v-if="hasAnyCellBindings">
+                <template v-for="col in columns" :key="col.path">
+                  <template v-for="bindings in [cellResolver(col, item, index)]" :key="0">
+                    <td v-if="cellSlotFlags[col.path]" role="gridcell" v-bind="bindings">
+                      <slot
+                        :name="`cell-${col.path}`"
+                        :row="item"
+                        :value="getCellValue(item, col.path)"
+                        :column="col"
+                      />
+                    </td>
+                    <component
+                      v-else
+                      :is="cellComponents[col.path]"
+                      :row="item"
+                      :column="col"
+                      role="gridcell"
+                      v-bind="bindings"
+                    />
+                  </template>
+                </template>
+              </template>
+              <template v-else>
+                <template v-for="col in columns" :key="col.path">
+                  <td v-if="cellSlotFlags[col.path]" role="gridcell">
                     <slot
                       :name="`cell-${col.path}`"
                       :row="item"
@@ -507,32 +648,12 @@ function rowTextValue(row: Record<string, unknown>): string {
                     :row="item"
                     :column="col"
                     role="gridcell"
-                    v-bind="bindings"
                   />
                 </template>
               </template>
-            </template>
-            <template v-else>
-              <template v-for="col in columns" :key="col.path">
-                <td v-if="cellSlotFlags[col.path]" role="gridcell">
-                  <slot
-                    :name="`cell-${col.path}`"
-                    :row="item"
-                    :value="getCellValue(item, col.path)"
-                    :column="col"
-                  />
-                </td>
-                <component
-                  v-else
-                  :is="cellComponents[col.path]"
-                  :row="item"
-                  :column="col"
-                  role="gridcell"
-                />
-              </template>
-            </template>
-            <td v-if="stretch" class="as-td-filler" role="gridcell" />
-          </tr>
+              <td v-if="stretch" class="as-td-filler" role="gridcell" />
+            </tr>
+          </template>
         </template>
       </AsTableVirtualizer>
     </table>

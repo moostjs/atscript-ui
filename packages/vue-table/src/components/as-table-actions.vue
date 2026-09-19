@@ -12,7 +12,7 @@
 //   as-table-actions-intent-warning
 //   as-table-actions-intent-primary
 //   as-table-actions-intent-secondary
-import { computed } from "vue";
+import { computed, ref, watch } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
 import {
@@ -181,6 +181,65 @@ const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures
   promptCtx,
   hrefFor,
 );
+
+// ── Progress feedback ──────────────────────────────────────────────────────
+//
+// `state.actions.invoking` holds the names of the in-flight invocations. A
+// running control is only marked visually today; screen readers got nothing,
+// so the two additions here are `aria-busy` + a ", running" suffix on the
+// ACCESSIBLE name (the visible label is untouched), and one polite live
+// region that narrates start and settle. The region lives outside the default
+// slot so it keeps announcing after the `…` menu — and any custom slot
+// content — is gone.
+const running = computed(() => state.actions.invoking.value);
+
+function isRunning(action: TVueTableActionInfo | undefined): boolean {
+  return action !== undefined && running.value.has(action.name);
+}
+
+/** Accessible name for a trigger, suffixed while its action is in flight. */
+function triggerLabel(action: TVueTableActionInfo): string {
+  const label = ariaLabelFor(action);
+  return isRunning(action) ? `${label}, running` : label;
+}
+
+const menuBusy = computed(
+  () =>
+    resolved.value.otherActions.some((a) => isRunning(a)) ||
+    resolved.value.trailingRowActions.some((a) => isRunning(a)),
+);
+
+const liveMessage = ref("");
+
+// Labels are captured when an action STARTS: by the time it settles the
+// toolbar may have resolved a different level (a bulk action clears the
+// selection), so re-deriving the label at the end can come up empty.
+const startedLabels = new Map<string, string>();
+
+function labelOfName(name: string): string {
+  const cached = startedLabels.get(name);
+  if (cached !== undefined) return cached;
+  for (const bucket of [state.actions.table, state.actions.row, state.actions.rows]) {
+    for (const a of bucket) if (a.name === name) return ariaLabelFor(a);
+  }
+  return name;
+}
+
+watch(running, (next, prev) => {
+  const before = prev ?? new Set<string>();
+  for (const name of next) {
+    if (before.has(name)) continue;
+    const label = labelOfName(name);
+    startedLabels.set(name, label);
+    liveMessage.value = `${label} running`;
+  }
+  for (const name of before) {
+    if (next.has(name)) continue;
+    const label = labelOfName(name);
+    startedLabels.delete(name);
+    liveMessage.value = `${label} ${state.actions.lastResult.value.get(name)?.ok ? "finished" : "failed"}`;
+  }
+});
 </script>
 
 <template>
@@ -201,8 +260,9 @@ const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures
         class="as-table-actions-btn"
         :class="intentClass('as-table-actions', resolved.defaultAction)"
         data-default
-        :aria-label="ariaLabelFor(resolved.defaultAction)"
+        :aria-label="triggerLabel(resolved.defaultAction)"
         :title="ariaLabelFor(resolved.defaultAction)"
+        :aria-busy="isRunning(resolved.defaultAction) ? 'true' : undefined"
         @click="
           onTriggerClick(
             resolved.defaultAction,
@@ -240,8 +300,9 @@ const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures
           <button
             type="button"
             class="as-table-actions-more"
-            aria-label="More actions"
+            :aria-label="menuBusy ? 'More actions, running' : 'More actions'"
             title="More actions"
+            :aria-busy="menuBusy ? 'true' : undefined"
           >
             <span class="i-as-menu" aria-hidden="true" />
           </button>
@@ -261,5 +322,6 @@ const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures
         </DropdownMenuPortal>
       </DropdownMenuRoot>
     </slot>
+    <span class="sr-only" role="status" aria-live="polite">{{ liveMessage }}</span>
   </span>
 </template>

@@ -1,7 +1,15 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { DEFAULT_ROW_HEIGHT_PX, clampTopIndex, type SelectionMode } from "@atscript/ui-table";
-import type { ColumnMenuConfig, EnterAction, QueryErrorKind, RowDeleteOpt } from "../types";
+import type {
+  ColumnMenuConfig,
+  EnterAction,
+  QueryErrorKind,
+  RowAttrsHook,
+  RowClassHook,
+  RowDeleteOpt,
+  RowSelectableHook,
+} from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useSelectModeReset } from "../composables/use-table-selection";
@@ -69,6 +77,29 @@ const props = withDefaults(
      * (sort/filter/reorder/resize) are unavailable in headless mode.
      */
     headless?: boolean;
+    /**
+     * Per-row selectability. Return `false` — or a string, surfaced as the
+     * disabled reason on the row's selection control — to make a row not
+     * selectable. Enforced on every path: row click, Space/Enter toggle, and
+     * the header select-all. Since 0.1.133.
+     *
+     * @example
+     * `:row-selectable="(row) => row.locked ? 'Locked by another user' : true"`
+     */
+    rowSelectable?: RowSelectableHook;
+    /**
+     * Extra classes for the row element — string, array, or
+     * `{ class: boolean }` map, merged with the framework's own row classes.
+     * Since 0.1.133.
+     */
+    rowClass?: RowClassHook;
+    /**
+     * Extra attributes for the row element. The framework's own `id`, `role`,
+     * `aria-*`, `data-*`, `class` and `style` always win, so a hook can
+     * decorate a row but never rewrite its accessibility contract.
+     * Since 0.1.133.
+     */
+    rowAttrs?: RowAttrsHook;
   }>(),
   {
     rowHeight: DEFAULT_ROW_HEIGHT_PX,
@@ -105,6 +136,16 @@ watch(
   () => props.rowDelete,
   (val) => {
     state.rowDelete.value = val;
+  },
+  { immediate: true },
+);
+
+// Renderer-pushed like `rowDelete`: the selection model owns the rule, so
+// click / Space / Enter / select-all all gate on the same predicate.
+watch(
+  () => props.rowSelectable,
+  (val) => {
+    state.rowSelectable.value = val;
   },
   { immediate: true },
 );
@@ -170,6 +211,8 @@ watch(
       :select="select"
       :headless="headless"
       :enter-action="enterAction"
+      :row-class="rowClass"
+      :row-attrs="rowAttrs"
       @row-click="(row: Row, ev: MouseEvent) => emit('row-click', row, ev)"
       @row-dblclick="(row: Row, ev: MouseEvent) => emit('row-dblclick', row, ev)"
       @viewport-metrics-change="onMetrics"

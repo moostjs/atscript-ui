@@ -1,5 +1,6 @@
 import type { Ref } from "vue";
 import { onBeforeUnmount, watch } from "vue";
+import { INTERACTIVE_SELECTOR } from "./state/create-nav-controller";
 
 /**
  * Pointer-drag horizontal scroll for a container. Listens for pointerdown on
@@ -36,7 +37,9 @@ export function useDragScroll(el: Ref<HTMLElement | null>) {
   function onDown(e: PointerEvent) {
     const target = e.target as HTMLElement | null;
     if (!el.value || !target) return;
-    if (target.closest("input, textarea, button, [role=button], a")) return;
+    // Same set the keyboard guard uses: a control inside a cell owns its own
+    // pointer gestures (text selection, sliders, drag handles).
+    if (target.closest(INTERACTIVE_SELECTOR)) return;
     if (e.button !== 0) return;
     startX = e.clientX;
     startScroll = el.value.scrollLeft;

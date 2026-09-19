@@ -39,6 +39,48 @@ export interface NavKeyCallOptions {
   mode?: SelectionMode;
 }
 
+/**
+ * Elements that own Enter / Space (and a pointer drag) themselves.
+ * `[contenteditable]` is matched separately because `contenteditable="false"`
+ * must NOT count.
+ */
+export const INTERACTIVE_SELECTOR =
+  "button, a[href], input, select, textarea, summary," +
+  " [role=button], [role=link], [role=checkbox], [role=menuitem]," +
+  " [role=switch], [role=tab], [role=option]";
+
+/**
+ * True when the key event started on an interactive element inside a cell,
+ * so table nav must not consume Enter / Space. The walk runs from
+ * `event.target` up to `event.currentTarget` — the element the handler is
+ * bound on — and stops at the cell / row boundary, so a wrapper outside the
+ * table can never make a whole table inert. A handler bound ON the
+ * interactive element itself (the search-input bridge) is therefore never
+ * guarded: the walk has nothing to cross. An interactive element opts BACK
+ * IN to table nav — e.g. a cell whose button should not swallow Enter —
+ * with `data-as-nav-keys`.
+ */
+export function isInteractiveKeyTarget(event: KeyboardEvent): boolean {
+  let el = event.target as Element | null;
+  const stop = event.currentTarget as Element | null;
+  while (el && el !== stop && typeof el.matches === "function") {
+    const tag = el.tagName;
+    if (tag === "TD" || tag === "TH" || tag === "TR" || tag === "TBODY" || tag === "TABLE") {
+      return false;
+    }
+    if (el.matches(INTERACTIVE_SELECTOR) || isEditable(el)) {
+      return !el.hasAttribute("data-as-nav-keys");
+    }
+    el = el.parentElement;
+  }
+  return false;
+}
+
+function isEditable(el: Element): boolean {
+  const attr = el.getAttribute("contenteditable");
+  return attr !== null && attr !== "false";
+}
+
 export interface NavController {
   navViewportRowCount: Ref<number>;
   setActive: (absIndex: number) => void;
@@ -125,6 +167,9 @@ export function createNavController(inputs: NavControllerInputs): NavController 
     const enterAction: EnterAction = opts?.enterAction ?? "main-action";
     const mode: SelectionMode = opts?.mode ?? "none";
     const key = event.key;
+    // Computed once, and only for the two keys that can be claimed by a cell
+    // control — arrows / paging keys stay with the table either way.
+    const guarded = (key === "Enter" || key === " ") && isInteractiveKeyTarget(event);
     const meta = event.metaKey;
     const ctrl = event.ctrlKey;
     const alt = event.altKey;
@@ -183,12 +228,16 @@ export function createNavController(inputs: NavControllerInputs): NavController 
       }
       case " ": {
         if (mode === "none") return;
+        if (guarded) return;
         event.preventDefault();
         toggleActiveSelection(mode);
         return;
       }
       case "Enter": {
         if (enterAction === "passthrough") return;
+        // A control inside a cell owns Enter: don't preventDefault and don't
+        // activate the row, or the button can never be pressed by keyboard.
+        if (guarded) return;
         event.preventDefault();
         if (enterAction === "toggle-select") {
           toggleActiveSelection(mode);
@@ -224,4 +273,33 @@ export function createNavController(inputs: NavControllerInputs): NavController 
     clearActive,
     handleNavKey,
   };
+}
+
+/**
+ * `@keydown` handler for a row's SELECTION CONTROL (the leading checkbox),
+ * shared by `<AsTableBase>` and `<AsWindowTableBase>`. The control carries
+ * `role="checkbox"`, so the tbody-level nav handler deliberately leaves
+ * Space to it (see {@link isInteractiveKeyTarget}) — this is where it lands.
+ *
+ * Keys other than Space, and `select="none"`, fall through untouched; only
+ * once the press is ours do we consume it, so the Reka-wrapped rendering
+ * modes (which never bind this handler) keep Space for their own item.
+ * Selectability is NOT re-checked here: `toggleActiveSelection` gates on
+ * `rowSelectable` itself, which is the single place that rule lives.
+ */
+export function onSelectControlKeydown(
+  event: KeyboardEvent,
+  index: number,
+  mode: SelectionMode,
+  state: {
+    setActive: (index: number) => void;
+    toggleActiveSelection: (mode: SelectionMode) => void;
+  },
+): void {
+  if (event.key !== " ") return;
+  if (mode === "none") return;
+  event.preventDefault();
+  event.stopPropagation();
+  state.setActive(index);
+  state.toggleActiveSelection(mode);
 }

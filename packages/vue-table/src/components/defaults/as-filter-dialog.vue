@@ -16,6 +16,7 @@ import {
   DialogOverlay,
   DialogContent,
   DialogTitle,
+  DialogDescription,
   DialogClose,
   TabsRoot,
   TabsList,
@@ -202,6 +203,13 @@ function onOpenAutoFocus(event: Event) {
             <span class="as-filter-dialog-title-label">Filter</span>
             <span class="as-filter-dialog-title-value">{{ column?.label }}</span>
           </DialogTitle>
+          <!-- Reka requires a description on every DialogContent — without it
+               it logs a warning and leaves `aria-describedby="undefined"` on
+               the surface. The column name is already in the title, so the
+               copy is screen-reader-only. -->
+          <DialogDescription class="sr-only">
+            Build the filter conditions applied to this column.
+          </DialogDescription>
           <DialogClose class="as-filter-dialog-close" aria-label="Close">
             <span class="i-as-close" aria-hidden="true" />
           </DialogClose>

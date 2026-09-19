@@ -33,10 +33,28 @@ const open = computed({
   },
 });
 
+// `display` is the RETAINED request, not the live one: `actionFormRequest` is
+// nulled the instant the user submits or cancels, but Reka keeps the content
+// mounted until its exit animation ends — rendering the live ref there blanks
+// the title, the id chips and the form mid-fade. The slot clears the retained
+// copy on `releaseActionForm`, bound to the content's `after-leave`; the
+// loaded schema / draft are reset from the same transition below.
+const display = state.actionFormDisplay;
+
 const def = ref<FormDef | null>(null);
 const formData = ref<{ value: Record<string, unknown> } | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
+
+// The retained request going away is the surface having left: drop the
+// loaded schema / draft with it so a reopen never flashes the old form.
+watch(display, (next) => {
+  if (next !== null) return;
+  def.value = null;
+  formData.value = null;
+  error.value = null;
+  loading.value = false;
+});
 
 const resolvedTypes = formTypes ?? createDefaultTypes();
 
@@ -47,11 +65,14 @@ const resolvedTypes = formTypes ?? createDefaultTypes();
 watch(
   req,
   async (next) => {
+    // A `null` transition is the dialog closing: the retained `display` and
+    // the loaded schema/draft stay alive so the leaving surface still renders
+    // them, and the `display` watcher below does the reset once it is gone.
+    if (next === null) return;
     def.value = null;
     formData.value = null;
     error.value = null;
     loading.value = false;
-    if (next === null) return;
     if (!next.action.inputForm) {
       error.value = "Action does not declare an input form.";
       return;
@@ -88,7 +109,7 @@ const MEASURE_CAP = 50;
 const formId = `as-action-form-${useId()}`;
 
 const view = computed(() => {
-  const r = req.value;
+  const r = display.value;
   if (!r) return null;
   const d = def.value;
   const ids = r.identifiers;
@@ -157,7 +178,7 @@ function onSubmit(payload: unknown) {
   <DialogRoot v-model:open="open">
     <DialogPortal>
       <DialogOverlay class="as-action-form-overlay" />
-      <DialogContent class="as-action-form-content">
+      <DialogContent class="as-action-form-content" @after-leave="state.releaseActionForm()">
         <template v-if="view">
           <header class="as-action-form-header">
             <DialogTitle class="as-action-form-title">{{ view.title }}</DialogTitle>
@@ -192,9 +213,14 @@ function onSubmit(payload: unknown) {
             </DialogClose>
           </header>
           <div class="as-action-form-body">
-            <DialogDescription v-if="view.description" class="as-action-form-description">{{
-              view.description
-            }}</DialogDescription>
+            <!-- Always rendered: Reka warns and leaves
+                 `aria-describedby="undefined"` on the surface when the action
+                 declares no description, so the fallback copy is kept
+                 screen-reader-only. -->
+            <DialogDescription
+              :class="view.description ? 'as-action-form-description' : 'sr-only'"
+              >{{ view.description || `Provide the input for ${view.title}.` }}</DialogDescription
+            >
             <p v-if="loading" class="as-action-form-status">Loading form…</p>
             <p v-else-if="error" class="as-action-form-error">{{ error }}</p>
             <AsForm

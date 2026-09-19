@@ -35,14 +35,18 @@ const isOpen = computed({
   },
 });
 
-const req = computed(() => state.confirmRequest.value);
+// `req` is the RETAINED request (`state.confirmDisplay`), not the live one:
+// `state.confirmRequest` is nulled the instant the user answers, but Reka
+// keeps the content mounted until its exit animation ends. The slot clears
+// the retained copy on `releaseConfirm`, bound to the content's `after-leave`.
+const req = state.confirmDisplay;
 </script>
 
 <template>
   <AlertDialogRoot v-model:open="isOpen">
     <AlertDialogPortal>
       <AlertDialogOverlay class="as-confirm-dialog-overlay" />
-      <AlertDialogContent class="as-confirm-dialog-content">
+      <AlertDialogContent class="as-confirm-dialog-content" @after-leave="state.releaseConfirm()">
         <div class="as-confirm-dialog-body-wrap">
           <AlertDialogTitle class="as-confirm-dialog-title">Confirmation</AlertDialogTitle>
           <AlertDialogDescription class="as-confirm-dialog-body">{{

@@ -138,6 +138,19 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
   table.style.tableLayout = origTableLayout;
   return measured;
 }
+
+/**
+ * The select-all control is a `role="checkbox"` span, not a `<button>`, so
+ * it gets no native key activation: bind Space (checkbox semantics) and
+ * Enter (the table's row-activation key) explicitly.
+ */
+function onSelectAllKeydown(event: KeyboardEvent) {
+  if (event.key !== " " && event.key !== "Enter") return;
+  if (!props.selectAllState) return;
+  event.preventDefault();
+  event.stopPropagation();
+  emit("select-all-toggle", props.selectAllState);
+}
 </script>
 
 <template>
@@ -153,10 +166,12 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
           }"
           role="checkbox"
           tabindex="0"
+          aria-label="Select all rows"
           :aria-checked="
             selectAllState === 'none' ? 'false' : selectAllState === 'all' ? 'true' : 'mixed'
           "
           @click="emit('select-all-toggle', selectAllState)"
+          @keydown="onSelectAllKeydown"
         >
           <span v-if="selectAllState === 'all'" class="as-table-checkbox-tick" aria-hidden="true" />
           <span v-else-if="selectAllState === 'some'" class="as-table-checkbox-dash" />
@@ -175,8 +190,13 @@ function measureNaturalColumnWidth(th: HTMLTableCellElement, table: HTMLTableEle
         @drop="col.fixed ? undefined : onHeaderDrop($event)"
         @dragend="col.fixed ? undefined : onHeaderDragEnd()"
       >
-        <slot v-if="!col.fixed" :name="`header-${col.path}`" :column="col">
+        <!-- An explicitly supplied `header-<path>` slot renders for fixed
+             (synthesised) columns too; only the DEFAULT header cell is
+             suppressed there, so `__actions` keeps its blank gutter unless
+             the consumer fills it. Reorder/resize stay disabled regardless. -->
+        <slot :name="`header-${col.path}`" :column="col">
           <component
+            v-if="!col.fixed"
             :is="HeaderCell"
             :column="col"
             :sort-direction="sortMap[col.path] ?? null"

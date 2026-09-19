@@ -1,12 +1,15 @@
 <script setup lang="ts">
 import { computed, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
-import { rowsToPks, type SelectionMode } from "@atscript/ui-table";
+import type { SelectionMode } from "@atscript/ui-table";
 import {
   ROW_ACTIONS_PATH,
   ROW_ACTIONS_TYPE,
   type ColumnMenuConfig,
+  type RowAttrsHook,
+  type RowClassHook,
   type RowDeleteOpt,
+  type RowSelectableHook,
 } from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
@@ -68,6 +71,30 @@ const props = withDefaults(
      * (sort/filter/reorder/resize) are unavailable in headless mode.
      */
     headless?: boolean;
+    /**
+     * Per-row selectability. Return `false` — or a string, surfaced as the
+     * disabled reason on the row's selection control — to make a row not
+     * selectable. Enforced on every path: row click, Space/Enter toggle, and
+     * the header select-all (which also stops counting ineligible rows).
+     * Since 0.1.133.
+     *
+     * @example
+     * `:row-selectable="(row) => row.locked ? 'Locked by another user' : true"`
+     */
+    rowSelectable?: RowSelectableHook;
+    /**
+     * Extra classes for the row element — string, array, or
+     * `{ class: boolean }` map, merged with the framework's own row classes.
+     * Since 0.1.133.
+     */
+    rowClass?: RowClassHook;
+    /**
+     * Extra attributes for the row element. The framework's own `id`, `role`,
+     * `aria-*`, `data-*`, `class` and `style` always win, so a hook can
+     * decorate a row but never rewrite its accessibility contract.
+     * Since 0.1.133.
+     */
+    rowAttrs?: RowAttrsHook;
   }>(),
   {
     stickyHeader: true,
@@ -99,6 +126,16 @@ watch(
   () => props.rowDelete,
   (val) => {
     state.rowDelete.value = val;
+  },
+  { immediate: true },
+);
+
+// Renderer-pushed like `rowDelete`: the selection model owns the rule, so
+// click / Space / Enter / select-all all gate on the same predicate.
+watch(
+  () => props.rowSelectable,
+  (val) => {
+    state.rowSelectable.value = val;
   },
   { immediate: true },
 );
@@ -171,7 +208,7 @@ const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClear
   useTableColumnHandlers(state);
 
 function handleSelectAll() {
-  state.selectedRows.value = rowsToPks(effectiveRows.value, state.rowValueFn);
+  state.selectAll(effectiveRows.value);
 }
 
 function handleDeselectAll() {
@@ -204,6 +241,8 @@ function handleDeselectAll() {
       :resizable="resizable"
       :column-min-width="columnMinWidth"
       :column-widths="state.columnWidths.value"
+      :row-class="rowClass"
+      :row-attrs="rowAttrs"
       @sort="onSort"
       @hide="onHide"
       @filter="onFilter"
