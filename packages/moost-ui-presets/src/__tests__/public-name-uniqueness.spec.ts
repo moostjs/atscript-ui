@@ -188,7 +188,7 @@ describe("public preset name uniqueness", () => {
       id: inserted.id,
       public: false,
     })) as { id: string; publicLabel?: string };
-    expect(flipped.publicLabel).toBeUndefined();
+    expect(flipped.publicLabel).toBeNull();
     await table.updateOne(flipped as never);
 
     // The DB-level slot is now free — a different user can claim "Reusable"

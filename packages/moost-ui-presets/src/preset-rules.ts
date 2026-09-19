@@ -41,7 +41,7 @@ export interface PresetRowLike {
   userLabel?: string;
   public?: boolean;
   label?: string;
-  publicLabel?: string;
+  publicLabel?: string | null;
   aspects?: PresetAspect[];
   data?: Record<string, unknown> | null;
   createdAt?: number;
@@ -267,7 +267,7 @@ async function processCreateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
     next.id = globalThis.crypto.randomUUID();
   }
   next.label = readPresetLabel(next.data);
-  next.publicLabel = next.public === true ? next.label : undefined;
+  next.publicLabel = next.public === true ? next.label : null;
   const capCheck = assertWithinCap(ctx, next.app, next.tableKey);
   const publicCheck =
     next.public === true
@@ -372,7 +372,9 @@ async function processUpdateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
   const prevLabel = existing.label ?? readPresetLabel(existing.data);
   const nextLabel = readPresetLabel(mergedData);
   next.label = nextLabel;
-  next.publicLabel = willBePublic ? nextLabel : undefined;
+  // `null`, not `undefined`: since @atscript/db 0.1.128 an undefined prop is
+  // pruned from the write, which would leave the public-name slot occupied.
+  next.publicLabel = willBePublic ? nextLabel : null;
   const [, userLabel] = await Promise.all([
     gatePublicPreset(
       ctx,
