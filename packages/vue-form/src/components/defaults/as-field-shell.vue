@@ -39,6 +39,11 @@ const { rootRef, enableOptional } = useAsFocusFirstAfter(props.onToggleOptional)
 const showOptionalClear = computed(
   () => !!props.optional && optionalEnabled.value && !props.chromeless,
 );
+// AsField always supplies `statusId`; the fallback keeps the shell usable when
+// a consumer mounts it standalone (the ids are derived from `inputId` there
+// too, so the pattern stays predictable).
+const statusId = computed(() => props.statusId || `${props.inputId}-status`);
+
 const showEmptyPlaceholder = computed(
   () =>
     !!props.optional && !optionalEnabled.value && !props.chromeless && !props.hideEmptyPlaceholder,
@@ -72,6 +77,8 @@ const showEmptyPlaceholder = computed(
             :input-id="inputId"
             :desc-id="descId"
             :optional-enabled="optionalEnabled"
+            :is-dirty="!!isDirty"
+            :status-id="statusId"
           />
         </template>
         <template v-else-if="!chromeless">
@@ -115,16 +122,38 @@ const showEmptyPlaceholder = computed(
         <slot :input-id="inputId" :error-id="errorId" :desc-id="descId" />
       </div>
       <slot name="after-input" :desc-id="descId" />
-      <div v-if="error || hint || formAction" class="as-field-footer-row">
-        <div
-          v-if="error || hint"
-          :id="errorId"
-          class="as-error-slot"
-          :role="error ? 'alert' : undefined"
+      <div
+        v-if="error || hint || formAction || isDirty || $slots.status"
+        class="as-field-footer-row"
+      >
+        <!-- `status` owns the whole error/hint/announcement area: overriding it
+             replaces the default markup wholesale (keep `statusId` on your own
+             node so `aria-describedby` still resolves). -->
+        <slot
+          name="status"
+          :is-dirty="!!isDirty"
+          :error="error"
+          :hint="hint"
+          :status-id="statusId"
+          :input-id="inputId"
         >
-          {{ error || hint }}
-        </div>
-        <span v-else class="as-error-slot" aria-hidden="true" />
+          <div
+            v-if="error || hint"
+            :id="errorId"
+            class="as-error-slot"
+            :role="error ? 'alert' : undefined"
+          >
+            {{ error || hint }}
+          </div>
+          <span v-else class="as-error-slot" aria-hidden="true" />
+          <!-- Visually hidden: the `data-dirty` rail is the sighted cue, this
+               is its AT counterpart. `role="status"` would make it a live
+               region and re-announce on every keystroke — it is referenced
+               through `aria-describedby` instead, which AsField appends on
+               exactly this `isDirty` condition, so a clean field never points
+               at a missing node. -->
+          <span v-if="isDirty" :id="statusId" class="as-field-status">Modified</span>
+        </slot>
         <button
           v-if="formAction"
           type="button"

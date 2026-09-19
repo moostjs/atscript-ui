@@ -96,12 +96,13 @@ defineExpose({ runAndFocus, runAndFocusNew });
     :open="isOpen"
     :class="[containerClass, 'as-grid-item', $attrs.class as string]"
     :data-object-level="level"
+    :data-dirty="isDirty ? '' : undefined"
     @toggle="onNativeToggle"
   >
     <summary class="as-collapsible-summary">
       <div class="as-collapsible-header">
         <div class="as-collapsible-title-row">
-          <component :is="headingTag" :class="titleClass">
+          <component :is="headingTag" :class="titleClass" :data-dirty="isDirty ? '' : undefined">
             {{ titleParts?.base
             }}<span v-if="titleParts?.suffix" class="as-collapsible-title-index"
               >&nbsp;{{ titleParts.suffix }}</span

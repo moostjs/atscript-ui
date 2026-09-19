@@ -68,6 +68,7 @@ function handleAddData(): void {
     :path="path"
     :error="error"
     :hidden="hidden"
+    :is-dirty="isDirty"
     :default-open="arrayIndex !== undefined"
   >
     <template #title-extras>

@@ -61,3 +61,19 @@ export interface PatchNestedForm {
 
     items: PatchCartLine[]
 }
+
+// ── Inline nested object (real collapsible section) ───────────
+
+/// An INLINE object literal renders as an `AsCollapsible` section, unlike a
+/// referenced interface (see `PatchNestedForm.address`) which is inlined into
+/// the parent grid. Drives the section-level `data-dirty` hook.
+export interface PatchSectionForm {
+    name: string
+
+    @meta.label 'Address'
+    address: {
+        city: string
+
+        zip: string
+    }
+}

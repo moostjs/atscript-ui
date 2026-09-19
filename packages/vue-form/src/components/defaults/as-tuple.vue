@@ -58,6 +58,7 @@ function handleEnableOptional() {
     :path="path"
     :error="error"
     :hidden="hidden"
+    :is-dirty="isDirty"
     :default-open="defaultOpen"
   >
     <template #title-extras>

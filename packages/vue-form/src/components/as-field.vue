@@ -322,6 +322,7 @@ const _id = useId();
 const inputId = `as-field-${_id}`;
 const errorId = `${inputId}-err`;
 const descId = `${inputId}-desc`;
+const statusId = `${inputId}-status`;
 const formActionMeta = getFieldMeta(prop, UI_FORM_ACTION);
 const wfActionWithData = getFieldMeta(prop, WF_ACTION_WITH_DATA) as string | undefined;
 const formAction: TFormAction | undefined = formActionMeta
@@ -743,6 +744,7 @@ const invariantProps = {
   inputId,
   errorId,
   descId,
+  statusId,
 };
 
 // ── Display props — cached separately from error state ────────
@@ -798,16 +800,30 @@ const displayProps = computed(() => {
 const componentProps = computed(() => {
   const dp = displayProps.value;
   const err = mergedError.value;
-  // `aria-describedby` resolves against the same id trio that defaults
-  // wire onto their inputs — error/hint share `errorId`, description owns `descId`.
-  const ariaDescribedBy = err || dp.hint ? errorId : dp.description ? descId : undefined;
   return {
     ...invariantProps,
     ...dp,
     error: err,
-    ariaDescribedBy,
     class: ["as-grid-item", { ...unwrap(classesBase), error: !!err }, gridClasses],
   };
+});
+
+// `aria-describedby` resolves against the id set that defaults wire onto their
+// inputs — error/hint share `errorId`, description owns `descId`, and the
+// dirty status node owns `statusId`. Bound SEPARATELY from `componentProps`
+// (like `isDirty`, see above) because it reads the change list: folding it back
+// into the memoised display props would re-merge every field's props on every
+// change-list bump. Vue patches this one prop instead.
+const ariaDescribedBy = computed<string | undefined>(() => {
+  const dp = displayProps.value;
+  const err = mergedError.value;
+  const ids: string[] = [];
+  if (err || dp.hint) ids.push(errorId);
+  else if (dp.description) ids.push(descId);
+  // Mirrors AsFieldShell's default `status` slot, which only renders the
+  // sr-only node while dirty — no dangling idref on a clean field.
+  if (isDirty.value) ids.push(statusId);
+  return ids.length > 0 ? ids.join(" ") : undefined;
 });
 </script>
 
@@ -817,6 +833,7 @@ const componentProps = computed(() => {
     :is="resolvedComponent"
     v-bind="componentProps"
     :is-dirty="isDirty"
+    :ariaDescribedBy="ariaDescribedBy"
     @action="handleAction"
   />
   <div v-else class="as-field-missing">

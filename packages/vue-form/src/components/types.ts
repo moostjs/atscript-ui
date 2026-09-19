@@ -98,7 +98,25 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   errorId: string;
   /** Stable id for the description container. Always populated by AsField. */
   descId: string;
-  /** Pre-resolved `aria-describedby` target — `errorId` when error/hint is present, else `descId`, else `undefined`. */
+  /**
+   * Stable id for the field's a11y status node — the screen-reader-only
+   * "modified" announcement rendered by `AsFieldShell`'s `status` slot.
+   * Always populated by AsField; a custom `status` slot that renders its own
+   * node must put this id on it so `aria-describedby` still resolves.
+   *
+   * Optional in the type (unlike the `inputId` / `errorId` / `descId` trio) so
+   * code that mounts `AsFieldShell` standalone against the pre-0.1.133 prop set
+   * keeps type-checking — the shell falls back to `` `${inputId}-status` ``.
+   *
+   * @since 0.1.133
+   */
+  statusId?: string;
+  /**
+   * Pre-resolved `aria-describedby` target — `errorId` when error/hint is
+   * present, else `descId`; `statusId` is appended (space-separated) while the
+   * field is dirty, so AT reads the "modified" status together with the
+   * error/description. `undefined` when there is nothing to point at.
+   */
   ariaDescribedBy?: string;
   /**
    * Resolved currency code (post-sibling resolution).
@@ -266,6 +284,20 @@ export interface TAsCollapsibleProps {
   defaultOpen?: boolean;
   hidden?: boolean;
   arrayIndex?: number;
+  /**
+   * Whether the section this collapsible wraps has changed since the
+   * change-tracking baseline. Forwarded by the structured defaults
+   * (`AsObject` / `AsArray` / `AsTuple`) from their own `isDirty` prop, which
+   * `AsField` resolves from the change list. `AsCollapsible` paints
+   * `data-dirty=""` on its root and on its heading element ONLY — never on
+   * descendants — so a dirty container does not make every child label inside
+   * it look modified. Styling hook: `as-collapsible-section` /
+   * `as-collapsible-island` / `as-collapsible-title*` (see
+   * `@atscript/ui-styles`).
+   *
+   * @since 0.1.133
+   */
+  isDirty?: boolean;
 }
 
 /**
