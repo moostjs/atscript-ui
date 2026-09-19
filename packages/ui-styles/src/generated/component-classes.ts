@@ -430,6 +430,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-config-dialog-tabs",
     "as-config-dialog-title",
     "as-config-field-count",
+    "as-config-field-hint",
     "as-config-field-label-text",
     "as-config-field-label-wrap",
     "as-config-tab-content",
