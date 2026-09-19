@@ -77,6 +77,15 @@ interface FormFieldDef {
   name: string;
   /** True when no `ui.fn.*` keys exist on the prop — perf flag. */
   allStatic: boolean;
+  /** `@ui.form.pushDown` — render below the submit button instead of in the main grid. */
+  pushDown: boolean;
+  /**
+   * Value-help target for an FK field, resolved once by `extractValueHelp()`
+   * while the def is built (since 0.1.134). `undefined` for non-FK fields.
+   * Renderers read this instead of re-walking the annotations per mount —
+   * `<AsField>` forwards it to the control as the `valueHelp` prop.
+   */
+  valueHelpInfo?: ValueHelpInfo;
 }
 ```
 
@@ -747,6 +756,10 @@ function extractLiteralOptions(
 ): { key: string; label: string }[] | undefined;
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 ```
+
+`extractValueHelp` follows reference chains since 0.1.134: when the prop itself has no `@db.rel.FK`, it hops through `ref.type().props[ref.field]` (bounded, cycle-safe) until it meets a link that carries `@db.rel.FK` and whose target has `@db.http.path`, so a view field projected from an FK column resolves to the dictionary, not the intermediate table. The server does the same in `/meta` since @atscript/db 0.1.128.
+
+You rarely call it directly: `createFormDef()` and `createTableDef()` run it once per field and store the result on the def ([`FormFieldDef.valueHelpInfo`](#formfielddef) / [`ColumnDef.valueHelpInfo`](#columndef)), which is where renderers read it from.
 
 ### `ValueHelpClient`
 

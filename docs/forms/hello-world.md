@@ -200,3 +200,7 @@ validates — both live on the type, via annotations.
 - [Field Types](/forms/field-types) — the default type map.
 - [Validation](/forms/validation) — `@expect.*`, custom rules,
   external errors.
+- [The canonical example](/forms/canonical-example) — the same pipeline
+  grown into a real edit form: PATCH + `$cas`, version-mismatch
+  recovery, server field errors and a custom control, in one
+  type-checked component.

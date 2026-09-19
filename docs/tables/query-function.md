@@ -154,11 +154,88 @@ backends, the most common pattern is to expose `<your-base>/meta` that
 returns a `MetaResponse`, and route `<your-base>/q` through your
 `queryFn`.
 
-::: tip Skipping moost-db entirely
-For pure-static datasets (in-memory arrays) use
-`createStaticTableState` from `@atscript/vue-table` — it ships with a
-default substring-matcher `queryFn` and a synthesised `/meta` derived
-from the `.as` type. Useful for fixtures, e2e tests, and dev playgrounds.
+::: tip Already have the rows?
+Don't wrap an in-memory array in a fake client — use
+[local rows](#path-c-local-rows) instead.
+:::
+
+## Path C — local rows
+
+When the data is already in hand — a fixture, a dev playground, a small
+list fetched by the page itself — give `<AsTableRoot>` the rows and the
+columns instead of a `:url`. Since 0.1.134.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { AsTableRoot, AsTable } from "@atscript/vue-table";
+import type { ColumnDef } from "@atscript/ui";
+
+const columns: ColumnDef[] = [
+  {
+    path: "id",
+    label: "ID",
+    type: "number",
+    sortable: true,
+    filterable: false,
+    nullable: false,
+    order: 0,
+  },
+  {
+    path: "name",
+    label: "Name",
+    type: "text",
+    sortable: true,
+    filterable: false,
+    nullable: false,
+    order: 1,
+  },
+];
+
+const rows = ref([
+  { id: 1, name: "alice" },
+  { id: 2, name: "bob" },
+]);
+</script>
+
+<template>
+  <AsTableRoot :rows="rows" :columns="columns" :search-paths="['name']">
+    <AsTable select="multi" />
+  </AsTableRoot>
+</template>
+```
+
+In local mode the table builds its state with `createStaticTableState`
+and provides the same context as the fetching path, so **cells, keyboard
+navigation, header and cell slots, selection, the config dialog
+(visibility + reordering) and pagination all work unchanged**. Sorting,
+searching and paging run in memory over `rows`.
+
+No client is constructed, no `/meta` request is made, and no entry lands
+in the URL-keyed metadata cache — so a local table costs nothing after
+unmount.
+
+| Prop          | Meaning                                                                            |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `rows`        | The dataset. **Reactive** — replace the array and the table re-queries locally.    |
+| `columns`     | `ColumnDef[]`, read once at setup.                                                 |
+| `searchPaths` | Field paths `searchTerm` matches (substring, case-insensitive). Omit to disable.   |
+| `localSort`   | Sort in memory from the active sorters. Default `true`; `false` keeps array order. |
+| `limit`       | Page size, as usual.                                                               |
+
+Features that need a server are inert and warn once in the console when
+configured: `:preset`, `v-model:url-query`, `:query-fn`, and `:url`
+itself (ignored when `:rows` is present). Server actions do not exist in
+local mode either — use
+[`:row-actions` `extra`](/tables/actions#selecting-and-extending-row-actions)
+for app-owned row actions.
+
+::: tip Writing your own root
+`provideTableContext` / `useTableContext` and the `TableContext` type
+are exported from `@atscript/vue-table`, so a fully custom root can
+build any state (including `createStaticTableState`) and provide it to
+`<AsTable>`. Advanced — `<AsTableRoot>` covers both the fetching and the
+local case.
 :::
 
 ## Force filters and force sorters

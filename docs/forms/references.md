@@ -41,6 +41,34 @@ When `<AsField>` resolves to a FK field it routes through the `ref` entry in
 your types map — by default `AsRef`, a Reka-ui Combobox driven by a
 `ValueHelpClient` (`packages/ui/src/value-help/value-help-client.ts`).
 
+## Reference chains
+
+A field does not have to point straight at the dictionary. A view field is
+often declared against an intermediate table — `errorCode: Issue.errorCode`,
+where `Issue.errorCode: ErrorCode.code` is the link that actually carries
+`@db.rel.FK`:
+
+```atscript
+@db.view
+export interface IssueView {
+    /// No `@db.rel.FK` here — the FK lives one hop down, on `Issue.errorCode`.
+    errorCode: Issue.errorCode
+}
+```
+
+_Since 0.1.134_ the UI follows such chains: `extractValueHelp(prop)` walks
+`prop.ref` → the referenced field → its own `ref` until it finds a link that
+carries `@db.rel.FK` **and** whose target declares `@db.http.path`, so the
+picker targets the dictionary (`ErrorCode`) rather than losing its value help.
+The walk is depth-bounded and cycle-safe; a chain that never reaches an FK link
+simply yields no value help.
+
+The server does the same on its side: since `@atscript/db` 0.1.128 `/meta` and
+`/meta/form/:name` serialize such a view field with `ref` pointing at the
+**terminal** field and `db.rel.FK: true` lifted onto the field. So a form built
+from a compiled `.as` type and one built from `/meta` resolve to the same
+dictionary.
+
 ## How the picker resolves the target
 
 `ValueHelpClient` is a thin wrapper around a `Client` from `@atscript/db-client`

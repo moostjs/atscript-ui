@@ -9,7 +9,9 @@ Query wiring, state contract, mutators.
 - [Meta endpoint](#meta-endpoint)
 - [ReactiveTableState](#reactivetablestate)
 - [Mutators are pure](#mutators-are-pure)
-- [Static mode](#static-mode)
+- [Path C — local rows](#path-c-local-rows-since-01134)
+- [Path C — local rows](#path-c-local-rows-since-01134)
+- [Static mode](#static-mode-custom-roots)
 
 ## Two wiring paths
 
@@ -53,7 +55,7 @@ const qf: QueryFn = async (query, page, size) => {
 };
 ```
 
-`url=` is still required even with `queryFn` — it drives the `/meta` fetch that builds the `TableDef`. To bypass `/meta` entirely, use `createStaticTableState` (see [Static mode](#static-mode)).
+`url=` is still required even with `queryFn` — it drives the `/meta` fetch that builds the `TableDef`. To bypass `/meta` entirely, pass `:rows` + `:columns` (see [Path C — local rows](#path-c-local-rows-since-01134)).
 
 ## queryFn signature in detail
 
@@ -217,19 +219,42 @@ When you build a custom filter dialog, columns dialog, or toolbar, just write th
 
 Public independence guarantee: `filterFields` (display) and `filters` (applied) are independent. Hiding a chip never clears its conditions; clearing conditions never hides the chip. The same rule applies to any future display/applied pair on columns or sorters. Hydration flows (preset apply, URL replay) take advantage of this: they can populate `filters` without forcing the user to open the chip first.
 
-## Static mode
+## Path C — local rows (since 0.1.134)
 
-`createStaticTableState(opts)` synthesizes a `TableDef` from in-memory rows + columns and runs sort / search locally. Used internally by the enum value-help dialog. Use it for tests or for tables backed by a one-shot REST response that doesn't need server-side pagination.
+Rows already in hand? Give `<AsTableRoot>` `:rows` + `:columns` instead of a `:url`. No client is constructed, no `/meta` request is made, no entry lands in the URL-keyed metadata cache.
 
-```typescript
-import { createStaticTableState } from "@atscript/vue-table";
-
-const { state } = createStaticTableState({
-  rows: [...],
-  columns: [...],
-  searchPaths: ["name", "sku"],
-  limit: 25,
-});
+```vue
+<AsTableRoot :rows="rows" :columns="columns" :search-paths="['name']">
+  <AsTable select="multi" />
+</AsTableRoot>
 ```
 
-Cannot host server actions (no `client`); `client.pages` is replaced with an in-memory filter+sort.
+| Prop          | Meaning                                                                            |
+| ------------- | ---------------------------------------------------------------------------------- |
+| `rows`        | The dataset. REACTIVE — replacing the array re-queries locally.                    |
+| `columns`     | `ColumnDef[]`, read ONCE at setup (not reactive).                                  |
+| `searchPaths` | Paths `searchTerm` matches (substring, case-insensitive). Omit to disable search.  |
+| `localSort`   | In-memory sort from the active sorters. Default `true`; `false` keeps array order. |
+
+Cells, keyboard nav, header/cell slots, selection, the config dialog and pagination all work unchanged; sort / search / paging run in memory.
+
+Inert in local mode, each warning once on the console: `:preset`, `v-model:url-query`, `:query-fn`, and `:url` itself (ignored when `:rows` is present). There are no server actions either — use [`:row-actions` `extra`](actions-selection.md#per-screen-row-action-policy-rowactions-since-01134) for app-owned row actions.
+
+## Static mode (custom roots)
+
+`createStaticTableState(opts)` is the factory behind local mode: it synthesizes a `TableDef` from in-memory rows + columns and runs sort / search locally. Reach for it directly only when writing a custom root; otherwise use `<AsTableRoot :rows>`.
+
+```typescript
+import { createStaticTableState, provideTableContext } from "@atscript/vue-table";
+
+const { state } = createStaticTableState({
+  rows: () => props.rows, // getter/ref = reactive; a plain array is a snapshot
+  columns: [...],
+  searchPaths: ["name", "sku"],
+  localSort: true,
+  limit: 25,
+});
+provideTableContext({ state, client: {} as Client, controls: {} });
+```
+
+`provideTableContext` / `useTableContext` + the `TableContext` type are exported (since 0.1.134) precisely so a custom root can do this. Cannot host server actions (no `client`); `client.pages` is replaced with an in-memory filter+sort.

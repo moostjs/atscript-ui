@@ -21,6 +21,8 @@ Framework-agnostic table model. Filter conditions, filter→Uniquery conversion,
 - [State contracts](#state-contracts)
 - [Window mode helpers](#window-mode-helpers)
 - [Column widths](#column-widths)
+- [Display columns](#display-columns)
+- [Export](#export)
 - [Utilities](#utilities)
 
 ## Filter model
@@ -736,9 +738,121 @@ function reconcileColumnWidthDefaults(
 
 `computeDefaultColumnWidth` prefers `@ui.table.width`, falls back to type + `@expect.maxLen`, clamps to `MAX_DEFAULT_COLUMN_WIDTH_PX`. `reconcileColumnWidthDefaults` is called whenever the column set changes so widths stay populated for every visible column.
 
+## Display columns
+
+Client-owned columns an app adds on top of the server's `/meta` columns. Since 0.1.134 — see [Display-only columns](/tables/customization#display-only-columns).
+
+```typescript
+interface DisplayColumnDef {
+  /** Stable key; becomes the column's `path`. Must not collide with a field path. */
+  key: string;
+  label: string;
+  width?: string;
+  /** Position among the server columns (lower = earlier). Appended when omitted. */
+  order?: number;
+  /**
+   * `'local'` sorts client-side over the loaded page; anything else leaves it
+   * unsortable. Paged tables only — `<AsWindowTable>` does not offer it.
+   */
+  sortable?: false | "local";
+  /** Value `sortable: 'local'` orders by. Without it the sorter reads `row[key]`. */
+  sortValue?: (row: Record<string, unknown>) => unknown;
+  component?: string;
+  /** Default `"text"`. */
+  type?: string;
+}
+
+/** Merge into the server's column list, ordered by `order`; stable, so ties keep `/meta` order. Returns `base` when `display` is empty. */
+function mergeDisplayColumns(base: ColumnDef[], display: readonly DisplayColumnDef[]): ColumnDef[];
+```
+
+`ColumnDef` gained one optional flag for these: `local` — never in `$select`, server sort or filters. A `local` column with `sortable: true` is ordered in memory.
+
+## Export
+
+Framework-agnostic halves of [`useTableExport`](/api/vue-table#usetableexport-ctx) — usable without Vue. Since 0.1.134; full guide: [Export](/tables/export).
+
+```typescript
+type ExportScalar = string | number | boolean | null;
+
+interface CsvOptions {
+  /** Prepend a UTF-8 BOM (Excel needs it to detect UTF-8). Default `false`. */
+  bom?: boolean;
+  /** Prefix `=` / `+` / `-` / `@` / TAB / CR STRING cells with `'`. Numbers stay numeric. Default `true`. */
+  escapeFormulas?: boolean;
+  /** Default `","`. */
+  delimiter?: string;
+}
+
+/** One RFC 4180 field: formula-escaped, then quoted when it holds the delimiter, a quote, CR or LF. */
+function csvCell(value: ExportScalar | undefined, opts?: CsvOptions): string;
+
+/** Header + rows to a CSV string — `\r\n` separators, trailing newline, optional BOM. */
+function toCsv(
+  header: readonly string[],
+  rows: readonly (readonly ExportScalar[])[],
+  opts?: CsvOptions,
+): string;
+```
+
+```typescript
+const DEFAULT_EXPORT_PAGE_SIZE = 500;
+
+/** Rejection raised when an export is cancelled. `name === "AbortError"`. */
+class ExportAbortError extends Error {}
+
+type ExportPageFetcher = (
+  query: Uniquery,
+  page: number,
+  size: number,
+) => Promise<{ data: Record<string, unknown>[]; count?: number }>;
+
+/**
+ * Append the primary key(s) to `$sort` as a tiebreaker so paging can neither
+ * skip nor duplicate rows. Existing sort fields are preserved; returns the
+ * input query when there is nothing to add. Never mutates.
+ */
+function withStableOrder(query: Uniquery, primaryKeys: readonly string[]): Uniquery;
+
+/**
+ * Page through `query` until a short page, the reported `count`, or `maxRows`.
+ * `signal` is checked before and after every request, so a cancel lands
+ * between pages.
+ */
+function collectExportRows<T = Record<string, unknown>>(opts: {
+  query: Uniquery;
+  pageSize?: number;
+  fetchPage: ExportPageFetcher;
+  signal?: AbortSignal;
+  onProgress?: (done: number, total?: number) => void;
+  maxRows?: number;
+  /** Project each row as it arrives; the result holds the projections, not the raw rows. */
+  mapRow?: (row: Record<string, unknown>) => T;
+}): Promise<{ rows: T[]; total?: number }>;
+```
+
+```typescript
+/**
+ * Resolve a raw cell value to the scalar an export carries, using the same
+ * column metadata the cells read: union/enum keys → labels, `Date` → ISO 8601,
+ * arrays joined, other objects JSON, `null`/`undefined` → `null`.
+ */
+function resolveExportValue(value: unknown, column?: ColumnDef): ExportScalar;
+```
+
 ## Utilities
 
 ```typescript
+/** Sort rows in memory: numeric when both sides are numbers, locale-aware otherwise. Returns a NEW array, or the input when there is nothing to sort. Since 0.1.134. */
+function sortRowsLocally<T extends Record<string, unknown>>(
+  rows: T[],
+  sorters: readonly SortControl[],
+  getValue?: (row: T, field: string) => unknown,
+): T[];
+
+/** The text a cell compares and matches by — `""` for objects, so `[object Object]` never drives an ordering. Since 0.1.134. */
+function cellAsString(value: unknown): string;
+
 function debounce<T extends (...args: any[]) => unknown>(fn: T, ms: number): T & { cancel(): void };
 function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean;
 function sameColumnSet(a: readonly string[], b: readonly string[]): boolean;
@@ -763,5 +877,6 @@ function reorderColumnNames(
 - [Tables — Pagination & Virtualization](/tables/pagination)
 - [Tables — Presets](/tables/presets)
 - [Tables — URL State](/tables/url-state)
+- [Tables — Export](/tables/export)
 - [@atscript/vue-table](/api/vue-table) — Vue-side `ReactiveTableState`
 - [@atscript/moost-ui-presets](/api/moost-ui-presets) — server endpoint

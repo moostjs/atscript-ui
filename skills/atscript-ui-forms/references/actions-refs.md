@@ -310,6 +310,10 @@ When rolling your own picker without the Vue composable, drop down to the framew
 import { extractValueHelp, resolveValueHelp, ValueHelpClient } from "@atscript/ui";
 import { Client } from "@atscript/db-client";
 
+// Already resolved for you when you have a form def: `field.valueHelpInfo`
+// (since 0.1.134) — `createFormDef` walks the chain once per field, and
+// `<AsField>` passes it to the control as the `valueHelp` prop. Call
+// `extractValueHelp` directly only when you have a bare prop and no def.
 const info = extractValueHelp(prop); // { url, targetField } | undefined
 if (!info) return;
 
@@ -318,6 +322,21 @@ const vh = new ValueHelpClient(new Client(info.url));
 const { items } = await vh.search(resolved, { text: "acme", mode: "form", limit: 20 });
 // commit `item[info.targetField]` to your model
 ```
+
+### Reference chains
+
+_Since 0.1.134._ The FK does not have to sit on the field itself. For a view
+field declared against an intermediate table — `errorCode: Issue.errorCode`,
+where `Issue.errorCode: ErrorCode.code` is the link carrying `@db.rel.FK` —
+`extractValueHelp` walks `prop.ref` → the referenced field → its own `ref` until
+it finds a link with `@db.rel.FK` whose target declares `@db.http.path`, and
+returns that dictionary's `{ url, targetField }`. The walk is depth-bounded and
+cycle-safe; a chain with no FK link anywhere yields `undefined`.
+
+The server resolves the same chains on its side: since `@atscript/db` 0.1.128
+`/meta` and `/meta/form/:name` serialize such a field with `ref` pointing at the
+TERMINAL field and `db.rel.FK: true` lifted onto it. Form defs built from a
+compiled `.as` type and from `/meta` therefore agree on the dictionary.
 
 `resolveValueHelp(url)` caches per URL across the app — call `resetValueHelpCache()` to invalidate (e.g. on logout). `ValueHelpClient.search` accepts `{ text?, mode?: 'form' | 'filter', limit?, select? }`.
 

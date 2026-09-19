@@ -55,6 +55,23 @@ accurate no matter how much the user changes. Re-baseline after a
 successful save with [`rebase()`](#after-a-successful-save-rebase).
 :::
 
+### Filling the container after mount
+
+`createAsFormDef()` seeds the container with the type's defaults right away,
+so a fetch-then-fill page assigns the loaded row into a container that already
+holds data. Since 0.1.134 replacing the container's `value` **while the form
+is clean** re-captures the baseline onto the new value. You can mount
+`<AsForm>` immediately and fill it whenever the request resolves — no `v-if`
+gate, and the form is not born dirty against the defaults.
+
+A swap on a **dirty** form is deliberately left alone: the baseline stays put
+and the user's unsaved edits keep showing as changes, because silently
+adopting the new row would drop work they never agreed to lose. Move the
+baseline yourself there — [`rebase()`](#after-a-successful-save-rebase) to
+discard the edits, or
+[`rebaseOnto()`](#folding-in-fresh-server-data-rebaseonto) to keep them on top
+of the new row.
+
 ## The two outputs
 
 Everywhere the tracking surface is exposed (slots, descendant composable,
@@ -518,6 +535,9 @@ query selects the version column if you rely on OCC.
 
 ## Next steps
 
+- [The canonical example](/forms/canonical-example) — one type-checked
+  component wiring all of this to a db client: patch-only submit, `$cas`,
+  `rebaseOnto()` after a version mismatch, and server field errors.
 - [Edit forms with optimistic concurrency](/tables/edit-form-occ) — the
   full table edit-page wiring and version-mismatch handling.
 - [atscript-db: Update & Patch](https://db.atscript.dev/api/update-patch)

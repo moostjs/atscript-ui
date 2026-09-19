@@ -27,7 +27,20 @@ Sets up `useTable()` once, provides the context, and renders the table chrome. M
 
 ```typescript
 interface AsTableRootProps {
-  url: string;
+  /** Required unless `rows` is given (local mode). */
+  url?: string;
+  /** Local mode: render this array instead of fetching. Reactive — replacing it re-queries locally. Since 0.1.134. See [Local rows](/tables/query-function#path-c-local-rows). */
+  rows?: Record<string, unknown>[];
+  /** Local mode: the columns to render, read once at setup. Since 0.1.134. */
+  columns?: ColumnDef[];
+  /** Local mode: field paths the search term matches (substring, case-insensitive). Since 0.1.134. */
+  searchPaths?: string[];
+  /** Local mode: sort in memory from the active sorters. Default `true`. Since 0.1.134. */
+  localSort?: boolean;
+  /** Client-owned columns merged into the server's column list — never in `$select`, server sort or filters. Since 0.1.134. See [Display-only columns](/tables/customization#display-only-columns). */
+  displayColumns?: DisplayColumnDef[];
+  /** Per-screen row-action policy: `include` / `exclude` / `overrides` / `extra`. The server's per-row `$actions` gate still wins. Since 0.1.134. See [Selecting and extending row actions](/tables/actions#selecting-and-extending-row-actions). */
+  rowActions?: RowActionsConfig;
   limit?: number;
   rowValueFn?: (row: Record<string, unknown>) => unknown;
   selectionPersistence?: "clear" | "trim" | "persist";
@@ -349,13 +362,38 @@ function createTableState(opts: CreateTableStateOptions): {
 
 ### `createStaticTableState(opts)`
 
-Builds a `ReactiveTableState` for static / in-memory data (no server, no `/meta`). Useful for stubs, demos, and unit tests.
+Builds a `ReactiveTableState` for static / in-memory data (no server, no `/meta`). Useful for stubs, demos, and unit tests. `<AsTableRoot :rows>` uses it for [local mode](/tables/query-function#path-c-local-rows).
 
 ```typescript
 function createStaticTableState(opts: CreateStaticTableStateOptions): {
   state: ReactiveTableState;
   internals: TableStateInternals;
 };
+
+interface CreateStaticTableStateOptions {
+  /** The rows. A getter or ref keeps it reactive — each local fetch re-reads it. Since 0.1.134. */
+  rows: MaybeRefOrGetter<Record<string, unknown>[]>;
+  columns: ColumnDef[];
+  searchPaths?: string[];
+  selection?: TableSelectionOptions;
+  limit?: number;
+  /** Sort in memory from the active sorters. Default `true`. Since 0.1.134. */
+  localSort?: boolean;
+  /** Client-owned columns merged into `columns`. Since 0.1.134. */
+  displayColumns?: readonly DisplayColumnDef[];
+  /** External refs from `defineModel`. Since 0.1.134. */
+  model?: TableModelRefs;
+  queryOnMount?: boolean;
+  actions?: TableActionsOptions;
+}
+```
+
+### `provideTableContext(ctx)`
+
+Provide a `TableContext` to the subtree. Exported since 0.1.134 so a custom root can build any state — including `createStaticTableState` — and hand it to `<AsTable>` / `<AsWindowTable>`. Advanced: `<AsTableRoot>` already covers both the fetching and the local case.
+
+```typescript
+function provideTableContext(ctx: TableContext): void;
 ```
 
 ## Composables — features
@@ -453,6 +491,75 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 <template>
   <AsTableRoot v-model:url-query="urlQuery" url="/db/products" />
 </template>
+```
+
+### `useTableExport(ctx?)`
+
+Export the table's data as it is queried right now — same filters, sorters, search and visible column order, paged over every matching row. Since 0.1.134. Full guide: [Export](/tables/export).
+
+```typescript
+function useTableExport(ctx?: TableContext): {
+  /** Rejects when a run is already in flight — one handle runs one export. */
+  exportRows: (opts?: ExportRowsOptions) => Promise<ExportResult>;
+  /** `true` while a run is in flight (derived from `progress`). */
+  exporting: ComputedRef<boolean>;
+  /** Progress of the in-flight run, `null` while idle. */
+  progress: Ref<{ done: number; total?: number } | null>;
+};
+
+interface ExportRowsOptions {
+  /**
+   * `"visible"` (default) — the visible columns minus the client-owned ones,
+   * unless a `formatters` entry fills them — or an explicit list of column
+   * paths, in export order.
+   */
+  columns?: "visible" | string[];
+  /** `"csv"` (default) → `{ csv, filename }`; `"rows"` → `{ rows }`. */
+  format?: "csv" | "rows";
+  /** Rows per request. Default 500. */
+  pageSize?: number;
+  /** Aborts between pages; the promise rejects with an `AbortError`. */
+  signal?: AbortSignal;
+  onProgress?: (done: number, total?: number) => void;
+  /** Global cell formatter; `undefined` falls through to the default. */
+  formatCell?: ExportCellFormatter;
+  /** Per-column formatters keyed by column path. Win over `formatCell`. */
+  formatters?: Record<string, ExportCellFormatter>;
+  /** `.csv` appended when missing. Default `"export.csv"`. */
+  filename?: string;
+  /** CSV writer settings — `bom`, `escapeFormulas`, `delimiter`. Ignored by `format: "rows"`. */
+  csv?: CsvOptions;
+  maxRows?: number;
+}
+
+type ExportResult =
+  | {
+      format: "csv";
+      csv: string;
+      filename: string;
+      columns: string[];
+      columnPaths: string[];
+      rowCount: number;
+      total?: number;
+    }
+  | {
+      format: "rows";
+      rows: ExportScalar[][];
+      columns: string[];
+      columnPaths: string[];
+      rowCount: number;
+      total?: number;
+    };
+```
+
+The query is built by `state.buildQuery()` and run through `state.fetchPage()`, so a custom `:query-fn` is honoured. The primary key(s) are appended to `$sort` as a tiebreaker so paging can neither skip nor duplicate rows; `$actions` is never requested; client-owned display columns are stripped from `$select`.
+
+### `downloadExport(result)`
+
+Hand a finished CSV export to the browser as a file download. Returns `false` without doing anything when there is no DOM (SSR / worker), so it is safe to call unguarded. Throws on a `format: "rows"` result. Since 0.1.134.
+
+```typescript
+function downloadExport(result: ExportResult): boolean;
 ```
 
 ### `useTableComponent(key, fallback)`
@@ -712,6 +819,9 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Actions namespace**: `actions: TableActionsState`.
 - **Prompt / action-form**: `confirmRequest`, `prompt`, `acceptPrompt`, `dismissPrompt`, `actionFormRequest`, `requestActionInput`, `acceptActionForm`, `dismissActionForm`.
 - **Presets namespace**: `preset: PresetSurface` — see [`PresetSurface`](#presetsurface).
+- **Row-action policy** (since 0.1.134): `rowActions: Ref<RowActionsConfig | undefined>` — renderer-pushed by `<AsTableRoot :row-actions>` — and `rowActionsPolicy`, the compiled view of it. Both `<AsRowActions>` and `<AsTableActions>` read the compiled policy, so the row cell and the selection toolbar always agree.
+- **Query surface** (since 0.1.134): `buildQuery(opts?)` returns the `Uniquery` the table's own fetch would send right now (`{ columnPaths?, includeActions? }` overrides); `fetchPage(query, page, size)` runs one page through the configured `queryFn` / client. These are the two seams `useTableExport` builds on.
+- **Local sorting** (since 0.1.134): `localColumnPaths` (paths of the client-owned columns) and `applyLocalSort(rows)` — `<AsTable>` runs the loaded page through it, sorting by the FULL sorter list so the server's ordering survives and a local sorter lands at its real priority. Inert without [display columns](/tables/customization#display-only-columns), in window mode, and for an in-memory table (its query function sorts the dataset itself).
 - **URL bridge**: `applyUrlQuery`.
 - **Query methods**: `query(opts?: { silent?: boolean })` (microtask-coalesced refresh; `{ silent: true }` runs the current query with no `querying` flip and leaves rows as-is on failure — for timer-driven live refresh), `queryImmediate(opts?: { silent?: boolean })` (awaitable form, same `silent` semantics), `queryNext()`, `loadRange()`, `invalidate()`. Every query keeps prior rows until the response settles, then swaps `results` + `totalCount` atomically (keep-rows-until-settle contract).
 
@@ -753,6 +863,42 @@ type ActionResult =
   | { ok: true; kind: "remove"; data: TDbDeleteResult }
   | { ok: false; kind: "error"; error: ClientError | Error };
 ```
+
+### `RowActionsConfig` / `LocalRowAction`
+
+Per-screen row-action policy. Since 0.1.134 — see [Selecting and extending row actions](/tables/actions#selecting-and-extending-row-actions).
+
+```typescript
+interface RowActionsConfig {
+  /** Allowlist of server action names. Omitted = every eligible action. */
+  include?: string[];
+  /** Denylist, applied after `include`. Also removes an `extra` of the same name. */
+  exclude?: string[];
+  /** Presentation patches keyed by server action name. */
+  overrides?: Record<
+    string,
+    Partial<Pick<TVueTableActionInfo, "label" | "icon" | "intent" | "promptText">>
+  >;
+  /** App-owned actions, appended after the server ones. */
+  extra?: LocalRowAction[];
+}
+
+interface LocalRowAction {
+  name: string;
+  label: string;
+  icon?: string;
+  intent?: TDbActionInfo["intent"];
+  promptText?: string | [string, string];
+  /** Renders a real anchor, mapped through `state.resolveHref`. */
+  href?: (row: Record<string, unknown>) => string;
+  /** Awaited locally, then settled as an `@action` emit with `kind: 'custom'`. */
+  onInvoke?: (row: Record<string, unknown>, pk?: Record<string, unknown>) => void | Promise<void>;
+  /** Per-row gate. */
+  enabled?: (row: Record<string, unknown>) => boolean;
+}
+```
+
+The server's per-row `$actions` gate runs **before** this policy, so `include` can only narrow what a row was already allowed and `overrides` never re-enable a gated action. `include` does not apply to `extra` — being listed there is the opt-in; `include: []` therefore hides every server action and keeps the extras. The policy applies wherever row actions render: the row-actions cell and the `level="row"` selection toolbar.
 
 ### `ColumnMenuConfig`
 

@@ -225,7 +225,12 @@ function onAction(action: TVueTableActionInfo, ids: unknown[], result: ActionRes
 }
 ```
 
-The CSV export pattern is straightforward: declare the action as
+For **CSV export**, reach for the native
+[`useTableExport()`](/tables/export) hook instead — it reuses the
+table's live query, its visible column order and its cell-value
+resolution, and pages through every matching row. The custom-action
+route above stays the right answer when the export must run server-side
+(a signed URL, a heavy report job): declare the action as
 `processor: 'custom'` on the `.as`, then match it by name in the
 `@action` handler.
 
@@ -325,9 +330,112 @@ the new-tab `window.open` target — **never** to the plain-left-click
 invoke path. That path goes through the client's `navigate` hook, which
 already accounts for the base. Default is identity `(url) => url`.
 
+### Wiring vue-router: both halves
+
+The two halves are separate on purpose and an SPA needs **both**.
+`resolveHref` paints the link; the client's `navigate` hook performs the
+navigation. Without `navigate`, a plain left click on a navigate action
+does a **full page load** — the browser's default — which drops your
+app's in-memory state.
+
+Set the hook once, app-wide, through the client factory:
+
+```ts
+// main.ts — after the router exists
+import { setDefaultClientFactory } from "@atscript/vue-table";
+import { Client } from "@atscript/db-client";
+import { router } from "./router";
+
+setDefaultClientFactory((url) => new Client(url, { navigate: (to) => router.push(to) }));
+```
+
+…and resolve hrefs on the table:
+
+```vue
+<script setup lang="ts">
+import { useRouter } from "vue-router";
+const router = useRouter();
+</script>
+
+<template>
+  <AsTableRoot url="/api/db/tables/customers" :resolve-href="(url) => router.resolve(url).href" />
+</template>
+```
+
+With both in place a plain click routes in-SPA, cmd/middle-click opens a
+real new tab at the resolved href, and "copy link address" yields a URL
+that works when pasted.
+
 Navigate actions are gated by per-row `$actions` exactly like any other
 action (see [Per-row action availability](#per-row-action-availability)),
 and their `ActionResult` on the invoke path is `{ ok: true, kind: 'navigate' }`.
+
+## Selecting and extending row actions
+
+The row-actions cell shows every row / rows action the server declared
+for the table. One screen often wants fewer of them, different wording,
+or an action the server has no idea about. That is the `:row-actions`
+prop on `<AsTableRoot>`. Since 0.1.134.
+
+```vue
+<AsTableRoot
+  url="/api/db/tables/orders"
+  :row-actions="{
+    include: ['approve', 'cancel'],
+    overrides: { cancel: { label: 'Void', intent: 'negative' } },
+    extra: [
+      { name: 'audit', label: 'Audit trail', icon: 'i-as-list', onInvoke: (row) => openAudit(row) },
+      { name: 'print', label: 'Print', href: (row) => `/print/orders/${row.id}` },
+    ],
+  }"
+/>
+```
+
+| Field       | Effect                                                                       |
+| ----------- | ---------------------------------------------------------------------------- |
+| `include`   | Allowlist of **server** action names. Omit for "all of them".                |
+| `exclude`   | Denylist, applied after `include`. Also removes an `extra` of the same name. |
+| `overrides` | Per-name `label` / `icon` / `intent` / `promptText` patch.                   |
+| `extra`     | App-owned actions, appended after the server ones.                           |
+
+**The server stays authoritative.** The per-row `$actions` gate runs
+_first_; `include` can only narrow what a row was already allowed, and
+`overrides` change appearance only. Naming a gated action in `include`
+does not bring it back.
+
+`extra` actions are the app's own, so `include` does not apply to them —
+being listed in `extra` _is_ the opt-in. `include: []` therefore hides
+every server action while keeping the extras, which is how a screen
+replaces the row actions wholesale. Each takes either:
+
+- **`href(row)`** — rendered as a real `<a>` through `state.resolveHref`,
+  with all the native link affordances of a
+  [navigate action](#navigate-actions); or
+- **`onInvoke(row, pk)`** — awaited locally, then settled as an
+  `@action` emit with `kind: 'custom'` (a rejection settles as
+  `kind: 'error'`).
+
+Add `promptText` for a confirmation, and `enabled(row)` to hide the
+action on rows it doesn't apply to.
+
+The same policy drives the single-button form, the `…` dropdown, a
+standalone `<AsRowActions>` mounted inside the table, and the
+`<AsTableActions level="row">` toolbar — every surface
+reads one compiled policy from the table context, so an excluded or
+relabelled action cannot reappear in another one. Pass `:actions` on
+`<AsRowActions>` to render an explicit list instead, bypassing both the
+server set and the policy.
+
+### DOs and DON'Ts
+
+- **DO** use `include` / `exclude` for per-screen presentation; keep
+  authorization on the server.
+- **DO** give every `extra` action a name that can't collide with a
+  server action.
+- **DON'T** expect `overrides` to unlock anything — it is cosmetic.
+- **DON'T** put a mutation behind `onInvoke` that the server should own;
+  `extra` is for client-side affordances (drawers, print views, audit
+  panels).
 
 ## Row-level default action
 

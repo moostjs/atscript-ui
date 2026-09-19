@@ -236,6 +236,8 @@ Slot scope-name uses the column path verbatim (dots included): `<template #cell-
 
 An explicit `#header-<colPath>` slot also renders for a fixed (synthesised) column such as `__actions`; only its default header stays blank. Since 0.1.133.
 
+Client-owned [display columns](customization.md#display-only-columns-displaycolumns-since-01134) dispatch through the same three rules. Nothing on the server backs them, so `getCellValue(row, path)` is usually `undefined` and the default `AsTableCellValue` renders an empty cell — always give them a `#cell-<key>` slot, a `component`, or a `type`.
+
 ### Interactive controls inside a cell (since 0.1.133)
 
 Table keyboard nav leaves Enter and Space to an interactive element under the event target: `button`, `a[href]`, `input`, `select`, `textarea`, `summary`, `[contenteditable]` (not `="false"`), or `role` in `button` / `link` / `checkbox` / `menuitem` / `switch` / `tab` / `option`. No `preventDefault`, no row activation, no selection toggle. The walk stops at the `td` / `th` / `tr` / `tbody` boundary.

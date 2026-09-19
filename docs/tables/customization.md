@@ -106,6 +106,85 @@ enforce it identically.
 `setFieldFilter`, `removeFieldFilter`, `addFilterField`,
 `removeFilterField`, `actions`, `prompt`.
 
+## Display-only columns
+
+Columns come from `/meta`. When a screen needs a column the server has
+no field for — a derived value, a count, a link, a widget — declare it
+with `:display-columns` on `<AsTableRoot>`. Since 0.1.134.
+
+```vue
+<AsTableRoot
+  url="/api/db/tables/orders"
+  :display-columns="[
+    { key: 'margin', label: 'Margin', width: '7em', order: 5 },
+    { key: 'actions', label: 'Links', component: 'orderLinks' },
+  ]"
+>
+  <AsTable>
+    <template #cell-margin="{ row }">{{ marginOf(row) }}</template>
+  </AsTable>
+</AsTableRoot>
+```
+
+A display column is a **real column** everywhere it matters: it has a
+label, a width, a position, it appears in the config dialog (badged
+`client`), it can be hidden and reordered, and presets store its
+visibility and order like any other column. What it never does is reach
+the backend — it is excluded from `$select`, from server sorting and
+from filters.
+
+| Field       | Meaning                                                                                                                                                               |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`       | Stable key; becomes the column's `path`, so `cell-<key>` / `header-<key>` slots, the `columnNames` model and presets refer to it. Must not collide with a field path. |
+| `label`     | Header label.                                                                                                                                                         |
+| `width`     | Default width (any CSS length).                                                                                                                                       |
+| `order`     | Position among the server columns (lower = earlier). Appended when omitted.                                                                                           |
+| `sortable`  | `'local'` to offer sorting, applied client-side over the loaded page. Unsortable otherwise.                                                                           |
+| `sortValue` | The value `sortable: 'local'` orders by. Without it the sorter reads `row[key]`.                                                                                      |
+| `component` | Named cell component, looked up in `:components`.                                                                                                                     |
+| `type`      | Cell type for the `:types` dispatch. Default `"text"`.                                                                                                                |
+
+Cells render through the normal dispatch — a `#cell-<key>` slot, a
+`component` name, or a `type` — exactly like a server column. See
+[Cells](/tables/cells#display-only-columns).
+
+### `sortable: 'local'`
+
+Sorting a display column is **page-local**: the framework can only order
+the rows it has loaded. By default it sorts on `row[key]` — which a
+display column has no reason to carry — so tell it what to order by:
+
+```vue
+<AsTableRoot
+  url="/api/db/tables/orders"
+  :display-columns="[
+    { key: 'margin', label: 'Margin', sortable: 'local', sortValue: (row) => marginOf(row) },
+  ]"
+/>
+```
+
+Without `sortValue` the sorter reads `row[key]`, which only works when
+the value really is in the payload but not rendered as a server column
+(pull it in with `:always-selected`). Leave `sortable` off when neither
+holds.
+
+The page is sorted by the **whole** sorter list, not just the local
+part: a server sorter the page is already ordered by stays in force, and
+the local sorter takes effect at its own priority. So
+`[name asc, margin asc]` orders by name and breaks ties by margin, while
+`[margin asc, name asc]` re-orders the page.
+
+Local sorting is a **paged-table** feature. `<AsWindowTable>` caches rows
+by absolute index and drops them as the viewport moves, so there is no
+page to re-order — it does not offer the sort affordance for a display
+column, in the header or in the config dialog. An in-memory table
+(`<AsTableRoot :rows>`) sorts its whole dataset in the query function
+instead, so a display column with `sortValue` sorts across every row
+there, not just the visible page.
+
+An unknown key in a stored preset is ignored, so removing a display
+column later doesn't break saved views.
+
 ## Cell-type map (`:types`)
 
 Replace whole categories per table. The map is keyed by column

@@ -60,6 +60,29 @@ because they're explicit; type-map overrides cover whole categories
 (every `date` column or every `number` column) without touching the
 `.as`.
 
+## Display-only columns
+
+A column declared through
+[`:display-columns`](/tables/customization#display-only-columns) is
+dispatched by the same three rules. It has no server field behind it, so
+`getCellValue(row, column.path)` is usually `undefined` and the default
+`AsTableCellValue` renders an empty cell — give it a renderer:
+
+```vue
+<AsTableRoot :display-columns="[{ key: 'margin', label: 'Margin' }]" url="/db/orders">
+  <AsTable>
+    <template #cell-margin="{ row }">
+      {{ format(Number(row.revenue) - Number(row.cost)) }}
+    </template>
+  </AsTable>
+</AsTableRoot>
+```
+
+…or a named component (`component: 'marginCell'` + `:components`), or a
+cell type (`type: 'number'` + `:types`). Whatever the column needs to
+read must be in the payload — add it with `:always-selected` when it
+isn't one of the visible columns.
+
 ## Built-in cells
 
 Every cell receives the same two props:

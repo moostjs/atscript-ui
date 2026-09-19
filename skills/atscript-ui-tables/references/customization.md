@@ -43,9 +43,47 @@ An explicit `#header-<colPath>` slot ALSO renders for a fixed (synthesised) colu
 />
 ```
 
-Precedence: framework `id` / `role` / `aria-*` / `data-*` / `class` / `style` always win over `:row-attrs`. Types: `RowSelectableHook`, `RowClassHook`, `RowAttrsHook`, `RowHookContext` (declared in `vue-table`'s `types.ts`; not re-exported from the package root as of 0.1.133). Selection semantics: [actions-selection.md](actions-selection.md#per-row-selectability-row-selectable-since-01133).
+Precedence: framework `id` / `role` / `aria-*` / `data-*` / `class` / `style` always win over `:row-attrs`. Types: `RowSelectableHook`, `RowClassHook`, `RowAttrsHook`, `RowHookContext`, exported from `@atscript/vue-table`. Selection semantics: [actions-selection.md](actions-selection.md#per-row-selectability-row-selectable-since-01133).
 
 `<AsTableRoot>`'s default `v-slot` exposes the full table-state surface for page chrome (toolbar, pagination, filter bar): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
+
+## Display-only columns (`:displayColumns`, since 0.1.134)
+
+Client-owned columns on top of the server's `/meta` columns — a derived value, a count, a link, a widget. They are real columns for visibility, reordering, the config dialog (badged `client`) and presets, and are NEVER sent to the server: excluded from `$select`, from server sorting and from filters.
+
+```ts
+interface DisplayColumnDef {
+  key: string; // becomes the column `path` → `cell-<key>` / `header-<key>` slots, `columnNames`, presets
+  label: string;
+  width?: string;
+  order?: number; // position among server columns; appended when omitted
+  sortable?: false | "local"; // 'local' = client-side, PAGE-LOCAL; paged tables only
+  sortValue?: (row: Record<string, unknown>) => unknown; // what 'local' orders by; default row[key]
+  component?: string; // named component from `:components`
+  type?: string; // cell type for `:types`; default "text"
+}
+```
+
+```vue
+<AsTableRoot
+  url="/api/db/tables/orders"
+  :display-columns="[{ key: 'margin', label: 'Margin', width: '7em', order: 5 }]"
+>
+  <AsTable>
+    <template #cell-margin="{ row }">{{ marginOf(row) }}</template>
+  </AsTable>
+</AsTableRoot>
+```
+
+Gotchas:
+
+- The column's value is not fetched. Render it from data already in the row, or pull the source field in with `:always-selected`.
+- `sortable: 'local'` orders the LOADED page. Give it `sortValue: (row) => …` when the value is computed in the slot; without one it reads `row[key]`, which only works when the key names a field in the payload.
+- The page is re-sorted by the WHOLE sorter list, so a server sorter before the local one keeps its ordering and the local sorter acts as a tiebreak.
+- Local sorting is paged-tables-only: `<AsWindowTable>` caches rows by absolute index, so it does not offer the affordance (header or config dialog). An in-memory table (`<AsTableRoot :rows>`) sorts the whole dataset in its query function instead.
+- Exports leave display columns out of `columns: "visible"` unless `formatters[path]` fills them — see [export.md](export.md).
+- An unknown key in a stored preset is ignored, so removing a display column later does not break saved views.
+- Pure helper in `@atscript/ui-table`: `mergeDisplayColumns`; `ColumnDef` gained `local` (a `local` column with `sortable: true` is ordered in memory).
 
 ## Cell maps — `:types` and `:components`
 

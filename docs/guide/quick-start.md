@@ -167,7 +167,7 @@ What you get out of the box:
 - Field ordering from `@ui.form.order`.
 
 ::: details Where to look next for more form patterns
-The full forms guide at [/forms/](/forms/) covers arrays, nested objects, unions, refs, dynamic fields, and validation with runnable examples.
+The full forms guide at [/forms/](/forms/) covers arrays, nested objects, unions, refs, dynamic fields, and validation with runnable examples. For the edit-form end of the spectrum — loading a row, sending a PATCH with `$cas`, and mapping server errors back onto fields — jump to [the canonical example](/forms/canonical-example).
 :::
 
 ## 7. Your first table

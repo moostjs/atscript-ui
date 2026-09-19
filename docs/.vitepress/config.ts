@@ -210,6 +210,7 @@ const formsSidebar = [
       { text: "Actions", link: "/forms/actions" },
       { text: "References (FK)", link: "/forms/references" },
       { text: "Change Tracking", link: "/forms/change-tracking" },
+      { text: "Canonical Example", link: "/forms/canonical-example" },
     ],
   },
   {
@@ -241,6 +242,7 @@ const tablesSidebar = [
       { text: "URL State", link: "/tables/url-state" },
       { text: "Presets", link: "/tables/presets" },
       { text: "Actions & Selection", link: "/tables/actions" },
+      { text: "Export", link: "/tables/export" },
       { text: "Edit Forms with OCC", link: "/tables/edit-form-occ" },
       { text: "Model Routes & Nav", link: "/tables/model-routes" },
     ],

@@ -10,6 +10,7 @@ Row / table / rows actions, selection model, recipes.
 - [state.actions API](#stateactions-api)
 - [Action result processing](#action-result-processing)
 - [Selection model](#selection-model)
+- [Per-screen row-action policy](#per-screen-row-action-policy-rowactions-since-01134)
 - [Recipes](#recipes)
 
 ## Action declaration on .as
@@ -285,13 +286,55 @@ Rendered contract on a standalone `<AsTable>`:
 | selection cell (ineligible) | `aria-disabled="true"`, `title="<reason>"`, `aria-label="Select row, <reason>"`, `.as-table-checkbox-disabled` |
 | `<tr>` (ineligible)         | `data-selectable="false"`                                                                                      |
 
-Not wired on `<AsWindowTable>` — the hooks live on `<AsTable>`.
+Both `<AsTable>` and `<AsWindowTable>` accept the row hooks (since 0.1.133) — the rule lives in the selection model (`state.rowSelectable`, `isRowSelectable`, `selectAll`), pushed in by whichever renderer is mounted, so neither renderer re-implements it. See [customization.md](customization.md#row-hooks-since-01133).
 
 ### Running-action feedback (since 0.1.133)
 
 `<AsTableActions>` marks an in-flight trigger `aria-busy="true"` and suffixes its ACCESSIBLE name with `", running"` (visible label unchanged). It also renders one `role="status" aria-live="polite"` sr-only region OUTSIDE the default slot, announcing `"<label> running"` → `"<label> finished"` / `"<label> failed"`. A custom `#default` slot keeps the announcements; per-item states inside `<AsRowActions>` menus are not covered.
 
 Window-mode scroll extensions don't reconcile selection — only fresh top-level fetches (query, invalidate, pagination jump) re-evaluate `selectedRows` against the new results. Switching `select` from `"multi"` to `"none"` clears the current selection.
+
+## Per-screen row-action policy (`:rowActions`, since 0.1.134)
+
+`<AsTableRoot :row-actions="config">` narrows / relabels the server's row-action set for one screen and appends app-owned actions. Pushed into `state.rowActions` like `:row-delete` and compiled once into `state.rowActionsPolicy`, which EVERY row-action surface reads: `<AsRowActions>` (including a standalone one inside the table) and the `<AsTableActions level="row">` selection toolbar. They cannot show different sets.
+
+```ts
+interface RowActionsConfig {
+  include?: string[]; // allowlist of SERVER action names
+  exclude?: string[]; // denylist, applied after include; also drops a same-named extra
+  overrides?: Record<
+    string,
+    Partial<Pick<TVueTableActionInfo, "label" | "icon" | "intent" | "promptText">>
+  >;
+  extra?: LocalRowAction[]; // app-owned, appended after the server ones
+}
+
+interface LocalRowAction {
+  name: string;
+  label: string;
+  icon?: string;
+  intent?: TDbActionIntent;
+  promptText?: string | [string, string];
+  href?: (row) => string; // → real <a>, mapped through state.resolveHref
+  onInvoke?: (row, pk?) => void | Promise<void>; // → awaited, then @action kind: 'custom'
+  enabled?: (row) => boolean;
+}
+```
+
+```vue
+<AsTableRoot
+  url="/api/db/tables/orders"
+  :row-actions="{
+    include: ['approve', 'cancel'],
+    overrides: { cancel: { label: 'Void', intent: 'negative' } },
+    extra: [{ name: 'audit', label: 'Audit trail', onInvoke: (row) => openAudit(row) }],
+  }"
+/>
+```
+
+Order of application: the per-row `$actions` gate runs FIRST, then the policy. So `include` can only narrow what the server already allowed for that row, and `overrides` are cosmetic — neither can surface a gated action. `include` does NOT apply to `extra` (being listed there is the opt-in); `exclude` and `enabled(row)` do. `include: []` therefore hides every server action and keeps the extras — the way to replace a screen's row actions wholesale.
+
+`<AsRowActions :actions="[...]">` renders an explicit list, bypassing both the server set and the policy — for a standalone cell that must show something hand-picked.
 
 ## Recipes
 
@@ -311,7 +354,20 @@ Window-mode scroll extensions don't reconcile selection — only fresh top-level
 
 The user selects rows (multi mode), clicks "Delete selected", confirms. `<AsTableActions>` calls `state.actions.invoke(deleteAction, identifiers[])`. Server validates and deletes; refetch fires.
 
-### CSV export — custom processor
+### CSV export — native hook (preferred, since 0.1.134)
+
+```ts
+import { useTableExport, downloadExport } from "@atscript/vue-table";
+
+const { exportRows, exporting } = useTableExport();
+downloadExport(await exportRows({ filename: "orders.csv", csv: { bom: true } }));
+```
+
+Reuses the table's live query, visible column order and cell-value resolution, and pages through every matching row. Full contract: [export.md](export.md).
+
+### CSV export — custom processor (server-side exports)
+
+Still the right shape when the file must be produced by the backend (signed URL, heavy report job).
 
 ```atscript
 @db.action.rows 'exportCsv' @ui.action.label 'Export CSV' @ui.action.processor 'custom'

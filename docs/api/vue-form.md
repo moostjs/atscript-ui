@@ -408,6 +408,8 @@ interface AsFormPatchHandle {
 }
 ```
 
+**Baseline lifecycle.** The baseline is captured as soon as the wrapped container holds real data, and re-captured automatically whenever the container's `value` is replaced by identity **while the form is clean** (since 0.1.134). That is the fetch-then-fill assignment `formData.value = row` on a form seeded with `createAsFormDef()` defaults: the form mounts straight away, no `v-if` gate, and it is not born dirty against those defaults. A swap on a **dirty** form keeps the old baseline — dropping unsaved edits is never implicit — so move it yourself with `rebase()` (discard the edits) or `rebaseOnto()` (keep them on top of the new row). See [Change tracking — filling the container after mount](/forms/change-tracking#filling-the-container-after-mount).
+
 ### `RebaseOntoResult`
 
 Return value of `AsFormPatchHandle.rebaseOnto()`. Aliases the `@atscript/ui` rebase shape minus `next` (which is written into the live container rather than returned).
