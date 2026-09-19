@@ -166,6 +166,34 @@ export function stateToUrlQueryString(
   return buildUrl(query);
 }
 
+/**
+ * The `$`-controls {@link urlQueryStringToState} actually reads. Any other
+ * `$key` is ignored by the parser, so it is NOT the table's to remove.
+ */
+const CONSUMED_CONTROLS = new Set(["$sort", "$search", "$relevance", "$skip"]);
+
+/** Characters that can only appear in a uniqu filter key, never in a page flag. */
+const FILTER_OPERATOR_CHAR = /[<>!~]/;
+
+/**
+ * Whether {@link urlQueryStringToState} would consume the query key `key` —
+ * i.e. whether the key belongs to the table rather than to the page hosting
+ * it. This is the ownership rule the `useTableUrlQuery` router bridge reads
+ * and writes by, so both directions agree: a key the parser ignores is never
+ * removed, and a key it reads is the table's to remove.
+ *
+ * Shape-only, and deliberately conservative for bare `field=value` keys: a
+ * filter on a column and a host flag are indistinguishable without the table
+ * definition, so those are owned only once the bridge has written them
+ * itself (or once a `prefix` namespaces them).
+ *
+ * @since 0.1.133
+ */
+export function urlQueryConsumesKey(key: string): boolean {
+  if (key.startsWith("$")) return CONSUMED_CONTROLS.has(key);
+  return FILTER_OPERATOR_CHAR.test(key);
+}
+
 export interface UrlQueryParseOptions {
   /**
    * Field paths the table knows about. Conditions on fields outside this set

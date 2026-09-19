@@ -97,7 +97,12 @@ export type {
   PresetsSaveAsOptions,
   PresetsSaveResult,
 } from "./presets/presets-client";
-export { PresetsClient, PresetsHttpError, isAuthError } from "./presets/presets-client";
+export {
+  PresetsClient,
+  PresetsHttpError,
+  isAuthError,
+  isUnavailableError,
+} from "./presets/presets-client";
 
 // ── AppPrefsClient (app-wide user prefs) ────────────────────
 export type { AppPrefsClientConfig, AppPrefsLoadResult } from "./presets/app-prefs-client";
@@ -118,7 +123,12 @@ export type {
   UrlQueryParseOptions,
   UrlQuerySync,
 } from "./query/url-query";
-export { resolveAspectGate, stateToUrlQueryString, urlQueryStringToState } from "./query/url-query";
+export {
+  resolveAspectGate,
+  stateToUrlQueryString,
+  urlQueryConsumesKey,
+  urlQueryStringToState,
+} from "./query/url-query";
 
 // ── Selection ──────────────────────────────────────────────
 export type { SelectionMode } from "./selection/selection-fns";

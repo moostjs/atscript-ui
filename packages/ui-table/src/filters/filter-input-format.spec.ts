@@ -140,8 +140,23 @@ describe("parseFilterInput", () => {
     expect(parseFilterInput("2024-01-15", "date")).toEqual({ type: "eq", value: ["2024-01-15"] });
   });
 
-  it("defaults to eq for boolean", () => {
-    expect(parseFilterInput("true", "boolean")).toEqual({ type: "eq", value: ["true"] });
+  it("defaults to eq for boolean and parses the true/false vocabulary", () => {
+    expect(parseFilterInput("true", "boolean")).toEqual({ type: "eq", value: [true] });
+    expect(parseFilterInput("false", "boolean")).toEqual({ type: "eq", value: [false] });
+    expect(parseFilterInput("TRUE", "boolean")).toEqual({ type: "eq", value: [true] });
+    expect(parseFilterInput(" False ", "boolean")).toEqual({ type: "eq", value: [false] });
+    expect(parseFilterInput("!=true", "boolean")).toEqual({ type: "ne", value: [true] });
+  });
+
+  it("leaves non-vocabulary boolean input as a string", () => {
+    expect(parseFilterInput("yes", "boolean")).toEqual({ type: "eq", value: ["yes"] });
+  });
+
+  it("round-trips a parsed boolean through formatFilterCondition", () => {
+    for (const text of ["true", "false"]) {
+      const cond = parseFilterInput(text, "boolean")!;
+      expect(formatFilterCondition(cond)).toBe(text);
+    }
   });
 
   // ── Edge cases ─────────────────────────────────────────────

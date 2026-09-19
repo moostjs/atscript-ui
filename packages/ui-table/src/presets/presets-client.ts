@@ -47,7 +47,7 @@ export interface PresetsListResult {
    * untouched.
    */
   capabilities: PresetCapabilities | null | undefined;
-  /** True when the controller responded 401/403 — UI silently hides. */
+  /** True when the controller responded 401/403/404 — UI silently hides. */
   denied: boolean;
 }
 
@@ -80,7 +80,7 @@ type UserConfWritePayload = {
 /**
  * Framework-agnostic wrapper over `@atscript/db-client`'s `Client` for the
  * `AsPresetEntry` table. Handles wire serialisation, list-splitting by
- * `type`, capabilities side-channel, and 401/403 → `denied` semantics.
+ * `type`, capabilities side-channel, and 401/403/404 → `denied` semantics.
  *
  * Stateless: every method is a fresh request. The Vue composable layer
  * holds reactive state; this class only translates intent → HTTP.
@@ -108,8 +108,8 @@ export class PresetsClient {
    * `(app, tableKey)`. By default also fetches `capabilities` in parallel —
    * pass `{ capabilities: false }` for refresh-after-mutation calls (fav
    * toggle, default change, save/save-as, public toggle, rename, delete)
-   * where role-derived capabilities can't have changed. Auth errors
-   * (401/403) collapse to `denied: true` with empty data so the UI hides
+   * where role-derived capabilities can't have changed. Unavailable
+   * responses (401/403/404) collapse to `denied: true` with empty data so the UI hides
    * itself silently.
    */
   async list(opts: { capabilities?: boolean } = {}): Promise<PresetsListResult> {
@@ -124,7 +124,7 @@ export class PresetsClient {
         this.client.query({ filter } as never) as unknown as Promise<AsPresetEntryRow[]>,
         fetchCapabilities
           ? this.loadCapabilities().catch((err) => {
-              if (isAuthError(err)) throw err;
+              if (isUnavailableError(err)) throw err;
               // Capabilities is best-effort — UI degrades gracefully when null.
               return null;
             })
@@ -144,7 +144,7 @@ export class PresetsClient {
         denied: false,
       };
     } catch (err) {
-      if (isAuthError(err)) {
+      if (isUnavailableError(err)) {
         return { presets: [], userConf: null, capabilities: null, denied: true };
       }
       throw err;
@@ -265,9 +265,21 @@ export class PresetsHttpError extends Error {
   }
 }
 
-/** True for HTTP 401/403 across both `ClientError` and `PresetsHttpError`. */
-export function isAuthError(err: unknown): boolean {
-  if (err instanceof ClientError && (err.status === 401 || err.status === 403)) return true;
-  if (err instanceof PresetsHttpError && (err.status === 401 || err.status === 403)) return true;
-  return false;
+/**
+ * True when the presets/app-prefs surface is simply not available to this
+ * client: HTTP 401/403 (not signed in / not permitted) or 404 (the
+ * controller is not mounted on this server). All three collapse to
+ * `denied: true` — the UI hides itself silently instead of surfacing an
+ * error. Covers both `ClientError` and `PresetsHttpError`.
+ */
+export function isUnavailableError(err: unknown): boolean {
+  const status =
+    err instanceof ClientError || err instanceof PresetsHttpError ? err.status : undefined;
+  return status === 401 || status === 403 || status === 404;
 }
+
+/**
+ * @deprecated Renamed to `isUnavailableError` in 0.1.133 — it also covers
+ * 404 (feature not mounted), not just auth failures.
+ */
+export const isAuthError = isUnavailableError;

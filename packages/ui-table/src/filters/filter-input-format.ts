@@ -4,12 +4,21 @@ import { conditionsForType } from "./filter-conditions-map";
 
 /**
  * Coerce a raw string value to the appropriate JS type for the column.
- * Number columns get numeric values; everything else stays as string.
+ * Number columns get numeric values, boolean columns understand the
+ * `true` / `false` vocabulary (case-insensitive) so the condition carries a
+ * real boolean and round-trips through the URL as one. Anything else stays
+ * a string. Since 0.1.133 for booleans.
  */
-function coerceValue(raw: string, columnType: ColumnFilterType): string | number {
+function coerceValue(raw: string, columnType: ColumnFilterType): string | number | boolean {
   if (columnType === "number") {
     const n = Number(raw);
     return Number.isNaN(n) ? raw : n;
+  }
+  if (columnType === "boolean") {
+    const lower = raw.toLowerCase();
+    if (lower === "true") return true;
+    if (lower === "false") return false;
+    return raw;
   }
   return raw;
 }

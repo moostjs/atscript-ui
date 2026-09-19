@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { stateToUrlQueryString, urlQueryStringToState } from "./url-query";
+import { stateToUrlQueryString, urlQueryConsumesKey, urlQueryStringToState } from "./url-query";
 import { uniqueryFilterToFieldFilters } from "../filters/uniquery-to-filters";
 import { filtersToUniqueryFilter } from "../filters/filters-to-uniquery";
 import type { FieldFilters } from "../filters/filter-types";
+import { parseFilterInput } from "../filters/filter-input-format";
 
 const DEFAULTS = { defaultItemsPerPage: 50 };
 
@@ -302,6 +303,38 @@ describe("round-trip — filters via Uniquery encoder + URL bridge", () => {
     expect(roundTrip({ note: [{ type: "notNull", value: [] }] })).toEqual({
       note: [{ type: "notNull", value: [] }],
     });
+  });
+
+  // Regression: a boolean column filter typed as `false` used to serialize as
+  // the quoted string "false" and match nothing.
+  it("boolean values stay booleans", () => {
+    expect(roundTrip({ archived: [{ type: "eq", value: [true] }] })).toEqual({
+      archived: [{ type: "eq", value: [true] }],
+    });
+    expect(roundTrip({ archived: [{ type: "eq", value: [false] }] })).toEqual({
+      archived: [{ type: "eq", value: [false] }],
+    });
+    expect(roundTrip({ archived: [{ type: "ne", value: [false] }] })).toEqual({
+      archived: [{ type: "ne", value: [false] }],
+    });
+  });
+});
+
+describe("boolean filter input → URL → state", () => {
+  it("round-trips a typed `false` as a real boolean", () => {
+    for (const [text, expected] of [
+      ["true", true],
+      ["false", false],
+    ] as const) {
+      const cond = parseFilterInput(text, "boolean")!;
+      expect(cond.value).toEqual([expected]);
+      const url = stateToUrlQueryString(
+        { filters: { archived: [cond] }, sorters: [], searchTerm: "" },
+        DEFAULTS,
+      );
+      const parsed = urlQueryStringToState(url, { knownFields: ["archived"] });
+      expect(parsed.filters).toEqual({ archived: [{ type: "eq", value: [expected] }] });
+    }
   });
 });
 
@@ -635,5 +668,33 @@ describe("urlQuerySync — round-trip symmetry (echo guard precondition)", () =>
     };
     expect(stateToUrlQueryString(FULL_STATE, { ...DEFAULTS, sync })).toBe("");
     expect(reEncode(FULL_STATE, sync)).toBe("");
+  });
+});
+
+// The ownership rule the `useTableUrlQuery` router bridge reads and writes
+// by: it must match what this parser actually consumes, or the bridge either
+// eats a host key or leaves its own behind.
+describe("urlQueryConsumesKey", () => {
+  it("claims only the $controls the parser reads", () => {
+    for (const key of ["$sort", "$search", "$relevance", "$skip"]) {
+      expect(urlQueryConsumesKey(key)).toBe(true);
+    }
+    // `$limit` is deliberately not read back (page size is the recipient's),
+    // and an unknown control belongs to the page.
+    expect(urlQueryConsumesKey("$limit")).toBe(false);
+    expect(urlQueryConsumesKey("$weird")).toBe(false);
+  });
+
+  it("claims operator-bearing filter keys", () => {
+    for (const key of ["total>100", "total<=5", "name~foo", "status!=x"]) {
+      expect(urlQueryConsumesKey(key)).toBe(true);
+    }
+  });
+
+  it("leaves a bare key to the page until the bridge writes it", () => {
+    // `status=active` could equally be a host flag — indistinguishable
+    // without the table definition.
+    expect(urlQueryConsumesKey("status")).toBe(false);
+    expect(urlQueryConsumesKey("tab")).toBe(false);
   });
 });

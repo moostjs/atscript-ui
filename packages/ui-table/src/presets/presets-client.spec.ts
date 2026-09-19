@@ -3,7 +3,7 @@ import type { Client } from "@atscript/db-client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AsPresetEntryRow } from "./preset-data-types";
-import { PresetsClient, isAuthError } from "./presets-client";
+import { PresetsClient, PresetsHttpError, isUnavailableError } from "./presets-client";
 
 interface MockClient {
   query: ReturnType<typeof vi.fn>;
@@ -30,7 +30,7 @@ function makeMockFetch(impl: (url: string, init: RequestInit) => Response | Prom
   }) as unknown as typeof globalThis.fetch;
 }
 
-function authError(status: 401 | 403 | 500) {
+function authError(status: 401 | 403 | 404 | 500) {
   return new ClientError(status, { message: "x", statusCode: status, errors: [] });
 }
 
@@ -108,6 +108,28 @@ describe("PresetsClient.list", () => {
     const client = makeMockClient();
     client.query.mockRejectedValue(authError(403));
     const sut = build(client);
+    const result = await sut.list();
+    expect(result.denied).toBe(true);
+  });
+
+  it("collapses to denied=true on 404 (controller not mounted)", async () => {
+    const client = makeMockClient();
+    client.query.mockRejectedValue(authError(404));
+    const sut = build(client);
+    const result = await sut.list();
+    expect(result).toEqual({
+      presets: [],
+      userConf: null,
+      capabilities: null,
+      denied: true,
+    });
+  });
+
+  it("collapses to denied=true when capabilities returns 404", async () => {
+    const client = makeMockClient();
+    client.query.mockResolvedValue([]);
+    const fetchImpl = makeMockFetch(() => new Response("not found", { status: 404 }));
+    const sut = build(client, fetchImpl);
     const result = await sut.list();
     expect(result.denied).toBe(true);
   });
@@ -310,15 +332,22 @@ describe("PresetsClient construction", () => {
   });
 });
 
-describe("isAuthError", () => {
-  it("recognises ClientError 401/403", () => {
-    expect(isAuthError(authError(401))).toBe(true);
-    expect(isAuthError(authError(403))).toBe(true);
-    expect(isAuthError(authError(500))).toBe(false);
+describe("isUnavailableError", () => {
+  it("recognises ClientError 401/403/404", () => {
+    expect(isUnavailableError(authError(401))).toBe(true);
+    expect(isUnavailableError(authError(403))).toBe(true);
+    expect(isUnavailableError(authError(404))).toBe(true);
+    expect(isUnavailableError(authError(500))).toBe(false);
+  });
+
+  it("recognises PresetsHttpError 401/403/404", () => {
+    expect(isUnavailableError(new PresetsHttpError(401, "x"))).toBe(true);
+    expect(isUnavailableError(new PresetsHttpError(404, "x"))).toBe(true);
+    expect(isUnavailableError(new PresetsHttpError(500, "x"))).toBe(false);
   });
 
   it("returns false for plain Error", () => {
-    expect(isAuthError(new Error("network"))).toBe(false);
-    expect(isAuthError(null)).toBe(false);
+    expect(isUnavailableError(new Error("network"))).toBe(false);
+    expect(isUnavailableError(null)).toBe(false);
   });
 });

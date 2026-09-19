@@ -9,6 +9,10 @@ import type {
  * Convert in-memory dict-form snapshot to the wire form persisted on the
  * server. Entries-arrays are sorted by `field` so consumers (server-side
  * aspect derivation, dirty detection, equality checks) see a stable order.
+ *
+ * Empty aspects round-trip as empty (since 0.1.133): a saved view with no
+ * filters owns `filterOps` and clears them on apply, which is not the same
+ * thing as a view that never claimed the aspect.
  */
 export function toWireSnapshot(snapshot: PresetSnapshot): PresetSnapshotWire {
   const wire: PresetSnapshotWire = {};
@@ -20,7 +24,9 @@ export function toWireSnapshot(snapshot: PresetSnapshot): PresetSnapshotWire {
       for (const field of Object.keys(columnWidths).toSorted()) {
         entries.push({ field, width: columnWidths[field] });
       }
-      if (entries.length > 0) columns.columnWidths = entries;
+      // Empty is meaningful: an owned-but-empty aspect CLEARS state on apply,
+      // while an absent one leaves it alone. Never collapse one into the other.
+      columns.columnWidths = entries;
     }
     wire.columns = columns;
   }
@@ -30,7 +36,7 @@ export function toWireSnapshot(snapshot: PresetSnapshot): PresetSnapshotWire {
     for (const field of Object.keys(snapshot.filterOps).toSorted()) {
       entries.push({ field, conditions: snapshot.filterOps[field] });
     }
-    if (entries.length > 0) wire.filterOps = entries;
+    wire.filterOps = entries;
   }
   if (snapshot.sorters) wire.sorters = snapshot.sorters;
   if (snapshot.itemsPerPage !== undefined) wire.itemsPerPage = snapshot.itemsPerPage;
@@ -42,7 +48,7 @@ export function fromWireSnapshot(wire: PresetSnapshotWire): PresetSnapshot {
   if (wire.columns) {
     const { columnNames, columnWidths } = wire.columns;
     const columns: NonNullable<PresetSnapshot["columns"]> = { columnNames };
-    if (columnWidths && columnWidths.length > 0) {
+    if (columnWidths) {
       const dict: Record<string, string> = {};
       for (const entry of columnWidths) dict[entry.field] = entry.width;
       columns.columnWidths = dict;
@@ -50,7 +56,7 @@ export function fromWireSnapshot(wire: PresetSnapshotWire): PresetSnapshot {
     snapshot.columns = columns;
   }
   if (wire.filters) snapshot.filters = wire.filters;
-  if (wire.filterOps && wire.filterOps.length > 0) {
+  if (wire.filterOps) {
     const dict: PresetSnapshot["filterOps"] = {};
     for (const entry of wire.filterOps) dict[entry.field] = entry.conditions;
     snapshot.filterOps = dict;

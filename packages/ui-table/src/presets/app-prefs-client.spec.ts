@@ -31,7 +31,7 @@ function build(client: MockClient) {
   });
 }
 
-function authError(status: 401 | 403) {
+function authError(status: 401 | 403 | 404 | 500) {
   return new ClientError(status, { message: "x", statusCode: status, errors: [] });
 }
 
@@ -82,6 +82,21 @@ describe("AppPrefsClient.load", () => {
     const sut = build(client);
     const result = await sut.load();
     expect(result.denied).toBe(true);
+  });
+
+  it("collapses to denied=true on 404 (controller not mounted)", async () => {
+    const client = makeMockClient();
+    client.query.mockRejectedValue(authError(404));
+    const sut = build(client);
+    const result = await sut.load();
+    expect(result).toEqual({ row: null, prefs: null, denied: true });
+  });
+
+  it("rethrows a 500", async () => {
+    const client = makeMockClient();
+    client.query.mockRejectedValue(authError(500));
+    const sut = build(client);
+    await expect(sut.load()).rejects.toThrow();
   });
 
   it("rethrows non-auth errors", async () => {

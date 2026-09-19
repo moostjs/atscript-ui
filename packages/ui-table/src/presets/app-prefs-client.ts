@@ -4,7 +4,7 @@ import type { FilterExpr } from "@uniqu/core";
 
 import type { AppConfData, AsPresetEntryRow } from "./preset-data-types";
 import { appConfId } from "./preset-id";
-import { isAuthError } from "./presets-client";
+import { isUnavailableError } from "./presets-client";
 
 /**
  * Configuration for an `AppPrefsClient`. App-wide user prefs (`appConf`)
@@ -25,7 +25,7 @@ export interface AppPrefsLoadResult {
   row: AsPresetEntryRow | null;
   /** Convenience accessor for `row.data` (the typed prefs payload), or `null`. */
   prefs: AppConfData | null;
-  /** True when the controller responded 401/403. */
+  /** True when the controller responded 401/403/404 (not mounted). */
   denied: boolean;
 }
 
@@ -65,7 +65,7 @@ export class AppPrefsClient {
       const prefs = row ? ((row.data ?? null) as AppConfData | null) : null;
       return { row, prefs, denied: false };
     } catch (err) {
-      if (isAuthError(err)) {
+      if (isUnavailableError(err)) {
         return { row: null, prefs: null, denied: true };
       }
       throw err;
