@@ -112,6 +112,10 @@ export interface AsFormPatchHandle {
  *
  * - captures a DEEP CLONE of the wrapped form-data the moment tracking becomes
  *   active (and, if data is not yet available, when it first arrives),
+ * - re-captures automatically when the container's `value` is replaced by
+ *   identity while the form is still CLEAN (since 0.1.134) — the fetch-then-fill
+ *   `formData.value = row` on a form seeded with `createAsFormDef` defaults; a
+ *   DIRTY swap keeps the old baseline and still needs an explicit rebase,
  * - re-baselines on `reset()` (the form's own reset path calls `rebase()`),
  * - exposes `rebase()` so a consumer can re-baseline after a successful save.
  *
@@ -188,17 +192,38 @@ export function createAsFormPatch(
   // first `{ value: … }` container (fetch-then-fill `:form-data`). Watch the
   // wrapped `value` so we react when an external ref resolves from
   // `undefined`/`{}` to a real container.
+  //
+  // Since 0.1.134 the same watcher also re-captures when the container's
+  // `value` is REPLACED BY IDENTITY while the form is still CLEAN — the
+  // `formData.value = row` that follows a fetch on a form seeded by
+  // `createAsFormDef` (whose defaults object is a perfectly real `{ value: … }`
+  // container, so the deferred branch above never applies). A clean swap is
+  // unambiguously a new baseline: there is nothing the user typed that adopting
+  // it could lose, and keeping the defaults baseline would mark every field
+  // dirty and turn the first `getPatch()` into a whole-row write. A DIRTY swap
+  // stays ambiguous (local edits must be preserved or dropped deliberately) and
+  // still requires an explicit `rebase()` / `rebaseOnto()`.
+  //
+  // Dirtiness is measured against the PREVIOUS container contents, not the live
+  // ones: by the time the callback runs the new value is already in place, and
+  // diffing that against the old baseline would report "dirty" for exactly the
+  // swap we are trying to absorb. `flush: 'sync'` keeps the new baseline
+  // observable to a `getPatch()` issued in the same tick as the assignment.
   capture();
-  if (baseline === undefined) {
-    const stop = watch(
-      () => getData().value,
-      () => {
-        if (baseline !== undefined) return;
+  watch(
+    () => getData().value,
+    (next, prev) => {
+      if (next === prev) return;
+      if (baseline === undefined) {
         capture();
-        if (baseline !== undefined) stop();
-      },
-    );
-  }
+        return;
+      }
+      // Clean swap → adopt. Dirty swap → keep the baseline (and the edits).
+      if (prev !== undefined && buildFormDiff(def(), baseline, { value: prev }).isDirty) return;
+      capture();
+    },
+    { flush: "sync" },
+  );
 
   // Deep dependency on the live form data. `buildFormDiff`'s read-walk covers
   // most leaves, but its keyed-array `$insert` branch pushes a freshly-inserted

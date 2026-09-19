@@ -18,7 +18,6 @@ import {
   createFieldValidator,
   buildGridClasses,
   resolveGridSpec,
-  extractValueHelp,
   getCurrencyDecimals,
   getCurrencyDisplayParts,
   DB_AMOUNT_CURRENCY,
@@ -194,7 +193,9 @@ const suffixIcon = getFieldMeta(prop, UI_FORM_SUFFIX_ICON);
 // ── Resolved annotation reads — done once at setup, surfaced to defaults ──
 // Defaults read these as plain props instead of touching `field.prop`,
 // so a custom swap component does not need to know about annotations.
-const valueHelp = extractValueHelp(prop);
+// Value help is resolved while the form def is built (`FormFieldDef.valueHelpInfo`),
+// so the `ref` chain is walked exactly once per field, not again per mount.
+const valueHelp = props.field.valueHelpInfo;
 
 // ── Measurement / adornment resolution (sibling-ref aware) ────
 // Raw annotation reads (one-shot — these are static keys).

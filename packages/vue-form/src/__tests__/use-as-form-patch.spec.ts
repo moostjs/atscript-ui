@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mount } from "@vue/test-utils";
 import { computed, defineComponent, h, isReactive, nextTick, reactive, ref } from "vue";
-import { createFormDef } from "@atscript/ui";
+import { createFormData, createFormDef } from "@atscript/ui";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { useAsForm, type UseAsFormReturn } from "../composables/use-as-form";
 import { useAsFormPatch } from "../composables/use-as-form-patch";
@@ -654,5 +654,84 @@ describe("AsForm instance — defineExpose surface (track-changes OFF)", () => {
     expect(vm.getPatch()).toEqual({});
     expect(vm.getChanges()).toEqual([]);
     expect(() => vm.rebase()).not.toThrow();
+  });
+});
+
+describe("useAsForm({ trackChanges }) — baseline re-capture on a CLEAN container swap", () => {
+  /**
+   * Mounts a tracked form over a container SEEDED WITH DEFAULTS (exactly what
+   * `createAsFormDef` hands a page), i.e. a real `{ value: … }` container from
+   * the first tick — so the deferred "wait for data" branch never applies and
+   * only the clean-swap re-capture can produce the right baseline.
+   */
+  function mountWithDefaults(type: TAtscriptAnnotatedType) {
+    const def = createFormDef(type);
+    const formData = reactive(createFormData(type)) as { value: Record<string, unknown> };
+    let api!: UseAsFormReturn;
+    const Custom = defineComponent({
+      setup() {
+        api = useAsForm({
+          def: () => def,
+          formData: () => formData,
+          types: () => createDefaultTypes(),
+          trackChanges: () => true,
+        });
+        return () => h("form");
+      },
+    });
+    mount(Custom);
+    return {
+      formData,
+      get api() {
+        return api;
+      },
+    };
+  }
+
+  it("adopts a row assigned after mount — an unchanged submit produces {} and no $cas", async () => {
+    const { PatchVersionedForm } = await import("./fixtures/patch-forms.as");
+    const { formData, api } = mountWithDefaults(PatchVersionedForm);
+
+    // The seeded defaults are a real container, so the tracker baselined them.
+    expect(formData.value).toBeDefined();
+
+    // Fetch resolves and fills the SAME container — the clean swap re-baselines.
+    formData.value = { name: "Alice", version: 3 };
+    await nextTick();
+
+    expect(api.patch!.isDirty.value).toBe(false);
+    expect(api.patch!.getPatch()).toEqual({});
+
+    // And a later edit still diffs against the LOADED row, $cas included.
+    formData.value.name = "Bob";
+    await nextTick();
+    expect(api.patch!.getPatch()).toEqual({ name: "Bob", $cas: { version: 3 } });
+  });
+
+  it("keeps the old baseline when the container is swapped on a DIRTY form", async () => {
+    const { PatchScalarForm } = await import("./fixtures/patch-forms.as");
+    const { formData, api } = mountWithDefaults(PatchScalarForm);
+
+    formData.value = { name: "Alice" };
+    await nextTick();
+    expect(api.patch!.isDirty.value).toBe(false);
+
+    // Local edit → dirty. The swap below is now ambiguous, so the baseline must
+    // survive it and only an explicit rebase may move it.
+    formData.value.name = "Bob";
+    await nextTick();
+    expect(api.patch!.isDirty.value).toBe(true);
+
+    formData.value = { name: "Carol" };
+    await nextTick();
+
+    expect(api.patch!.isDirty.value).toBe(true);
+    // Diffed against the ORIGINAL ("Alice") baseline, not the swapped-in row.
+    expect(api.patch!.getPatch()).toEqual({ name: "Carol" });
+
+    // The explicit escape hatch still works.
+    api.patch!.rebase();
+    await nextTick();
+    expect(api.patch!.isDirty.value).toBe(false);
   });
 });
