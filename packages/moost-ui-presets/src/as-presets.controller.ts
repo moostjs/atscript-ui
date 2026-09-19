@@ -60,7 +60,9 @@ export abstract class AsPresetsController<
   }
 
   @Get("capabilities")
-  async capabilities(@Query() query: AsCapabilitiesQuery): Promise<PresetCapabilities> {
+  // `capabilities` is an instance property of the base controller since
+  // @atscript/moost-db 0.1.128 (field capability index); the route stays `GET capabilities`.
+  async getCapabilities(@Query() query: AsCapabilitiesQuery): Promise<PresetCapabilities> {
     const user = await this.getCurrentUser();
     return buildCapabilities(query.app, query.tableKey, user, this.hooks);
   }

@@ -40,7 +40,7 @@ abstract class AsPresetsController<
   protected getUserLabel(user: string): Promise<string | undefined>;
 
   @Get("capabilities")
-  capabilities(query: AsCapabilitiesQuery): Promise<PresetCapabilities>;
+  getCapabilities(query: AsCapabilitiesQuery): Promise<PresetCapabilities>; // route: GET capabilities (renamed from `capabilities` in 0.1.133 — the base controller owns that property now)
 }
 ```
 
