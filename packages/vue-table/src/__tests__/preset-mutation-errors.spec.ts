@@ -86,6 +86,26 @@ function mountWithPreset(component: unknown, preset: PresetSurface) {
   return wrapper;
 }
 
+/** Open the picker menu and step into the inline Save-as popover. */
+async function openSaveAsPopover(): Promise<void> {
+  document.querySelector<HTMLElement>(".as-preset-picker-trigger")!.click();
+  await flushPromises();
+  [...document.querySelectorAll<HTMLElement>(".as-preset-picker-action")]
+    .find((el) => el.textContent?.includes("Save as"))!
+    .click();
+  await flushPromises();
+}
+
+/** Type a preset name into the open popover and hit Save. */
+async function submitSaveAs(label: string): Promise<void> {
+  const input = document.querySelector<HTMLInputElement>(".as-preset-picker-popover-input")!;
+  input.value = label;
+  input.dispatchEvent(new Event("input"));
+  await flushPromises();
+  document.querySelector<HTMLElement>(".as-preset-picker-popover-save")!.click();
+  await flushPromises();
+}
+
 describe("<AsPresetPicker> — mutation failures", () => {
   it("keeps the popover open and renders the message when save-as fails", async () => {
     // Mirrors the real slice: the mutator RECORDS on `lastError` (the single
@@ -99,49 +119,36 @@ describe("<AsPresetPicker> — mutation failures", () => {
     preset = makePresetSurface({ saveAs: saveAs as never });
     mountWithPreset(AsPresetPicker, preset);
 
-    const trigger = document.querySelector<HTMLElement>(".as-preset-picker-trigger")!;
-    trigger.click();
-    await flushPromises();
-
-    const saveAsItem = [...document.querySelectorAll<HTMLElement>(".as-preset-picker-action")].find(
-      (el) => el.textContent?.includes("Save as"),
-    )!;
-    saveAsItem.click();
-    await flushPromises();
-
-    const input = document.querySelector<HTMLInputElement>(".as-preset-picker-popover-input")!;
-    input.value = "My view";
-    input.dispatchEvent(new Event("input"));
-    await flushPromises();
-
-    document.querySelector<HTMLElement>(".as-preset-picker-popover-save")!.click();
-    await flushPromises();
+    await openSaveAsPopover();
+    await submitSaveAs("My view");
 
     expect(saveAs).toHaveBeenCalledTimes(1);
     // Popover still open…
     expect(document.querySelector(".as-preset-picker-popover-input")).not.toBeNull();
     // …and the reason is on screen for a screen reader too.
     const alert = document.querySelector<HTMLElement>('.as-preset-picker-error[role="alert"]')!;
-    expect(alert).not.toBeNull();
     expect(alert.textContent).toContain("already exists");
+
+    // Layout contract, not styling: the Cancel/Save pair and the failure note
+    // are SIBLINGS of the scrolling region, never inside it. When one box both
+    // caps and scrolls, they ride out of view on a short viewport — so the
+    // reason a save just failed can only be read by scrolling to it.
+    const body = document.querySelector(".as-preset-picker-popover-body")!;
+    const inner = document.querySelector(".as-preset-picker-popover-inner")!;
+    const footer = document.querySelector(".as-preset-picker-popover-footer")!;
+    expect(body.querySelector(".as-preset-picker-popover-input")).not.toBeNull();
+    for (const pinned of [footer, alert]) {
+      expect(body.contains(pinned)).toBe(false);
+      expect(inner.contains(pinned)).toBe(true);
+    }
   });
 
   it("closes the popover on success", async () => {
     const preset = makePresetSurface();
     mountWithPreset(AsPresetPicker, preset);
 
-    document.querySelector<HTMLElement>(".as-preset-picker-trigger")!.click();
-    await flushPromises();
-    [...document.querySelectorAll<HTMLElement>(".as-preset-picker-action")]
-      .find((el) => el.textContent?.includes("Save as"))!
-      .click();
-    await flushPromises();
-    const input = document.querySelector<HTMLInputElement>(".as-preset-picker-popover-input")!;
-    input.value = "My view";
-    input.dispatchEvent(new Event("input"));
-    await flushPromises();
-    document.querySelector<HTMLElement>(".as-preset-picker-popover-save")!.click();
-    await flushPromises();
+    await openSaveAsPopover();
+    await submitSaveAs("My view");
 
     expect(document.querySelector(".as-preset-picker-popover-input")).toBeNull();
     expect(document.querySelector(".as-preset-picker-error")).toBeNull();

@@ -77,14 +77,36 @@ describe("dropdown/popover viewport caps", () => {
 
   // Every panel that composes the shared `popperCapped` recipe (table/_shared).
   it("the popper-capped panels bound their height to the popper space", async () => {
-    for (const token of [
-      "as-preset-picker-popover",
-      "as-preset-picker-menu",
-      "as-filters-overflow",
-    ]) {
+    for (const token of ["as-preset-picker-menu", "as-filters-overflow"]) {
       const decls = allDeclarations(await parse(token));
       expect(decls["max-height"]).toBe("var(--reka-popper-available-height)");
       expect(decls["overflow-y"]).toBe("auto");
+    }
+  });
+
+  // The Save-as popover caps and scrolls in two different boxes. When one box
+  // does both, the footer it contains rides the scroll out of view on a short
+  // viewport and the Cancel/Save pair can only be reached by scrolling.
+  it("the save-as popover caps on the root but scrolls in the body", async () => {
+    const root = allDeclarations(await parse("as-preset-picker-popover"));
+    expect(root["max-height"]).toBe("var(--reka-popper-available-height)");
+    // The shorthand, not `overflow-y` — an `overflow-auto` regression on the
+    // root is exactly the bug, and it would not touch the longhand.
+    expect(root.overflow).toBe("hidden");
+    expect(root.display).toBe("flex");
+    expect(root["flex-direction"]).toBe("column");
+
+    const body = allDeclarations(await parse("as-preset-picker-popover-body"));
+    expect(body["overflow-y"]).toBe("auto");
+    // `min-height: 0` on the body AND on the wrapper between it and the
+    // capped root: either one missing and the body stops shrinking, so the
+    // footer is pushed past the cap and `overflow: hidden` clips it away.
+    expect(body["min-height"]).toBe("0");
+    expect(allDeclarations(await parse("as-preset-picker-popover-inner"))["min-height"]).toBe("0");
+
+    // ...and the pinned rows must not be shrunk in its place.
+    for (const token of ["as-preset-picker-popover-title", "as-preset-picker-popover-footer"]) {
+      expect(allDeclarations(await parse(token))["flex-shrink"]).toBe("0");
     }
   });
 });

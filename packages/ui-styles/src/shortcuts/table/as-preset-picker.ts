@@ -1,5 +1,5 @@
 import { defineShortcuts } from "vunor/theme";
-import { inlineErrorText, popperCapped } from "./_shared";
+import { inlineErrorText, panelBodyShrink, popperCapShell, popperCapped } from "./_shared";
 
 /**
  * `<AsPresetPicker>` Tier-1 dropdown shortcuts. Built on `DropdownMenuRoot`
@@ -104,13 +104,14 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // wrapper — the footer owns its own `py-$m` so the space above and below
   // the button row is symmetric (the wrapper's bottom padding would
   // otherwise stack on the footer's bottom and break it).
-  // `popperCapped` here means the footer's Cancel/Save pair — a child of
-  // `-popover-inner`, which this stylesheet cannot lift out of the scrolled
-  // content — is reached by scrolling on a short viewport rather than being
-  // clipped away entirely.
-  "as-preset-picker-popover": `scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em] ${popperCapped}`,
-  "as-preset-picker-popover-inner": "flex flex-col gap-$m",
-  "as-preset-picker-popover-title": "text-body-l font-600 m-0",
+  //
+  // The viewport cap lives here but the SCROLL does not — it sits on
+  // `-popover-body`, so a short viewport or a long aspect list scrolls the
+  // form while the title, the error note and the Cancel/Save footer stay put.
+  "as-preset-picker-popover": `scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em] ${popperCapShell}`,
+  "as-preset-picker-popover-inner": "flex flex-col gap-$m min-h-0",
+  "as-preset-picker-popover-body": `gap-$m ${panelBodyShrink}`,
+  "as-preset-picker-popover-title": "text-body-l font-600 m-0 shrink-0",
   "as-preset-picker-popover-field": "flex flex-col gap-$xs",
   // Bold body-color labels ("Name", "Save:", etc.) — match reference: not muted.
   "as-preset-picker-popover-label": "text-body font-600 text-current",
@@ -136,7 +137,7 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // gives equal breathing room above + below the button row, owning the
   // popover's bottom margin entirely (wrapper has only `pt-$m`).
   "as-preset-picker-popover-footer":
-    "flex items-center justify-end gap-$s py-$m -mx-$l px-$l border-t-1",
+    "flex items-center justify-end gap-$s py-$m -mx-$l px-$l border-t-1 shrink-0",
   // Inline mutation failure (save / save-as); `role="alert"` in the markup,
   // so this is presentation only.
   "as-preset-picker-error": inlineErrorText,

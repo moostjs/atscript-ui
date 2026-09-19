@@ -1355,6 +1355,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-preset-picker-popover-aspect",
     "as-preset-picker-popover-aspect-icon",
     "as-preset-picker-popover-aspects",
+    "as-preset-picker-popover-body",
     "as-preset-picker-popover-cancel",
     "as-preset-picker-popover-field",
     "as-preset-picker-popover-footer",

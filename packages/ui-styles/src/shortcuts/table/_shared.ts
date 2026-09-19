@@ -113,4 +113,23 @@ export const inlineErrorText = "scope-error text-current-hl text-caption min-w-0
  * near the bottom of the screen) renders past the viewport with no way to
  * reach the rest of it.
  */
-export const popperCapped = "max-h-[var(--reka-popper-available-height)] overflow-y-auto";
+export const popperCap = "max-h-[var(--reka-popper-available-height)]";
+
+/** {@link popperCap} for a panel that is ALL scrollable content. */
+export const popperCapped = `${popperCap} overflow-y-auto`;
+
+/**
+ * {@link popperCap} for a panel with pinned chrome. The cap and the scroll
+ * must sit in different boxes: weld them together and whatever the panel
+ * pins — a footer, an error note — scrolls away with the content it was
+ * meant to stay above. The scrolling child carries {@link panelBodyShrink}.
+ */
+export const popperCapShell = `${popperCap} flex flex-col overflow-hidden`;
+
+/**
+ * Scrolling middle region of a {@link popperCapShell}. `min-h-0` is
+ * load-bearing: without it the box refuses to shrink below its content and
+ * pushes its pinned siblings past the cap — which `overflow-hidden` then
+ * clips away rather than letting anyone scroll to them.
+ */
+export const panelBodyShrink = "flex flex-col min-h-0 overflow-y-auto";

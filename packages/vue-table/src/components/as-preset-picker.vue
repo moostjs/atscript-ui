@@ -407,44 +407,56 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
              item. Escape/Enter still bubble so `@escape-key-down` fires. -->
         <div class="as-preset-picker-popover-inner" @keydown.tab.stop>
           <h3 class="as-preset-picker-popover-title">Save as new preset</h3>
-          <div class="as-preset-picker-popover-field">
-            <label class="as-preset-picker-popover-label" for="as-preset-picker-label">Name</label>
-            <input
-              id="as-preset-picker-label"
-              ref="saveAsInputRef"
-              v-model="saveAsLabel"
-              class="as-preset-picker-popover-input"
-              type="text"
-              @keydown.enter.prevent="commitSaveAs"
-            />
-          </div>
-          <div class="as-preset-picker-popover-aspects">
-            <span class="as-preset-picker-popover-label">Save:</span>
-            <label v-for="a in aspects" :key="a" class="as-preset-picker-popover-aspect">
+          <!-- Only the form body scrolls. The title, the error note and the
+               Cancel/Save footer stay pinned, so a short viewport (or a long
+               aspect list) can never put the buttons — or the reason a save
+               just failed — out of reach behind a scroll. -->
+          <div class="as-preset-picker-popover-body">
+            <div class="as-preset-picker-popover-field">
+              <label class="as-preset-picker-popover-label" for="as-preset-picker-label"
+                >Name</label
+              >
               <input
-                type="checkbox"
-                :checked="saveAsAspectsMask[a] === true"
-                @change="(ev: Event) => toggleAspect(a, ev)"
+                id="as-preset-picker-label"
+                ref="saveAsInputRef"
+                v-model="saveAsLabel"
+                class="as-preset-picker-popover-input"
+                type="text"
+                @keydown.enter.prevent="commitSaveAs"
               />
-              <span
-                :class="[ASPECT_ICONS[a], 'as-preset-picker-popover-aspect-icon']"
-                aria-hidden="true"
-              />
-              {{ ASPECT_LABELS[a] }}
-            </label>
+            </div>
+            <div class="as-preset-picker-popover-aspects">
+              <span class="as-preset-picker-popover-label">Save:</span>
+              <label v-for="a in aspects" :key="a" class="as-preset-picker-popover-aspect">
+                <input
+                  type="checkbox"
+                  :checked="saveAsAspectsMask[a] === true"
+                  @change="(ev: Event) => toggleAspect(a, ev)"
+                />
+                <span
+                  :class="[ASPECT_ICONS[a], 'as-preset-picker-popover-aspect-icon']"
+                  aria-hidden="true"
+                />
+                {{ ASPECT_LABELS[a] }}
+              </label>
+            </div>
+            <template
+              v-if="
+                state.preset.capabilities.value === null ||
+                state.preset.capabilities.value.canPublish
+              "
+            >
+              <div class="as-preset-picker-popover-separator" />
+              <label class="as-preset-picker-popover-public">
+                <input v-model="saveAsPublic" type="checkbox" />
+                <span
+                  class="i-as-eye-off as-preset-picker-popover-aspect-icon"
+                  aria-hidden="true"
+                />
+                Make public
+              </label>
+            </template>
           </div>
-          <template
-            v-if="
-              state.preset.capabilities.value === null || state.preset.capabilities.value.canPublish
-            "
-          >
-            <div class="as-preset-picker-popover-separator" />
-            <label class="as-preset-picker-popover-public">
-              <input v-model="saveAsPublic" type="checkbox" />
-              <span class="i-as-eye-off as-preset-picker-popover-aspect-icon" aria-hidden="true" />
-              Make public
-            </label>
-          </template>
           <ErrorNote />
           <div class="as-preset-picker-popover-footer">
             <button type="button" class="as-preset-picker-popover-cancel" @click="cancelSaveAs">
