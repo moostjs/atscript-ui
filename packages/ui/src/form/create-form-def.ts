@@ -20,6 +20,7 @@ import {
   DB_AMOUNT_CURRENCY_REF,
   DB_UNIT,
   DB_UNIT_REF,
+  META_DESCRIPTION,
   META_LABEL,
   UI_FORM_COMPONENT,
   UI_FORM_FN_OPTIONS,
@@ -78,12 +79,8 @@ export function createFormDef(
     const originalProp = resolveOriginalProp(objectType, path) ?? prop;
     const kind = originalProp.type.kind;
 
-    // Flat objects (no label/component): skip, children render inline
-    if (kind === "object") {
-      const hasLabel = getFieldMeta(originalProp, META_LABEL) !== undefined;
-      const hasComponent = getFieldMeta(originalProp, UI_FORM_COMPONENT) !== undefined;
-      if (!hasLabel && !hasComponent) continue;
-    }
+    // Namespace objects: skip, children render inline
+    if (kind === "object" && !isStructuredObject(originalProp)) continue;
 
     // Nested arrays without component: unsupported
     if (kind === "array") {
@@ -296,6 +293,47 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
 }
 
 // ── Helpers ─────────────────────────────────────────────────
+
+/** Non-`ui.form.*` keys that still address the object itself. */
+const OBJECT_IDENTITY_KEYS = new Set<string>([META_LABEL, META_DESCRIPTION, UI_TYPE]);
+const UI_FORM_NS = "ui.form.";
+/** `ui.form.*` keys that place a field rather than give it an identity. */
+const UI_FORM_PLACEMENT_NS = "ui.form.grid.";
+
+/**
+ * Whether an object prop renders as a field of its own rather than being
+ * flattened into its parent.
+ *
+ * Any `@ui.form.*` annotation (plus `@meta.label` / `@meta.description` /
+ * `@ui.type`) means the author addressed the object itself, so it needs a
+ * field to carry that instruction to a renderer — a collapsible section, or
+ * whatever `@ui.form.component` / `@ui.form.type` names. An object with none
+ * of them is a pure namespace: it is dropped and its children render inline
+ * in the parent grid, which keeps DB-flattened structs (`addr.street` stored
+ * as `addr__street`) from growing chrome nobody asked for. `@db.*`,
+ * `@expect.*` and the rest of `@meta.*` stay out for exactly that reason —
+ * they are what such a struct carries.
+ *
+ * Placement keys (`@ui.form.order`, `@ui.form.grid.*`) are excluded: they
+ * position a field among its siblings, and a namespace has no position of its
+ * own — its children carry their own.
+ *
+ * A prefix rule rather than a list because the list was wrong the moment it
+ * was written. Matching on `@meta.label` and `@ui.form.component` alone left
+ * every other key to be read off a prop that never became a field: a
+ * `@meta.description` went missing, a `@ui.form.type` component silently
+ * never mounted, `@ui.form.pushDown` never pushed down, and — the one that
+ * mattered — `@ui.form.hidden` on a struct left every child on screen.
+ */
+function isStructuredObject(prop: TAtscriptAnnotatedType): boolean {
+  for (const key of prop.metadata.keys()) {
+    if (OBJECT_IDENTITY_KEYS.has(key)) return true;
+    if (!key.startsWith(UI_FORM_NS)) continue;
+    if (key === UI_FORM_ORDER || key.startsWith(UI_FORM_PLACEMENT_NS)) continue;
+    return true;
+  }
+  return false;
+}
 
 /** Resolves the original annotated type from the type hierarchy by path. */
 function resolveOriginalProp(

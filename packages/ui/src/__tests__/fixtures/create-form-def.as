@@ -102,6 +102,80 @@ export interface LabeledTypedNestedObject {
     address: LabeledTypedAddress
 }
 
+/// Inner with @meta.description only — kept, so the description renders.
+export interface DescribedNestedObject {
+    @meta.description 'Postal address'
+    address: {
+        street: string
+    }
+}
+
+/// Inner with @ui.form.type only — kept, so the named component mounts.
+export interface TypedNestedObject {
+    @ui.form.type 'address-card'
+    address: {
+        street: string
+    }
+}
+
+/// Inner with @ui.type only — same dispatch as @ui.form.type.
+export interface UiTypedNestedObject {
+    @ui.type 'address-card'
+    address: {
+        street: string
+    }
+}
+
+/// Inner with @ui.form.pushDown only — kept, so it can be partitioned
+/// into the below-submit grid.
+export interface PushedDownNestedObject {
+    @ui.form.pushDown
+    consent: {
+        accepted: boolean
+    }
+
+    name: string
+}
+
+/// Inner hidden via @ui.form.hidden — kept, so the whole struct hides.
+export interface HiddenNestedObject {
+    @ui.form.hidden
+    secret: {
+        token: string
+    }
+
+    visible: string
+}
+
+/// Inner with @ui.form.order only — order positions siblings, so it does
+/// NOT make a namespace object a field of its own.
+export interface OrderedNestedObject {
+    @ui.form.order 1
+    address: {
+        street: string
+    }
+
+    @ui.form.order 2
+    name: string
+}
+
+/// Same shape as FlatNestedObject, reached through a named interface —
+/// pins that inline literals and referenced interfaces behave identically.
+interface ReferencedAddress {
+    street: string
+    city: string
+}
+
+export interface ReferencedFlatNestedObject {
+    address: ReferencedAddress
+}
+
+/// Referenced interface with a prop-site @meta.label.
+export interface ReferencedLabeledNestedObject {
+    @meta.label 'Address'
+    address: ReferencedAddress
+}
+
 // ── Array fields ─────────────────────────────────────────────
 
 /// Object containing a plain string array.

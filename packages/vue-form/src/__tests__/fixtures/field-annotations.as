@@ -39,3 +39,22 @@ export interface NumberAdornedField {
     @ui.form.suffix '/hr'
     rate: number
 }
+
+/// A hidden nested STRUCT — the whole object, children included, must go.
+export interface HiddenObjectField {
+    @ui.form.hidden
+    credentials: {
+        token: string
+    }
+
+    visible: string
+}
+
+/// Same struct without the annotation — the namespace inlines its children.
+export interface PlainObjectField {
+    credentials: {
+        token: string
+    }
+
+    visible: string
+}

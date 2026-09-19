@@ -19,6 +19,30 @@ describe("AsField", () => {
     expect(field.attributes("style")).toContain("display: none");
   });
 
+  it("inlines an un-annotated nested object into the parent grid", async () => {
+    const { PlainObjectField } = await import("./fixtures/field-annotations.as");
+    const { wrapper } = mountForm(PlainObjectField);
+    expect(wrapper.find(".as-collapsible-section").exists()).toBe(false);
+    expect(wrapper.find('input[name="token"]').exists()).toBe(true);
+  });
+
+  // `@ui.form.hidden` on an OBJECT used to be read off a prop that never
+  // became a field: the struct inlined into the parent grid (as the test
+  // above shows it does un-annotated) and every child rendered in plain sight.
+  it("applies @ui.form.hidden to a nested object, children included", async () => {
+    const { HiddenObjectField } = await import("./fixtures/field-annotations.as");
+    const { wrapper } = mountForm(HiddenObjectField);
+
+    const section = wrapper.find(".as-collapsible-section");
+    expect(section.attributes("style")).toContain("display: none");
+    expect(section.find('input[name="token"]').exists()).toBe(true);
+
+    // The sibling field is outside the section and untouched.
+    const visible = wrapper.find('input[name="visible"]');
+    expect(visible.exists()).toBe(true);
+    expect(section.element.contains(visible.element)).toBe(false);
+  });
+
   it("applies @ui.form.disabled (input has disabled attribute)", async () => {
     const { DisabledField } = await import("./fixtures/field-annotations.as");
     const { wrapper } = mountForm(DisabledField);

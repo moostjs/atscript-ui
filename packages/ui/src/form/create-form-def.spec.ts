@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
+  UI_FORM_FN_HIDDEN,
   UI_FORM_TYPE,
 } from "../shared/annotation-keys";
 import { buildUnionVariants, createFormDef } from "./create-form-def";
@@ -24,7 +25,9 @@ import {
   DecimalPrefixRefObject,
   DecimalSuffixObject,
   DecimalUnitObject,
+  DescribedNestedObject,
   FlatNestedObject,
+  HiddenNestedObject,
   HiddenObject,
   LabeledNestedObject,
   LabeledTypedNestedObject,
@@ -36,12 +39,16 @@ import {
   NumberUnitObject,
   NumberUnitRefObject,
   ObjectWithOrder,
+  OrderedNestedObject,
+  PushedDownNestedObject,
   PartialOrderObject,
   PersonStringUnion,
   PhantomObject,
   PlainNumberObject,
   PureLiteralUnion,
   RadioTagObject,
+  ReferencedFlatNestedObject,
+  ReferencedLabeledNestedObject,
   RootArrayContainer,
   SelectTagObject,
   SelectTagWithUiType,
@@ -52,6 +59,8 @@ import {
   TimestampObject,
   TupleRgbPicker,
   TupleTwo,
+  TypedNestedObject,
+  UiTypedNestedObject,
   UnionWithFormType,
   VersionedObject,
 } from "../__tests__/fixtures/create-form-def.as";
@@ -155,7 +164,7 @@ describe("createFormDef", () => {
   });
 
   describe("nested objects", () => {
-    it("inlines flat objects without @meta.label or @ui.form.component", () => {
+    it("inlines an object that carries no annotation of its own", () => {
       const def = createFormDef(FlatNestedObject);
 
       // Children should appear at top level (address.street, address.city)
@@ -188,6 +197,75 @@ describe("createFormDef", () => {
       expect(addressField!.type).toBe("object");
       expect(isObjectField(addressField!)).toBe(true);
       expect(addressField!.customType).toBe("address-card");
+    });
+
+    // Each of the four below used to inline, which dropped the annotation
+    // on the floor: it was read off a prop that never became a field.
+    it("keeps object as structured field when @meta.description is present", () => {
+      const def = createFormDef(DescribedNestedObject);
+
+      expect(def.fields.find((f) => f.path === "address")).toBeDefined();
+      expect(def.fields.find((f) => f.path === "address.street")).toBeUndefined();
+    });
+
+    // Production treats the two as one `??` pair, so they are pinned as one.
+    it.each([
+      ["@ui.form.type", TypedNestedObject],
+      ["@ui.type", UiTypedNestedObject],
+    ])("keeps object as structured field when %s is present without a label", (_name, fixture) => {
+      const addressField = createFormDef(fixture).fields.find((f) => f.path === "address");
+      expect(addressField!.type).toBe("object");
+      expect(addressField!.customType).toBe("address-card");
+    });
+
+    it("keeps an object marked @ui.form.pushDown so it can be partitioned", () => {
+      const def = createFormDef(PushedDownNestedObject);
+
+      const consent = def.fields.find((f) => f.path === "consent");
+      expect(consent?.pushDown).toBe(true);
+      expect(def.pushDownFields.map((f) => f.path)).toEqual(["consent"]);
+      expect(def.mainFields.map((f) => f.path)).toEqual(["name"]);
+    });
+
+    it("keeps a hidden object as one field so the whole struct hides with it", () => {
+      const def = createFormDef(HiddenNestedObject);
+
+      expect(def.fields.find((f) => f.path === "secret")).toBeDefined();
+      // The children must not escape the hidden parent into the parent grid
+      expect(def.fields.find((f) => f.path === "secret.token")).toBeUndefined();
+      expect(def.fields.find((f) => f.path === "visible")).toBeDefined();
+    });
+
+    it("keeps an @ui.form.fn.hidden object as one field", () => {
+      // ui-fns declares `@ui.form.fn.hidden`, so it is absent from this
+      // build's `AtscriptMetadata` and cannot appear in an `.as` fixture here.
+      const inner = defineAnnotatedType("object").prop("token", prop(SimpleObject, "name")).$type;
+      inner.metadata.set(
+        UI_FORM_FN_HIDDEN as keyof AtscriptMetadata,
+        "(v, d) => !d.visible" as never,
+      );
+      const type = defineAnnotatedType("object").prop("secret", inner).$type;
+
+      const def = createFormDef(type);
+      expect(def.fields.find((f) => f.path === "secret")).toBeDefined();
+      expect(def.fields.find((f) => f.path === "secret.token")).toBeUndefined();
+    });
+
+    it("@ui.form.order alone does not turn a namespace object into a field", () => {
+      const def = createFormDef(OrderedNestedObject);
+
+      expect(def.fields.find((f) => f.path === "address")).toBeUndefined();
+      expect(def.fields.find((f) => f.path === "address.street")).toBeDefined();
+    });
+
+    it("treats a referenced interface exactly like an inline object literal", () => {
+      const inline = createFormDef(FlatNestedObject);
+      const referenced = createFormDef(ReferencedFlatNestedObject);
+
+      expect(referenced.fields.map((f) => f.path)).toEqual(inline.fields.map((f) => f.path));
+
+      const labeled = createFormDef(ReferencedLabeledNestedObject);
+      expect(labeled.fields.find((f) => f.path === "address")!.type).toBe("object");
     });
   });
 
