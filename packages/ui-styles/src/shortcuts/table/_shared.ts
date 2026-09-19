@@ -97,3 +97,20 @@ export function buildActionsIntentVariants(
     [`${prefix}-intent-secondary`]: "scope-secondary",
   };
 }
+
+/**
+ * Inline mutation-failure text (preset save / save-as, staged preset writes).
+ * `role="alert"` lives in the markup, so this is presentation only:
+ * `min-w-0 break-words` keeps a long server message inside its flex row
+ * instead of blowing the panel's width out.
+ */
+export const inlineErrorText = "scope-error text-current-hl text-caption min-w-0 break-words";
+
+/**
+ * Viewport-height cap for a Reka-positioned popper panel.
+ * `--reka-popper-available-height` is the space Reka measured between the
+ * trigger and the viewport edge; without the cap a long list (or a trigger
+ * near the bottom of the screen) renders past the viewport with no way to
+ * reach the rest of it.
+ */
+export const popperCapped = "max-h-[var(--reka-popper-available-height)] overflow-y-auto";

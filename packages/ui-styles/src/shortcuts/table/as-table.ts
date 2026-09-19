@@ -87,6 +87,10 @@ export const asTableShortcuts = defineShortcuts({
   // (opaque `layer-1`). The descendant rule on `.as-table` covers plain tables;
   // this base shortcut covers any row that wears the class outside that wrapper.
   "as-table-row-active": "layer-1",
+  // Row rejected by `<AsTable :row-selectable>`: the control reads disabled
+  // (and carries `aria-disabled` + the reason in its accessible name). Purely
+  // the selection affordance — the row itself keeps its normal presentation.
+  "as-table-checkbox-disabled": "opacity-40 cursor-not-allowed",
   "as-table-checkbox-checked": "bg-current-hl border-current-hl",
   "as-table-checkbox-indeterminate": "bg-current-hl border-current-hl",
   "as-table-checkbox-tick": "i-as-check size-[0.9em] text-white",

@@ -7,6 +7,7 @@ import { asConfigTabShortcuts } from "./as-config-tab";
 import { asConfirmDialogShortcuts } from "./as-confirm-dialog";
 import { asFilterDialogShortcuts } from "./as-filter-dialog";
 import { asFilterFieldShortcuts } from "./as-filter-field";
+import { asFiltersShortcuts } from "./as-filters";
 import { asFpillShortcuts } from "./as-fpill";
 import { asOrderableListShortcuts } from "./as-orderable-list";
 import { asPageShortcuts } from "./as-page";
@@ -29,6 +30,7 @@ export {
   asConfirmDialogShortcuts,
   asFilterDialogShortcuts,
   asFilterFieldShortcuts,
+  asFiltersShortcuts,
   asFpillShortcuts,
   asOrderableListShortcuts,
   asPageShortcuts,
@@ -53,6 +55,7 @@ export const tableShortcuts = mergeVunorShortcuts([
   asPresetDialogShortcuts,
   asFilterDialogShortcuts,
   asFilterFieldShortcuts,
+  asFiltersShortcuts,
   asConfigDialogShortcuts,
   asConfigTabShortcuts,
   asConfirmDialogShortcuts,

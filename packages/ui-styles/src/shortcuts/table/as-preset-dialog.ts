@@ -1,5 +1,5 @@
 import { defineShortcuts } from "vunor/theme";
-import { dialogBase, dialogOverlay } from "./_shared";
+import { dialogBase, dialogOverlay, inlineErrorText } from "./_shared";
 
 /**
  * `<AsPresetDialog>` Tier-2 default. Centred-card management dialog
@@ -172,6 +172,8 @@ export const asPresetDialogShortcuts = defineShortcuts({
   // footer; no additional `border-t-1` here.
   "as-preset-dialog-footer": "flex items-center justify-between gap-$s px-$l py-$m",
   "as-preset-dialog-footer-status": "flex items-center gap-$xs min-w-0",
+  // Failed staged writes stay staged; this names the reason next to the footer buttons.
+  "as-preset-dialog-footer-error": inlineErrorText,
   // "● unsaved changes" pill on the left — primary dot so it reads as
   // "draft state" without being alarming.
   "as-preset-dialog-footer-unsaved":

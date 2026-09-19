@@ -1,5 +1,5 @@
 import { defineShortcuts } from "vunor/theme";
-import { inputBase } from "./_shared";
+import { dirtyRail, inputBase } from "./_shared";
 
 const clearBtnChrome =
   "border-1 layer-0 text-current/60 rounded-base cursor-pointer transition-all duration-120 disabled-soft";
@@ -14,21 +14,15 @@ export const asFieldShortcuts = defineShortcuts({
 
     // Changed-since-baseline hook. AsFieldShell paints `data-dirty=""` on the
     // root when `<AsForm track-changes>` reports this field dirty (see
-    // as-field-shell.vue + useAsField().isDirty). A SUBTLE, restrained accent —
-    // a thin left bar in the primary scope highlight — so a glance shows what
-    // the user touched without a loud full-field treatment. Consumers restyle
-    // the whole look by re-defining just this one variant key via
-    // `vunorShortcuts(overrides)`.
+    // as-field-shell.vue + useAsField().isDirty); `dirtyRail` in `_shared` is
+    // the shared recipe, and `bg-current-hl` there reads the scope-500
+    // highlight set by the `scope-primary` on the root below.
     //
     // The self-attribute selector is wrapped in `:is(...)` so the nested `[]`
     // inside the arbitrary-variant bracket compiles (UnoCSS silently drops a
-    // bare `[&[data-dirty]]:`). The bar is a positioned `::before` (the root is
-    // already `relative`); `bg-current-hl` paints the scope-500 highlight set by
-    // the sibling `scope-primary`, sized in em so it tracks the field's type
-    // scale, and spans the field's full vertical extent.
+    // bare `[&[data-dirty]]:`).
     "[&:is([data-dirty])]:": "scope-primary",
-    "[&:is([data-dirty])]:before:":
-      'content-[""] absolute left-[-0.4em] top-0 bottom-0 w-[0.15em] rounded-full bg-current-hl',
+    "[&:is([data-dirty])]:before:": dirtyRail,
 
     // Comma-separated arbitrary-variant selector lists silently break the
     // `dark:` qualifier — UnoCSS only prefixes `.dark ` onto the first
@@ -97,6 +91,13 @@ export const asFieldShortcuts = defineShortcuts({
   "as-field-input-row":
     "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1",
   "as-error-slot": "leading-[1] text-callout text-current/60",
+
+  // Screen-reader-only counterpart of the `data-dirty` left rail: the rail is
+  // the sighted cue, this node is what `aria-describedby` points at (see
+  // AsFieldShell's `status` slot). `sr-only` (from preset-wind3, which vunor
+  // builds on) clips it out of the layout so it never participates in the
+  // footer row's flex flow.
+  "as-field-status": "sr-only",
 
   "as-field-footer-row": "flex flex-row items-baseline justify-between gap-$xs",
   "as-field-action-link": {

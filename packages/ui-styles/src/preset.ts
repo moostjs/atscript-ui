@@ -139,6 +139,24 @@ export interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
    */
   excludeComponents?: AsComponentName[];
   /**
+   * Whether to register the baked `i-as-*` icon collection (default `true`).
+   *
+   * Set to `false` when you already run your OWN `presetIcons()` instance —
+   * two instances in one config fight over the `i-` prefix and the second one
+   * never resolves. Pass your own loader the `as` collection instead:
+   *
+   * ```ts
+   * presetIcons({ collections: { as: createIconsLoader({ aliases }) } })
+   * ```
+   *
+   * Everything else the preset provides (shortcuts, the component extractor,
+   * keyframes, the form-grid variant + safelist, vunor itself) is unaffected —
+   * only the baked-icons `presetIcons` instance is skipped.
+   *
+   * @since 0.1.133
+   */
+  icons?: boolean;
+  /**
    * Replace any of our built-in `i-as-<name>` icons with custom SVG strings.
    * Keys are the semantic names listed in `bakedIcons` (e.g. `search`,
    * `close`, `loading`). Values are full `<svg>...</svg>` strings — fetch
@@ -182,37 +200,31 @@ const progressKeyframesPreset: Preset = {
 };
 
 /**
- * No-op marker classes referenced by other shortcuts. UnoCSS warns
- * `unmatched utility "X" in shortcut "Y"` when a shortcut body references
- * a utility that doesn't resolve to any rule:
- * - `group` is registered by `presetWind` only as a *variant* (for
- *   `group-hover:`, `group-data-*:`, …) — not a static rule. Templates
- *   that put `group` on a parent so children can use `group-hover:foo`
- *   compile fine at the call site, but referencing `group` inside a
- *   `defineShortcuts` body trips the warning.
- * - `btn-square` is a vunor marker class (`{ '': '' }` empty-body
- *   shortcut). Empty body resolves to nothing, which UnoCSS reports
- *   the same way — yet it's load-bearing because `btn`'s
- *   `[&.btn-square]:` variant relies on it being present in the class
- *   list.
+ * No-op marker class referenced by other shortcuts. UnoCSS warns
+ * `unmatched utility "X" in shortcut "Y"` when a shortcut body references a
+ * utility that doesn't resolve to any rule — and `group` is registered by
+ * `presetWind` only as a *variant* (for `group-hover:`, `group-data-*:`, …),
+ * not as a static rule. Templates that put `group` on a parent so children can
+ * use `group-hover:foo` compile fine at the call site, but referencing `group`
+ * inside a `defineShortcuts` body trips the warning.
  *
- * Both are intentional: the class needs to exist on the element so a
- * descendant variant or peer shortcut can target it. We register a
- * dynamic rule whose body function returns `undefined`, which gives
- * `parseUtil` a successful match but emits no CSS — the warning's
- * suppressed and the consumer output stays byte-identical.
+ * That is intentional: the class needs to exist on the element so a descendant
+ * variant can target it. We register a dynamic rule whose body is a
+ * `$$`-prefixed entry — UnoCSS' `clearIdenticalEntries` strips `$$*` keys
+ * before serialising, so `parseUtil` succeeds (the entry-count check passes
+ * inside `resolveCSSResult`) but no CSS is emitted into the shortcut body or
+ * the standalone selector. The warning is suppressed with zero impact on
+ * consumer output.
+ *
+ * `btn-square` used to be listed here for the same reason — under vunor 0.2.x
+ * it was an empty-body marker shortcut. Since vunor 0.3.0 it has a real body
+ * (`size-fingertip px-0 [--btn-label-display:none] …`), so a RULE of the same
+ * name would SHADOW the real shortcut and silently drop the square-button
+ * sizing wherever an alias shortcut composes `btn btn-square`.
  */
 const markerRulesPreset: Preset = {
   name: "atscript-ui-marker-rules",
-  rules: [
-    // Body uses a `$$`-prefixed entry — UnoCSS' `clearIdenticalEntries`
-    // strips `$$*` keys before serialising, so `parseUtil` succeeds (the
-    // entry-count check passes inside `resolveCSSResult`) but no CSS is
-    // emitted into the shortcut body or the standalone selector. This
-    // suppresses the warning with zero impact on consumer output.
-    ["group", { $$noop: "" }],
-    ["btn-square", { $$noop: "" }],
-  ],
+  rules: [["group", { $$noop: "" }]],
 };
 
 /**
@@ -299,10 +311,12 @@ function mergeVunorOptions(user: AsVunorPresetOptions | undefined): AsVunorPrese
 }
 
 function buildBasePresets(options: AsPresetVunorOptions): Preset[] {
-  const { iconOverrides, excludeComponents: _exc, ...vunorOpts } = options;
+  const { icons = true, iconOverrides, excludeComponents: _exc, ...vunorOpts } = options;
 
   return [
-    bakedIconsPreset(iconOverrides),
+    // `icons: false` skips ONLY this entry — the consumer brings their own
+    // `presetIcons()` instance (see the `icons` option docs).
+    ...(icons ? [bakedIconsPreset(iconOverrides)] : []),
     shimmerKeyframesPreset,
     progressKeyframesPreset,
     markerRulesPreset,

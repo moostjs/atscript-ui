@@ -1,4 +1,5 @@
 import { defineShortcuts } from "vunor/theme";
+import { inlineErrorText, popperCapped } from "./_shared";
 
 /**
  * `<AsPresetPicker>` Tier-1 dropdown shortcuts. Built on `DropdownMenuRoot`
@@ -30,8 +31,7 @@ export const asPresetPickerShortcuts = defineShortcuts({
   "as-preset-picker-trigger-dirty": "text-current/70 ml-[-0.25em]",
   "as-preset-picker-trigger-chevron": "text-[1em] text-current/60 shrink-0 -mr-$xs",
 
-  "as-preset-picker-menu":
-    "scope-primary popup-card whitespace-nowrap py-$xs min-w-[16em] max-w-[28em]",
+  "as-preset-picker-menu": `scope-primary popup-card whitespace-nowrap py-$xs min-w-[16em] max-w-[28em] ${popperCapped}`,
 
   "as-preset-picker-section": "flex flex-col",
   "as-preset-picker-section-header":
@@ -104,7 +104,11 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // wrapper — the footer owns its own `py-$m` so the space above and below
   // the button row is symmetric (the wrapper's bottom padding would
   // otherwise stack on the footer's bottom and break it).
-  "as-preset-picker-popover": "scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em]",
+  // `popperCapped` here means the footer's Cancel/Save pair — a child of
+  // `-popover-inner`, which this stylesheet cannot lift out of the scrolled
+  // content — is reached by scrolling on a short viewport rather than being
+  // clipped away entirely.
+  "as-preset-picker-popover": `scope-primary popup-card z-[201] pt-$m px-$l min-w-[20em] ${popperCapped}`,
   "as-preset-picker-popover-inner": "flex flex-col gap-$m",
   "as-preset-picker-popover-title": "text-body-l font-600 m-0",
   "as-preset-picker-popover-field": "flex flex-col gap-$xs",
@@ -133,6 +137,9 @@ export const asPresetPickerShortcuts = defineShortcuts({
   // popover's bottom margin entirely (wrapper has only `pt-$m`).
   "as-preset-picker-popover-footer":
     "flex items-center justify-end gap-$s py-$m -mx-$l px-$l border-t-1",
+  // Inline mutation failure (save / save-as); `role="alert"` in the markup,
+  // so this is presentation only.
+  "as-preset-picker-error": inlineErrorText,
   "as-preset-picker-popover-cancel": "scope-neutral c8-chrome btn h-fingertip-s",
   "as-preset-picker-popover-save": "scope-primary c8-filled btn h-fingertip-s",
 });

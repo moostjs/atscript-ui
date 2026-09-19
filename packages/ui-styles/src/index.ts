@@ -1,7 +1,17 @@
 export { createAsExtractor } from "./extractor";
 export type { AsExtractorOptions } from "./extractor";
-export { asPresetVunor, createAsBaseUnoConfig, defaultAsVunorOptions } from "./preset";
+export {
+  asPresetVunor,
+  createAsBaseUnoConfig,
+  defaultAsIconAliases,
+  defaultAsVunorOptions,
+} from "./preset";
 export type { AsBaseUnoConfigOptions, AsPresetVunorOptions } from "./preset";
+
+// Node-only (reads/writes the on-disk icon cache) — import it from a build-time
+// config (`uno.config.ts`), never from browser code.
+export { createIconsLoader } from "./icon-loader";
+export type { IconsLoaderOptions } from "./icon-loader";
 
 export * from "./shortcuts";
 

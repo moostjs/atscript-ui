@@ -16,11 +16,45 @@ Shared UnoCSS preset, shortcuts, icon loader, per-component class safelist, and 
 
 - **`asPresetVunor(opts)`** — the consumer-facing UnoCSS preset. Returns `Preset[]` with vunor's preset, an icons preset, shortcuts merged across `form` / `table` / `wf` / `common`, and a custom **Extractor** that pulls per-component class lists into the consumer's CSS bundle without any `node_modules` filesystem scan.
 - **`createAsBaseUnoConfig(opts)`** — same presets + shortcuts as `asPresetVunor` but **without** the extractor. Internal scripts only (see Decision 13).
-- **`allShortcuts`** + per-area exports (`formShortcuts`, `tableShortcuts`, `wfShortcuts`, `commonShortcuts`) — direct access to the shortcut maps.
-- **`asIconsPreset(opts)`** + **`createIconsLoader(opts)`** — local-SVG icons collection with the `as` prefix.
+- **`allShortcuts`** + per-area exports (`formShortcuts`, `tableShortcuts`, `wfShortcuts`, `commonShortcuts`, `aoothShortcuts`) — direct access to the shortcut maps.
+- **`createIconsLoader(opts)`** — Node-only Iconify loader (local `.icons/` dir + on-disk API cache) used by `scripts/bake-icons.ts`; exported so consumers can drive their own `presetIcons()` instance. There is no `asIconsPreset` export — the baked `i-as-*` collection is registered inside `asPresetVunor()` and switched off with `icons: false`.
+- **`bakedIcons`** — the baked `name → <svg>` map behind the `i-as-*` collection.
 - **Generated safelist** at [`src/generated/component-classes.ts`](src/generated/component-classes.ts) — committed (Decision 12). Re-export public API: `componentClasses`, `helperAliases`, `componentPackages`, `getComponentClasses(...)`, `getHelperClasses(...)`.
 - **Pre-built CSS** at `dist/css/{all,form,table,wf}.css` — for non-UnoCSS consumers (Decision 5). Default theme only; cannot be themed or filtered.
 - **`AsResolver()`** at the `@atscript/ui-styles/vite` subpath — `unplugin-vue-components` resolver that maps `As*` PascalCase tags to the matching per-component subpath (`@atscript/vue-{form,table,wf}/<as-name>`). Tag-only — composables must be imported explicitly. Driven by `componentPackages` from the generated module, so new components are picked up automatically.
+
+### Bringing your own icons preset
+
+Two `presetIcons()` instances in one UnoCSS config fight over the `i-` prefix
+and the second one never resolves. When the consumer already runs their own
+icons preset, switch ours off and hand them the `as` collection instead:
+
+```ts
+// uno.config.ts
+import presetIcons from "@unocss/preset-icons";
+import { asPresetVunor, bakedIcons } from "@atscript/ui-styles";
+
+export default defineConfig({
+  presets: [
+    ...asPresetVunor({ icons: false }),
+    presetIcons({
+      collections: {
+        // your own collections …
+        as: (name) => bakedIcons[name],
+      },
+    }),
+  ],
+});
+```
+
+`bakedIcons` is sync and has no filesystem/network dependency. To resolve the
+`as` names from Iconify (or your own `.icons/*.svg`) at build time instead, swap
+the collection for `createIconsLoader({ aliases: defaultAsIconAliases, iconsDir: ".icons" })`
+— Node-only, writes an on-disk cache.
+
+`icons: false` skips ONLY the baked-icons preset entry — shortcuts, the
+component extractor, the keyframes presets and the form-grid variant/safelist
+are untouched. (Since 0.1.133.)
 
 ## Why this package exists
 

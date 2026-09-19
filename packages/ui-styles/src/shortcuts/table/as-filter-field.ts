@@ -31,8 +31,14 @@ export const asFilterFieldShortcuts = defineShortcuts({
     "hover:": "layer-2 text-current-hl",
     "[.as-filter-field:focus-within_&]:": "text-current-hl",
   },
+  // Width cap: never wider than the viewport allows (`--reka-popper-available-width`,
+  // set by Reka on the popper) and never wider than `--as-dropdown-max-w`.
+  // The default 64em is generous enough for dictionary columns with wide
+  // `@ui.table.width` annotations; override it per-app (or per-column) by
+  // declaring `--as-dropdown-max-w` on any ancestor, e.g.
+  // `:root { --as-dropdown-max-w: 48em }`.
   "as-filter-field-dropdown":
-    "scope-primary popup-card min-w-[max(var(--reka-popper-anchor-width,320px),320px)] max-w-[min(36em,var(--reka-popper-available-width,36em))] flex flex-col outline-none",
+    "scope-primary popup-card min-w-[max(var(--reka-popper-anchor-width,320px),320px)] max-w-[min(var(--as-dropdown-max-w,64em),var(--reka-popper-available-width,64em))] flex flex-col outline-none",
   "as-filter-field-dropdown-body": "relative flex flex-col min-w-0 min-h-[12em]",
   "as-filter-field-dropdown-footer": {
     "": "flex gap-$s px-$s py-$xs border-t-1 justify-end",
