@@ -239,6 +239,8 @@ type MountTableStateOptions = {
   /** Configured default for the runtime relevance flag. */
   ignoreSortersWhenSearched?: boolean;
   queryFn?: QueryFn;
+  /** The query fn orders the whole dataset itself (the in-memory provider). */
+  preSorted?: boolean;
   /** URL bridge: gate first query until ref is `true`. */
   urlQueryReady?: import("vue").Ref<boolean>;
   /** URL bridge: fired with the serialized URL on every state-driven URL change. */
@@ -292,6 +294,7 @@ function mountWith(
             alwaysSelected: opts.alwaysSelected,
             ignoreSortersWhenSearched: opts.ignoreSortersWhenSearched,
             fn: opts.queryFn,
+            preSorted: opts.preSorted,
             urlQueryReady: opts.urlQueryReady,
             onUrlQueryChange: opts.onUrlQueryChange,
             urlQuerySync: opts.urlQuerySync,

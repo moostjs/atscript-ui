@@ -714,6 +714,15 @@ export interface ReactiveTableState extends TableStateMethods {
    */
   applyLocalSort: <T extends Record<string, unknown>>(rows: T[]) => T[];
   /**
+   * Whether a sorter on a client-owned column currently does anything — the
+   * single rule behind every sort affordance, so the header and the config
+   * dialog cannot offer different sets. `false` only in window mode behind a
+   * server fetcher, where rows are cached by absolute index and dropped as
+   * the viewport moves; an in-memory provider orders the whole dataset before
+   * it slices, so the sort holds there. Since 0.1.135.
+   */
+  localSortAvailable: ComputedRef<boolean>;
+  /**
    * The row-action policy from {@link rowActions}, compiled once per config
    * change. Every surface that renders row actions reads it — the row-actions
    * cell and the selection toolbar — so they cannot show different sets.

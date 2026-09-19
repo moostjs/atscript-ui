@@ -291,4 +291,54 @@ describe("display columns — window mode", () => {
     expect(document.body.textContent).not.toContain("Ascending");
     document.body.innerHTML = "";
   });
+
+  // The exclusion above is about the SERVER case: rows arrive a block at a
+  // time, so sorting the materialized island in memory has no defined order.
+  // An in-memory provider sorts the whole dataset before it slices, so every
+  // absolute index already arrives in place and the sort works here too.
+  it("offers it in window mode when the provider pre-sorts the whole dataset", async () => {
+    const { wrapper } = mountWithTableContext(AsWindowTableBase, {
+      columns: [mockColumn("id")],
+      displayColumns: display,
+      preSorted: true,
+      props: { rowHeight: 32 },
+      seedRows: [{ id: 1 }],
+    });
+    await flushPromises();
+    await wrapper.find('th[data-column-path="rank"] button.as-th-btn').trigger("click");
+    await flushPromises();
+    expect(document.body.textContent).toContain("Ascending");
+    document.body.innerHTML = "";
+  });
+
+  // The config dialog renders the same affordance from the same rule, so it
+  // has to reach the same verdict as the header above.
+  it("the config dialog's sorter tab follows the same rule", async () => {
+    for (const [preSorted, expected] of [
+      [false, false],
+      [true, true],
+    ] as const) {
+      const { state } = mountWithTableContext(AsWindowTableBase, {
+        columns: [mockColumn("id")],
+        displayColumns: display,
+        preSorted,
+        props: { rowHeight: 32 },
+        seedRows: [{ id: 1 }],
+      });
+      await flushPromises();
+      // The window renderer owns `navMode`, so the rule is only live once it mounts.
+      expect(state.navMode.value).toBe("window");
+      expect(state.localSortAvailable.value).toBe(expected);
+      document.body.innerHTML = "";
+    }
+  });
+
+  it("an in-memory provider makes local sort available; a server-backed one does not", () => {
+    const { state: local } = createStaticTableState({ rows: [], columns: [mockColumn("id")] });
+    // Pagination mode: available either way — there is a page to re-order.
+    expect(local.localSortAvailable.value).toBe(true);
+    expect(mountTableState({ columns: [mockColumn("id")] }).state.localSortAvailable.value).toBe(
+      true,
+    );
+  });
 });

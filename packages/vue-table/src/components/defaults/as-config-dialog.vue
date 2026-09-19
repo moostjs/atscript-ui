@@ -56,13 +56,11 @@ useSeedOnOpen(isOpen, () => {
 });
 
 const filterableColumns = computed(() => state.allColumns.value.filter((c) => c.filterable));
-// A client-owned column sorts in memory over the loaded page, which window
-// mode (rows cached by absolute index) has no notion of — don't offer it there.
-const sortableColumns = computed(() =>
-  state.allColumns.value.filter(
-    (c) => c.sortable && !(c.local && state.navMode.value === "window"),
-  ),
-);
+const sortableColumns = computed(() => {
+  // Same rule as the table header — `state.localSortAvailable` owns it.
+  const localOk = state.localSortAvailable.value;
+  return state.allColumns.value.filter((c) => c.sortable && (localOk || !c.local));
+});
 
 function filterCount(path: string): number {
   return state.filters.value[path]?.length ?? 0;

@@ -604,6 +604,20 @@ export function createTableState(opts: CreateTableStateOptions): {
   // (window) vs page-relative (pagination) index. Renderers flip it on mount.
   const navMode = ref<"pagination" | "window">("pagination");
 
+  /**
+   * Whether a sorter on a client-owned column does anything right now — the
+   * one rule every surface that renders a sort affordance reads, so the
+   * header and the config dialog cannot disagree about it.
+   *
+   * Sorting a client-owned column happens in memory over the loaded page.
+   * Window mode has no page: it caches rows by absolute index and drops them
+   * as the viewport moves, so behind a server fetcher the order would shift
+   * under the user as they scrolled. `preSorted` is the case where it would
+   * not — the in-memory provider orders the whole dataset before it slices,
+   * so every absolute index arrives already in place.
+   */
+  const localSortAvailable = computed(() => navMode.value !== "window" || !!queryOpts?.preSorted);
+
   // ── Sub-factories (constructed in dependency order) ─────────────────────
   // `blockQuery` is reactive — a table mounted while blocked must run its
   // first query as soon as the host unblocks it.
@@ -933,6 +947,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     fetchPage: dispatchPages,
     localColumnPaths,
     applyLocalSort,
+    localSortAvailable,
     rowActionsPolicy,
     dataAt,
     loadingAt,

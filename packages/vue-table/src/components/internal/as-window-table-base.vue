@@ -95,12 +95,12 @@ const { state } = useTableContext();
 const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(() => state.tableDef.value);
 const cellComponents = useCellComponents(() => state.columns.value);
 
-// A client-owned column sorts in memory over the rows of one loaded PAGE.
-// Window mode has no page — it caches rows by absolute index and drops them
-// as the viewport moves — so the ordering would be undefined. Drop the
-// affordance in the header instead of offering a sort that does nothing.
+// Drop the sort affordance on a client-owned column when it would not do
+// anything here; `state.localSortAvailable` owns that rule.
 const headerColumns = computed(() =>
-  state.columns.value.map((c) => (c.local && c.sortable ? { ...c, sortable: false } : c)),
+  state.localSortAvailable.value
+    ? state.columns.value
+    : state.columns.value.map((c) => (c.local && c.sortable ? { ...c, sortable: false } : c)),
 );
 
 const hasValue = computed(() => props.select !== "none");
