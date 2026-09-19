@@ -106,7 +106,14 @@ function columnFilterType(columnType: string): ColumnFilterType;
 Tools for parsing and formatting filter values typed by the user.
 
 ```typescript
-/** Parses operator shorthand (`>100`, `*foo*`, `lo...hi`, `<empty>`, `!<empty>`, `/regex/`). */
+/**
+ * Parses operator shorthand (`>100`, `*foo*`, `lo...hi`, `<empty>`,
+ * `!<empty>`, `/regex/`). Values are coerced per `columnType`: `number`
+ * columns get numbers, and (since 0.1.133) `boolean` columns understand the
+ * `true` / `false` vocabulary case-insensitively, so the condition carries a
+ * real boolean and round-trips through the URL as one. Anything else — on a
+ * boolean column too — stays a string.
+ */
 function parseFilterInput(
   raw: string,
   columnType: ColumnFilterType,
@@ -203,7 +210,14 @@ function toWireSnapshot(snapshot: PresetSnapshot): PresetSnapshotWire;
 function fromWireSnapshot(wire: PresetSnapshotWire): PresetSnapshot;
 ```
 
-Bidirectional bridge between the application shape (sets, ordered arrays, etc.) and the JSON wire shape.
+Bidirectional bridge between the application shape (sets, ordered arrays, etc.) and the JSON wire shape. Entries-arrays are sorted by `field` so consumers (server-side aspect derivation, dirty detection, equality checks) see a stable order.
+
+**Empty aspects round-trip as empty (since 0.1.133).** `columnWidths` and
+`filterOps` used to be dropped when they serialized to zero entries, which
+silently turned an owned aspect into an absent one. An owned-but-empty aspect
+CLEARS that state on apply — a saved view with no filters owns `filterOps` and
+clears them — while an absent aspect leaves the state alone. The two are never
+collapsed into each other in either direction.
 
 ## Presets — application types
 
@@ -334,21 +348,30 @@ function isDirtyAgainst(
 Opt-in localStorage overlay that captures the user's in-flight tweaks. Persists `columns`/`filters`/`sorters` and optionally `itemsPerPage`; `filterOps`, `searchTerm`, and pagination are never persisted.
 
 ```typescript
-interface PresetDraft {
-  presetId: string;
-  columns?: PresetSnapshot["columns"];
-  filters?: PresetSnapshot["filters"];
-  sorters?: PresetSnapshot["sorters"];
-  itemsPerPage?: number;
-}
+/** Subset of `PresetSnapshot` — `filterOps` is excluded by design. */
+type PresetDraft = Omit<PresetSnapshot, "filterOps">;
 
 type DraftPersistedAspect = "columns" | "filters" | "sorters" | "itemsPerPage";
 const DRAFT_PERSISTED_ASPECTS: readonly DraftPersistedAspect[];
 
-function serializeDraft(draft: PresetDraft): string;
-function deserializeDraft(raw: string): PresetDraft | undefined;
+/** Copy the draft-persistable aspects out of a snapshot, gated by `availableAspects`. */
+function serializeDraft(
+  snapshot: PresetSnapshot,
+  availableAspects: readonly PresetAspect[],
+): PresetDraft;
+
+/** Inverse of `serializeDraft` — same gate. */
+function deserializeDraft(
+  draft: PresetDraft,
+  availableAspects: readonly PresetAspect[],
+): PresetSnapshot;
+
 function isEmptyDraft(draft: PresetDraft): boolean;
-function draftMatchesPreset(draft: PresetDraft, snapshot: PresetSnapshot): boolean;
+function draftMatchesPreset(
+  draft: PresetDraft,
+  presetSnapshot: PresetSnapshot,
+  availableAspects: readonly PresetAspect[],
+): boolean;
 ```
 
 ## Presets — HTTP clients
@@ -377,7 +400,7 @@ interface PresetsListResult {
   userConf: AsPresetEntryRow | null;
   /** `null` when the capabilities load failed; `undefined` when the call skipped capabilities. */
   capabilities: PresetCapabilities | null | undefined;
-  /** True when the controller responded 401/403 — UI silently hides. */
+  /** True when the controller responded 401/403/404 (404 = controller not mounted) — UI silently hides. */
   denied: boolean;
 }
 
@@ -421,7 +444,7 @@ class PresetsClient {
 }
 ```
 
-### `PresetsHttpError` / `isAuthError`
+### `PresetsHttpError` / `isUnavailableError`
 
 ```typescript
 class PresetsHttpError extends Error {
@@ -429,7 +452,7 @@ class PresetsHttpError extends Error {
   constructor(status: number, message: string);
 }
 
-function isAuthError(err: unknown): boolean; // true for HTTP 401/403 on `ClientError` or `PresetsHttpError`
+function isUnavailableError(err: unknown): boolean; // true for HTTP 401/403/404 on `ClientError` or `PresetsHttpError` (404 = presets controller not mounted). `isAuthError` is a deprecated alias (since 0.1.133).
 ```
 
 ### `AppPrefsClient`
@@ -450,7 +473,7 @@ interface AppPrefsLoadResult {
   row: AsPresetEntryRow | null;
   /** Convenience accessor for `row.data`, or `null`. */
   prefs: AppConfData | null;
-  /** True when the controller responded 401/403. */
+  /** True when the controller responded 401/403/404 (404 = controller not mounted). */
   denied: boolean;
 }
 
@@ -579,6 +602,14 @@ function urlQueryStringToState(
   opts?: UrlQueryParseOptions,
 ): UrlQueryStateSnapshot;
 ```
+
+### `urlQueryConsumesKey`
+
+```typescript
+function urlQueryConsumesKey(key: string): boolean;
+```
+
+Since 0.1.133. `true` for the keys `urlQueryStringToState` would read: the `$sort` / `$search` / `$relevance` / `$skip` controls and operator-bearing filter keys (`total>100`). `useTableUrlQuery` treats exactly these (plus keys it wrote itself) as table-owned; everything else in the query is host-owned and preserved.
 
 See [URL State](/tables/url-state).
 

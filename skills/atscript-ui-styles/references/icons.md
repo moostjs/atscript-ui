@@ -7,6 +7,7 @@ Customize the bundled icon set. Two public extension points: `iconOverrides` for
 - [Overriding an icon — iconOverrides](#overriding-an-icon--iconoverrides)
 - [Unknown keys ignored](#unknown-keys-ignored)
 - [Adding brand-new icons](#adding-brand-new-icons)
+- [One presetIcons instance — icons: false](#one-preseticons-instance--icons-false)
 - [Em-based sizing rule](#em-based-sizing-rule)
 - [Reference grep — i-as-\* usage in shortcuts](#reference-grep--i-as--usage-in-shortcuts)
 
@@ -131,6 +132,29 @@ Use the new icons in your `as-*` shortcut extensions or directly in templates:
 UnoCSS preset-icons docs: https://unocss.dev/presets/icons. Available collections: https://icones.js.org.
 
 Note: you can't add brand-new icons by widening `iconOverrides` — unknown keys are ignored (previous section). Use a separate collection prefix instead.
+
+## One presetIcons instance — icons: false
+
+0.1.133+. Two `presetIcons()` instances in one config fight over the `i-` prefix and the second one never resolves. When the consumer already runs their own — a custom `cdn`, `unit`, `customizations`, `extraProperties` — switch ours off and register the `as` collection on theirs:
+
+```ts
+import { asPresetVunor, bakedIcons } from "@atscript/ui-styles";
+
+presets: [
+  ...asPresetVunor({ icons: false }),
+  presetIcons({
+    unit: "rem",
+    collections: { as: (name) => bakedIcons[name] },
+  }),
+];
+```
+
+| Rule                                                                                                                                                                                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `icons: false` skips ONLY the baked-icons preset entry — shortcuts, the component extractor, keyframes and the form-grid variant/safelist are untouched.                                                                                            |
+| `iconOverrides` stops applying too. Merge them yourself: `{ ...bakedIcons, ...myOverrides }`.                                                                                                                                                       |
+| There is no `asIconsPreset` export (a stale README claim, fixed in 0.1.133). The baked collection lives inside `asPresetVunor()`.                                                                                                                   |
+| `createIconsLoader({ aliases: defaultAsIconAliases, iconsDir: ".icons" })` resolves the aliases from Iconify / local SVGs at build time instead of the baked map. Node-only — reads and writes an on-disk cache; never import it from browser code. |
 
 ## Em-based sizing rule
 

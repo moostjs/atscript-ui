@@ -61,11 +61,20 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 </template>
 ```
 
-| Option | Default     | Effect                                                                                      |
-| ------ | ----------- | ------------------------------------------------------------------------------------------- |
-| `mode` | `"replace"` | `router.replace` per write. `"push"` makes every filter/sort/page mutation a history entry. |
+| Option   | Default     | Effect                                                                                         |
+| -------- | ----------- | ---------------------------------------------------------------------------------------------- |
+| `mode`   | `"replace"` | `router.replace` per write. `"push"` makes every filter/sort/page mutation a history entry.    |
+| `prefix` | none        | Namespace every table-owned key as `prefix.key`. Since 0.1.133. Lets two tables share a route. |
 
-The bridge owns the **entire query string** — apps that share the URL with non-table params should write their own `computed<string>` instead.
+Since 0.1.133 the bridge owns **only what the parser consumes**: a key is table-owned iff `urlQueryStringToState` would read it (`urlQueryConsumesKey`, exported from `@atscript/ui-table`) or the bridge has written it before — so read and write agree in both directions. Each write merges into `route.query`; host-owned keys are preserved in place. Consumed without a prior write: `$sort`, `$search`, `$relevance`, `$skip`, and operator-bearing filter keys (`total>100`). NOT consumed, therefore never removed: `$limit`, any other `$key`, and a plain `field=value` key already present at mount (indistinguishable from a host flag until the bridge writes it itself).
+
+Two tables on one route — give each a `prefix`; only keys under that prefix are read, written or removed:
+
+```typescript
+const left = useTableUrlQuery(route, router, { prefix: "orders" });
+const right = useTableUrlQuery(route, router, { prefix: "customers" });
+// ?orders.status='open'&orders.$skip=50&customers.name=acme&tab=split
+```
 
 Type-only import of `Router` + `RouteLocationNormalizedLoaded` — `@atscript/vue-table` does not add a runtime dependency on `vue-router`.
 
@@ -139,6 +148,10 @@ export type PresetAspect = (typeof PRESET_ASPECTS)[number];
 Per invariant 8, a snapshot's set of present keys claims those aspects; absent keys leave that slice untouched on apply. A "columns-only" preset doesn't dirty when filters change; a "filter-only" preset doesn't dirty when columns reorder.
 
 App-level aspect availability is set via `<AsTableRoot :preset.aspects>` (default `['columns','filters','filterOps','sorters']`). Add `'itemsPerPage'` for paginated tables; drop any aspect the app doesn't use.
+
+`<AsTableRoot :preset.systemAspects>` (since 0.1.133) narrows what a SYSTEM preset owns — intersected with `aspects`, default all of them. With `systemAspects: ['filterOps']`, switching between filter-only system views leaves the user's columns, widths, displayed filters, sorters and page size alone, and the system preset's dirty baseline ignores those aspects. User and public presets keep owning whatever their snapshot claims. Exposed as `state.preset.systemAspects`.
+
+A snapshot aspect that is present but EMPTY (`filterOps: {}`, `sorters: []`) is owned-and-empty: applying it CLEARS that slice. An absent key leaves the slice untouched. `toWireSnapshot` / `fromWireSnapshot` preserve the distinction in both directions since 0.1.133.
 
 `AspectMask` (`Partial<Record<PresetAspect, boolean>>`) is used by `captureSnapshot(mask?)` to opt-in/out per aspect at capture time. Intersected with `availableAspects` — unavailable aspects never leak in.
 
@@ -233,9 +246,9 @@ Returns:
 | `userConf`                             | `ShallowRef<AsPresetEntryRow \| null>`       | This user's `type='userConf'` row.                                       |
 | `capabilities`                         | `Ref<PresetCapabilities \| null>`            | `{ canPublish, presetLimit, userId }`.                                   |
 | `systemPresets`                        | `ComputedRef<SystemPreset[]>`                | Resolved order (Standard first).                                         |
-| `available`                            | `ComputedRef<boolean>`                       | False on 401/403 — UI hides itself.                                      |
+| `available`                            | `ComputedRef<boolean>`                       | False on 401/403/404 (404 = controller not mounted) — UI hides itself.   |
 | `loading`                              | `Ref<boolean>`                               |                                                                          |
-| `error`                                | `Ref<unknown>`                               | Last non-auth error.                                                     |
+| `error`                                | `Ref<unknown>`                               | Last non-auth error; mutator failures set it too (0.1.133) and rethrow.  |
 | `currentUser`                          | `ComputedRef<string \| null>`                | From capabilities or row scan.                                           |
 | `activePresetId`                       | `Ref<string \| null>`                        | Owned by the table state, not auto-resolved here.                        |
 | `activePreset`                         | `ComputedRef<ActivePresetView \| null>`      | `{ kind: 'system' \| 'stored', entry }`.                                 |
@@ -271,7 +284,7 @@ const { prefs, save } = useAppPrefs({
 | `prefs`       | `WritableComputedRef<AppConfData>`               | Non-null `{}` until first load. Mutate via `save` only. |
 | `loading`     | `Ref<boolean>`                                   |                                                         |
 | `error`       | `Ref<unknown>`                                   | Last non-auth error.                                    |
-| `available`   | `ComputedRef<boolean>`                           | False on 401/403.                                       |
+| `available`   | `ComputedRef<boolean>`                           | False on 401/403/404.                                   |
 | `reload()`    | `() => Promise<void>`                            |                                                         |
 | `save(patch)` | `(patch: Partial<AppConfData>) => Promise<void>` | Optimistic shallow merge; rollback on error.            |
 | `reset()`     | `() => void`                                     | Drop in-memory + cached state (sign-out flow).          |
@@ -291,6 +304,7 @@ const draft = useLocalDraft({
   enabled: true, // or a Ref<boolean>
   availableAspects: ["columns", "filters", "sorters"], // persisted slices
   debounceMs: 300, // optional
+  scope: () => session.userId, // since 0.1.133 — identity the draft is keyed under
 });
 ```
 
@@ -301,7 +315,9 @@ const draft = useLocalDraft({
 | `clear()`                                | Drop the localStorage entry.                                                                                        |
 | `readDraft()`                            | Raw `PresetDraft \| null` from storage.                                                                             |
 
-Storage key format: `as-table-draft:${app}:${tableKey}`. `filterOps` / `searchTerm` / `pagination` are NOT persisted in drafts by design.
+Storage key format: `as-table-draft:${app}:${scope}:${tableKey}` when `scope` is set, `as-table-draft:${app}:${tableKey}` when it is not. `filterOps` / `searchTerm` / `pagination` are NOT persisted in drafts by design.
+
+**Pass the signed-in user's id as `scope` whenever drafts are on** — without it a shared browser restores the previous user's draft. `scope` is reactive: changing it moves reads and writes to the new key without touching the old one. Via the component: `<AsTableRoot :preset="{ ..., persistDrafts: true, draftScope: userId }">`.
 
 Enable per table via `<AsTableRoot :preset="{ ..., persistDrafts: true }"`. Inert when `enabled=false`.
 
@@ -334,6 +350,10 @@ state.preset.setDefault(id | null);
 state.preset.toggleFav(id);
 state.preset.batch(fn);
 ```
+
+Since 0.1.133 `state.preset.lastError` is the SINGLE channel for preset write failures: a mutator clears it only when it is the OUTERMOST call, records the failure there **and rethrows**. `batch()` is an outer frame, so a failure early in a batch survives later writes inside it (the batch's last failure wins). Callers must handle the rejection: the picker keeps its popover open and renders the message, and the manage dialog keeps failed edits staged, stays open and only closes when every write succeeded.
+
+`usePresets().error` is the LOAD channel only — mutator failures rethrow and are not mirrored there.
 
 `<AsPresetDialog>` (Tier-2) opens for rename / delete / public-toggle / favorite / default management — bound to `state.preset.dialogOpen`. Override via `controls.presetDialog`.
 
@@ -465,7 +485,7 @@ The default `<AsPresetPicker>` is not rendered automatically — drop one in the
 Framework-agnostic wire client (from `@atscript/ui-table`). Stateless; the Vue composable holds reactive state.
 
 ```typescript
-import { PresetsClient, isAuthError, PresetsHttpError } from "@atscript/ui-table";
+import { PresetsClient, isUnavailableError, PresetsHttpError } from "@atscript/ui-table";
 
 const client = new PresetsClient({
   url: "/api/db/_presets",
@@ -490,6 +510,6 @@ Methods:
 | `deletePreset(id)`                                 | DELETE.                                                                                  |
 | `upsertUserConf(existing, patch, user?)`           | Insert or update based on existing-row presence.                                         |
 
-`isAuthError(err)` returns `true` for HTTP 401/403 across `ClientError` and `PresetsHttpError`. `available` / `denied` semantics rely on this.
+`isUnavailableError(err)` returns `true` for HTTP 401/403 **and 404** across `ClientError` and `PresetsHttpError` — 404 means the presets controller is not mounted on this server, which is "feature unavailable", not an error. `available` / `denied` semantics rely on this. `isAuthError` is a deprecated alias kept for compatibility (same behaviour, 404 included) since 0.1.133.
 
 `AppPrefsClient` is the analogous client for `appConf` reads/writes — used internally by `useAppPrefs`.

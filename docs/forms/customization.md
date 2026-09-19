@@ -167,7 +167,23 @@ What you get for free by wrapping with `AsFieldShell`:
 - Hint text (`@ui.form.hint` / `@ui.form.fn.hint`)
 - Error message and `scope-error` styling
 - Optional-field toggle (`onToggleOptional`)
-- `aria-describedby` wiring via `errorId` / `descId`
+- `aria-describedby` wiring via `errorId` / `descId` / `statusId`
+- The `data-dirty` change-tracking hook and its screen-reader status node
+
+### `AsFieldShell` slots
+
+| Slot          | Scope                                                         | Renders                                      |
+| ------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| `default`     | `inputId`, `errorId`, `descId`                                | Your control                                 |
+| `header`      | `inputId`, `descId`, `optionalEnabled`, `isDirty`, `statusId` | Replaces the label row content               |
+| `after-input` | `descId`                                                      | Extra chrome directly under the control      |
+| `status`      | `isDirty`, `error`, `hint`, `statusId`, `inputId`             | The footer's error/hint + dirty announcement |
+
+`isDirty` / `statusId` on `header`, and the `status` slot itself, are new in
+0.1.133. The default `status` content is the error/hint block plus a visually
+hidden "Modified" node — see
+[Change tracking](/forms/change-tracking#announcing-it-to-screen-readers) for
+the override recipe.
 
 `ColorSwatch.vue`, `StarRating.vue`, `TagInput.vue`,
 `NumberStepper.vue`, and `GrowingTextarea.vue` are typical working

@@ -10,6 +10,8 @@ The `as-*` shortcut tree, how to read it, and how to extend it without forking. 
 - [Extending the shortcut tree](#extending-the-shortcut-tree)
 - [Overriding a built-in shortcut](#overriding-a-built-in-shortcut)
 - [Variant overrides](#variant-overrides)
+- [Tunable CSS custom properties](#tunable-css-custom-properties)
+- [Change-tracking (`data-dirty`) hooks](#change-tracking-data-dirty-hooks)
 - [Reka-UI state attributes](#reka-ui-state-attributes)
 - [excludeComponents — drop unused classes](#excludecomponents--drop-unused-classes)
 - [Component class maps](#component-class-maps)
@@ -46,12 +48,12 @@ Each is a `TVunorShortcut[]` (re-exported `TVunorShortcut` type from `vunor/them
 
 Representative top-level concepts per group. (Not exhaustive — read the directory for the full list.)
 
-| Group             | Concepts (selected)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `commonShortcuts` | `as-kbd`, `as-description`, `as-overlay`, `as-overlay-icon`, `as-close-btn`, `as-dialog-close`, `c8-progress` / `c8-progress-fill` / `c8-progress-label`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
-| `formShortcuts`   | `as-form`, `as-form-title`, `as-form-description`, `as-form-error`, `as-form-overlay`, `as-form-grid`, `as-default-field`, `as-field-label`, `as-field-input-row`, `as-field-description`, `as-field-remove-btn`, `as-select-wrap`, `as-checkbox-field`, `as-radio-group`, `as-array`, `as-collapsible`, `as-object`, `as-ref`, `as-action`, `as-no-data`, `as-decimal-number`, `as-dropdown`                                                                                                                                                                                                                                                                    |
-| `tableShortcuts`  | `as-table`, `as-th-*`, `as-td-*`, `as-table-scroll-container`, `as-table-outer-wrap`, `as-table-sticky`, `as-table-stretch`, `as-table-checkbox`, `as-table-row-active`, `as-table-empty`, `as-table-loading`, `as-table-error`, `as-table-query-overlay`, `as-cell-number`, `as-cell` (number/date/json/string/...), `as-fpill`, `as-page`, `as-column-menu`, `as-preset-picker`, `as-preset-dialog`, `as-filter-dialog`, `as-filter-field`, `as-config-dialog`, `as-config-tab`, `as-confirm-dialog`, `as-action-form`, `as-orderable-list`, `as-row-actions`, `as-sorter`, `as-table-actions`, `as-window-table`, `as-window-skeleton`, `as-window-scrollbar` |
-| `wfShortcuts`     | `as-wf-form-error`, `as-wf-form-loading`, `as-wf-finish`, `as-wf-finish-message`, `as-wf-finish-actions`, `as-wf-finish-primary`, `as-wf-finish-option`, `as-wf-finish-skip` / `-fill` / `-label`, `as-wf-finish-countdown`                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Group             | Concepts (selected)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `commonShortcuts` | `as-kbd`, `as-description`, `as-overlay`, `as-overlay-icon`, `as-close-btn`, `as-dialog-close`, `c8-progress` / `c8-progress-fill` / `c8-progress-label`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `formShortcuts`   | `as-form`, `as-form-title`, `as-form-description`, `as-form-error`, `as-form-overlay`, `as-form-grid`, `as-default-field`, `as-field-label`, `as-field-input-row`, `as-field-description`, `as-field-remove-btn`, `as-select-wrap`, `as-checkbox-field`, `as-radio-group`, `as-array`, `as-collapsible`, `as-object`, `as-ref`, `as-action`, `as-no-data`, `as-decimal-number`, `as-dropdown`                                                                                                                                                                                                                                                                                            |
+| `tableShortcuts`  | `as-table`, `as-th-*`, `as-td-*`, `as-table-scroll-container`, `as-table-outer-wrap`, `as-table-sticky`, `as-table-stretch`, `as-table-checkbox`, `as-table-row-active`, `as-table-empty`, `as-table-loading`, `as-table-error`, `as-table-query-overlay`, `as-cell-number`, `as-cell` (number/date/json/string/...), `as-fpill`, `as-page`, `as-column-menu`, `as-preset-picker`, `as-preset-dialog`, `as-filter-dialog`, `as-filter-field`, `as-filters-overflow*`, `as-config-dialog`, `as-config-tab`, `as-confirm-dialog`, `as-action-form`, `as-orderable-list`, `as-row-actions`, `as-sorter`, `as-table-actions`, `as-window-table`, `as-window-skeleton`, `as-window-scrollbar` |
+| `wfShortcuts`     | `as-wf-form-error`, `as-wf-form-loading`, `as-wf-finish`, `as-wf-finish-message`, `as-wf-finish-actions`, `as-wf-finish-primary`, `as-wf-finish-option`, `as-wf-finish-skip` / `-fill` / `-label`, `as-wf-finish-countdown`                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
 Each group also re-exports its per-file slices (e.g. `asFormShortcuts`, `asFieldShortcuts`, `asTableShortcuts`, `asCellShortcuts`, …) so you can compose a subset preset by hand if needed.
 
@@ -251,6 +253,37 @@ defineShortcuts({
 ```
 
 Mergers are shallow on the outer key + deep on the variant map — overriding `as-fpill.focus-within:` doesn't touch `as-fpill.""` or `as-fpill.hover:`. Mirror the existing variant syntax exactly (trailing colon for variants, empty string for base).
+
+## Tunable CSS custom properties
+
+A few shortcuts read an inherited custom property instead of baking a literal, so a consumer retunes them from any ancestor without overriding the shortcut at all:
+
+| Property              | Read by                    | Default | Effect                                                                                                                                                                                       |
+| --------------------- | -------------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--as-dropdown-max-w` | `as-filter-field-dropdown` | `64em`  | Width cap of a filter field's dropdown. 0.1.133+ (was a hardcoded `36em`). Always additionally capped by `--reka-popper-available-width`, so raising it can never push the panel off-screen. |
+| `--as-inset`          | `as-collapsible-section`   | `0px`   | Horizontal padding the section breaks out of, for full-bleed dividers inside a padded card. Islands set it to `1em` for their nested sections.                                               |
+
+```css
+.dense-page {
+  --as-dropdown-max-w: 42em;
+}
+```
+
+Reka popper vars (`--reka-popper-available-width` / `--reka-popper-available-height` / `--reka-popper-anchor-width`) are set by Reka on the popper element; `as-preset-picker-menu`, `as-preset-picker-popover` and `as-filters-overflow` use the height one with `overflow-y-auto` so a panel near the viewport edge scrolls instead of clipping.
+
+## Change-tracking (`data-dirty`) hooks
+
+`<AsForm track-changes>` paints `data-dirty=""` on:
+
+| Element                 | Shortcut carrying the hook                                                |
+| ----------------------- | ------------------------------------------------------------------------- |
+| A dirty leaf field      | `as-default-field` — `[&:is([data-dirty])]:` + `:before:` left rail       |
+| A dirty section root    | `as-collapsible-section` / `as-collapsible-island` — same rail (0.1.133+) |
+| A dirty section heading | `as-collapsible-title` / `as-collapsible-title-nested` (0.1.133+)         |
+
+Never on descendants — one changed leaf must not repaint every label in the subtree. The section rail puts `scope-primary` on the `::before` itself (not the section root) for the same reason. Blank any of these with `{ "[&:is([data-dirty])]:before:": "" }`.
+
+`as-field-status` is the visually hidden node `AsFieldShell` renders while dirty (`aria-describedby` target). Since 0.1.133 it is an alias for `sr-only`, so it never affects the footer's flex layout.
 
 ## Reka-UI state attributes
 

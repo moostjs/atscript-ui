@@ -179,6 +179,28 @@ The handful you'll reach for most when restyling form chrome:
 
 `as-field-label`, `as-field-description`, `as-error-slot`, and `as-field-header-row` are reachable the same way. For the complete catalog of every `as-*` shortcut name, see the [`@atscript/ui-styles` API reference](/api/ui-styles#shortcuts) and the [source shortcut tree](https://github.com/moostjs/atscript-ui/tree/main/packages/ui-styles/src/shortcuts).
 
+### Tunable CSS custom properties
+
+A few shortcuts read a custom property instead of baking a literal, so you can
+retune them from any ancestor (`:root`, a page wrapper, a single table) without
+overriding the shortcut at all:
+
+| Property              | Read by                    | Default | Effect                                                             |
+| --------------------- | -------------------------- | ------- | ------------------------------------------------------------------ |
+| `--as-dropdown-max-w` | `as-filter-field-dropdown` | `64em`  | Width cap of a filter field's dropdown panel. _Since 0.1.133._     |
+| `--as-inset`          | `as-collapsible-section`   | `0px`   | Horizontal padding a section breaks out of for full-bleed dividers |
+
+```css
+/* Narrow every filter dropdown in a dense page. */
+.dense-page {
+  --as-dropdown-max-w: 42em;
+}
+```
+
+The dropdown is always additionally capped by `--reka-popper-available-width`,
+the space Reka measured to the viewport edge — raising `--as-dropdown-max-w`
+can never push the panel off-screen.
+
 ## Composing with vunor primitives
 
 When you add a new `as-*` shortcut and want it to inherit palette, dark mode, and scope tinting, compose its body from vunor primitives instead of pixel literals or hex colors. The library's own shortcut tree follows the same approach — that's what lets a single `palette.colors.primary` change in `presetVunor()` repaint everything downstream. If you'd rather hardcode values in a particular shortcut, that's fine too; just know that shortcut won't follow palette changes.

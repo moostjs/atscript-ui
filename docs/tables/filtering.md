@@ -126,12 +126,51 @@ state.
 </AsTableRoot>
 ```
 
+#### Overflow — capping the row
+
+_Since 0.1.133._ A wide table can list more filter fields than a toolbar row can
+hold. `:max-visible` caps how many render inline and moves the rest into a
+popover behind a **More filters** trigger:
+
+```vue
+<AsFilters :max-visible="3" />
+```
+
+The trigger badges the number of **active** filters hidden inside it, so a
+filter that is narrowing the result set from off-screen stays discoverable. Open
+it with a click or <kbd>Enter</kbd>/<kbd>Space</kbd> — it is an ordinary button,
+and focus moves into the panel, which renders the same `<AsFilterField>`s (your
+`controls.filterField` swap included).
+
+| Prop          | Default                            | Meaning                                                                                                                                                                                 |
+| ------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `max-visible` | — (all fields inline)              | How many fields render inline.                                                                                                                                                          |
+| `overflow`    | `'popover'` when `max-visible` set | `'popover'` → the More-filters panel; `'none'` → don't render the extra fields at all (only when your app surfaces them elsewhere — an active filter on a dropped field still applies). |
+
+The cap is count-based and deterministic: `<AsFilters>` never measures the
+toolbar. Width-driven responsiveness stays with the host, which knows its own
+breakpoints — feed a smaller `:max-visible` (or a shorter `:filter-fields`) from
+your own media query or container query.
+
+`<AsFilters>` renders a bare fragment — the fields and the overflow trigger,
+with no wrapper element of its own — so they are direct children of whatever
+toolbar row you wrap them in, and you style that row.
+
+Styling hooks: `as-filters-overflow-trigger`, `as-filters-overflow-badge`,
+`as-filters-overflow`.
+
 ### `<AsFilterField>` — one inline filter
 
 The Tier-2 default for a single inline filter chip / input. Reads
 `column.type` and `column.options` to pick the right input shape
 (text, number, date range, value-help typeahead, …). Calls
 `state.setFieldFilter(path, conditions)` on change.
+
+Typed values are coerced to the column's type: number columns get
+numbers, and boolean columns understand `true` / `false`
+(case-insensitive) — since 0.1.133 they produce real booleans, so a
+boolean filter round-trips through the URL and matches. Any other
+text on a boolean column stays a string and matches nothing.
 
 ### `<AsFilterDialog>` — per-column condition builder
 

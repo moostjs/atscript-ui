@@ -102,6 +102,7 @@ The fields you'll set most:
 | `arrayIndex`      | Appends a `#N` suffix to the title.                                                                                       |
 | `optional`        | When `true` and not enabled, the `empty` slot renders instead of the section.                                             |
 | `optionalEnabled` | Gates the `empty` slot — the placeholder shows when `optional && !optionalEnabled`.                                       |
+| `isDirty`         | _Since 0.1.133._ Paints `data-dirty=""` on the section root **and** its heading, driving the change-tracking accent.      |
 
 `level` drives both the visual variant and the heading tag:
 
@@ -128,6 +129,22 @@ Every header slot renders **inside `<summary>`**.
 | `actions`      | Header action buttons. ⚠ Always visible, **even when collapsed** (it lives in `<summary>`). |
 | `body`         | The section content.                                                                        |
 | `empty`        | The "enable this section" placeholder, shown when `optional && !optionalEnabled`.           |
+
+## Marking a changed section
+
+_Since 0.1.133._ `AsObject` / `AsArray` / `AsTuple` forward the `isDirty` prop
+they receive from `AsField` straight into `AsCollapsible`. A custom container
+renderer should do the same:
+
+```vue
+<AsCollapsible :level="props.level ?? 1" :path="props.path" :is-dirty="props.isDirty">
+```
+
+Only the root `<details>` and the heading get `data-dirty` — descendants never
+do, so one changed leaf doesn't make every label inside the section look
+modified. The styling hook lives in `@atscript/ui-styles`
+(`as-collapsible-section` / `as-collapsible-island` / `as-collapsible-title*`);
+see [Change tracking](/forms/change-tracking#sections-light-up-too).
 
 ## Header actions only when expanded
 

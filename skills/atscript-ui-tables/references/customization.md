@@ -22,6 +22,29 @@ Override layers for table rendering, coarse → fine. Pick the smallest one that
 
 Slot name uses the column path verbatim, dots included: `<template #cell-address.city="...">`. Slots win over the cell-component dispatch for matched columns.
 
+An explicit `#header-<colPath>` slot ALSO renders for a fixed (synthesised) column such as `__actions` — only that column's DEFAULT header stays blank, and it remains non-draggable / non-resizable. Since 0.1.133.
+
+## Row hooks (since 0.1.133)
+
+`<AsTable>` and `<AsWindowTable>` (both, since 0.1.133 — not `<AsTable>`-only). Each hook receives `(row, { index, selected })`; `index` is the absolute row index in windowed mode. `selected` is a lazy getter, so a predicate that ignores it is not re-run on selection changes.
+
+| Prop              | Returns                                         | Effect                                                             |
+| ----------------- | ----------------------------------------------- | ------------------------------------------------------------------ |
+| `:row-selectable` | `boolean \| string`                             | `false`/string ⇒ row not selectable; string is the disabled reason |
+| `:row-class`      | `string \| string[] \| Record<string, boolean>` | Extra classes on `<tr>`                                            |
+| `:row-attrs`      | `Record<string, unknown>`                       | Extra attributes on `<tr>`                                         |
+
+```vue
+<AsTable
+  select="multi"
+  :row-selectable="(row) => (row.archived ? 'Archived rows cannot be picked' : true)"
+  :row-class="(row) => ({ 'opacity-60': row.archived })"
+  :row-attrs="(row) => ({ 'data-status': row.status })"
+/>
+```
+
+Precedence: framework `id` / `role` / `aria-*` / `data-*` / `class` / `style` always win over `:row-attrs`. Types: `RowSelectableHook`, `RowClassHook`, `RowAttrsHook`, `RowHookContext` (declared in `vue-table`'s `types.ts`; not re-exported from the package root as of 0.1.133). Selection semantics: [actions-selection.md](actions-selection.md#per-row-selectability-row-selectable-since-01133).
+
 `<AsTableRoot>`'s default `v-slot` exposes the full table-state surface for page chrome (toolbar, pagination, filter bar): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
 
 ## Cell maps — `:types` and `:components`

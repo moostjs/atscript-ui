@@ -43,6 +43,14 @@ interface AsTableRootProps {
     size: number,
   ) => Promise<PageResult<Record<string, unknown>>>;
   queryOnMount?: boolean;
+  /**
+   * Suppress every query trigger (`query` / `queryNext` / `loadRange`). The
+   * prop stays a plain boolean, but `AsTableRoot` forwards it to `useTable`
+   * as a getter, so it is reactive (since 0.1.133): a table mounted while
+   * blocked starts fetching the moment the flag clears, and an
+   * already-queried table replays one query for whatever state changed while
+   * it was blocked.
+   */
   blockQuery?: boolean;
   blockSize?: number;
   dragReleaseDebounceMs?: number;
@@ -101,8 +109,30 @@ interface AsTableProps {
    * checkbox column. `false` (default) hides the column entirely.
    */
   rowActionsColumn?: "first" | "last" | "merge-select" | false;
+  /**
+   * Per-row selectability (since 0.1.133). Return `false` — or a string,
+   * surfaced as the disabled reason on the row's selection control — to make
+   * a row not selectable. Enforced on every path: row click, Space/Enter
+   * toggle, and the header select-all, which also stops counting ineligible
+   * rows. Example:
+   * `:row-selectable="(row) => (row.locked ? 'Locked by another user' : true)"`.
+   */
+  rowSelectable?: RowSelectableHook;
+  /**
+   * Extra classes for the row element (since 0.1.133) — string, array, or
+   * `{ class: boolean }` map, merged with the framework's own row classes.
+   */
+  rowClass?: RowClassHook;
+  /**
+   * Extra attributes for the row element (since 0.1.133). The framework's own
+   * `id`, `role`, `aria-*`, `data-*`, `class` and `style` always win, so a
+   * hook can decorate a row but never rewrite its accessibility contract.
+   */
+  rowAttrs?: RowAttrsHook;
 }
 ```
+
+The three hooks are typed under [Row hooks](#row-hooks). `AsWindowTable` accepts the same three props; the gate lives in the selection model (`state.rowSelectable` / `isRowSelectable` / `selectAll`), so click, keyboard, select-all and the header tri-state all share it.
 
 **Emits**: `row-click(row, event)`, `row-dblclick(row, event)`, `main-action(row, absIndex, event)`.
 
@@ -113,6 +143,39 @@ Windowed (virtualized) renderer for million-row datasets. Uses `planFetch` / pag
 ### `AsFilters`
 
 Renders the active-filters bar. Reads `state.filterFields` and `state.filters`, emits writes through the same refs.
+
+```typescript
+interface AsFiltersProps {
+  /** Explicit field list; defaults to the displayed `state.filterFields`. */
+  filterFields?: string[];
+  /**
+   * Hard cap on how many filter fields render inline (since 0.1.133).
+   * Deterministic and count-based — the component never measures the toolbar,
+   * so width-driven responsiveness stays with the host (feed a shorter
+   * `filterFields` list, or a smaller `maxVisible`). Omitted (the default)
+   * renders every field inline, exactly as before.
+   */
+  maxVisible?: number;
+  /**
+   * What happens to the fields past `maxVisible` (since 0.1.133). Ignored
+   * when `maxVisible` is omitted.
+   *
+   * - `'popover'` (the default whenever `maxVisible` is set) — they move into
+   *   a popover behind a "More filters" trigger, badged with the number of
+   *   ACTIVE hidden filters so nothing silently narrows the table from
+   *   off-screen.
+   * - `'none'` — they are not rendered at all. Pick this only when the host
+   *   surfaces them elsewhere (e.g. its own filter dialog); an active filter
+   *   on a dropped field still applies to the query.
+   */
+  overflow?: "popover" | "none";
+}
+```
+
+`$attrs` are still forwarded to every filter field: the component sets
+`inheritAttrs: false` and renders a multi-root fragment (no wrapper element),
+so the fields (and the overflow trigger beside them) stay direct children of
+the host's filter row and no existing layout changed.
 
 ### `AsTableActions`
 
@@ -228,7 +291,8 @@ interface UseTableOptions {
   alwaysSelected?: string[];
   queryFn?: QueryFn;
   queryOnMount?: boolean;
-  blockQuery?: boolean;
+  /** When true, all triggers (query/queryNext/loadRange) early-return. Pass a getter (or a ref) to keep it reactive — the held-back query runs once when it flips back to `false` (since 0.1.133). */
+  blockQuery?: boolean | (() => boolean);
   blockSize?: number;
   dragReleaseDebounceMs?: number;
   clientFactory?: ClientFactory;
@@ -339,12 +403,35 @@ function useTableActions(): TableActionsState;
 
 ### `useTableUrlQuery(route, router, opts?)`
 
-Bridge `<AsTableRoot v-model:url-query>` to vue-router. Owns the whole query string. Uses type-only imports of `Router` / `RouteLocationNormalizedLoaded` — no runtime dependency on `vue-router` is added to `@atscript/vue-table`.
+Bridge `<AsTableRoot v-model:url-query>` to vue-router. Uses type-only imports of `Router` / `RouteLocationNormalizedLoaded` — no runtime dependency on `vue-router` is added to `@atscript/vue-table`.
+
+**Scope (since 0.1.133): the bridge owns only the keys it serializes.** It used
+to replace `route.query` wholesale; now every write merges into the current
+query. A key is table-owned iff the URL parser consumes it
+(`urlQueryConsumesKey(key)` from `@atscript/ui-table`: the `$sort` / `$search` /
+`$relevance` / `$skip` controls and operator-bearing filter keys) or the bridge
+wrote it before; owned keys are replaced or removed, every other key is left
+untouched, in place. Read and write agree: a key the parser ignores is never
+deleted.
+
+Without a `prefix` the bridge cannot tell a plain `field=value` filter from a
+page-owned flag of the same shape, so a plain key that was already in the URL
+when the bridge mounted counts as foreign until the bridge writes it itself.
+Pass `prefix` when a route carries a host key that could collide with a column
+path, or when it carries two tables.
 
 ```typescript
 interface UseTableUrlQueryOptions {
   /** `"replace"` (default) or `"push"`. */
   mode?: "replace" | "push";
+  /**
+   * Namespace for this table's query keys (since 0.1.133). With
+   * `prefix: "t1"` every key the bridge writes becomes `t1.<key>`
+   * (`t1.$skip`, `t1.status`, `t1.total>100`), and only keys under that
+   * prefix are read back or removed — keys with no prefix, or another
+   * table's prefix, are foreign and preserved untouched.
+   */
+  prefix?: string;
 }
 
 function useTableUrlQuery(
@@ -359,6 +446,9 @@ function useTableUrlQuery(
 import { useRoute, useRouter } from "vue-router";
 import { useTableUrlQuery } from "@atscript/vue-table";
 const urlQuery = useTableUrlQuery(useRoute(), useRouter());
+// Two tables on one route:
+// const left = useTableUrlQuery(useRoute(), useRouter(), { prefix: "a" });
+// const right = useTableUrlQuery(useRoute(), useRouter(), { prefix: "b" });
 </script>
 <template>
   <AsTableRoot v-model:url-query="urlQuery" url="/db/products" />
@@ -402,29 +492,52 @@ Manages preset rows, userConf, capabilities, and the apply/save plumbing. `useTa
 ```typescript
 interface UsePresetsOptions {
   url: string;
+  /** Defaults to `inject(AS_PRESETS_APP)`. */
   app?: string;
   tableKey: string;
   clientFactory?: ClientFactory;
   systemPresets?: SystemPresetInput[];
+  /** Auto-load on setup. Default `true`. */
+  autoLoad?: boolean;
 }
 
 interface UsePresetsReturn {
   presets: ShallowRef<AsPresetEntryRow[]>;
+  presetsById: ComputedRef<Map<string, AsPresetEntryRow>>;
   userConf: ShallowRef<AsPresetEntryRow | null>;
   capabilities: Ref<PresetCapabilities | null>;
   systemPresets: ComputedRef<SystemPreset[]>;
+  systemPresetsById: ComputedRef<Map<string, SystemPreset>>;
+  /** False when the initial load returned 401/403/404 — UI hides itself. */
   available: ComputedRef<boolean>;
-  saveActive: () => Promise<void>;
-  saveAs: (label: string, opts?: { aspects?: AspectMask; public?: boolean }) => Promise<string>;
-  rename: (id: string, label: string) => Promise<void>;
-  remove: (id: string) => Promise<void>;
-  togglePublic: (id: string) => Promise<void>;
-  setDefault: (id: string | null) => Promise<void>;
-  toggleFav: (id: string) => Promise<void>;
-  setFavorites: (ids: string[]) => Promise<void>;
-  batch: <T>(fn: () => Promise<T>) => Promise<T>;
+  loading: Ref<boolean>;
+  /** Last failure. Since 0.1.133 the mutators write here as well as rethrowing. */
+  error: Ref<unknown>;
+  currentUser: ComputedRef<string | null>;
+  activePresetId: Ref<string | null>;
+  activePreset: ComputedRef<ActivePresetView | null>;
+  isOwned(id: string): boolean;
+  reload(): Promise<void>;
+  batch<T>(fn: () => Promise<T>): Promise<T>;
+  savePreset(snapshot: PresetSnapshot): Promise<void>;
+  savePresetAs(
+    label: string,
+    snapshot: PresetSnapshot,
+    opts?: { public?: boolean },
+  ): Promise<string>;
+  renamePreset(id: string, label: string): Promise<void>;
+  deletePreset(id: string): Promise<void>;
+  togglePublic(id: string): Promise<void>;
+  setDefault(id: string | null): Promise<void>;
+  toggleFav(id: string): Promise<void>;
+  setFavorites(ids: string[]): Promise<void>;
 }
 ```
+
+Every mutator rethrows on failure; `error` here is the **load** channel only.
+Mutation failures are recorded on the wired `state.preset.lastError`
+(since 0.1.133), so a UI that only needs to render the failure can watch that
+ref instead of wrapping each call.
 
 `apply` is not on `usePresets` — it lives on the wired `state.preset` surface (`PresetSurface`) and accepts a system id (`sys:*`), a stored row id, or a raw `PresetSnapshot`. Bypassing it and writing the underlying model arrays directly works too — the root watcher reacts either way.
 
@@ -449,9 +562,9 @@ interface UseAppPrefsReturn {
   /** Reactive prefs. Always non-null; defaults to `{}` until first load resolves. */
   prefs: WritableComputedRef<AppConfData>;
   loading: Ref<boolean>;
-  /** Last non-auth error, or `null`. Auth errors flip `available` instead. */
+  /** Last error, or `null`. Unavailable responses flip `available` instead. */
   error: Ref<unknown>;
-  /** False on 401/403 from initial load — hide pref-bound controls. */
+  /** False on 401/403/404 from initial load — hide pref-bound controls. */
   available: ComputedRef<boolean>;
   reload(): Promise<void>;
   /** Optimistic shallow-merge save; rolls back on error. */
@@ -462,7 +575,7 @@ interface UseAppPrefsReturn {
 
 ### `useLocalDraft(options)`
 
-localStorage overlay manager for table preset drafts. One overlay per `(app, tableKey)`; switching presets clears it (the caller decides when to call `clear()`).
+localStorage overlay manager for table preset drafts. One overlay per `(app, scope, tableKey)`; switching presets clears it (the caller decides when to call `clear()`).
 
 ```typescript
 interface UseLocalDraftOptions {
@@ -470,6 +583,14 @@ interface UseLocalDraftOptions {
   tableKey: string;
   enabled: Ref<boolean> | boolean;
   availableAspects: readonly PresetAspect[];
+  /**
+   * Identity the draft is keyed under (since 0.1.133) — pass the signed-in
+   * user's id so a shared browser never restores the previous user's draft.
+   * Reactive: when it changes, reads and writes move to the new key and the
+   * old scope's draft is neither read nor overwritten. Omitted (or
+   * `undefined`) keeps the pre-0.1.133 unscoped key.
+   */
+  scope?: MaybeRefOrGetter<string | undefined>;
   debounceMs?: number;
   storage?: StorageLike | null;
 }
@@ -580,16 +701,17 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Filters / sorters / search**: `filters`, `filterFields`, `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
-- **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`.
+- **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only.
 - **Active row / nav**: `activeIndex`, `navMode`, `navViewportRowCount`, `hasMainActionListener`, `rowId`, `getActiveRow`, `setActive`, `clearActive`, `toggleActiveSelection`, `requestMainAction`, `handleNavKey`, `registerMainActionListener`.
 
   `getActiveRow(): Record<string, unknown> | undefined` resolves the currently-active row — nav-mode-aware: page-relative into `results` for paginated `<AsTable>`, absolute via `windowCache` for `<AsWindowTable>`. Returns `undefined` when no row is active (`activeIndex < 0`). It is the single resolver shared by selection, the `@main-action` emit, and the `level="row"` toolbar.
 
 - **Errors**: `queryError`, `lastError`, `mustRefresh`.
+- **Dialog exit retention** (since 0.1.133): `confirmDisplay` / `actionFormDisplay` keep the last non-null request while the dialog animates out; `releaseConfirm()` / `releaseActionForm()` clear them (bound to the content's `after-leave`) and are no-ops when a new request was raised meanwhile.
 - **Querying flags**: `querying`, `queryingNext`.
 - **Actions namespace**: `actions: TableActionsState`.
 - **Prompt / action-form**: `confirmRequest`, `prompt`, `acceptPrompt`, `dismissPrompt`, `actionFormRequest`, `requestActionInput`, `acceptActionForm`, `dismissActionForm`.
-- **Presets namespace**: `preset: PresetSurface`.
+- **Presets namespace**: `preset: PresetSurface` — see [`PresetSurface`](#presetsurface).
 - **URL bridge**: `applyUrlQuery`.
 - **Query methods**: `query(opts?: { silent?: boolean })` (microtask-coalesced refresh; `{ silent: true }` runs the current query with no `querying` flip and leaves rows as-is on failure — for timer-driven live refresh), `queryImmediate(opts?: { silent?: boolean })` (awaitable form, same `silent` semantics), `queryNext()`, `loadRange()`, `invalidate()`. Every query keeps prior rows until the response settles, then swaps `results` + `totalCount` atomically (keep-rows-until-settle contract).
 
@@ -644,6 +766,100 @@ interface ColumnMenuConfig {
 }
 ```
 
+### Row hooks
+
+Exported types behind `<AsTable>`'s `rowSelectable` / `rowClass` / `rowAttrs`
+props. All new in 0.1.133.
+
+```typescript
+/** Context handed to every per-row hook. */
+interface RowHookContext {
+  /** Position of the row in the rows the renderer is currently rendering. */
+  index: number;
+  /** Whether the row's pk is in `state.selectedRows` right now. */
+  selected: boolean;
+}
+
+/**
+ * Per-row selectability predicate. Return `false` — or a string, surfaced as
+ * the disabled reason on the selection control — to make the row not
+ * selectable; `true` (or omitting the prop) keeps it selectable.
+ */
+type RowSelectableHook = (row: Record<string, unknown>, ctx: RowHookContext) => boolean | string;
+
+/** Extra classes for the row element. */
+type RowClassHook = (
+  row: Record<string, unknown>,
+  ctx: RowHookContext,
+) => string | string[] | Record<string, boolean> | undefined;
+
+/**
+ * Extra attributes for the row element. The framework's own `id`, `role`,
+ * `aria-*`, `data-*`, `class` and `style` always win.
+ */
+type RowAttrsHook = (
+  row: Record<string, unknown>,
+  ctx: RowHookContext,
+) => Record<string, unknown> | undefined;
+
+/** Normalised `RowSelectableHook` verdict. */
+interface RowSelectableVerdict {
+  ok: boolean;
+  /** Disabled reason, when the predicate returned a string. */
+  reason?: string;
+}
+```
+
+A rejected row's selection control renders with `as-table-checkbox-disabled`
+(see [@atscript/ui-styles](/api/ui-styles)), carries `aria-disabled`, and puts
+the reason in its accessible name.
+
+### `PresetConfig`
+
+Preset feature configuration passed to `useTable({ preset })` / `<AsTableRoot :preset>`. Presence of the object enables the feature; omit it entirely to disable.
+
+```typescript
+interface PresetConfig {
+  /** Preset controller URL, e.g. `"/api/db/_presets"`. */
+  url: string;
+  /** Per-table identifier — scopes preset rows under `(app, tableKey)`. */
+  tableKey: string;
+  /** Optional override; defaults to `inject(AS_PRESETS_APP)`. */
+  app?: string;
+  /** Consumer-supplied synthetic system presets (`sys:*`, never persisted). */
+  systemPresets?: SystemPresetInput[];
+  /** App-declared aspect set. Default `['columns','filters','filterOps','sorters']`. */
+  aspects?: PresetAspect[];
+  /**
+   * Aspects a SYSTEM preset owns (since 0.1.133). Intersected with `aspects`;
+   * defaults to all of them. Narrow it to e.g. `['filterOps']` when system
+   * presets are filter-only views that must not reset the user's columns,
+   * displayed filters, sorters or page size.
+   */
+  systemAspects?: PresetAspect[];
+  /** Opt-in localStorage overlay for in-flight tweaks. Default `false`. */
+  persistDrafts?: boolean;
+  /**
+   * Identity the draft is stored under (since 0.1.133) — pass the signed-in
+   * user's id whenever `persistDrafts` is on, so a shared browser never
+   * restores the previous user's draft. Reactive. Omitted keeps the
+   * pre-0.1.133 unscoped key.
+   */
+  draftScope?: MaybeRefOrGetter<string | undefined>;
+}
+```
+
+### `PresetSurface`
+
+The preset namespace on `state.preset`. Always present; inert (`available` is `false`, mutators throw) when `preset` was not configured. Read-only refs for picker UI; mutators are pure batched writes and never call `query()` — the root watchers refetch.
+
+- **Rows**: `presets`, `presetsById`, `userConf`, `capabilities`, `systemPresets`, `systemPresetsById`.
+- **Aspects**: `availableAspects` (app-declared; static), and `systemAspects` (since 0.1.133) — the subset a SYSTEM preset owns, equal to `availableAspects` unless `preset.systemAspects` narrowed it. It drives apply/reset, the dirty baseline, the picker/dialog badges, and the Save-As defaults for system presets.
+- **Status**: `available` (false when `preset` is absent, the initial load returned 401/403/404, or any other error — the picker / dialog hide themselves), `activeId`, `activeSnapshot`, `isDirty`, `canSaveActive`, `currentUser`, `dialogOpen`.
+- **Mutation status** (since 0.1.133): `lastError: Ref<Error | null>` — the error thrown by the most recent outermost mutator, cleared when the next outermost mutator starts (a `batch()` is one frame: the last failure inside it wins); mutators still rethrow, so a caller can handle a single call and this ref is for UI that only renders the failure.
+- **Aspect ownership** (since 0.1.133): `ownedAspects(id: string | null): PresetAspect[]` — `systemAspects` for a system id, the stored row's own `aspects` for a saved preset, `availableAspects` otherwise. Apply, dirty baseline, badges and Save-as defaults all use it.
+- **Methods**: `captureSnapshot`, `apply`, `resetActive`, `clearLocalDraft`, `resolveDefaultId`, `saveActive`, `saveAs`, `rename`, `remove`, `togglePublic`, `setDefault`, `toggleFav`, `setFavorites`, `batch`.
+
 ### `RowDeleteOpt` / `InvokeOpts` / `NavKeyOptions` / `MainActionRequest` / `QueryErrorKind` / `TVueTableActionInfo`
 
 ```typescript
@@ -664,6 +880,14 @@ interface NavKeyOptions {
   enterAction?: "main-action" | "toggle-select" | "passthrough";
   mode?: SelectionMode;
 }
+
+Since 0.1.133 Enter and Space are always left to native handling when the
+event target (or an ancestor inside the cell) is interactive — `button`,
+`a[href]`, form controls, `summary`, `[contenteditable]`, or a widget `role` —
+and the row is not activated. An interactive element hands the keys back to
+table navigation with the `data-as-nav-keys` attribute. Arrow and paging keys
+are unaffected. The search-input bridge is not affected: its handler is bound
+on the input itself.
 
 interface MainActionRequest {
   /** Active row, resolved nav-mode-aware via `state.getActiveRow()` — the reliable field on every page. */

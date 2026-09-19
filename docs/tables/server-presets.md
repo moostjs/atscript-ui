@@ -237,6 +237,7 @@ The client points at the controller's URL via the table root's
         },
       },
     ],
+    systemAspects: ['filterOps'],
   }"
 >
   <AsTableActions>
@@ -260,6 +261,23 @@ const presets = usePresets({
 
 await presets.savePresetAs("Q4 Open", snapshot, { public: true });
 ```
+
+`systemAspects` (since 0.1.133) declares which aspects the built-in
+`systemPresets` own — here, filter conditions only, so switching
+between "Open" and "Closed" leaves the user's columns, displayed
+filters, sorters and page size in place. Omit it and a system preset
+owns every available aspect, as before. See
+[Presets](/tables/presets#what-a-system-preset-owns).
+
+If the controller is not mounted on the server the endpoints answer 404. Since 0.1.133 that is treated exactly like 401/403: `available`
+goes false, the picker hides itself, no error is surfaced and nothing
+is retried — so a build that ships the table but not the presets
+controller degrades quietly.
+
+Every mutator (`savePresetAs`, `renamePreset`, `deletePreset`,
+`togglePublic`, `setDefault`, `setFavorites`) rejects on failure and
+records the reason on `presets.error`. Handle the rejection in custom
+flows.
 
 ## Mounting once for the whole app
 

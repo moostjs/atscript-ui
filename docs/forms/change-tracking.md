@@ -179,6 +179,57 @@ defineShortcuts({
 });
 ```
 
+### Sections light up too
+
+_Since 0.1.133._ `AsObject`, `AsArray` and `AsTuple` forward their dirty flag into
+`AsCollapsible`, which paints `data-dirty=""` on **two** nodes: the section root
+(`as-collapsible-section` / `as-collapsible-island`) and its heading
+(`as-collapsible-title` / `as-collapsible-title-nested`). Nothing else inside
+the section is marked — otherwise one changed leaf would make every label in the
+subtree look modified. The section gets the same restrained left rail as a leaf
+field; restyle it exactly the same way:
+
+```ts
+defineShortcuts({
+  "as-collapsible-section": {
+    "[&:is([data-dirty])]:before:": "", // drop the rail on sections only
+  },
+});
+```
+
+Pass `:is-dirty` yourself if you render `AsCollapsible` directly — see
+[Collapsible sections](/forms/collapsible-sections).
+
+### Announcing it to screen readers
+
+_Since 0.1.133._ The rail is a purely visual cue, so `AsFieldShell` also renders a visually
+hidden status node while the field is dirty:
+
+```html
+<span id="as-field-v-1-status" class="as-field-status">Modified</span>
+```
+
+`AsField` appends that node's id to the input's `aria-describedby` on exactly
+the same condition, so assistive tech reads "Modified" alongside the error or
+description — and a clean field never points at a node that isn't there.
+
+The node lives in `AsFieldShell`'s `status` slot, which owns the whole
+error/hint/announcement area of the footer. Override it to change the wording,
+localise it, or render a visible badge instead:
+
+```vue
+<AsFieldShell v-bind="props">
+  <template #status="{ isDirty, error, hint, statusId }">
+    <div v-if="error || hint" class="as-error-slot">{{ error || hint }}</div>
+    <!-- Keep `statusId` on your node — `aria-describedby` points at it. -->
+    <span v-if="isDirty" :id="statusId" class="as-field-status">Gewijzigd</span>
+  </template>
+</AsFieldShell>
+```
+
+The `header` slot receives `isDirty` and `statusId` too, if you would rather put
+the indicator next to the label.
+
 ## End to end
 
 A complete edit page: load a row, enable tracking, gate a Save button on

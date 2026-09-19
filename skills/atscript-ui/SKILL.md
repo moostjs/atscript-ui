@@ -196,7 +196,7 @@ import {
   PresetsClient,
   AppPrefsClient,
   PresetsHttpError,
-  isAuthError,
+  isUnavailableError, // 401/403/404 → presets unavailable (isAuthError = deprecated alias)
   // query builder
   buildTableQuery,
   // URL bridge

@@ -141,7 +141,16 @@ defineProps<TAsComponentProps<number>>();
 | `chromeless`           | Hide all default chrome (label, description, optional clear). Inline-header fields like checkbox use this. |
 | `hideEmptyPlaceholder` | Skip the empty-state placeholder when the optional field is unset (e.g. radio group).                      |
 
-Slot `#header` overrides the default label + actions row. Slot `#default` receives `{ inputId, descId, optionalEnabled }`.
+`AsFieldShell` slots:
+
+| Slot          | Scope                                                             | Renders                                                                                                                                              |
+| ------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `default`     | `inputId`, `errorId`, `descId`                                    | Your control.                                                                                                                                        |
+| `header`      | `inputId`, `descId`, `optionalEnabled`, `isDirty`\*, `statusId`\* | Replaces the default label + actions row.                                                                                                            |
+| `after-input` | `descId`                                                          | Extra chrome directly under the control.                                                                                                             |
+| `status`\*    | `isDirty`, `error`, `hint`, `statusId`, `inputId`                 | Footer error/hint block + the sr-only "Modified" node. Overriding it replaces BOTH — keep `statusId` on your own node or `aria-describedby` dangles. |
+
+\* 0.1.133+.
 
 ## Level 4 — Fully custom root
 
@@ -331,7 +340,7 @@ Notes:
 
 - Mutate `model.value`, not `props.model` (the wrapper is stable, the inner value is reactive).
 - Wire `aria-describedby="ariaDescribedBy"` so screen readers reach the error/hint/description container set up by `AsFieldShell`.
-- `inputId` / `descId` / `errorId` are pre-resolved on the props — AsFieldShell defaults use them, custom components should too.
+- `inputId` / `descId` / `errorId` / `statusId` are pre-resolved on the props — AsFieldShell defaults use them, custom components should too. `ariaDescribedBy` already joins the right ids (error/hint or description, plus `statusId` while dirty).
 
 ## Custom field-level rules from inside a component
 

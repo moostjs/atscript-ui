@@ -42,6 +42,39 @@ preset owns it. The wire form (`PresetSnapshotWire` with
 entries-arrays for atscript validation) is converted via
 `toWireSnapshot()` / `fromWireSnapshot()` from `@atscript/ui-table`.
 
+Present-but-empty is not the same as absent. `filterOps: {}` says
+"this preset owns the filters and there are none" — applying it
+clears whatever was filtered. Omitting the key entirely leaves the
+current filters alone. Both directions of the wire conversion
+preserve that distinction since 0.1.133, so a saved unfiltered view
+really does clear the filters it was saved without.
+
+### What a system preset owns
+
+By default a system preset owns **every** available aspect: applying
+one resets columns, displayed filters, filter conditions, sorters and
+page size to the preset's values or the factory defaults. When your
+system presets are filter-only views ("Open", "Closed", "Mine"), that
+is too much — switching between them throws away the user's column
+layout. Narrow it with `systemAspects` (since 0.1.133):
+
+```vue
+<AsTableRoot
+  :preset="{
+    url: '/api/db/_presets',
+    tableKey: 'tickets',
+    systemPresets,
+    systemAspects: ['filterOps'],
+  }"
+/>
+```
+
+`systemAspects` is intersected with `aspects` and applies to system
+presets only — user and public presets keep owning whatever their
+snapshot claims. It also scopes the dirty indicator: with
+`systemAspects: ['filterOps']`, reordering columns while a system
+preset is active does not mark it unsaved.
+
 ## Three preset kinds
 
 | Kind       | ID prefix | Persisted | Scope                |
@@ -132,6 +165,12 @@ automatically when the live snapshot matches the active preset's
 claimed aspects (so the URL bar stays clean once you're "done"
 editing).
 
+Pass `draftScope` (since 0.1.133) with the signed-in user's id
+whenever drafts are on — the draft key includes it, so a shared
+browser never restores the previous user's draft. Changing it at
+runtime moves reads and writes to the new key without touching the
+old one.
+
 Wired automatically when `<AsTableRoot :preset="{ ..., persistDrafts: true }">`
 is set; direct use is for programmatic setups.
 
@@ -198,7 +237,9 @@ A typical table page shows the whole flow:
     url: '/api/db/_presets',
     tableKey: path,
     systemPresets,
+    systemAspects: ['filterOps'],
     persistDrafts: true,
+    draftScope: userId,
   }"
 >
   <AsTableActions>
@@ -209,7 +250,25 @@ A typical table page shows the whole flow:
 ```
 
 Note `:preset.systemPresets` is per-table — each table can declare
-its own built-in views.
+its own built-in views. `systemAspects` keeps those built-in views
+from resetting the user's layout, and `draftScope` keeps local
+drafts private to the signed-in user.
+
+### When a preset write fails
+
+Every mutator on `state.preset` (`saveActive`, `saveAs`, `rename`,
+`remove`, `togglePublic`, `setDefault`, `toggleFav`, `setFavorites`)
+rejects on failure and records the reason on
+`state.preset.lastError` — the single channel for write failures.
+It is cleared when an _outermost_ mutator starts, so a
+`state.preset.batch(...)` counts as one user action: a failure early
+in a batch is not wiped by a later write inside it, and the batch's
+last failure is what remains.
+
+The built-in picker keeps its Save-as popover open and shows the
+message, and the manage dialog keeps the failed edits staged, stays
+open and closes only once every write has succeeded. Custom UI must
+handle the rejection — nothing is swallowed since 0.1.133.
 
 ## Next steps
 

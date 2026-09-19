@@ -76,6 +76,43 @@ export default defineConfig({
 
 `i-lucide-search` and `i-brand-logo` now resolve alongside `i-as-search` — different prefixes, zero coordination needed. See the [UnoCSS `presetIcons` docs](https://unocss.dev/presets/icons) for the full API.
 
+## Running a single `presetIcons` instance
+
+_Since 0.1.133._ The example above is fine because the two presets never share a collection. If your own `presetIcons()` is already configured the way you want it — a custom `cdn`, `customizations`, `extraProperties`, a `unit` other than `em` — you can switch ours off with `icons: false` and register the `as` collection on yours instead:
+
+```typescript
+import { defineConfig } from "unocss";
+import { allShortcuts, asPresetVunor, bakedIcons } from "@atscript/ui-styles";
+import { vunorShortcuts } from "vunor/theme";
+import presetIcons from "@unocss/preset-icons";
+
+export default defineConfig({
+  presets: [
+    ...asPresetVunor({ icons: false }),
+    presetIcons({
+      unit: "rem",
+      collections: {
+        lucide: () => import("@iconify-json/lucide/icons.json").then((i) => i.default),
+        as: (name) => bakedIcons[name],
+      },
+    }),
+  ],
+  shortcuts: [vunorShortcuts(allShortcuts)],
+});
+```
+
+`icons: false` skips **only** the baked-icons preset entry. Shortcuts, the component extractor, the keyframes presets and the form-grid variant/safelist are untouched, so nothing else about the preset changes. Note that `iconOverrides` no longer applies either — merge your overrides into the map yourself (`{ ...bakedIcons, ...myOverrides }`).
+
+To resolve the `as` aliases from Iconify (or your own `.icons/*.svg`) at build time rather than from the baked map, use `createIconsLoader` — the same Node-only loader we bake with:
+
+```typescript
+import { createIconsLoader, defaultAsIconAliases } from "@atscript/ui-styles";
+
+// as: createIconsLoader({ aliases: defaultAsIconAliases, iconsDir: ".icons" })
+```
+
+It reads `.icons/<name>.svg` for bare tokens, fetches `prefix:name` ids from the Iconify API, and caches both on disk. Node only — never import it from browser code.
+
 ## Em-based sizing
 
 Every `as-*` shortcut that renders an icon sizes it with `em`, not pixels:

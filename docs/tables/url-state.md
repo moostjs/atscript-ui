@@ -12,8 +12,7 @@ navigates between views.
 ## The composable
 
 `useTableUrlQuery(useRoute(), useRouter())` returns a
-`WritableComputedRef<string>` that owns the entire `route.query`.
-Bind it to `<AsTableRoot v-model:url-query>`:
+`WritableComputedRef<string>` you bind to `<AsTableRoot v-model:url-query>`:
 
 ```vue
 <script setup lang="ts">
@@ -157,14 +156,52 @@ A few things to note:
   `useTableUrlQuery(route, router, { mode: 'push' })` if every
   state change should be a discrete back-button step.
 
-## Caveats
+## Host-owned query keys
 
-`useTableUrlQuery` owns the **entire** `route.query`. Apps that mix
-table state with unrelated query params (e.g. an analytics tag,
-`?utm_source=...`) should write a small `WritableComputedRef`
-themselves that merges in the table aspect rather than wholesale-
-replacing the query. The pattern is small enough that we don't
-want to grow the public API surface to cover it.
+Since 0.1.133 the bridge owns **only what the table reads back**: a
+key is the table's iff the URL parser would consume it, or the bridge
+has written it before. Read and write therefore agree in both
+directions. Every write merges into the current `route.query`: the
+table's keys are replaced (or removed once they drop out), and
+anything else the page owns (`?utm_source=…`, a tab flag, an
+analytics tag) is left untouched, in place.
+
+Consumed, and therefore the table's to remove: the `$`-controls the
+parser actually reads (`$sort`, `$search`, `$relevance`, `$skip`) and
+operator-bearing filter keys (`total>100`) — so a deep link's sort or
+range filter still clears when the user clears it. A `$`-key the
+parser ignores (`$limit`, or anything of your own) stays with the
+page. A plain `field=value` key is indistinguishable from a
+page-owned flag of the same name, so one that was already in the URL
+at mount counts as foreign until the bridge writes it itself. Pass a
+`prefix` when that matters.
+
+## Two tables on one route
+
+Give each table a namespace. Every key the bridge writes is then
+`prefix.key`, and only keys under that prefix are read back or
+removed — everything else is foreign and preserved:
+
+```vue
+<script setup lang="ts">
+import { useRoute, useRouter } from "vue-router";
+import { AsTableRoot, useTableUrlQuery } from "@atscript/vue-table";
+
+const route = useRoute();
+const router = useRouter();
+const ordersQuery = useTableUrlQuery(route, router, { prefix: "orders" });
+const customersQuery = useTableUrlQuery(route, router, { prefix: "customers" });
+</script>
+
+<template>
+  <AsTableRoot url="/api/db/tables/orders" v-model:url-query="ordersQuery" />
+  <AsTableRoot url="/api/db/tables/customers" v-model:url-query="customersQuery" />
+</template>
+```
+
+The resulting URL reads
+`?orders.status='open'&orders.$skip=50&customers.name=acme&tab=split` —
+each table only ever touches its own keys, and the page keeps `tab`.
 
 ## Next steps
 

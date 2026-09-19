@@ -121,6 +121,50 @@ table synthesises a `__remove` row action with a confirm prompt.
 `state.isPkSelected(pk)` is the O(1) "is this row selected"
 predicate used internally by the checkbox cell.
 
+Each row's selection control is a real `role="checkbox"` with
+`aria-checked`, an accessible name (`"Select row"`) and a Space
+keyboard toggle.
+
+### Per-row selectability
+
+`:row-selectable` decides, per row, whether it may be selected at
+all. Return `false`, or a string — the string becomes the disabled
+reason, surfaced on the control as `title` and inside its accessible
+name. Since 0.1.133.
+
+```vue
+<AsTable
+  select="multi"
+  :row-selectable="(row) => (row.archived ? 'Archived rows cannot be picked' : true)"
+/>
+```
+
+The predicate gates every path: row click, the Space/Enter toggle,
+and the header select-all. It is enforced by the selection model, so
+`<AsWindowTable>` honours it exactly as `<AsTable>` does. An
+ineligible row renders `aria-disabled="true"` on its control and
+`data-selectable="false"` on the `<tr>`, and it is excluded from the
+select-all count — so the header checkbox reads fully checked once
+every _eligible_ row is picked.
+
+Select-all never un-picks: a row that is already selected but is now
+ineligible keeps its selection, and it does not hold the header back
+from reading fully checked.
+
+The header's select-all control is a `role="checkbox"` too, with
+`aria-label="Select all rows"` and Space / Enter activation.
+
+### Announcing a running action
+
+While `state.actions.invoke` is in flight, the `<AsTableActions>`
+trigger for that action carries `aria-busy="true"` and its accessible
+name gains a `", running"` suffix (the visible label never changes).
+The toolbar also renders one screen-reader-only polite live region
+that announces `"<label> running"` on start and
+`"<label> finished"` / `"<label> failed"` on settle — it lives
+outside the default slot, so a custom toolbar keeps the
+announcements. Since 0.1.133.
+
 ## Programmatic invocation
 
 `state.actions.invoke(action, pk?, opts?)` invokes any action

@@ -258,6 +258,39 @@ Selection persistence policy on every results-replacement (`<AsTableRoot :select
 | `"clear"`   | Drop everything.                                                                                                 |
 | `"persist"` | Never write to `selectedRows`; full consumer ownership.                                                          |
 
+### Per-row selectability (`:row-selectable`, since 0.1.133)
+
+`<AsTable :row-selectable="(row, { index, selected }) => boolean | string | undefined">`. `false` or a string blocks selection; the string is the disabled reason; `true` / `undefined` allow it. Works on `<AsWindowTable>` too — the rule lives in the selection model (`state.rowSelectable`, pushed by the renderer like `:row-delete`), not in either renderer.
+
+Gated paths: row click, Space/Enter toggle, header select-all, and the select-all "all" count (measured against selectable rows only).
+
+| Rule                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Select-all is ADDITIVE for ineligible rows: a pk that is already selected but is now ineligible is KEPT, and it does not stop the header reading "all". |
+| The tri-state header compares the selection against ELIGIBLE rendered rows only.                                                                        |
+| The header select-all control is `role="checkbox"` + `aria-label="Select all rows"` and activates on Space / Enter as well as click.                    |
+
+```vue
+<AsTable
+  select="multi"
+  :row-selectable="(row) => (row.archived ? 'Archived rows cannot be picked' : true)"
+/>
+```
+
+Rendered contract on a standalone `<AsTable>`:
+
+| Element                     | Attribute                                                                                                      |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| selection cell (every row)  | `role="checkbox"`, `aria-checked`, `aria-label="Select row"`, `tabindex="0"`, Space toggles                    |
+| selection cell (ineligible) | `aria-disabled="true"`, `title="<reason>"`, `aria-label="Select row, <reason>"`, `.as-table-checkbox-disabled` |
+| `<tr>` (ineligible)         | `data-selectable="false"`                                                                                      |
+
+Not wired on `<AsWindowTable>` — the hooks live on `<AsTable>`.
+
+### Running-action feedback (since 0.1.133)
+
+`<AsTableActions>` marks an in-flight trigger `aria-busy="true"` and suffixes its ACCESSIBLE name with `", running"` (visible label unchanged). It also renders one `role="status" aria-live="polite"` sr-only region OUTSIDE the default slot, announcing `"<label> running"` → `"<label> finished"` / `"<label> failed"`. A custom `#default` slot keeps the announcements; per-item states inside `<AsRowActions>` menus are not covered.
+
 Window-mode scroll extensions don't reconcile selection — only fresh top-level fetches (query, invalidate, pagination jump) re-evaluate `selectedRows` against the new results. Switching `select` from `"multi"` to `"none"` clears the current selection.
 
 ## Recipes

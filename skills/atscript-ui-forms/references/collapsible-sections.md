@@ -54,6 +54,8 @@ Register a component name via `:components="{ sessions: MySessions }"` (see [cus
 | 6   | **`empty` slot shows only when `optional && !optionalEnabled`.**                                                                                                                                                                                                                                                                                                                                                                                                 |
 | 7   | **Section dividers can full-bleed to a padded wrapper via the inherited `--as-inset` CSS var** (= the wrapper's horizontal padding). Islands auto-set it for sections nested inside them; for a form in your own card set it on the card: `<div class="… p-$m [--as-inset:1em]">`. Unset → `0px` → no bleed (opt-in). Only the section variant bleeds (islands keep their full border); match the value to the padding (em-based) or it overflows / falls short. |
 
+| 8 | **`:is-dirty` (0.1.133+) paints `data-dirty=""` on the `<details>` root AND the heading element — never on descendants.** `AsObject`/`AsArray`/`AsTuple` forward the prop they get from `AsField`; a custom container renderer must pass `:is-dirty="props.isDirty"` itself or its section never lights up under `<AsForm track-changes>`. Style hooks: `as-collapsible-section` / `as-collapsible-island` / `as-collapsible-title*` (`[&:is([data-dirty])]:before:` left rail). |
+
 ## Slots
 
 All header slots (`title-extras`, `badges`, `actions`) render inside `<summary>` — see invariant 1. Content slots: `body`, `empty`. Shapes: `TAsCollapsibleSlots`.

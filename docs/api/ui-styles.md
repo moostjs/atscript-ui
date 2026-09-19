@@ -35,6 +35,19 @@ interface AsPresetVunorOptions extends AsBaseUnoConfigOptions {
   excludeComponents?: AsComponentName[];
   /** Replace built-in `i-as-<name>` icons with custom SVG strings. Unknown keys ignored. */
   iconOverrides?: Record<string, string>;
+  /**
+   * Register the baked `i-as-*` icon collection. Default `true` (since 0.1.133).
+   *
+   * Set to `false` when the config already runs its OWN `presetIcons()`
+   * instance — two instances fight over the `i-` prefix and the second one
+   * never resolves. Pass your own loader the `as` collection instead:
+   * `presetIcons({ collections: { as: createIconsLoader({ aliases }) } })`.
+   *
+   * Nothing else is affected: shortcuts, the component extractor, keyframes,
+   * the form-grid variant + safelist and vunor itself are all still applied —
+   * only the baked-icons `presetIcons` instance is skipped.
+   */
+  icons?: boolean;
 }
 
 function asPresetVunor(options?: AsPresetVunorOptions): Preset[];
@@ -174,6 +187,64 @@ defineShortcuts({
   "my-button": "i-as-plus c8-filled scope-primary",
 });
 ```
+
+### `defaultAsIconAliases`
+
+```typescript
+const defaultAsIconAliases: Record<string, string>;
+```
+
+The semantic-name → icon-source map the baked collection is generated from
+(since 0.1.133). Exported so a consumer running their own `presetIcons()` can
+feed the same aliases to `createIconsLoader`, keeping every `i-as-*` class in
+our shortcuts resolvable.
+
+### `createIconsLoader(options?)`
+
+**Node-only — build-time.** It reads and writes an on-disk icon cache, so
+import it from a build config (`uno.config.ts`), never from browser code.
+
+```typescript
+interface IconsLoaderOptions {
+  /** Semantic name → Iconify id (or local file name). Defaults to `{}`; pass `defaultAsIconAliases` to cover our own icons. */
+  aliases?: Record<string, string>;
+  /** On-disk cache / local-SVG directory. Default `".icons"`. */
+  iconsDir?: string;
+  /** Iconify API base. Default `"https://api.iconify.design"`. */
+  iconifyApiUrl?: string;
+  /** Cache fetched icons under `iconsDir`. Default `true`. */
+  enableCache?: boolean;
+  /** Post-process a local SVG — the default recolours hard-coded fills to `currentColor` unless the file starts with `<!-- colored -->`. */
+  processLocalSvg?: (svg: string) => string;
+}
+
+function createIconsLoader(options?: IconsLoaderOptions): CustomIconLoader;
+```
+
+Pair it with `asPresetVunor({ icons: false })` so only one `presetIcons()`
+instance owns the `i-` prefix:
+
+```typescript
+import presetIcons from "@unocss/preset-icons";
+import { asPresetVunor, createIconsLoader, defaultAsIconAliases } from "@atscript/ui-styles";
+
+export default defineConfig({
+  presets: [
+    ...asPresetVunor({ icons: false }),
+    presetIcons({
+      collections: {
+        as: createIconsLoader({ aliases: { ...defaultAsIconAliases, ...myAliases } }),
+        // …your own collections
+      },
+    }),
+  ],
+});
+```
+
+With `icons: false` the `iconOverrides` option no longer applies either —
+merge your overrides yourself (`{ ...bakedIcons, ...myOverrides }`), or point
+the `as` collection straight at `bakedIcons` (`as: (name) => bakedIcons[name]`)
+when you want the baked SVGs without the loader's network/disk access.
 
 See [Styling — Icons](/styling/icons).
 

@@ -132,6 +132,14 @@ interface AsCollapsibleProps {
   hidden?: boolean;
   /** Appends a `#N` suffix to the title. */
   arrayIndex?: number;
+  /**
+   * Whether the wrapped section changed since the change-tracking baseline
+   * (since 0.1.133). `AsObject` / `AsArray` / `AsTuple` forward their own
+   * `isDirty`. Paints `data-dirty=""` on the root element and on the heading
+   * ONLY — never on descendants — so a dirty section does not make every
+   * field label inside it look modified.
+   */
+  isDirty?: boolean;
 }
 ```
 
@@ -176,6 +184,27 @@ Every component implements `TAsComponentProps`. The columns below list the `@ui.
 | `AsRef`         | `ref`                          | FK input with value-help dropdown.                                                                       |
 
 All defaults accept the full `TAsComponentProps` contract — see [Component prop & emit types](#component-prop-emit-types).
+
+### `AsFieldShell` slots
+
+`AsFieldShell` is the chrome every other default renders inside, so overriding
+one of its slots is how a custom field keeps the standard label / error /
+status layout while replacing one part of it.
+
+| Slot          | Slot props                                                | Renders                                                               |
+| ------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
+| default       | `{ inputId, errorId, descId }`                            | The control itself, inside the input row.                             |
+| `header`      | `{ inputId, descId, optionalEnabled, isDirty, statusId }` | Replaces the default `<label>` in the header row.                     |
+| `after-input` | `{ descId }`                                              | Extra content directly below the input row (e.g. a description node). |
+| `status`      | `{ isDirty, error, hint, statusId, inputId }`             | The whole footer error / hint / status area.                          |
+
+`isDirty` and `statusId` on `header` are new in 0.1.133, as is the `status`
+slot. The default `status` content renders the error/hint node (`errorId`,
+`role="alert"` when it is an error) plus a visually hidden "Modified" node
+carrying `statusId`, rendered only while the field is dirty. Overriding
+`status` replaces that markup wholesale — put `statusId` on your own node, or
+`aria-describedby` (which `AsField` points at `statusId` on exactly the same
+dirty condition) will reference a missing element.
 
 ## Factories
 
@@ -835,6 +864,20 @@ interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   inputId: string;
   errorId: string;
   descId: string;
+  /**
+   * Stable id for the field's screen-reader-only "modified" status node —
+   * the one `AsFieldShell`'s `status` slot renders (since 0.1.133). Always
+   * populated by `AsField`; optional in the type so standalone
+   * `AsFieldShell` mounts against the pre-0.1.133 prop set still type-check
+   * (the shell falls back to `` `${inputId}-status` ``).
+   */
+  statusId?: string;
+  /**
+   * Pre-resolved `aria-describedby`: `errorId` when an error or hint is
+   * present, else `descId`; `statusId` is appended space-separated while the
+   * field is dirty (since 0.1.133), so AT reads "modified" together with the
+   * error or description. `undefined` when there is nothing to point at.
+   */
   ariaDescribedBy?: string;
   currencyCode?: string;
   unitCode?: string;

@@ -58,6 +58,42 @@ Pick the smallest layer that does the job.
 </AsTable>
 ```
 
+A `#header-<colPath>` slot also renders for the synthesised
+`__actions` column, whose default header is deliberately blank — pass
+the slot when that gutter needs a label. The column stays locked
+(no drag-reorder, no resize) either way. Since 0.1.133.
+
+## Row hooks
+
+Three optional props on `<AsTable>` and `<AsWindowTable>` decorate or
+gate the row element, without a slot. Each receives
+`(row, { index, selected })` — in windowed mode `index` is the
+absolute row index. Since 0.1.133.
+
+| Prop              | Returns                                         | Effect                                                                         |
+| ----------------- | ----------------------------------------------- | ------------------------------------------------------------------------------ |
+| `:row-selectable` | `boolean \| string`                             | `false`/string ⇒ the row is not selectable (the string is the disabled reason) |
+| `:row-class`      | `string \| string[] \| Record<string, boolean>` | Extra classes on the `<tr>`                                                    |
+| `:row-attrs`      | `Record<string, unknown>`                       | Extra attributes on the `<tr>`                                                 |
+
+```vue
+<AsTable
+  select="multi"
+  :row-selectable="(row) => (row.archived ? 'Archived rows cannot be picked' : true)"
+  :row-class="(row) => ({ 'opacity-60': row.archived })"
+  :row-attrs="(row) => ({ 'data-status': row.status })"
+/>
+```
+
+`:row-attrs` can decorate a row but never rewrite its accessibility
+contract: the framework's own `id`, `role`, `aria-*`, `data-*`,
+`class` and `style` always win. Use `:row-class` for classes.
+
+See [Actions & Selection](./actions.md#per-row-selectability) for how
+`:row-selectable` gates click, keyboard and select-all. The rule lives
+in the selection model, not in the renderer, so both table components
+enforce it identically.
+
 `<AsTableRoot>` exposes additional top-level slots — its default
 `v-slot` receives the full table-state surface so the page chrome
 (toolbar, pagination, filter bar) reads from one source: `tableDef`,

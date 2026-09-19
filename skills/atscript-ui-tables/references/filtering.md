@@ -122,15 +122,37 @@ Inverse: `uniqueryFilterToFieldFilters(filterExpr)` decodes a Uniquery into the 
 
 Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Use `conditionsForType(type, nullable)` to read the resolved list. Map a `ColumnDef.type` string to `ColumnFilterType` via `columnFilterType(columnType)`.
 
+### Value coercion in inline input
+
+`parseFilterInput(text, columnType, nullable?)` coerces the typed value to the column's JS type: `number` columns get numbers, and since 0.1.133 `boolean` columns understand the `true` / `false` vocabulary (case-insensitive) and produce real booleans, so `false` round-trips through the URL as a boolean and actually matches. Any other text on a boolean column stays a string — the existing "no match" behaviour is unchanged.
+
 ## AsFilters component
 
 Renders one `<AsFilterField>` per visible filter path.
 
-| Prop           | Type       | Notes                                                              |
-| -------------- | ---------- | ------------------------------------------------------------------ |
-| `filterFields` | `string[]` | Override the visible list; defaults to `state.filterFields.value`. |
+| Prop           | Type                  | Notes                                                                                                   |
+| -------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
+| `filterFields` | `string[]`            | Override the visible list; defaults to `state.filterFields.value`.                                      |
+| `maxVisible`   | `number`              | 0.1.133+. How many fields render inline; the rest overflow. Omitted → all inline (unchanged behaviour). |
+| `overflow`     | `'popover' \| 'none'` | 0.1.133+. Default `'popover'` when `maxVisible` is set. `'none'` drops the extra fields entirely.       |
 
-All `$attrs` pass through to each `<AsFilterField>`.
+All `$attrs` pass through to each `<AsFilterField>` — including the ones inside the overflow popover.
+
+### Overflow (0.1.133+)
+
+`<AsFilters :max-visible="3" />` renders 3 fields inline plus a **More filters**
+trigger (`as-filters-overflow-trigger`, a plain `<button>` with
+`aria-label="More filters"`) that opens a Reka `Popover` holding the rest
+(`as-filters-overflow`). The trigger badges the count of ACTIVE overflow filters
+(`as-filters-overflow-badge`) so a filter narrowing the result set from
+off-screen stays discoverable.
+
+| Rule                                                                                                                                                                                                              |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The cap is COUNT-based and deterministic — `<AsFilters>` never measures the toolbar. Width-driven responsiveness belongs to the host (feed a smaller `maxVisible` / `filterFields`).                              |
+| `<AsFilters>` is a MULTI-ROOT fragment: no wrapper element, no `as-filters` class, no layout of its own. The fields and the trigger are direct children of the host's toolbar row, which is what the host styles. |
+| `overflow: 'none'` does NOT clear anything: a filter applied to a dropped field still rides `state.filters` into the query. Only pick it when your app surfaces those fields elsewhere.                           |
+| The popover renders the same resolved `controls.filterField` component as the inline row.                                                                                                                         |
 
 Use a separate `<AsFilters>` block in the toolbar to render the chip strip; the "Add filter" affordance is up to the consumer (or use the Filters tab inside `<AsConfigDialog>` — see [state-persistence.md](state-persistence.md)).
 

@@ -187,6 +187,24 @@ remove:
 Both are exported from `@atscript/ui-table` for direct use in
 non-AsTableRoot contexts.
 
+## Holding queries back
+
+`:block-query` short-circuits every fetch trigger — the initial
+bootstrap, `query()`, `queryNext()` and window `loadRange()`. Use it
+while a prerequisite is still missing (a tenant not yet picked, a
+parent record not yet loaded):
+
+```vue
+<AsTableRoot :url="url" :block-query="!tenantId" />
+```
+
+Since 0.1.133 the prop is read reactively: while it is `true` the
+table stays idle and empty, and the moment it flips back to `false`
+the held-back query runs — exactly once, with the state as it stands
+then. Flipping it back to `true` stops everything again. Before
+0.1.133 the value was captured at mount, so a table mounted while
+blocked never fetched at all.
+
 ## Cache and reuse
 
 A single `/meta` fetch is shared across every component that points at

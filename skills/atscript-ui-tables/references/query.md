@@ -110,6 +110,12 @@ Pure function, no framework dependencies. Returns a `Uniquery` ready for `client
 
 Use these for tenancy filters, soft-delete gates, role-derived defaults — the user-facing `state.filters` / `state.sorters` stay independent and can be saved / shared without leaking the force layer.
 
+## blockQuery
+
+`<AsTableRoot :block-query>` / `useTable(url, { blockQuery })` short-circuits every fetch trigger: the bootstrap query, `query()`, `queryNext()` and `loadRange()`.
+
+Reactive since 0.1.133 — the component prop is passed as a getter, and `useTable` accepts `boolean | (() => boolean)`. A table mounted while blocked stays empty and runs its first query the moment the flag clears (exactly once, coalesced); re-blocking stops everything again, and state changed while blocked is replayed on the next unblock. Before 0.1.133 the value was captured once at setup, so a table mounted with `blockQuery: true` never fetched.
+
 ## Meta endpoint
 
 `AsTableRoot` calls `getMetaEntry(url, clientFactory)` from `@atscript/ui`. The shape returned by `GET <url>/meta` (cross-link atscript-db skill `references/moost-db.md`):

@@ -234,6 +234,24 @@ For numeric cells, prefer composing with `useCellLocale()` + `formatDecimalForDi
 
 Slot scope-name uses the column path verbatim (dots included): `<template #cell-address.city="...">`. Slots win over the cell-component dispatch for matched columns.
 
+An explicit `#header-<colPath>` slot also renders for a fixed (synthesised) column such as `__actions`; only its default header stays blank. Since 0.1.133.
+
+### Interactive controls inside a cell (since 0.1.133)
+
+Table keyboard nav leaves Enter and Space to an interactive element under the event target: `button`, `a[href]`, `input`, `select`, `textarea`, `summary`, `[contenteditable]` (not `="false"`), or `role` in `button` / `link` / `checkbox` / `menuitem` / `switch` / `tab` / `option`. No `preventDefault`, no row activation, no selection toggle. The walk stops at the `td` / `th` / `tr` / `tbody` boundary.
+
+Opt a control back OUT with `data-as-nav-keys` — Enter then reaches the row's default action as usual:
+
+```vue
+<template #cell-status="{ row }">
+  <td>
+    <button type="button" data-as-nav-keys>{{ row.status }}</button>
+  </td>
+</template>
+```
+
+Mechanism: `handleNavKey()` always applies the guard — there is no opt-out flag. The walk runs from `event.target` up to `event.currentTarget` (the element the handler is bound on), so `useTableNavBridge` on an external search input is immune by construction: its handler sits ON the input, target and boundary are the same element, and the walk never starts. Enter in the search box still fires the main action. Since 0.1.133.
+
 ## Per-cell styling annotations
 
 Static annotations (resolved once per column, cached):

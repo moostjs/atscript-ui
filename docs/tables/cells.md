@@ -194,6 +194,29 @@ fields (e.g. a project-wide `currency` cell). One-off cells belong in
 `:components`.
 :::
 
+## Interactive controls inside a cell
+
+A `<button>`, link, form control or `role="button"`-style widget
+inside a cell keeps Enter and Space for itself — table nav no longer
+consumes them, so a keyboard user can operate the control without the
+row activating underneath. Recognised as interactive: `button`,
+`a[href]`, `input`, `select`, `textarea`, `summary`,
+`[contenteditable]`, and `role` in `button` / `link` / `checkbox` /
+`menuitem` / `switch` / `tab` / `option`. Since 0.1.133.
+
+To opt a control back OUT — i.e. let Enter fall through to the row's
+default action even though focus is on the control — add
+`data-as-nav-keys`:
+
+```vue
+<template #cell-status="{ row }">
+  <td>
+    <!-- Enter opens the row, as it would anywhere else in the table. -->
+    <button type="button" data-as-nav-keys>{{ row.status }}</button>
+  </td>
+</template>
+```
+
 ## Next steps
 
 - [Custom Cells](/tables/custom-cells) — write your own cell, or use

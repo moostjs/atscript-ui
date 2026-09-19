@@ -9,6 +9,7 @@ auto-lifts from `@db.column.version`.
 ## Contents
 
 - [Quick start](#quick-start)
+- [Per-field dirty](#per-field-dirty) — leaf `data-dirty`, dirty sections, the sr-only status node
 - [Invariants](#invariants)
 - [rebaseOnto — 3-way merge](#rebaseonto--3-way-merge)
 - [Key imports](#key-imports)
@@ -115,6 +116,35 @@ OVERRIDABLE `scope-primary` left accent bar via the `as-default-field`
 shortcut's `[&:is([data-dirty])]:` variant (+ a `::before` bar). Restyle or
 disable by re-defining just that one variant key in your vunor shortcuts —
 e.g. `vunorShortcuts({ "as-default-field": { "[&:is([data-dirty])]:": "" } })`.
+
+### Sections (0.1.133+)
+
+`AsObject` / `AsArray` / `AsTuple` forward `isDirty` into `AsCollapsible`, which
+paints `data-dirty=""` on the section root (`as-collapsible-section` /
+`as-collapsible-island`) AND its heading (`as-collapsible-title*`) — and on
+NOTHING else, so one changed leaf does not make every label in the subtree look
+modified. Same left-rail recipe as the leaf; override
+`"as-collapsible-section": { "[&:is([data-dirty])]:before:": "" }` to drop it.
+A custom container renderer must pass `:is-dirty="props.isDirty"` itself.
+
+### A11y status node (0.1.133+)
+
+While dirty, `AsFieldShell` renders a visually hidden
+`<span :id="statusId" class="as-field-status">Modified</span>` and `AsField`
+appends `statusId` to the input's `aria-describedby` (space-separated, after
+`errorId`/`descId`) on exactly the same condition — no dangling idref on a clean
+field. The node lives in the new `status` slot, which owns the whole footer
+error/hint/announcement area:
+
+```vue
+<template #status="{ isDirty, error, hint, statusId }">
+  <div v-if="error || hint" class="as-error-slot">{{ error || hint }}</div>
+  <span v-if="isDirty" :id="statusId" class="as-field-status">Modified</span>
+</template>
+```
+
+Overriding it replaces the default markup wholesale — keep `statusId` on your
+own node. The `header` slot also receives `isDirty` + `statusId`.
 
 ### Usage
 
