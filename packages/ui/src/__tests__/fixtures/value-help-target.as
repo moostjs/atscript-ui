@@ -63,3 +63,43 @@ export interface VersionedTarget {
     @ui.dict.attr
     version: number
 }
+
+// ── Reference chains (value help through intermediate tables) ──
+
+/// Terminal dictionary of a reference chain.
+@db.http.path '/error-codes'
+export interface ErrorCode {
+    @meta.id
+    code: string
+
+    @ui.dict.label
+    title: string
+}
+
+/// Intermediate table — `errorCode` is the link carrying the FK.
+@db.http.path '/issues'
+export interface Issue {
+    @meta.id
+    id: number
+
+    @db.rel.FK
+    errorCode: ErrorCode.code
+}
+
+/// Second intermediate — its `errorCode` only forwards to `Issue.errorCode`,
+/// so a chain through it needs two hops to reach the dictionary.
+@db.http.path '/issue-reports'
+export interface IssueReport {
+    @meta.id
+    id: number
+
+    errorCode: Issue.errorCode
+}
+
+/// Chain with no FK anywhere — `note` forwards to a plain string field.
+export interface PlainNote {
+    @meta.id
+    id: number
+
+    note: string
+}

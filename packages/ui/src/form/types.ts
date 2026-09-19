@@ -1,4 +1,5 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import type { ValueHelpInfo } from "../value-help/types";
 
 export type { TFormEntryOptions } from "../value-help/types";
 
@@ -48,6 +49,15 @@ export interface FormFieldDef {
    * stays in `fields[]` for validation/data; only its render slot moves.
    */
   pushDown: boolean;
+  /**
+   * Value-help target for an FK field — `{ url, targetField }` resolved once by
+   * `extractValueHelp` while the def is built (since 0.1.134; mirrors
+   * `ColumnDef.valueHelpInfo` on the table side). `undefined` for every field
+   * that is not an FK. Renderers read this instead of re-walking the
+   * annotations per field, which also keeps the annotation dependency out of
+   * the component layer.
+   */
+  valueHelpInfo?: ValueHelpInfo;
 }
 
 /**

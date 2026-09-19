@@ -515,4 +515,35 @@ describe("FK ref fields", () => {
     const fkField = def.fields.find((f) => f.path === "orphanId");
     expect(fkField!.type).toBe("number");
   });
+
+  it("carries the resolved valueHelpInfo on the field def (renderers never re-walk)", async () => {
+    const { BookForm } = await import("../__tests__/fixtures/value-help-fk.as");
+    const def = createFormDef(BookForm);
+
+    expect(def.fields.find((f) => f.path === "authorId")!.valueHelpInfo).toEqual({
+      url: "/authors",
+      targetField: "id",
+    });
+    // Non-FK fields carry nothing.
+    expect(def.fields.find((f) => f.path === "title")!.valueHelpInfo).toBeUndefined();
+  });
+
+  it("carries valueHelpInfo even when @ui.type overrides the render type", async () => {
+    const { OverriddenForm } = await import("../__tests__/fixtures/value-help-fk.as");
+    const def = createFormDef(OverriddenForm);
+
+    const fkField = def.fields.find((f) => f.path === "authorId")!;
+    expect(fkField.type).toBe("text");
+    expect(fkField.valueHelpInfo).toEqual({ url: "/authors", targetField: "id" });
+  });
+
+  it("resolves a reference CHAIN onto the field def", async () => {
+    const { IssueView } = await import("../__tests__/fixtures/value-help-fk.as");
+    const def = createFormDef(IssueView);
+
+    expect(def.fields.find((f) => f.path === "errorCode")!.valueHelpInfo).toEqual({
+      url: "/error-codes",
+      targetField: "code",
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { Author, Category, Orphan, NumericOnly } from './value-help-target'
+import { Author, Category, Orphan, NumericOnly, Issue, IssueReport, PlainNote } from './value-help-target'
 
 /// Form with FK field pointing to Author (full dict annotations)
 export interface BookForm {
@@ -36,4 +36,24 @@ export interface OverriddenForm {
 /// Form with a ref but NO @db.rel.FK — probe must return undefined
 export interface UnannotatedRefForm {
     authorId: Author.id
+}
+
+/// View field one hop away from the FK: `Issue.errorCode` carries `@db.rel.FK`
+/// and points at the `ErrorCode` dictionary.
+export interface IssueView {
+    @meta.id
+    id: number
+
+    errorCode: Issue.errorCode
+}
+
+/// View field two hops away: `IssueReport.errorCode` → `Issue.errorCode` (FK)
+/// → `ErrorCode.code`.
+export interface IssueReportView {
+    errorCode: IssueReport.errorCode
+}
+
+/// Chain that never reaches an FK — the probe must give up and return undefined.
+export interface PlainNoteView {
+    note: PlainNote.note
 }

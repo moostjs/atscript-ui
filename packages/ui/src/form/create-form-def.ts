@@ -141,7 +141,12 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     (getFieldMeta(prop, UI_FORM_TYPE) as string | undefined) ??
     (getFieldMeta(prop, UI_TYPE) as string | undefined);
   const pushDown = getFieldMeta(prop, UI_FORM_PUSH_DOWN) !== undefined;
-  const base = { path, prop, phantom: false, name, allStatic, pushDown };
+  // Resolved ONCE per field and carried on the def (mirrors `ColumnDef` on the
+  // table side). The `ref` chain walk used to run twice — here as a boolean
+  // dispatch test, and again in `<AsField>`'s setup for the actual url /
+  // targetField — so the renderer now reads `field.valueHelpInfo` instead.
+  const valueHelpInfo = extractValueHelp(prop);
+  const base = { path, prop, phantom: false, name, allStatic, pushDown, valueHelpInfo };
   // Structured kinds (array, object, tuple, multi-variant union) need to
   // keep `type` equal to the kind so the `isArrayField` / `isObjectField`
   // / `isTupleField` / `isUnionField` guards (and the validator / path-
@@ -223,7 +228,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
     } as FormTupleFieldDef;
   }
 
-  if (extractValueHelp(prop)) {
+  if (valueHelpInfo) {
     return { ...base, type: uiType ?? "ref" };
   }
 

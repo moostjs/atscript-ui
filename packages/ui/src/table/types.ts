@@ -158,6 +158,15 @@ export interface ColumnDef {
    * (`path: '__actions'`).
    */
   fixed?: boolean;
+  /**
+   * Client-owned (display-only) column: nothing on the server backs it, so it
+   * never enters `$select`, server sorting or filters. It still takes part in
+   * column visibility, reordering and presets like any other column. Produced
+   * from `<AsTableRoot :display-columns>`. A `local` column with
+   * `sortable: true` is sorted in memory over the loaded page, never by the
+   * server. Since 0.1.134.
+   */
+  local?: boolean;
 }
 
 // ── Query state types ───────────────────────────────────────
