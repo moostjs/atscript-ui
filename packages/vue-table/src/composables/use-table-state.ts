@@ -27,6 +27,7 @@ import {
   mergeDisplayColumns,
   mergeSorters,
   reconcileColumnWidthDefaults,
+  gateOwns,
   resolveAspectGate,
   sameColumnSet,
   sortRowsLocally,
@@ -46,6 +47,7 @@ import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type {
   ActionFormRequest,
   ActionResult,
+  ApplyUrlQueryOptions,
   ConfigTab,
   ConfirmOptions,
   ConfirmRequest,
@@ -1058,8 +1060,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     queryOpts.onUrlQueryChange(next);
   }
 
-  function applyUrlQuery(urlString: string): void {
+  function applyUrlQuery(urlString: string, opts?: ApplyUrlQueryOptions): void {
     if (urlsEquivalent(urlString, lastEmittedUrl)) return;
+    const replace = opts?.mode === "replace";
     const cols = allColumns.value;
     const parsed = urlQueryStringToState(urlString, {
       knownFields: cols.length > 0 ? cols.map((c) => c.path) : undefined,
@@ -1076,26 +1079,34 @@ export function createTableState(opts: CreateTableStateOptions): {
     const wasQueryDetected = queryDetected;
     hydratingFromUrl = true;
 
-    // Per-field overlay: URL fields override, others (preset/local) survive.
-    // Allowlist gating is already applied by the parser (parsed.filters only
-    // contains allowlisted paths in that mode), so the merge step is the
-    // same shape for "all" and allowlist.
+    // Both aspects below ask one question of the existing state: which entries
+    // does this URL supersede? On replace, every entry the gate says the URL
+    // owns — so one it omits is cleared. On merge, only the entries it actually
+    // carries — so a preset field the URL is silent on survives. The URL's own
+    // entries are then overlaid identically either way.
     const filtersGate = resolveAspectGate(urlQuerySync?.filters);
     if (filtersGate !== "none") {
-      const next: FieldFilters = { ...filters.value };
+      const next: FieldFilters = {};
+      for (const path in filters.value) {
+        // Replace drops what the URL owns. Merge keeps every existing path and
+        // lets the overlay below rewrite the URL's IN PLACE — that preserves key
+        // insertion order, and the order of filter keys is observable (it sets
+        // the `$and` clause order of the built query and of the emitted URL).
+        if (!replace || !gateOwns(filtersGate, path)) next[path] = filters.value[path];
+      }
       for (const path in parsed.filters) next[path] = parsed.filters[path];
       filters.value = next;
     }
 
-    // Sorters merge field-level: drop existing sorters whose field URL
-    // re-specifies, then append URL's. Preserves preset sorters whose field
-    // URL is silent on.
+    // Same question, keyed on `SortControl.field`. Appending the URL's sorters
+    // last means its ordering wins outright on replace, where nothing survives.
     const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
     let urlSortersChanged = false;
     if (sortersGate !== "none") {
-      const urlFields = new Set<string>();
-      for (const s of parsed.sorters) urlFields.add(s.field);
-      const survivors = sorters.value.filter((s) => !urlFields.has(s.field));
+      const urlSortFields = new Set(parsed.sorters.map((s) => s.field));
+      const survivors = sorters.value.filter(
+        (s) => !(replace ? gateOwns(sortersGate, s.field) : urlSortFields.has(s.field)),
+      );
       const merged = [...survivors, ...parsed.sorters];
       if (!sortersEqual(sorters.value, merged)) {
         sorters.value = merged;

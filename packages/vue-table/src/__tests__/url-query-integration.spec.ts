@@ -665,3 +665,200 @@ describe("urlQuerySync — echo guard symmetry (no spurious refetch)", () => {
     expect(pagesFn).not.toHaveBeenCalled();
   });
 });
+
+describe("applyUrlQuery — merge vs replace (history restoration)", () => {
+  // The bug this pins: one `applyUrlQuery` served both mount-time deep-link
+  // hydration and back/forward navigation, always merging per field. Merging is
+  // right for the first (the URL overlays a preset baseline) and wrong for the
+  // second (the URL is a full snapshot), so pressing Back never undid a filter
+  // or sorter the user had just added — it stayed in state and in the query.
+
+  it("replace clears a filter the URL omits (Back undoes an added filter)", async () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("customer")],
+      queryOnMount: false,
+    });
+    await nextTick();
+
+    // User is filtered on status, then adds customer — the state Back must undo.
+    state.filters.value = {
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    };
+    await nextTick();
+
+    state.applyUrlQuery("status=active", { mode: "replace" });
+    await nextTick();
+
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+  });
+
+  it("merge (default) keeps a filter the URL omits — preset baseline survives", async () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("customer")],
+      queryOnMount: false,
+    });
+    await nextTick();
+
+    state.filters.value = {
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    };
+    await nextTick();
+
+    state.applyUrlQuery("status=shipped");
+    await nextTick();
+
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["shipped"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    });
+  });
+
+  it("replace clears a sorter the URL omits and takes the URL's ordering", async () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("name"), mockColumn("createdAt")],
+      queryOnMount: false,
+    });
+    await nextTick();
+
+    state.sorters.value = [
+      { field: "name", direction: "asc" },
+      { field: "createdAt", direction: "desc" },
+    ];
+    await nextTick();
+
+    state.applyUrlQuery("$sort=-createdAt", { mode: "replace" });
+    await nextTick();
+
+    expect(state.sorters.value).toEqual([{ field: "createdAt", direction: "desc" }]);
+  });
+
+  it("replace with an empty query clears every synced aspect", async () => {
+    const onUrlQueryChange = vi.fn();
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("createdAt")],
+      queryOnMount: false,
+      limit: 50,
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
+    state.sorters.value = [{ field: "createdAt", direction: "desc" }];
+    state.searchTerm.value = "foo";
+    state.pagination.value = { page: 3, itemsPerPage: 50 };
+    await nextTick();
+    await nextTick();
+    // The URL the user is at — also what the echo guard now holds, so the
+    // empty query below is a real navigation and not a self-echo.
+    expect(onUrlQueryChange).toHaveBeenCalled();
+
+    // Back to the pristine view: the bridge emits "" for default state, so ""
+    // arriving after mount means "clear", not "no opinion".
+    state.applyUrlQuery("", { mode: "replace" });
+    await nextTick();
+
+    expect(state.filters.value).toEqual({});
+    expect(state.sorters.value).toEqual([]);
+    expect(state.searchTerm.value).toBe("");
+    expect(state.pagination.value.page).toBe(1);
+  });
+
+  it("replace leaves non-allowlisted filters alone (a private filter is not URL-clearable)", async () => {
+    const onUrlQueryChange = vi.fn();
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("customer")],
+      queryOnMount: false,
+      urlQuerySync: { filters: ["status"] },
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
+    state.setFieldFilter("customer", [{ type: "eq", value: ["5"] }]);
+    await nextTick();
+    await nextTick();
+    // Only the allowlisted field round-trips.
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("status=active");
+
+    // `customer` never round-trips through the URL, so an omitting URL says
+    // nothing about it — clearing it would lose state the user cannot restore.
+    state.applyUrlQuery("", { mode: "replace" });
+    await nextTick();
+
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["5"] }] });
+  });
+
+  it("replace leaves non-allowlisted sorters alone", async () => {
+    const onUrlQueryChange = vi.fn();
+    const { state } = mountTableState({
+      columns: [mockColumn("name"), mockColumn("createdAt")],
+      queryOnMount: false,
+      urlQuerySync: { sorters: ["createdAt"] },
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    state.sorters.value = [
+      { field: "name", direction: "asc" },
+      { field: "createdAt", direction: "desc" },
+    ];
+    await nextTick();
+    await nextTick();
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("$sort=-createdAt");
+
+    state.applyUrlQuery("", { mode: "replace" });
+    await nextTick();
+
+    expect(state.sorters.value).toEqual([{ field: "name", direction: "asc" }]);
+  });
+
+  it("replace honours filters: false / sorters: false (nothing synced, nothing cleared)", async () => {
+    const onUrlQueryChange = vi.fn();
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("createdAt")],
+      queryOnMount: false,
+      urlQuerySync: { filters: false, sorters: false },
+      onUrlQueryChange,
+    });
+    await nextTick();
+
+    state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
+    state.sorters.value = [{ field: "createdAt", direction: "desc" }];
+    state.searchTerm.value = "foo";
+    await nextTick();
+    await nextTick();
+    // Search is the only synced aspect here, so it is what primes the guard.
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("$search=foo");
+
+    state.applyUrlQuery("", { mode: "replace" });
+    await nextTick();
+
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+    expect(state.sorters.value).toEqual([{ field: "createdAt", direction: "desc" }]);
+  });
+
+  it("replace re-fetches with the narrowed filter set", async () => {
+    const { state, pagesFn } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("customer")],
+      queryOnMount: true,
+    });
+    await nextTick();
+    await nextTick();
+
+    state.filters.value = {
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["5"] }],
+    };
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    pagesFn.mockClear();
+
+    state.applyUrlQuery("status=active", { mode: "replace" });
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
+    expect(pagesFn).toHaveBeenCalled();
+    const [query] = pagesFn.mock.calls.at(-1) as [{ filter?: unknown }];
+    expect(query.filter).toEqual({ status: "active" });
+  });
+});

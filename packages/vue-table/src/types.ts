@@ -424,6 +424,15 @@ export type TAsCellTypeComponents = {
 } & Record<string, Component>;
 
 /**
+ * How `applyUrlQuery` treats filters and sorters the URL does not mention.
+ * @since 0.1.137
+ */
+export interface ApplyUrlQueryOptions {
+  /** `"merge"` (default) keeps them, `"replace"` clears them. */
+  mode?: "merge" | "replace";
+}
+
+/**
  * Reactive table state — Vue implementation of the framework-agnostic
  * TableStateData + TableStateMethods interfaces.
  *
@@ -675,12 +684,20 @@ export interface ReactiveTableState extends TableStateMethods {
   releaseActionForm: () => void;
   /**
    * Hydrate state from a URL query string produced by `stateToUrlQueryString`.
-   * Replaces filters / sorters / search / pagination with values decoded from
-   * the URL; unions decoded filter fields into `filterFields`. Echo-guarded
-   * against the bridge's own emissions. Does NOT call `query()` — root
-   * watchers refetch in reaction to the writes.
+   * Writes filters / sorters / search / pagination decoded from the URL and
+   * unions decoded filter fields into `filterFields`. Echo-guarded against the
+   * bridge's own emissions. Does NOT call `query()` — root watchers refetch in
+   * reaction to the writes.
+   *
+   * `mode` decides what happens to filters and sorters the URL does NOT
+   * mention (search and pagination always take the URL's value):
+   * - `"merge"` (default) — they survive. This is mount-time deep-link
+   *   hydration, where the URL overlays a preset baseline it must not wipe.
+   * - `"replace"` (since 0.1.137) — they are cleared, within whatever the
+   *   `urlQuerySync` gates actually serialize. This is history navigation,
+   *   where the URL is a complete snapshot of the synced aspects.
    */
-  applyUrlQuery: (urlString: string) => void;
+  applyUrlQuery: (urlString: string, opts?: ApplyUrlQueryOptions) => void;
 
   /**
    * Build the Uniquery the table's own fetch would send right now — same

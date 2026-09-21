@@ -335,17 +335,44 @@ watch(
 );
 
 if (urlQueryActive && !localMode) {
-  // Wait for tableDef (schema-driven parsing) AND preset bootstrap. Preset
-  // writes its baseline first, URL overlays per-field on top — so a deep
-  // link survives a preset that would otherwise clear filters, and preset's
-  // non-URL fields are preserved. `preset.ready` is `true` when the feature
-  // isn't wired, so non-preset tables stay single-step.
+  // Two different events arrive on this one watcher, and they want opposite
+  // things from a URL that omits a filter.
+  //
+  // The FIRST pass is deep-link hydration. It waits for tableDef (schema-driven
+  // parsing) AND preset bootstrap: preset writes its baseline, the URL overlays
+  // per-field on top, so a deep link survives a preset that would otherwise
+  // clear filters and the preset's non-URL fields are preserved. An empty query
+  // here means "no deep link" and must leave the preset alone.
+  //
+  // EVERY LATER pass is history navigation, where the URL is a complete
+  // snapshot of the synced aspects — the bridge re-serializes all of them on
+  // every write. So it replaces: a filter or sorter the URL omits was removed,
+  // and an empty query means "back to the unfiltered view", not "no opinion".
+  // Merging those is why Back failed to undo a filter the user had just added.
+  //
+  // `preset.ready` is `true` when the feature isn't wired, so non-preset
+  // tables stay single-step. `urlQueryReady` already marks which pass we are on:
+  // it starts `false` whenever URL sync is active and flips exactly once, here.
+  //
+  // The later passes still compare the query string rather than just reacting to
+  // the watcher, because the watcher also fires on tableDef and preset.ready. The
+  // echo guard inside `applyUrlQuery` cannot stand in for that: a merge pass
+  // re-primes `lastEmittedUrl` from the MERGED state, so it now carries the
+  // preset's fields and no longer equals the deep-link URL — a same-URL re-fire
+  // would sail past it and replace.
+  let lastSeenQuery = "";
   watch(
     [() => state.tableDef.value, () => urlQuery.value, () => state.preset.ready.value],
     ([def, q, presetReady]) => {
       if (def === null || !presetReady) return;
-      if (typeof q === "string" && q !== "") state.applyUrlQuery(q);
-      if (!urlQueryReady.value) urlQueryReady.value = true;
+      const query = typeof q === "string" ? q : "";
+      if (!urlQueryReady.value) {
+        if (query !== "") state.applyUrlQuery(query, { mode: "merge" });
+        urlQueryReady.value = true;
+      } else if (query !== lastSeenQuery) {
+        state.applyUrlQuery(query, { mode: "replace" });
+      }
+      lastSeenQuery = query;
     },
     { immediate: true },
   );

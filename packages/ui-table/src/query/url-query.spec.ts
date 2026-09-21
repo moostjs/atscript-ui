@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { stateToUrlQueryString, urlQueryConsumesKey, urlQueryStringToState } from "./url-query";
+import {
+  gateOwns,
+  resolveAspectGate,
+  stateToUrlQueryString,
+  urlQueryConsumesKey,
+  urlQueryStringToState,
+} from "./url-query";
 import { uniqueryFilterToFieldFilters } from "../filters/uniquery-to-filters";
 import { filtersToUniqueryFilter } from "../filters/filters-to-uniquery";
 import type { FieldFilters } from "../filters/filter-types";
@@ -696,5 +702,48 @@ describe("urlQueryConsumesKey", () => {
     // without the table definition.
     expect(urlQueryConsumesKey("status")).toBe(false);
     expect(urlQueryConsumesKey("tab")).toBe(false);
+  });
+});
+
+describe("gateOwns", () => {
+  it("an 'all' gate owns every path", () => {
+    expect(gateOwns(resolveAspectGate(true), "status")).toBe(true);
+    expect(gateOwns(resolveAspectGate(undefined), "anything")).toBe(true);
+  });
+
+  it("a 'none' gate owns nothing", () => {
+    expect(gateOwns(resolveAspectGate(false), "status")).toBe(false);
+    expect(gateOwns(resolveAspectGate([]), "status")).toBe(false);
+  });
+
+  it("an allowlist owns exactly its members", () => {
+    const gate = resolveAspectGate(["status", "total"]);
+    expect(gateOwns(gate, "status")).toBe(true);
+    expect(gateOwns(gate, "total")).toBe(true);
+    // Not listed: private, never round-trips, so a URL cannot clear it either.
+    expect(gateOwns(gate, "customer")).toBe(false);
+  });
+
+  it("agrees with what the encoder actually writes", () => {
+    // The predicate is only useful if it matches the serializer's behaviour —
+    // read and write have to agree on ownership or the URL self-echoes.
+    const url = stateToUrlQueryString(
+      {
+        filters: {
+          status: [{ type: "eq", value: ["active"] }],
+          customer: [{ type: "eq", value: ["5"] }],
+        } as FieldFilters,
+        sorters: [
+          { field: "name", direction: "asc" },
+          { field: "createdAt", direction: "desc" },
+        ],
+        searchTerm: "",
+      },
+      { ...DEFAULTS, sync: { filters: ["status"], sorters: ["createdAt"] } },
+    );
+    expect(url).toContain("status=");
+    expect(url).not.toContain("customer=");
+    expect(url).toContain("$sort=-createdAt");
+    expect(url).not.toContain("name");
   });
 });

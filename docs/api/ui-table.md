@@ -603,7 +603,25 @@ function urlQueryStringToState(
   urlString: string,
   opts?: UrlQueryParseOptions,
 ): UrlQueryStateSnapshot;
+
+/** Is the URL authoritative for this field under `gate`? */
+function gateOwns(gate: AspectGate, path: string): boolean;
 ```
+
+### `gateOwns`
+
+Since 0.1.137. The companion to `resolveAspectGate`, and the single place the
+tri-state is decided: `"all"` owns every path, an allowlist owns exactly its
+members, `"none"` owns nothing.
+
+"Owns" means the URL is authoritative for that field — it serializes the field
+on write, and on read its **silence** about the field is meaningful. Both
+directions need the same answer or the URL self-echoes: the encoder writes only
+owned fields, and a history restore must clear the owned ones before overlaying
+the URL, or a filter the user removed survives the Back that should have removed
+it. `applyUrlQuery(url, { mode: "replace" })` in `@atscript/vue-table` is the
+main external consumer; a custom renderer restoring its own state from a URL
+needs it for the same reason.
 
 ### `urlQueryConsumesKey`
 
@@ -663,7 +681,7 @@ interface TableStateMethods {
   setSearchTerm(value: string): void;
   setPagination(p: PaginationControl): void;
   setSelectedRows(rows: unknown[]): void;
-  applyUrlQuery(urlString: string): void;
+  applyUrlQuery(urlString: string, opts?: { mode?: "merge" | "replace" }): void;
   // ...
 }
 ```

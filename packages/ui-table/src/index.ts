@@ -124,6 +124,7 @@ export type {
   UrlQuerySync,
 } from "./query/url-query";
 export {
+  gateOwns,
   resolveAspectGate,
   stateToUrlQueryString,
   urlQueryConsumesKey,

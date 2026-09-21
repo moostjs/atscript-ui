@@ -96,10 +96,31 @@ export function resolveAspectGate(value: boolean | string[] | undefined): Aspect
   return new Set(value);
 }
 
-function pickFilterPaths(filters: FieldFilters, allow: Set<string>): FieldFilters {
+/**
+ * Does a URL under `gate` own `path`? The single place the tri-state is decided,
+ * and the companion to {@link resolveAspectGate}.
+ *
+ * "Owns" means the URL is authoritative for that field: it serializes the field
+ * on write, and on read its silence about the field is meaningful. An `"all"`
+ * gate owns every path, an allowlist owns exactly its members (the rest are
+ * private and never round-trip), `"none"` owns nothing.
+ *
+ * Both directions need it. The encoder writes only owned fields; a history
+ * restore must clear the owned ones before overlaying the URL, or a filter the
+ * user removed survives the Back that should have removed it.
+ *
+ * @since 0.1.137
+ */
+export function gateOwns(gate: AspectGate, path: string): boolean {
+  if (gate === "all") return true;
+  if (gate === "none") return false;
+  return gate.has(path);
+}
+
+function pickFilterPaths(filters: FieldFilters, gate: AspectGate): FieldFilters {
   const out: FieldFilters = {};
   for (const path in filters) {
-    if (allow.has(path)) out[path] = filters[path];
+    if (gateOwns(gate, path)) out[path] = filters[path];
   }
   return out;
 }
@@ -122,19 +143,15 @@ export function stateToUrlQueryString(
   const searchOff = defaults.sync?.search === false;
   const paginationOff = defaults.sync?.pagination === false;
 
+  // "all" passes the state through untouched; every other gate filters by
+  // ownership, which covers "none" (owns nothing) without its own arm.
   const filters: FieldFilters =
-    filtersGate === "none"
-      ? {}
-      : filtersGate === "all"
-        ? state.filters
-        : pickFilterPaths(state.filters, filtersGate);
+    filtersGate === "all" ? state.filters : pickFilterPaths(state.filters, filtersGate);
 
   const sorters: SortControl[] =
-    sortersGate === "none"
-      ? []
-      : sortersGate === "all"
-        ? state.sorters
-        : state.sorters.filter((s) => sortersGate.has(s.field));
+    sortersGate === "all"
+      ? state.sorters
+      : state.sorters.filter((s) => gateOwns(sortersGate, s.field));
 
   const query = buildTableQuery({
     visibleColumnPaths: [],
@@ -262,7 +279,7 @@ export function urlQueryStringToState(
     if ($sort && typeof $sort === "object") {
       for (const field in $sort) {
         if (knownSet && !knownSet.has(field)) continue;
-        if (sortersGate !== "all" && !sortersGate.has(field)) continue;
+        if (!gateOwns(sortersGate, field)) continue;
         const dir = ($sort as Record<string, unknown>)[field];
         if (dir === 1) sorters.push({ field, direction: "asc" });
         else if (dir === -1) sorters.push({ field, direction: "desc" });

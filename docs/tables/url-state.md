@@ -93,19 +93,43 @@ The gate is honoured **symmetrically**: the encoder leaves the
 aspect out, the decoder ignores it on hydration. Asymmetric gating
 would produce self-echoing URLs.
 
-## Hydration
+## Hydration and restoration
 
-On first mount, `applyUrlQuery(urlString)` replays the URL onto
-state:
+`applyUrlQuery(urlString, opts?)` replays a URL onto state. It runs
+in two situations that want opposite things from a URL that omits a
+filter, so since 0.1.137 it takes a `mode`:
 
-- Replaces `state.filters`, `state.sorters`, `state.searchTerm`,
-  `state.pagination.page`.
+| `mode`              | When                      | Filters/sorters the URL omits |
+| ------------------- | ------------------------- | ----------------------------- |
+| `"merge"` (default) | first mount — a deep link | **kept**                      |
+| `"replace"`         | back/forward navigation   | **cleared**                   |
+
+`<AsTableRoot>` picks the mode for you: the first pass merges, every
+later pass replaces. Merging on mount is what lets a deep link
+overlay a preset baseline without wiping the preset's other fields.
+Replacing afterwards is what makes Back actually undo a filter — the
+bridge re-serializes every synced aspect on each write, so a URL that
+omits one is saying it was removed, not that it has no opinion. An
+empty query after mount means "back to the unfiltered view" and
+clears the synced aspects; on the first pass it means "no deep link"
+and leaves the preset alone.
+
+Either mode:
+
+- Writes `state.searchTerm` and `state.pagination.page` from the URL
+  (those always take the URL's value — absent means empty / page 1).
 - Unions decoded filter field paths into `state.filterFields` so
   hidden inputs become visible (you arrived at this URL because
-  someone filtered by them).
+  someone filtered by them). This never narrows, in either mode: a
+  revealed filter input is a per-user display preference.
 - Sets `state.hydratingFromUrl` for the current tick — the root
   watcher suppresses its query call so a second fetch doesn't
   follow the URL replay.
+
+`replace` only clears what the sync gates actually serialize. Under
+an allowlist, filters outside it are private — the URL never carried
+them, so it cannot clear them; under `filters: false` nothing is
+touched at all.
 
 The bridge is echo-guarded: writes that originated from
 `applyUrlQuery` don't fire a follow-up URL write back, and writes

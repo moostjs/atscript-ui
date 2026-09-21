@@ -1,5 +1,6 @@
 // ── Types ───────────────────────────────────────────────────
 export type {
+  ApplyUrlQueryOptions,
   TAsTableControls,
   TAsCellTypeComponents,
   ReactiveTableState,
