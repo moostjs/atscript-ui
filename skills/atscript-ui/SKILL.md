@@ -177,12 +177,16 @@ import {
   FieldFilters,
   FilterConditionType,
   filtersToUniqueryFilter,
-  uniqueryFilterToFieldFilters,
+  uniqueryFilterToFieldFilters, // lossy pieces → 3rd arg onUnsupportedFilter / dev warn (0.1.139+)
   conditionsForType,
   columnFilterType,
+  columnFilterConditions, // per-column ops incl. existence-only columns (0.1.139+)
+  isColumnFilterable,
   parseFilterInput,
+  parseColumnFilterInput, // per column: honours existence-only columns (0.1.139+)
   formatFilterCondition,
   defaultCondition,
+  columnDefaultCondition, // per column (0.1.139+)
   dateShortcuts,
   // preset model
   PresetSnapshot,
@@ -203,6 +207,7 @@ import {
   stateToUrlQueryString,
   urlQueryStringToState,
   resolveAspectGate,
+  URL_SNAPSHOT_KEY, // "$snapshot" (0.1.139+)
   // selection
   togglePk,
   trimSelection,

@@ -43,8 +43,11 @@ Four aspects round-trip:
 | Pagination | `$skip=50` (page-derived)   |
 | Search     | `$search='laptop'`          |
 
-Default view (page 1, no filters, no sorters, no search) emits an
-empty string — no `?` in the URL.
+Every URL the table writes ends in the `$snapshot` marker, so the
+default view (page 1, no filters, no sorters, no search) is `?$snapshot`
+— see [Snapshot URLs and deep links](#snapshot-urls-and-deep-links).
+Up to 0.1.138 there was no marker and the default view emitted an empty
+string.
 
 Tables that opt into
 [search-relevance suppression](/tables/sorting#search-relevance-sort-suppression)
@@ -82,6 +85,7 @@ interface UrlQuerySync {
   sorters?: boolean | string[]; // allowlist of field paths
   search?: boolean; // $search
   pagination?: boolean; // $skip + $limit
+  snapshot?: boolean; // the $snapshot marker (since 0.1.139)
 }
 ```
 
@@ -95,46 +99,133 @@ would produce self-echoing URLs.
 
 ## Hydration and restoration
 
-`applyUrlQuery(urlString, opts?)` replays a URL onto state. It runs
-in two situations that want opposite things from a URL that omits a
-filter, so since 0.1.137 it takes a `mode`:
+`applyUrlQuery(urlString, opts?)` replays a URL onto state.
+`<AsTableRoot>` calls it on every pass — the deep link on mount, then
+every client-side navigation and Back / Forward — and the URL itself
+decides what happens to filters and sorters it does **not** mention:
 
-| `mode`              | When                      | Filters/sorters the URL omits |
-| ------------------- | ------------------------- | ----------------------------- |
-| `"merge"` (default) | first mount — a deep link | **kept**                      |
-| `"replace"`         | back/forward navigation   | **cleared**                   |
+| URL                     | Filters/sorters the URL omits                           |
+| ----------------------- | ------------------------------------------------------- |
+| carries `$snapshot`     | **cleared** — the URL is the whole view                 |
+| no marker (an app link) | **reset to the boot baseline**, then the URL is laid on |
 
-`<AsTableRoot>` picks the mode for you: the first pass merges, every
-later pass replaces. Merging on mount is what lets a deep link
-overlay a preset baseline without wiping the preset's other fields.
-Replacing afterwards is what makes Back actually undo a filter — the
-bridge re-serializes every synced aspect on each write, so a URL that
-omits one is saying it was removed, not that it has no opinion. An
-empty query after mount means "back to the unfiltered view" and
-clears the synced aspects; on the first pass it means "no deep link"
-and leaves the preset alone.
+The **boot baseline** is what the table's URL-owned filters and sorters
+were just before the first URL was applied: the preset, a persisted
+draft, the `v-model` values you passed. It is captured once, so every
+marker-less URL overlays the same starting point — Back to the deep
+link you opened restores that link as it was first opened, not the
+link plus whatever changed since. A preset the user switches to after
+mount does **not** move the baseline; the boot baseline wins.
 
-Either mode:
+Both behaviours:
 
-- Writes `state.searchTerm` and `state.pagination.page` from the URL
+- Write `state.searchTerm` and `state.pagination.page` from the URL
   (those always take the URL's value — absent means empty / page 1).
-- Unions decoded filter field paths into `state.filterFields` so
+- Union decoded filter field paths into `state.filterFields` so
   hidden inputs become visible (you arrived at this URL because
-  someone filtered by them). This never narrows, in either mode: a
-  revealed filter input is a per-user display preference.
-- Sets `state.hydratingFromUrl` for the current tick — the root
+  someone filtered by them). This never narrows: a revealed filter
+  input is a per-user display preference.
+- Set `state.hydratingFromUrl` for the current tick — the root
   watcher suppresses its query call so a second fetch doesn't
   follow the URL replay.
+- Touch only what the sync gates serialize. Under an allowlist,
+  filters outside it are private — the URL never carried them, so it
+  neither clears nor resets them; under `filters: false` nothing is
+  touched at all.
 
-`replace` only clears what the sync gates actually serialize. Under
-an allowlist, filters outside it are private — the URL never carried
-them, so it cannot clear them; under `filters: false` nothing is
-touched at all.
+`opts.mode` overrides the marker for a programmatic caller: `"replace"`
+clears like a snapshot URL, `"merge"` resets to the baseline like a
+marker-less one.
 
 The bridge is echo-guarded: writes that originated from
 `applyUrlQuery` don't fire a follow-up URL write back, and writes
 that originated from state mutations don't trigger a re-hydration
-of the state they came from.
+of the state they came from. `useTableUrlQuery` writes the table's
+keys as one block in the table's order, so its own URL reads back the
+way it was written.
+
+History of this behaviour: up to 0.1.136 every pass merged onto the
+current state and an empty query was skipped, so Back could not undo
+a filter. 0.1.137–0.1.138 merged on the first pass and replaced on
+every later one, so Back to a marker-less deep link lost the preset's
+criteria. Since 0.1.139 the marker decides, on every pass.
+
+## Snapshot URLs and deep links
+
+Since 0.1.139 a URL says which of two things it is:
+
+| URL                      | Written by                     | Filters/sorters the URL omits            |
+| ------------------------ | ------------------------------ | ---------------------------------------- |
+| `?status=open&$snapshot` | the table (every URL it emits) | **cleared** — the URL is the whole view  |
+| `?status=open`           | your app (a hand-built link)   | **kept** from the boot baseline (preset) |
+
+**Reload and share reproduce the table.** Because the table stamps
+`$snapshot` on everything it writes, reloading or opening a copied URL
+restores exactly the filters and sorters it lists — a preset's or saved
+default's other criteria are not added back, and a URL without `$sort`
+means _no_ sorters, not "keep the default ones". Columns, widths and
+other presentation preferences are never touched. This holds on the
+first mount, on client-side navigation and on Back / Forward.
+
+The marker counts by presence alone: `$snapshot`, `$snapshot=1` and
+`$snapshot=0` all mark a snapshot.
+
+**Link into a view.** Pick the form by what the destination should do
+with its own default view:
+
+```ts
+import { stateToUrlQueryString } from "@atscript/ui-table";
+
+// Exactly this population, nothing from the destination's preset.
+const exact = stateToUrlQueryString(
+  { filters: { team: [{ type: "eq", value: ["core"] }] }, sorters: [] },
+  { defaultItemsPerPage: 25 },
+); // → "team=core&$snapshot"
+
+// The destination's preset, narrowed by one more criterion.
+router.push({ path: "/tickets", query: { team: "core" } });
+```
+
+A snapshot link built by hand just adds the bare key:
+`router.push({ path: "/tickets", query: { team: "core", $snapshot: null } })`.
+The key is exported as `URL_SNAPSHOT_KEY` from `@atscript/ui-table`.
+
+- **Do** build cross-view links as snapshots when the linked population
+  must be exact (a dashboard tile, an alert) — an overlay link inherits
+  whatever the destination's default preset filters on.
+- **Do** keep marker-less links for "open this view, focused on X".
+- **Don't** strip `$snapshot` from table URLs you store or share — without
+  it a reload overlays the preset again.
+- **Don't** rely on a marker-less URL to remove a baseline filter: it
+  can only add to the baseline. Use a snapshot URL for that.
+- `:url-query-sync="{ snapshot: false }"` turns the marker off: it is
+  neither written nor honoured, so every URL — including the ones the
+  table writes — overlays the boot baseline.
+
+## Links the filter model cannot hold
+
+A URL can carry filters the table's per-field model cannot express — a
+cross-field OR (`(lane=fast^openedAt<=50)`), an unknown operator, a
+second range AND-ed onto the same field. The table never approximates
+those: the piece is left out whole, so the view shows a _broader_
+result than the link described, and it is reported. Listen for it to
+tell the user:
+
+```vue
+<AsTableRoot
+  v-model:url-query="urlQuery"
+  url="/api/db/tables/tickets"
+  @unsupported-filter="(issue) => notify(`Link criterion ignored: ${issue.fields.join(', ')}`)"
+/>
+```
+
+Without a listener each piece is reported with a `console.warn` in
+development builds. Renderless tables pass `onUnsupportedFilter` to
+`useTable`; custom renderers calling `urlQueryStringToState` read the
+left-out pieces from the result's `unsupported` array. `$in` / `$nin` lists and same-field ORs are not
+lossy — they become equality / inequality conditions on that field.
+The rules, reasons and the programmatic API are on
+[Filtering](/tables/filtering#converting-a-uniquery-filter-back).
 
 ## End-to-end wiring
 
@@ -186,12 +277,14 @@ Since 0.1.133 the bridge owns **only what the table reads back**: a
 key is the table's iff the URL parser would consume it, or the bridge
 has written it before. Read and write therefore agree in both
 directions. Every write merges into the current `route.query`: the
-table's keys are replaced (or removed once they drop out), and
-anything else the page owns (`?utm_source=…`, a tab flag, an
-analytics tag) is left untouched, in place.
+table's keys are rewritten as one block in the table's order (and
+removed once they drop out), and anything else the page owns
+(`?utm_source=…`, a tab flag, an analytics tag) is left untouched, in
+place.
 
 Consumed, and therefore the table's to remove: the `$`-controls the
-parser actually reads (`$sort`, `$search`, `$relevance`, `$skip`) and
+parser actually reads (`$sort`, `$search`, `$relevance`, `$skip`,
+`$snapshot`) and
 operator-bearing filter keys (`total>100`) — so a deep link's sort or
 range filter still clears when the user clears it. A `$`-key the
 parser ignores (`$limit`, or anything of your own) stays with the

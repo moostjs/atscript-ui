@@ -6,7 +6,9 @@ Filter model, condition types, dialogs, OR/AND semantics.
 - [Per-field OR / AND semantics](#per-field-or--and-semantics)
 - [filterFields vs filters](#filterfields-vs-filters)
 - [filtersToUniqueryFilter](#filterstouniqueryfilter)
+- [Decoding a Uniquery filter](#decoding-a-uniquery-filter)
 - [Condition availability per column type](#condition-availability-per-column-type)
+- [Existence-only columns](#existence-only-columns)
 - [AsFilters component](#asfilters-component)
 - [AsFilterField component](#asfilterfield-component)
 - [AsFilterDialog component](#asfilterdialog-component)
@@ -107,7 +109,20 @@ const filter = filtersToUniqueryFilter({
 
 Pure function — no framework dependencies. The atscript-db skill documents the `Uniquery` `FilterExpr` shape (`$eq`, `$ne`, `$regex`, `$gt`, `$gte`, `$lt`, `$lte`, `$exists`, `$and`, `$or`, `$not`).
 
-Inverse: `uniqueryFilterToFieldFilters(filterExpr)` decodes a Uniquery into the dict shape. Used by the URL bridge.
+## Decoding a Uniquery filter
+
+`uniqueryFilterToFieldFilters(expr, knownFields?, onUnsupportedFilter?)` rebuilds `FieldFilters`; the URL bridge decodes every restored URL with it.
+
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Exact for everything `filtersToUniqueryFilter` writes** — round-trip never reports.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2   | **Exact mappings:** `$in` → `eq` per value (OR); `$nin` → `ne` per value; `null` member → `null` / `notNull`; same-field `$or` → that field's OR'd conditions; `$not` of eq/ne/null/notNull → inverse (De Morgan over `$in`); split `$gte` + `$lte` → `bw`.                                                                                                                                                                                                                                                        |
+| 3   | **Fields next to `$or` / `$and` / `$not` in one object are kept** (≤ 0.1.138 dropped them).                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 4   | **Never approximates.** An AND-ed piece the model can't hold is left out whole and reported: `reason` `"cross-field"` (`a=1 OR b=2`, correlated ORs), `"conjunction"` (second positive group on a field, e.g. `$gt` + `$lt`; the first is kept), `"negation"` (`$not` of a range, negative inside `$or`), `"operator"` (unknown `$op`, `$nor`, empty `$in`, object operand). Result = superset of the input. ≤ 0.1.138: cross-field `$or` became an AND per field (broader / narrower), `$in` vanished — silently. |
+| 5   | **Report channel:** `onUnsupportedFilter(issue)` (`{ reason, expr, fields }`) when given, else dev-mode `console.warn("[ui-table] Filter left out …")`. `urlQueryStringToState` never warns — it returns the pieces as `result.unsupported` (omitted when none). The table reports them via `useTable({ onUnsupportedFilter })` / `<AsTableRoot @unsupported-filter>`, else dev `console.warn("[vue-table] URL filter left out …")`.                                                                               |
+| 6   | **Unknown fields (`knownFields`) are ignored silently** (host flags, stale columns) unless they share a piece with a known field — then that piece is reported.                                                                                                                                                                                                                                                                                                                                                    |
+
+Do not hand-roll a residual/fallback filter for the left-out piece; surface the report to the user instead.
 
 ## Condition availability per column type
 
@@ -120,11 +135,22 @@ Inverse: `uniqueryFilterToFieldFilters(filterExpr)` decodes a Uniquery into the 
 | `enum`      | same as `text`                                                             |
 | `ref`       | same as `text`                                                             |
 
-Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Use `conditionsForType(type, nullable)` to read the resolved list. Map a `ColumnDef.type` string to `ColumnFilterType` via `columnFilterType(columnType)`.
+Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Use `conditionsForType(type, nullable)` to read the resolved list. Map a `ColumnDef.type` string to `ColumnFilterType` via `columnFilterType(columnType)`. For a concrete column use `columnFilterConditions(column)` (next section) — it also covers existence-only columns.
+
+## Existence-only columns
+
+Since 0.1.139 (needs `@atscript/moost-db` 0.1.132+): `/meta.fields[P]` = `{ filterable: false, filterOps: ["$exists"] }` for a column whose value can't be compared but whose presence can (JSON / array storage on a relational adapter). `createTableDef` copies it to `ColumnDef.filterOps`.
+
+| #   | Rule                                                                                                                                                                                                                                                             |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Built-in filter UIs offer only `null` / `notNull` on it** (column menu, config dialog, filter dialog, filter bar). ≤ 0.1.138: hidden from filtering.                                                                                                           |
+| 2   | **Gate custom filter UIs on `isColumnFilterable(column)`, list ops with `columnFilterConditions(column)`** — never on `column.filterable` (value comparison only) or `getFilterableColumns` from `@atscript/ui`.                                                 |
+| 3   | **Non-nullable existence-only column → `[]`** (never empty, nothing to offer). `filterOps: ["$geoWithin"]` alone → `[]` (no UI condition).                                                                                                                       |
+| 4   | **Use the column-level helpers:** `parseColumnFilterInput(text, col)`, `columnDefaultCondition(col)` — keep typed input and the default inside what the column offers. The type-level `parseFilterInput` / `defaultCondition` don't know existence-only columns. |
 
 ### Value coercion in inline input
 
-`parseFilterInput(text, columnType, nullable?)` coerces the typed value to the column's JS type: `number` columns get numbers, and since 0.1.133 `boolean` columns understand the `true` / `false` vocabulary (case-insensitive) and produce real booleans, so `false` round-trips through the URL as a boolean and actually matches. Any other text on a boolean column stays a string — the existing "no match" behaviour is unchanged.
+`parseFilterInput(text, columnType, nullable?)` (and `parseColumnFilterInput(text, column)`) coerces the typed value to the column's JS type: `number` columns get numbers, and since 0.1.133 `boolean` columns understand the `true` / `false` vocabulary (case-insensitive) and produce real booleans, so `false` round-trips through the URL as a boolean and actually matches. Any other text on a boolean column stays a string — the existing "no match" behaviour is unchanged.
 
 ## AsFilters component
 
@@ -234,7 +260,8 @@ state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
 ### Set an initial filter through the URL bridge
 
 ```typescript
-state.applyUrlQuery("status=active");
+state.applyUrlQuery("status=active"); // overlays the boot baseline (preset/draft/props)
+state.applyUrlQuery("status=active&$snapshot"); // exactly this — clears the rest (0.1.139+)
 // Or use useTableUrlQuery — see state-persistence.md.
 ```
 

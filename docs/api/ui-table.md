@@ -99,9 +99,17 @@ function conditionsForType(
 
 /** Map a `ColumnDef.type` string to its filter-type bucket. */
 function columnFilterType(columnType: string): ColumnFilterType;
+
+type FilterableColumn = Pick<ColumnDef, "type" | "nullable" | "filterable" | "filterOps">;
+
+/** The conditions a column offers; `[]` when it takes no filter. Since 0.1.139. */
+function columnFilterConditions(column: FilterableColumn): readonly FilterConditionType[];
+
+/** `columnFilterConditions(column).length > 0`. Since 0.1.139. */
+function isColumnFilterable(column: FilterableColumn): boolean;
 ```
 
-`conditionsForType` returns the operator set the filter picker should offer for a given column type.
+`conditionsForType` returns the operator set for a column type. `columnFilterConditions` is the per-column answer every built-in filter UI reads: the type's set for a value-filterable column, `["null", "notNull"]` for an existence-only one (`filterable: false` with `filterOps` including `"$exists"` — a JSON-stored column; dropped when the column is not nullable), `[]` otherwise. Gate custom filter UIs on `isColumnFilterable`, not on `column.filterable` (value comparison only). See [Filterable columns](/tables/filtering#filterable-columns).
 
 ## Filter input format
 
@@ -122,11 +130,24 @@ function parseFilterInput(
   nullable?: boolean,
 ): FilterCondition | undefined;
 
+/**
+ * `parseFilterInput` for a column: type from the column, accepted operators
+ * from `columnFilterConditions(column)`. Since 0.1.139.
+ */
+function parseColumnFilterInput(raw: string, column: FilterableColumn): FilterCondition | undefined;
+
 /** Format a condition back into the same operator-shorthand string. Round-trips with `parseFilterInput`. */
 function formatFilterCondition(cond: FilterCondition): string;
 
 /** Default operator for a fresh filter picker: `"contains"` for `text`/`enum`/`ref`, else `"eq"`. */
 function defaultCondition(columnType: ColumnFilterType): FilterConditionType;
+
+/**
+ * Default operator for a column's filter input: `defaultCondition(type)` when
+ * the column offers it, else the first condition it offers (`"null"` on an
+ * existence-only column). Since 0.1.139.
+ */
+function columnDefaultCondition(column: FilterableColumn): FilterConditionType;
 
 function escapeRegex(value: string): string;
 function unescapeRegex(value: string): string;
@@ -136,19 +157,31 @@ See [Filtering](/tables/filtering).
 
 ## Filters and Uniquery
 
-`filtersToUniqueryFilter` produces a `@uniqu/core`-compatible filter object the server consumes; `uniqueryFilterToFieldFilters` rebuilds `FieldFilters` from a stored Uniquery object (used when applying a preset or URL state).
+`filtersToUniqueryFilter` produces a `@uniqu/core` filter the server consumes; `uniqueryFilterToFieldFilters` rebuilds `FieldFilters` from a Uniquery filter (the URL bridge's decoder uses it).
 
 ```typescript
-function filtersToUniqueryFilter(
-  filters: FieldFilters,
-  columns: ColumnDef[],
-): Record<string, unknown> | undefined;
+function filtersToUniqueryFilter(filters: FieldFilters): FilterExpr | undefined;
 
 function uniqueryFilterToFieldFilters(
-  filter: Record<string, unknown> | undefined,
-  columns: ColumnDef[],
+  expr: FilterExpr | undefined,
+  /** Conditions on other fields are ignored silently. */
+  knownFields?: Iterable<string>,
+  /** Each AND-ed piece that was left out. Omitted → a dev-mode `console.warn` per piece. Since 0.1.139. */
+  onUnsupportedFilter?: (issue: UnsupportedFilter) => void,
 ): FieldFilters;
+
+interface UnsupportedFilter {
+  reason: UnsupportedFilterReason;
+  /** The left-out sub-expression, as it appeared in the input. */
+  expr: FilterExpr;
+  /** Field paths it references. */
+  fields: string[];
+}
+
+type UnsupportedFilterReason = "cross-field" | "operator" | "negation" | "conjunction";
 ```
+
+The decoder is exact for everything `filtersToUniqueryFilter` produces, maps `$in` / `$nin` / same-field `$or` / invertible `$not` exactly, and leaves out whole — and reports — every AND-ed piece field filters cannot express, so the result never selects fewer rows than the input and never silently more. Up to 0.1.138 such pieces were dropped or reshaped without a report. See [Converting a Uniquery filter back](/tables/filtering#converting-a-uniquery-filter-back).
 
 ## Date shortcuts
 
@@ -537,7 +570,7 @@ function mergeFilters(force?: FilterExpr, user?: FilterExpr): FilterExpr | undef
 
 ## URL query bridge
 
-Two-way bridge between table state and URL query strings. Per-aspect gates (`filters` / `sorters` / `search` / `pagination`) are honoured symmetrically by encoder and decoder — pass the same `sync` config to both so the round-trip matches.
+Two-way bridge between table state and URL query strings. Per-aspect gates (`filters` / `sorters` / `search` / `pagination`, plus the `snapshot` marker) are honoured symmetrically by encoder and decoder — pass the same `sync` config to both so the round-trip matches. A decoded `snapshot: true` means "restore exactly": clear every filter and sorter the gates own, then apply the URL's; without it the URL is an overlay on the table's starting filters and sorters (see [Snapshot URLs](/tables/url-state#snapshot-urls-and-deep-links)).
 
 ```typescript
 interface UrlQueryStateLike {
@@ -553,9 +586,16 @@ interface UrlQueryStateLike {
   ignoreSorters?: boolean;
 }
 
+/** `"$snapshot"` — the control that marks a URL as a complete filter + sorter snapshot. Read by presence, whatever its value. Since 0.1.139. */
+const URL_SNAPSHOT_KEY: "$snapshot";
+
 interface UrlQueryStateSnapshot {
   filters: FieldFilters;
   sorters: SortControl[];
+  /** `true` when the URL carried `$snapshot`; omitted otherwise (and when `sync.snapshot` is `false`). Since 0.1.139. */
+  snapshot?: true;
+  /** Filter pieces left out of `filters` because field filters cannot express them (see `uniqueryFilterToFieldFilters`); omitted when none. The parser never warns — the caller decides. Since 0.1.139. */
+  unsupported?: UnsupportedFilter[];
   /** Raw `$skip` offset when present (no page math — recipients divide by their own `itemsPerPage`). */
   skip?: number;
   searchTerm: string;
@@ -572,6 +612,8 @@ interface UrlQuerySync {
   search?: boolean;
   /** Round-trip pagination (`$skip`). Default `true`. */
   pagination?: boolean;
+  /** Write `$snapshot` on every URL and honour it on read. Default `true`; `false` = neither. Since 0.1.139. */
+  snapshot?: boolean;
 }
 
 interface UrlQueryDefaults {
@@ -595,7 +637,11 @@ type AspectGate = "all" | "none" | Set<string>;
 
 function resolveAspectGate(value: boolean | string[] | undefined): AspectGate;
 
-/** Returns the URL query string (no leading `?`). Returns `""` for the default view. */
+/**
+ * Returns the URL query string (no leading `?`), ending in `$snapshot` unless
+ * `sync.snapshot` is `false` or neither filters nor sorters sync. The default
+ * view is `"$snapshot"` (`""` with the marker off; `""` always up to 0.1.138).
+ */
 function stateToUrlQueryString(state: UrlQueryStateLike, defaults: UrlQueryDefaults): string;
 
 /** Robust by design — schema drift never breaks the recipient's view. */
@@ -629,7 +675,7 @@ needs it for the same reason.
 function urlQueryConsumesKey(key: string): boolean;
 ```
 
-Since 0.1.133. `true` for the keys `urlQueryStringToState` would read: the `$sort` / `$search` / `$relevance` / `$skip` controls and operator-bearing filter keys (`total>100`). `useTableUrlQuery` treats exactly these (plus keys it wrote itself) as table-owned; everything else in the query is host-owned and preserved.
+Since 0.1.133. `true` for the keys `urlQueryStringToState` would read: the `$sort` / `$search` / `$relevance` / `$skip` / `$snapshot` (since 0.1.139) controls and operator-bearing filter keys (`total>100`). `useTableUrlQuery` treats exactly these (plus keys it wrote itself) as table-owned; everything else in the query is host-owned and preserved.
 
 See [URL State](/tables/url-state).
 
@@ -876,6 +922,9 @@ function arraysEqual<T>(a: readonly T[], b: readonly T[]): boolean;
 function sameColumnSet(a: readonly string[], b: readonly string[]): boolean;
 function setsEqual<T>(a: ReadonlySet<T>, b: ReadonlySet<T>): boolean;
 function sortersEqual(a: readonly SortControl[], b: readonly SortControl[]): boolean;
+
+/** `true` outside a production build (`process.env.NODE_ENV !== "production"`, replaced by bundlers) — the gate for dev-only warnings. Since 0.1.139. */
+const DEV: boolean;
 
 type ColumnReorderPosition = "before" | "after";
 

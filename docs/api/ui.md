@@ -239,7 +239,10 @@ interface ColumnDef {
   /** Extra sibling leaf paths to fetch when this column is visible — see [Custom Cells](/tables/custom-cells). */
   selectWith?: string[];
   sortable: boolean;
+  /** Value comparisons accepted (the server's `filterable`). */
   filterable: boolean;
+  /** Narrower operators accepted when `filterable` is `false`, e.g. `["$exists"]` on a JSON-stored column. Since 0.1.139. */
+  filterOps?: string[];
   nullable: boolean;
   visible: boolean;
   width?: string;
@@ -279,6 +282,8 @@ interface MetaResponse {
 interface FieldMeta {
   sortable: boolean;
   filterable: boolean;
+  /** Present only when `filterable` is `false` but narrower predicates pass (`@atscript/moost-db` 0.1.132+). Since 0.1.139. */
+  filterOps?: string[];
 }
 
 interface SearchIndexInfo {
@@ -908,6 +913,8 @@ function getSortableColumns(def: TableDef): ColumnDef[];
 function getFilterableColumns(def: TableDef): ColumnDef[];
 function getColumn(def: TableDef, path: string): ColumnDef | undefined;
 ```
+
+`getFilterableColumns` returns the value-filterable columns (`filterable: true`). To list every column a filter UI can offer — existence-only columns included — filter with `isColumnFilterable` from `@atscript/ui-table`.
 
 ## Error map utilities
 

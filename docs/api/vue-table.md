@@ -83,7 +83,7 @@ interface AsTableRootProps {
 
 **v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]), `ignoreSortersWhenSearched` (boolean).
 
-**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`.
+**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)).
 
 **Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
 
@@ -320,6 +320,8 @@ interface UseTableOptions {
   urlQueryReady?: Ref<boolean>;
   onUrlQueryChange?: (urlString: string) => void;
   urlQuerySync?: UrlQuerySync;
+  /** Each left-out piece of a restored URL's filter. Omitted → dev-mode `console.warn`. Since 0.1.139. */
+  onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
   preset?: PresetConfig;
 }
 ```
@@ -822,7 +824,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Row-action policy** (since 0.1.134): `rowActions: Ref<RowActionsConfig | undefined>` — renderer-pushed by `<AsTableRoot :row-actions>` — and `rowActionsPolicy`, the compiled view of it. Both `<AsRowActions>` and `<AsTableActions>` read the compiled policy, so the row cell and the selection toolbar always agree.
 - **Query surface** (since 0.1.134): `buildQuery(opts?)` returns the `Uniquery` the table's own fetch would send right now (`{ columnPaths?, includeActions? }` overrides); `fetchPage(query, page, size)` runs one page through the configured `queryFn` / client. These are the two seams `useTableExport` builds on.
 - **Local sorting** (since 0.1.134): `localColumnPaths` (paths of the client-owned columns) and `applyLocalSort(rows)` — `<AsTable>` runs the loaded page through it, sorting by the FULL sorter list so the server's ordering survives and a local sorter lands at its real priority. Inert without [display columns](/tables/customization#display-only-columns), in window mode, and for an in-memory table (its query function sorts the dataset itself, which is also what lets a window-mode in-memory table keep the affordance). `localSortAvailable` (since 0.1.135) is the single rule every sort affordance reads, so the header and the config dialog cannot offer different sets.
-- **URL bridge**: `applyUrlQuery(urlString, opts?)`. Since 0.1.137 `opts.mode` picks how filters and sorters the URL omits are treated: `"merge"` (default) keeps them — mount-time deep-link hydration overlaying a preset baseline — and `"replace"` clears them within the `urlQuerySync` gates, which is what history navigation needs. `<AsTableRoot>` merges on the first pass and replaces on every later one.
+- **URL bridge**: `applyUrlQuery(urlString, opts?)`. The URL decides what happens to filters and sorters it omits, within the `urlQuerySync` gates: a URL carrying `$snapshot` (every URL the table writes) clears them; any other URL resets them to the table's boot baseline (the owned filters and sorters it had before the first URL was applied — preset, persisted draft, props) and lays its own on top. `opts.mode` (`"merge"` / `"replace"`) overrides the marker. `<AsTableRoot>` calls it on every pass without a mode. Since 0.1.139; 0.1.137–0.1.138 merged onto the current state on the first pass and replaced on every later one — see [Hydration and restoration](/tables/url-state#hydration-and-restoration).
 - **Query methods**: `query(opts?: { silent?: boolean })` (microtask-coalesced refresh; `{ silent: true }` runs the current query with no `querying` flip and leaves rows as-is on failure — for timer-driven live refresh), `queryImmediate(opts?: { silent?: boolean })` (awaitable form, same `silent` semantics), `queryNext()`, `loadRange()`, `invalidate()`. Every query keeps prior rows until the response settles, then swaps `results` + `totalCount` atomically (keep-rows-until-settle contract).
 
 ### `TableActionsState`

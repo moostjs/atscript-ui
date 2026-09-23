@@ -90,6 +90,50 @@ translation:
 | `regex` | `{ field: { $regex: <value> } }` |
 :::
 
+## Filterable columns
+
+Which columns take a filter, and which conditions they offer, comes from
+the server's `/meta` (see [Annotations Reference](/tables/annotations)):
+
+| `/meta.fields[path]`                          | Filter UI offers                                   |
+| --------------------------------------------- | -------------------------------------------------- |
+| `filterable: true`                            | the column type's conditions (text, number, date…) |
+| `filterable: false`, `filterOps: ["$exists"]` | only _is empty_ / _is not empty_                   |
+| `filterable: false`, no `filterOps`           | nothing — the column is not in any filter UI       |
+
+The middle row is a column whose value cannot be compared but whose
+presence can — typically a JSON-stored object or array on a relational
+database (`@atscript/moost-db` 0.1.132+ reports it). Since 0.1.139 the
+column menu, config dialog, filter dialog and filter bar offer it with
+exactly those two conditions; up to 0.1.138 it was hidden from
+filtering. As everywhere, `null` / `notNull` are dropped for a
+non-nullable column, which leaves such a column with nothing to offer.
+
+Building your own filter UI? Read the same answer the built-ins read:
+
+```ts
+import {
+  columnDefaultCondition,
+  columnFilterConditions,
+  isColumnFilterable,
+  parseColumnFilterInput,
+} from "@atscript/ui-table";
+
+const filterable = state.allColumns.value.filter(isColumnFilterable);
+const ops = columnFilterConditions(column); // e.g. ["null", "notNull"]
+const initial = columnDefaultCondition(column); // "null" there, "contains" on text
+const typed = parseColumnFilterInput("!<empty>", column); // { type: "notNull", value: [] }
+```
+
+- **Do** gate on `isColumnFilterable(column)` — **don't** gate on
+  `column.filterable`, which is value comparison only and hides
+  existence-only columns.
+- **Do** use the column-level helpers `columnDefaultCondition(column)`
+  and `parseColumnFilterInput(text, column)` so the default operator and
+  typed input stay inside what the column offers. The type-level
+  `defaultCondition(type)` / `parseFilterInput(text, type, nullable)`
+  know nothing about existence-only columns.
+
 ## Display state vs applied state
 
 Two independent arrays drive filtering:
@@ -177,10 +221,11 @@ text on a boolean column stays a string and matches nothing.
 Mounted automatically by `<AsTableRoot>`. Opens when the user picks
 _Filter_ from a column-menu, or when you call
 `state.openFilterDialog(column)` directly. Lets the user compose
-multiple conditions per column (e.g. `> 100` AND `<= 1000`) and pick
-operators from the full `FilterConditionType` palette. The dialog
-respects `column.nullable` — `null` / `notNull` are hidden for
-non-nullable columns.
+multiple conditions per column (OR-ed, per the
+[combination rules](#combination-rules) — use _between_ for a range) and
+pick from the operators the column offers
+([Filterable columns](#filterable-columns)). `null` / `notNull` are
+hidden for non-nullable columns.
 
 Override it via `:controls.filterDialog` (pass only the override —
 other slots fall back to their built-ins):
@@ -265,9 +310,51 @@ const filter = filtersToUniqueryFilter({
 Useful when you're piping filters into a non-table query (e.g. an
 export endpoint) or wiring `forceFilters` from elsewhere in your app.
 
-The inverse — `uniqueryFilterToFieldFilters` — is also exported, and
-powers the URL-state bridge's hydration step. See
-[URL State](/tables/url-state).
+## Converting a Uniquery filter back
+
+`uniqueryFilterToFieldFilters` rebuilds `FieldFilters` from a Uniquery
+filter — the URL bridge decodes every restored URL with it. It is exact
+for everything `filtersToUniqueryFilter` writes, and for:
+
+| Input                                                 | Becomes                                 |
+| ----------------------------------------------------- | --------------------------------------- |
+| `{ status: { $in: ["open", "review"] } }`             | two `eq` conditions on `status` (OR-ed) |
+| `{ status: { $nin: ["done"] } }`                      | an `ne` condition                       |
+| `{ $or: [{ n: 1 }, { n: { $gte: 5, $lte: 9 } }] }`    | `eq 1` + `bw 5..9` on `n`               |
+| `{ $not: { status: "done" } }`                        | `ne "done"`                             |
+| `{ team: "core", $or: [...] }` (fields next to `$or`) | `team` kept alongside the `$or` result  |
+
+Anything the per-field model cannot express is **left out whole and
+reported** — never approximated:
+
+| `reason`        | Example                                           |
+| --------------- | ------------------------------------------------- |
+| `"cross-field"` | `{ $or: [{ lane: "fast" }, { openedAt: 5 }] }`    |
+| `"conjunction"` | `{ total: { $gt: 1, $lt: 5 } }` — keeps `$gt`     |
+| `"negation"`    | `{ $not: { total: { $gt: 5 } } }`                 |
+| `"operator"`    | `{ tags: { $all: ["a"] } }`, `{ n: { $in: [] } }` |
+
+Leaving out an AND-ed piece can only widen the match, so the result is a
+superset of the input — and the caller is told:
+
+```ts
+import { uniqueryFilterToFieldFilters } from "@atscript/ui-table";
+
+const filters = uniqueryFilterToFieldFilters(expr, knownFields, (issue) =>
+  console.info(issue.reason, issue.fields, issue.expr),
+);
+```
+
+Without a handler each piece is reported with a `console.warn` in
+development builds. Conditions on fields outside `knownFields` are
+ignored silently (they are not this table's), unless they share a piece
+with a known field. `urlQueryStringToState` never warns — it returns the
+pieces as `unsupported` on its result — and `<AsTableRoot>` surfaces
+them as the `@unsupported-filter` event (`useTable({ onUnsupportedFilter })`
+without the component) — see
+[URL State](/tables/url-state#links-the-filter-model-cannot-hold).
+Up to 0.1.138 these pieces were dropped or reshaped without a report
+(a cross-field OR became an AND, `$in` vanished).
 
 ## Next steps
 

@@ -66,9 +66,21 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 | `mode`   | `"replace"` | `router.replace` per write. `"push"` makes every filter/sort/page mutation a history entry.    |
 | `prefix` | none        | Namespace every table-owned key as `prefix.key`. Since 0.1.133. Lets two tables share a route. |
 
-Since 0.1.137 restoring a URL after mount **replaces** the synced aspects instead of merging them: `<AsTableRoot>` calls `applyUrlQuery(q, { mode: "replace" })` on every pass after the first, so a filter or sorter the URL omits is cleared and an empty query returns the table to its unfiltered view. The first pass still merges — that is deep-link hydration overlaying a preset baseline, which it must not wipe. Clearing is bounded by the sync gates — `gateOwns(gate, path)` in `@atscript/ui-table` (since 0.1.137) is the predicate, and the encoder uses the same one so read and write agree: allowlisted-out filters are private, never round-trip, and are never cleared by a URL. (≤ 0.1.136 every pass merged per field and an empty query was skipped outright, so Back did not undo a filter the user had just added.)
+`<AsTableRoot>` calls `applyUrlQuery(q)` on every pass (mount, client-side navigation, Back/Forward) and the URL decides (0.1.139+): a `$snapshot` URL clears the filters/sorters it omits; a marker-less URL resets them to the **boot baseline** — the URL-owned filters/sorters the table had before the first URL was applied (preset, persisted draft, props), captured once — then overlays its own. Back to an app deep link therefore restores it as first opened; an empty marker-less query restores the baseline, not an unfiltered view; a preset switched after mount does NOT move the baseline. `opts.mode` (`"merge"` = baseline overlay / `"replace"` = clear) overrides the marker for programmatic callers. Both are bounded by the sync gates — `gateOwns(gate, path)` in `@atscript/ui-table` (since 0.1.137) is the predicate, and the encoder uses the same one so read and write agree: allowlisted-out filters are private, never round-trip, and are never cleared or reset by a URL. (≤ 0.1.136 every pass merged onto the current state and an empty query was skipped; 0.1.137–0.1.138 merged on the first pass and replaced on every later one, so Back to a marker-less deep link lost the preset's criteria.)
 
-Since 0.1.133 the bridge owns **only what the parser consumes**: a key is table-owned iff `urlQueryStringToState` would read it (`urlQueryConsumesKey`, exported from `@atscript/ui-table`) or the bridge has written it before — so read and write agree in both directions. Each write merges into `route.query`; host-owned keys are preserved in place. Consumed without a prior write: `$sort`, `$search`, `$relevance`, `$skip`, and operator-bearing filter keys (`total>100`). NOT consumed, therefore never removed: `$limit`, any other `$key`, and a plain `field=value` key already present at mount (indistinguishable from a host flag until the bridge writes it itself).
+### Snapshot URLs (`$snapshot`, since 0.1.139)
+
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                       |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Every URL the table writes ends in the bare `$snapshot` marker** (`status=open&$sort=-id&$snapshot`; the empty view is `$snapshot`). Not written when neither filters nor sorters sync. Key exported as `URL_SNAPSHOT_KEY`. ≤ 0.1.138: no marker, empty view emitted `""`.                                                                                                               |
+| 2   | **A marked URL restores exactly, on every pass** — first mount, client-side navigation, Back/Forward: filters/sorters the URL omits are cleared (a missing `$sort` = no sorters, preset/saved-default criteria are NOT added back). Columns, widths, presentation untouched. The marker counts by presence (`$snapshot=0` is still a marker). ≤ 0.1.138: reload/share overlaid the preset. |
+| 3   | **A marker-less URL overlays the boot baseline, on every pass** (app deep link "open view X, narrowed by Y"). It can only add to the baseline — to drop a baseline filter, link with the marker. With `snapshot: false` the table's own URLs are marker-less too, so they overlay as well.                                                                                                 |
+| 4   | **Cross-view link that must be exact → include the marker**: `stateToUrlQueryString(...)` (stamps it) or `router.push({ query: { team: "core", $snapshot: null } })`. Overlay link → omit it.                                                                                                                                                                                              |
+| 5   | **Opt out** with `:url-query-sync="{ snapshot: false }"` — neither written nor honoured; pass the same `sync` to `stateToUrlQueryString` / `urlQueryStringToState` in custom renderers.                                                                                                                                                                                                    |
+| 6   | **`useTableUrlQuery` writes the table's keys as one block in the table's order** (foreign keys keep their slots), so the table's own URL reads back as written and the echo guard catches it — no refetch. A custom bridge must do the same: never keep old table keys in place while appending new ones.                                                                                  |
+| 7   | **URL filters the per-field model can't hold are left out and reported** (cross-field OR, unknown operator, second range on one field): `<AsTableRoot @unsupported-filter="(issue) => …">` (`issue.reason` / `.fields` / `.expr`); unbound → dev `console.warn`. `useTable({ onUnsupportedFilter })` for renderless use. See [filtering.md](filtering.md#decoding-a-uniquery-filter).      |
+
+Since 0.1.133 the bridge owns **only what the parser consumes**: a key is table-owned iff `urlQueryStringToState` would read it (`urlQueryConsumesKey`, exported from `@atscript/ui-table`) or the bridge has written it before — so read and write agree in both directions. Each write merges into `route.query`; host-owned keys are preserved in place. Consumed without a prior write: `$sort`, `$search`, `$relevance`, `$skip`, `$snapshot` (0.1.139+), and operator-bearing filter keys (`total>100`). NOT consumed, therefore never removed: `$limit`, any other `$key`, and a plain `field=value` key already present at mount (indistinguishable from a host flag until the bridge writes it itself).
 
 Two tables on one route — give each a `prefix`; only keys under that prefix are read, written or removed:
 
@@ -100,6 +112,7 @@ Per-aspect gate via `<AsTableRoot :url-query-sync>` (the `UrlQuerySync` type):
 | `sorters`    | `boolean \| string[]` | `true`  | Same `boolean \| string[]` semantics; allowlist matches `SortControl.field`. |
 | `search`     | `boolean`             | `true`  | Whether `$search` round-trips. Also gates `$relevance` (see below).          |
 | `pagination` | `boolean`             | `true`  | `$skip` + `$limit` together — one knob.                                      |
+| `snapshot`   | `boolean`             | `true`  | 0.1.139+. Write + honour the `$snapshot` marker (see above).                 |
 
 `$relevance=1\|0` rides under the `search` gate: it round-trips the runtime `ignoreSortersWhenSearched` flag, emitted only while a search term is present AND the flag differs from the table's configured `ignoreSortersWhenSearched` default — so a link shared mid-search reproduces the sharer's ranking. `stateToUrlQueryString` takes it as `state.ignoreSorters` + `defaults.defaultIgnoreSorters`; `urlQueryStringToState` returns it as `snapshot.ignoreSorters` (omitted when the URL carries no explicit value). See [sorting-pagination.md](sorting-pagination.md#search-relevance-suppression).
 
@@ -112,16 +125,16 @@ const s = stateToUrlQueryString(
   { filters, sorters, page, itemsPerPage, searchTerm },
   { defaultItemsPerPage: 25, sync: { pagination: false } },
 );
-// "status=active&$sort=createdAt:-1"
+// "status=active&$sort=-createdAt&$snapshot"
 
 const snapshot = urlQueryStringToState(s, {
   knownFields: ["status", "createdAt"], // optional; gates unknown paths
   sync: { pagination: false },
 });
-// { filters, sorters, skip?, searchTerm }
+// { filters, sorters, skip?, searchTerm, snapshot?: true, unsupported?: UnsupportedFilter[] }
 ```
 
-Both honour `UrlQuerySync` symmetrically. The encoder reuses `buildTableQuery` for the filter/sort/search shape and appends `$skip` / `$limit` for pagination. The decoder produces a `UrlQueryStateSnapshot` (`skip` is the raw record offset — consumer computes `page = floor(skip / itemsPerPage) + 1`).
+Both honour `UrlQuerySync` symmetrically. The encoder reuses `buildTableQuery` for the filter/sort/search shape and appends `$skip` / `$limit` for pagination. The decoder produces a `UrlQueryStateSnapshot` (`skip` is the raw record offset — consumer computes `page = floor(skip / itemsPerPage) + 1`; `snapshot: true` means clear every gate-owned filter/sorter before applying — use `gateOwns`; `unsupported` (0.1.139+) lists left-out filter pieces — the parser never warns, report them yourself).
 
 ## Preset model
 

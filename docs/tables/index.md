@@ -99,10 +99,13 @@ query on a timer without loading affordances. See
   `@ui.dict.*`, `@meta.*`, `@expect.*` and `@db.*` key the table reads.
 - [Query Function](/tables/query-function) — moost-db wiring AND the
   custom `queryFn` escape hatch.
-- [Filtering](/tables/filtering) — the filter model, value-help, and
-  how UI state translates to Uniquery.
+- [Filtering](/tables/filtering) — the filter model, value-help, which
+  columns take which conditions, and how filters translate to and from
+  Uniquery.
 - [Sorting](/tables/sorting) — multi-sort, force sorters, header
   interactions.
+- [URL State](/tables/url-state) — address-bar sync, `$snapshot` URLs
+  that reload exactly, and cross-view links.
 - [Pagination & Virtualization](/tables/pagination) — choosing between
   `<AsTable>` and `<AsWindowTable>`, tuning block size.
 - [Model Routes & Nav](/tables/model-routes) — generate router entries
