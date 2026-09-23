@@ -5,6 +5,7 @@ import type {
   ColumnMenuConfig,
   EnterAction,
   QueryErrorKind,
+  RowActionsColumnPlacement,
   RowAttrsHook,
   RowClassHook,
   RowDeleteOpt,
@@ -13,6 +14,7 @@ import type {
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useSelectModeReset } from "../composables/use-table-selection";
+import { useRowActionsColumn } from "../composables/use-row-actions-column";
 import AsWindowTableBase from "./internal/as-window-table-base.vue";
 
 type Row = Record<string, unknown>;
@@ -71,6 +73,18 @@ const props = withDefaults(
      */
     rowDelete?: boolean | RowDeleteOpt;
     /**
+     * Synthesised row-actions pseudo-column, as on `<AsTable>`. `'first'` /
+     * `'last'` prepend or append a fixed `__actions` column rendering
+     * `controls.rowActions` (the `@DbAction` row actions, per-row gated by
+     * `$actions`). `'merge-select'` only renders it when `select === "none"`,
+     * sharing the leading gutter with the checkbox column.
+     *
+     * The column is locked: no header dropdown, no resize, no drag-reorder,
+     * NOT in the `columnNames` v-model. Hidden entirely when
+     * `state.actions.row` is empty. Since 0.1.138.
+     */
+    rowActionsColumn?: RowActionsColumnPlacement | false;
+    /**
      * Render without a header row. Omits `<thead>` entirely (not
      * `display:none`); column widths are carried by the `<colgroup>`, so data
      * columns keep their annotated/seeded widths. Header-driven interactions
@@ -111,6 +125,7 @@ const props = withDefaults(
     columnMinWidth: 48,
     select: "none",
     rowDelete: false,
+    rowActionsColumn: false,
     headless: false,
   },
 );
@@ -151,6 +166,12 @@ watch(
 );
 
 useSelectModeReset(state, () => props.select);
+
+const effectiveColumns = useRowActionsColumn(state, {
+  placement: () => props.rowActionsColumn,
+  select: () => props.select,
+  columns: () => state.columns.value,
+});
 
 useRegisterMainActionListener(
   state,
@@ -202,6 +223,7 @@ watch(
 <template>
   <div ref="containerRef" class="as-table-outer-wrap">
     <AsWindowTableBase
+      :columns="effectiveColumns"
       :row-height="rowHeight"
       :wheel-rows-per-tick="wheelRowsPerTick"
       :column-menu="columnMenu"

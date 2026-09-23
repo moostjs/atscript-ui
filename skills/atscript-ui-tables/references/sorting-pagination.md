@@ -164,7 +164,7 @@ Same prop shape as `<AsTable>` plus window controls:
 | `minRows` / `maxRows` | —                       | Bounds on the auto-sized row count.                                                       |
 | `enterAction`         | `"main-action"`         | `"main-action" \| "toggle-select" \| "passthrough"` — what Enter does for the active row. |
 
-Plus the shared props above (`select`, `rowDelete`, `columnMenu`, `reorderable`, `resizable`, `columnMinWidth`).
+Plus the shared props above (`select`, `rowDelete`, `rowActionsColumn` (since 0.1.138), `columnMenu`, `reorderable`, `resizable`, `columnMinWidth`).
 
 Pagination is replaced by **block-aligned fetching**: the table fetches fixed-size blocks (default 100 rows) as the viewport scrolls into them and caches them keyed by absolute index. You don't drive this directly — `<AsWindowTable>` reads rows via `state.dataAt(absIndex)` / `state.loadingAt(absIndex)` / `state.errorAt(absIndex)` (see [query.md](query.md)). Tune the fetch behavior via the props below.
 

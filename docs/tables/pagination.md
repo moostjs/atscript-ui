@@ -154,16 +154,17 @@ state merges them into `results` so existing UI bindings stay stable.
 
 ### Tunables on `<AsWindowTable>`
 
-| Prop              | Default                      | Purpose                                                                         |
-| ----------------- | ---------------------------- | ------------------------------------------------------------------------------- |
-| `:row-height`     | `DEFAULT_ROW_HEIGHT_PX` (32) | Fixed row height in pixels. Virtual scroll requires this.                       |
-| `:rows`           | undefined                    | Force exactly N rows of height (overrides min/max).                             |
-| `:min-rows`       | undefined                    | Floor; useful for value-help dialogs that should never collapse.                |
-| `:max-rows`       | undefined                    | Cap; useful for embedded tables on dashboard cards.                             |
-| `:select="multi"` | `"none"`                     | Multi-select checkbox column.                                                   |
-| `:row-delete`     | `false`                      | Synthesised `__remove` action.                                                  |
-| `:column-menu`    | (full set)                   | Column-menu entries.                                                            |
-| `:enter-action`   | `"main-action"`              | `"toggle-select"` for value-help tables where Enter shouldn't fire main action. |
+| Prop                  | Default                      | Purpose                                                                              |
+| --------------------- | ---------------------------- | ------------------------------------------------------------------------------------ |
+| `:row-height`         | `DEFAULT_ROW_HEIGHT_PX` (32) | Fixed row height in pixels. Virtual scroll requires this.                            |
+| `:rows`               | undefined                    | Force exactly N rows of height (overrides min/max).                                  |
+| `:min-rows`           | undefined                    | Floor; useful for value-help dialogs that should never collapse.                     |
+| `:max-rows`           | undefined                    | Cap; useful for embedded tables on dashboard cards.                                  |
+| `:select="multi"`     | `"none"`                     | Multi-select checkbox column.                                                        |
+| `:row-delete`         | `false`                      | Synthesised `__remove` action.                                                       |
+| `:row-actions-column` | `false`                      | `"first"` / `"last"` / `"merge-select"` — the row-actions column, as on `<AsTable>`. |
+| `:column-menu`        | (full set)                   | Column-menu entries.                                                                 |
+| `:enter-action`       | `"main-action"`              | `"toggle-select"` for value-help tables where Enter shouldn't fire main action.      |
 
 ### Tunables on `<AsTableRoot>` for windowed mode
 

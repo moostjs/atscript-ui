@@ -3,9 +3,8 @@ import { computed, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import type { SelectionMode } from "@atscript/ui-table";
 import {
-  ROW_ACTIONS_PATH,
-  ROW_ACTIONS_TYPE,
   type ColumnMenuConfig,
+  type RowActionsColumnPlacement,
   type RowAttrsHook,
   type RowClassHook,
   type RowDeleteOpt,
@@ -15,6 +14,7 @@ import { useRegisterMainActionListener, useTableContext } from "../composables/u
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useSelectModeReset } from "../composables/use-table-selection";
 import { useTableColumnHandlers } from "../composables/use-table-column-handlers";
+import { useRowActionsColumn } from "../composables/use-row-actions-column";
 import AsTableBase from "./internal/as-table-base.vue";
 
 const props = withDefaults(
@@ -63,7 +63,7 @@ const props = withDefaults(
      * Wrapper-only prop — not forwarded by `<AsTableRoot>`. Raw consumers
      * compose their own column layout.
      */
-    rowActionsColumn?: "first" | "last" | "merge-select" | false;
+    rowActionsColumn?: RowActionsColumnPlacement | false;
     /**
      * Render without a header row. Omits `<thead>` entirely (not
      * `display:none`); column widths are carried by the `<colgroup>`, so data
@@ -142,21 +142,6 @@ watch(
 
 useSelectModeReset(state, () => props.select);
 
-// `?$actions=true` is gated on this watcher so tables without a row-actions
-// column don't pay the per-row payload cost.
-watch(
-  () => {
-    const placement = props.rowActionsColumn;
-    if (!placement) return false;
-    if (placement === "merge-select" && props.select !== "none") return false;
-    return state.actions.cellRow.length > 0;
-  },
-  (on) => {
-    state.includeActions.value = on;
-  },
-  { immediate: true },
-);
-
 // `applyLocalSort` re-orders the loaded page by any sorter that targets a
 // client-owned (`:display-columns`) column — those never reach the server, so
 // the renderer is where they take effect. A no-op (same array reference) for
@@ -165,43 +150,10 @@ const effectiveRows = computed<Record<string, unknown>[]>(() =>
   state.applyLocalSort(props.rows ?? state.results.value),
 );
 
-// Synthesized actions column. Width adapts to the row-action shape so it
-// hugs its content:
-//   - 0 or >1 actions OR single icon action → 4em (matches the multi-select
-//     checkbox column `as-th-select`/`as-td-select`, so square icon
-//     buttons line up with checkboxes visually).
-//   - single label-only action (e.g. customers' "View orders") → 8em
-//     (fits typical short labels with the chrome-button padding).
-// Setting `col.width` flows through `reconcileColumnWidthDefaults` →
-// `state.columnWidths` → `widthStyle` → inline `width` on the TH, which
-// `table-layout: fixed` then locks the column to.
-const actionsCol = computed<ColumnDef>(() => {
-  const acts = state.actions.row;
-  const isLabelOnly = acts.length === 1 && !acts[0]?.icon;
-  return {
-    path: ROW_ACTIONS_PATH,
-    label: "",
-    type: ROW_ACTIONS_TYPE,
-    sortable: false,
-    filterable: false,
-    order: 0,
-    fixed: true,
-    width: isLabelOnly ? "8em" : "4em",
-  };
-});
-
-const effectiveColumns = computed(() => {
-  const base = props.columns ?? state.columns.value;
-  const placement = props.rowActionsColumn;
-  if (placement === false || placement === undefined) return base;
-  if (state.actions.row.length === 0) return base;
-  if (placement === "first") return [actionsCol.value, ...base];
-  if (placement === "last") return [...base, actionsCol.value];
-  // 'merge-select': only in select="none". In select="multi" the checkbox
-  // column owns the leading gutter; the actions surface through the toolbar
-  // `<AsTableActions>` (selection-aware) instead.
-  if (props.select === "none") return [actionsCol.value, ...base];
-  return base;
+const effectiveColumns = useRowActionsColumn(state, {
+  placement: () => props.rowActionsColumn,
+  select: () => props.select,
+  columns: () => props.columns ?? state.columns.value,
 });
 
 useRegisterMainActionListener(

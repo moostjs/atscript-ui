@@ -6,6 +6,7 @@ import type { Client, MetaResponse, TDbActionInfo } from "@atscript/db-client";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import AsTableRoot from "../components/as-table-root.vue";
 import AsTable from "../components/as-table.vue";
+import AsWindowTable from "../components/as-window-table.vue";
 import { clearTableCache } from "../composables/use-table";
 
 afterEach(() => {
@@ -45,10 +46,14 @@ function buildMeta(actions: TDbActionInfo[]): MetaResponse {
 function makeClient(
   meta: MetaResponse,
   data: Record<string, unknown>[] = [{ id: "u1", name: "Ann" }],
+  queries: unknown[] = [],
 ) {
   const client = {
     meta: () => Promise.resolve(meta),
-    pages: () => Promise.resolve({ data, count: data.length, page: 1, itemsPerPage: 50, pages: 1 }),
+    pages: (query: unknown) => {
+      queries.push(query);
+      return Promise.resolve({ data, count: data.length, page: 1, itemsPerPage: 50, pages: 1 });
+    },
     action: async () => ({ ok: true }),
   } as unknown as Client;
   return client;
@@ -128,5 +133,72 @@ describe("rowActionsColumn — synthesized __actions column", () => {
     await flushPromises();
     const th = wrapper.find('th[data-column-path="__actions"]');
     expect(th.attributes("aria-label")).toBe("Actions");
+  });
+});
+
+describe("rowActionsColumn on <AsWindowTable>", () => {
+  function mountWindow(opts: MountOpts = {}) {
+    const meta = buildMeta(opts.actions ?? [block]);
+    const queries: unknown[] = [];
+    const client = makeClient(meta, undefined, queries);
+    const Host = defineComponent({
+      setup() {
+        return () =>
+          h(
+            AsTableRoot as unknown as Parameters<typeof h>[0],
+            { url: opts.url ?? "/rac-window", clientFactory: () => client },
+            {
+              // `rows` pins the viewport: happy-dom has no layout to measure.
+              default: () => h(AsWindowTable, { rows: 1, rowActionsColumn: opts.rowActionsColumn }),
+            },
+          );
+      },
+    });
+    return { wrapper: mount(Host), queries };
+  }
+
+  it("default (false): no __actions column, no $actions request", async () => {
+    const { wrapper, queries } = mountWindow({ url: "/racw-off" });
+    await flushPromises();
+    await flushPromises();
+    expect(wrapper.find('[data-column-path="__actions"]').exists()).toBe(false);
+    expect(wrapper.find(".as-row-actions").exists()).toBe(false);
+    const last = queries[queries.length - 1] as { controls?: Record<string, unknown> };
+    expect(last?.controls?.$actions).toBeUndefined();
+  });
+
+  it("'first': leading header, a row-actions cell per row, and $actions requested", async () => {
+    const { wrapper, queries } = mountWindow({ rowActionsColumn: "first", url: "/racw-first" });
+    await flushPromises();
+    await flushPromises();
+    const ths = wrapper.findAll("thead th[data-column-path]");
+    expect(ths[0]!.attributes("data-column-path")).toBe("__actions");
+    const row = wrapper.find("tr.as-window-data-row");
+    expect(row.exists()).toBe(true);
+    expect(row.findAll("td")[0]!.classes()).toContain("as-row-actions");
+    const last = queries[queries.length - 1] as { controls?: Record<string, unknown> };
+    expect(last?.controls?.$actions).toBe(true);
+  });
+
+  it("'last': trailing column, before the filler cell", async () => {
+    const { wrapper } = mountWindow({ rowActionsColumn: "last", url: "/racw-last" });
+    await flushPromises();
+    await flushPromises();
+    const ths = wrapper.findAll("thead th[data-column-path]");
+    expect(ths[ths.length - 1]!.attributes("data-column-path")).toBe("__actions");
+    const tds = wrapper.find("tr.as-window-data-row").findAll("td");
+    expect(tds[tds.length - 2]!.classes()).toContain("as-row-actions");
+    expect(tds[tds.length - 1]!.classes()).toContain("as-td-filler");
+  });
+
+  it("hidden when actions.row is empty", async () => {
+    const { wrapper } = mountWindow({
+      rowActionsColumn: "first",
+      actions: [],
+      url: "/racw-empty",
+    });
+    await flushPromises();
+    await flushPromises();
+    expect(wrapper.find('[data-column-path="__actions"]').exists()).toBe(false);
   });
 });

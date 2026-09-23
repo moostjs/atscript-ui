@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue";
 import { useResizeObserver } from "@vueuse/core";
+import type { ColumnDef } from "@atscript/ui";
 import { clampTopIndex, filledFilterCount, type SelectionMode } from "@atscript/ui-table";
 import type {
   ColumnMenuConfig,
@@ -27,6 +28,12 @@ type Row = Record<string, unknown>;
 
 const props = withDefaults(
   defineProps<{
+    /**
+     * Columns to render. Defaults to `state.columns`; the `<AsWindowTable>`
+     * wrapper passes its effective list (with the synthesised `__actions`
+     * column when `rowActionsColumn` is set).
+     */
+    columns?: ColumnDef[];
     /** Pixel height of one row. */
     rowHeight: number;
     /** Number of rows the viewport advances per wheel-tick. */
@@ -93,14 +100,15 @@ const emit = defineEmits<{
 const slots = useSlots();
 const { state } = useTableContext();
 const { resolve: cellResolver, hasAnyCellBindings } = useCellResolver(() => state.tableDef.value);
-const cellComponents = useCellComponents(() => state.columns.value);
+const columns = computed(() => props.columns ?? state.columns.value);
+const cellComponents = useCellComponents(() => columns.value);
 
 // Drop the sort affordance on a client-owned column when it would not do
 // anything here; `state.localSortAvailable` owns that rule.
 const headerColumns = computed(() =>
   state.localSortAvailable.value
-    ? state.columns.value
-    : state.columns.value.map((c) => (c.local && c.sortable ? { ...c, sortable: false } : c)),
+    ? columns.value
+    : columns.value.map((c) => (c.local && c.sortable ? { ...c, sortable: false } : c)),
 );
 
 const hasValue = computed(() => props.select !== "none");
@@ -114,7 +122,7 @@ const selectAllState = computed<SelectAllState | undefined>(() => {
 
 const cellSlotFlags = computed(() => {
   const out: Record<string, boolean> = {};
-  for (const c of state.columns.value) out[c.path] = !!slots[`cell-${c.path}`];
+  for (const c of columns.value) out[c.path] = !!slots[`cell-${c.path}`];
   return out;
 });
 
@@ -391,7 +399,7 @@ onMounted(() => {
 // NOT a trigger: it fires on every block settlement during scroll, and
 // each fire forces layout reads (offsetHeight/clientHeight) without
 // affecting any geometry that recompute depends on.
-watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
+watch(() => [props.rowHeight, columns.value], scheduleRecompute);
 </script>
 
 <template>
@@ -404,7 +412,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
         :aria-multiselectable="select === 'multi' ? 'true' : undefined"
       >
         <AsTableColgroup
-          :columns="state.columns.value"
+          :columns="columns"
           :column-widths="state.columnWidths.value"
           :has-select="hasValue"
           :with-filler="true"
@@ -433,7 +441,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
           @resize="state.setColumnWidth"
           @select-all-toggle="onSelectAllToggle"
         >
-          <template v-for="col in state.columns.value" #[`header-${col.path}`]="scope">
+          <template v-for="col in columns" #[`header-${col.path}`]="scope">
             <slot :name="`header-${col.path}`" v-bind="scope" />
           </template>
         </AsTableHeader>
@@ -494,7 +502,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
                 </span>
               </td>
               <template v-if="hasAnyCellBindings">
-                <template v-for="col in state.columns.value" :key="col.path">
+                <template v-for="col in columns" :key="col.path">
                   <template
                     v-for="bindings in [
                       cellResolver(col, slot.row as Row, state.topIndex.value + slot.s),
@@ -521,7 +529,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
                 </template>
               </template>
               <template v-else>
-                <template v-for="col in state.columns.value" :key="col.path">
+                <template v-for="col in columns" :key="col.path">
                   <td v-if="cellSlotFlags[col.path]" role="gridcell">
                     <slot
                       :name="`cell-${col.path}`"
@@ -543,7 +551,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
             </tr>
             <AsWindowSkeletonRow
               v-else
-              :columns="state.columns.value"
+              :columns="columns"
               :row-height="rowHeight"
               :has-select="hasValue"
               :errored="slot.errored"
@@ -558,7 +566,7 @@ watch(() => [props.rowHeight, state.columns.value], scheduleRecompute);
         :query-error="state.queryError.value"
         :is-empty="state.totalCount.value === 0"
         :querying="state.querying.value"
-        :columns="state.columns.value"
+        :columns="columns"
         :search-term="state.searchTerm.value"
         :has-active-filters="hasActiveFilters"
         :on-clear-filters="onClearFilters"

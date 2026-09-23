@@ -15,6 +15,12 @@ export const ROW_ACTIONS_PATH = "__actions";
 export const ROW_ACTIONS_TYPE = "__actions";
 
 /**
+ * Where a renderer places the synthesised row-actions column
+ * (`:row-actions-column` on `<AsTable>` / `<AsWindowTable>`).
+ */
+export type RowActionsColumnPlacement = "first" | "last" | "merge-select";
+
+/**
  * Action descriptor used everywhere in vue-table. Widens `processor` to admit
  * the UI-side `__remove` sentinel without leaking into db-client.
  */

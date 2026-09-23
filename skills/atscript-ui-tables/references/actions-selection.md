@@ -72,7 +72,7 @@ applyRowGate({ default, others, rows }, row);
 
 Reads the row's server-evaluated `$actions: string[]` field (populated when `state.includeActions=true` → `controls.$actions=true` on the query). Actions named in `$actions` are kept; others are filtered out. **Every server-declared action is gated regardless of processor** (`backend`, `navigate`, `custom`). The sole exemption is the client-synthesised `__remove` — its name never appears in `$actions`, so its visibility is governed by `tableDef.canRemove` (the server still authorises the delete at invoke).
 
-Opt in to the synthesized column via `<AsTable :row-actions-column="'first' | 'last' | 'merge-select'">`. The column is locked: no header dropdown, no resize, no drag-reorder, never in `state.columnNames`.
+Opt in to the synthesized column via `<AsTable :row-actions-column="'first' | 'last' | 'merge-select'">` — `<AsWindowTable>` takes the same prop (since 0.1.138). The column is locked: no header dropdown, no resize, no drag-reorder, never in `state.columnNames`.
 
 Override the cell renderer via `controls.rowActions`.
 
@@ -413,7 +413,7 @@ async function archiveSelected() {
 
 ### Disable an action per-row from the server
 
-Server `@DbAction` handler returns the action name in the row's `$actions: string[]` only when allowed. The client-side `applyRowGate` will hide the action for that row automatically. No client-side wiring required — `state.includeActions` is set on by `<AsTable :row-actions-column>` so the query carries `?$actions=true` and the gate is fed.
+Server `@DbAction` handler returns the action name in the row's `$actions: string[]` only when allowed. The client-side `applyRowGate` will hide the action for that row automatically. No client-side wiring required — `state.includeActions` is set on by `:row-actions-column` (on `<AsTable>` or `<AsWindowTable>`) so the query carries `?$actions=true` and the gate is fed.
 
 ### Confirm dialog overrides
 
