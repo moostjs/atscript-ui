@@ -3,7 +3,13 @@ import { computed, defineAsyncComponent, ref, watch, type Component, type Ref } 
 import type { ColumnDef, SortControl, ClientFactory } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
-import type { ColumnWidthsMap, DisplayColumnDef, UrlQuerySync } from "@atscript/ui-table";
+import type {
+  ColumnWidthsMap,
+  DisplayColumnDef,
+  UnsupportedFilter,
+  UrlQuerySync,
+} from "@atscript/ui-table";
+import { DEV } from "@atscript/ui-table";
 import type {
   ActionResult,
   PresetConfig,
@@ -17,9 +23,9 @@ import { finalizeTableState, useTable } from "../composables/use-table";
 import {
   createStaticTableState,
   useRegisterMainActionListener,
+  warnUnsupportedFilter,
 } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
-import { DEV } from "../utils/dev";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
 import type { Client, PageResult } from "@atscript/db-client";
@@ -182,6 +188,13 @@ const emit = defineEmits<{
     result: ActionResult,
     event?: KeyboardEvent | MouseEvent,
   ): void;
+  /**
+   * A piece of a restored URL's filter that field filters cannot express
+   * (cross-field OR, unknown operator, …) was left out, so the table shows a
+   * broader result than the URL described. Once per piece, per restore.
+   * Unbound → a dev-mode `console.warn` instead. Since 0.1.139.
+   */
+  (e: "unsupported-filter", issue: UnsupportedFilter): void;
 }>();
 
 const filterFields = defineModel<string[]>("filterFields", { default: () => [] });
@@ -283,6 +296,8 @@ function createLocalState(): ReactiveTableState {
   return localState;
 }
 
+const hasUnsupportedFilterListener = useHasEmitListener("onUnsupportedFilter");
+
 const state = localMode
   ? createLocalState()
   : useTable(props.url!, {
@@ -320,6 +335,11 @@ const state = localMode
       urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
       onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
       urlQuerySync: props.urlQuerySync,
+      // The listener is checked per report, not once at setup.
+      onUnsupportedFilter: (issue) =>
+        hasUnsupportedFilterListener.value
+          ? emit("unsupported-filter", issue)
+          : warnUnsupportedFilter(issue),
       preset: props.preset,
       displayColumns: props.displayColumns,
     });
@@ -335,44 +355,30 @@ watch(
 );
 
 if (urlQueryActive && !localMode) {
-  // Two different events arrive on this one watcher, and they want opposite
-  // things from a URL that omits a filter.
+  // Every pass — deep-link hydration on mount, then client-side navigation
+  // and Back/Forward — hands the URL to `applyUrlQuery`, which decides by the
+  // URL itself: a `$snapshot` URL (every URL the table writes) replaces the
+  // filters and sorters, a marker-less app deep link overlays the ones the
+  // table booted with. The first pass waits for tableDef (schema-driven
+  // parsing) AND preset bootstrap, so that boot state is the preset's; it then
+  // opens `urlQueryReady`, which gates the first fetch. `preset.ready` is
+  // `true` when the feature isn't wired, so non-preset tables stay single-step.
   //
-  // The FIRST pass is deep-link hydration. It waits for tableDef (schema-driven
-  // parsing) AND preset bootstrap: preset writes its baseline, the URL overlays
-  // per-field on top, so a deep link survives a preset that would otherwise
-  // clear filters and the preset's non-URL fields are preserved. An empty query
-  // here means "no deep link" and must leave the preset alone.
-  //
-  // EVERY LATER pass is history navigation, where the URL is a complete
-  // snapshot of the synced aspects — the bridge re-serializes all of them on
-  // every write. So it replaces: a filter or sorter the URL omits was removed,
-  // and an empty query means "back to the unfiltered view", not "no opinion".
-  // Merging those is why Back failed to undo a filter the user had just added.
-  //
-  // `preset.ready` is `true` when the feature isn't wired, so non-preset
-  // tables stay single-step. `urlQueryReady` already marks which pass we are on:
-  // it starts `false` whenever URL sync is active and flips exactly once, here.
-  //
-  // The later passes still compare the query string rather than just reacting to
-  // the watcher, because the watcher also fires on tableDef and preset.ready. The
-  // echo guard inside `applyUrlQuery` cannot stand in for that: a merge pass
-  // re-primes `lastEmittedUrl` from the MERGED state, so it now carries the
-  // preset's fields and no longer equals the deep-link URL — a same-URL re-fire
-  // would sail past it and replace.
-  let lastSeenQuery = "";
+  // Later passes compare the query string rather than just reacting to the
+  // watcher, because the watcher also fires on tableDef and preset.ready. The
+  // echo guard inside `applyUrlQuery` cannot stand in for that: an overlay
+  // pass re-primes `lastEmittedUrl` from the overlaid state, which carries the
+  // baseline's fields and no longer equals the deep-link URL — a same-URL
+  // re-fire would sail past it.
+  let lastSeenQuery: string | undefined;
   watch(
     [() => state.tableDef.value, () => urlQuery.value, () => state.preset.ready.value],
     ([def, q, presetReady]) => {
       if (def === null || !presetReady) return;
       const query = typeof q === "string" ? q : "";
-      if (!urlQueryReady.value) {
-        if (query !== "") state.applyUrlQuery(query, { mode: "merge" });
-        urlQueryReady.value = true;
-      } else if (query !== lastSeenQuery) {
-        state.applyUrlQuery(query, { mode: "replace" });
-      }
+      if (query !== lastSeenQuery) state.applyUrlQuery(query);
       lastSeenQuery = query;
+      urlQueryReady.value = true;
     },
     { immediate: true },
   );

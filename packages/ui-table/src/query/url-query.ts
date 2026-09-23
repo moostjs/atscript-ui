@@ -2,7 +2,10 @@ import type { SortControl } from "@atscript/ui";
 import { buildUrl } from "@uniqu/url/builder";
 import { parseUrl } from "@uniqu/url";
 import type { FieldFilters } from "../filters/filter-types";
-import { uniqueryFilterToFieldFilters } from "../filters/uniquery-to-filters";
+import {
+  uniqueryFilterToFieldFilters,
+  type UnsupportedFilter,
+} from "../filters/uniquery-to-filters";
 import { buildTableQuery } from "./build-table-query";
 
 /** State subset that round-trips through the URL bridge. */
@@ -25,10 +28,36 @@ export interface UrlQueryStateLike {
   ignoreSorters?: boolean;
 }
 
+/**
+ * The URL control that marks a query string as a complete snapshot of the
+ * table's filters and sorters. Restoring a URL that carries it clears every
+ * filter and sorter the URL owns before applying its own, so nothing the URL
+ * omits survives (empty `$sort` included). A URL without it is an overlay:
+ * its filters and sorters are laid over the table's starting ones.
+ *
+ * The encoder writes it bare (`…&$snapshot`) on every URL; the decoder goes
+ * by presence alone, whatever the value. `UrlQuerySync.snapshot: false` turns
+ * both off.
+ *
+ * @since 0.1.139
+ */
+export const URL_SNAPSHOT_KEY = "$snapshot";
+
 /** Snapshot recovered from a URL string — partial on purpose so callers can layer it onto state. */
 export interface UrlQueryStateSnapshot {
   filters: FieldFilters;
   sorters: SortControl[];
+  /**
+   * `true` when the URL carried {@link URL_SNAPSHOT_KEY} (and `sync.snapshot`
+   * is not `false`). Omitted otherwise. Since 0.1.139.
+   */
+  snapshot?: true;
+  /**
+   * Pieces of the URL's filter that `filters` leaves out because field filters
+   * cannot express them — see `uniqueryFilterToFieldFilters`. Omitted when
+   * the filter converted exactly. Since 0.1.139.
+   */
+  unsupported?: UnsupportedFilter[];
   /**
    * Raw record offset from `$skip` (omitted when no `$skip` in URL). The
    * decoder does NOT compute a page index — that requires `itemsPerPage`,
@@ -67,6 +96,12 @@ export interface UrlQuerySync {
   search?: boolean;
   /** Whether pagination (`$skip` + `$limit`) syncs. Page and limit are coupled — one knob. */
   pagination?: boolean;
+  /**
+   * Whether the encoder writes {@link URL_SNAPSHOT_KEY} and the decoder
+   * honours it. Default `true`; `false` makes every URL an overlay.
+   * Since 0.1.139.
+   */
+  snapshot?: boolean;
 }
 
 export interface UrlQueryDefaults {
@@ -132,7 +167,9 @@ function pickFilterPaths(filters: FieldFilters, gate: AspectGate): FieldFilters 
  * `$actions`, `forceFilters`, `forceSorters` — those are not user state) and
  * appends `$skip` / `$limit` for pagination.
  *
- * Returns `""` (no leading `?`) for the default view.
+ * Stamps {@link URL_SNAPSHOT_KEY} unless `defaults.sync.snapshot` is `false`
+ * (or neither filters nor sorters sync), so the default view serializes to
+ * `"$snapshot"`; with the marker off it serializes to `""` (no leading `?`).
  */
 export function stateToUrlQueryString(
   state: UrlQueryStateLike,
@@ -180,6 +217,12 @@ export function stateToUrlQueryString(
     if (page > 1) query.controls!.$skip = (page - 1) * itemsPerPage;
   }
 
+  // Meaningless when the URL carries neither filters nor sorters. Empty value
+  // → the builder writes the bare key; set last, so it trails the URL.
+  if (defaults.sync?.snapshot !== false && (filtersGate !== "none" || sortersGate !== "none")) {
+    query.controls![URL_SNAPSHOT_KEY] = "";
+  }
+
   return buildUrl(query);
 }
 
@@ -187,7 +230,7 @@ export function stateToUrlQueryString(
  * The `$`-controls {@link urlQueryStringToState} actually reads. Any other
  * `$key` is ignored by the parser, so it is NOT the table's to remove.
  */
-const CONSUMED_CONTROLS = new Set(["$sort", "$search", "$relevance", "$skip"]);
+const CONSUMED_CONTROLS = new Set(["$sort", "$search", "$relevance", "$skip", URL_SNAPSHOT_KEY]);
 
 /** Characters that can only appear in a uniqu filter key, never in a page flag. */
 const FILTER_OPERATOR_CHAR = /[<>!~]/;
@@ -228,7 +271,9 @@ export interface UrlQueryParseOptions {
  * Robust by design — schema drift and copy-paste errors must not break the
  * recipient's view:
  * - unknown fields (not in `knownFields`) → silently dropped
- * - unsupported operators → silently dropped
+ * - filter pieces field filters cannot express (cross-field OR, unknown
+ *   operator, …) → left out of `filters` and listed in `unsupported`, never
+ *   approximated (the parser does not warn — the caller decides)
  * - unknown controls (e.g. `$weird=42`) → silently ignored
  * - malformed query → `{ filters: {}, sorters: [], searchTerm: "" }`
  *
@@ -270,8 +315,13 @@ export function urlQueryStringToState(
       filterKnown = filtersGate;
     }
   }
+  const unsupported: UnsupportedFilter[] = [];
   const filters: FieldFilters =
-    filtersGate === "none" ? {} : uniqueryFilterToFieldFilters(parsed.filter, filterKnown);
+    filtersGate === "none"
+      ? {}
+      : uniqueryFilterToFieldFilters(parsed.filter, filterKnown, (issue) =>
+          unsupported.push(issue),
+        );
 
   const sorters: SortControl[] = [];
   if (sortersGate !== "none") {
@@ -291,6 +341,11 @@ export function urlQueryStringToState(
   const searchTerm = !searchOff && typeof $search === "string" ? $search : "";
 
   const out: UrlQueryStateSnapshot = { filters, sorters, searchTerm };
+  if (unsupported.length > 0) out.unsupported = unsupported;
+
+  if (opts.sync?.snapshot !== false && parsed.controls && URL_SNAPSHOT_KEY in parsed.controls) {
+    out.snapshot = true;
+  }
 
   if (!searchOff) {
     // `$relevance` round-trips as a string on the wire ("1" / "0").

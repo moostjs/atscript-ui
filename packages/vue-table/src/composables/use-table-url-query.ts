@@ -84,7 +84,8 @@ function findCleanEq(segment: string): number {
  * write therefore agree in both directions: a key the parser ignores (a host
  * flag, an unrecognised `$control`) is never removed, and a key the parser
  * reads is the bridge's to remove. Every write merges into the current
- * `route.query`, in place.
+ * `route.query`: foreign keys stay where they are, the table's own keys are
+ * written as one block in the table's order.
  *
  * Without a `prefix` the bridge cannot tell a plain `field=value` filter from
  * a page-owned flag of the same shape, so a plain key that was already in the
@@ -155,20 +156,24 @@ export function useTableUrlQuery(
         written.add(key);
       }
 
-      // Merge, preserving the position of every key that stays.
+      // Foreign keys keep their slots. Own keys belong wholly to the table, so
+      // they are rewritten as one block in the table's order — where the first
+      // own key sat, else at the end — and read back in that order: a key the
+      // table adds must not trail the ones it kept, or its own URL would come
+      // back spelled differently and miss its echo guard. An own key absent
+      // from this write is dropped.
       const query: Record<string, string | string[] | null> = {};
+      let placed = false;
+      const place = () => {
+        if (placed) return;
+        placed = true;
+        for (const [key, value] of serialized) query[key] = value;
+      };
       for (const key in route.query) {
-        if (!isOwn(key)) {
-          query[key] = route.query[key] as string | string[] | null;
-          continue;
-        }
-        if (serialized.has(key)) {
-          query[key] = serialized.get(key)!;
-          serialized.delete(key);
-        }
-        // Own key absent from this write → dropped.
+        if (isOwn(key)) place();
+        else query[key] = route.query[key] as string | string[] | null;
       }
-      for (const [key, value] of serialized) query[key] = value;
+      place();
       void navigate({ query });
     },
   });

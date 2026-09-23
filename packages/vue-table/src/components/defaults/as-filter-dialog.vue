@@ -2,8 +2,7 @@
 import { computed, ref } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import {
-  columnFilterType,
-  defaultCondition,
+  columnDefaultCondition,
   formatFilterCondition,
   isFilled,
   isSimpleEq,
@@ -44,15 +43,18 @@ const isOpen = computed({
 
 const column = computed<ColumnDef | null>(() => state.filterDialogColumn.value);
 
+// Value help picks values, so it needs a value-filterable column — an
+// existence-only one (JSON storage) offers just the empty / not-empty pair.
 const hasValueHelp = computed(
   () =>
     !!column.value &&
+    column.value.filterable &&
     (!!column.value.valueHelpInfo ||
       (column.value.options != null && column.value.options.length > 0)),
 );
 
 const defCondition = computed<FilterConditionType>(() =>
-  column.value ? defaultCondition(columnFilterType(column.value.type)) : "eq",
+  column.value ? columnDefaultCondition(column.value) : "eq",
 );
 
 const valueHelpConditions = ref<FilterCondition[]>([]);

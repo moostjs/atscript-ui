@@ -14,7 +14,7 @@ import type { MetaResponse } from "./types";
 function buildMeta(
   serialized: TSerializedAnnotatedType,
   fieldNames: readonly string[],
-  fields?: Record<string, { sortable: boolean; filterable: boolean }>,
+  fields?: MetaResponse["fields"],
   overrides?: Partial<MetaResponse>,
 ): MetaResponse {
   return {
@@ -469,6 +469,19 @@ describe("column-resolver", () => {
     const filterable = getFilterableColumns(def);
     expect(filterable).toHaveLength(2);
     expect(filterable.map((c) => c.path)).toEqual(expect.arrayContaining(["id", "name"]));
+  });
+
+  it("copies meta filterOps onto the column (existence-only JSON columns)", async () => {
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), [], {
+      name: { sortable: false, filterable: false, filterOps: ["$exists"] },
+      age: { sortable: true, filterable: true },
+      active: { sortable: false, filterable: false },
+    });
+    const def = createTableDef(meta);
+    expect(getColumn(def, "name")).toMatchObject({ filterable: false, filterOps: ["$exists"] });
+    expect(getColumn(def, "age")).not.toHaveProperty("filterOps");
+    expect(getColumn(def, "active")).not.toHaveProperty("filterOps");
   });
 
   it("getColumn finds by path", async () => {

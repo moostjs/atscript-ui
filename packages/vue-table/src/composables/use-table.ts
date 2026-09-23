@@ -9,7 +9,12 @@ import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { Client } from "@atscript/db-client";
 import type { Component, Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
-import type { ColumnWidthsMap, DisplayColumnDef, UrlQuerySync } from "@atscript/ui-table";
+import type {
+  ColumnWidthsMap,
+  DisplayColumnDef,
+  UnsupportedFilter,
+  UrlQuerySync,
+} from "@atscript/ui-table";
 import type {
   ActionResult,
   PresetConfig,
@@ -150,6 +155,12 @@ export interface UseTableOptions {
    * Default (omitted): full sync.
    */
   urlQuerySync?: UrlQuerySync;
+  /**
+   * Receives each piece of a restored URL's filter that was left out because
+   * field filters cannot express it — see `TableQueryOptions.onUnsupportedFilter`.
+   * Since 0.1.139.
+   */
+  onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
 
   /**
    * Preset feature config — opt-in. Omit to disable presets entirely
@@ -264,6 +275,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       urlQueryReady: opts?.urlQueryReady,
       onUrlQueryChange: opts?.onUrlQueryChange,
       urlQuerySync: opts?.urlQuerySync,
+      onUnsupportedFilter: opts?.onUnsupportedFilter,
     },
     window: {
       blockSize: opts?.blockSize,

@@ -21,7 +21,14 @@ export interface RelationInfo {
 /** Per-field capability flags. */
 export interface FieldMeta {
   sortable: boolean;
+  /** Whether the field accepts value comparisons (`=`, `>`, `$regex`, …). */
   filterable: boolean;
+  /**
+   * Present only when `filterable` is `false` but narrower predicates still
+   * pass the server's gate — e.g. `["$exists"]` on a JSON-stored column.
+   * Needs `@atscript/moost-db` 0.1.132+. Since 0.1.139.
+   */
+  filterOps?: string[];
 }
 
 /** Meta response from moost-db `/meta` endpoint. */
@@ -123,8 +130,16 @@ export interface ColumnDef {
   selectWith?: string[];
   /** Whether this column supports sorting. */
   sortable: boolean;
-  /** Whether this column supports filtering. */
+  /** Whether this column supports value filtering (the server's `filterable`). */
   filterable: boolean;
+  /**
+   * Narrower filter operators the server accepts on a column that is not
+   * value-filterable — `["$exists"]` on a JSON-stored column, whose value
+   * cannot be compared but whose presence can. Copied from
+   * `meta.fields[path].filterOps`; omitted when absent. Filter UIs read it
+   * through `columnFilterConditions()` from `@atscript/ui-table`. Since 0.1.139.
+   */
+  filterOps?: string[];
   /**
    * Whether the column accepts `null` values (atscript prop is `optional`).
    * Drives operator-picker availability — `null` / `notNull` are dropped

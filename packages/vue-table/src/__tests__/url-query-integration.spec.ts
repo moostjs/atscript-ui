@@ -30,7 +30,7 @@ describe("URL query bridge — state↔URL integration", () => {
     state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
     await nextTick();
 
-    expect(onUrlQueryChange).toHaveBeenCalledWith("status=active");
+    expect(onUrlQueryChange).toHaveBeenCalledWith("status=active&$snapshot");
   });
 
   it("emits URL on sorter change", async () => {
@@ -45,7 +45,7 @@ describe("URL query bridge — state↔URL integration", () => {
     state.sorters.value = [{ field: "createdAt", direction: "desc" }];
     await nextTick();
 
-    expect(onUrlQueryChange).toHaveBeenCalledWith("$sort=-createdAt");
+    expect(onUrlQueryChange).toHaveBeenCalledWith("$sort=-createdAt&$snapshot");
   });
 
   it("emits URL on pagination change", async () => {
@@ -61,7 +61,7 @@ describe("URL query bridge — state↔URL integration", () => {
     state.pagination.value = { page: 3, itemsPerPage: 50 };
     await nextTick();
 
-    expect(onUrlQueryChange).toHaveBeenCalledWith("$skip=100");
+    expect(onUrlQueryChange).toHaveBeenCalledWith("$skip=100&$snapshot");
   });
 
   it("emits URL on searchTerm change (after debounce)", async () => {
@@ -78,7 +78,7 @@ describe("URL query bridge — state↔URL integration", () => {
 
     // Watcher fires synchronously on the next tick — emit happens immediately,
     // it's only the actual fetch that's debounced.
-    expect(onUrlQueryChange).toHaveBeenCalledWith("$search=foo");
+    expect(onUrlQueryChange).toHaveBeenCalledWith("$search=foo&$snapshot");
   });
 
   it("does NOT re-emit on echo (loop guard via lastEmittedUrl)", async () => {
@@ -185,7 +185,7 @@ describe("URL query bridge — state↔URL integration", () => {
     state.setFieldFilter("status", []);
     await nextTick();
 
-    expect(onUrlQueryChange).toHaveBeenCalledWith("");
+    expect(onUrlQueryChange).toHaveBeenCalledWith("$snapshot");
   });
 
   it("ignores cross-encoder echo (URLSearchParams %24 vs buildUrl $) — no spurious refetch", async () => {
@@ -205,7 +205,7 @@ describe("URL query bridge — state↔URL integration", () => {
 
     state.searchTerm.value = "bob";
     await nextTick();
-    expect(onUrlQueryChange).toHaveBeenLastCalledWith("$search=bob");
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("$search=bob&$snapshot");
     pagesFn.mockClear();
 
     // Simulate the percent-encoded round-trip vue-router would deliver.
@@ -452,7 +452,7 @@ describe("urlQuerySync — emit gating", () => {
 
     state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
     await nextTick();
-    expect(onUrlQueryChange).toHaveBeenCalledWith("status=active");
+    expect(onUrlQueryChange).toHaveBeenCalledWith("status=active&$snapshot");
   });
 
   it("search: false omits $search from emitted URL", async () => {
@@ -602,7 +602,7 @@ describe("urlQuerySync — echo guard symmetry (no spurious refetch)", () => {
     state.sorters.value = [{ field: "createdAt", direction: "desc" }];
     state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
     await nextTick();
-    expect(onUrlQueryChange).toHaveBeenLastCalledWith("status=active");
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("status=active&$snapshot");
     pagesFn.mockClear();
 
     // Feed the emitted URL back (simulating a vue-router echo).
@@ -628,7 +628,7 @@ describe("urlQuerySync — echo guard symmetry (no spurious refetch)", () => {
     await nextTick();
 
     const emitted = onUrlQueryChange.mock.calls.at(-1)?.[0];
-    expect(emitted).toBe("status=active");
+    expect(emitted).toBe("status=active&$snapshot");
     pagesFn.mockClear();
 
     state.applyUrlQuery(emitted as string);
@@ -655,7 +655,7 @@ describe("urlQuerySync — echo guard symmetry (no spurious refetch)", () => {
     await nextTick();
 
     const emitted = onUrlQueryChange.mock.calls.at(-1)?.[0];
-    expect(emitted).toBe("status=active");
+    expect(emitted).toBe("status=active&$snapshot");
     pagesFn.mockClear();
 
     state.applyUrlQuery(emitted as string);
@@ -780,7 +780,7 @@ describe("applyUrlQuery — merge vs replace (history restoration)", () => {
     await nextTick();
     await nextTick();
     // Only the allowlisted field round-trips.
-    expect(onUrlQueryChange).toHaveBeenLastCalledWith("status=active");
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("status=active&$snapshot");
 
     // `customer` never round-trips through the URL, so an omitting URL says
     // nothing about it — clearing it would lose state the user cannot restore.
@@ -806,7 +806,7 @@ describe("applyUrlQuery — merge vs replace (history restoration)", () => {
     ];
     await nextTick();
     await nextTick();
-    expect(onUrlQueryChange).toHaveBeenLastCalledWith("$sort=-createdAt");
+    expect(onUrlQueryChange).toHaveBeenLastCalledWith("$sort=-createdAt&$snapshot");
 
     state.applyUrlQuery("", { mode: "replace" });
     await nextTick();
@@ -830,6 +830,7 @@ describe("applyUrlQuery — merge vs replace (history restoration)", () => {
     await nextTick();
     await nextTick();
     // Search is the only synced aspect here, so it is what primes the guard.
+    // Neither filters nor sorters sync, so no `$snapshot` marker either.
     expect(onUrlQueryChange).toHaveBeenLastCalledWith("$search=foo");
 
     state.applyUrlQuery("", { mode: "replace" });

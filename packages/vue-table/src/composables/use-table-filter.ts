@@ -2,10 +2,10 @@ import { ref, computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import type { FilterCondition } from "@atscript/ui-table";
 import {
-  conditionsForType,
+  columnFilterConditions,
   columnFilterType,
   isFilled,
-  defaultCondition,
+  columnDefaultCondition,
 } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
 
@@ -19,9 +19,9 @@ import type { ReactiveTableState } from "../types";
  */
 export function useTableFilter(column: ColumnDef, state: ReactiveTableState) {
   const filterType = columnFilterType(column.type);
-  const availableConditions = conditionsForType(filterType, column.nullable);
+  const availableConditions = columnFilterConditions(column);
 
-  const defCondition = defaultCondition(filterType);
+  const defCondition = columnDefaultCondition(column);
 
   function cloneConditions(): FilterCondition[] {
     const existing = state.filters.value[column.path];

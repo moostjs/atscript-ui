@@ -8,8 +8,7 @@ import {
   debounce,
   isFilled,
   isSimpleEq,
-  columnFilterType,
-  parseFilterInput,
+  parseColumnFilterInput,
   formatFilterCondition,
   type FilterCondition,
 } from "@atscript/ui-table";
@@ -39,7 +38,6 @@ const info = props.column.valueHelpInfo as ValueHelpInfo | undefined;
 const hasValueHelp = !!info;
 const hasOptions = !!(props.column.options && props.column.options.length > 0);
 const hasDropdown = hasValueHelp || hasOptions;
-const filterType = columnFilterType(props.column.type);
 
 let vhClient: ValueHelpClient | undefined;
 let innerState: ReturnType<typeof useTable> | undefined;
@@ -351,7 +349,7 @@ function onInputFocus() {
 function onEnter() {
   if (hasDropdown || !searchTerm.value.trim()) return;
 
-  const parsed = parseFilterInput(searchTerm.value, filterType, props.column.nullable);
+  const parsed = parseColumnFilterInput(searchTerm.value, props.column);
   if (!parsed) return;
 
   const existing = state.filters.value[props.column.path] ?? [];

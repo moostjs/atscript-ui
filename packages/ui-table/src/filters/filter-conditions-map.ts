@@ -1,3 +1,4 @@
+import type { ColumnDef } from "@atscript/ui";
 import { NULL_OPS } from "./filter-conditions";
 import type { FilterConditionType } from "./filter-types";
 
@@ -88,4 +89,44 @@ export function columnFilterType(columnType: string): ColumnFilterType {
     default:
       return "text";
   }
+}
+
+/** The `ColumnDef` fields that decide which filter conditions a column offers. */
+export type FilterableColumn = Pick<ColumnDef, "type" | "nullable" | "filterable" | "filterOps">;
+
+const EXISTENCE_CONDITIONS: readonly FilterConditionType[] = ["null", "notNull"];
+const NO_CONDITIONS: readonly FilterConditionType[] = [];
+
+/**
+ * Filter conditions a column offers — the one answer every filter UI (column
+ * menu, filter dialog, filter bar, config dialog) reads.
+ *
+ * - Value-filterable (`filterable: true`) → {@link conditionsForType} for its
+ *   display type.
+ * - Existence-only (`filterable: false`, `filterOps` includes `$exists` — a
+ *   JSON-stored column) → `null` / `notNull`: whether a value is present,
+ *   never what it is.
+ * - Otherwise → `[]`: the column takes no filter.
+ *
+ * `null` / `notNull` are dropped for non-nullable columns, so an existence-only
+ * column that is never empty offers nothing.
+ *
+ * @since 0.1.139
+ */
+export function columnFilterConditions(column: FilterableColumn): readonly FilterConditionType[] {
+  if (column.filterable) return conditionsForType(columnFilterType(column.type), column.nullable);
+  if (column.nullable && column.filterOps?.includes("$exists")) return EXISTENCE_CONDITIONS;
+  return NO_CONDITIONS;
+}
+
+/**
+ * Whether a column takes any filter at all — value comparisons or the
+ * existence-only `null` / `notNull` pair. Use it (not
+ * `column.filterable`, which is value comparison only) to decide whether to
+ * show a column in a filter UI.
+ *
+ * @since 0.1.139
+ */
+export function isColumnFilterable(column: FilterableColumn): boolean {
+  return columnFilterConditions(column).length > 0;
 }

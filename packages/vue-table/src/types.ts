@@ -434,7 +434,10 @@ export type TAsCellTypeComponents = {
  * @since 0.1.137
  */
 export interface ApplyUrlQueryOptions {
-  /** `"merge"` (default) keeps them, `"replace"` clears them. */
+  /**
+   * Overrides what the URL itself decides (see `applyUrlQuery`): `"merge"`
+   * falls back to the table's starting values, `"replace"` clears them.
+   */
   mode?: "merge" | "replace";
 }
 
@@ -695,13 +698,21 @@ export interface ReactiveTableState extends TableStateMethods {
    * bridge's own emissions. Does NOT call `query()` — root watchers refetch in
    * reaction to the writes.
    *
-   * `mode` decides what happens to filters and sorters the URL does NOT
-   * mention (search and pagination always take the URL's value):
-   * - `"merge"` (default) — they survive. This is mount-time deep-link
-   *   hydration, where the URL overlays a preset baseline it must not wipe.
-   * - `"replace"` (since 0.1.137) — they are cleared, within whatever the
-   *   `urlQuerySync` gates actually serialize. This is history navigation,
-   *   where the URL is a complete snapshot of the synced aspects.
+   * The URL decides what happens to filters and sorters it does NOT mention,
+   * within whatever the `urlQuerySync` gates serialize (search and pagination
+   * always take the URL's value; columns and other presentation state are
+   * never touched):
+   * - A URL carrying the `$snapshot` marker (`URL_SNAPSHOT_KEY` — every URL
+   *   the table writes) replaces: they are cleared, an empty `$sort`
+   *   included, so a reload or a shared link reproduces the table exactly.
+   * - Any other URL (an app deep link) merges: they fall back to the table's
+   *   boot baseline — the owned filters and sorters it had before the first
+   *   URL was applied (preset, persisted drafts, props). Every merge starts
+   *   from that baseline, not from the current state, so Back to a deep link
+   *   restores it as first opened. A preset switched to later does not move
+   *   the baseline.
+   *
+   * `opts.mode` overrides the marker either way. Since 0.1.139.
    */
   applyUrlQuery: (urlString: string, opts?: ApplyUrlQueryOptions) => void;
 

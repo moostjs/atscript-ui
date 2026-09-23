@@ -85,6 +85,7 @@ export function createTableDef(
       selectWith: getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined,
       sortable: fieldMeta?.sortable ?? false,
       filterable: fieldMeta?.filterable ?? false,
+      ...(fieldMeta?.filterOps && { filterOps: [...fieldMeta.filterOps] }),
       nullable: prop.optional === true,
       width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
       maxLen: maxLengthMeta?.length,

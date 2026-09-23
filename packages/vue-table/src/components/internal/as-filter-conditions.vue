@@ -2,11 +2,11 @@
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import {
+  columnDefaultCondition,
+  columnFilterConditions,
   columnFilterType,
   conditionLabel,
-  conditionsForType,
   dateShortcuts,
-  defaultCondition,
   type FilterCondition,
   type FilterConditionType,
 } from "@atscript/ui-table";
@@ -23,10 +23,8 @@ const FilterInput = useTableComponent("filterInput", AsFilterInput);
 const model = defineModel<FilterCondition[]>({ required: true });
 
 const filterType = computed(() => columnFilterType(props.column.type));
-const availableConditions = computed(() =>
-  conditionsForType(filterType.value, props.column.nullable),
-);
-const defCondition = computed<FilterConditionType>(() => defaultCondition(filterType.value));
+const availableConditions = computed(() => columnFilterConditions(props.column));
+const defCondition = computed<FilterConditionType>(() => columnDefaultCondition(props.column));
 const isDateType = computed(() => filterType.value === "date");
 const shortcuts = computed(() => (isDateType.value ? dateShortcuts() : []));
 

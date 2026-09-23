@@ -23,6 +23,7 @@ import {
   buildTableQuery,
   cellAsString,
   debounce,
+  DEV,
   isFilled,
   mergeDisplayColumns,
   mergeSorters,
@@ -39,6 +40,7 @@ import {
   type FieldFilters,
   type FilterCondition,
   type QueryOptions,
+  type UnsupportedFilter,
   type UrlQuerySync,
 } from "@atscript/ui-table";
 import type { Client, PageResult } from "@atscript/db-client";
@@ -204,6 +206,14 @@ export interface TableQueryOptions {
    * behaviour). Static — captured at setup; to change sync, re-mount.
    */
   urlQuerySync?: UrlQuerySync;
+  /**
+   * Receives each piece of a restored URL's filter that field filters cannot
+   * express (a cross-field OR, an unknown operator, …) and that was left out
+   * of the restored state — the table then shows a broader result than the
+   * link described. When omitted, each one is reported with a dev-mode
+   * `console.warn`. Since 0.1.139.
+   */
+  onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
 }
 
 export interface TableWindowOptions {
@@ -346,6 +356,24 @@ function createRequestSlot<TBody, TResolved>(
     if (r.value === null) display.value = null;
   }
   return { ref: r, display, request, accept, dismiss, release };
+}
+
+// The URL baseline is copied in and out, so a caller that edits a model entry
+// in place cannot reach it.
+const cloneConditions = (conds: FilterCondition[]): FilterCondition[] =>
+  conds.map((c) => ({ type: c.type, value: [...c.value] }));
+const cloneSorter = (s: SortControl): SortControl => ({ field: s.field, direction: s.direction });
+
+/**
+ * The report for a restored URL's filter piece when nobody handles it
+ * (`onUnsupportedFilter` / `@unsupported-filter`): a dev-mode warning.
+ */
+export function warnUnsupportedFilter(issue: UnsupportedFilter): void {
+  if (!DEV) return;
+  console.warn(
+    `[vue-table] URL filter left out (${issue.reason}): ${JSON.stringify(issue.expr)}. ` +
+      "Field filters cannot express it, so the table shows more rows than the URL described.",
+  );
 }
 
 export function createTableState(opts: CreateTableStateOptions): {
@@ -1060,14 +1088,66 @@ export function createTableState(opts: CreateTableStateOptions): {
     queryOpts.onUrlQueryChange(next);
   }
 
+  const filtersGate = resolveAspectGate(urlQuerySync?.filters);
+  const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
+
+  // What a marker-less URL overlays: the URL-owned filters and sorters the
+  // table booted with (preset, persisted drafts, props), captured once before
+  // the first URL lands on them. Each such URL starts from here, not from the
+  // current state — so Back to an app deep link restores the link as it was
+  // opened, not the link plus whatever the user changed since. A preset the
+  // user switches to later does not move it.
+  let urlBaseline: { filters: FieldFilters; sorters: SortControl[] } | null = null;
+  function captureUrlBaseline(): void {
+    if (urlBaseline) return;
+    const owned: FieldFilters = {};
+    for (const path in filters.value) {
+      if (!gateOwns(filtersGate, path)) continue;
+      owned[path] = cloneConditions(filters.value[path]);
+    }
+    urlBaseline = {
+      filters: owned,
+      sorters: sorters.value.filter((s) => gateOwns(sortersGate, s.field)).map(cloneSorter),
+    };
+  }
+
+  // The URL the table starts from stands for its starting state — an empty
+  // query overlays nothing — so that state is the echo baseline. Without it the
+  // first mutation of an aspect the URL does not carry (an unsynced sorter)
+  // would still write the bare `$snapshot` marker. Primed once the bootstrap
+  // gate opens (a deep link has primed it already by then, to the same value);
+  // the overlay baseline is taken there too when no URL came in first.
+  if (queryOpts?.onUrlQueryChange) {
+    const gate = queryOpts.urlQueryReady;
+    if (!gate || gate.value) lastEmittedUrl = serializeStateForUrl();
+    else {
+      const stop = watch(
+        () => gate.value,
+        () => {
+          captureUrlBaseline();
+          lastEmittedUrl = serializeStateForUrl();
+          stop();
+        },
+        { flush: "sync" },
+      );
+    }
+  }
+
   function applyUrlQuery(urlString: string, opts?: ApplyUrlQueryOptions): void {
+    captureUrlBaseline();
     if (urlsEquivalent(urlString, lastEmittedUrl)) return;
-    const replace = opts?.mode === "replace";
     const cols = allColumns.value;
     const parsed = urlQueryStringToState(urlString, {
       knownFields: cols.length > 0 ? cols.map((c) => c.path) : undefined,
       sync: urlQuerySync,
     });
+    for (const issue of parsed.unsupported ?? []) {
+      (queryOpts?.onUnsupportedFilter ?? warnUnsupportedFilter)(issue);
+    }
+    // A `$snapshot` URL is complete: it replaces. Any other URL overlays the
+    // baseline. An explicit `mode` overrides the marker either way.
+    const replace = opts?.mode ? opts.mode === "replace" : parsed.snapshot === true;
+    const base = replace ? null : urlBaseline!;
 
     // Round-trip stability when user changed page size locally: divide raw
     // `$skip` by the consumer's CURRENT `itemsPerPage`, not the default.
@@ -1079,35 +1159,32 @@ export function createTableState(opts: CreateTableStateOptions): {
     const wasQueryDetected = queryDetected;
     hydratingFromUrl = true;
 
-    // Both aspects below ask one question of the existing state: which entries
-    // does this URL supersede? On replace, every entry the gate says the URL
-    // owns — so one it omits is cleared. On merge, only the entries it actually
-    // carries — so a preset field the URL is silent on survives. The URL's own
-    // entries are then overlaid identically either way.
-    const filtersGate = resolveAspectGate(urlQuerySync?.filters);
+    // Both aspects start from the entries the URL does not own (the current
+    // state's private ones) plus, on overlay, the baseline's owned ones; the
+    // URL's entries go on top. So an owned entry the URL omits is cleared on
+    // replace and falls back to the baseline on overlay.
     if (filtersGate !== "none") {
       const next: FieldFilters = {};
+      // Current keys first, so a key that stays keeps its slot — the order of
+      // filter keys is observable (it sets the `$and` clause order of the
+      // built query and of the emitted URL).
       for (const path in filters.value) {
-        // Replace drops what the URL owns. Merge keeps every existing path and
-        // lets the overlay below rewrite the URL's IN PLACE — that preserves key
-        // insertion order, and the order of filter keys is observable (it sets
-        // the `$and` clause order of the built query and of the emitted URL).
-        if (!replace || !gateOwns(filtersGate, path)) next[path] = filters.value[path];
+        if (!gateOwns(filtersGate, path)) next[path] = filters.value[path];
+        else if (base?.filters[path]) next[path] = cloneConditions(base.filters[path]);
       }
+      if (base) for (const path in base.filters) next[path] ??= cloneConditions(base.filters[path]);
       for (const path in parsed.filters) next[path] = parsed.filters[path];
       filters.value = next;
     }
 
-    // Same question, keyed on `SortControl.field`. Appending the URL's sorters
-    // last means its ordering wins outright on replace, where nothing survives.
-    const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
+    // Same, keyed on `SortControl.field`. Appending the URL's sorters last
+    // means its ordering wins over the entries it starts from.
     let urlSortersChanged = false;
     if (sortersGate !== "none") {
       const urlSortFields = new Set(parsed.sorters.map((s) => s.field));
-      const survivors = sorters.value.filter(
-        (s) => !(replace ? gateOwns(sortersGate, s.field) : urlSortFields.has(s.field)),
-      );
-      const merged = [...survivors, ...parsed.sorters];
+      const start = sorters.value.filter((s) => !gateOwns(sortersGate, s.field));
+      if (base) start.push(...base.sorters.map(cloneSorter));
+      const merged = [...start.filter((s) => !urlSortFields.has(s.field)), ...parsed.sorters];
       if (!sortersEqual(sorters.value, merged)) {
         sorters.value = merged;
         urlSortersChanged = true;

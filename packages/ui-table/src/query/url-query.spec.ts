@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
+  URL_SNAPSHOT_KEY,
   gateOwns,
   resolveAspectGate,
   stateToUrlQueryString,
@@ -14,15 +15,17 @@ import { parseFilterInput } from "../filters/filter-input-format";
 const DEFAULTS = { defaultItemsPerPage: 50 };
 
 describe("stateToUrlQueryString — encoding", () => {
-  it("returns empty string for the default view", () => {
+  it("returns the bare snapshot marker for the default view", () => {
     expect(
       stateToUrlQueryString({ filters: {}, sorters: [], page: 1, searchTerm: "" }, DEFAULTS),
-    ).toBe("");
+    ).toBe("$snapshot");
   });
 
   it("encodes filters via the existing Uniquery format", () => {
     const filters: FieldFilters = { status: [{ type: "eq", value: ["active"] }] };
-    expect(stateToUrlQueryString({ filters, sorters: [] }, DEFAULTS)).toBe("status=active");
+    expect(stateToUrlQueryString({ filters, sorters: [] }, DEFAULTS)).toBe(
+      "status=active&$snapshot",
+    );
   });
 
   it("encodes sorters with - prefix for desc", () => {
@@ -37,33 +40,35 @@ describe("stateToUrlQueryString — encoding", () => {
         },
         DEFAULTS,
       ),
-    ).toBe("$sort=-createdAt,name");
+    ).toBe("$sort=-createdAt,name&$snapshot");
   });
 
   it("encodes searchTerm as $search", () => {
     expect(stateToUrlQueryString({ filters: {}, sorters: [], searchTerm: "foo" }, DEFAULTS)).toBe(
-      "$search=foo",
+      "$search=foo&$snapshot",
     );
   });
 
   it("omits $skip when page is 1", () => {
-    expect(stateToUrlQueryString({ filters: {}, sorters: [], page: 1 }, DEFAULTS)).toBe("");
+    expect(stateToUrlQueryString({ filters: {}, sorters: [], page: 1 }, DEFAULTS)).toBe(
+      "$snapshot",
+    );
   });
 
   it("encodes page > 1 as $skip", () => {
     expect(
       stateToUrlQueryString({ filters: {}, sorters: [], page: 3, itemsPerPage: 50 }, DEFAULTS),
-    ).toBe("$skip=100");
+    ).toBe("$skip=100&$snapshot");
   });
 
   it("never emits $limit (page size is a private user preference)", () => {
     // Default itemsPerPage:
     expect(stateToUrlQueryString({ filters: {}, sorters: [], itemsPerPage: 50 }, DEFAULTS)).toBe(
-      "",
+      "$snapshot",
     );
     // Non-default itemsPerPage — still no $limit; only the offset is shareable.
     expect(stateToUrlQueryString({ filters: {}, sorters: [], itemsPerPage: 25 }, DEFAULTS)).toBe(
-      "",
+      "$snapshot",
     );
   });
 
@@ -71,7 +76,7 @@ describe("stateToUrlQueryString — encoding", () => {
     // Page 3 at size 25 → records 50..74 → $skip=50.
     expect(
       stateToUrlQueryString({ filters: {}, sorters: [], page: 3, itemsPerPage: 25 }, DEFAULTS),
-    ).toBe("$skip=50");
+    ).toBe("$skip=50&$snapshot");
   });
 
   it("composes filter + sort + page + search (no $limit)", () => {
@@ -85,7 +90,7 @@ describe("stateToUrlQueryString — encoding", () => {
       },
       DEFAULTS,
     );
-    expect(out).toBe("status=active&$sort=-createdAt&$skip=25&$search=foo");
+    expect(out).toBe("status=active&$sort=-createdAt&$skip=25&$search=foo&$snapshot");
   });
 });
 
@@ -228,7 +233,7 @@ describe("uniqueryFilterToFieldFilters — operator coverage", () => {
     });
   });
 
-  it("flattens $or branches into AND'd accumulator (lossy by design)", () => {
+  it("merges same-field $or branches into the field's OR'd conditions", () => {
     const expr = {
       $or: [{ status: "active" }, { status: "pending" }],
     };
@@ -240,14 +245,24 @@ describe("uniqueryFilterToFieldFilters — operator coverage", () => {
     });
   });
 
-  it("drops $not branches", () => {
-    expect(uniqueryFilterToFieldFilters({ $not: { status: "deleted" } })).toEqual({});
+  it("inverts a $not of equality", () => {
+    expect(uniqueryFilterToFieldFilters({ $not: { status: "deleted" } })).toEqual({
+      status: [{ type: "ne", value: ["deleted"] }],
+    });
   });
 
-  it("drops unknown operators", () => {
-    expect(uniqueryFilterToFieldFilters({ name: { $weirdOp: "x", $eq: "ok" } })).toEqual({
+  it("leaves out unknown operators (reported) and keeps the known ones", () => {
+    const onUnsupported = vi.fn();
+    expect(
+      uniqueryFilterToFieldFilters(
+        { name: { $weirdOp: "x", $eq: "ok" } },
+        undefined,
+        onUnsupported,
+      ),
+    ).toEqual({
       name: [{ type: "eq", value: ["ok"] }],
     });
+    expect(onUnsupported).toHaveBeenCalledTimes(1);
   });
 
   it("returns {} for undefined input", () => {
@@ -375,7 +390,7 @@ describe("round-trip — full state via URL string", () => {
       { filters: {}, sorters: [], page: 4, itemsPerPage: 25 },
       DEFAULTS,
     );
-    expect(url).toBe("$skip=75");
+    expect(url).toBe("$skip=75&$snapshot");
     const back = urlQueryStringToState(url);
     const recipientSize = 25;
     expect(Math.floor((back.skip ?? 0) / recipientSize) + 1).toBe(4);
@@ -393,11 +408,11 @@ describe("round-trip — full state via URL string", () => {
     expect(Math.floor((back.skip ?? 0) / recipientSize) + 1).toBe(2);
   });
 
-  it("default view round-trips through empty string", () => {
+  it("default view round-trips through the bare marker", () => {
     const url = stateToUrlQueryString({ filters: {}, sorters: [] }, DEFAULTS);
-    expect(url).toBe("");
+    expect(url).toBe("$snapshot");
     const back = urlQueryStringToState(url);
-    expect(back).toEqual({ filters: {}, sorters: [], searchTerm: "" });
+    expect(back).toEqual({ filters: {}, sorters: [], searchTerm: "", snapshot: true });
   });
 });
 
@@ -410,13 +425,13 @@ describe("$relevance — ignoreSorters round-trip", () => {
         { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: false },
         DEFAULTS,
       ),
-    ).toBe("$search=foo");
+    ).toBe("$search=foo&$snapshot");
     expect(
       stateToUrlQueryString(
         { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: true },
         { ...DEFAULTS, defaultIgnoreSorters: true },
       ),
-    ).toBe("$search=foo");
+    ).toBe("$search=foo&$snapshot");
   });
 
   it("emits $relevance=1 when flag is true and default is false", () => {
@@ -425,7 +440,7 @@ describe("$relevance — ignoreSorters round-trip", () => {
         { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: true },
         DEFAULTS,
       ),
-    ).toBe("$search=foo&$relevance=1");
+    ).toBe("$search=foo&$relevance=1&$snapshot");
   });
 
   it("emits $relevance=0 when flag is false and default is true", () => {
@@ -439,7 +454,7 @@ describe("$relevance — ignoreSorters round-trip", () => {
         },
         { ...DEFAULTS, defaultIgnoreSorters: true },
       ),
-    ).toBe("$sort=name&$search=foo&$relevance=0");
+    ).toBe("$sort=name&$search=foo&$relevance=0&$snapshot");
   });
 
   it("omits $relevance without a search term (flag is meaningless)", () => {
@@ -448,7 +463,7 @@ describe("$relevance — ignoreSorters round-trip", () => {
         { filters: {}, sorters: [], searchTerm: "", ignoreSorters: true },
         DEFAULTS,
       ),
-    ).toBe("");
+    ).toBe("$snapshot");
   });
 
   it("omits $relevance when search sync is off", () => {
@@ -457,7 +472,7 @@ describe("$relevance — ignoreSorters round-trip", () => {
         { filters: {}, sorters: [], searchTerm: "foo", ignoreSorters: true },
         { ...DEFAULTS, sync: { search: false } },
       ),
-    ).toBe("");
+    ).toBe("$snapshot");
   });
 
   it("decodes $relevance=1 / $relevance=0", () => {
@@ -682,7 +697,7 @@ describe("urlQuerySync — round-trip symmetry (echo guard precondition)", () =>
 // eats a host key or leaves its own behind.
 describe("urlQueryConsumesKey", () => {
   it("claims only the $controls the parser reads", () => {
-    for (const key of ["$sort", "$search", "$relevance", "$skip"]) {
+    for (const key of ["$sort", "$search", "$relevance", "$skip", "$snapshot"]) {
       expect(urlQueryConsumesKey(key)).toBe(true);
     }
     // `$limit` is deliberately not read back (page size is the recipient's),
@@ -745,5 +760,73 @@ describe("gateOwns", () => {
     expect(url).not.toContain("customer=");
     expect(url).toContain("$sort=-createdAt");
     expect(url).not.toContain("name");
+  });
+});
+
+describe("$snapshot marker", () => {
+  const state = {
+    filters: { status: [{ type: "eq" as const, value: ["open"] }] },
+    sorters: [{ field: "name", direction: "asc" as const }],
+  };
+
+  it("trails every encoded URL as a bare key", () => {
+    expect(URL_SNAPSHOT_KEY).toBe("$snapshot");
+    expect(stateToUrlQueryString(state, DEFAULTS)).toBe("status=open&$sort=name&$snapshot");
+  });
+
+  it("round-trips: a marked URL decodes as a snapshot", () => {
+    const back = urlQueryStringToState(stateToUrlQueryString(state, DEFAULTS));
+    expect(back).toEqual({ ...state, searchTerm: "", snapshot: true });
+  });
+
+  it("an unmarked URL decodes without the flag (overlay)", () => {
+    expect(urlQueryStringToState("status=open").snapshot).toBeUndefined();
+  });
+
+  it("goes by the marker's presence, whatever its value", () => {
+    expect(urlQueryStringToState("$snapshot=1").snapshot).toBe(true);
+    expect(urlQueryStringToState("$snapshot=").snapshot).toBe(true);
+    expect(urlQueryStringToState("$snapshot=0").snapshot).toBe(true);
+    expect(urlQueryStringToState("$snapshot=false").snapshot).toBe(true);
+  });
+
+  it("sync.snapshot: false neither writes nor honours the marker", () => {
+    const sync = { snapshot: false };
+    expect(stateToUrlQueryString(state, { ...DEFAULTS, sync })).toBe("status=open&$sort=name");
+    expect(stateToUrlQueryString({ filters: {}, sorters: [] }, { ...DEFAULTS, sync })).toBe("");
+    expect(urlQueryStringToState("status=open&$snapshot", { sync }).snapshot).toBeUndefined();
+  });
+
+  it("is not written when neither filters nor sorters sync", () => {
+    const sync = { filters: false, sorters: false };
+    expect(stateToUrlQueryString({ ...state, searchTerm: "x" }, { ...DEFAULTS, sync })).toBe(
+      "$search=x",
+    );
+  });
+});
+
+describe("urlQueryStringToState — unsupported filters", () => {
+  it("lists a cross-field OR in `unsupported`, leaves it out, and does not warn", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const out = urlQueryStringToState("team=core&(a=1^b=2)");
+      expect(out.filters).toEqual({ team: [{ type: "eq", value: ["core"] }] });
+      expect(out.unsupported).toHaveLength(1);
+      expect(out.unsupported![0]).toMatchObject({ reason: "cross-field", fields: ["a", "b"] });
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("decodes a URL in-list as the field's OR'd equalities", () => {
+    const out = urlQueryStringToState("status{open,review}");
+    expect(out.filters).toEqual({
+      status: [
+        { type: "eq", value: ["open"] },
+        { type: "eq", value: ["review"] },
+      ],
+    });
+    expect(out.unsupported).toBeUndefined();
   });
 });

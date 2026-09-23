@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import type { ColumnWidthEntry, FilterCondition } from "@atscript/ui-table";
-import { isFilled } from "@atscript/ui-table";
+import { isColumnFilterable, isFilled } from "@atscript/ui-table";
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -40,7 +40,7 @@ function emitSort(direction: "asc" | "desc") {
 }
 
 const showSort = computed(() => props.config.sort && props.column.sortable);
-const showFilters = computed(() => props.config.filters && props.column.filterable);
+const showFilters = computed(() => props.config.filters && isColumnFilterable(props.column));
 const showHide = computed(() => props.config.hide);
 const showResetWidth = computed(
   () => props.config.resetWidth && !!props.widthEntry && props.widthEntry.w !== props.widthEntry.d,

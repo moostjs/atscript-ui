@@ -13,8 +13,13 @@ export {
 } from "./filters/filter-conditions";
 
 // ── Filter conditions map ───────────────────────────────────
-export type { ColumnFilterType } from "./filters/filter-conditions-map";
-export { conditionsForType, columnFilterType } from "./filters/filter-conditions-map";
+export type { ColumnFilterType, FilterableColumn } from "./filters/filter-conditions-map";
+export {
+  conditionsForType,
+  columnFilterType,
+  columnFilterConditions,
+  isColumnFilterable,
+} from "./filters/filter-conditions-map";
 
 // ── Escape regex ────────────────────────────────────────────
 export { escapeRegex, unescapeRegex } from "./filters/escape-regex";
@@ -22,12 +27,15 @@ export { escapeRegex, unescapeRegex } from "./filters/escape-regex";
 // ── Filter input format ─────────────────────────────────────
 export {
   parseFilterInput,
+  parseColumnFilterInput,
   formatFilterCondition,
   defaultCondition,
+  columnDefaultCondition,
 } from "./filters/filter-input-format";
 
 // ── Filters to Uniquery ─────────────────────────────────────
 export { filtersToUniqueryFilter } from "./filters/filters-to-uniquery";
+export type { UnsupportedFilter, UnsupportedFilterReason } from "./filters/uniquery-to-filters";
 export { uniqueryFilterToFieldFilters } from "./filters/uniquery-to-filters";
 
 // ── Date shortcuts ──────────────────────────────────────────
@@ -124,6 +132,7 @@ export type {
   UrlQuerySync,
 } from "./query/url-query";
 export {
+  URL_SNAPSHOT_KEY,
   gateOwns,
   resolveAspectGate,
   stateToUrlQueryString,
@@ -188,3 +197,6 @@ export { mergeDisplayColumns } from "./columns/display-columns";
 
 // ── Local (in-memory) row sorting ──────────────────────────
 export { cellAsString, sortRowsLocally } from "./utils/sort-rows";
+
+// ── Dev-mode gate ───────────────────────────────────────────
+export { DEV } from "./utils/dev";

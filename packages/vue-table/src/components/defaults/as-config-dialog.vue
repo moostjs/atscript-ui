@@ -14,7 +14,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "reka-ui";
-import { arraysEqual, sortersEqual } from "@atscript/ui-table";
+import { arraysEqual, isColumnFilterable, sortersEqual } from "@atscript/ui-table";
 import type { ConfigTab } from "../../types";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTableComponent } from "../../composables/use-table-component";
@@ -55,7 +55,7 @@ useSeedOnOpen(isOpen, () => {
   sortersModel.value = state.sorters.value.map((s) => ({ ...s }));
 });
 
-const filterableColumns = computed(() => state.allColumns.value.filter((c) => c.filterable));
+const filterableColumns = computed(() => state.allColumns.value.filter(isColumnFilterable));
 const sortableColumns = computed(() => {
   // Same rule as the table header — `state.localSortAvailable` owns it.
   const localOk = state.localSortAvailable.value;

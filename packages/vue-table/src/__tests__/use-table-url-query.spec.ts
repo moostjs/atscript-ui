@@ -138,6 +138,36 @@ describe("useTableUrlQuery", () => {
     expect(Object.keys(route.query as object)).toEqual(["demo", "status"]);
   });
 
+  it("writes its own keys in the table's order, so the table reads back what it wrote", () => {
+    // Regression: merging in place kept `$snapshot` where the previous write
+    // put it and appended `$sort` after it, so the table's own URL came back
+    // spelled differently and slipped past its echo guard.
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=active&$snapshot";
+    urlQuery.value = "status=active&$sort=-createdAt&$snapshot";
+
+    expect(urlQuery.value).toBe("status=active&$sort=-createdAt&$snapshot");
+  });
+
+  it("keeps foreign keys in their slots around its own block", () => {
+    const route = createMockRoute({ tab: "a", status: "active", $snapshot: null, demo: "1" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=active&$sort=name&$snapshot";
+
+    expect(Object.keys(route.query as object)).toEqual([
+      "tab",
+      "status",
+      "$sort",
+      "$snapshot",
+      "demo",
+    ]);
+  });
+
   it("is reactive to external route changes", () => {
     const route = createMockRoute({});
     const router = createMockRouter(route);
@@ -303,5 +333,39 @@ describe("useTableUrlQuery — prefix (two tables on one route)", () => {
     urlQuery.value = "status=active";
 
     expect(route.query).toEqual({ $skip: "50", "t1.status": "active" });
+  });
+});
+
+describe("useTableUrlQuery — $snapshot marker", () => {
+  it("round-trips the bare marker through route.query", () => {
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=active&$snapshot";
+
+    expect(router.replace).toHaveBeenCalledWith({ query: { status: "active", $snapshot: null } });
+    expect(urlQuery.value).toBe("status=active&$snapshot");
+  });
+
+  it("owns a marker already in the URL at mount and drops it when a write omits it", () => {
+    const route = createMockRoute({ status: "active", $snapshot: null, tab: "orders" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "status=done";
+
+    expect(route.query).toEqual({ status: "done", tab: "orders" });
+  });
+
+  it("keeps the marker under a prefix", () => {
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { prefix: "t1" });
+
+    urlQuery.value = "$snapshot";
+
+    expect(route.query).toEqual({ "t1.$snapshot": null });
+    expect(urlQuery.value).toBe("$snapshot");
   });
 });

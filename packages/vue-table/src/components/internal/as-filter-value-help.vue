@@ -4,6 +4,7 @@ import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
 import { resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
 import {
   filledFilterCount,
+  isColumnFilterable,
   isSimpleEq,
   sameColumnSet,
   type FilterCondition,
@@ -124,7 +125,7 @@ if (info && innerState) {
       const dictCols = fkState.allColumns.value.filter((c) => dictPaths.has(c.path));
       fkState.columnNames.value = dictCols.map((c) => c.path);
       if (fkState.filterFields.value.length === 0) {
-        fkState.filterFields.value = dictCols.filter((c) => c.filterable).map((c) => c.path);
+        fkState.filterFields.value = dictCols.filter(isColumnFilterable).map((c) => c.path);
       }
       fkState.query();
     },

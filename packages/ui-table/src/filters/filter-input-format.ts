@@ -1,6 +1,11 @@
 import type { FilterCondition, FilterConditionType } from "./filter-types";
-import type { ColumnFilterType } from "./filter-conditions-map";
-import { conditionsForType } from "./filter-conditions-map";
+import {
+  columnFilterConditions,
+  columnFilterType,
+  conditionsForType,
+  type ColumnFilterType,
+  type FilterableColumn,
+} from "./filter-conditions-map";
 
 /**
  * Coerce a raw string value to the appropriate JS type for the column.
@@ -33,6 +38,19 @@ export function defaultCondition(columnType: ColumnFilterType): FilterConditionT
     default:
       return "eq";
   }
+}
+
+/**
+ * The condition a column's filter input starts with: its type's
+ * {@link defaultCondition} when the column offers it, otherwise the first
+ * condition it does offer (`null` on an existence-only column).
+ *
+ * @since 0.1.139
+ */
+export function columnDefaultCondition(column: FilterableColumn): FilterConditionType {
+  const type = defaultCondition(columnFilterType(column.type));
+  const offered = columnFilterConditions(column);
+  return offered.length === 0 || offered.includes(type) ? type : offered[0];
 }
 
 /** Prefix operators in match order (longest first). */
@@ -68,17 +86,40 @@ const PREFIX_OPS: ReadonlyArray<readonly [string, FilterConditionType]> = [
  *   number/date/boolean → eq
  *
  * Returns undefined for empty/invalid input or if the parsed operator
- * is not available for the column type.
+ * is not available for the column type. To honour what a specific column
+ * offers (an existence-only column takes only `<empty>` / `!<empty>`), use
+ * {@link parseColumnFilterInput}.
  */
 export function parseFilterInput(
   text: string,
   columnType: ColumnFilterType,
   nullable = true,
 ): FilterCondition | undefined {
+  return parseInput(text, columnType, conditionsForType(columnType, nullable));
+}
+
+/**
+ * {@link parseFilterInput} for a column: the type comes from the column and
+ * the accepted operators are {@link columnFilterConditions} — the ones the
+ * column's filter UI offers.
+ *
+ * @since 0.1.139
+ */
+export function parseColumnFilterInput(
+  text: string,
+  column: FilterableColumn,
+): FilterCondition | undefined {
+  return parseInput(text, columnFilterType(column.type), columnFilterConditions(column));
+}
+
+function parseInput(
+  text: string,
+  columnType: ColumnFilterType,
+  available: readonly FilterConditionType[],
+): FilterCondition | undefined {
   const trimmed = text.trim();
   if (trimmed === "") return undefined;
 
-  const available = conditionsForType(columnType, nullable);
   const isNumber = columnType === "number";
   const build = (
     type: FilterConditionType,

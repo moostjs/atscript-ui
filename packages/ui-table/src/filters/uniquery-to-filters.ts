@@ -1,27 +1,73 @@
-import type { FilterExpr } from "@uniqu/core";
+import { isLogicalKey, type FilterExpr } from "@uniqu/core";
 import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
 import { unescapeRegex } from "./escape-regex";
+import { isExclusionType } from "./filters-to-uniquery";
+import { DEV } from "../utils/dev";
 
-const SUPPORTED_TYPES = new Set<FilterConditionType>([
-  "eq",
-  "ne",
-  "gt",
-  "gte",
-  "lt",
-  "lte",
-  "contains",
-  "starts",
-  "ends",
-  "bw",
-  "null",
-  "notNull",
-  "regex",
-]);
+/**
+ * Why part of a Uniquery filter has no `FieldFilters` equivalent.
+ *
+ * - `"cross-field"` — an `$or` / `$not` that spans several fields
+ *   (`a=1 OR b=2`). The model ANDs fields, so it cannot hold a correlation.
+ * - `"operator"` — an operator or operand no condition type expresses
+ *   (`$nor`, an unknown `$op`, an object value, an empty `$in`, …).
+ * - `"negation"` — a negative inside an `$or`, or a `$not` that is not a
+ *   plain inversion of equality / emptiness.
+ * - `"conjunction"` — a second positive group AND'd onto a field that already
+ *   has one (`a>1 AND a<5`). A field's positive conditions are OR'd.
+ *
+ * @since 0.1.139
+ */
+export type UnsupportedFilterReason = "cross-field" | "operator" | "negation" | "conjunction";
+
+/**
+ * One AND-ed piece of a Uniquery filter that {@link uniqueryFilterToFieldFilters}
+ * left out of its result.
+ *
+ * @since 0.1.139
+ */
+export interface UnsupportedFilter {
+  reason: UnsupportedFilterReason;
+  /** The left-out sub-expression, as it appeared in the input. */
+  expr: FilterExpr;
+  /** Field paths the sub-expression references, in order of appearance. */
+  fields: string[];
+}
 
 type Primitive = string | number | boolean;
 
+/**
+ * One AND-ed piece of the input, on a single field: either a positive group
+ * (its conditions OR'd — one condition, an `$in` list, a same-field `$or`) or
+ * exactly one negative condition. Negatives are AND'd per field, so any number
+ * of them fits the model; positives fit once per field. Which one a term is
+ * follows from its conditions — the encoder's exclusion types.
+ */
+interface Term {
+  field: string;
+  conds: FilterCondition[];
+  expr: FilterExpr;
+}
+
+interface Collected {
+  terms: Term[];
+  issues: UnsupportedFilter[];
+}
+
+// Local guards rather than `@uniqu/core`'s `isPrimitive` / `walkFilter`: those
+// accept any non-plain object as a value, and malformed operands must be reported.
 function isPrimitive(v: unknown): v is Primitive {
   return typeof v === "string" || typeof v === "number" || typeof v === "boolean";
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    !Array.isArray(v) &&
+    !(v instanceof RegExp) &&
+    !(v instanceof Date)
+  );
 }
 
 // Wire format the encoder emits — `/<body>/<flags>`. `s` flag treats `.` as
@@ -37,6 +83,7 @@ const ENDS_ANCHOR = /^(.+)\$$/s;
  * `regex` condition.
  */
 function regexToCondition(raw: unknown): FilterCondition | null {
+  if (raw instanceof RegExp) raw = raw.toString();
   if (typeof raw !== "string") return null;
   const m = REGEX_LITERAL.exec(raw);
   if (!m) return { type: "regex", value: [raw] };
@@ -52,123 +99,334 @@ function regexToCondition(raw: unknown): FilterCondition | null {
   return { type: "regex", value: [raw] };
 }
 
-function pushIfPrimitive(out: FilterCondition[], type: FilterConditionType, v: unknown): void {
-  if (!isPrimitive(v)) return;
-  out.push({ type, value: [v] });
+const nullCond = (): FilterCondition => ({ type: "null", value: [] });
+const notNullCond = (): FilterCondition => ({ type: "notNull", value: [] });
+
+/** Positive condition for one `$eq` / `$in` value — `null` means "is empty". */
+function memberCondition(v: unknown): FilterCondition | null {
+  if (v === null) return nullCond();
+  return isPrimitive(v) ? { type: "eq", value: [v] } : null;
 }
 
-/**
- * Decode a per-field operator object (e.g. `{ $gt: 5, $lte: 10 }`) into one or
- * more `FilterCondition`s. Unknown operators are silently dropped.
- *
- * `$gte` + `$lte` on the same field collapse into a single `bw` condition,
- * matching the encoder's behaviour.
- */
-function decodeFieldOps(ops: Record<string, unknown>): FilterCondition[] {
-  const out: FilterCondition[] = [];
+/** Negative condition for one `$ne` / `$nin` value — `null` means "is not empty". */
+function nonMemberCondition(v: unknown): FilterCondition | null {
+  if (v === null) return notNullCond();
+  return isPrimitive(v) ? { type: "ne", value: [v] } : null;
+}
 
-  const hasGte = "$gte" in ops && isPrimitive(ops.$gte);
-  const hasLte = "$lte" in ops && isPrimitive(ops.$lte);
-  if (hasGte && hasLte) {
-    out.push({ type: "bw", value: [ops.$gte as Primitive, ops.$lte as Primitive] });
-  } else {
-    if (hasGte) pushIfPrimitive(out, "gte", ops.$gte);
-    if (hasLte) pushIfPrimitive(out, "lte", ops.$lte);
+const RANGE_OPS: Record<string, FilterConditionType> = {
+  $gt: "gt",
+  $gte: "gte",
+  $lt: "lt",
+  $lte: "lte",
+};
+
+/** Field paths an expression references, deduped, in order of appearance. */
+function fieldsOf(expr: unknown, out: string[] = []): string[] {
+  if (Array.isArray(expr)) {
+    for (const child of expr) fieldsOf(child, out);
+    return out;
   }
-
-  if ("$eq" in ops) pushIfPrimitive(out, "eq", ops.$eq);
-  if ("$ne" in ops) pushIfPrimitive(out, "ne", ops.$ne);
-  if ("$gt" in ops) pushIfPrimitive(out, "gt", ops.$gt);
-  if ("$lt" in ops) pushIfPrimitive(out, "lt", ops.$lt);
-
-  if ("$exists" in ops) {
-    if (ops.$exists === false) out.push({ type: "null", value: [] });
-    else if (ops.$exists === true) out.push({ type: "notNull", value: [] });
+  if (!isPlainObject(expr)) return out;
+  for (const key in expr) {
+    if (key.startsWith("$")) fieldsOf(expr[key], out);
+    else if (!out.includes(key)) out.push(key);
   }
-
-  if ("$regex" in ops) {
-    const cond = regexToCondition(ops.$regex);
-    if (cond) out.push(cond);
-  }
-
   return out;
 }
 
+function unsupported(reason: UnsupportedFilterReason, expr: unknown): UnsupportedFilter {
+  const fields = fieldsOf(expr);
+  // Spanning fields is the root cause whatever else is wrong with the piece.
+  return { reason: fields.length > 1 ? "cross-field" : reason, expr: expr as FilterExpr, fields };
+}
+
+const isNegative = (term: Term): boolean => isExclusionType(term.conds[0].type);
+
 /**
- * Walk a leaf `ComparisonNode` (one or more field=value entries) into the
- * shared `FieldFilters` accumulator. Drops unknown fields and operators.
+ * Add decoded conditions as terms: negatives one term each (they AND), a
+ * positive list as one group (it ORs). Conditions share their polarity.
  */
-function walkLeaf(
-  node: Record<string, unknown>,
-  acc: FieldFilters,
-  knownFields: Set<string> | null,
-): void {
-  for (const field in node) {
-    if (field.startsWith("$")) continue; // logical key — not a leaf
-    if (knownFields && !knownFields.has(field)) continue;
-
-    const value = node[field];
-    let conditions: FilterCondition[];
-
-    if (value === null || value === undefined) {
-      conditions = [{ type: "null", value: [] }];
-    } else if (isPrimitive(value)) {
-      conditions = [{ type: "eq", value: [value] }];
-    } else if (typeof value === "object" && !Array.isArray(value)) {
-      conditions = decodeFieldOps(value as Record<string, unknown>);
-    } else {
-      continue;
-    }
-
-    if (conditions.length === 0) continue;
-    const filtered = conditions.filter((c) => SUPPORTED_TYPES.has(c.type));
-    if (filtered.length === 0) continue;
-
-    if (acc[field]) acc[field] = [...acc[field], ...filtered];
-    else acc[field] = filtered;
+function addTerms(out: Collected, field: string, conds: FilterCondition[], expr: FilterExpr): void {
+  if (conds.length === 0) return;
+  if (isExclusionType(conds[0].type)) {
+    for (const cond of conds) out.terms.push({ field, conds: [cond], expr });
+  } else {
+    out.terms.push({ field, conds, expr });
   }
 }
 
-// Logical structure is intentionally flattened — `FieldFilters` is a per-field
-// accumulator (AND across fields, OR/AND within a field by condition type).
-// Round-tripped URLs always land in this shape; cross-field $or in pasted URLs
-// degrades to best-effort AND'd conjunctions (lossy-coerce by design). $not is
-// dropped — no UI representation, and the encoder never emits it.
-function walkExpr(expr: FilterExpr, acc: FieldFilters, knownFields: Set<string> | null): void {
-  if ("$and" in expr && expr.$and) {
-    for (const child of expr.$and as FilterExpr[]) walkExpr(child, acc, knownFields);
+/**
+ * `a>=x` AND `a<=y` is the model's `bw`, whether both halves sit in one
+ * operator object (the encoder's shape) or in two AND-ed pieces. Folds `cond`
+ * into an earlier lone opposite half on `field`; `false` when there is none.
+ */
+function pairRange(out: Collected, field: string, cond: FilterCondition): boolean {
+  const opposite = cond.type === "gte" ? "lte" : cond.type === "lte" ? "gte" : null;
+  if (!opposite) return false;
+  const i = out.terms.findIndex(
+    (t) => t.field === field && t.conds.length === 1 && t.conds[0].type === opposite,
+  );
+  if (i < 0) return false;
+  const other = out.terms[i].conds[0];
+  const [lo, hi] =
+    cond.type === "gte" ? [cond.value[0], other.value[0]] : [other.value[0], cond.value[0]];
+  out.terms[i] = {
+    field,
+    conds: [{ type: "bw", value: [lo, hi] }],
+    expr: { [field]: { $gte: lo, $lte: hi } } as FilterExpr,
+  };
+  return true;
+}
+
+/**
+ * Decode one field entry (`field: value`) into terms. An operator object is an
+ * implicit AND of its operators — each becomes its own term.
+ */
+function collectField(field: string, value: unknown, out: Collected): void {
+  const whole = { [field]: value } as FilterExpr;
+  if (value === null || value === undefined) return addTerms(out, field, [nullCond()], whole);
+  if (isPrimitive(value)) return addTerms(out, field, [{ type: "eq", value: [value] }], whole);
+  if (value instanceof RegExp) return addTerms(out, field, [regexToCondition(value)!], whole);
+  if (!isPlainObject(value)) {
+    out.issues.push(unsupported("operator", whole));
     return;
   }
-  if ("$or" in expr && expr.$or) {
-    for (const child of expr.$or as FilterExpr[]) walkExpr(child, acc, knownFields);
+  for (const op in value) {
+    const v = value[op];
+    if (v === undefined) continue;
+    const expr = { [field]: { [op]: v } } as FilterExpr;
+    const conds = decodeOperator(op, v);
+    if (!conds) out.issues.push(unsupported("operator", expr));
+    else if (conds.length !== 1 || !pairRange(out, field, conds[0])) {
+      addTerms(out, field, conds, expr);
+    }
+  }
+}
+
+const one = (cond: FilterCondition | null): FilterCondition[] | null => (cond ? [cond] : null);
+
+/**
+ * One operator of a field's operator object, as conditions of one polarity
+ * (see {@link addTerms}). `null` means no condition type expresses the
+ * operator / operand.
+ */
+function decodeOperator(op: string, v: unknown): FilterCondition[] | null {
+  if (op in RANGE_OPS) return one(isPrimitive(v) ? { type: RANGE_OPS[op], value: [v] } : null);
+  switch (op) {
+    case "$eq":
+      return one(memberCondition(v));
+    case "$ne":
+      return one(nonMemberCondition(v));
+    case "$regex":
+      return one(regexToCondition(v));
+    case "$exists":
+      if (v === false) return one(nullCond());
+      return v === true ? one(notNullCond()) : null;
+    case "$in": {
+      // Membership is a same-field OR of equalities — exactly one positive
+      // group. An empty list matches nothing, which no condition can say.
+      const conds = Array.isArray(v) ? v.map(memberCondition) : [];
+      return conds.length > 0 && conds.every(Boolean) ? (conds as FilterCondition[]) : null;
+    }
+    case "$nin": {
+      // An AND of inequalities — one negative each. An empty list matches
+      // everything, so contributing nothing is exact.
+      if (!Array.isArray(v)) return null;
+      const conds = v.map(nonMemberCondition);
+      return conds.every(Boolean) ? (conds as FilterCondition[]) : null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Decode an `$or` branch / `$not` operand on its own. Usable only when it
+ * converts fully and stays on one field; `null` when it constrains nothing.
+ * A branch that spans fields comes back with a placeholder reason —
+ * {@link unsupported} names it `"cross-field"` from the fields it sees.
+ */
+function classifyBranch(
+  expr: unknown,
+): { field: string; terms: Term[] } | { reason: UnsupportedFilterReason } | null {
+  const sub: Collected = { terms: [], issues: [] };
+  collect(expr, sub);
+  if (sub.issues.length > 0) return { reason: sub.issues[0].reason };
+  if (sub.terms.length === 0) return null;
+  const field = sub.terms[0].field;
+  if (sub.terms.some((t) => t.field !== field)) return { reason: "operator" };
+  return { field, terms: sub.terms };
+}
+
+/**
+ * `$or` fits the model only as a same-field OR of positive branches. Each
+ * branch must decode to exactly one positive group; the groups merge.
+ */
+function collectOr(branches: unknown, out: Collected): void {
+  const expr = { $or: branches } as FilterExpr;
+  if (!Array.isArray(branches) || branches.length === 0) {
+    out.issues.push(unsupported("operator", expr));
     return;
   }
-  if ("$not" in expr && expr.$not) return;
-  walkLeaf(expr as Record<string, unknown>, acc, knownFields);
+  if (branches.length === 1) return collect(branches[0], out);
+
+  const groups: Term[] = [];
+  let reason: UnsupportedFilterReason | undefined;
+  for (const branch of branches) {
+    const b = classifyBranch(branch);
+    // An empty branch is `true`, and so is the whole OR: it constrains nothing.
+    if (b === null) return;
+    if ("reason" in b) reason ??= b.reason;
+    else if (b.terms.length > 1) reason ??= "conjunction";
+    else if (isNegative(b.terms[0])) reason ??= "negation";
+    else groups.push(b.terms[0]);
+  }
+  const field = groups[0]?.field;
+  if (reason !== undefined || groups.some((t) => t.field !== field)) {
+    out.issues.push(unsupported(reason ?? "operator", expr));
+    return;
+  }
+  out.terms.push({ field: field!, conds: groups.flatMap((t) => t.conds), expr });
+}
+
+const INVERSE: Partial<Record<FilterConditionType, FilterConditionType>> = {
+  eq: "ne",
+  ne: "eq",
+  null: "notNull",
+  notNull: "null",
+};
+
+function invert(cond: FilterCondition): FilterCondition | null {
+  const type = INVERSE[cond.type];
+  return type ? { type, value: [...cond.value] } : null;
+}
+
+/**
+ * `$not` fits when it inverts equality / emptiness on one field — De Morgan
+ * turns NOT(a=1 OR a=2) into a≠1 AND a≠2 (negatives), and NOT(a≠1 AND a≠2)
+ * back into a=1 OR a=2 (one positive group). A positive group AND'd with
+ * anything else would invert into an OR of ANDs, which the model cannot hold.
+ */
+function collectNot(child: unknown, out: Collected): void {
+  const expr = { $not: child } as FilterExpr;
+  const b = classifyBranch(child);
+  if (b && !("reason" in b) && (b.terms.length === 1 || b.terms.every(isNegative))) {
+    const inverted = b.terms.flatMap((t) => t.conds).map(invert);
+    if (inverted.every(Boolean)) {
+      return addTerms(out, b.field, inverted as FilterCondition[], expr);
+    }
+  }
+  out.issues.push(unsupported("negation", expr));
+}
+
+function collectAnd(children: unknown, out: Collected): void {
+  if (Array.isArray(children)) for (const child of children) collect(child, out);
+  else out.issues.push(unsupported("operator", { $and: children }));
+}
+
+const LOGICAL = { $and: collectAnd, $or: collectOr, $not: collectNot } as const;
+
+/**
+ * Split an expression into AND-ed terms. Every member of a node is an implicit
+ * AND, in key order — comparison fields may sit next to `$and` / `$or` /
+ * `$not` (Mongo semantics), and none of them is skipped.
+ */
+function collect(expr: unknown, out: Collected): void {
+  if (!isPlainObject(expr)) {
+    out.issues.push(unsupported("operator", expr));
+    return;
+  }
+  for (const key in expr) {
+    const value = expr[key];
+    if (!key.startsWith("$")) collectField(key, value, out);
+    else if (value === undefined) continue;
+    else if (isLogicalKey(key)) LOGICAL[key](value, out);
+    else out.issues.push(unsupported("operator", { [key]: value }));
+  }
+}
+
+function sameConds(a: FilterCondition[], b: FilterCondition[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every(
+      (c, i) =>
+        c.type === b[i].type &&
+        c.value.length === b[i].value.length &&
+        c.value.every((v, j) => v === b[i].value[j]),
+    )
+  );
+}
+
+function warnUnsupported(issue: UnsupportedFilter): void {
+  if (!DEV) return;
+  console.warn(
+    `[ui-table] Filter left out (${issue.reason}): ${JSON.stringify(issue.expr)}. ` +
+      "Field filters cannot express it, so the result is broader than the source filter.",
+  );
 }
 
 /**
  * Convert a Uniquery `FilterExpr` back into the UI's `FieldFilters` shape.
  *
- * Inverse of `filtersToUniqueryFilter`. Drops:
- * - conditions on fields not in `knownFields` (when provided)
- * - operators not in the supported `FilterConditionType` union
- * - `$not` branches (no native UI representation; lossy on hand-crafted URLs)
+ * Inverse of `filtersToUniqueryFilter`, and exact for everything that encoder
+ * produces. For any other input, each AND-ed piece is either converted exactly
+ * or left out whole and reported — never approximated:
+ *
+ * - `$in` becomes equality conditions on the field, `$nin` inequality ones.
+ * - A same-field `$or` becomes that field's OR'd conditions.
+ * - A `$not` that inverts equality / emptiness becomes the inverse conditions.
+ * - Fields next to `$and` / `$or` / `$not` in one object are all kept.
+ * - Anything else (see {@link UnsupportedFilterReason}) is left out. Leaving
+ *   an AND-ed piece out only ever widens the match, so the result selects a
+ *   superset of `expr`. Each left-out piece goes to `onUnsupportedFilter`, or
+ *   to a dev-mode `console.warn` when no handler is given.
+ *
+ * Conditions on fields outside `knownFields` (when provided) are ignored
+ * silently: they are not this table's (a host page flag, a stale column). A
+ * piece that mixes known and unknown fields is reported.
  *
  * Returns `{}` for an empty/missing expression. Never throws.
  */
 export function uniqueryFilterToFieldFilters(
   expr: FilterExpr | undefined,
   knownFields?: Iterable<string> | Set<string>,
+  onUnsupportedFilter: (issue: UnsupportedFilter) => void = warnUnsupported,
 ): FieldFilters {
   const acc: FieldFilters = {};
   if (!expr) return acc;
   const known =
     knownFields == null ? null : knownFields instanceof Set ? knownFields : new Set(knownFields);
+  const isKnown = (field: string) => known === null || known.has(field);
+
+  const out: Collected = { terms: [], issues: [] };
   try {
-    walkExpr(expr, acc, known);
+    collect(expr, out);
   } catch {
-    // Silent on malformed input — schema drift tolerance per the URL contract.
+    // The walker type-checks what it reads; only exotic input (a throwing
+    // getter, a cyclic object) lands here.
+    out.terms = [];
+    out.issues = [{ reason: "operator", expr, fields: [] }];
+  }
+
+  // The first positive group per field is kept; a later one would be AND'd
+  // onto it, which the model cannot hold (it ORs a field's positives).
+  const positives = new Map<string, FilterCondition[]>();
+  for (const term of out.terms) {
+    if (!isKnown(term.field)) continue;
+    const list = (acc[term.field] ??= []);
+    const kept = positives.get(term.field);
+    if (isNegative(term) || !kept) {
+      if (!isNegative(term)) positives.set(term.field, term.conds);
+      list.push(...term.conds);
+    } else if (!sameConds(kept, term.conds)) {
+      // `a=1 AND a=1` is not a conjunction worth reporting.
+      out.issues.push({ reason: "conjunction", expr: term.expr, fields: [term.field] });
+    }
+  }
+
+  for (const issue of out.issues) {
+    if (issue.fields.length === 0 || issue.fields.some(isKnown)) onUnsupportedFilter(issue);
   }
   return acc;
 }

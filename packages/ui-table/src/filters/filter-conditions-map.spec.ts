@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { columnFilterType, conditionsForType } from "./filter-conditions-map";
+import {
+  columnFilterConditions,
+  columnFilterType,
+  conditionsForType,
+  isColumnFilterable,
+} from "./filter-conditions-map";
+import { columnDefaultCondition, parseColumnFilterInput } from "./filter-input-format";
 
 describe("conditionsForType", () => {
   it("text has contains, starts, ends, regex", () => {
@@ -81,5 +87,52 @@ describe("columnFilterType", () => {
     expect(columnFilterType("email")).toBe("text");
     expect(columnFilterType("array")).toBe("text");
     expect(columnFilterType("object")).toBe("text");
+  });
+});
+
+const col = (over: Partial<Parameters<typeof columnFilterConditions>[0]>) => ({
+  type: "text",
+  nullable: true,
+  filterable: true,
+  ...over,
+});
+
+describe("columnFilterConditions / isColumnFilterable", () => {
+  it("value-filterable columns offer their type's conditions", () => {
+    expect(columnFilterConditions(col({ type: "number" }))).toEqual(conditionsForType("number"));
+    expect(columnFilterConditions(col({ nullable: false }))).toEqual(
+      conditionsForType("text", false),
+    );
+    expect(isColumnFilterable(col({}))).toBe(true);
+  });
+
+  it("existence-only columns offer null / notNull and nothing else", () => {
+    const json = col({ type: "object", filterable: false, filterOps: ["$exists"] });
+    expect(columnFilterConditions(json)).toEqual(["null", "notNull"]);
+    expect(isColumnFilterable(json)).toBe(true);
+  });
+
+  it("an existence-only column that is never empty offers nothing", () => {
+    const json = col({ filterable: false, filterOps: ["$exists"], nullable: false });
+    expect(columnFilterConditions(json)).toEqual([]);
+    expect(isColumnFilterable(json)).toBe(false);
+  });
+
+  it("non-filterable columns, and operators the UI has no condition for, offer nothing", () => {
+    expect(isColumnFilterable(col({ filterable: false }))).toBe(false);
+    expect(isColumnFilterable(col({ filterable: false, filterOps: ["$geoWithin"] }))).toBe(false);
+  });
+
+  it("columnDefaultCondition and parseColumnFilterInput stay inside the offered conditions", () => {
+    const json = col({ filterable: false, filterOps: ["$exists"] });
+    expect(columnDefaultCondition(json)).toBe("null");
+    expect(columnDefaultCondition(col({}))).toBe("contains");
+    expect(columnDefaultCondition(col({ type: "number" }))).toBe("eq");
+    expect(parseColumnFilterInput("!<empty>", json)).toEqual({ type: "notNull", value: [] });
+    expect(parseColumnFilterInput("abc", json)).toBeUndefined();
+    expect(parseColumnFilterInput(">5", col({ type: "number" }))).toEqual({
+      type: "gt",
+      value: [5],
+    });
   });
 });

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 import { mount, flushPromises } from "@vue/test-utils";
 import type { Client } from "@atscript/db-client";
@@ -47,7 +47,7 @@ function mountWithUrlQuery(initialQuery: string) {
   return { wrapper, state, urlQuery, pagesFn };
 }
 
-describe("<AsTableRoot> URL restoration — hydrate once, then replace", () => {
+describe("<AsTableRoot> URL restoration — every URL is re-applied", () => {
   it("navigating to a URL without a filter clears it (Back undoes the filter)", async () => {
     const { state, urlQuery } = mountWithUrlQuery("status=active");
     await flushPromises();
@@ -99,5 +99,270 @@ describe("<AsTableRoot> URL restoration — hydrate once, then replace", () => {
     expect(pagesFn).toHaveBeenCalled();
     const [query] = pagesFn.mock.calls.at(-1) as [{ filter?: unknown }];
     expect(query.filter).toEqual({ status: "active" });
+  });
+});
+
+/**
+ * Like `mountWithUrlQuery`, plus a destination baseline written before URL
+ * hydration — the way a preset or a saved default lands — and a columns model
+ * to prove presentation state is left alone.
+ */
+function mountWithBaseline(initialQuery: string, listeners: Record<string, unknown> = {}) {
+  const urlQuery = ref(initialQuery);
+  const columnNames = ref(["id", "status", "customer"]);
+  const sorters = ref([{ field: "id", direction: "desc" as const }]);
+  const { client, pagesFn } = createMockClient({
+    meta: createMockMeta(["id", "status", "customer"]),
+    data: [],
+  });
+  const wrapper = mount(
+    defineComponent({
+      setup() {
+        return () =>
+          h(
+            AsTableRoot as unknown as Parameters<typeof h>[0],
+            {
+              url: "/orders",
+              clientFactory: () => client as Client,
+              urlQuery: urlQuery.value,
+              "onUpdate:urlQuery": (v: string) => {
+                urlQuery.value = v;
+              },
+              columnNames: columnNames.value,
+              "onUpdate:columnNames": (v: string[]) => {
+                columnNames.value = v;
+              },
+              sorters: sorters.value,
+              "onUpdate:sorters": (v: typeof sorters.value) => {
+                sorters.value = v;
+              },
+              ...listeners,
+            },
+            { default: () => [] },
+          );
+      },
+    }),
+  );
+  const state = (wrapper.findComponent(AsTableRoot).vm as unknown as { state: ReactiveTableState })
+    .state;
+  // Baseline filter, written before tableDef loads (so before hydration).
+  state.filters.value = { status: [{ type: "eq", value: ["active"] }] };
+  return { wrapper, state, urlQuery, columnNames, pagesFn };
+}
+
+async function settle() {
+  await flushPromises();
+  await flushPromises();
+}
+
+describe("<AsTableRoot> $snapshot URLs", () => {
+  it("initial mount: a marked URL replaces the baseline filters and sorters", async () => {
+    const { state, columnNames } = mountWithBaseline("customer=acme&$sort=status&$snapshot");
+    await settle();
+
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+    expect(state.sorters.value).toEqual([{ field: "status", direction: "asc" }]);
+    expect(columnNames.value).toEqual(["id", "status", "customer"]);
+  });
+
+  it("initial mount: an unmarked deep link still overlays the baseline", async () => {
+    const { state } = mountWithBaseline("customer=acme&$sort=status");
+    await settle();
+
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["acme"] }],
+    });
+    expect(state.sorters.value).toEqual([
+      { field: "id", direction: "desc" },
+      { field: "status", direction: "asc" },
+    ]);
+  });
+
+  it("a marked URL without $sort clears the baseline sorters", async () => {
+    const { state } = mountWithBaseline("customer=acme&$snapshot");
+    await settle();
+
+    expect(state.sorters.value).toEqual([]);
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+  });
+
+  it("the bare marker restores an empty table", async () => {
+    const { state, pagesFn } = mountWithBaseline("$snapshot");
+    await settle();
+
+    expect(state.filters.value).toEqual({});
+    expect(state.sorters.value).toEqual([]);
+    const [query] = pagesFn.mock.calls.at(-1) as [{ filter?: unknown; controls?: unknown }];
+    expect(query.filter).toBeUndefined();
+  });
+
+  it("writes the marker on every URL it emits, including the empty view", async () => {
+    const { state, urlQuery } = mountWithUrlQuery("");
+    await settle();
+
+    state.setFieldFilter("status", [{ type: "eq", value: ["active"] }]);
+    await flushPromises();
+    expect(urlQuery.value).toBe("status=active&$snapshot");
+
+    state.removeFieldFilter("status");
+    await flushPromises();
+    expect(urlQuery.value).toBe("$snapshot");
+  });
+
+  it("client-side navigation to another marked URL replaces the state", async () => {
+    const { state, urlQuery } = mountWithBaseline("status=active&$snapshot");
+    await settle();
+
+    urlQuery.value = "customer=beta&$sort=-customer&$snapshot";
+    await flushPromises();
+
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["beta"] }] });
+    expect(state.sorters.value).toEqual([{ field: "customer", direction: "desc" }]);
+  });
+
+  it("Back / Forward re-apply the URLs the table wrote", async () => {
+    const { state, urlQuery } = mountWithBaseline("");
+    await settle();
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+
+    state.setFieldFilter("customer", [{ type: "eq", value: ["acme"] }]);
+    await flushPromises();
+    const first = urlQuery.value;
+    expect(first).toBe("status=active&customer=acme&$sort=-id&$snapshot");
+
+    state.sorters.value = [];
+    state.removeFieldFilter("status");
+    await flushPromises();
+    const second = urlQuery.value;
+    expect(second).toBe("customer=acme&$snapshot");
+
+    urlQuery.value = first; // Back
+    await flushPromises();
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["acme"] }],
+    });
+    expect(state.sorters.value).toEqual([{ field: "id", direction: "desc" }]);
+
+    urlQuery.value = second; // Forward
+    await flushPromises();
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+    expect(state.sorters.value).toEqual([]);
+  });
+});
+
+describe("<AsTableRoot> marker-less URLs overlay the boot baseline", () => {
+  it("Back to a marker-less deep link restores the baseline criteria plus the link's", async () => {
+    const { state, urlQuery } = mountWithBaseline("customer=acme");
+    await settle();
+    const opened = {
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["acme"] }],
+    };
+    expect(state.filters.value).toEqual(opened);
+
+    // The user drops the baseline filter and the sorter, and edits the link's.
+    state.sorters.value = [];
+    state.removeFieldFilter("status");
+    state.setFieldFilter("customer", [{ type: "eq", value: ["beta"] }]);
+    await flushPromises();
+    const edited = urlQuery.value;
+    expect(edited).toBe("customer=beta&$snapshot");
+
+    urlQuery.value = "customer=acme"; // Back to the deep link
+    await flushPromises();
+    expect(state.filters.value).toEqual(opened);
+    expect(state.sorters.value).toEqual([{ field: "id", direction: "desc" }]);
+
+    urlQuery.value = edited; // Forward: a marked URL still replaces
+    await flushPromises();
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["beta"] }] });
+    expect(state.sorters.value).toEqual([]);
+  });
+
+  it("an empty URL restores the baseline, not an unfiltered table", async () => {
+    const { state, urlQuery } = mountWithBaseline("");
+    await settle();
+
+    state.setFieldFilter("customer", [{ type: "eq", value: ["acme"] }]);
+    state.removeFieldFilter("status");
+    await flushPromises();
+
+    urlQuery.value = "";
+    await flushPromises();
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+    expect(state.sorters.value).toEqual([{ field: "id", direction: "desc" }]);
+  });
+
+  it("the boot baseline wins over a preset applied after mount", async () => {
+    const { state, urlQuery } = mountWithBaseline("");
+    await settle();
+
+    state.preset.apply({
+      filterOps: { customer: [{ type: "eq", value: ["beta"] }] },
+      sorters: [{ field: "customer", direction: "asc" }],
+    });
+    await flushPromises();
+
+    urlQuery.value = "customer=acme";
+    await flushPromises();
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["acme"] }],
+    });
+    expect(state.sorters.value).toEqual([{ field: "id", direction: "desc" }]);
+  });
+
+  it("an explicit mode overrides the marker", async () => {
+    const { state } = mountWithBaseline("");
+    await settle();
+
+    state.applyUrlQuery("customer=acme&$snapshot", { mode: "merge" });
+    await flushPromises();
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["acme"] }],
+    });
+
+    state.applyUrlQuery("customer=beta", { mode: "replace" });
+    await flushPromises();
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["beta"] }] });
+    expect(state.sorters.value).toEqual([]);
+  });
+});
+
+describe("<AsTableRoot> unsupported URL filters", () => {
+  it("emits unsupported-filter for a cross-field OR and keeps the rest", async () => {
+    const onUnsupportedFilter = vi.fn();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { state } = mountWithBaseline("customer=acme&(status=a^id=2)&$snapshot", {
+        onUnsupportedFilter,
+      });
+      await settle();
+
+      expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+      expect(onUnsupportedFilter).toHaveBeenCalledTimes(1);
+      expect(onUnsupportedFilter.mock.calls[0][0]).toMatchObject({
+        reason: "cross-field",
+        fields: ["status", "id"],
+      });
+      expect(warn).not.toHaveBeenCalledWith(expect.stringContaining("left out"));
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("warns in dev mode when nothing listens", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      mountWithBaseline("(status=a^id=2)&$snapshot");
+      await settle();
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("[vue-table] URL filter left out"));
+    } finally {
+      warn.mockRestore();
+    }
   });
 });

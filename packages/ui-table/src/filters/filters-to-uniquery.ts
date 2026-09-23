@@ -6,6 +6,11 @@ import { escapeRegex } from "./escape-regex";
 /** Exclusion condition types — AND'd together per field. */
 const EXCLUSION_TYPES = new Set<FilterConditionType>(["ne", "notNull"]);
 
+/** Whether conditions of `type` are exclusions (AND'd per field) rather than inclusions (OR'd). */
+export function isExclusionType(type: FilterConditionType): boolean {
+  return EXCLUSION_TYPES.has(type);
+}
+
 /**
  * Convert a single condition to a Uniquery filter expression.
  * Returns a ComparisonNode with the field as key.
@@ -68,7 +73,7 @@ export function filtersToUniqueryFilter(fieldFilters: FieldFilters): FilterExpr 
     for (const condition of conditions) {
       if (!isFilled(condition)) continue;
       const expr = conditionToExpr(field, condition);
-      if (EXCLUSION_TYPES.has(condition.type)) {
+      if (isExclusionType(condition.type)) {
         (exclusions ??= []).push(expr);
       } else {
         (inclusions ??= []).push(expr);
