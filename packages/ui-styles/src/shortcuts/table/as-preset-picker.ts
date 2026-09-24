@@ -36,6 +36,9 @@ export const asPresetPickerShortcuts = defineShortcuts({
   "as-preset-picker-section": "flex flex-col",
   "as-preset-picker-section-header":
     "px-$m pt-$s pb-$xs text-callout uppercase tracking-wider text-current/60 select-none",
+  // Quiet one-liner above the action row: applying the active preset left out
+  // fields this user cannot see. Informational, not an error.
+  "as-preset-picker-note": "m-0 px-$m py-$xs text-callout text-current/60 select-none",
 
   // Menu item base — mirrors as-row-actions-menu-item exactly, with
   // optional [data-active] state for the currently-applied preset.

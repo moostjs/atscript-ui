@@ -6,6 +6,8 @@ import type { FieldFilters } from "../filters/filter-types";
 import {
   decomposeUniqueryFilter,
   filterExprFields,
+  unsupported as unsupportedPiece,
+  type UnknownFilter,
   type UnsupportedFilter,
 } from "../filters/uniquery-to-filters";
 import { buildTableQuery } from "./build-table-query";
@@ -71,6 +73,21 @@ export interface UrlQueryStateSnapshot {
    * or `sync.residual` is `false`. Since 0.1.140.
    */
   residual?: FilterExpr[];
+  /**
+   * Filter pieces left out because they name a field outside `knownFields`
+   * and `localFields` — a column hidden from this caller, or gone from the
+   * schema — with those paths in `fields`. Each is a whole AND-ed piece (a
+   * mixed known/unknown one included), so the result is broader by exactly
+   * these. A bare `field=value` piece is not listed: without the table
+   * definition it reads the same as a flag of the host page. Omitted when
+   * none. Since 0.1.141 — before, a mixed piece was listed in `unsupported`.
+   */
+  unknown?: UnknownFilter[];
+  /**
+   * `$sort` entries left out because their field is outside `knownFields`
+   * and `localFields`. Omitted when none. Since 0.1.141.
+   */
+  unknownSorters?: SortControl[];
   /**
    * Raw record offset from `$skip` (omitted when no `$skip` in URL). The
    * decoder does NOT compute a page index — that requires `itemsPerPage`,
@@ -272,6 +289,22 @@ export function stateToUrlQueryString(
  */
 const CONSUMED_CONTROLS = new Set(["$sort", "$search", "$relevance", "$skip", URL_SNAPSHOT_KEY]);
 
+function toSet(paths: Iterable<string> | undefined): ReadonlySet<string> | null {
+  if (!paths) return null;
+  return paths instanceof Set ? paths : new Set(paths);
+}
+
+/**
+ * `field=value` (or `field=null`) — the one filter shape a host page flag
+ * shares, so a bare one on an unknown field is not reported as dropped.
+ */
+function isBareEquality(expr: FilterExpr): boolean {
+  const keys = Object.keys(expr);
+  if (keys.length !== 1 || keys[0].startsWith("$")) return false;
+  const v = (expr as Record<string, unknown>)[keys[0]];
+  return v === null || typeof v !== "object";
+}
+
 /**
  * Characters that can only appear in a uniqu filter key, never in a page flag:
  * comparison operators, `^` (OR), `( )` (groups) and `{ }` (`$in` lists).
@@ -299,11 +332,19 @@ export function urlQueryConsumesKey(key: string): boolean {
 
 export interface UrlQueryParseOptions {
   /**
-   * Field paths the table knows about. Conditions on fields outside this set
-   * are silently dropped. Omit to accept any field (useful when the table
-   * definition isn't loaded yet).
+   * Field paths the table knows about. Conditions and sorters on fields
+   * outside this set are dropped and listed in `unknown` / `unknownSorters`.
+   * Omit to accept any field (useful when the table definition isn't loaded
+   * yet).
    */
   knownFields?: Iterable<string>;
+  /**
+   * Client-owned column paths. The URL never restores them (no server query
+   * can use them), but they are not unknown either: a sorter on one is
+   * ignored, and a filter piece correlating one with a known field is
+   * reported as `unsupported` (`"cross-field"`). Since 0.1.141.
+   */
+  localFields?: Iterable<string>;
   /** Per-aspect sync gates — must match the encoder's config to keep the round-trip symmetric. */
   sync?: UrlQuerySync;
 }
@@ -311,9 +352,10 @@ export interface UrlQueryParseOptions {
 /**
  * Parse a URL query string back into the table state subset.
  *
- * Robust by design — schema drift and copy-paste errors must not break the
- * recipient's view:
- * - unknown fields (not in `knownFields`) → silently dropped
+ * Robust by design — schema drift, fields hidden from the recipient and
+ * copy-paste errors must not break the recipient's view:
+ * - unknown fields (not in `knownFields`) → dropped, listed in `unknown` /
+ *   `unknownSorters` (the parser does not warn — the caller decides)
  * - filter pieces field filters cannot express (cross-field OR, unknown
  *   operator, …) → left out of `filters` and listed in `unsupported`, never
  *   approximated (the parser does not warn — the caller decides). Unless
@@ -346,16 +388,20 @@ export function urlQueryStringToState(
   const searchOff = opts.sync?.search === false;
   const paginationOff = opts.sync?.pagination === false;
 
-  const knownSet = opts.knownFields ? new Set(opts.knownFields) : null;
+  const knownSet = toSet(opts.knownFields);
+  const localSet = toSet(opts.localFields);
+  // Outside the schema this caller sees: neither known nor client-owned.
+  const isHidden = (f: string) => !!knownSet && !knownSet.has(f) && !localSet?.has(f);
 
   // For filters, intersect knownFields (schema gate) with allowlist (sync gate).
-  let filterKnown: Set<string> | undefined;
+  let filterKnown: ReadonlySet<string> | undefined;
   if (filtersGate === "all") {
     filterKnown = knownSet ?? undefined;
   } else if (filtersGate !== "none") {
     if (knownSet) {
-      filterKnown = new Set();
-      for (const path of filtersGate) if (knownSet.has(path)) filterKnown.add(path);
+      const owned = new Set<string>();
+      for (const path of filtersGate) if (knownSet.has(path)) owned.add(path);
+      filterKnown = owned;
     } else {
       filterKnown = filtersGate;
     }
@@ -370,15 +416,18 @@ export function urlQueryStringToState(
   const filters: FieldFilters = decomposed?.filters ?? {};
 
   const sorters: SortControl[] = [];
+  const unknownSorters: SortControl[] = [];
   if (sortersGate !== "none") {
     const $sort = parsed.controls?.$sort;
     if ($sort && typeof $sort === "object") {
       for (const field in $sort) {
-        if (knownSet && !knownSet.has(field)) continue;
         if (!gateOwns(sortersGate, field)) continue;
         const dir = ($sort as Record<string, unknown>)[field];
-        if (dir === 1) sorters.push({ field, direction: "asc" });
-        else if (dir === -1) sorters.push({ field, direction: "desc" });
+        if (dir !== 1 && dir !== -1) continue;
+        const sorter: SortControl = { field, direction: dir === 1 ? "asc" : "desc" };
+        if (!knownSet || knownSet.has(field)) sorters.push(sorter);
+        else if (isHidden(field)) unknownSorters.push(sorter);
+        // A client-owned column's sorter is applied in memory, never restored.
       }
     }
   }
@@ -387,8 +436,24 @@ export function urlQueryStringToState(
   const searchTerm = !searchOff && typeof $search === "string" ? $search : "";
 
   const out: UrlQueryStateSnapshot = { filters, sorters, searchTerm };
-  if (decomposed?.unsupported.length) out.unsupported = decomposed.unsupported;
+  const unsupported = decomposed?.unsupported ?? [];
+  const unknown: UnknownFilter[] = [];
+  for (const piece of decomposed?.unknown ?? []) {
+    const hidden = piece.fields.filter(isHidden);
+    if (hidden.length > 0) {
+      if (!isBareEquality(piece.expr)) unknown.push({ expr: piece.expr, fields: hidden });
+      continue;
+    }
+    // Every field is in the schema, just not the URL's (client-owned, or
+    // outside the filter allowlist). Correlated with a field the URL owns,
+    // the piece cannot be restored — reported; otherwise not the URL's at all.
+    const issue = unsupportedPiece("cross-field", piece.expr);
+    if (issue.fields.some((f) => filterKnown?.has(f))) unsupported.push(issue);
+  }
+  if (unsupported.length) out.unsupported = unsupported;
   if (decomposed?.residual.length) out.residual = decomposed.residual;
+  if (unknown.length) out.unknown = unknown;
+  if (unknownSorters.length) out.unknownSorters = unknownSorters;
 
   if (opts.sync?.snapshot !== false && parsed.controls && URL_SNAPSHOT_KEY in parsed.controls) {
     out.snapshot = true;

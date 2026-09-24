@@ -35,6 +35,19 @@ export interface UnsupportedFilter {
   fields: string[];
 }
 
+/**
+ * One AND-ed piece of a Uniquery filter left out because it names a field
+ * outside `knownFields` — alone or next to known ones.
+ *
+ * @since 0.1.141
+ */
+export interface UnknownFilter {
+  /** The left-out sub-expression, as it appeared in the input. */
+  expr: FilterExpr;
+  /** The paths it names that are outside `knownFields`. */
+  fields: string[];
+}
+
 type Primitive = string | number | boolean;
 
 /**
@@ -145,7 +158,8 @@ function fieldsOf(expr: unknown, out: string[]): string[] {
   return out;
 }
 
-function unsupported(reason: UnsupportedFilterReason, expr: unknown): UnsupportedFilter {
+/** @internal Module-shared with the URL parser; not a package export. */
+export function unsupported(reason: UnsupportedFilterReason, expr: unknown): UnsupportedFilter {
   const fields = fieldsOf(expr, []);
   // Spanning fields is the root cause whatever else is wrong with the piece.
   return { reason: fields.length > 1 ? "cross-field" : reason, expr: expr as FilterExpr, fields };
@@ -383,9 +397,10 @@ function warnUnsupported(issue: UnsupportedFilter): void {
 /** Options for {@link decomposeUniqueryFilter}. @since 0.1.140 */
 export interface DecomposeUniqueryFilterOptions {
   /**
-   * Field paths the table knows. Pieces on fields outside it are ignored
-   * silently; a piece mixing known and unknown fields is reported, never
-   * carried. Omit to accept every field.
+   * Field paths the table knows. A piece that names a field outside it —
+   * alone or mixed with known ones — is left out whole and listed in
+   * `unknown`, never carried or reported as `unsupported`. Omit to accept
+   * every field.
    */
   knownFields?: Iterable<string>;
   /**
@@ -404,15 +419,23 @@ export interface DecomposedUniqueryFilter {
   residual: FilterExpr[];
   /** Pieces left out and lost — the result is broader by exactly these. */
   unsupported: UnsupportedFilter[];
+  /**
+   * Pieces left out because they name a field outside `knownFields` (hidden
+   * from the caller, or not in the schema). Each is a whole AND-ed piece, so
+   * the result is broader by exactly these too. `[]` without `knownFields`.
+   * Since 0.1.141 — before, pieces on unknown fields only were dropped
+   * silently and mixed known/unknown pieces went to `unsupported`.
+   */
+  unknown: UnknownFilter[];
 }
 
 /**
  * Split a Uniquery `FilterExpr` into what the table's field-filter model
  * holds exactly (`filters`), what it cannot hold but carries as residual
- * conditions (`residual`, with `carry`), and what it leaves out
- * (`unsupported`). Nothing is approximated: `filters AND residual` selects
- * `expr` minus the `unsupported` pieces and pieces on fields outside
- * `knownFields`.
+ * conditions (`residual`, with `carry`), what it leaves out (`unsupported`)
+ * and what names a field outside `knownFields` (`unknown`). Nothing is
+ * approximated: `filters AND residual` selects `expr` minus the
+ * `unsupported` and `unknown` pieces.
  *
  * Never throws, never warns — the caller decides how to report.
  *
@@ -423,7 +446,12 @@ export function decomposeUniqueryFilter(
   opts: DecomposeUniqueryFilterOptions = {},
 ): DecomposedUniqueryFilter {
   const filters: FieldFilters = {};
-  const result: DecomposedUniqueryFilter = { filters, residual: [], unsupported: [] };
+  const result: DecomposedUniqueryFilter = {
+    filters,
+    residual: [],
+    unsupported: [],
+    unknown: [],
+  };
   if (!expr) return result;
   const knownFields = opts.knownFields;
   const known =
@@ -443,8 +471,13 @@ export function decomposeUniqueryFilter(
   // Terms land in order; a field's first positive group is kept (the model
   // ORs a field's positives, so a second one AND'd onto it cannot join it).
   const positives = new Map<string, Term[]>();
+  // Terms decoded from one operator list share its expression — list it once.
+  const unknown = new Map<FilterExpr, string[]>();
   for (const term of out.terms) {
-    if (!isKnown(term.field)) continue;
+    if (!isKnown(term.field)) {
+      unknown.set(term.expr, [term.field]);
+      continue;
+    }
     const list = (filters[term.field] ??= []);
     if (isNegative(term)) {
       list.push(...term.conds);
@@ -482,11 +515,13 @@ export function decomposeUniqueryFilter(
 
   for (const issue of out.issues) {
     const fields = issue.fields;
-    if (fields.length > 0 && !fields.some(isKnown)) continue;
-    if (opts.carry && fields.length > 0 && fields.every(isKnown)) carried.push(issue.expr);
+    const outside = fields.filter((f) => !isKnown(f));
+    if (outside.length > 0) unknown.set(issue.expr, outside);
+    else if (opts.carry && fields.length > 0) carried.push(issue.expr);
     else result.unsupported.push(issue);
   }
   result.residual = normalizeResidualFilters(carried);
+  result.unknown = [...unknown].map(([expr, fields]) => ({ expr, fields }));
   return result;
 }
 
@@ -540,9 +575,10 @@ export function normalizeResidualFilters(exprs: readonly FilterExpr[]): FilterEx
  *   to a dev-mode `console.warn` when no handler is given. To keep those
  *   pieces instead, use {@link decomposeUniqueryFilter} with `carry`.
  *
- * Conditions on fields outside `knownFields` (when provided) are ignored
- * silently: they are not this table's (a host page flag, a stale column). A
- * piece that mixes known and unknown fields is reported.
+ * Pieces that name a field outside `knownFields` (when provided) are ignored
+ * silently: they are not this table's (a host page flag, a hidden or stale
+ * column). Since 0.1.141 that includes a piece mixing known and unknown
+ * fields — {@link decomposeUniqueryFilter} lists them as `unknown`.
  *
  * Returns `{}` for an empty/missing expression. Never throws.
  */

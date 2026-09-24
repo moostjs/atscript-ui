@@ -356,14 +356,16 @@ describe("<AsTableRoot> unsupported URL filters", () => {
     }
   });
 
-  it("reports a piece that touches an unknown field (dev warning when nothing listens)", async () => {
+  it("reports a piece that touches an unknown field as dropped fields (dev warning when nothing listens)", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const { state } = mountWithBaseline("(status=a^ghost=2)&$snapshot");
       await settle();
       expect(state.residualFilters.value).toEqual([]);
       expect(warn).toHaveBeenCalledTimes(1);
-      expect(warn).toHaveBeenCalledWith(expect.stringContaining("[vue-table] URL filter left out"));
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("[vue-table] Left out fields this table cannot use (url): ghost"),
+      );
     } finally {
       warn.mockRestore();
     }
@@ -497,5 +499,42 @@ describe("<AsTableRoot> residual filter conditions", () => {
     urlQuery.value = "status=b&$snapshot";
     await flushPromises();
     expect(state.residualFilters.value).toEqual([PRIVATE]);
+  });
+});
+
+describe("<AsTableRoot> URLs naming fields this caller cannot use", () => {
+  // Meta exposes `id`, `status`, `customer` — `email` is hidden from this role.
+  const URL = "email~=/x/&status=active&(customer=acme^email=b)&$sort=-email&$snapshot";
+
+  it("drops them, reports once, queries clean and leaves the address bar alone", async () => {
+    const onFieldsDropped = vi.fn();
+    const onUnsupportedFilter = vi.fn();
+    const { state, urlQuery, pagesFn } = mountWithBaseline(URL, {
+      onFieldsDropped,
+      onUnsupportedFilter,
+    });
+    await settle();
+
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+    expect(state.residualFilters.value).toEqual([]);
+    expect(state.sorters.value).toEqual([]);
+    expect(onUnsupportedFilter).not.toHaveBeenCalled();
+    expect(onFieldsDropped).toHaveBeenCalledTimes(1);
+    expect(onFieldsDropped.mock.calls[0][0]).toMatchObject({
+      source: "url",
+      fields: ["email"],
+      sorters: [{ field: "email", direction: "desc" }],
+    });
+    expect(onFieldsDropped.mock.calls[0][0].residual).toHaveLength(2);
+
+    const [query] = pagesFn.mock.calls.at(-1) as [unknown];
+    expect(JSON.stringify(query)).not.toContain("email");
+    // No forced rewrite: the link stays as it came until the user's next change.
+    expect(urlQuery.value).toBe(URL);
+
+    state.setFieldFilter("customer", [{ type: "eq", value: ["5"] }]);
+    await settle();
+    expect(urlQuery.value).not.toContain("email");
+    expect(urlQuery.value).toContain("customer=");
   });
 });

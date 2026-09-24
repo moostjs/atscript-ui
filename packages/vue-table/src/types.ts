@@ -244,6 +244,7 @@ import type {
   AsPresetEntryRow,
   ColumnWidthsMap,
   ConfigTab,
+  DroppedFields,
   FieldFilters,
   PresetAspect,
   PresetCapabilities,
@@ -433,6 +434,29 @@ export type TAsCellTypeComponents = {
   /** Synthesised row-actions pseudo-column (`:rowActionsColumn` opt-in). */
   __actions?: Component;
 } & Record<string, Component>;
+
+/**
+ * What the table left out because it names a field outside the columns this
+ * caller can use — a field hidden from their role, or gone from the schema.
+ * Sent to `onFieldsDropped` / `@fields-dropped` once per apply, only when
+ * something was dropped. `fields` lists the unavailable paths; the other
+ * lists hold the dropped entries themselves.
+ *
+ * - `"preset"` — a preset applied (picker switch, reset, raw snapshot, and
+ *   the bootstrap default with the local draft laid over it).
+ * - `"url"` — a restored URL (deep link, shared link, Back/Forward). Its
+ *   dropped filter pieces are listed in `residual`, as whole expressions.
+ *
+ * State written straight to the model is not reported: the query leaves such
+ * fields out (a dev-mode warning names them once).
+ *
+ * @since 0.1.141
+ */
+export interface DroppedFieldsReport extends DroppedFields {
+  source: "preset" | "url";
+  /** The preset whose apply dropped the entries (`"preset"`). */
+  presetId?: string;
+}
 
 /**
  * How `applyUrlQuery` treats filters and sorters the URL does not mention.
@@ -834,8 +858,19 @@ export interface PresetSurface {
   available: ComputedRef<boolean>;
   /** Currently active preset id (system `'sys:*'` or stored). null = no active. */
   activeId: Ref<string | null>;
-  /** Active preset's snapshot (system presets are aspect-expanded). */
+  /**
+   * Active preset's snapshot (system presets are aspect-expanded), pruned of
+   * fields this caller cannot use — what applying it wrote. The stored row
+   * is never rewritten.
+   */
   activeSnapshot: ComputedRef<PresetSnapshot>;
+  /**
+   * What the active preset names that this caller cannot use — left out
+   * when it was applied — or `null`. Derived from the stored preset, so it
+   * follows the active id. `<AsPresetPicker>` shows a quiet note while set.
+   * Since 0.1.141.
+   */
+  droppedFields: ComputedRef<DroppedFieldsReport | null>;
   /** True when the current snapshot ≠ active preset's claimed aspects. */
   isDirty: ComputedRef<boolean>;
   /** True iff the active preset is owned by the current user (gates Save). */
@@ -864,7 +899,11 @@ export interface PresetSurface {
   resolveDefaultId: () => string;
 
   // Persistence — only meaningful when feature is configured.
-  /** Re-capture the active preset's existing aspect mask. Never widens. */
+  /**
+   * Re-capture the active preset's existing aspect mask. Never widens.
+   * Entries on fields this caller cannot use (`droppedFields`) are appended
+   * back after the visible ones, so they survive the overwrite.
+   */
   saveActive: () => Promise<void>;
   /** Create a new preset and switch the active id to it. */
   saveAs: (label: string, opts?: { aspects?: AspectMask; public?: boolean }) => Promise<string>;

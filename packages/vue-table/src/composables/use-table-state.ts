@@ -31,6 +31,8 @@ import {
   mergeDisplayColumns,
   mergeSorters,
   normalizeResidualFilters,
+  prunePresetSnapshot,
+  pruneResidualFilters,
   reconcileColumnWidthDefaults,
   gateOwns,
   residualGateOwns,
@@ -44,6 +46,7 @@ import {
   type DisplayColumnDef,
   type FieldFilters,
   type FilterCondition,
+  type KnownFields,
   type QueryOptions,
   type UnsupportedFilter,
   type UrlQuerySync,
@@ -58,6 +61,7 @@ import type {
   ConfigTab,
   ConfirmOptions,
   ConfirmRequest,
+  DroppedFieldsReport,
   MainActionRequest,
   QueryErrorKind,
   ReactiveTableState,
@@ -160,9 +164,13 @@ export type TableSelectionOptions = SelectionApiOptions;
 export interface TableQueryOptions {
   /** Override the default query function. */
   fn?: QueryFn;
-  /** Always-applied Uniquery filter expression (AND'd with user filters). */
+  /**
+   * Always-applied Uniquery filter expression (AND'd with user filters).
+   * App-authored, so never pruned of fields the caller cannot see — keep it
+   * to fields every role reads, or the query is rejected.
+   */
   forceFilters?: FilterExpr;
-  /** Always-applied sorters (prepended before user sorters). */
+  /** Always-applied sorters (prepended before user sorters). Never pruned, like `forceFilters`. */
   forceSorters?: SortControl[];
   /**
    * Leaf field paths always added to `$select` (deduped, gated by available
@@ -223,6 +231,16 @@ export interface TableQueryOptions {
    * `urlQuerySync.residual` is not `false`); only the rest are reported.
    */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
+  /**
+   * Receives what the table left out because it names a field outside the
+   * columns this caller can use — a column hidden from their role, or gone
+   * from the schema. Presets (with the local draft) and restored URLs are
+   * pruned instead of failing the query; one report per apply, only when
+   * something was dropped. Anything else the query leaves out without a
+   * report. When omitted, each report is a dev-mode `console.warn`.
+   * Since 0.1.141.
+   */
+  onFieldsDropped?: (report: DroppedFieldsReport) => void;
 }
 
 export interface TableWindowOptions {
@@ -390,6 +408,18 @@ export function warnUnsupportedFilter(issue: UnsupportedFilter): void {
   );
 }
 
+/**
+ * The report for fields the table left out when nobody handles it
+ * (`onFieldsDropped` / `@fields-dropped`): a dev-mode warning.
+ */
+export function warnFieldsDropped(report: DroppedFieldsReport): void {
+  if (!DEV) return;
+  const from = report.presetId ? `${report.source} "${report.presetId}"` : report.source;
+  console.warn(
+    `[vue-table] Left out fields this table cannot use (${from}): ${report.fields.join(", ")}.`,
+  );
+}
+
 export function createTableState(opts: CreateTableStateOptions): {
   state: ReactiveTableState;
   internals: TableStateInternals;
@@ -492,6 +522,27 @@ export function createTableState(opts: CreateTableStateOptions): {
   const configTab = ref<ConfigTab>("columns");
   const filterDialogColumn = ref<ColumnDef | null>(null);
 
+  /**
+   * The paths the table can use, from its column list: every column, and the
+   * server-backed ones. `null` until the table definition loads. Presets,
+   * drafts, URLs and the query itself are all pruned against it.
+   */
+  const knownFields = computed<KnownFields | null>(() => {
+    const all = allColumns.value;
+    if (all.length === 0) return null;
+    const columns = new Set<string>();
+    const server = new Set<string>();
+    for (const c of all) {
+      columns.add(c.path);
+      if (!c.local) server.add(c.path);
+    }
+    return { columns, server };
+  });
+
+  function reportFieldsDropped(report: DroppedFieldsReport): void {
+    (queryOpts?.onFieldsDropped ?? warnFieldsDropped)(report);
+  }
+
   const { slice: presetSlice, internals: presetInternals } = createPresetState({
     columnNames,
     columnWidths,
@@ -507,6 +558,8 @@ export function createTableState(opts: CreateTableStateOptions): {
     systemAspects: opts.preset?.systemAspects,
     persistDrafts: opts.preset?.persistDrafts,
     fallbackSystemPresets: opts.preset?.fallbackSystemPresets,
+    knownFields,
+    onFieldsDropped: reportFieldsDropped,
   });
   presetInternals.bootstrap();
 
@@ -554,7 +607,8 @@ export function createTableState(opts: CreateTableStateOptions): {
    */
   const localColumnPaths = computed(() => {
     const out = new Set<string>();
-    for (const c of allColumns.value) if (c.local) out.add(c.path);
+    const known = knownFields.value;
+    if (known) for (const p of known.columns) if (!known.server.has(p)) out.add(p);
     return out;
   });
 
@@ -596,30 +650,85 @@ export function createTableState(opts: CreateTableStateOptions): {
     return sortRowsLocally(rows, merged, sortValueOf);
   }
 
+  /**
+   * The query's view of the model, gated to the fields this caller can use.
+   * This is the guarantee that no table state sends a field the server does
+   * not expose: presets and URLs are pruned on apply, but `setFieldFilter`,
+   * `addFilterField`, `v-model` writes, `setResidualFilters` and the like
+   * write straight to the model. `$select` is gated by the column list
+   * (`knownFields.columns`, then client-owned columns are stripped); filters
+   * and residual conditions by the server-backed columns. `forceFilters` /
+   * `forceSorters` are app-authored and never gated. Memoized: pages,
+   * window blocks and exports reuse it.
+   */
+  const queryModel = computed(() => {
+    const model = {
+      columnNames: columnNames.value,
+      filters: filters.value,
+      sorters: splitSorters.value.server,
+      residual: residualFilters.value,
+      stripped: [] as string[],
+    };
+    const known = knownFields.value;
+    if (!known) return model;
+    const { snapshot, dropped } = prunePresetSnapshot(
+      {
+        columns: { columnNames: model.columnNames },
+        filterOps: model.filters,
+        sorters: model.sorters,
+      },
+      known,
+    );
+    const residual = pruneResidualFilters(model.residual, known.server);
+    return {
+      // Gated in `buildCurrentQuery` with any `columnPaths` override, and
+      // never widened to every column the way a preset's names are.
+      columnNames: model.columnNames,
+      filters: snapshot.filterOps!,
+      sorters: snapshot.sorters!,
+      residual: residual.kept,
+      stripped: [...new Set([...(dropped?.fields ?? []), ...(residual.dropped?.fields ?? [])])],
+    };
+  });
+
+  /** Stripped path sets already warned about — one dev warning per set. */
+  const warnedStripped = new Set<string>();
+
   function buildCurrentQuery(buildOpts?: BuildQueryOptions): Uniquery {
     // narrowed-meta gate over the server-returnable field set (`fetchableFields`,
     // includes `@ui.table.exclude` fields that are never columns). Falls back to
     // the column paths when a synthetic def carries no `fetchableFields`.
-    const available =
-      tableDef.value?.fetchableFields ?? new Set(allColumns.value.map((c) => c.path));
+    const available: ReadonlySet<string> =
+      tableDef.value?.fetchableFields ?? knownFields.value?.columns ?? new Set<string>();
     const extra = new Set<string>();
     for (const c of columns.value) // selectWith: VISIBLE columns only
       for (const p of c.selectWith ?? []) if (available.has(p)) extra.add(p);
     if (queryOpts?.alwaysSelected)
       // alwaysSelected: same gate
       for (const p of queryOpts.alwaysSelected) if (available.has(p)) extra.add(p);
+    const model = queryModel.value;
+    if (DEV && model.stripped.length > 0) {
+      const key = model.stripped.join(",");
+      if (!warnedStripped.has(key)) {
+        warnedStripped.add(key);
+        console.warn(
+          `[vue-table] Query leaves out fields this table cannot use: ${model.stripped.join(", ")}.`,
+        );
+      }
+    }
+    const known = knownFields.value;
     const localPaths = localColumnPaths.value;
-    const requested = buildOpts?.columnPaths ?? columnNames.value;
-    const visibleColumnPaths = localPaths.size
-      ? requested.filter((p) => !localPaths.has(p))
-      : requested;
+    const requested = buildOpts?.columnPaths ?? model.columnNames;
+    const visibleColumnPaths = requested.filter(
+      (p) => !localPaths.has(p) && (!known || known.columns.has(p)),
+    );
     return buildTableQuery({
       visibleColumnPaths,
       extraSelect: extra.size ? [...extra] : undefined,
-      sorters: splitSorters.value.server,
+      sorters: model.sorters,
       forceSorters: queryOpts?.forceSorters,
-      filters: filters.value,
-      residualFilters: residualFilters.value,
+      filters: model.filters,
+      residualFilters: model.residual,
       forceFilters: queryOpts?.forceFilters,
       search: searchTerm.value || undefined,
       ignoreSorters: sortersIgnored(),
@@ -1175,17 +1284,35 @@ export function createTableState(opts: CreateTableStateOptions): {
   function applyUrlQuery(urlString: string, opts?: ApplyUrlQueryOptions): void {
     captureUrlBaseline();
     if (urlsEquivalent(urlString, lastEmittedUrl)) return;
-    const cols = allColumns.value;
     // Client-owned columns are not the URL's: no server query can filter on
-    // them, so a piece that names one is left out and reported.
+    // them, so a piece correlating one with a server column is reported.
+    const known = knownFields.value;
     const parsed = urlQueryStringToState(urlString, {
-      knownFields: cols.length > 0 ? cols.filter((c) => !c.local).map((c) => c.path) : undefined,
+      knownFields: known?.server,
+      localFields: known ? localColumnPaths.value : undefined,
       sync: urlQuerySync,
     });
     // Pieces field filters cannot hold arrive as `residual`; the rest of the
     // left-out ones are lost — the table shows more rows than the link says.
     for (const issue of parsed.unsupported ?? []) {
       (queryOpts?.onUnsupportedFilter ?? warnUnsupportedFilter)(issue);
+    }
+    // Pieces on fields this caller cannot use are dropped and reported, never
+    // sent. The address bar keeps the link as it came until the next change.
+    if (parsed.unknown || parsed.unknownSorters) {
+      const residual = parsed.unknown?.map((u) => u.expr) ?? [];
+      const sorters = parsed.unknownSorters ?? [];
+      const fields = new Set(parsed.unknown?.flatMap((u) => u.fields));
+      for (const s of sorters) fields.add(s.field);
+      reportFieldsDropped({
+        source: "url",
+        fields: [...fields],
+        columns: [],
+        filterFields: [],
+        filters: {},
+        residual,
+        sorters,
+      });
     }
     const urlResidual = parsed.residual ?? [];
     // A URL owns every path it mentions, in a field filter or inside a

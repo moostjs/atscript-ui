@@ -187,9 +187,10 @@ describe("uniqueryFilterToFieldFilters — knownFields", () => {
     expect(issues).toEqual([]);
   });
 
-  it("reports a piece that mixes known and unknown fields", () => {
-    const { issues } = decode({ $or: [{ status: "open" }, { tab: "a" }] }, ["status"]);
-    expect(issues.map((i) => i.reason)).toEqual(["cross-field"]);
+  it("ignores a piece that mixes known and unknown fields (since 0.1.141)", () => {
+    const { filters, issues } = decode({ $or: [{ status: "open" }, { tab: "a" }] }, ["status"]);
+    expect(filters).toEqual({});
+    expect(issues).toEqual([]);
   });
 });
 

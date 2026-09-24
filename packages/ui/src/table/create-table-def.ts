@@ -21,7 +21,7 @@ import { extractMeasurement } from "../form/measurement";
 import { humanizePath } from "../shared/str";
 import { extractLiteralOptions } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
-import type { ColumnDef, MetaResponse, TableActionsModel, TableDef } from "./types";
+import type { ColumnDef, FieldMeta, MetaResponse, TableActionsModel, TableDef } from "./types";
 
 /**
  * Builds a TableDef from a moost-db MetaResponse.
@@ -50,22 +50,20 @@ export function createTableDef(
   for (const [path, prop] of flatMap.entries()) {
     if (path === "") continue;
     if (path === meta.versionColumn) continue;
-    if (!(path in meta.fields)) {
-      // Sub-paths become columns only when the server lists them in meta.fields —
-      // keeps atomic JSON/document columns from leaking their internals as synthetic columns.
-      // Top-level object/array parents that aren't in meta.fields are flat-flattened
-      // structures (no `@db.json`) — their leaves are the real physical columns and
-      // appear in meta.fields, so skip the synthetic parent here.
-      const kind = prop.type.kind;
-      if (path.includes(".") || kind === "object" || kind === "array") continue;
-    }
+    // Only readable fields become columns: the server lists them in meta.fields
+    // and does not mark them `writeOnly`. Anything else would be rejected in
+    // `$select` / filters / `$sort`. The gate also keeps atomic JSON/document
+    // columns from leaking their internals as synthetic sub-path columns, and
+    // skips flat-flattened object parents (no `@db.json`), whose leaves are the
+    // real physical columns listed in meta.fields.
+    const fieldMeta = meta.fields[path];
+    if (!isReadable(fieldMeta)) continue;
 
     // `@ui.table.exclude` fields never become columns (not displayable,
     // filterable, sortable, or shown in the config dialog). They stay in
     // `fetchableFields` below so they remain valid `@ui.table.selectWith` targets.
     if (getFieldMeta(prop, UI_TABLE_EXCLUDE) !== undefined) continue;
 
-    const fieldMeta = meta.fields[path];
     const options = extractLiteralOptions(prop);
     const valueHelpInfo = extractValueHelp(prop);
 
@@ -83,9 +81,9 @@ export function createTableDef(
       type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
       component: tableComponent,
       selectWith: getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined,
-      sortable: fieldMeta?.sortable ?? false,
-      filterable: fieldMeta?.filterable ?? false,
-      ...(fieldMeta?.filterOps && { filterOps: [...fieldMeta.filterOps] }),
+      sortable: fieldMeta.sortable ?? false,
+      filterable: fieldMeta.filterable ?? false,
+      ...(fieldMeta.filterOps && { filterOps: [...fieldMeta.filterOps] }),
       nullable: prop.optional === true,
       width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
       maxLen: maxLengthMeta?.length,
@@ -105,7 +103,7 @@ export function createTableDef(
     type,
     columns,
     flatMap,
-    fetchableFields: new Set(Object.keys(meta.fields)),
+    fetchableFields: new Set(Object.keys(meta.fields).filter((p) => isReadable(meta.fields[p]))),
     primaryKeys: meta.primaryKeys,
     // Older servers / stub fixtures may omit `preferredId` — fall back to PK
     // so identifier extraction and `$1` substitution stay defined.
@@ -119,6 +117,11 @@ export function createTableDef(
     searchIndexes: meta.searchIndexes,
     relations: meta.relations,
   };
+}
+
+/** A field the caller may read: listed in `meta.fields` and not write-only. */
+function isReadable(field: FieldMeta | undefined): field is FieldMeta {
+  return field !== undefined && field.writeOnly !== true;
 }
 
 /** Sort by (order ?? 0). `toSorted` is stable per spec, so ties preserve declaration order. */

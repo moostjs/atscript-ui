@@ -5,6 +5,7 @@ import {
   type AsPresetEntryRow,
   type ColumnWidthsMap,
   type FieldFilters,
+  type KnownFields,
   type PresetAspect,
   type PresetCapabilities,
   type PresetSnapshot,
@@ -13,7 +14,9 @@ import {
   fromWireSnapshot,
   isDirtyAgainst,
   isSystemPresetId,
+  prunePresetSnapshot,
   resolveSystemPresets,
+  restoreDroppedEntries,
 } from "@atscript/ui-table";
 import {
   type ComputedRef,
@@ -26,6 +29,7 @@ import {
   watch,
 } from "vue";
 
+import type { DroppedFieldsReport } from "../../types";
 import { aspectsOf } from "../preset-aspect-display";
 import type { UseLocalDraftReturn } from "../use-local-draft";
 import type { UsePresetsReturn } from "../use-presets";
@@ -87,6 +91,16 @@ export interface CreatePresetStateOptions {
 
   /** Whether localStorage drafts should be hydrated + persisted on bootstrap. */
   persistDrafts?: boolean;
+
+  /**
+   * Field paths the table can use; `null` until the table definition loads.
+   * Bootstrap waits for it, and every applied snapshot is pruned against it
+   * (a preset written by a role that sees more fields must not break this
+   * one). Omitted → nothing is pruned. Since 0.1.141.
+   */
+  knownFields?: ComputedRef<KnownFields | null>;
+  /** Receives the report of each apply that dropped something. Since 0.1.141. */
+  onFieldsDropped?: (report: DroppedFieldsReport) => void;
 }
 
 /** Public preset surface — what consumers see on `state.preset`. */
@@ -110,8 +124,13 @@ export interface PresetStateSlice {
   ownedAspects: (id: string | null) => PresetAspect[];
   available: ComputedRef<boolean>;
   activeId: Ref<string | null>;
-  /** Snapshot of the active preset (system presets are aspect-expanded). */
+  /**
+   * Snapshot of the active preset (system presets are aspect-expanded),
+   * pruned of fields this table cannot use — what applying it wrote.
+   */
   activeSnapshot: ComputedRef<PresetSnapshot>;
+  /** What the active preset names that this caller cannot use, or null. Since 0.1.141. */
+  droppedFields: ComputedRef<DroppedFieldsReport | null>;
   isDirty: ComputedRef<boolean>;
   canSaveActive: ComputedRef<boolean>;
   currentUser: ComputedRef<string | null>;
@@ -166,9 +185,10 @@ export interface PresetStateInternals {
   /** Bootstrap gate. False until `bootstrap()` resolves the default preset, true thereafter. */
   gate: Ref<boolean>;
   /**
-   * Idempotent bootstrap. Watches `presetsHandle.loading`; when settled,
-   * applies the resolved default preset (overlaying the localStorage draft
-   * when `persistDrafts` is on), then flips `gate` true on the next tick so
+   * Idempotent bootstrap. Waits until `presetsHandle.loading` settles AND
+   * `knownFields` is available (the table definition loaded), then applies
+   * the resolved default preset (overlaying the localStorage draft
+   * when `persistDrafts` is on) pruned, then flips `gate` true on the next tick so
    * the bootstrap watcher in `createTableState` fires its single composed
    * `query()`. No-op when `presetsHandle` is null (gate is treated as open
    * by the bootstrap watcher in that branch).
@@ -394,8 +414,24 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     return { snapshot, nextActiveId: id };
   }
 
+  /**
+   * The one write-side prune: drop what names a field this table cannot use,
+   * and report it. A no-op before the table definition loads — bootstrap
+   * waits for it, and the query gate covers any other early writer.
+   */
+  function pruneForApply(snapshot: PresetSnapshot, presetId: string | null): PresetSnapshot {
+    const known = opts.knownFields?.value;
+    if (!known) return snapshot;
+    const { snapshot: pruned, dropped } = prunePresetSnapshot(snapshot, known);
+    if (dropped) {
+      opts.onFieldsDropped?.({ ...dropped, source: "preset", presetId: presetId ?? undefined });
+    }
+    return pruned;
+  }
+
   function apply(idOrSnapshot: string | PresetSnapshot): void {
-    const { snapshot, nextActiveId } = resolveSnapshot(idOrSnapshot);
+    const { snapshot: resolved, nextActiveId } = resolveSnapshot(idOrSnapshot);
+    const snapshot = pruneForApply(resolved, nextActiveId);
     // System presets treat missing aspects as "factory default" (claim
     // everything in `availableAspects`); stored presets keep dict-form
     // opt-in so a column-only preset doesn't wipe filters on apply.
@@ -457,7 +493,8 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     return out;
   }
 
-  const activeSnapshot = computed<PresetSnapshot>(() => {
+  /** The active preset's snapshot as stored — the base `saveActive` merges back into. */
+  const storedActiveSnapshot = computed<PresetSnapshot>(() => {
     const id = activeId.value;
     if (!id) return {};
     if (isSystemPresetId(id)) {
@@ -469,6 +506,20 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     const data = row.data as { content?: unknown } | null;
     const wire = data?.content;
     return wire ? fromWireSnapshot(wire as Parameters<typeof fromWireSnapshot>[0]) : {};
+  });
+
+  // Pruned like every apply, so a preset applied without its hidden fields
+  // is not dirty for lacking them. Comparison only — the row is untouched.
+  const prunedActive = computed(() => {
+    const known = opts.knownFields?.value;
+    const stored = storedActiveSnapshot.value;
+    return known ? prunePresetSnapshot(stored, known) : { snapshot: stored, dropped: null };
+  });
+  const activeSnapshot = computed<PresetSnapshot>(() => prunedActive.value.snapshot);
+  const droppedFields = computed<DroppedFieldsReport | null>(() => {
+    const dropped = prunedActive.value.dropped;
+    const presetId = activeId.value;
+    return dropped && presetId ? { ...dropped, source: "preset", presetId } : null;
   });
 
   // A residual condition is never saved, so while one is active the view
@@ -495,12 +546,16 @@ export function createPresetState(opts: CreatePresetStateOptions): {
         throw new Error("[vue-table] saveActive: system presets cannot be overwritten");
       }
       // Reuse the active preset's existing aspect mask — never widens.
-      const existing = activeSnapshot.value;
+      const existing = storedActiveSnapshot.value;
       const mask: AspectMask = {};
       for (const aspect of availableAspects) {
         if ((existing as Record<string, unknown>)[aspect] !== undefined) mask[aspect] = true;
       }
-      await handle.savePreset(captureSnapshot(mask));
+      // Entries on fields this caller cannot see were pruned on apply; put
+      // them back, or overwriting would silently destroy them.
+      const captured = captureSnapshot(mask);
+      const dropped = prunedActive.value.dropped;
+      await handle.savePreset(dropped ? restoreDroppedEntries(captured, dropped) : captured);
       clearLocalDraft();
     });
   }
@@ -583,11 +638,19 @@ export function createPresetState(opts: CreatePresetStateOptions): {
   function bootstrap(): void {
     if (!opts.presetsHandle) return;
     const handle = opts.presetsHandle;
-    const stop = watch(
-      () => handle.loading.value,
-      (loading) => {
-        if (loading) return;
-        stop();
+    // Waits for the presets AND the table definition, so the default preset
+    // is applied once, already pruned. Nothing reads it earlier: the first
+    // query and the URL bridge both wait for this gate.
+    const knownReady = () => !opts.knownFields || opts.knownFields.value !== null;
+    let done = false;
+    let stop: (() => void) | undefined;
+    stop = watch(
+      () => !handle.loading.value && knownReady(),
+      (ready) => {
+        if (!ready || done) return;
+        done = true;
+        // `immediate` can fire before `stop` is assigned — stopped below then.
+        stop?.();
         // Compose default + persisted draft into one snapshot then apply
         // once — halves per-aspect ref writes vs two back-to-back applies.
         const id = resolveDefaultId();
@@ -597,7 +660,9 @@ export function createPresetState(opts: CreatePresetStateOptions): {
         const merged = draftEnabled
           ? (opts.draftHandle as UseLocalDraftReturn).hydrate(base)
           : base;
-        apply(merged);
+        // Pruned here so the report names the default preset (the draft
+        // lies over it); `apply` then finds nothing more to drop.
+        apply(pruneForApply(merged, nextActiveId));
         // apply(snapshot) doesn't touch activeId; set it explicitly.
         activeId.value = nextActiveId;
         if (draftEnabled) {
@@ -613,6 +678,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
       },
       { immediate: true },
     );
+    if (done) stop();
   }
 
   const slice: PresetStateSlice = {
@@ -628,6 +694,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     available,
     activeId,
     activeSnapshot,
+    droppedFields,
     isDirty,
     canSaveActive,
     currentUser,

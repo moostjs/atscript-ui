@@ -12,6 +12,7 @@ import type {
 import { DEV } from "@atscript/ui-table";
 import type {
   ActionResult,
+  DroppedFieldsReport,
   PresetConfig,
   ReactiveTableState,
   RowActionsConfig,
@@ -23,6 +24,7 @@ import { finalizeTableState, useTable } from "../composables/use-table";
 import {
   createStaticTableState,
   useRegisterMainActionListener,
+  warnFieldsDropped,
   warnUnsupportedFilter,
 } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
@@ -107,7 +109,13 @@ const props = withDefaults(
     /** Named form-component overrides for the action-form dialog. */
     formComponents?: Record<string, Component>;
     limit?: number;
+    /**
+     * Always-applied filter. App-authored: unlike presets and URLs it is
+     * never pruned of fields the caller cannot see — keep it to fields every
+     * role reads.
+     */
     forceFilters?: FilterExpr;
+    /** Always-applied sorters. Never pruned, like `forceFilters`. */
     forceSorters?: SortControl[];
     /**
      * Leaf field paths always added to `$select` (deduped, gated by available
@@ -200,6 +208,17 @@ const emit = defineEmits<{
    * `urlQuerySync: { residual: false }` restores the 0.1.139 behaviour.
    */
   (e: "unsupported-filter", issue: UnsupportedFilter): void;
+  /**
+   * Parts of a preset (with the local draft laid over it) or of a restored
+   * URL that name fields this caller cannot use (hidden from their role, or gone
+   * from the schema) were left out instead of failing the query. One report
+   * per apply, only when something was dropped. Unbound → a dev-mode
+   * `console.warn` instead. Since 0.1.141.
+   *
+   * Since 0.1.141 a URL filter piece that mixes such a field with usable
+   * ones is reported here, not as `unsupported-filter`.
+   */
+  (e: "fields-dropped", report: DroppedFieldsReport): void;
 }>();
 
 const filterFields = defineModel<string[]>("filterFields", { default: () => [] });
@@ -302,6 +321,7 @@ function createLocalState(): ReactiveTableState {
 }
 
 const hasUnsupportedFilterListener = useHasEmitListener("onUnsupportedFilter");
+const hasFieldsDroppedListener = useHasEmitListener("onFieldsDropped");
 
 const state = localMode
   ? createLocalState()
@@ -345,6 +365,8 @@ const state = localMode
         hasUnsupportedFilterListener.value
           ? emit("unsupported-filter", issue)
           : warnUnsupportedFilter(issue),
+      onFieldsDropped: (report) =>
+        hasFieldsDroppedListener.value ? emit("fields-dropped", report) : warnFieldsDropped(report),
       preset: props.preset,
       displayColumns: props.displayColumns,
     });

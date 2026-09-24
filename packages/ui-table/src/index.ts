@@ -38,6 +38,7 @@ export { filtersToUniqueryFilter } from "./filters/filters-to-uniquery";
 export type {
   DecomposedUniqueryFilter,
   DecomposeUniqueryFilterOptions,
+  UnknownFilter,
   UnsupportedFilter,
   UnsupportedFilterReason,
 } from "./filters/uniquery-to-filters";
@@ -96,6 +97,14 @@ export {
 // ── System presets ──────────────────────────────────────────
 export type { SystemPreset, SystemPresetInput } from "./presets/system-presets";
 export { resolveSystemPresets } from "./presets/system-presets";
+
+// ── Hidden-field pruning ────────────────────────────────────
+export type { DroppedFields, KnownFields } from "./presets/prune-preset-snapshot";
+export {
+  prunePresetSnapshot,
+  pruneResidualFilters,
+  restoreDroppedEntries,
+} from "./presets/prune-preset-snapshot";
 
 // ── Dirty detection ─────────────────────────────────────────
 export { stableStringify, isDirtyAgainst } from "./presets/preset-dirty";

@@ -611,7 +611,10 @@ describe("urlQueryStringToState — residual", () => {
     });
     expect(out.filters).toEqual({ total: [{ type: "gt", value: [5] }] });
     expect(out.residual).toBeUndefined();
-    expect(out.unsupported).toHaveLength(1);
+    expect(out.unsupported).toBeUndefined();
+    expect(out.unknown).toEqual([
+      { expr: { $or: [{ status: "shipped" }, { ghost: 1 }] }, fields: ["ghost"] },
+    ]);
   });
 
   it("carries only pieces the filter allowlist owns", () => {

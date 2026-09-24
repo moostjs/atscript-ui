@@ -1352,6 +1352,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-preset-picker-item-label",
     "as-preset-picker-item-meta",
     "as-preset-picker-menu",
+    "as-preset-picker-note",
     "as-preset-picker-popover",
     "as-preset-picker-popover-aspect",
     "as-preset-picker-popover-aspect-icon",

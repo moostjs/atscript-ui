@@ -1,6 +1,7 @@
 // ── Types ───────────────────────────────────────────────────
 export type {
   ApplyUrlQueryOptions,
+  DroppedFieldsReport,
   TAsTableControls,
   TAsCellTypeComponents,
   ReactiveTableState,

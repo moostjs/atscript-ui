@@ -145,13 +145,60 @@ describe("urlQueryStringToState — decoding", () => {
       knownFields: ["status"],
     });
     expect(out.filters).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+    // A bare `field=value` reads the same as a host-page flag: not listed.
+    expect(out.unknown).toBeUndefined();
   });
 
-  it("drops sorters on unknown fields", () => {
+  it("drops sorters on unknown fields and lists them", () => {
     const out = urlQueryStringToState("$sort=-knownField,unknownField", {
       knownFields: ["knownField"],
     });
     expect(out.sorters).toEqual([{ field: "knownField", direction: "desc" }]);
+    expect(out.unknownSorters).toEqual([{ field: "unknownField", direction: "asc" }]);
+  });
+
+  it("lists operator-shaped filter pieces on unknown fields as unknown", () => {
+    const out = urlQueryStringToState("email~=/x/&status=active&$sort=-email&$snapshot", {
+      knownFields: ["status", "username"],
+    });
+    expect(out.filters).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+    expect(out.sorters).toEqual([]);
+    expect(out.unknown).toEqual([{ expr: { email: { $regex: "/x/" } }, fields: ["email"] }]);
+    expect(out.unknownSorters).toEqual([{ field: "email", direction: "desc" }]);
+    expect(out.unsupported).toBeUndefined();
+  });
+
+  it("lists a mixed known/unknown piece as unknown, not unsupported", () => {
+    const out = urlQueryStringToState("(username~=/a/i^email~=/a/i)", {
+      knownFields: ["status", "username"],
+    });
+    expect(out.filters).toEqual({});
+    expect(out.residual).toBeUndefined();
+    expect(out.unsupported).toBeUndefined();
+    expect(out.unknown).toHaveLength(1);
+  });
+
+  it("treats client-owned columns as neither known nor unknown", () => {
+    const out = urlQueryStringToState("(status=a^score>2)&$sort=score,-email", {
+      knownFields: new Set(["status"]),
+      localFields: new Set(["score"]),
+    });
+    expect(out.unknown).toBeUndefined();
+    expect(out.sorters).toEqual([]);
+    expect(out.unknownSorters).toEqual([{ field: "email", direction: "desc" }]);
+    // Correlated with a known field → lost, reported as cross-field.
+    expect(out.unsupported).toEqual([
+      expect.objectContaining({ reason: "cross-field", fields: ["status", "score"] }),
+    ]);
+  });
+
+  it("does not list pieces outside a filter allowlist as unknown", () => {
+    const out = urlQueryStringToState("status=active&other>2&$sort=other", {
+      knownFields: ["status", "other"],
+      sync: { filters: ["status"], sorters: ["status"] },
+    });
+    expect(out.unknown).toBeUndefined();
+    expect(out.unknownSorters).toBeUndefined();
   });
 
   it("ignores unknown controls without throwing", () => {

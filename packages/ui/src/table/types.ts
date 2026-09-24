@@ -29,6 +29,13 @@ export interface FieldMeta {
    * Needs `@atscript/moost-db` 0.1.132+. Since 0.1.139.
    */
   filterOps?: string[];
+  /**
+   * The caller may write this field but not read it (an access-control
+   * projection kept it in `/meta` for forms). The server rejects it in
+   * `$select`, filters and `$sort`, so it is never a table column and never
+   * fetchable. Since 0.1.141.
+   */
+  writeOnly?: boolean;
 }
 
 /** Meta response from moost-db `/meta` endpoint. */
@@ -95,6 +102,7 @@ export interface TableDef {
   /**
    * Server-returnable field paths (from meta.fields) — the gate for
    * @ui.table.selectWith targets, includes @ui.table.exclude fields.
+   * `writeOnly` fields are not readable, so they are left out (since 0.1.141).
    */
   fetchableFields: Set<string>;
   primaryKeys: string[];

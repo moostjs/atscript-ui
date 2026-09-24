@@ -39,14 +39,33 @@ describe("decomposeUniqueryFilter", () => {
     expect(out.residual).toEqual([{ $not: { status: "x", total: { $gt: 1 } } }]);
   });
 
-  it("never carries a piece on an unknown field, and ignores all-unknown ones", () => {
+  it("lists a mixed known/unknown piece as unknown, not unsupported", () => {
     const expr: FilterExpr = {
       $and: [{ $or: [{ a: 1 }, { ghost: 2 }] }, { $or: [{ x: 1 }, { y: 2 }] }],
     };
     const out = decomposeUniqueryFilter(expr, { carry: true, knownFields: ["a"] });
     expect(out.residual).toEqual([]);
-    expect(out.unsupported).toHaveLength(1);
-    expect(out.unsupported[0].fields).toEqual(["a", "ghost"]);
+    expect(out.unsupported).toEqual([]);
+    expect(out.unknown).toEqual([
+      { expr: { $or: [{ a: 1 }, { ghost: 2 }] }, fields: ["ghost"] },
+      { expr: { $or: [{ x: 1 }, { y: 2 }] }, fields: ["x", "y"] },
+    ]);
+  });
+
+  it("lists single-field pieces on unknown fields as unknown", () => {
+    const expr: FilterExpr = { a: 1, ghost: { $regex: "/x/i", $ne: "y" }, spook: { $nin: [1, 2] } };
+    const out = decomposeUniqueryFilter(expr, { knownFields: ["a"] });
+    expect(out.filters).toEqual({ a: [{ type: "eq", value: [1] }] });
+    expect(out.unknown).toEqual([
+      { expr: { ghost: { $regex: "/x/i" } }, fields: ["ghost"] },
+      { expr: { ghost: { $ne: "y" } }, fields: ["ghost"] },
+      { expr: { spook: { $nin: [1, 2] } }, fields: ["spook"] },
+    ]);
+  });
+
+  it("has no unknown pieces without knownFields", () => {
+    const out = decomposeUniqueryFilter({ ghost: 1, $or: [{ a: 1 }, { b: 2 }] }, { carry: true });
+    expect(out.unknown).toEqual([]);
   });
 
   it("does not carry a piece that references no field", () => {

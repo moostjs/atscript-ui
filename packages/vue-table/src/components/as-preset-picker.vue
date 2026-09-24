@@ -352,6 +352,9 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
 
         <!-- Action row -->
         <DropdownMenuSeparator class="as-preset-picker-separator" />
+        <p v-if="state.preset.droppedFields.value" class="as-preset-picker-note" role="note">
+          Some fields in this preset aren't available to you.
+        </p>
         <ErrorNote />
         <DropdownMenuItem
           v-if="state.preset.isDirty.value && state.preset.canSaveActive.value"

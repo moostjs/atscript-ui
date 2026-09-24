@@ -83,12 +83,18 @@ describe("display columns — query", () => {
       columns: [mockColumn("id")],
       displayColumns: display,
     });
-    // A preset saved against an older schema.
+    // A preset saved against an older schema, written straight to the model.
     state.columnNames.value = ["id", "ghost", "score"];
     expect(state.columns.value.map((c) => c.path)).toEqual(["id", "score"]);
-    // `ghost` is simply an unknown path — `$select` passes it through as it
-    // always has; what matters is that the client-owned `score` is stripped.
-    expect(state.buildQuery().controls!.$select).toEqual(["id", "ghost"]);
+    // The client-owned `score` is stripped, and the query's safety net drops
+    // the unknown `ghost` (with a dev warning — a writer skipped pruning).
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(state.buildQuery().controls!.$select).toEqual(["id"]);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("ghost"));
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("survives hiding and reordering through the columns model", () => {

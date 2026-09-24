@@ -17,6 +17,7 @@ import type {
 } from "@atscript/ui-table";
 import type {
   ActionResult,
+  DroppedFieldsReport,
   PresetConfig,
   ReactiveTableState,
   TAsCellTypeComponents,
@@ -161,6 +162,11 @@ export interface UseTableOptions {
    * Since 0.1.139.
    */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
+  /**
+   * Receives what the table left out because it names a field this caller
+   * cannot use — see `TableQueryOptions.onFieldsDropped`. Since 0.1.141.
+   */
+  onFieldsDropped?: (report: DroppedFieldsReport) => void;
 
   /**
    * Preset feature config — opt-in. Omit to disable presets entirely
@@ -276,6 +282,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       onUrlQueryChange: opts?.onUrlQueryChange,
       urlQuerySync: opts?.urlQuerySync,
       onUnsupportedFilter: opts?.onUnsupportedFilter,
+      onFieldsDropped: opts?.onFieldsDropped,
     },
     window: {
       blockSize: opts?.blockSize,

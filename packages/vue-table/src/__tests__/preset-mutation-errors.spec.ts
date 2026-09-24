@@ -41,6 +41,7 @@ function makePresetSurface(overrides: Partial<PresetSurface> = {}) {
     available: computed(() => true),
     activeId: ref<string | null>(null),
     activeSnapshot: computed(() => ({})),
+    droppedFields: computed(() => null),
     isDirty: computed(() => false),
     canSaveActive: computed(() => false),
     currentUser: computed(() => "me"),
@@ -105,6 +106,36 @@ async function submitSaveAs(label: string): Promise<void> {
   document.querySelector<HTMLElement>(".as-preset-picker-popover-save")!.click();
   await flushPromises();
 }
+
+describe("<AsPresetPicker> — dropped fields", () => {
+  it("shows a quiet note while the active preset dropped fields", async () => {
+    const report = {
+      source: "preset",
+      presetId: "p1",
+      fields: ["email"],
+      columns: ["email"],
+      filterFields: [],
+      filters: {},
+      residual: [],
+      sorters: [],
+    };
+    mountWithPreset(
+      AsPresetPicker,
+      makePresetSurface({ droppedFields: computed(() => report) as never }),
+    );
+    document.querySelector<HTMLElement>(".as-preset-picker-trigger")!.click();
+    await flushPromises();
+    const note = document.querySelector<HTMLElement>(".as-preset-picker-note");
+    expect(note?.textContent).toContain("aren't available to you");
+  });
+
+  it("renders no note when nothing was dropped", async () => {
+    mountWithPreset(AsPresetPicker, makePresetSurface());
+    document.querySelector<HTMLElement>(".as-preset-picker-trigger")!.click();
+    await flushPromises();
+    expect(document.querySelector(".as-preset-picker-note")).toBeNull();
+  });
+});
 
 describe("<AsPresetPicker> — mutation failures", () => {
   it("keeps the popover open and renders the message when save-as fails", async () => {

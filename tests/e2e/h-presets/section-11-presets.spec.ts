@@ -29,6 +29,8 @@
 //   11.7.5+9  rename My B → My B v2, public My C, delete My A    → 2
 //   11.7.10  cancel discards pending edits                       → 2
 //   11.9.A  popover Make-public visible (admin)                  → 2
+//   11.10.A +Admin contacts (public, via API) on /users; the viewer
+//           favorites it in 11.10.B
 //
 // Wire-shape findings:
 //   - Preset CRUD endpoint: `/api/db/_presets/`
@@ -55,6 +57,8 @@
 // wrap defeats `@uniqu/url`'s `mergeConjunction` collapse so both clauses
 // reach the server.
 
+import type { Browser, Response } from "@playwright/test";
+
 import { type Locator, type Page, expect, test } from "../fixtures";
 
 import {
@@ -65,6 +69,7 @@ import {
   clickColumnHeader,
   dialogRow,
   expectSinglePages,
+  expectUrlQuery,
   gotoTable,
   newRequestContext,
   openManageDialog,
@@ -86,6 +91,8 @@ const PICKER_ITEM = ".as-preset-picker-item";
 const POPOVER_NAME_INPUT = ".as-preset-picker-popover-input";
 const POPOVER_SAVE_BTN = ".as-preset-picker-popover-save";
 const POPOVER_ASPECT = ".as-preset-picker-popover-aspect";
+const COLUMN_TH = (path: string) =>
+  `table[data-as-main-table] thead th[data-column-path="${path}"]`;
 
 const DIALOG_FOOTER_SAVE = ".as-preset-dialog-footer-save";
 const DIALOG_FOOTER_CLOSE = ".as-preset-dialog-footer-close";
@@ -977,6 +984,182 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
       await expect(row.locator(".as-preset-dialog-row-public-spacer")).toHaveCount(1);
     } finally {
       await viewerCtx.close();
+    }
+  });
+  // -------------------------------------------------------------------
+  // 11.10 — Hidden-field tolerance. An admin's public preset (and a shared
+  // /users link) names `email` / `roleId`, which the viewer role cannot read
+  // (VIEWER_USERS_COLS = id, username, status). The viewer's table must drop
+  // those parts and keep working — never a 400.
+
+  const HIDDEN_PRESET = "Admin contacts";
+  const HIDDEN = /email|roleId/u;
+
+  /**
+   * A viewer page that records every `/api/db/tables/users/*` failure and
+   * every `/pages` request URL (decoded).
+   */
+  async function viewerUsersPage(browser: Browser) {
+    const ctx = await browser.newContext({ storageState: authFileFor("viewer") });
+    const vPage = await ctx.newPage();
+    const failures: string[] = [];
+    const pages: string[] = [];
+    vPage.on("response", (r: Response) => {
+      if (!r.url().includes("/api/db/tables/users/")) return;
+      if (r.status() >= 400) failures.push(`${r.status()} ${r.url()}`);
+      if (/\/users\/pages(?:\?|$)/u.test(r.url())) pages.push(decodeURIComponent(r.url()));
+    });
+    return { ctx, vPage, failures, pages };
+  }
+
+  test("11.10.A — admin publishes a /users preset naming email + roleId", async () => {
+    const ctx = await newRequestContext("admin");
+    try {
+      const res = await ctx.post("/api/db/_presets", {
+        data: {
+          type: "preset",
+          app: "vuedemo",
+          tableKey: "users",
+          public: true,
+          data: {
+            label: HIDDEN_PRESET,
+            content: {
+              columns: { columnNames: ["username", "email", "roleId"] },
+              filters: ["email", "status"],
+              filterOps: [
+                { field: "email", conditions: [{ type: "contains", value: ["@"] }] },
+                { field: "status", conditions: [{ type: "eq", value: ["active"] }] },
+              ],
+              sorters: [{ field: "email", direction: "desc" }],
+            },
+          },
+        },
+      });
+      expect(res.ok(), `insert failed: ${res.status()}`).toBeTruthy();
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
+  test("11.10.B — viewer applies it: hidden parts dropped, 200s only, not dirty, quiet note", async ({
+    browser,
+  }) => {
+    const { ctx, vPage, failures, pages } = await viewerUsersPage(browser);
+    try {
+      await gotoTable(vPage, "users");
+
+      // Someone else's public preset reaches the picker through Favorites.
+      const menu = await openPresetPicker(vPage);
+      const dialog = await openManageDialog(vPage, menu);
+      await dialogRow(dialog, HIDDEN_PRESET).locator(".as-preset-dialog-row-fav").click();
+      const upsert = vPage.waitForRequest(
+        (r) =>
+          r.url().includes("/api/db/_presets") && (r.method() === "POST" || r.method() === "PATCH"),
+      );
+      await dialog.locator(DIALOG_FOOTER_SAVE).click();
+      await upsert;
+      await expect(dialog).toHaveCount(0);
+
+      await applyPickerItem(vPage, HIDDEN_PRESET, { table: "users" });
+
+      const last = pages.at(-1)!;
+      expect(last).not.toMatch(HIDDEN);
+      expect(last).toContain("status=active");
+      await expect(vPage.locator(COLUMN_TH("username"))).toHaveCount(1);
+      await expect(vPage.locator(COLUMN_TH("email"))).toHaveCount(0);
+      await expect(vPage.locator(PICKER_TRIGGER_LABEL)).toHaveText(HIDDEN_PRESET);
+      await expect(vPage.locator(".as-preset-picker-trigger-dirty")).toHaveCount(0);
+
+      const menu2 = await openPresetPicker(vPage);
+      await expect(menu2.locator(".as-preset-picker-note")).toBeVisible();
+      await vPage.keyboard.press("Escape");
+      await expect(menu2).toHaveCount(0);
+
+      expect(failures).toEqual([]);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("11.10.C — the stored preset is untouched: admin still gets email in every aspect", async () => {
+    const ctx = await newRequestContext("admin");
+    try {
+      const res = await ctx.get("/api/db/_presets/query?app=vuedemo&tableKey=users");
+      expect(res.ok()).toBeTruthy();
+      const rows = (await res.json()) as Array<{ label?: string; data?: { content?: unknown } }>;
+      const row = rows.find((r) => r.label === HIDDEN_PRESET);
+      expect(row, "admin's preset must still be listed").toBeTruthy();
+      const content = row!.data!.content as {
+        columns: { columnNames: string[] };
+        filters: string[];
+        filterOps: Array<{ field: string }>;
+        sorters: Array<{ field: string }>;
+      };
+      expect(content.columns.columnNames).toContain("email");
+      expect(content.filters).toContain("email");
+      expect(content.filterOps.map((f) => f.field)).toContain("email");
+      expect(content.sorters.map((s) => s.field)).toEqual(["email"]);
+    } finally {
+      await ctx.dispose();
+    }
+  });
+
+  test("11.10.D — viewer deep link naming email: one clean 200 query, URL untouched until the next change", async ({
+    browser,
+  }) => {
+    const { ctx, vPage, failures, pages } = await viewerUsersPage(browser);
+    // The demo binds no `@fields-dropped`, so the dev-mode warning is the report.
+    const warnings: string[] = [];
+    vPage.on("console", (m) => {
+      if (m.type() === "warning") warnings.push(m.text());
+    });
+    try {
+      const pagesResp = vPage.waitForResponse((r) => /\/users\/pages(?:\?|$)/u.test(r.url()));
+      // `/users` keeps sorters out of the URL (`urlQuerySync.sorters: false`),
+      // so `$sort=-email` is not the table's to restore at all.
+      await vPage.goto("/users?email~=/x/&status=active&$sort=-email&$snapshot");
+      expect((await pagesResp).status()).toBe(200);
+      await expect(vPage.getByText("Loading…", { exact: true })).toHaveCount(0);
+
+      expect(pages).toHaveLength(1);
+      expect(pages[0]).not.toMatch(HIDDEN);
+      expect(pages[0]).toContain("status=active");
+      expect(warnings.filter((w) => w.includes("(url)"))).toEqual([
+        expect.stringContaining("Left out fields this table cannot use (url): email"),
+      ]);
+      // No forced rewrite: the link stays as it came…
+      expectUrlQuery(vPage, ["email~=/x/"]);
+
+      // …until the user's next change writes the table's own, clean URL.
+      await vPage.getByPlaceholder("Search across all columns…").fill("a");
+      await expect.poll(() => decodeURIComponent(vPage.url())).toContain("$search=a");
+      expectUrlQuery(vPage, ["status=active", "$snapshot"]);
+      expect(decodeURIComponent(vPage.url())).not.toMatch(HIDDEN);
+
+      expect(failures).toEqual([]);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("11.10.E — viewer deep link with an $or over username and email: dropped whole, no chip, 200", async ({
+    browser,
+  }) => {
+    const { ctx, vPage, failures, pages } = await viewerUsersPage(browser);
+    try {
+      const pagesResp = vPage.waitForResponse((r) => /\/users\/pages(?:\?|$)/u.test(r.url()));
+      await vPage.goto("/users?(username~=/a/i^email~=/a/i)&$snapshot");
+      expect((await pagesResp).status()).toBe(200);
+      await expect(vPage.getByText("Loading…", { exact: true })).toHaveCount(0);
+
+      expect(pages).toHaveLength(1);
+      expect(pages[0]).not.toMatch(HIDDEN);
+      expect(pages[0]).not.toContain("^");
+      await expect(vPage.locator(".as-residual-filter")).toHaveCount(0);
+
+      expect(failures).toEqual([]);
+    } finally {
+      await ctx.close();
     }
   });
 });

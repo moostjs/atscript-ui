@@ -183,13 +183,31 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "optional")!.nullable).toBe(true);
   });
 
-  it("fields not in meta.fields default to not sortable/filterable", async () => {
-    const { WithoutLabel } = await import(F);
-    const meta = buildMeta(serializeAnnotatedType(WithoutLabel), ["firstName"], {});
+  it("a top-level scalar missing from meta.fields is not a column", async () => {
+    // The server did not advertise it (e.g. hidden from the caller's role):
+    // naming it in `$select` would be rejected.
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), [], {
+      name: { sortable: true, filterable: true },
+    });
     const def = createTableDef(meta);
 
-    expect(def.columns[0]!.sortable).toBe(false);
-    expect(def.columns[0]!.filterable).toBe(false);
+    expect(def.columns.map((c) => c.path)).toEqual(["name"]);
+    expect([...def.fetchableFields]).toEqual(["name"]);
+  });
+
+  it("a writeOnly field is neither a column nor fetchable", async () => {
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), [], {
+      name: { sortable: true, filterable: true },
+      age: { sortable: false, filterable: false, writeOnly: true },
+      active: { sortable: true, filterable: true },
+    });
+    const def = createTableDef(meta);
+
+    expect(def.columns.map((c) => c.path)).not.toContain("age");
+    expect(def.fetchableFields.has("age")).toBe(false);
+    expect(def.fetchableFields.has("name")).toBe(true);
   });
 
   it("passes through primaryKeys, crud, searchable flags", async () => {
