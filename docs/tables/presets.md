@@ -57,6 +57,11 @@ Save-as popover says so while one is active). A preset that owns
 **Reset** — clears them, and while one is active the view counts as
 changed against that preset.
 
+A preset reaches every role that can see it, as written. Entries on fields
+the current role cannot read are dropped on apply, the preset does not
+count as changed for lacking them, and **Save** keeps them in the stored
+row. See [Fields Hidden by Role](/tables/hidden-fields#presets).
+
 ### What a system preset owns
 
 By default a system preset owns **every** available aspect: applying
@@ -284,3 +289,5 @@ handle the rejection — nothing is swallowed since 0.1.133.
   Moost controller, override hooks, configure DB.
 - [URL State](/tables/url-state) — the address-bar bridge that
   complements presets.
+- [Fields Hidden by Role](/tables/hidden-fields) — how a preset written
+  by a wider role applies to a narrower one.

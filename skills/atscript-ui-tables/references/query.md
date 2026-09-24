@@ -112,6 +112,8 @@ Pure function, no framework dependencies. Returns a `Uniquery` ready for `client
 
 Use these for tenancy filters, soft-delete gates, role-derived defaults — the user-facing `state.filters` / `state.sorters` stay independent and can be saved / shared without leaking the force layer.
 
+Force filters and sorters are **never pruned** of fields the caller cannot read (0.1.141+ prunes presets, drafts and URLs — [hidden-fields.md](hidden-fields.md)). Name only fields every role reads, or the query 400s for the narrower roles.
+
 ## blockQuery
 
 `<AsTableRoot :block-query>` / `useTable(url, { blockQuery })` short-circuits every fetch trigger: the bootstrap query, `query()`, `queryNext()` and `loadRange()`.

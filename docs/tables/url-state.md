@@ -231,15 +231,21 @@ A link written by hand works the same way — the `&` inside a group can
 be left raw. The table does not rewrite the URL on load; the next change
 writes it in the table's own spelling.
 
-What is still **left out and reported** (the view is then _broader_ than
-the link):
+What is still **left out and reported** as `@unsupported-filter` (the view
+is then _broader_ than the link):
 
-- a piece that references a field the table does not know, or a
-  client-owned (`local`) column — both unreachable server-side;
+- a piece that correlates a server-backed column with a client-owned
+  (`local`) one — unreachable server-side;
 - everything, when `:url-query-sync="{ residual: false }"` — the 0.1.139
   behaviour: nothing is carried, nothing extra is written.
 
-Listen for those to tell the user:
+A piece that names a field the caller cannot read (hidden from their role,
+or gone from the schema) is dropped too, but reported as
+`@fields-dropped`. See [Fields Hidden by Role](/tables/hidden-fields#urls).
+Up to 0.1.140 a piece mixing such a field with known ones went to
+`@unsupported-filter`.
+
+Listen for the lossy pieces to tell the user:
 
 ```vue
 <AsTableRoot
@@ -252,8 +258,8 @@ Listen for those to tell the user:
 Without a listener each piece is reported with a `console.warn` in
 development builds. Renderless tables pass `onUnsupportedFilter` to
 `useTable`. Custom renderers calling `urlQueryStringToState` get the
-carried conditions as `residual` and only the lost pieces as
-`unsupported`. `$in` /
+carried conditions as `residual`, the lost pieces as `unsupported`, and
+the pieces and sorters on unknown fields as `unknown` / `unknownSorters`. `$in` /
 `$nin` lists and same-field ORs are not lossy — they become field
 conditions. The decoding rules are on
 [Filtering](/tables/filtering#converting-a-uniquery-filter-back).

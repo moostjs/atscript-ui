@@ -353,7 +353,9 @@ equal 100) or (…)` — with a remove button; swap the chip through the
   `residualFilters` still filters correctly, but comes back as a field
   chip after a URL round trip.
 - **Do** reference only server-backed columns: a condition on a
-  client-owned (`local`) column cannot reach the server.
+  client-owned (`local`) column cannot reach the server, and one on a
+  field the caller cannot read is left out of the query whole
+  ([Fields Hidden by Role](/tables/hidden-fields)).
 - **Don't** expect presets to keep them. A preset cannot store one; applying
   a preset that owns the filter conditions clears them, and while one is
   active the view counts as changed — see
@@ -418,9 +420,10 @@ const filters = uniqueryFilterToFieldFilters(expr, knownFields, (issue) =>
 ```
 
 Without a handler each piece is reported with a `console.warn` in
-development builds. Conditions on fields outside `knownFields` are
-ignored silently (they are not this table's), unless they share a piece
-with a known field. `urlQueryStringToState` never warns — it returns the
+development builds. Pieces that name a field outside `knownFields` are
+ignored silently (they are not this table's), including a piece that
+mixes a known field with an unknown one (reported up to 0.1.140).
+`urlQueryStringToState` never warns — it returns the
 pieces as `unsupported` on its result — and `<AsTableRoot>` surfaces
 them as the `@unsupported-filter` event (`useTable({ onUnsupportedFilter })`
 without the component) — see
@@ -431,11 +434,16 @@ Up to 0.1.138 these pieces were dropped or reshaped without a report
 ### Keeping what the model cannot hold
 
 _Since 0.1.140._ `decomposeUniqueryFilter(expr, { knownFields, carry: true })`
-returns `{ filters, residual, unsupported }`: the exact field filters,
-the pieces they cannot hold as [custom filter conditions](#custom-filter-conditions),
-and the pieces that are still left out (a piece mixing known and unknown
-fields). `filters` AND `residual` selects exactly `expr`, minus the
-`unsupported` pieces and pieces on fields outside `knownFields`.
+returns `{ filters, residual, unsupported, unknown }`: the exact field
+filters, the pieces they cannot hold as
+[custom filter conditions](#custom-filter-conditions), the pieces that are
+still left out because the model cannot express them, and (since 0.1.141)
+the pieces left out because they name a field outside `knownFields`,
+alone or mixed with known ones (each `{ expr, fields }`, `fields` being
+the unknown paths). `filters` AND `residual` selects exactly
+`expr`, minus the `unsupported` and `unknown` pieces. `unknown` means
+"not this caller's to use" (see [Fields Hidden by Role](/tables/hidden-fields));
+`unsupported` means "not expressible".
 
 ```ts
 import { decomposeUniqueryFilter } from "@atscript/ui-table";

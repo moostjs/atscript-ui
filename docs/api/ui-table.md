@@ -13,6 +13,7 @@ Framework-agnostic table model. Filter conditions, filter→Uniquery conversion,
 - [Presets — id helpers](#presets-id-helpers)
 - [Presets — system presets](#presets-system-presets)
 - [Presets — dirty detection](#presets-dirty-detection)
+- [Hidden-field pruning](#hidden-field-pruning)
 - [Presets — local draft](#presets-local-draft)
 - [Presets — HTTP clients](#presets-http-clients)
 - [Query builder](#query-builder)
@@ -164,7 +165,7 @@ function filtersToUniqueryFilter(filters: FieldFilters): FilterExpr | undefined;
 
 function uniqueryFilterToFieldFilters(
   expr: FilterExpr | undefined,
-  /** Conditions on other fields are ignored silently. */
+  /** Pieces naming another field (alone or mixed with known ones, since 0.1.141) are ignored silently. */
   knownFields?: Iterable<string>,
   /** Each AND-ed piece that was left out. Omitted → a dev-mode `console.warn` per piece. Since 0.1.139. */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void,
@@ -187,7 +188,7 @@ function decomposeUniqueryFilter(
 ): DecomposedUniqueryFilter;
 
 interface DecomposeUniqueryFilterOptions {
-  /** Pieces on other fields are ignored silently; a piece mixing known and unknown fields is reported, never carried. */
+  /** A piece naming another field — alone or mixed with known ones — goes to `unknown`, never carried or `unsupported`. */
   knownFields?: Iterable<string>;
   /** Keep left-out pieces whose fields are all known as `residual`. Default `false` (the 0.1.139 split). */
   carry?: boolean;
@@ -199,6 +200,16 @@ interface DecomposedUniqueryFilter {
   residual: FilterExpr[];
   /** Pieces left out and lost (not carried) — the result is broader by exactly these. */
   unsupported: UnsupportedFilter[];
+  /** Since 0.1.141. Whole pieces left out because they name a field outside `knownFields`. `[]` without `knownFields`. Up to 0.1.140 a mixed piece went to `unsupported`. */
+  unknown: UnknownFilter[];
+}
+
+/** Since 0.1.141. */
+interface UnknownFilter {
+  /** The left-out sub-expression, as it appeared in the input. */
+  expr: FilterExpr;
+  /** The paths it names that are outside `knownFields`. */
+  fields: string[];
 }
 
 /** Since 0.1.140. Canonical identity of a filter expression (its `@uniqu/url` spelling) — equal keys select the same rows. */
@@ -404,6 +415,46 @@ function isDirtyAgainst(
 ```
 
 `stableStringify` produces deterministic JSON (sorted keys) so a snapshot's hash is stable across reorders. `isDirtyAgainst` returns true when at least one claimed aspect differs from baseline.
+
+## Hidden-field pruning
+
+Since 0.1.141. Pure helpers that drop the parts of a snapshot or of residual conditions that name fields the table cannot use — the rules `@atscript/vue-table` applies to presets, drafts and URLs. See [Fields Hidden by Role](/tables/hidden-fields).
+
+```typescript
+interface KnownFields {
+  /** Every column path, client-owned columns included, in column order. Gates column names, widths, sorters. */
+  columns: ReadonlySet<string>;
+  /** Server-backed column paths. Gates filter inputs, field filters, residual conditions. */
+  server: ReadonlySet<string>;
+}
+
+interface DroppedFields {
+  /** The unusable paths behind the drops, deduped, in order of appearance. */
+  fields: string[];
+  columns: string[];
+  filterFields: string[];
+  filters: FieldFilters;
+  residual: FilterExpr[];
+  sorters: SortControl[];
+}
+
+/** `dropped: null` when nothing user-visible was removed. Never mutates its input. */
+function prunePresetSnapshot(
+  snapshot: PresetSnapshot,
+  known: KnownFields,
+): { snapshot: PresetSnapshot; dropped: DroppedFields | null };
+
+/** One pass. A condition naming any unknown field is dropped whole (never pruned inside `$or` / `$not`); `dropped` fills `residual` and `fields`, `null` when all are kept. */
+function pruneResidualFilters(
+  exprs: FilterExpr[],
+  known: ReadonlySet<string>,
+): { kept: FilterExpr[]; dropped: DroppedFields | null };
+
+/** Append `dropped` back onto `captured`: column names, filter inputs and sorters after the captured ones; field filters added. Only aspects `captured` carries; hidden widths are not kept. */
+function restoreDroppedEntries(captured: PresetSnapshot, dropped: DroppedFields): PresetSnapshot;
+```
+
+`prunePresetSnapshot` falls back to every column when no column name survives, and omits a `columnWidths` map it emptied. A width-only drop reports nothing (`dropped: null`) but still returns the pruned snapshot.
 
 ## Presets — local draft
 
@@ -630,6 +681,10 @@ interface UrlQueryStateSnapshot {
   unsupported?: UnsupportedFilter[];
   /** Filter pieces field filters cannot express, carried as residual conditions (canonical order); omitted when none or `sync.residual` is `false`. `unsupported` then lists only the pieces left out and lost. Since 0.1.140. */
   residual?: FilterExpr[];
+  /** Filter pieces left out because they name a field outside `knownFields` and `localFields` (a mixed piece included), with those paths. A bare `field=value` is not listed — it reads the same as a host-page flag. Omitted when none. Since 0.1.141; up to 0.1.140 a mixed piece was in `unsupported`. */
+  unknown?: UnknownFilter[];
+  /** `$sort` entries left out because their field is outside `knownFields` and `localFields`. Omitted when none. Since 0.1.141. */
+  unknownSorters?: SortControl[];
   /** Raw `$skip` offset when present (no page math — recipients divide by their own `itemsPerPage`). */
   skip?: number;
   searchTerm: string;
@@ -662,8 +717,10 @@ interface UrlQueryDefaults {
 }
 
 interface UrlQueryParseOptions {
-  /** Field paths the table knows about. Conditions on fields outside this set are silently dropped. */
+  /** Field paths the table knows about. Conditions and sorters on fields outside this set are dropped and listed in `unknown` / `unknownSorters`. */
   knownFields?: Iterable<string>;
+  /** Client-owned column paths: never restored, not unknown. Their sorters are ignored; a piece correlating one with a known field is `unsupported` (`"cross-field"`). Since 0.1.141. */
+  localFields?: Iterable<string>;
   /** Per-aspect sync gates — must match the encoder's config. */
   sync?: UrlQuerySync;
 }

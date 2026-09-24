@@ -83,7 +83,9 @@ interface AsTableRootProps {
 
 **v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]), `ignoreSortersWhenSearched` (boolean).
 
-**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. Since 0.1.140 a piece on server-backed columns is kept as a residual condition instead and not reported — the event means "dropped"; `urlQuerySync: { residual: false }` restores 0.1.139. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)).
+**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. Since 0.1.140 a piece on server-backed columns is kept as a residual condition instead and not reported — the event means "dropped"; `urlQuerySync: { residual: false }` restores 0.1.139. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)), `fields-dropped(report: DroppedFieldsReport)` (since 0.1.141 — once per apply of a preset (the local draft included) or a restored URL that named fields the caller cannot use, only when something was dropped; state written straight to the model is left out of the query without a report; unbound → a dev-mode `console.warn`. A URL piece mixing such a field with usable ones is reported here, no longer as `unsupported-filter`. See [Fields Hidden by Role](/tables/hidden-fields)).
+
+`forceFilters` / `forceSorters` are never pruned of hidden fields — keep them to fields every role reads.
 
 **Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
 
@@ -332,6 +334,8 @@ interface UseTableOptions {
   urlQuerySync?: UrlQuerySync;
   /** Each left-out piece of a restored URL's filter (since 0.1.140: only those not carried as residual conditions). Omitted → dev-mode `console.warn`. Since 0.1.139. */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
+  /** What an apply left out because it names fields the caller cannot use. Omitted → dev-mode `console.warn`. Since 0.1.141. */
+  onFieldsDropped?: (report: DroppedFieldsReport) => void;
   preset?: PresetConfig;
 }
 ```
@@ -1015,10 +1019,24 @@ The preset namespace on `state.preset`. Always present; inert (`available` is `f
 
 - **Rows**: `presets`, `presetsById`, `userConf`, `capabilities`, `systemPresets`, `systemPresetsById`.
 - **Aspects**: `availableAspects` (app-declared; static), and `systemAspects` (since 0.1.133) — the subset a SYSTEM preset owns, equal to `availableAspects` unless `preset.systemAspects` narrowed it. It drives apply/reset, the dirty baseline, the picker/dialog badges, and the Save-As defaults for system presets.
-- **Status**: `available` (false when `preset` is absent, the initial load returned 401/403/404, or any other error — the picker / dialog hide themselves), `activeId`, `activeSnapshot`, `isDirty`, `canSaveActive`, `currentUser`, `dialogOpen`.
+- **Status**: `available` (false when `preset` is absent, the initial load returned 401/403/404, or any other error — the picker / dialog hide themselves), `activeId`, `activeSnapshot` (since 0.1.141 pruned of fields the caller cannot use, so such a preset is not dirty; the stored row is untouched), `isDirty`, `canSaveActive`, `currentUser`, `dialogOpen`.
+- **Dropped fields** (since 0.1.141): `droppedFields: ComputedRef<DroppedFieldsReport | null>` — what the active preset names that the caller cannot use, computed from the stored preset (always `source: "preset"`); `null` when nothing is dropped. `<AsPresetPicker>` shows a quiet note while it is set. `saveActive` appends those entries back after the visible ones; `saveAs` stores only what the caller can see. See [Fields Hidden by Role](/tables/hidden-fields#presets).
 - **Mutation status** (since 0.1.133): `lastError: Ref<Error | null>` — the error thrown by the most recent outermost mutator, cleared when the next outermost mutator starts (a `batch()` is one frame: the last failure inside it wins); mutators still rethrow, so a caller can handle a single call and this ref is for UI that only renders the failure.
 - **Aspect ownership** (since 0.1.133): `ownedAspects(id: string | null): PresetAspect[]` — `systemAspects` for a system id, the stored row's own `aspects` for a saved preset, `availableAspects` otherwise. Apply, dirty baseline, badges and Save-as defaults all use it.
 - **Methods**: `captureSnapshot`, `apply`, `resetActive`, `clearLocalDraft`, `resolveDefaultId`, `saveActive`, `saveAs`, `rename`, `remove`, `togglePublic`, `setDefault`, `toggleFav`, `setFavorites`, `batch`.
+
+### `DroppedFieldsReport`
+
+Since 0.1.141. The `@fields-dropped` / `onFieldsDropped` payload. Extends `DroppedFields` from [`@atscript/ui-table`](/api/ui-table#hidden-field-pruning) (`fields`, `columns`, `filterFields`, `filters`, `residual`, `sorters`).
+
+```typescript
+interface DroppedFieldsReport extends DroppedFields {
+  /** preset: a preset applied (the bootstrap default with the local draft included) · url: a restored URL (its dropped filter pieces are in `residual`). */
+  source: "preset" | "url";
+  /** The preset applied (`"preset"`). */
+  presetId?: string;
+}
+```
 
 ### `RowDeleteOpt` / `InvokeOpts` / `NavKeyOptions` / `MainActionRequest` / `QueryErrorKind` / `TVueTableActionInfo`
 

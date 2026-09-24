@@ -241,6 +241,7 @@ const tablesSidebar = [
       { text: "Config Dialog", link: "/tables/config-dialog" },
       { text: "URL State", link: "/tables/url-state" },
       { text: "Presets", link: "/tables/presets" },
+      { text: "Fields Hidden by Role", link: "/tables/hidden-fields" },
       { text: "Actions & Selection", link: "/tables/actions" },
       { text: "Export", link: "/tables/export" },
       { text: "Edit Forms with OCC", link: "/tables/edit-form-occ" },

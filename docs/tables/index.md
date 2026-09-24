@@ -106,6 +106,8 @@ query on a timer without loading affordances. See
   interactions.
 - [URL State](/tables/url-state) — address-bar sync, `$snapshot` URLs
   that reload exactly, and cross-view links.
+- [Fields Hidden by Role](/tables/hidden-fields) — presets and links that
+  name fields the caller cannot read degrade instead of failing.
 - [Pagination & Virtualization](/tables/pagination) — choosing between
   `<AsTable>` and `<AsWindowTable>`, tuning block size.
 - [Model Routes & Nav](/tables/model-routes) — generate router entries

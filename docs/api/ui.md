@@ -209,6 +209,8 @@ interface TableDef {
   type: TAtscriptAnnotatedType;
   columns: ColumnDef[];
   flatMap: Map<string, TAtscriptAnnotatedType>;
+  /** Readable `meta.fields` paths — the gate for `@ui.table.selectWith` / `alwaysSelected`; includes `@ui.table.exclude` fields, excludes `writeOnly` ones (since 0.1.141). */
+  fetchableFields: Set<string>;
   primaryKeys: string[];
   /** Preferred row identifier for URL/wire addressing. */
   preferredId: string[];
@@ -284,6 +286,8 @@ interface FieldMeta {
   filterable: boolean;
   /** Present only when `filterable` is `false` but narrower predicates pass (`@atscript/moost-db` 0.1.132+). Since 0.1.139. */
   filterOps?: string[];
+  /** The caller may write but not read this field (kept in `/meta` for forms). Never a column, never fetchable. Since 0.1.141. */
+  writeOnly?: boolean;
 }
 
 interface SearchIndexInfo {
@@ -349,6 +353,8 @@ function createTableDef(meta: MetaResponse, type: TAtscriptAnnotatedType): Table
 ```
 
 See [Annotations Reference](/tables/annotations) for how `@ui.table.*` and `@db.*` annotations populate `ColumnDef`.
+
+Only readable fields become columns: a path must be listed in `meta.fields` and not be `writeOnly`. Since 0.1.141 a `writeOnly` field and a top-level field missing from `meta.fields` are no longer columns — either would fail the query's `$select`. See [Fields Hidden by Role](/tables/hidden-fields#which-fields-a-table-can-use).
 
 ## Navigate action hrefs
 
