@@ -1,9 +1,11 @@
 import type { SortControl } from "@atscript/ui";
+import type { FilterExpr } from "@uniqu/core";
 import { buildUrl } from "@uniqu/url/builder";
 import { parseUrl } from "@uniqu/url";
 import type { FieldFilters } from "../filters/filter-types";
 import {
-  uniqueryFilterToFieldFilters,
+  decomposeUniqueryFilter,
+  filterExprFields,
   type UnsupportedFilter,
 } from "../filters/uniquery-to-filters";
 import { buildTableQuery } from "./build-table-query";
@@ -11,6 +13,11 @@ import { buildTableQuery } from "./build-table-query";
 /** State subset that round-trips through the URL bridge. */
 export interface UrlQueryStateLike {
   filters: FieldFilters;
+  /**
+   * Residual filter conditions, AND-ed after `filters`. Only the ones the
+   * filter gate owns are written (see {@link residualGateOwns}). Since 0.1.140.
+   */
+  residualFilters?: FilterExpr[];
   sorters: SortControl[];
   /** 1-based page number. `1` is the default and is omitted from the URL. */
   page?: number;
@@ -53,11 +60,17 @@ export interface UrlQueryStateSnapshot {
    */
   snapshot?: true;
   /**
-   * Pieces of the URL's filter that `filters` leaves out because field filters
-   * cannot express them — see `uniqueryFilterToFieldFilters`. Omitted when
-   * the filter converted exactly. Since 0.1.139.
+   * Pieces of the URL's filter that are left out because field filters
+   * cannot express them — see `uniqueryFilterToFieldFilters`. Since 0.1.140
+   * only the pieces NOT carried in `residual`. Omitted when none. Since 0.1.139.
    */
   unsupported?: UnsupportedFilter[];
+  /**
+   * Filter pieces field filters cannot express, carried as residual
+   * conditions (see `decomposeUniqueryFilter`). Omitted when there are none
+   * or `sync.residual` is `false`. Since 0.1.140.
+   */
+  residual?: FilterExpr[];
   /**
    * Raw record offset from `$skip` (omitted when no `$skip` in URL). The
    * decoder does NOT compute a page index — that requires `itemsPerPage`,
@@ -102,6 +115,15 @@ export interface UrlQuerySync {
    * Since 0.1.139.
    */
   snapshot?: boolean;
+  /**
+   * Whether filter pieces the field-filter model cannot hold travel as
+   * residual conditions. Default `true`: the encoder writes
+   * `UrlQueryStateLike.residualFilters` and the decoder returns them as
+   * `residual`. `false`: neither — the 0.1.139 behaviour, where such
+   * pieces are left out and reported. Inert when `filters` is off.
+   * Since 0.1.140.
+   */
+  residual?: boolean;
 }
 
 export interface UrlQueryDefaults {
@@ -152,6 +174,18 @@ export function gateOwns(gate: AspectGate, path: string): boolean {
   return gate.has(path);
 }
 
+/**
+ * Does a URL under `gate` own the residual condition `expr`? Only when it
+ * owns every field the condition references — a condition that touches a
+ * private field stays private as a whole.
+ *
+ * @internal Exported for `@atscript/vue-table`.
+ */
+export function residualGateOwns(gate: AspectGate, expr: FilterExpr): boolean {
+  const fields = filterExprFields(expr);
+  return fields.length > 0 && fields.every((path) => gateOwns(gate, path));
+}
+
 function pickFilterPaths(filters: FieldFilters, gate: AspectGate): FieldFilters {
   const out: FieldFilters = {};
   for (const path in filters) {
@@ -190,10 +224,16 @@ export function stateToUrlQueryString(
       ? state.sorters
       : state.sorters.filter((s) => gateOwns(sortersGate, s.field));
 
+  const residualFilters =
+    defaults.sync?.residual === false || !state.residualFilters?.length
+      ? undefined
+      : state.residualFilters.filter((expr) => residualGateOwns(filtersGate, expr));
+
   const query = buildTableQuery({
     visibleColumnPaths: [],
     sorters,
     filters,
+    residualFilters,
     search: searchOff ? undefined : state.searchTerm || undefined,
   });
 
@@ -232,8 +272,11 @@ export function stateToUrlQueryString(
  */
 const CONSUMED_CONTROLS = new Set(["$sort", "$search", "$relevance", "$skip", URL_SNAPSHOT_KEY]);
 
-/** Characters that can only appear in a uniqu filter key, never in a page flag. */
-const FILTER_OPERATOR_CHAR = /[<>!~]/;
+/**
+ * Characters that can only appear in a uniqu filter key, never in a page flag:
+ * comparison operators, `^` (OR), `( )` (groups) and `{ }` (`$in` lists).
+ */
+const FILTER_OPERATOR_CHAR = /[<>!~()^{}]/;
 
 /**
  * Whether {@link urlQueryStringToState} would consume the query key `key` —
@@ -273,7 +316,9 @@ export interface UrlQueryParseOptions {
  * - unknown fields (not in `knownFields`) → silently dropped
  * - filter pieces field filters cannot express (cross-field OR, unknown
  *   operator, …) → left out of `filters` and listed in `unsupported`, never
- *   approximated (the parser does not warn — the caller decides)
+ *   approximated (the parser does not warn — the caller decides). Unless
+ *   `sync.residual` is `false`, those whose fields are all known come back
+ *   in `residual` instead
  * - unknown controls (e.g. `$weird=42`) → silently ignored
  * - malformed query → `{ filters: {}, sorters: [], searchTerm: "" }`
  *
@@ -315,13 +360,14 @@ export function urlQueryStringToState(
       filterKnown = filtersGate;
     }
   }
-  const unsupported: UnsupportedFilter[] = [];
-  const filters: FieldFilters =
+  const decomposed =
     filtersGate === "none"
-      ? {}
-      : uniqueryFilterToFieldFilters(parsed.filter, filterKnown, (issue) =>
-          unsupported.push(issue),
-        );
+      ? null
+      : decomposeUniqueryFilter(parsed.filter, {
+          knownFields: filterKnown,
+          carry: opts.sync?.residual !== false,
+        });
+  const filters: FieldFilters = decomposed?.filters ?? {};
 
   const sorters: SortControl[] = [];
   if (sortersGate !== "none") {
@@ -341,7 +387,8 @@ export function urlQueryStringToState(
   const searchTerm = !searchOff && typeof $search === "string" ? $search : "";
 
   const out: UrlQueryStateSnapshot = { filters, sorters, searchTerm };
-  if (unsupported.length > 0) out.unsupported = unsupported;
+  if (decomposed?.unsupported.length) out.unsupported = decomposed.unsupported;
+  if (decomposed?.residual.length) out.residual = decomposed.residual;
 
   if (opts.sync?.snapshot !== false && parsed.controls && URL_SNAPSHOT_KEY in parsed.controls) {
     out.snapshot = true;

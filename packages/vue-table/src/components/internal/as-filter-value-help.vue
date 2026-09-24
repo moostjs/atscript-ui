@@ -169,7 +169,9 @@ const hasFilterableFields = computed(
 const totalCount = computed(() => innerState?.totalCount.value ?? 0);
 
 const hasActiveFilters = computed(() =>
-  innerState ? filledFilterCount(innerState.filters.value) > 0 : false,
+  innerState
+    ? filledFilterCount(innerState.filters.value) > 0 || innerState.residualFilters.value.length > 0
+    : false,
 );
 
 function clearAllFilters() {

@@ -74,7 +74,7 @@ afterEach(() => {
 });
 
 function mountWithPreset(component: unknown, preset: PresetSurface) {
-  const state = { preset } as unknown as ReactiveTableState;
+  const state = { preset, residualFilters: shallowRef([]) } as unknown as ReactiveTableState;
   const Host = defineComponent({
     setup() {
       provideTableContext({ state, client: stubClient(), controls: {} });

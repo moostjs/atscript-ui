@@ -1,4 +1,5 @@
 import type { ColumnDef, PaginationControl, SortControl } from "@atscript/ui";
+import type { FilterExpr } from "@uniqu/core";
 import {
   type AspectMask,
   type AsPresetEntryRow,
@@ -53,6 +54,12 @@ export interface CreatePresetStateOptions {
   columnWidths: Ref<ColumnWidthsMap>;
   filterFields: ShallowRef<string[]>;
   filters: ShallowRef<FieldFilters>;
+  /**
+   * Residual filter conditions. Not a preset aspect — never captured — but a
+   * preset that owns `filterOps` defines the whole filter population, so
+   * applying it clears them, and they keep the view dirty. Since 0.1.140.
+   */
+  residualFilters?: ShallowRef<FilterExpr[]>;
   sorters: ShallowRef<SortControl[]>;
   pagination: Ref<PaginationControl>;
   allColumns: ShallowRef<ColumnDef[]>;
@@ -311,6 +318,9 @@ export function createPresetState(opts: CreatePresetStateOptions): {
       apply(o, value, isSystem) {
         if (!value && !isSystem) return;
         o.filters.value = value ? { ...(value as FieldFilters) } : {};
+        // The preset's filters are the whole population: residual conditions
+        // (which a preset cannot store) go with the filters they refined.
+        if (o.residualFilters?.value.length) o.residualFilters.value = [];
       },
       expandDefault: () => ({}),
     },
@@ -461,7 +471,13 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     return wire ? fromWireSnapshot(wire as Parameters<typeof fromWireSnapshot>[0]) : {};
   });
 
-  const isDirty = computed(() => isDirtyAgainst(activeSnapshot.value, captureSnapshot()));
+  // A residual condition is never saved, so while one is active the view
+  // differs from any preset that owns the applied filters.
+  const isDirty = computed(
+    () =>
+      isDirtyAgainst(activeSnapshot.value, captureSnapshot()) ||
+      (activeSnapshot.value.filterOps !== undefined && !!opts.residualFilters?.value.length),
+  );
 
   function requirePresets(): UsePresetsReturn {
     if (!opts.presetsHandle) {

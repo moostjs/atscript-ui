@@ -3,6 +3,7 @@ import type { FieldFilters, FilterCondition, FilterConditionType } from "./filte
 import { unescapeRegex } from "./escape-regex";
 import { isExclusionType } from "./filters-to-uniquery";
 import { DEV } from "../utils/dev";
+import { buildUrl } from "@uniqu/url/builder";
 
 /**
  * Why part of a Uniquery filter has no `FieldFilters` equivalent.
@@ -121,8 +122,17 @@ const RANGE_OPS: Record<string, FilterConditionType> = {
   $lte: "lte",
 };
 
-/** Field paths an expression references, deduped, in order of appearance. */
-function fieldsOf(expr: unknown, out: string[] = []): string[] {
+/**
+ * Field paths a Uniquery filter expression references, deduped, in order of
+ * appearance (logical operators are walked, operator keys skipped).
+ *
+ * @internal Exported for `@atscript/vue-table`.
+ */
+export function filterExprFields(expr: unknown): string[] {
+  return fieldsOf(expr, []);
+}
+
+function fieldsOf(expr: unknown, out: string[]): string[] {
   if (Array.isArray(expr)) {
     for (const child of expr) fieldsOf(child, out);
     return out;
@@ -136,7 +146,7 @@ function fieldsOf(expr: unknown, out: string[] = []): string[] {
 }
 
 function unsupported(reason: UnsupportedFilterReason, expr: unknown): UnsupportedFilter {
-  const fields = fieldsOf(expr);
+  const fields = fieldsOf(expr, []);
   // Spanning fields is the root cause whatever else is wrong with the piece.
   return { reason: fields.length > 1 ? "cross-field" : reason, expr: expr as FilterExpr, fields };
 }
@@ -211,7 +221,7 @@ const one = (cond: FilterCondition | null): FilterCondition[] | null => (cond ? 
  * (see {@link addTerms}). `null` means no condition type expresses the
  * operator / operand.
  */
-function decodeOperator(op: string, v: unknown): FilterCondition[] | null {
+export function decodeOperator(op: string, v: unknown): FilterCondition[] | null {
   if (op in RANGE_OPS) return one(isPrimitive(v) ? { type: RANGE_OPS[op], value: [v] } : null);
   switch (op) {
     case "$eq":
@@ -309,6 +319,10 @@ function invert(cond: FilterCondition): FilterCondition | null {
  * anything else would invert into an OR of ANDs, which the model cannot hold.
  */
 function collectNot(child: unknown, out: Collected): void {
+  // `!!p ≡ p` — the shape `mergeFilters` wraps a colliding clause in.
+  if (isPlainObject(child) && Object.keys(child).length === 1 && "$not" in child) {
+    return collect(child.$not, out);
+  }
   const expr = { $not: child } as FilterExpr;
   const b = classifyBranch(child);
   if (b && !("reason" in b) && (b.terms.length === 1 || b.terms.every(isNegative))) {
@@ -366,35 +380,52 @@ function warnUnsupported(issue: UnsupportedFilter): void {
   );
 }
 
+/** Options for {@link decomposeUniqueryFilter}. @since 0.1.140 */
+export interface DecomposeUniqueryFilterOptions {
+  /**
+   * Field paths the table knows. Pieces on fields outside it are ignored
+   * silently; a piece mixing known and unknown fields is reported, never
+   * carried. Omit to accept every field.
+   */
+  knownFields?: Iterable<string>;
+  /**
+   * Keep left-out pieces whose fields are all known as `residual` instead of
+   * reporting them. Default `false` — the 0.1.139 split. See
+   * [Custom filter conditions](https://ui.atscript.dev/tables/filtering#custom-filter-conditions).
+   */
+  carry?: boolean;
+}
+
+/** Result of {@link decomposeUniqueryFilter}. @since 0.1.140 */
+export interface DecomposedUniqueryFilter {
+  /** The part field filters express exactly. */
+  filters: FieldFilters;
+  /** Carried pieces — AND-ed conditions, deduped, canonical order. `[]` unless `carry` is on. */
+  residual: FilterExpr[];
+  /** Pieces left out and lost — the result is broader by exactly these. */
+  unsupported: UnsupportedFilter[];
+}
+
 /**
- * Convert a Uniquery `FilterExpr` back into the UI's `FieldFilters` shape.
+ * Split a Uniquery `FilterExpr` into what the table's field-filter model
+ * holds exactly (`filters`), what it cannot hold but carries as residual
+ * conditions (`residual`, with `carry`), and what it leaves out
+ * (`unsupported`). Nothing is approximated: `filters AND residual` selects
+ * `expr` minus the `unsupported` pieces and pieces on fields outside
+ * `knownFields`.
  *
- * Inverse of `filtersToUniqueryFilter`, and exact for everything that encoder
- * produces. For any other input, each AND-ed piece is either converted exactly
- * or left out whole and reported — never approximated:
+ * Never throws, never warns — the caller decides how to report.
  *
- * - `$in` becomes equality conditions on the field, `$nin` inequality ones.
- * - A same-field `$or` becomes that field's OR'd conditions.
- * - A `$not` that inverts equality / emptiness becomes the inverse conditions.
- * - Fields next to `$and` / `$or` / `$not` in one object are all kept.
- * - Anything else (see {@link UnsupportedFilterReason}) is left out. Leaving
- *   an AND-ed piece out only ever widens the match, so the result selects a
- *   superset of `expr`. Each left-out piece goes to `onUnsupportedFilter`, or
- *   to a dev-mode `console.warn` when no handler is given.
- *
- * Conditions on fields outside `knownFields` (when provided) are ignored
- * silently: they are not this table's (a host page flag, a stale column). A
- * piece that mixes known and unknown fields is reported.
- *
- * Returns `{}` for an empty/missing expression. Never throws.
+ * @since 0.1.140
  */
-export function uniqueryFilterToFieldFilters(
+export function decomposeUniqueryFilter(
   expr: FilterExpr | undefined,
-  knownFields?: Iterable<string> | Set<string>,
-  onUnsupportedFilter: (issue: UnsupportedFilter) => void = warnUnsupported,
-): FieldFilters {
-  const acc: FieldFilters = {};
-  if (!expr) return acc;
+  opts: DecomposeUniqueryFilterOptions = {},
+): DecomposedUniqueryFilter {
+  const filters: FieldFilters = {};
+  const result: DecomposedUniqueryFilter = { filters, residual: [], unsupported: [] };
+  if (!expr) return result;
+  const knownFields = opts.knownFields;
   const known =
     knownFields == null ? null : knownFields instanceof Set ? knownFields : new Set(knownFields);
   const isKnown = (field: string) => known === null || known.has(field);
@@ -409,24 +440,118 @@ export function uniqueryFilterToFieldFilters(
     out.issues = [{ reason: "operator", expr, fields: [] }];
   }
 
-  // The first positive group per field is kept; a later one would be AND'd
-  // onto it, which the model cannot hold (it ORs a field's positives).
-  const positives = new Map<string, FilterCondition[]>();
+  // Terms land in order; a field's first positive group is kept (the model
+  // ORs a field's positives, so a second one AND'd onto it cannot join it).
+  const positives = new Map<string, Term[]>();
   for (const term of out.terms) {
     if (!isKnown(term.field)) continue;
-    const list = (acc[term.field] ??= []);
-    const kept = positives.get(term.field);
-    if (isNegative(term) || !kept) {
-      if (!isNegative(term)) positives.set(term.field, term.conds);
+    const list = (filters[term.field] ??= []);
+    if (isNegative(term)) {
       list.push(...term.conds);
-    } else if (!sameConds(kept, term.conds)) {
-      // `a=1 AND a=1` is not a conjunction worth reporting.
-      out.issues.push({ reason: "conjunction", expr: term.expr, fields: [term.field] });
+      continue;
+    }
+    const groups = positives.get(term.field);
+    if (!groups) {
+      positives.set(term.field, [term]);
+      list.push(...term.conds);
+    } else if (!groups.some((g) => sameConds(g.conds, term.conds))) {
+      // `a=1 AND a=1` is one group, not a conjunction.
+      groups.push(term);
+    }
+  }
+
+  const carried: FilterExpr[] = [];
+  for (const [field, groups] of positives) {
+    if (groups.length < 2) continue;
+    // Carrying: none of the groups stays a field filter. Which one would be
+    // "first" is not stable — `mergeFilters` wraps a repeated same-field
+    // clause in `$not: { $not }` (servers on older @uniqu/url parsers would
+    // collapse it otherwise), and the parser orders that logical node ahead
+    // of plain comparisons, so a round trip would swap pill and residual.
+    const leftOut = opts.carry ? groups : groups.slice(1);
+    if (opts.carry) {
+      const kept = new Set(groups[0].conds);
+      const rest = filters[field].filter((c) => !kept.has(c));
+      if (rest.length > 0) filters[field] = rest;
+      else delete filters[field];
+    }
+    for (const term of leftOut) {
+      out.issues.push({ reason: "conjunction", expr: term.expr, fields: [field] });
     }
   }
 
   for (const issue of out.issues) {
-    if (issue.fields.length === 0 || issue.fields.some(isKnown)) onUnsupportedFilter(issue);
+    const fields = issue.fields;
+    if (fields.length > 0 && !fields.some(isKnown)) continue;
+    if (opts.carry && fields.length > 0 && fields.every(isKnown)) carried.push(issue.expr);
+    else result.unsupported.push(issue);
   }
-  return acc;
+  result.residual = normalizeResidualFilters(carried);
+  return result;
+}
+
+/**
+ * Canonical identity of a filter expression — its `@uniqu/url` spelling.
+ * Two expressions with the same key select the same rows.
+ *
+ * @since 0.1.140
+ */
+export function filterExprKey(expr: FilterExpr): string {
+  try {
+    return buildUrl({ filter: expr });
+  } catch {
+    return JSON.stringify(expr) ?? "";
+  }
+}
+
+/**
+ * A residual-condition list with empty expressions and duplicates (by
+ * {@link filterExprKey}) dropped, sorted by key. Sorted, not first-appearance:
+ * the URL parser moves \`$not\`-wrapped clauses (how \`mergeFilters\` spells
+ * a repeated same-field clause) ahead of plain ones, so appearance order would
+ * flip on every round trip.
+ *
+ * @internal Exported for `@atscript/vue-table`.
+ */
+export function normalizeResidualFilters(exprs: readonly FilterExpr[]): FilterExpr[] {
+  const byKey = new Map<string, FilterExpr>();
+  for (const expr of exprs) {
+    if (!isPlainObject(expr)) continue;
+    const key = filterExprKey(expr);
+    if (key && !byKey.has(key)) byKey.set(key, expr);
+  }
+  return [...byKey.keys()].toSorted().map((key) => byKey.get(key)!);
+}
+
+/**
+ * Convert a Uniquery `FilterExpr` back into the UI's `FieldFilters` shape.
+ *
+ * Inverse of `filtersToUniqueryFilter`, and exact for everything that encoder
+ * produces. For any other input, each AND-ed piece is either converted exactly
+ * or left out whole and reported — never approximated:
+ *
+ * - `$in` becomes equality conditions on the field, `$nin` inequality ones.
+ * - A same-field `$or` becomes that field's OR'd conditions.
+ * - A `$not` that inverts equality / emptiness becomes the inverse conditions.
+ * - Fields next to `$and` / `$or` / `$not` in one object are all kept.
+ * - Anything else (see {@link UnsupportedFilterReason}) is left out. Leaving
+ *   an AND-ed piece out only ever widens the match, so the result selects a
+ *   superset of `expr`. Each left-out piece goes to `onUnsupportedFilter`, or
+ *   to a dev-mode `console.warn` when no handler is given. To keep those
+ *   pieces instead, use {@link decomposeUniqueryFilter} with `carry`.
+ *
+ * Conditions on fields outside `knownFields` (when provided) are ignored
+ * silently: they are not this table's (a host page flag, a stale column). A
+ * piece that mixes known and unknown fields is reported.
+ *
+ * Returns `{}` for an empty/missing expression. Never throws.
+ */
+export function uniqueryFilterToFieldFilters(
+  expr: FilterExpr | undefined,
+  knownFields?: Iterable<string> | Set<string>,
+  onUnsupportedFilter: (issue: UnsupportedFilter) => void = warnUnsupported,
+): FieldFilters {
+  const { filters, unsupported } = decomposeUniqueryFilter(expr, { knownFields });
+  for (const issue of unsupported) onUnsupportedFilter(issue);
+  return filters;
 }

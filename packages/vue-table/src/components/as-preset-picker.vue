@@ -440,6 +440,9 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
                 {{ ASPECT_LABELS[a] }}
               </label>
             </div>
+            <p v-if="state.residualFilters.value.length > 0" class="as-preset-picker-popover-note">
+              Custom filter conditions are not saved with presets.
+            </p>
             <template
               v-if="
                 state.preset.capabilities.value === null ||

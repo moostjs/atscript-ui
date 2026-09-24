@@ -1,8 +1,9 @@
 import type { FilterExpr } from "@uniqu/core";
 
 /**
- * AND-merge two filter expressions, producing a wire shape that survives
- * `@uniqu/url`'s `mergeConjunction` parser collapse.
+ * AND-merge filter expressions (`undefined` ones skipped), producing a wire
+ * shape that survives `@uniqu/url`'s `mergeConjunction` parser collapse.
+ * Variadic since 0.1.140.
  *
  * The collapse problem: when two `$and` siblings target the same field
  * with the same op (e.g. `{status: 'cancelled'}` AND `{status: 'shipped'}`),
@@ -15,13 +16,10 @@ import type { FilterExpr } from "@uniqu/core";
  * and `!!p ≡ p` is a semantic identity, so the server evaluator sees the
  * same AND. Non-colliding merges produce the canonical `$and` shape.
  */
-export function mergeFilters(
-  a: FilterExpr | undefined,
-  b: FilterExpr | undefined,
-): FilterExpr | undefined {
-  if (!a) return b;
-  if (!b) return a;
-  return makeParserSafeAnd([a, b]);
+export function mergeFilters(...exprs: (FilterExpr | undefined)[]): FilterExpr | undefined {
+  const list = exprs.filter((e): e is FilterExpr => !!e);
+  if (list.length <= 1) return list[0];
+  return makeParserSafeAnd(list);
 }
 
 /** Op-set for a field value: primitives are `$eq`, op-bags expose their keys. */

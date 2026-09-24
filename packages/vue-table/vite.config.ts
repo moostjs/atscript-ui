@@ -19,6 +19,7 @@ export default defineConfig({
         "@atscript/ui-table",
         "@atscript/db-client",
         "@uniqu/core",
+        "@uniqu/url",
       ],
     },
   },

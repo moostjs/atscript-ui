@@ -6,6 +6,7 @@ import {
   AsFilterDialog,
   AsFilterField,
   AsFilterInput,
+  AsResidualFilter,
   AsTableHeaderCell,
 } from "../components/defaults";
 
@@ -34,6 +35,7 @@ export function createDefaultControls(): TAsTableControls {
     filterDialog: AsFilterDialog,
     filterInput: AsFilterInput,
     filterField: AsFilterField,
+    residualFilter: AsResidualFilter,
     configDialog: AsConfigDialog,
     confirmDialog: AsConfirmDialog,
   };

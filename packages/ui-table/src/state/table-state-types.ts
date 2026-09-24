@@ -1,4 +1,5 @@
 import type { ColumnDef, PaginationControl, SortControl, TableDef } from "@atscript/ui";
+import type { FilterExpr } from "@uniqu/core";
 import type { ColumnWidthsMap } from "../columns/column-widths";
 import type { FilterCondition, FieldFilters } from "../filters/filter-types";
 
@@ -32,6 +33,13 @@ export interface TableStateData {
   filterFields: string[];
   /** Active field filters. */
   filters: FieldFilters;
+  /**
+   * Residual filter conditions — AND-ed Uniquery conjuncts the field-filter
+   * model cannot hold (a cross-field `$or`, a second range on one field, …),
+   * applied after `filters`. Restored from URLs, shown as "custom filter"
+   * chips. Since 0.1.140.
+   */
+  residualFilters: FilterExpr[];
   /** Active sorters. */
   sorters: SortControl[];
   /**
@@ -154,8 +162,18 @@ export interface TableStateMethods {
   loadingAt(absIdx: number): boolean;
   /** Returns the last error attached to the block covering `absIdx`, or null. */
   errorAt(absIdx: number): Error | null;
-  /** Clear all applied filters. Does not touch `filterFields`. */
+  /**
+   * Clear all applied filters — field filters and residual conditions. Does
+   * not touch `filterFields`.
+   */
   resetFilters(): void;
+  /**
+   * Replace the residual filter conditions (AND-ed Uniquery conjuncts).
+   * Empty expressions and duplicates are dropped. Since 0.1.140.
+   */
+  setResidualFilters(exprs: FilterExpr[]): void;
+  /** Remove the residual condition at `index`. Since 0.1.140. */
+  removeResidualFilter(index: number): void;
   /** Open the config dialog (optionally to a specific tab). */
   showConfigDialog(tab?: ConfigTab): void;
   /** Append a field to the displayed filter fields (deduped). */

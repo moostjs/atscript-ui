@@ -9,44 +9,61 @@ export default { inheritAttrs: false };
 import { computed } from "vue";
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from "reka-ui";
 import type { ColumnDef } from "@atscript/ui";
+import { filterExprKey } from "@atscript/ui-table";
 import { useTableContext } from "../composables/use-table-state";
 import { useTableComponent } from "../composables/use-table-component";
 import AsFilterField from "./defaults/as-filter-field.vue";
+import AsResidualFilter from "./defaults/as-residual-filter.vue";
 
-const props = defineProps<{
-  filterFields?: string[];
-  /**
-   * Hard cap on how many filter fields render inline. Deterministic and
-   * count-based — this component never measures the toolbar. Width-driven
-   * responsiveness stays with the host, which already knows its own
-   * breakpoints and can feed a shorter `filterFields` list (or a smaller
-   * `maxVisible`).
-   *
-   * Omitted (the default) → every field renders inline, exactly as before.
-   *
-   * @since 0.1.133
-   */
-  maxVisible?: number;
-  /**
-   * What happens to the fields past `maxVisible`:
-   * - `'popover'` (the default whenever `maxVisible` is set) — they move into
-   *   a popover behind a "More filters" trigger, which badges the number of
-   *   ACTIVE hidden filters so nothing silently narrows the table from
-   *   off-screen.
-   * - `'none'` — they are not rendered at all. Pick this only when the host
-   *   surfaces them elsewhere (e.g. its own filter dialog); an active filter
-   *   on a dropped field still applies to the query.
-   *
-   * Ignored when `maxVisible` is omitted.
-   *
-   * @since 0.1.133
-   */
-  overflow?: "popover" | "none";
-}>();
+const props = withDefaults(
+  defineProps<{
+    filterFields?: string[];
+    /**
+     * Hard cap on how many filter fields render inline. Deterministic and
+     * count-based — this component never measures the toolbar. Width-driven
+     * responsiveness stays with the host, which already knows its own
+     * breakpoints and can feed a shorter `filterFields` list (or a smaller
+     * `maxVisible`).
+     *
+     * Omitted (the default) → every field renders inline, exactly as before.
+     *
+     * @since 0.1.133
+     */
+    maxVisible?: number;
+    /**
+     * What happens to the fields past `maxVisible`:
+     * - `'popover'` (the default whenever `maxVisible` is set) — they move into
+     *   a popover behind a "More filters" trigger, which badges the number of
+     *   ACTIVE hidden filters so nothing silently narrows the table from
+     *   off-screen.
+     * - `'none'` — they are not rendered at all. Pick this only when the host
+     *   surfaces them elsewhere (e.g. its own filter dialog); an active filter
+     *   on a dropped field still applies to the query.
+     *
+     * Ignored when `maxVisible` is omitted.
+     *
+     * @since 0.1.133
+     */
+    overflow?: "popover" | "none";
+    /**
+     * Render the table's residual filter conditions (`state.residualFilters`)
+     * as "custom filter" chips after the fields. Default `true`. They always
+     * render inline — never moved into the overflow popover — because a hidden
+     * condition that narrows the table is exactly what they exist to show.
+     * Pass `false` to place them yourself (e.g. with `<AsResidualFilter>`).
+     *
+     * @since 0.1.140
+     */
+    residual?: boolean;
+  }>(),
+  // Vue casts an absent boolean prop to `false`; the chips are on by default.
+  { residual: true },
+);
 
 const { state } = useTableContext();
 // Static skin-slot resolution — `controls.filterField ?? AsFilterField`.
 const FilterField = useTableComponent("filterField", AsFilterField);
+const ResidualFilter = useTableComponent("residualFilter", AsResidualFilter);
 
 const columnMap = computed(() => {
   const tableDef = state.tableDef.value;
@@ -105,6 +122,16 @@ const activeOverflowCount = computed(() => {
     :column="col"
     v-bind="$attrs"
   />
+
+  <template v-if="props.residual">
+    <component
+      :is="ResidualFilter"
+      v-for="(expr, i) in state.residualFilters.value"
+      :key="filterExprKey(expr)"
+      :expr="expr"
+      :index="i"
+    />
+  </template>
 
   <PopoverRoot v-if="(props.overflow ?? 'popover') === 'popover' && split.overflow.length > 0">
     <PopoverTrigger class="as-filters-overflow-trigger" aria-label="More filters">

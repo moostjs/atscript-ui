@@ -292,3 +292,37 @@ describe("buildTableQuery", () => {
     expect(q.controls!.$actions).toBeUndefined();
   });
 });
+
+describe("buildTableQuery — residual filters", () => {
+  const OR = { $or: [{ a: 1 }, { b: 2 }] };
+
+  it("ANDs residual conditions after the field filters, inside forceFilters", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: { c: [{ type: "eq", value: [3] }] },
+      residualFilters: [OR],
+      forceFilters: { d: 4 },
+    });
+    expect(q.filter).toEqual({ $and: [{ d: 4 }, { c: 3 }, OR] });
+  });
+
+  it("keeps a colliding residual clause parser-safe", () => {
+    const q = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: { status: [{ type: "eq", value: ["A"] }] },
+      residualFilters: [{ status: "B" }],
+    });
+    expect(q.filter).toEqual({ $and: [{ status: "A" }, { $not: { $not: { status: "B" } } }] });
+  });
+
+  it("is unchanged without residual conditions", () => {
+    const base = {
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: { c: [{ type: "eq" as const, value: [3] }] },
+    };
+    expect(buildTableQuery({ ...base, residualFilters: [] })).toEqual(buildTableQuery(base));
+  });
+});

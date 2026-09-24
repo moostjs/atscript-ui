@@ -110,6 +110,23 @@ describe("ReactiveTableState — preset surface (no presetsHandle)", () => {
     expect(state.columnNames.value).toEqual(["name", "status"]);
   });
 
+  it("a residual condition keeps the view dirty and applying the preset clears it", () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("name"), mockColumn("status")],
+    });
+    state.preset.apply("sys:standard");
+    expect(state.preset.isDirty.value).toBe(false);
+
+    state.setResidualFilters([{ $or: [{ name: "a" }, { status: "b" }] }]);
+    expect(state.preset.isDirty.value).toBe(true);
+    // Never captured — presets cannot store it.
+    expect(state.preset.captureSnapshot()).not.toHaveProperty("residualFilters");
+
+    state.preset.resetActive();
+    expect(state.residualFilters.value).toEqual([]);
+    expect(state.preset.isDirty.value).toBe(false);
+  });
+
   it("isDirty defaults to false when no active preset is set", () => {
     const { state } = mountTableState();
     expect(state.preset.activeId.value).toBeNull();

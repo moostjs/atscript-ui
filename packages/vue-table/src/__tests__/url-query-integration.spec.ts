@@ -863,3 +863,26 @@ describe("applyUrlQuery — merge vs replace (history restoration)", () => {
     expect(query.filter).toEqual({ status: "active" });
   });
 });
+
+describe("applyUrlQuery — residual filter conditions", () => {
+  it("never carries a condition on a client-owned column; reports it instead", async () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("name")],
+      displayColumns: [{ key: "badge", label: "Badge" }],
+      queryOnMount: false,
+      onUrlQueryChange: () => {},
+    });
+    await nextTick();
+    // No `onUnsupportedFilter` wired → the report is the dev-mode warning.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      state.applyUrlQuery("(status=a^badge=x)&(status=b^name=y)&$snapshot");
+      await nextTick();
+      expect(state.residualFilters.value).toEqual([{ $or: [{ status: "b" }, { name: "y" }] }]);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).toContain("badge");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});

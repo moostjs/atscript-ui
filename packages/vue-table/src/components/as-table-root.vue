@@ -193,6 +193,11 @@ const emit = defineEmits<{
    * (cross-field OR, unknown operator, …) was left out, so the table shows a
    * broader result than the URL described. Once per piece, per restore.
    * Unbound → a dev-mode `console.warn` instead. Since 0.1.139.
+   *
+   * Since 0.1.140 a piece whose fields are all server-backed columns is kept
+   * as a residual filter condition (`state.residualFilters`, shown as a
+   * "custom filter" chip) and not reported — this event means "dropped".
+   * `urlQuerySync: { residual: false }` restores the 0.1.139 behaviour.
    */
   (e: "unsupported-filter", issue: UnsupportedFilter): void;
 }>();
@@ -432,6 +437,7 @@ defineExpose({ state, navBridge });
     :columns="state.columns.value"
     :filter-fields="state.filterFields.value"
     :filters="state.filters.value"
+    :residual-filters="state.residualFilters.value"
     :sorters="state.sorters.value"
     :results="state.results.value"
     :querying="state.querying.value"
@@ -455,6 +461,8 @@ defineExpose({ state, navBridge });
     :close-filter-dialog="state.closeFilterDialog"
     :set-field-filter="state.setFieldFilter"
     :remove-field-filter="state.removeFieldFilter"
+    :set-residual-filters="state.setResidualFilters"
+    :remove-residual-filter="state.removeResidualFilter"
     :add-filter-field="state.addFilterField"
     :remove-filter-field="state.removeFilterField"
     :actions="state.actions"

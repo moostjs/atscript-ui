@@ -6,11 +6,11 @@ catalog:
   "@aooth/arbac": ^0.1.63
   "@aooth/arbac-moost": ^0.1.63
   "@atscript/core": ^0.1.93
-  "@atscript/db": ^0.1.132
-  "@atscript/db-client": ^0.1.132
-  "@atscript/db-sql-tools": ^0.1.132
-  "@atscript/db-sqlite": ^0.1.132
-  "@atscript/moost-db": ^0.1.132
+  "@atscript/db": ^0.1.133
+  "@atscript/db-client": ^0.1.133
+  "@atscript/db-sql-tools": ^0.1.133
+  "@atscript/db-sqlite": ^0.1.133
+  "@atscript/moost-db": ^0.1.133
   "@atscript/moost-validator": ^0.1.93
   "@atscript/typescript": ^0.1.93
   "@iconify/utils": ^3.1.3
@@ -23,8 +23,8 @@ catalog:
   "@tanstack/vue-virtual": ^3.13.26
   "@tsdown/css": ^0.21.4
   "@types/node": ^24
-  "@uniqu/core": ^0.1.9
-  "@uniqu/url": ^0.1.9
+  "@uniqu/core": ^0.1.10
+  "@uniqu/url": ^0.1.10
   "@unocss/cli": ^66.7.0
   "@unocss/preset-icons": ^66.7.0
   "@unocss/reset": ^66.7.0

@@ -333,16 +333,18 @@ describe("<AsTableRoot> marker-less URLs overlay the boot baseline", () => {
 });
 
 describe("<AsTableRoot> unsupported URL filters", () => {
-  it("emits unsupported-filter for a cross-field OR and keeps the rest", async () => {
+  it("with residual sync off, emits unsupported-filter for a cross-field OR and keeps the rest", async () => {
     const onUnsupportedFilter = vi.fn();
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const { state } = mountWithBaseline("customer=acme&(status=a^id=2)&$snapshot", {
         onUnsupportedFilter,
+        urlQuerySync: { residual: false },
       });
       await settle();
 
       expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+      expect(state.residualFilters.value).toEqual([]);
       expect(onUnsupportedFilter).toHaveBeenCalledTimes(1);
       expect(onUnsupportedFilter.mock.calls[0][0]).toMatchObject({
         reason: "cross-field",
@@ -354,15 +356,146 @@ describe("<AsTableRoot> unsupported URL filters", () => {
     }
   });
 
-  it("warns in dev mode when nothing listens", async () => {
+  it("reports a piece that touches an unknown field (dev warning when nothing listens)", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      mountWithBaseline("(status=a^id=2)&$snapshot");
+      const { state } = mountWithBaseline("(status=a^ghost=2)&$snapshot");
       await settle();
+      expect(state.residualFilters.value).toEqual([]);
       expect(warn).toHaveBeenCalledTimes(1);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("[vue-table] URL filter left out"));
     } finally {
       warn.mockRestore();
     }
+  });
+});
+
+describe("<AsTableRoot> residual filter conditions", () => {
+  const OR = { $or: [{ status: "a" }, { id: 2 }] };
+
+  it("carries a cross-field OR as a residual condition — applied, not reported", async () => {
+    const onUnsupportedFilter = vi.fn();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const { state, pagesFn } = mountWithBaseline("customer=acme&(status=a^id=2)&$snapshot", {
+        onUnsupportedFilter,
+      });
+      await settle();
+
+      expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+      expect(state.residualFilters.value).toEqual([OR]);
+      expect(onUnsupportedFilter).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+      const [query] = pagesFn.mock.calls.at(-1) as [{ filter?: unknown }];
+      expect(query.filter).toEqual({ $and: [{ customer: "acme" }, OR] });
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it("writes it back into the URL and drops it on Back to a URL without it", async () => {
+    const { state, urlQuery, pagesFn } = mountWithBaseline("");
+    await settle();
+
+    state.setResidualFilters([OR]);
+    await flushPromises();
+    const withResidual = urlQuery.value;
+    expect(withResidual).toBe("status=active&(status=a^id=2)&$sort=-id&$snapshot");
+
+    state.removeResidualFilter(0);
+    await flushPromises();
+    const without = urlQuery.value;
+    expect(without).toBe("status=active&$sort=-id&$snapshot");
+
+    urlQuery.value = withResidual; // Back
+    await flushPromises();
+    expect(state.residualFilters.value).toEqual([OR]);
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["active"] }] });
+
+    urlQuery.value = without; // Forward
+    await flushPromises();
+    expect(state.residualFilters.value).toEqual([]);
+
+    await settle();
+    const [query] = pagesFn.mock.calls.at(-1) as [{ filter?: unknown }];
+    expect(query.filter).toEqual({ status: "active" });
+  });
+
+  it("does not echo its own URL into a second fetch", async () => {
+    const { state, pagesFn } = mountWithBaseline("");
+    await settle();
+    const before = pagesFn.mock.calls.length;
+
+    state.setResidualFilters([OR]);
+    await new Promise((r) => setTimeout(r, 600)); // past the filter debounce
+    await flushPromises();
+    expect(pagesFn.mock.calls.length).toBe(before + 1);
+  });
+
+  it("resetFilters clears field filters and residual conditions", async () => {
+    const { state, urlQuery } = mountWithBaseline("(status=a^id=2)&$snapshot");
+    await settle();
+    expect(state.residualFilters.value).toEqual([OR]);
+
+    state.resetFilters();
+    await flushPromises();
+    expect(state.filters.value).toEqual({});
+    expect(state.residualFilters.value).toEqual([]);
+    expect(urlQuery.value).toBe("$snapshot");
+  });
+
+  it("an overlay deep link owns every path it mentions, inside a residual too", async () => {
+    // Baseline: status=active. The link talks about `status` only inside its OR.
+    const { state } = mountWithBaseline("customer=acme&(status=a^id=2)");
+    await settle();
+
+    expect(state.filters.value).toEqual({ customer: [{ type: "eq", value: ["acme"] }] });
+    expect(state.residualFilters.value).toEqual([OR]);
+  });
+
+  it("an overlay deep link that does not mention it keeps a baseline residual", async () => {
+    const { state, urlQuery } = mountWithBaseline("");
+    await settle();
+    // An app-seeded condition present at boot is part of the baseline.
+    state.applyUrlQuery("(status=a^id=2)", { mode: "merge" });
+    await flushPromises();
+    expect(state.residualFilters.value).toEqual([OR]);
+
+    urlQuery.value = "customer=acme";
+    await flushPromises();
+    // Baseline had no residual — a merge starts from the baseline.
+    expect(state.residualFilters.value).toEqual([]);
+    expect(state.filters.value).toEqual({
+      status: [{ type: "eq", value: ["active"] }],
+      customer: [{ type: "eq", value: ["acme"] }],
+    });
+  });
+
+  it("applying a preset that owns the applied filters clears residual conditions", async () => {
+    const { state } = mountWithBaseline("(status=a^id=2)&$snapshot");
+    await settle();
+
+    state.preset.apply({ sorters: [] });
+    expect(state.residualFilters.value).toEqual([OR]);
+
+    state.preset.apply({ filterOps: { customer: [{ type: "eq", value: ["beta"] }] } });
+    expect(state.residualFilters.value).toEqual([]);
+  });
+
+  it("keeps a condition on a private field out of the URL and across URL restores", async () => {
+    const { state, urlQuery } = mountWithBaseline("", { urlQuerySync: { filters: ["status"] } });
+    await settle();
+
+    const PRIVATE = { $or: [{ status: "a" }, { customer: "x" }] };
+    const before = urlQuery.value;
+    state.setResidualFilters([PRIVATE]);
+    await flushPromises();
+    // Nothing the URL owns changed, so nothing is written.
+    expect(urlQuery.value).toBe(before);
+    expect(state.buildQuery().filter).toEqual({ $and: [{ status: "active" }, PRIVATE] });
+
+    urlQuery.value = "status=b&$snapshot";
+    await flushPromises();
+    expect(state.residualFilters.value).toEqual([PRIVATE]);
   });
 });

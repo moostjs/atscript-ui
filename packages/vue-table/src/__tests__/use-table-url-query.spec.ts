@@ -250,18 +250,20 @@ describe("useTableUrlQuery — operator-bearing keys", () => {
     expect(urlQuery.value).toBe("status=active&total>100&$skip=50");
   });
 
-  it("respects single-quoted string literals when splitting on `&`", () => {
-    // `&` inside `'...'` is part of the value per uniqu's syntax, not a separator.
+  it("keeps a value's `&` inside its segment — `buildUrl` percent-encodes it", () => {
+    // The bridge splits exactly like @uniqu/url's parser (paren-aware, not
+    // quote-aware); a raw `&` inside a quoted value never comes out of the
+    // builder, which writes `name='foo%26bar'`.
     const route = createMockRoute({});
     const router = createMockRouter(route);
     const urlQuery = useTableUrlQuery(route, router);
 
-    urlQuery.value = "name='foo&bar'&status=active";
+    urlQuery.value = "name='foo%26bar'&status=active";
 
     expect(router.replace).toHaveBeenCalledWith({
-      query: { name: "'foo&bar'", status: "active" },
+      query: { name: "'foo%26bar'", status: "active" },
     });
-    expect(urlQuery.value).toBe("name='foo&bar'&status=active");
+    expect(urlQuery.value).toBe("name='foo%26bar'&status=active");
   });
 
   it("respects backslash-escaped quotes inside string literals", () => {
@@ -284,6 +286,60 @@ describe("useTableUrlQuery — operator-bearing keys", () => {
     const urlQuery = useTableUrlQuery(route, router);
 
     expect(urlQuery.value).toBe("total>100&status=active");
+  });
+});
+
+describe("useTableUrlQuery — grouped filters", () => {
+  it("keeps a parenthesized group with an inner `&` as one key", () => {
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value =
+      "customerId=2&((status=shipped&total>500)^(status=pending&total<=50))&$snapshot";
+
+    expect(router.replace).toHaveBeenCalledWith({
+      query: {
+        customerId: "2",
+        "((status=shipped&total>500)^(status=pending&total<=50))": null,
+        $snapshot: null,
+      },
+    });
+    expect(urlQuery.value).toBe(
+      "customerId=2&((status=shipped&total>500)^(status=pending&total<=50))&$snapshot",
+    );
+  });
+
+  it("does not lose a fragment that repeats inside two groups", () => {
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "(a=1&m=1&b=1)^(c=1&m=1&d=1)&$snapshot";
+    expect(urlQuery.value).toBe("(a=1&m=1&b=1)^(c=1&m=1&d=1)&$snapshot");
+  });
+
+  it("does not count a value's paren — `buildUrl` percent-encodes it", () => {
+    const route = createMockRoute({});
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "name='a%28b'&status=active";
+    expect(router.replace).toHaveBeenCalledWith({
+      query: { name: "'a%28b'", status: "active" },
+    });
+  });
+
+  it("replaces a deep link's differently-spelled group instead of keeping it as foreign", () => {
+    // A hand-written link, spelled differently from what the table writes back.
+    const route = createMockRoute({ "(path=FAST&raisedAt=1)^(path=SLOW)": null, tab: "x" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router);
+
+    urlQuery.value = "(path=SLOW^(path=FAST&raisedAt=1))&$snapshot";
+    expect(router.replace).toHaveBeenCalledWith({
+      query: { "(path=SLOW^(path=FAST&raisedAt=1))": null, $snapshot: null, tab: "x" },
+    });
   });
 });
 

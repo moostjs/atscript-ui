@@ -6,7 +6,7 @@ import type {
   TDbActionProcessor,
   TDbDeleteResult,
 } from "@atscript/db-client";
-import type { Uniquery } from "@uniqu/core";
+import type { FilterExpr, Uniquery } from "@uniqu/core";
 
 /** UI-side sentinel for the synthesised row-delete processor. */
 export const REMOVE_PROCESSOR = "__remove";
@@ -380,6 +380,11 @@ export interface TAsTableControls {
   filterDialog?: Component;
   filterField?: Component;
   filterValueHelp?: Component;
+  /**
+   * One residual filter condition's chip in `<AsFilters>` — receives
+   * `expr` and `index`. Default `AsResidualFilter`. Since 0.1.140.
+   */
+  residualFilter?: Component;
 
   // Config
   configDialog?: Component;
@@ -464,6 +469,15 @@ export interface ReactiveTableState extends TableStateMethods {
   columnWidths: Ref<ColumnWidthsMap>;
   filterFields: ShallowRef<string[]>;
   filters: ShallowRef<FieldFilters>;
+  /**
+   * Residual filter conditions — AND-ed Uniquery conjuncts the field-filter
+   * model cannot hold (a cross-field `$or`, a second range on one field, …).
+   * AND'd after `filters` into every query, carried through the URL, shown
+   * as "custom filter" chips by `<AsFilters>`. Replace wholesale (or use
+   * `setResidualFilters` / `removeResidualFilter`); `resetFilters()`
+   * clears them. Not saved in presets. Since 0.1.140.
+   */
+  residualFilters: ShallowRef<FilterExpr[]>;
   sorters: ShallowRef<SortControl[]>;
   results: ShallowRef<Record<string, unknown>[]>;
   /** Absolute index where `results[0]` sits. */
@@ -713,6 +727,11 @@ export interface ReactiveTableState extends TableStateMethods {
    *   the baseline.
    *
    * `opts.mode` overrides the marker either way. Since 0.1.139.
+   *
+   * Filter pieces the field-filter model cannot hold are restored as
+   * `residualFilters` (since 0.1.140). A URL owns every path it mentions —
+   * in a field filter or inside such a condition — so on merge the
+   * baseline's filters and residual conditions on those paths give way.
    */
   applyUrlQuery: (urlString: string, opts?: ApplyUrlQueryOptions) => void;
 

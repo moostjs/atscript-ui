@@ -23,6 +23,12 @@ export interface BuildTableQueryOptions {
   ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
+  /**
+   * Residual filter conditions — AND-ed conjuncts the field-filter model
+   * cannot hold (a cross-field `$or`, a second range on one field, …). AND'd
+   * after `filters`. Since 0.1.140.
+   */
+  residualFilters?: FilterExpr[];
   /** Always-applied Uniquery filter (AND'd with user filters). */
   forceFilters?: FilterExpr;
   /** Full-text search term. */
@@ -42,12 +48,16 @@ export interface BuildTableQueryOptions {
  * Build a Uniquery object from table UI state.
  *
  * Pure function — no framework dependencies.
- * Combines user filters with force filters, merges sorters,
+ * Combines user filters (field filters, then residual conditions) with force
+ * filters, merges sorters,
  * projects visible columns, and applies pagination.
  */
 export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
-  const userFilter = filtersToUniqueryFilter(opts.filters);
-  const filter = mergeFilters(opts.forceFilters, userFilter);
+  const filter = mergeFilters(
+    opts.forceFilters,
+    filtersToUniqueryFilter(opts.filters),
+    ...(opts.residualFilters ?? []),
+  );
 
   const userSorters = opts.ignoreSorters ? [] : opts.sorters;
   const sorters = opts.forceSorters?.length

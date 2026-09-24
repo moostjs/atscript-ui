@@ -1,5 +1,6 @@
 import { computed, type WritableComputedRef } from "vue";
 import { urlQueryConsumesKey } from "@atscript/ui-table";
+import { splitUrlSegments } from "@uniqu/url";
 import type { Router, RouteLocationNormalizedLoaded } from "vue-router";
 
 /** Options for {@link useTableUrlQuery}. */
@@ -22,37 +23,6 @@ export interface UseTableUrlQueryOptions {
    * so two tables can share one route. Since 0.1.133.
    */
   prefix?: string;
-}
-
-/**
- * Split a uniqu URL string on top-level `&` separators, respecting
- * single-quoted string literals (`name='foo&bar'` is one segment, not two).
- * Within a quote, `\'` escapes a literal apostrophe per @uniqu/url's encoder.
- * Empty segments (from leading/trailing/double `&`) are dropped.
- */
-function splitSegments(urlString: string): string[] {
-  if (!urlString) return [];
-  const out: string[] = [];
-  let start = 0;
-  let inQuote = false;
-  const push = (end: number) => {
-    if (end > start) out.push(urlString.slice(start, end));
-  };
-  for (let i = 0; i < urlString.length; i++) {
-    const c = urlString[i];
-    if (c === "\\" && inQuote) {
-      i++;
-      continue;
-    }
-    if (c === "'") {
-      inQuote = !inQuote;
-    } else if (c === "&" && !inQuote) {
-      push(i);
-      start = i + 1;
-    }
-  }
-  push(urlString.length);
-  return out;
 }
 
 const KEY_CHAR = /[A-Za-z0-9_.$-]/;
@@ -149,7 +119,11 @@ export function useTableUrlQuery(
     },
     set: (urlString) => {
       const serialized = new Map<string, string | null>();
-      for (const segment of splitSegments(urlString)) {
+      // The parser's own top-level split: an `&` inside a group is not a
+      // separator. The table's string comes from `buildUrl`, which
+      // percent-encodes `&` and parens inside values.
+      for (const segment of splitUrlSegments(urlString)) {
+        if (!segment) continue;
         const eqIdx = findCleanEq(segment);
         const key = eqIdx > 0 ? `${prefix}${segment.slice(0, eqIdx)}` : `${prefix}${segment}`;
         serialized.set(key, eqIdx > 0 ? segment.slice(eqIdx + 1) : null);

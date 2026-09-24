@@ -117,6 +117,9 @@ export const asPresetPickerShortcuts = defineShortcuts({
   "as-preset-picker-popover-label": "text-body font-600 text-current",
   "as-preset-picker-popover-input": "layer-0 i8-bare h-fingertip-m px-$s rounded-r1",
   "as-preset-picker-popover-aspects": "flex flex-col gap-$s",
+  // One-line caveat under the aspect list (e.g. residual filter conditions
+  // are not part of any aspect, so they are not saved).
+  "as-preset-picker-popover-note": "m-0 text-callout text-current/60",
   // Aspect / public-toggle row. Icon color tracks the checkbox state —
   // primary when the input next to it is checked, body/40 when not — so
   // the row's "this aspect ships" status reads at a glance.

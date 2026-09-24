@@ -24,11 +24,16 @@ import {
   cellAsString,
   debounce,
   DEV,
+  arraysEqual,
+  filterExprFields,
+  filterExprKey,
   isFilled,
   mergeDisplayColumns,
   mergeSorters,
+  normalizeResidualFilters,
   reconcileColumnWidthDefaults,
   gateOwns,
+  residualGateOwns,
   resolveAspectGate,
   sameColumnSet,
   sortRowsLocally,
@@ -212,6 +217,10 @@ export interface TableQueryOptions {
    * of the restored state — the table then shows a broader result than the
    * link described. When omitted, each one is reported with a dev-mode
    * `console.warn`. Since 0.1.139.
+   *
+   * Since 0.1.140 such pieces are carried as `residualFilters` instead
+   * whenever every field they reference is a server-backed column (and
+   * `urlQuerySync.residual` is not `false`); only the rest are reported.
    */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
 }
@@ -364,6 +373,11 @@ const cloneConditions = (conds: FilterCondition[]): FilterCondition[] =>
   conds.map((c) => ({ type: c.type, value: [...c.value] }));
 const cloneSorter = (s: SortControl): SortControl => ({ field: s.field, direction: s.direction });
 
+/** Same residual conditions, in the same (canonical) order. */
+function sameResidualFilters(a: FilterExpr[], b: FilterExpr[]): boolean {
+  return arraysEqual(a.map(filterExprKey), b.map(filterExprKey));
+}
+
 /**
  * The report for a restored URL's filter piece when nobody handles it
  * (`onUnsupportedFilter` / `@unsupported-filter`): a dev-mode warning.
@@ -424,6 +438,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   const rowActionsPolicy = computed(() => compileRowActionsConfig(rowActions.value));
 
   const filters = shallowRef<FieldFilters>({});
+  const residualFilters = shallowRef<FilterExpr[]>([]);
   const results = shallowRef<Row[]>([]);
   const resultsStart = ref(0);
   const querying = ref(false);
@@ -482,6 +497,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     columnWidths,
     filterFields,
     filters,
+    residualFilters,
     sorters,
     pagination,
     allColumns,
@@ -603,6 +619,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       sorters: splitSorters.value.server,
       forceSorters: queryOpts?.forceSorters,
       filters: filters.value,
+      residualFilters: residualFilters.value,
       forceFilters: queryOpts?.forceFilters,
       search: searchTerm.value || undefined,
       ignoreSorters: sortersIgnored(),
@@ -897,6 +914,11 @@ export function createTableState(opts: CreateTableStateOptions): {
     };
   }
 
+  function setResidualFilters(exprs: FilterExpr[]): void {
+    const next = normalizeResidualFilters(exprs);
+    if (!sameResidualFilters(next, residualFilters.value)) residualFilters.value = next;
+  }
+
   // ── Public state object ─────────────────────────────────────────────────
   const state: ReactiveTableState = {
     tableDef,
@@ -907,6 +929,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     columnWidths,
     filterFields,
     filters,
+    residualFilters,
     sorters,
     results,
     resultsStart,
@@ -983,8 +1006,14 @@ export function createTableState(opts: CreateTableStateOptions): {
     loadingAt,
     errorAt,
     resetFilters() {
-      if (Object.keys(filters.value).length === 0) return;
-      filters.value = {};
+      if (Object.keys(filters.value).length > 0) filters.value = {};
+      if (residualFilters.value.length > 0) residualFilters.value = [];
+    },
+    setResidualFilters,
+    removeResidualFilter(index: number) {
+      const list = residualFilters.value;
+      if (index < 0 || index >= list.length) return;
+      residualFilters.value = list.filter((_, i) => i !== index);
     },
     showConfigDialog(tab?: ConfigTab) {
       configTab.value = tab ?? "columns";
@@ -1044,6 +1073,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     return stateToUrlQueryString(
       {
         filters: filters.value,
+        residualFilters: residualFilters.value,
         sorters: sorters.value,
         page: pagination.value.page,
         itemsPerPage: pagination.value.itemsPerPage,
@@ -1090,6 +1120,10 @@ export function createTableState(opts: CreateTableStateOptions): {
 
   const filtersGate = resolveAspectGate(urlQuerySync?.filters);
   const sortersGate = resolveAspectGate(urlQuerySync?.sorters);
+  // Residual conditions the URL owns — written and restored with it. The rest
+  // (a private field inside, or residual sync off) never leave the table.
+  const residualSync = urlQuerySync?.residual !== false;
+  const urlOwnsResidual = (expr: FilterExpr) => residualSync && residualGateOwns(filtersGate, expr);
 
   // What a marker-less URL overlays: the URL-owned filters and sorters the
   // table booted with (preset, persisted drafts, props), captured once before
@@ -1097,7 +1131,11 @@ export function createTableState(opts: CreateTableStateOptions): {
   // current state — so Back to an app deep link restores the link as it was
   // opened, not the link plus whatever the user changed since. A preset the
   // user switches to later does not move it.
-  let urlBaseline: { filters: FieldFilters; sorters: SortControl[] } | null = null;
+  let urlBaseline: {
+    filters: FieldFilters;
+    residual: FilterExpr[];
+    sorters: SortControl[];
+  } | null = null;
   function captureUrlBaseline(): void {
     if (urlBaseline) return;
     const owned: FieldFilters = {};
@@ -1107,6 +1145,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     }
     urlBaseline = {
       filters: owned,
+      residual: residualFilters.value.filter(urlOwnsResidual),
       sorters: sorters.value.filter((s) => gateOwns(sortersGate, s.field)).map(cloneSorter),
     };
   }
@@ -1137,13 +1176,21 @@ export function createTableState(opts: CreateTableStateOptions): {
     captureUrlBaseline();
     if (urlsEquivalent(urlString, lastEmittedUrl)) return;
     const cols = allColumns.value;
+    // Client-owned columns are not the URL's: no server query can filter on
+    // them, so a piece that names one is left out and reported.
     const parsed = urlQueryStringToState(urlString, {
-      knownFields: cols.length > 0 ? cols.map((c) => c.path) : undefined,
+      knownFields: cols.length > 0 ? cols.filter((c) => !c.local).map((c) => c.path) : undefined,
       sync: urlQuerySync,
     });
+    // Pieces field filters cannot hold arrive as `residual`; the rest of the
+    // left-out ones are lost — the table shows more rows than the link says.
     for (const issue of parsed.unsupported ?? []) {
       (queryOpts?.onUnsupportedFilter ?? warnUnsupportedFilter)(issue);
     }
+    const urlResidual = parsed.residual ?? [];
+    // A URL owns every path it mentions, in a field filter or inside a
+    // residual condition — on overlay, the baseline's say on those goes.
+    const residualPaths = new Set(urlResidual.flatMap((expr) => filterExprFields(expr)));
     // A `$snapshot` URL is complete: it replaces. Any other URL overlays the
     // baseline. An explicit `mode` overrides the marker either way.
     const replace = opts?.mode ? opts.mode === "replace" : parsed.snapshot === true;
@@ -1168,13 +1215,32 @@ export function createTableState(opts: CreateTableStateOptions): {
       // Current keys first, so a key that stays keeps its slot — the order of
       // filter keys is observable (it sets the `$and` clause order of the
       // built query and of the emitted URL).
+      const fromBase = (path: string) => !!base?.filters[path] && !residualPaths.has(path);
       for (const path in filters.value) {
         if (!gateOwns(filtersGate, path)) next[path] = filters.value[path];
-        else if (base?.filters[path]) next[path] = cloneConditions(base.filters[path]);
+        else if (fromBase(path)) next[path] = cloneConditions(base!.filters[path]);
       }
-      if (base) for (const path in base.filters) next[path] ??= cloneConditions(base.filters[path]);
+      if (base) {
+        for (const path in base.filters) {
+          if (fromBase(path)) next[path] ??= cloneConditions(base.filters[path]);
+        }
+      }
       for (const path in parsed.filters) next[path] = parsed.filters[path];
       filters.value = next;
+    }
+
+    // Residual conditions: the private ones stay, the baseline's (on overlay,
+    // minus any on a path the URL mentions) and the URL's are laid on top.
+    if (residualSync) {
+      const mentioned = new Set([...Object.keys(parsed.filters), ...residualPaths]);
+      const next = residualFilters.value.filter((expr) => !urlOwnsResidual(expr));
+      if (base) {
+        for (const expr of base.residual) {
+          if (!filterExprFields(expr).some((f) => mentioned.has(f))) next.push(expr);
+        }
+      }
+      next.push(...urlResidual);
+      setResidualFilters(next);
     }
 
     // Same, keyed on `SortControl.field`. Appending the URL's sorters last
@@ -1251,7 +1317,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     if (queryDetected) scheduleQuery();
   }, FILTER_DEBOUNCE_MS);
 
-  watch([() => filters.value, () => searchTerm.value], () => {
+  watch([() => filters.value, () => residualFilters.value, () => searchTerm.value], () => {
     if (hydratingFromUrl) return;
     if (!queryDetected) return;
     mustRefresh.value = true;
@@ -1337,6 +1403,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   watch(
     [
       () => filters.value,
+      () => residualFilters.value,
       () => sorters.value,
       () => searchTerm.value,
       () => pagination.value,

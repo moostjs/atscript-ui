@@ -117,6 +117,11 @@
       "import": "./dist/as-preset-picker.mjs",
       "require": "./dist/as-preset-picker.cjs"
     },
+    "./as-residual-filter": {
+      "types": "./dist/as-residual-filter.d.mts",
+      "import": "./dist/as-residual-filter.mjs",
+      "require": "./dist/as-residual-filter.cjs"
+    },
     "./as-row-actions": {
       "types": "./dist/as-row-actions.d.mts",
       "import": "./dist/as-row-actions.mjs",
@@ -177,6 +182,7 @@
     "@atscript/typescript": "catalog:",
     "@tanstack/vue-virtual": "catalog:",
     "@uniqu/core": "catalog:",
+    "@uniqu/url": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
     "@vueuse/core": "catalog:",
@@ -191,6 +197,7 @@
   "peerDependencies": {
     "@atscript/db-client": "catalog:",
     "@tanstack/vue-virtual": "catalog:",
+    "@uniqu/url": "catalog:",
     "@vueuse/core": "catalog:",
     "reka-ui": "catalog:",
     "vue": "catalog:"

@@ -806,10 +806,10 @@ describe("$snapshot marker", () => {
 });
 
 describe("urlQueryStringToState — unsupported filters", () => {
-  it("lists a cross-field OR in `unsupported`, leaves it out, and does not warn", () => {
+  it("lists a cross-field OR in `unsupported`, leaves it out, and does not warn (residual off)", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const out = urlQueryStringToState("team=core&(a=1^b=2)");
+      const out = urlQueryStringToState("team=core&(a=1^b=2)", { sync: { residual: false } });
       expect(out.filters).toEqual({ team: [{ type: "eq", value: ["core"] }] });
       expect(out.unsupported).toHaveLength(1);
       expect(out.unsupported![0]).toMatchObject({ reason: "cross-field", fields: ["a", "b"] });

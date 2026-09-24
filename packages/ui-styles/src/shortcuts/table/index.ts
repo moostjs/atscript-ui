@@ -13,6 +13,7 @@ import { asOrderableListShortcuts } from "./as-orderable-list";
 import { asPageShortcuts } from "./as-page";
 import { asPresetDialogShortcuts } from "./as-preset-dialog";
 import { asPresetPickerShortcuts } from "./as-preset-picker";
+import { asResidualFilterShortcuts } from "./as-residual-filter";
 import { asRowActionsShortcuts } from "./as-row-actions";
 import { asSorterShortcuts } from "./as-sorter";
 import { asTableActionsShortcuts } from "./as-table-actions";
@@ -36,6 +37,7 @@ export {
   asPageShortcuts,
   asPresetDialogShortcuts,
   asPresetPickerShortcuts,
+  asResidualFilterShortcuts,
   asRowActionsShortcuts,
   asSorterShortcuts,
   asTableActionsShortcuts,
@@ -56,6 +58,7 @@ export const tableShortcuts = mergeVunorShortcuts([
   asFilterDialogShortcuts,
   asFilterFieldShortcuts,
   asFiltersShortcuts,
+  asResidualFilterShortcuts,
   asConfigDialogShortcuts,
   asConfigTabShortcuts,
   asConfirmDialogShortcuts,

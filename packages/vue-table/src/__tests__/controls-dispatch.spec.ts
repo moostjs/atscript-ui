@@ -164,4 +164,25 @@ describe(":controls dispatch — context-provided chrome overrides", () => {
     expect(custom.text()).toBe("name");
     expect(wrapper.find(".as-filter-field").exists()).toBe(false);
   });
+
+  it("controls.residualFilter replaces the residual-condition chip in <AsFilters>", async () => {
+    const CustomResidual = defineComponent({
+      props: { expr: { type: Object, required: true }, index: { type: Number, required: true } },
+      setup: (props) => () => h("i", { class: "custom-residual" }, String(props.index)),
+    });
+    const wrapper = mountRoot({
+      url: "/ctl-residual",
+      controls: { residualFilter: CustomResidual },
+      child: () => h(AsFilters, { filterFields: ["name"] }),
+    });
+    await flushPromises();
+    await flushPromises();
+    const root = wrapper.findComponent(AsTableRoot).vm as unknown as {
+      state: { setResidualFilters: (e: unknown[]) => void };
+    };
+    root.state.setResidualFilters([{ $or: [{ id: "1" }, { name: "x" }] }]);
+    await flushPromises();
+    expect(wrapper.find(".custom-residual").text()).toBe("0");
+    expect(wrapper.find(".as-residual-filter").exists()).toBe(false);
+  });
 });

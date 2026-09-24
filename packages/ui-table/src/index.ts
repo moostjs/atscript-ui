@@ -35,8 +35,20 @@ export {
 
 // ── Filters to Uniquery ─────────────────────────────────────
 export { filtersToUniqueryFilter } from "./filters/filters-to-uniquery";
-export type { UnsupportedFilter, UnsupportedFilterReason } from "./filters/uniquery-to-filters";
-export { uniqueryFilterToFieldFilters } from "./filters/uniquery-to-filters";
+export type {
+  DecomposedUniqueryFilter,
+  DecomposeUniqueryFilterOptions,
+  UnsupportedFilter,
+  UnsupportedFilterReason,
+} from "./filters/uniquery-to-filters";
+export {
+  decomposeUniqueryFilter,
+  filterExprFields,
+  filterExprKey,
+  normalizeResidualFilters,
+  uniqueryFilterToFieldFilters,
+} from "./filters/uniquery-to-filters";
+export { formatFilterExpr } from "./filters/format-filter-expr";
 
 // ── Date shortcuts ──────────────────────────────────────────
 export type { DateShortcut } from "./filters/date-shortcuts";
@@ -134,6 +146,7 @@ export type {
 export {
   URL_SNAPSHOT_KEY,
   gateOwns,
+  residualGateOwns,
   resolveAspectGate,
   stateToUrlQueryString,
   urlQueryConsumesKey,
