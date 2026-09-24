@@ -13,7 +13,8 @@
 // Selector strategy: filter pills carry `<label class="as-filter-field-label">`
 // with the column.label text. The Filters tab in the toolbar config dialog
 // renders rows with `.as-config-field-label-text` (custom label slot in
-// `<AsConfigDialog>`); the Columns tab uses `.as-orderable-list-item-label`.
+// `<AsConfigDialog>`, shared with the Columns tab); only the Sorters tab uses
+// the default `.as-orderable-list-item-label`.
 
 import { type Locator, expect, test } from "../fixtures";
 

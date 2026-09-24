@@ -165,7 +165,9 @@ test.describe("Section 2 — Cell rendering by type", () => {
   test("2.3: Tags chips — horizontal overflow, hidden scrollbar", async ({ page }) => {
     await gotoTable(page, "products");
     const table = page.locator("table.as-table").first();
-    const tagsHead = table.locator(`thead th[data-column-path="tags"]`).first();
+    // Column widths live on the `<colgroup>` (`table-layout: fixed`), not on
+    // the `<th>` — styling the header cell does not resize the column.
+    const tagsCol = table.locator(`colgroup col[data-column-path="tags"]`).first();
     const tagsIdx = await columnCellIndex(table, "tags");
 
     // Force a narrow column so chips DEFINITELY overflow horizontally; the
@@ -173,7 +175,7 @@ test.describe("Section 2 — Cell rendering by type", () => {
     // The behavioural contract is "chips don't wrap and the scrollbar is
     // hidden when overflowing", not "the seed always overflows". Forcing
     // a small width pins the assertion to the cell shortcut behaviour.
-    await tagsHead.evaluate((el) => {
+    await tagsCol.evaluate((el) => {
       (el as HTMLElement).style.width = "60px";
     });
 

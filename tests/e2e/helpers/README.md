@@ -140,7 +140,8 @@ The toolbar's three buttons (Columns / Filters / Sorters) all open the same `<As
 - `configDialog(page)` — root locator (`.as-config-dialog-content`).
 - `configTabTrigger(dialog, tab)` — tab trigger by name; matched by canonical-order index for stability against label-text drift.
 - `configActivePanel(dialog)` — active `[role='tabpanel']` inside the dialog.
-- `configListRow(dialog, label)` — row in the active tabpanel by visible label. Handles both label classes (`.as-orderable-list-item-label` for Columns/Sorters, `.as-config-field-label-text` for Filters).
+- `configListRow(dialog, label)` — row in the active tabpanel by visible label. Handles both label classes (`.as-config-field-label-text` for Columns/Filters, which override the `#label` slot in `<AsConfigDialog>`; `.as-orderable-list-item-label` for Sorters).
+- `configListLabels(dialog)` — label elements of every row in the active tabpanel, in rendered order, either label class. Read with `allTextContents()` or assert with `toHaveText([...])`.
 - `openConfigDialog(page, tab)` — clicks the toolbar entry button (`title="Columns" | "Filters" | "Sorters"`) and asserts the named tab is active. Returns the dialog locator.
 - `applyConfig(dialog)` / `cancelConfig(dialog)` — clicks the footer button and asserts the dialog dismissed.
 - `toggleConfigListRow(dialog, label)` — toggles a row's checkbox via row click.

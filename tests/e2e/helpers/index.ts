@@ -50,6 +50,7 @@ export {
   cancelConfig,
   configActivePanel,
   configDialog,
+  configListLabels,
   configListRow,
   configTabTrigger,
   moveConfigListRowDown,

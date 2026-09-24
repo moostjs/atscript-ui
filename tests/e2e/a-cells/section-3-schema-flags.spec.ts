@@ -9,7 +9,7 @@
 
 import { expect, test } from "../fixtures";
 
-import { columnCellIndex, gotoTable } from "../helpers";
+import { columnCellIndex, configListLabels, gotoTable } from "../helpers";
 
 test.describe("Section 3 — Schema-driven flags", () => {
   test("3.1: Flat-flattened parents are not synthetic columns", async ({ page }) => {
@@ -30,9 +30,7 @@ test.describe("Section 3 — Schema-driven flags", () => {
     const dialog = page.locator(".as-config-dialog-content");
     await expect(dialog).toBeVisible();
 
-    const labels = await dialog
-      .locator("[role='tabpanel'][data-state='active'] .as-orderable-list-item-label")
-      .allTextContents();
+    const labels = await configListLabels(dialog).allTextContents();
     const trimmed = labels.map((l) => l.trim());
     expect(trimmed).toContain("First Name");
     expect(trimmed).toContain("Last Name");
@@ -81,8 +79,8 @@ test.describe("Section 3 — Schema-driven flags", () => {
     // filterable columns — neither @db.json column appears. The Filters
     // tab overrides the default `#label` slot with a chip-flavoured label,
     // so the visible class is `.as-config-field-label-text` (NOT
-    // `.as-orderable-list-item-label` which only the columns/sorters tabs
-    // inherit from the default slot fallback).
+    // `.as-orderable-list-item-label` which only the Sorters tab inherits
+    // from the default slot fallback).
     const filterLabels = await dialog
       .locator("[role='tabpanel'][data-state='active'] .as-config-field-label-text")
       .allTextContents();

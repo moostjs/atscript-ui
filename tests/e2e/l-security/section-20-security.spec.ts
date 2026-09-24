@@ -196,17 +196,32 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
     }
   });
 
-  // 20.3 — Column-level narrow: $select of a scope-hidden column is rejected (hidden ≡ nonexistent), not silently dropped.
+  // 20.3 — Column-level narrow: every reference to a scope-hidden column is
+  // rejected exactly like a nonexistent one (hidden ≡ nonexistent) — never
+  // silently dropped. $select alone is not enough: an accepted filter or sort
+  // on a hidden column is a match/no-match (or ordering) oracle over its
+  // value, even when the projection strips the column from the response.
+  // Viewer's users scope is `id, username, status` — `password` / `salt` /
+  // `email` are all hidden.
 
-  test("20.3 — viewer's $select of scope-hidden column → 400 Unknown field (hidden ≡ nonexistent)", async () => {
+  test("20.3 — viewer's $select / filter / $sort on scope-hidden columns → 400 Unknown field (hidden ≡ nonexistent)", async () => {
+    const probes: Array<{ query: string; field: string }> = [
+      { query: "$select=id,username,password,salt", field: "password" },
+      { query: "$select=password", field: "password" },
+      { query: "password~=/^./", field: "password" },
+      { query: "password!=x", field: "password" },
+      { query: "email!=x", field: "email" },
+      { query: "$sort=password", field: "password" },
+    ];
     const ctx = await newRequestContext("viewer");
     try {
-      const res = await ctx.get(
-        "/api/db/tables/users/pages?$select=id,username,password,salt&$size=2",
-      );
-      expect(res.status()).toBe(400);
-      const body = (await res.json()) as { message?: string };
-      expect(body.message).toBe('Unknown field "password"');
+      // Soft assertions: every probe is reported, not just the first leak.
+      for (const { query, field } of probes) {
+        const res = await ctx.get(`/api/db/tables/users/pages?${query}&$size=2`);
+        expect.soft(res.status(), `status for ?${query}`).toBe(400);
+        const body = (await res.json()) as { message?: string };
+        expect.soft(body.message, `message for ?${query}`).toBe(`Unknown field "${field}"`);
+      }
 
       // Granted-column reads still succeed — the 400 above is column-specific, not a blanket viewer block.
       const ok = await ctx.get("/api/db/tables/users/pages?$select=id,username&$size=2");
@@ -1037,10 +1052,12 @@ test.describe("Section 20 — Framework rigidity / security (single-file batch)"
       const res = await ctx.get("/api/db/tables/customers/meta");
       expect(res.ok()).toBeTruthy();
       const body = (await res.json()) as {
-        fields?: Record<string, { filterable?: boolean; sortable?: boolean }>;
+        fields?: Record<string, { filterable?: boolean; sortable?: boolean; filterOps?: string[] }>;
       };
-      expect(body.fields?.address).toEqual({ filterable: false, sortable: false });
-      expect(body.fields?.preferences).toEqual({ filterable: false, sortable: false });
+      // No value comparison or sort; only the existence check (`filterOps`, @atscript/db ≥ 0.1.132).
+      const jsonColumn = { filterable: false, sortable: false, filterOps: ["$exists"] };
+      expect(body.fields?.address).toEqual(jsonColumn);
+      expect(body.fields?.preferences).toEqual(jsonColumn);
     } finally {
       await ctx.dispose();
     }

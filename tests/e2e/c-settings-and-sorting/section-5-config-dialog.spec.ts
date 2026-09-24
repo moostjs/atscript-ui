@@ -28,6 +28,7 @@ import {
   type ConfigTab,
   cancelConfig,
   configActivePanel,
+  configListLabels,
   configListRow,
   configTabTrigger,
   expectNoPages,
@@ -51,9 +52,7 @@ async function rowChecked(dialog: Locator, label: string): Promise<boolean> {
 }
 
 async function listOrder(dialog: Locator): Promise<string[]> {
-  const labels = await configActivePanel(dialog)
-    .locator(".as-orderable-list-item .as-orderable-list-item-label")
-    .allTextContents();
+  const labels = await configListLabels(dialog).allTextContents();
   return labels.map((s) => s.trim()).filter(Boolean);
 }
 
@@ -144,9 +143,9 @@ test.describe("Section 5 — Settings dialog (layout, interactions, cancel, live
       const wasBelow = orderBefore[usernameIdx + 1];
       expect(wasBelow).toBeTruthy();
       await moveConfigListRowDown(dialog, "Username");
-      const orderAfter = await listOrder(dialog);
-      expect(orderAfter[usernameIdx]).toBe(wasBelow);
-      expect(orderAfter[usernameIdx + 1]).toBe("Username");
+      const expectedAfter = [...orderBefore];
+      expectedAfter.splice(usernameIdx, 2, wasBelow, "Username");
+      await expect(configListLabels(dialog)).toHaveText(expectedAfter);
 
       // Toggle a row — uncheck `Username`. Reka's `<ListboxItem>` flips its
       // `data-state` between `checked` and `unchecked`; that's the visible

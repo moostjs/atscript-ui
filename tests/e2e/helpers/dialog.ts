@@ -30,14 +30,28 @@ export function configActivePanel(dialog: Locator): Locator {
 }
 
 /**
- * Row in the active config tabpanel by visible label. Handles both label
- * variants — Columns/Sorters use `.as-orderable-list-item-label`, Filters
- * uses `.as-config-field-label-text` (custom slot in `<AsFieldsSelector>`).
+ * Label class variants in the config dialog's orderable lists. The Sorters
+ * tab renders `<AsFieldsSelector>`'s default `.as-orderable-list-item-label`;
+ * the Columns and Filters tabs override the `#label` slot in
+ * `<AsConfigDialog>` and render `.as-config-field-label-text` (next to a
+ * "client" hint / per-field filter-count badge, which is NOT part of the label).
  */
+const LABEL_CLASSES = [".as-orderable-list-item-label", ".as-config-field-label-text"];
+
+/** Row in the active config tabpanel by visible label (either label variant). */
 export function configListRow(dialog: Locator, label: string): Locator {
   return configActivePanel(dialog).locator(
-    `.as-orderable-list-item:has(.as-orderable-list-item-label:text-is("${label}")),` +
-      `.as-orderable-list-item:has(.as-config-field-label-text:text-is("${label}"))`,
+    LABEL_CLASSES.map((c) => `.as-orderable-list-item:has(${c}:text-is("${label}"))`).join(","),
+  );
+}
+
+/**
+ * Row labels in the active config tabpanel, in rendered (document) order —
+ * either label variant. Use with `allTextContents()` or `toHaveText([...])`.
+ */
+export function configListLabels(dialog: Locator): Locator {
+  return configActivePanel(dialog).locator(
+    LABEL_CLASSES.map((c) => `.as-orderable-list-item ${c}`).join(","),
   );
 }
 
