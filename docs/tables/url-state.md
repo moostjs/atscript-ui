@@ -86,6 +86,7 @@ interface UrlQuerySync {
   search?: boolean; // $search
   pagination?: boolean; // $skip + $limit
   snapshot?: boolean; // the $snapshot marker (since 0.1.139)
+  residual?: boolean; // custom filter conditions (since 0.1.140)
 }
 ```
 
@@ -131,7 +132,14 @@ Both behaviours:
 - Touch only what the sync gates serialize. Under an allowlist,
   filters outside it are private — the URL never carried them, so it
   neither clears nor resets them; under `filters: false` nothing is
-  touched at all.
+  touched at all. A custom filter condition is the URL's only when the
+  allowlist covers every field it references.
+
+A marker-less URL owns every field path it mentions — in a field filter
+or inside a [custom filter condition](/tables/filtering#custom-filter-conditions):
+the baseline's filters and custom conditions on those paths give way,
+the rest of the baseline stays (since 0.1.140; field filters always
+worked this way).
 
 `opts.mode` overrides the marker for a programmatic caller: `"replace"`
 clears like a snapshot URL, `"merge"` resets to the baseline like a
@@ -205,11 +213,33 @@ The key is exported as `URL_SNAPSHOT_KEY` from `@atscript/ui-table`.
 ## Links the filter model cannot hold
 
 A URL can carry filters the table's per-field model cannot express — a
-cross-field OR (`(lane=fast^openedAt<=50)`), an unknown operator, a
-second range AND-ed onto the same field. The table never approximates
-those: the piece is left out whole, so the view shows a _broader_
-result than the link described, and it is reported. Listen for it to
-tell the user:
+cross-field OR, a second range AND-ed onto the same field, a negated
+range. Since 0.1.140 the table keeps them as
+[custom filter conditions](/tables/filtering#custom-filter-conditions):
+the rows are exactly the ones the link describes, a "Custom filter" chip
+in `<AsFilters>` shows the condition in words, and the user can remove
+it. The condition is written back into every URL the table emits, in the
+same uniqu grammar, so reload, share and Back / Forward keep it:
+
+```
+?(lane=fast&openedAt<=100)^(lane=slow&openedAt<=50)&$snapshot
+?customerId=2&((status=shipped&total>500)^(status=pending&total<=50))&$snapshot
+?!(status=shipped&total>500)&$snapshot
+```
+
+A link written by hand works the same way — the `&` inside a group can
+be left raw. The table does not rewrite the URL on load; the next change
+writes it in the table's own spelling.
+
+What is still **left out and reported** (the view is then _broader_ than
+the link):
+
+- a piece that references a field the table does not know, or a
+  client-owned (`local`) column — both unreachable server-side;
+- everything, when `:url-query-sync="{ residual: false }"` — the 0.1.139
+  behaviour: nothing is carried, nothing extra is written.
+
+Listen for those to tell the user:
 
 ```vue
 <AsTableRoot
@@ -221,11 +251,15 @@ tell the user:
 
 Without a listener each piece is reported with a `console.warn` in
 development builds. Renderless tables pass `onUnsupportedFilter` to
-`useTable`; custom renderers calling `urlQueryStringToState` read the
-left-out pieces from the result's `unsupported` array. `$in` / `$nin` lists and same-field ORs are not
-lossy — they become equality / inequality conditions on that field.
-The rules, reasons and the programmatic API are on
+`useTable`. Custom renderers calling `urlQueryStringToState` get the
+carried conditions as `residual` and only the lost pieces as
+`unsupported`. `$in` /
+`$nin` lists and same-field ORs are not lossy — they become field
+conditions. The decoding rules are on
 [Filtering](/tables/filtering#converting-a-uniquery-filter-back).
+
+In 0.1.139 every such piece was left out and reported; `@unsupported-filter`
+now fires only for pieces that are actually dropped.
 
 ## End-to-end wiring
 
@@ -285,8 +319,10 @@ place.
 Consumed, and therefore the table's to remove: the `$`-controls the
 parser actually reads (`$sort`, `$search`, `$relevance`, `$skip`,
 `$snapshot`) and
-operator-bearing filter keys (`total>100`) — so a deep link's sort or
-range filter still clears when the user clears it. A `$`-key the
+operator-bearing filter keys (`total>100`, and since 0.1.140 groups and
+lists: `(a=1^b=2)`, `status{a,b}`) — so a deep link's sort, range filter
+or custom condition still clears when the user clears it. A group with an
+`&` inside stays one key. A `$`-key the
 parser ignores (`$limit`, or anything of your own) stays with the
 page. A plain `field=value` key is indistinguishable from a
 page-owned flag of the same name, so one that was already in the URL

@@ -170,6 +170,11 @@ state.
 </AsTableRoot>
 ```
 
+After the fields it renders one "Custom filter" chip per
+[custom filter condition](#custom-filter-conditions) — always inline,
+never moved into the overflow popover. `:residual="false"` hides them
+when you place `<AsResidualFilter>` yourself.
+
 #### Overflow — capping the row
 
 _Since 0.1.133._ A wide table can list more filter fields than a toolbar row can
@@ -289,9 +294,75 @@ const currentFilters = root.value?.state.filters.value;
 
 ### `state.resetFilters()`
 
-Clears every entry from `state.filters`. Does NOT touch
-`state.filterFields` — the empty input rows remain visible, ready for
-the next keystroke.
+Clears every entry from `state.filters` and every
+[custom filter condition](#custom-filter-conditions)
+(`state.residualFilters`). Does NOT touch `state.filterFields` — the
+empty input rows remain visible, ready for the next keystroke.
+
+## Custom filter conditions
+
+_Since 0.1.140._ Some filters have no per-field shape: "fast-lane tickets
+opened in the last 100 minutes, or slow-lane ones in the last 50" is a
+cross-field OR that no set of field chips can hold. The table keeps such
+conditions as **residual filters** — AND-ed Uniquery expressions applied
+after the field filters — instead of dropping them:
+
+```vue
+<AsTableRoot url="/api/db/tables/tickets" v-slot="{ setResidualFilters }">
+  <button
+    @click="
+      setResidualFilters([
+        {
+          $or: [
+            { lane: 'fast', openedAt: { $lte: 100 } },
+            { lane: 'slow', openedAt: { $lte: 50 } },
+          ],
+        },
+      ])
+    "
+  >
+    Overdue tickets
+  </button>
+  <AsFilters />
+  <AsTable />
+</AsTableRoot>
+```
+
+The usual source is a link: a URL whose filter the field model cannot
+hold restores its extra pieces here automatically — see
+[URL State](/tables/url-state#links-the-filter-model-cannot-hold).
+
+| API                                        | What it does                                                  |
+| ------------------------------------------ | ------------------------------------------------------------- |
+| `state.residualFilters`                    | `ShallowRef<FilterExpr[]>` — read it, watch it, or replace it |
+| `state.setResidualFilters(exprs)`          | Replace them (empty expressions and duplicates dropped)       |
+| `state.removeResidualFilter(index)`        | Remove one                                                    |
+| `state.resetFilters()`                     | Clear them together with the field filters                    |
+| `formatFilterExpr(expr, labelOf?)`         | Words a condition like the chips do (`@atscript/ui-table`)    |
+| `decomposeUniqueryFilter(expr, { carry })` | Split a `FilterExpr` into field filters + residual conditions |
+
+They behave like the field filters: every change refetches (page 1),
+writes the URL and shows in exports (`buildQuery`). `<AsFilters>` shows
+each one as a chip in words — `(Lane equals fast and Opened at less or
+equal 100) or (…)` — with a remove button; swap the chip through the
+`residualFilter` [control](/tables/customization).
+
+- **Do** decompose a `FilterExpr` you hold before applying it —
+  `const { filters, residual } = decomposeUniqueryFilter(expr, { knownFields, carry: true })`,
+  then write both. A representable condition written straight into
+  `residualFilters` still filters correctly, but comes back as a field
+  chip after a URL round trip.
+- **Do** reference only server-backed columns: a condition on a
+  client-owned (`local`) column cannot reach the server.
+- **Don't** expect presets to keep them. A preset cannot store one; applying
+  a preset that owns the filter conditions clears them, and while one is
+  active the view counts as changed — see
+  [Presets](/tables/presets#the-snapshot-model).
+- **Don't** use them for filters that must always apply — that is
+  `:force-filters`, which survives `resetFilters()` and never reaches
+  the URL.
+- Server tables only: the in-memory (`:rows`) mode ignores them, as it
+  ignores field filters.
 
 ## `filtersToUniqueryFilter` directly
 
@@ -325,7 +396,8 @@ for everything `filtersToUniqueryFilter` writes, and for:
 | `{ team: "core", $or: [...] }` (fields next to `$or`) | `team` kept alongside the `$or` result  |
 
 Anything the per-field model cannot express is **left out whole and
-reported** — never approximated:
+reported** — never approximated (to keep those pieces instead, see
+`decomposeUniqueryFilter` below):
 
 | `reason`        | Example                                           |
 | --------------- | ------------------------------------------------- |
@@ -355,6 +427,31 @@ without the component) — see
 [URL State](/tables/url-state#links-the-filter-model-cannot-hold).
 Up to 0.1.138 these pieces were dropped or reshaped without a report
 (a cross-field OR became an AND, `$in` vanished).
+
+### Keeping what the model cannot hold
+
+_Since 0.1.140._ `decomposeUniqueryFilter(expr, { knownFields, carry: true })`
+returns `{ filters, residual, unsupported }`: the exact field filters,
+the pieces they cannot hold as [custom filter conditions](#custom-filter-conditions),
+and the pieces that are still left out (a piece mixing known and unknown
+fields). `filters` AND `residual` selects exactly `expr`, minus the
+`unsupported` pieces and pieces on fields outside `knownFields`.
+
+```ts
+import { decomposeUniqueryFilter } from "@atscript/ui-table";
+
+const { filters, residual } = decomposeUniqueryFilter(expr, {
+  knownFields: state.allColumns.value.map((c) => c.path),
+  carry: true,
+});
+state.filters.value = filters;
+state.setResidualFilters(residual);
+```
+
+With `carry`, a field with two positive groups (`total > 1 AND total < 5`)
+keeps **neither** as a field filter — both become residual conditions,
+so no chip shows half of the range. Without `carry` the result is the
+0.1.139 split, which `uniqueryFilterToFieldFilters` still returns.
 
 ## Next steps
 

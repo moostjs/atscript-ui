@@ -98,13 +98,14 @@ enforce it identically.
 `v-slot` receives the full table-state surface so the page chrome
 (toolbar, pagination, filter bar) reads from one source: `tableDef`,
 `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`,
-`columnWidths`, `columns`, `filterFields`, `filters`, `sorters`,
-`results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`,
+`columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`,
+`sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`,
 `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`,
 `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`,
 `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`,
-`setFieldFilter`, `removeFieldFilter`, `addFilterField`,
-`removeFilterField`, `actions`, `prompt`.
+`setFieldFilter`, `removeFieldFilter`, `setResidualFilters`,
+`removeResidualFilter`, `addFilterField`, `removeFilterField`,
+`actions`, `prompt`.
 
 ## Display-only columns
 
@@ -267,6 +268,7 @@ The full `TAsTableControls` shape:
 | `filterDialog`     | `AsFilterDialog`    | Per-column filter dialog                   |
 | `filterField`      | `AsFilterField`     | One filter field row inside the filter bar |
 | `filterValueHelp`  | (lazy)              | Value-help dialog (`?` lookups)            |
+| `residualFilter`   | `AsResidualFilter`  | "Custom filter" chip in the filter bar     |
 | `configDialog`     | `AsConfigDialog`    | Three-tab settings dialog                  |
 | `fieldsSelector`   | (lazy)              | Inner column / filter list                 |
 | `sortersConfig`    | (lazy)              | Inner sorters list                         |

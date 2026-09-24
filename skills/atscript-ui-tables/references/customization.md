@@ -45,7 +45,7 @@ An explicit `#header-<colPath>` slot ALSO renders for a fixed (synthesised) colu
 
 Precedence: framework `id` / `role` / `aria-*` / `data-*` / `class` / `style` always win over `:row-attrs`. Types: `RowSelectableHook`, `RowClassHook`, `RowAttrsHook`, `RowHookContext`, exported from `@atscript/vue-table`. Selection semantics: [actions-selection.md](actions-selection.md#per-row-selectability-row-selectable-since-01133).
 
-`<AsTableRoot>`'s default `v-slot` exposes the full table-state surface for page chrome (toolbar, pagination, filter bar): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
+`<AsTableRoot>`'s default `v-slot` exposes the full table-state surface for page chrome (toolbar, pagination, filter bar): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
 
 ## Display-only columns (`:displayColumns`, since 0.1.134)
 
@@ -106,21 +106,22 @@ Resolution per column (cached once per column, reused per row): named `@ui.table
 
 Every key is dispatched at its mount site as `controls[key] ?? default`, so pass **only the entries you replace** — spreading `createDefaultControls()` is redundant and statically bundles + eager-mounts the lazy dialogs (invariant 1):
 
-| Key                | Default                                | Mounts                                                            |
-| ------------------ | -------------------------------------- | ----------------------------------------------------------------- |
-| `headerCell`       | `AsTableHeaderCell`                    | Inner-of-`<th>` content per column                                |
-| `columnMenu`       | `AsColumnMenu`                         | Header dropdown (mounted by the default `headerCell`)             |
-| `rowActions`       | `types.__actions`, then `AsRowActions` | Synthesized `__actions` cell (see invariant 3)                    |
-| `filterField`      | `AsFilterField`                        | One field per active filter in `<AsFilters>`                      |
-| `filterInput`      | `AsFilterInput`                        | Condition value input (filter dialog conditions tab)              |
-| `filterValueHelp`  | internal, unexported                   | Value-help tab inside the filter dialog                           |
-| `fieldsSelector`   | internal, unexported                   | Columns / Filters lists inside the config dialog                  |
-| `sortersConfig`    | internal, unexported                   | Sorters list inside the config dialog                             |
-| `filterDialog`     | `AsFilterDialog`                       | Per-column filter dialog (lazy: first open)                       |
-| `configDialog`     | `AsConfigDialog`                       | Three-tab settings dialog (lazy: first open)                      |
-| `confirmDialog`    | `AsConfirmDialog`                      | `state.prompt()` dialog (always mounted)                          |
-| `presetDialog`     | `AsPresetDialog`                       | Preset manage dialog (lazy: first open; requires presets enabled) |
-| `actionFormDialog` | lazy-loaded import                     | `@InputForm` action dialog (lazy: first input-form action)        |
+| Key                | Default                                | Mounts                                                                            |
+| ------------------ | -------------------------------------- | --------------------------------------------------------------------------------- |
+| `headerCell`       | `AsTableHeaderCell`                    | Inner-of-`<th>` content per column                                                |
+| `columnMenu`       | `AsColumnMenu`                         | Header dropdown (mounted by the default `headerCell`)                             |
+| `rowActions`       | `types.__actions`, then `AsRowActions` | Synthesized `__actions` cell (see invariant 3)                                    |
+| `filterField`      | `AsFilterField`                        | One field per active filter in `<AsFilters>`                                      |
+| `residualFilter`   | `AsResidualFilter`                     | 0.1.140+. One "Custom filter" chip per residual condition (props `expr`, `index`) |
+| `filterInput`      | `AsFilterInput`                        | Condition value input (filter dialog conditions tab)                              |
+| `filterValueHelp`  | internal, unexported                   | Value-help tab inside the filter dialog                                           |
+| `fieldsSelector`   | internal, unexported                   | Columns / Filters lists inside the config dialog                                  |
+| `sortersConfig`    | internal, unexported                   | Sorters list inside the config dialog                                             |
+| `filterDialog`     | `AsFilterDialog`                       | Per-column filter dialog (lazy: first open)                                       |
+| `configDialog`     | `AsConfigDialog`                       | Three-tab settings dialog (lazy: first open)                                      |
+| `confirmDialog`    | `AsConfirmDialog`                      | `state.prompt()` dialog (always mounted)                                          |
+| `presetDialog`     | `AsPresetDialog`                       | Preset manage dialog (lazy: first open; requires presets enabled)                 |
+| `actionFormDialog` | lazy-loaded import                     | `@InputForm` action dialog (lazy: first input-form action)                        |
 
 ```ts
 const controls = { filterDialog: MyFilterDialog }; // overrides only — don't spread defaults

@@ -254,8 +254,8 @@ remove:
 `buildTableQuery` merges these with user state via `mergeFilters` and
 `mergeSorters`:
 
-- **`mergeFilters(force, user)`** — combines with `$and` at the top
-  level. If `force` exists, every user condition AND-s with it. Both
+- **`mergeFilters(force, user, ...more)`** — combines with `$and` at the top
+  level (variadic since 0.1.140; residual conditions ride along). If `force` exists, every user condition AND-s with it. Both
   are `FilterExpr`s from `@uniqu/core`.
 - **`mergeSorters(force, user)`** — prepends `force` first. If a field
   appears in both lists, the force entry wins; the matching user entry

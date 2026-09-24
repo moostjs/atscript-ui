@@ -179,9 +179,36 @@ interface UnsupportedFilter {
 }
 
 type UnsupportedFilterReason = "cross-field" | "operator" | "negation" | "conjunction";
+
+/** Since 0.1.140. Split into exact field filters, carried residual conditions and reports. Never throws, never warns. */
+function decomposeUniqueryFilter(
+  expr: FilterExpr | undefined,
+  opts?: DecomposeUniqueryFilterOptions,
+): DecomposedUniqueryFilter;
+
+interface DecomposeUniqueryFilterOptions {
+  /** Pieces on other fields are ignored silently; a piece mixing known and unknown fields is reported, never carried. */
+  knownFields?: Iterable<string>;
+  /** Keep left-out pieces whose fields are all known as `residual`. Default `false` (the 0.1.139 split). */
+  carry?: boolean;
+}
+
+interface DecomposedUniqueryFilter {
+  filters: FieldFilters;
+  /** Carried conditions, AND-ed conjuncts in canonical order. `[]` without `carry`. */
+  residual: FilterExpr[];
+  /** Pieces left out and lost (not carried) — the result is broader by exactly these. */
+  unsupported: UnsupportedFilter[];
+}
+
+/** Since 0.1.140. Canonical identity of a filter expression (its `@uniqu/url` spelling) — equal keys select the same rows. */
+function filterExprKey(expr: FilterExpr): string;
+
+/** Since 0.1.140. Human-readable rendering, worded like the filter chips. `labelOf` maps a path to a display label. */
+function formatFilterExpr(expr: FilterExpr, labelOf?: (path: string) => string | undefined): string;
 ```
 
-The decoder is exact for everything `filtersToUniqueryFilter` produces, maps `$in` / `$nin` / same-field `$or` / invertible `$not` exactly, and leaves out whole — and reports — every AND-ed piece field filters cannot express, so the result never selects fewer rows than the input and never silently more. Up to 0.1.138 such pieces were dropped or reshaped without a report. See [Converting a Uniquery filter back](/tables/filtering#converting-a-uniquery-filter-back).
+The decoder is exact for everything `filtersToUniqueryFilter` produces, maps `$in` / `$nin` / same-field `$or` / invertible `$not` exactly, and leaves out whole — and reports — every AND-ed piece field filters cannot express, so the result never selects fewer rows than the input and never silently more. Up to 0.1.138 such pieces were dropped or reshaped without a report. `$not: { $not: p }` reads as `p` (since 0.1.140). `decomposeUniqueryFilter(expr, { carry: true })` keeps those pieces as residual conditions instead — with `carry`, a field with two positive groups keeps neither as a field filter, so an encode/decode round trip is a fixed point. See [Converting a Uniquery filter back](/tables/filtering#converting-a-uniquery-filter-back) and [Custom filter conditions](/tables/filtering#custom-filter-conditions).
 
 ## Date shortcuts
 
@@ -544,6 +571,8 @@ interface BuildTableQueryOptions {
   ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
+  /** Residual filter conditions, AND'd after `filters`. Since 0.1.140. */
+  residualFilters?: FilterExpr[];
   /** Always-applied Uniquery filter (AND'd with user filters). */
   forceFilters?: FilterExpr;
   /** Full-text search term. */
@@ -565,7 +594,8 @@ Used by `buildTableQuery` to combine force + user controls; safe to call directl
 function mergeSorters(force: SortControl[], user: SortControl[]): SortControl[];
 
 /** AND-merge two `FilterExpr` trees, producing a wire shape that survives the Uniquery parser collapse. */
-function mergeFilters(force?: FilterExpr, user?: FilterExpr): FilterExpr | undefined;
+/** Variadic since 0.1.140 (`undefined` entries skipped); `mergeFilters(force, user)` still works. */
+function mergeFilters(...exprs: (FilterExpr | undefined)[]): FilterExpr | undefined;
 ```
 
 ## URL query bridge
@@ -575,6 +605,8 @@ Two-way bridge between table state and URL query strings. Per-aspect gates (`fil
 ```typescript
 interface UrlQueryStateLike {
   filters: FieldFilters;
+  /** Residual filter conditions; only those whose fields the filter gate all owns are written. Since 0.1.140. */
+  residualFilters?: FilterExpr[];
   sorters: SortControl[];
   /** 1-based page number; `1` is the default and is omitted from the URL. */
   page?: number;
@@ -596,6 +628,8 @@ interface UrlQueryStateSnapshot {
   snapshot?: true;
   /** Filter pieces left out of `filters` because field filters cannot express them (see `uniqueryFilterToFieldFilters`); omitted when none. The parser never warns — the caller decides. Since 0.1.139. */
   unsupported?: UnsupportedFilter[];
+  /** Filter pieces field filters cannot express, carried as residual conditions (canonical order); omitted when none or `sync.residual` is `false`. `unsupported` then lists only the pieces left out and lost. Since 0.1.140. */
+  residual?: FilterExpr[];
   /** Raw `$skip` offset when present (no page math — recipients divide by their own `itemsPerPage`). */
   skip?: number;
   searchTerm: string;
@@ -614,6 +648,8 @@ interface UrlQuerySync {
   pagination?: boolean;
   /** Write `$snapshot` on every URL and honour it on read. Default `true`; `false` = neither. Since 0.1.139. */
   snapshot?: boolean;
+  /** Carry filter pieces field filters cannot hold as residual conditions (write + decode). Default `true`; `false` = the 0.1.139 behaviour, byte for byte. Inert when `filters` is off. Since 0.1.140. */
+  residual?: boolean;
 }
 
 interface UrlQueryDefaults {
@@ -675,7 +711,7 @@ needs it for the same reason.
 function urlQueryConsumesKey(key: string): boolean;
 ```
 
-Since 0.1.133. `true` for the keys `urlQueryStringToState` would read: the `$sort` / `$search` / `$relevance` / `$skip` / `$snapshot` (since 0.1.139) controls and operator-bearing filter keys (`total>100`). `useTableUrlQuery` treats exactly these (plus keys it wrote itself) as table-owned; everything else in the query is host-owned and preserved.
+Since 0.1.133. `true` for the keys `urlQueryStringToState` would read: the `$sort` / `$search` / `$relevance` / `$skip` / `$snapshot` (since 0.1.139) controls and operator-bearing filter keys (`total>100`; since 0.1.140 also groups and lists — keys containing `(`, `)`, `^`, `{`, `}`). `useTableUrlQuery` treats exactly these (plus keys it wrote itself) as table-owned; everything else in the query is host-owned and preserved.
 
 See [URL State](/tables/url-state).
 
@@ -708,6 +744,8 @@ interface TableStateData {
   columnWidths: ColumnWidthsMap;
   filterFields: string[];
   filters: FieldFilters;
+  /** AND-ed conditions field filters cannot hold. Since 0.1.140. */
+  residualFilters: FilterExpr[];
   sorters: SortControl[];
   searchTerm: string;
   pagination: PaginationControl;
@@ -723,6 +761,9 @@ interface TableStateMethods {
   setColumnNames(names: string[]): void;
   setColumnWidths(widths: ColumnWidthsMap): void;
   setFilters(filters: FieldFilters, fields?: string[]): void;
+  /** Since 0.1.140. `resetFilters()` clears these too. */
+  setResidualFilters(exprs: FilterExpr[]): void;
+  removeResidualFilter(index: number): void;
   setSorters(sorters: SortControl[]): void;
   setSearchTerm(value: string): void;
   setPagination(p: PaginationControl): void;

@@ -7,6 +7,7 @@ Filter model, condition types, dialogs, OR/AND semantics.
 - [filterFields vs filters](#filterfields-vs-filters)
 - [filtersToUniqueryFilter](#filterstouniqueryfilter)
 - [Decoding a Uniquery filter](#decoding-a-uniquery-filter)
+- [Residual filter conditions](#residual-filter-conditions)
 - [Condition availability per column type](#condition-availability-per-column-type)
 - [Existence-only columns](#existence-only-columns)
 - [AsFilters component](#asfilters-component)
@@ -79,13 +80,13 @@ Single-condition groups unwrap to a bare expression (no enclosing `$or`/`$and`).
 
 Invariant 3:
 
-| Mutation                         | Effect on `filterFields` | Effect on `filters` |
-| -------------------------------- | ------------------------ | ------------------- |
-| `state.addFilterField(path)`     | append if absent         | none                |
-| `state.removeFilterField(path)`  | remove                   | none                |
-| `state.setFieldFilter(path, [])` | none                     | delete `[path]`     |
-| `state.removeFieldFilter(path)`  | none                     | delete `[path]`     |
-| `state.resetFilters()`           | none                     | `{}`                |
+| Mutation                         | Effect on `filterFields` | Effect on `filters`                       |
+| -------------------------------- | ------------------------ | ----------------------------------------- |
+| `state.addFilterField(path)`     | append if absent         | none                                      |
+| `state.removeFilterField(path)`  | remove                   | none                                      |
+| `state.setFieldFilter(path, [])` | none                     | delete `[path]`                           |
+| `state.removeFieldFilter(path)`  | none                     | delete `[path]`                           |
+| `state.resetFilters()`           | none                     | `{}` (+ `residualFilters = []`, 0.1.140+) |
 
 A field can have applied conditions but no visible input (preset applied state, URL hydration); a field can have a visible input but no applied conditions (user opened the input but hasn't typed). When building a custom filter dialog, write `filterFields` and `filters` independently — cross-clearing one from the other fights the watcher and produces double-fetches.
 
@@ -113,16 +114,44 @@ Pure function — no framework dependencies. The atscript-db skill documents the
 
 `uniqueryFilterToFieldFilters(expr, knownFields?, onUnsupportedFilter?)` rebuilds `FieldFilters`; the URL bridge decodes every restored URL with it.
 
-| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 1   | **Exact for everything `filtersToUniqueryFilter` writes** — round-trip never reports.                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| 2   | **Exact mappings:** `$in` → `eq` per value (OR); `$nin` → `ne` per value; `null` member → `null` / `notNull`; same-field `$or` → that field's OR'd conditions; `$not` of eq/ne/null/notNull → inverse (De Morgan over `$in`); split `$gte` + `$lte` → `bw`.                                                                                                                                                                                                                                                        |
-| 3   | **Fields next to `$or` / `$and` / `$not` in one object are kept** (≤ 0.1.138 dropped them).                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| 4   | **Never approximates.** An AND-ed piece the model can't hold is left out whole and reported: `reason` `"cross-field"` (`a=1 OR b=2`, correlated ORs), `"conjunction"` (second positive group on a field, e.g. `$gt` + `$lt`; the first is kept), `"negation"` (`$not` of a range, negative inside `$or`), `"operator"` (unknown `$op`, `$nor`, empty `$in`, object operand). Result = superset of the input. ≤ 0.1.138: cross-field `$or` became an AND per field (broader / narrower), `$in` vanished — silently. |
-| 5   | **Report channel:** `onUnsupportedFilter(issue)` (`{ reason, expr, fields }`) when given, else dev-mode `console.warn("[ui-table] Filter left out …")`. `urlQueryStringToState` never warns — it returns the pieces as `result.unsupported` (omitted when none). The table reports them via `useTable({ onUnsupportedFilter })` / `<AsTableRoot @unsupported-filter>`, else dev `console.warn("[vue-table] URL filter left out …")`.                                                                               |
-| 6   | **Unknown fields (`knownFields`) are ignored silently** (host flags, stale columns) unless they share a piece with a known field — then that piece is reported.                                                                                                                                                                                                                                                                                                                                                    |
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Exact for everything `filtersToUniqueryFilter` writes** — round-trip never reports.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 2   | **Exact mappings:** `$in` → `eq` per value (OR); `$nin` → `ne` per value; `null` member → `null` / `notNull`; same-field `$or` → that field's OR'd conditions; `$not` of eq/ne/null/notNull → inverse (De Morgan over `$in`); split `$gte` + `$lte` → `bw`.                                                                                                                                                                                                                                                                                                                                                                        |
+| 3   | **Fields next to `$or` / `$and` / `$not` in one object are kept** (≤ 0.1.138 dropped them).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| 4   | **Never approximates.** An AND-ed piece the model can't hold is left out whole and reported (or, 0.1.140+, carried — see [Residual filter conditions](#residual-filter-conditions)): `reason` `"cross-field"` (`a=1 OR b=2`, correlated ORs), `"conjunction"` (second positive group on a field, e.g. `$gt` + `$lt`; the first is kept — with `carry`, none is), `"negation"` (`$not` of a range, negative inside `$or`), `"operator"` (unknown `$op`, `$nor`, empty `$in`, object operand). Result = superset of the input. ≤ 0.1.138: cross-field `$or` became an AND per field (broader / narrower), `$in` vanished — silently. |
+| 5   | **Report channel:** `onUnsupportedFilter(issue)` (`{ reason, expr, fields }`) when given, else dev-mode `console.warn("[ui-table] Filter left out …")`. `urlQueryStringToState` never warns — it returns the carried pieces as `result.residual` (0.1.140+) and only the lost ones as `result.unsupported`. The table reports only the lost pieces via `useTable({ onUnsupportedFilter })` / `<AsTableRoot @unsupported-filter>`, else dev `console.warn("[vue-table] URL filter left out …")`.                                                                                                                                    |
+| 6   | **Unknown fields (`knownFields`) are ignored silently** (host flags, stale columns) unless they share a piece with a known field — then that piece is reported.                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 
-Do not hand-roll a residual/fallback filter for the left-out piece; surface the report to the user instead.
+Do not hand-roll a residual/fallback filter for a left-out piece — the table carries it (0.1.140+). What is still reported is genuinely dropped; surface that to the user.
+
+## Residual filter conditions
+
+0.1.140+. `state.residualFilters: ShallowRef<FilterExpr[]>` — AND-ed Uniquery conjuncts the field model can't hold, AND'd after `filters` into every query / URL / export. Restored from URLs automatically; shown by `<AsFilters>` as "Custom filter" chips.
+
+```typescript
+import { decomposeUniqueryFilter } from "@atscript/ui-table";
+
+// Apply a FilterExpr you hold (dashboard drill-down) exactly:
+const { filters, residual } = decomposeUniqueryFilter(expr, {
+  knownFields: state.allColumns.value.map((c) => c.path),
+  carry: true,
+});
+state.filters.value = filters;
+state.setResidualFilters(residual);
+```
+
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                 |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | **Mutators:** `setResidualFilters(exprs)` (normalizes: drops `{}`, dedupes, canonical order), `removeResidualFilter(index)`, `resetFilters()` clears them with the field filters. Writing the ref works too; the root watcher refetches (page 1) and writes the URL.                                                                                                                 |
+| 2   | **Carried from a URL only when every field is a server-backed column** (`allColumns` minus `local` ones) and the filter gate owns it. Otherwise dropped + reported (`@unsupported-filter`).                                                                                                                                                                                          |
+| 3   | **Decompose before writing.** A representable conjunct written raw into `residualFilters` filters correctly but comes back as a field chip after a URL round trip. `decomposeUniqueryFilter(expr, { carry: true })` gives the normalized split.                                                                                                                                      |
+| 4   | **`carry` normalizes for round trips:** a field with ≥ 2 positive groups keeps none as a field filter (all residual; negatives stay). `$not: { $not: p }` always reads as `p`. Without `carry` → the 0.1.139 split (`uniqueryFilterToFieldFilters` is that wrapper); `decomposeUniqueryFilter().unsupported` lists only lost pieces. Identity of a condition: `filterExprKey(expr)`. |
+| 5   | **Not a preset aspect.** Never saved; applying a preset that owns `filterOps` (or Reset) clears them; while one is active the view is dirty against such a preset.                                                                                                                                                                                                                   |
+| 6   | **Not `forceFilters`.** Residuals are user state (URL, chip, clearable). Use `:force-filters` for a condition that must always apply.                                                                                                                                                                                                                                                |
+| 7   | **Opt out:** `urlQuerySync: { residual: false }` → 0.1.139 behaviour byte for byte (nothing carried or written, everything reported). In-memory (`:rows`) tables ignore residuals, like field filters.                                                                                                                                                                               |
+
+Words for a condition: `formatFilterExpr(expr, labelOf?)` → `(Status equals shipped and Total greater than 500) or (…)`. Custom chip: `controls.residualFilter` (props `expr`, `index`), default `AsResidualFilter`.
 
 ## Condition availability per column type
 
@@ -156,11 +185,12 @@ Since 0.1.139 (needs `@atscript/moost-db` 0.1.132+): `/meta.fields[P]` = `{ filt
 
 Renders one `<AsFilterField>` per visible filter path.
 
-| Prop           | Type                  | Notes                                                                                                   |
-| -------------- | --------------------- | ------------------------------------------------------------------------------------------------------- |
-| `filterFields` | `string[]`            | Override the visible list; defaults to `state.filterFields.value`.                                      |
-| `maxVisible`   | `number`              | 0.1.133+. How many fields render inline; the rest overflow. Omitted → all inline (unchanged behaviour). |
-| `overflow`     | `'popover' \| 'none'` | 0.1.133+. Default `'popover'` when `maxVisible` is set. `'none'` drops the extra fields entirely.       |
+| Prop           | Type                  | Notes                                                                                                                                        |
+| -------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filterFields` | `string[]`            | Override the visible list; defaults to `state.filterFields.value`.                                                                           |
+| `maxVisible`   | `number`              | 0.1.133+. How many fields render inline; the rest overflow. Omitted → all inline (unchanged behaviour).                                      |
+| `overflow`     | `'popover' \| 'none'` | 0.1.133+. Default `'popover'` when `maxVisible` is set. `'none'` drops the extra fields entirely.                                            |
+| `residual`     | `boolean`             | 0.1.140+. Default `true`: one "Custom filter" chip per `state.residualFilters` entry after the fields — always inline, never in the popover. |
 
 All `$attrs` pass through to each `<AsFilterField>` — including the ones inside the overflow popover.
 
@@ -297,7 +327,7 @@ Render your own list, write to `state.filters` directly:
 ### Clear all applied filters
 
 ```typescript
-state.resetFilters(); // state.filters = {}
+state.resetFilters(); // state.filters = {}, state.residualFilters = []
 ```
 
 This does NOT clear `filterFields` (display) — visible inputs stay. To clear both:

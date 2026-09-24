@@ -151,15 +151,16 @@ slot. Key props:
 
 The default slot exposes the full reactive state — `tableDef`,
 `allColumns`, `columns`, `columnNames`, `columnWidths`,
-`filterFields`, `filters`, `sorters`, `results`, `pagination`,
+`filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `pagination`,
 `searchTerm`, `selectedRows`, `selectedCount`, `totalCount`,
 `loadedCount`, plus the loading/error flags (`querying`,
 `queryingNext`, `loadingMetadata`, `queryError`, `metadataError`,
 `mustRefresh`), the keyboard nav bridge (`navBridge`), and the
 public methods (`query`, `queryNext`, `resetFilters`,
 `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`,
-`setFieldFilter`, `removeFieldFilter`, `addFilterField`,
-`removeFilterField`, `actions`, `prompt`). External `v-model`s are
+`setFieldFilter`, `removeFieldFilter`, `setResidualFilters`,
+`removeResidualFilter`, `addFilterField`, `removeFilterField`,
+`actions`, `prompt`). External `v-model`s are
 supported for `filterFields`, `columnNames`, `columnWidths`,
 `sorters`, `selectedRows` and the URL bridge `urlQuery`.
 

@@ -49,6 +49,14 @@ current filters alone. Both directions of the wire conversion
 preserve that distinction since 0.1.133, so a saved unfiltered view
 really does clear the filters it was saved without.
 
+[Custom filter conditions](/tables/filtering#custom-filter-conditions)
+(`state.residualFilters`, since 0.1.140) are not an aspect — a preset
+cannot store them, and **Save** / **Save as…** leave them out (the
+Save-as popover says so while one is active). A preset that owns
+`filterOps` defines the whole filter population, so applying it — or
+**Reset** — clears them, and while one is active the view counts as
+changed against that preset.
+
 ### What a system preset owns
 
 By default a system preset owns **every** available aspect: applying

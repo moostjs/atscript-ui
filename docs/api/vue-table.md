@@ -83,9 +83,9 @@ interface AsTableRootProps {
 
 **v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]), `ignoreSortersWhenSearched` (boolean).
 
-**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)).
+**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. Since 0.1.140 a piece on server-backed columns is kept as a residual condition instead and not reported — the event means "dropped"; `urlQuerySync: { residual: false }` restores 0.1.139. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)).
 
-**Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt`.
+**Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
 
 ### `AsTable`
 
@@ -182,6 +182,12 @@ interface AsFiltersProps {
    *   on a dropped field still applies to the query.
    */
   overflow?: "popover" | "none";
+  /**
+   * Render `state.residualFilters` as "Custom filter" chips after the fields
+   * (since 0.1.140). Default `true`; always inline, never in the overflow
+   * popover. `false` when the host places `<AsResidualFilter>` itself.
+   */
+  residual?: boolean;
 }
 ```
 
@@ -256,6 +262,10 @@ import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
 
 Single column's filter row inside the filter dialog or active-filters bar.
 
+### `AsResidualFilter`
+
+Since 0.1.140. One [custom filter condition](/tables/filtering#custom-filter-conditions) as a chip: label, the condition in words (`formatFilterExpr` with column labels), and a remove button. Props: `expr: FilterExpr`, `index: number` (its position in `state.residualFilters`). Rendered by `<AsFilters>`; override via `controls.residualFilter`. Subpath: `@atscript/vue-table/as-residual-filter`.
+
 ### `AsFilterInput`
 
 Input control for one condition — switches between text / number / date / boolean / ref based on column type.
@@ -320,7 +330,7 @@ interface UseTableOptions {
   urlQueryReady?: Ref<boolean>;
   onUrlQueryChange?: (urlString: string) => void;
   urlQuerySync?: UrlQuerySync;
-  /** Each left-out piece of a restored URL's filter. Omitted → dev-mode `console.warn`. Since 0.1.139. */
+  /** Each left-out piece of a restored URL's filter (since 0.1.140: only those not carried as residual conditions). Omitted → dev-mode `console.warn`. Since 0.1.139. */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
   preset?: PresetConfig;
 }
@@ -739,7 +749,7 @@ function injectPresetsApp(override?: string): string;
 
 ### `createDefaultControls()`
 
-Returns a fresh `TAsTableControls` map pre-filled with the seven always-on Tier-2 defaults: `headerCell`, `columnMenu`, `filterInput`, `filterDialog`, `filterField`, `configDialog`, `confirmDialog`. The other six slots are intentionally **not** seeded: `rowActions` already falls back to the `types` map's `__actions` entry and then the built-in `AsRowActions` (set `controls.rowActions` only to override explicitly — it wins over the `types` entry); `fieldsSelector`, `sortersConfig`, and `filterValueHelp` default to internal (unexported) components resolved at their mount sites; `presetDialog` is lazy-mounted on first open; and `actionFormDialog` is lazy-loaded so it only pulls in `@atscript/vue-form` when an `@InputForm` action is detected.
+Returns a fresh `TAsTableControls` map pre-filled with the eight always-on Tier-2 defaults: `headerCell`, `columnMenu`, `filterInput`, `filterDialog`, `filterField`, `residualFilter` (since 0.1.140), `configDialog`, `confirmDialog`. The other six slots are intentionally **not** seeded: `rowActions` already falls back to the `types` map's `__actions` entry and then the built-in `AsRowActions` (set `controls.rowActions` only to override explicitly — it wins over the `types` entry); `fieldsSelector`, `sortersConfig`, and `filterValueHelp` default to internal (unexported) components resolved at their mount sites; `presetDialog` is lazy-mounted on first open; and `actionFormDialog` is lazy-loaded so it only pulls in `@atscript/vue-form` when an `@InputForm` action is detected.
 
 You rarely need this helper for `:controls` — every dispatch site falls back to its built-in internally, and passing defaults wholesale statically bundles (and eager-mounts) the lazy dialogs. Pass only the entries you replace:
 
@@ -774,6 +784,8 @@ interface TAsTableControls {
   filterDialog?: Component;
   filterField?: Component;
   filterValueHelp?: Component;
+  /** One residual-condition chip in `<AsFilters>` (props `expr`, `index`). Since 0.1.140. */
+  residualFilter?: Component;
   configDialog?: Component;
   fieldsSelector?: Component;
   sortersConfig?: Component;
@@ -807,7 +819,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 
 - **Metadata**: `tableDef`, `loadingMetadata`, `metadataError`.
 - **Columns**: `columns`, `allColumns`, `columnNames`, `columnWidths`.
-- **Filters / sorters / search**: `filters`, `filterFields`, `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
+- **Filters / sorters / search**: `filters`, `filterFields`, `residualFilters` (`ShallowRef<FilterExpr[]>`, since 0.1.140 — AND-ed conditions field filters cannot hold; `setResidualFilters(exprs)`, `removeResidualFilter(index)`, cleared by `resetFilters()`; see [Custom filter conditions](/tables/filtering#custom-filter-conditions)), `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
 - **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only.
@@ -824,7 +836,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Row-action policy** (since 0.1.134): `rowActions: Ref<RowActionsConfig | undefined>` — renderer-pushed by `<AsTableRoot :row-actions>` — and `rowActionsPolicy`, the compiled view of it. Both `<AsRowActions>` and `<AsTableActions>` read the compiled policy, so the row cell and the selection toolbar always agree.
 - **Query surface** (since 0.1.134): `buildQuery(opts?)` returns the `Uniquery` the table's own fetch would send right now (`{ columnPaths?, includeActions? }` overrides); `fetchPage(query, page, size)` runs one page through the configured `queryFn` / client. These are the two seams `useTableExport` builds on.
 - **Local sorting** (since 0.1.134): `localColumnPaths` (paths of the client-owned columns) and `applyLocalSort(rows)` — `<AsTable>` runs the loaded page through it, sorting by the FULL sorter list so the server's ordering survives and a local sorter lands at its real priority. Inert without [display columns](/tables/customization#display-only-columns), in window mode, and for an in-memory table (its query function sorts the dataset itself, which is also what lets a window-mode in-memory table keep the affordance). `localSortAvailable` (since 0.1.135) is the single rule every sort affordance reads, so the header and the config dialog cannot offer different sets.
-- **URL bridge**: `applyUrlQuery(urlString, opts?)`. The URL decides what happens to filters and sorters it omits, within the `urlQuerySync` gates: a URL carrying `$snapshot` (every URL the table writes) clears them; any other URL resets them to the table's boot baseline (the owned filters and sorters it had before the first URL was applied — preset, persisted draft, props) and lays its own on top. `opts.mode` (`"merge"` / `"replace"`) overrides the marker. `<AsTableRoot>` calls it on every pass without a mode. Since 0.1.139; 0.1.137–0.1.138 merged onto the current state on the first pass and replaced on every later one — see [Hydration and restoration](/tables/url-state#hydration-and-restoration).
+- **URL bridge**: `applyUrlQuery(urlString, opts?)`. The URL decides what happens to filters and sorters it omits, within the `urlQuerySync` gates: a URL carrying `$snapshot` (every URL the table writes) clears them; any other URL resets them to the table's boot baseline (the owned filters and sorters it had before the first URL was applied — preset, persisted draft, props) and lays its own on top. `opts.mode` (`"merge"` / `"replace"`) overrides the marker. `<AsTableRoot>` calls it on every pass without a mode. Since 0.1.140 filter pieces the field model cannot hold are restored as `residualFilters`, and a marker-less URL owns every path it mentions (inside such a condition too). Since 0.1.139; 0.1.137–0.1.138 merged onto the current state on the first pass and replaced on every later one — see [Hydration and restoration](/tables/url-state#hydration-and-restoration).
 - **Query methods**: `query(opts?: { silent?: boolean })` (microtask-coalesced refresh; `{ silent: true }` runs the current query with no `querying` flip and leaves rows as-is on failure — for timer-driven live refresh), `queryImmediate(opts?: { silent?: boolean })` (awaitable form, same `silent` semantics), `queryNext()`, `loadRange()`, `invalidate()`. Every query keeps prior rows until the response settles, then swaps `results` + `totalCount` atomically (keep-rows-until-settle contract).
 
 ### `TableActionsState`
