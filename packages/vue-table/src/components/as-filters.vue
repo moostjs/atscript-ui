@@ -6,7 +6,7 @@ export default { inheritAttrs: false };
 </script>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from "reka-ui";
 import type { ColumnDef } from "@atscript/ui";
 import { filterExprKey } from "@atscript/ui-table";
@@ -60,6 +60,58 @@ const props = withDefaults(
   { residual: true },
 );
 
+/**
+ * Open state of the overflow popover — `v-model:overflow-open` to drive or
+ * observe it (e.g. close it before the host opens its own dialog). Unbound →
+ * the popover keeps its own state.
+ *
+ * @since 0.1.142
+ */
+const overflowOpen = defineModel<boolean>("overflowOpen", { default: false });
+
+const emit = defineEmits<{
+  /**
+   * The overflow popover is about to focus its first field. Cancellable —
+   * `event.preventDefault()` keeps focus where it is. Since 0.1.142.
+   */
+  (e: "overflow-open-auto-focus", event: Event): void;
+  /**
+   * The overflow popover closed and is about to return focus to its trigger.
+   * Cancellable — `event.preventDefault()` to focus something else. Since 0.1.142.
+   */
+  (e: "overflow-close-auto-focus", event: Event): void;
+}>();
+
+defineSlots<{
+  /**
+   * Replaces the overflow trigger. Render ONE focusable element (a `<button>`
+   * or a component that forwards attrs): the popover merges its ARIA
+   * attributes, ref and click handler onto it. `activeCount` = active filters
+   * among the overflowed fields. Since 0.1.142.
+   */
+  "overflow-trigger"?: (props: { activeCount: number; open: boolean }) => unknown;
+  /**
+   * Replaces the popover body. `columns` = the overflowed fields' columns,
+   * `close()` closes the popover. Since 0.1.142.
+   */
+  overflow?: (props: { columns: ColumnDef[]; close: () => void }) => unknown;
+}>();
+
+// Workaround for reka-ui 2.9.8 `PopoverContentNonModal`: with a
+// `@close-auto-focus` listener bound it emits `closeAutoFocus` twice for one
+// event (its own handler plus the one `useForwardPropsEmits` forwards).
+// Forward each event once; drop this when reka emits it once.
+let lastClose: Event | null = null;
+function onCloseAutoFocus(event: Event): void {
+  if (event === lastClose) return;
+  lastClose = event;
+  emit("overflow-close-auto-focus", event);
+}
+
+function closeOverflow(): void {
+  overflowOpen.value = false;
+}
+
 const { state } = useTableContext();
 // Static skin-slot resolution — `controls.filterField ?? AsFilterField`.
 const FilterField = useTableComponent("filterField", AsFilterField);
@@ -99,6 +151,15 @@ const split = computed(() => {
   return { visible: all.slice(0, limit), overflow: all.slice(limit) };
 });
 
+const hasOverflowPopover = computed(
+  () => (props.overflow ?? "popover") === "popover" && split.value.overflow.length > 0,
+);
+// The popover unmounts with its last overflowed field; it must not come back
+// already open when fields overflow again.
+watch(hasOverflowPopover, (has) => {
+  if (!has) closeOverflow();
+});
+
 // Badge count — a hidden filter that is actually narrowing the result set must
 // stay discoverable, or the table looks wrong for no visible reason.
 const activeOverflowCount = computed(() => {
@@ -133,13 +194,17 @@ const activeOverflowCount = computed(() => {
     />
   </template>
 
-  <PopoverRoot v-if="(props.overflow ?? 'popover') === 'popover' && split.overflow.length > 0">
-    <PopoverTrigger class="as-filters-overflow-trigger" aria-label="More filters">
-      <span class="i-as-filter as-filters-overflow-trigger-icon" aria-hidden="true" />
-      <span v-if="activeOverflowCount > 0" class="as-filters-overflow-badge">
-        {{ activeOverflowCount }}
-      </span>
-      <span class="i-as-chevron-down as-filters-overflow-chevron" aria-hidden="true" />
+  <PopoverRoot v-if="hasOverflowPopover" v-model:open="overflowOpen">
+    <PopoverTrigger as-child>
+      <slot name="overflow-trigger" :active-count="activeOverflowCount" :open="overflowOpen">
+        <button type="button" class="as-filters-overflow-trigger" aria-label="More filters">
+          <span class="i-as-filter as-filters-overflow-trigger-icon" aria-hidden="true" />
+          <span v-if="activeOverflowCount > 0" class="as-filters-overflow-badge">
+            {{ activeOverflowCount }}
+          </span>
+          <span class="i-as-chevron-down as-filters-overflow-chevron" aria-hidden="true" />
+        </button>
+      </slot>
     </PopoverTrigger>
     <PopoverPortal>
       <PopoverContent
@@ -147,14 +212,18 @@ const activeOverflowCount = computed(() => {
         align="end"
         :side-offset="4"
         :collision-padding="8"
+        @open-auto-focus="emit('overflow-open-auto-focus', $event)"
+        @close-auto-focus="onCloseAutoFocus"
       >
-        <component
-          :is="FilterField"
-          v-for="col in split.overflow"
-          :key="col.path"
-          :column="col"
-          v-bind="$attrs"
-        />
+        <slot name="overflow" :columns="split.overflow" :close="closeOverflow">
+          <component
+            :is="FilterField"
+            v-for="col in split.overflow"
+            :key="col.path"
+            :column="col"
+            v-bind="$attrs"
+          />
+        </slot>
       </PopoverContent>
     </PopoverPortal>
   </PopoverRoot>

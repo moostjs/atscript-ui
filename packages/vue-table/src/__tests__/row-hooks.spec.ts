@@ -154,10 +154,13 @@ describe("<AsTable> rowSelectable", () => {
 
     const headerBox = () =>
       wrapper.element.querySelector(".as-th-select .as-table-checkbox") as HTMLElement;
+    // Only an ineligible pick → no ELIGIBLE row is selected, so "none".
+    expect(headerBox().getAttribute("aria-checked")).toBe("false");
     headerBox().dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await nextTick();
 
-    expect(state.selectedRows.value).toEqual([1, 2, 3]);
+    // Select-all adds to the selection, after what was already there.
+    expect(state.selectedRows.value).toEqual([2, 1, 3]);
     // Every ELIGIBLE row is picked, so the ineligible leftover must not hold
     // the header back at "some".
     expect(headerBox().getAttribute("aria-checked")).toBe("true");

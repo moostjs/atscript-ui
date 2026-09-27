@@ -300,8 +300,20 @@ export interface PresetConfig {
 
 export type QueryErrorKind = "initial" | "query" | "queryNext" | "loadRange";
 
-/** Tri-state for the multi-select header checkbox. Window mode never reaches "all". */
+/**
+ * Tri-state for the multi-select header checkbox, measured against the rows
+ * the header acts on: the loaded rows in `<AsTable>`, every row in
+ * `<AsWindowTable>` (which shows the control only once all rows are loaded).
+ */
 export type SelectAllState = "none" | "some" | "all";
+
+/**
+ * What toggles a row's selection by pointer (`:select-on` on `<AsTable>` /
+ * `<AsWindowTable>`): `"row"` — a click anywhere on the row (the default);
+ * `"control"` — only the row's checkbox, a row click just moves the active
+ * row. Space / Enter behave the same in both. Since 0.1.142.
+ */
+export type SelectOn = "row" | "control";
 
 /**
  * Context handed to the per-row hooks of `<AsTable>` (`rowSelectable`,
@@ -611,16 +623,33 @@ export interface ReactiveTableState extends TableStateMethods {
   /** How many of `rows` the `rowSelectable` predicate lets through. Since 0.1.133. */
   selectableCount: (rows: readonly Record<string, unknown>[]) => number;
   /**
-   * Select every eligible row in `rows`. An ineligible row that is already
-   * selected stays selected. `indexOf` maps a position in `rows` to the
-   * index the `rowSelectable` predicate sees — windowed callers pass it
-   * because their rows come from a cache keyed by absolute index.
-   * Since 0.1.133.
+   * Add every eligible row in `rows` to the selection. Nothing already
+   * selected is dropped — rows outside `rows`, and an ineligible row that is
+   * already picked, stay. `indexOf` maps a position in `rows` to the index
+   * the `rowSelectable` predicate sees — windowed callers pass it because
+   * their rows come from a cache keyed by absolute index. Since 0.1.133.
    */
   selectAll: (
     rows: readonly Record<string, unknown>[],
     indexOf?: (position: number) => number,
   ) => void;
+  /**
+   * Remove every eligible row in `rows` from the selection. Selections
+   * outside `rows` stay, and so does a picked row the `rowSelectable`
+   * predicate rejects. Since 0.1.142.
+   */
+  deselectAll: (rows: readonly Record<string, unknown>[]) => void;
+  /**
+   * The header checkbox's action over `rows`: deselect them when every
+   * eligible one is selected, otherwise select them. Since 0.1.142.
+   */
+  toggleAll: (rows: readonly Record<string, unknown>[]) => void;
+  /**
+   * Empty the selection — every pk, whether or not its row is loaded or
+   * eligible. The header checkbox only ever acts on loaded rows; this is the
+   * real clear. Since 0.1.142.
+   */
+  clearSelection: () => void;
   /** Column currently open in the filter dialog (null when closed). */
   filterDialogColumn: Ref<ColumnDef | null>;
 
@@ -861,7 +890,9 @@ export interface PresetSurface {
   /**
    * Active preset's snapshot (system presets are aspect-expanded), pruned of
    * fields this caller cannot use — what applying it wrote. The stored row
-   * is never rewritten.
+   * is never rewritten. Since 0.1.142 it is canonical, spelled the way
+   * `captureSnapshot()` spells table state: no width equal to its column's
+   * default, no filter field with nothing filled.
    */
   activeSnapshot: ComputedRef<PresetSnapshot>;
   /**

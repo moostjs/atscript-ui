@@ -275,6 +275,22 @@ export function createNavController(inputs: NavControllerInputs): NavController 
   };
 }
 
+/** What the row-selection helpers below need from table state. */
+interface RowToggleState {
+  setActive: (index: number) => void;
+  toggleActiveSelection: (mode: SelectionMode) => void;
+}
+
+/**
+ * Toggle the row at `index`: it becomes the active row, then the active row
+ * toggles. Selectability is NOT re-checked here: `toggleActiveSelection`
+ * gates on `rowSelectable` itself, which is the single place that rule lives.
+ */
+export function toggleRowAt(index: number, mode: SelectionMode, state: RowToggleState): void {
+  state.setActive(index);
+  state.toggleActiveSelection(mode);
+}
+
 /**
  * `@keydown` handler for a row's SELECTION CONTROL (the leading checkbox),
  * shared by `<AsTableBase>` and `<AsWindowTableBase>`. The control carries
@@ -284,22 +300,16 @@ export function createNavController(inputs: NavControllerInputs): NavController 
  * Keys other than Space, and `select="none"`, fall through untouched; only
  * once the press is ours do we consume it, so the Reka-wrapped rendering
  * modes (which never bind this handler) keep Space for their own item.
- * Selectability is NOT re-checked here: `toggleActiveSelection` gates on
- * `rowSelectable` itself, which is the single place that rule lives.
  */
 export function onSelectControlKeydown(
   event: KeyboardEvent,
   index: number,
   mode: SelectionMode,
-  state: {
-    setActive: (index: number) => void;
-    toggleActiveSelection: (mode: SelectionMode) => void;
-  },
+  state: RowToggleState,
 ): void {
   if (event.key !== " ") return;
   if (mode === "none") return;
   event.preventDefault();
   event.stopPropagation();
-  state.setActive(index);
-  state.toggleActiveSelection(mode);
+  toggleRowAt(index, mode, state);
 }

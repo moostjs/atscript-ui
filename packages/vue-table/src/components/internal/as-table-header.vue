@@ -25,6 +25,8 @@ const props = withDefaults(
     hasSelectColumn?: boolean;
     /** Tri-state for the multi-select header checkbox. Undefined → no checkbox rendered. */
     selectAllState?: SelectAllState;
+    /** Size of the whole selection, handed to the `header-__select` slot. */
+    selectedCount?: number;
     /** Whether the trailing `<th class="as-th-filler">` renders. */
     withFiller?: boolean;
     /** Optional double-click auto-fit on the resize handle (base only). */
@@ -48,8 +50,11 @@ const emit = defineEmits<{
   (e: "reset-width", column: ColumnDef): void;
   (e: "reorder", fromPath: string, toPath: string, position: ColumnReorderPosition): void;
   (e: "resize", path: string, width: string): void;
-  /** Click on the multi-select header checkbox; parent decides select vs deselect. */
-  (e: "select-all-toggle", state: SelectAllState): void;
+  /**
+   * The header checkbox was activated (click, Space / Enter, or the slot's
+   * `toggle`); the renderer runs `state.toggleAll` over its rows in scope.
+   */
+  (e: "toggle-all"): void;
 }>();
 
 const sortMap = computed(() => {
@@ -149,7 +154,12 @@ function onSelectAllKeydown(event: KeyboardEvent) {
   if (!props.selectAllState) return;
   event.preventDefault();
   event.stopPropagation();
-  emit("select-all-toggle", props.selectAllState);
+  toggleSelectAll();
+}
+
+/** The header control's action — click, keys and the `header-__select` slot. */
+function toggleSelectAll() {
+  if (props.selectAllState) emit("toggle-all");
 }
 </script>
 
@@ -157,25 +167,36 @@ function onSelectAllKeydown(event: KeyboardEvent) {
   <thead>
     <tr>
       <th v-if="hasSelectColumn" class="as-th-select">
-        <span
-          v-if="selectAllState"
-          class="as-table-checkbox"
-          :class="{
-            'as-table-checkbox-checked': selectAllState === 'all',
-            'as-table-checkbox-indeterminate': selectAllState === 'some',
-          }"
-          role="checkbox"
-          tabindex="0"
-          aria-label="Select all rows"
-          :aria-checked="
-            selectAllState === 'none' ? 'false' : selectAllState === 'all' ? 'true' : 'mixed'
-          "
-          @click="emit('select-all-toggle', selectAllState)"
-          @keydown="onSelectAllKeydown"
+        <slot
+          name="header-__select"
+          :state="selectAllState"
+          :toggle="toggleSelectAll"
+          :selected-count="selectedCount ?? 0"
         >
-          <span v-if="selectAllState === 'all'" class="as-table-checkbox-tick" aria-hidden="true" />
-          <span v-else-if="selectAllState === 'some'" class="as-table-checkbox-dash" />
-        </span>
+          <span
+            v-if="selectAllState"
+            class="as-table-checkbox"
+            :class="{
+              'as-table-checkbox-checked': selectAllState === 'all',
+              'as-table-checkbox-indeterminate': selectAllState === 'some',
+            }"
+            role="checkbox"
+            tabindex="0"
+            aria-label="Select all rows"
+            :aria-checked="
+              selectAllState === 'none' ? 'false' : selectAllState === 'all' ? 'true' : 'mixed'
+            "
+            @click="toggleSelectAll"
+            @keydown="onSelectAllKeydown"
+          >
+            <span
+              v-if="selectAllState === 'all'"
+              class="as-table-checkbox-tick"
+              aria-hidden="true"
+            />
+            <span v-else-if="selectAllState === 'some'" class="as-table-checkbox-dash" />
+          </span>
+        </slot>
       </th>
       <th
         v-for="col in columns"

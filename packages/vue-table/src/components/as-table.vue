@@ -9,6 +9,7 @@ import {
   type RowClassHook,
   type RowDeleteOpt,
   type RowSelectableHook,
+  type SelectOn,
 } from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
@@ -40,6 +41,8 @@ const props = withDefaults(
      * user's selected pks in place, surviving a future re-enable.
      */
     select?: SelectionMode;
+    /** See {@link SelectOn}. Since 0.1.142. */
+    selectOn?: SelectOn;
     /**
      * Built-in row-delete: `false` (off, default), `true` (on with defaults),
      * or a `RowDeleteOpt` overriding label/icon/intent/promptText. The
@@ -103,6 +106,7 @@ const props = withDefaults(
     resizable: true,
     columnMinWidth: 48,
     select: "none",
+    selectOn: "row",
     rowDelete: false,
     rowActionsColumn: false,
     headless: false,
@@ -164,14 +168,6 @@ useRegisterMainActionListener(
 
 const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClearFilters } =
   useTableColumnHandlers(state);
-
-function handleSelectAll() {
-  state.selectAll(effectiveRows.value);
-}
-
-function handleDeselectAll() {
-  state.selectedRows.value = [];
-}
 </script>
 
 <template>
@@ -183,6 +179,7 @@ function handleDeselectAll() {
       :sorters="state.sorters.value"
       :selected-rows="state.selectedRows.value"
       :select="props.select"
+      :select-on="props.selectOn"
       :row-value-fn="state.rowValueFn"
       :querying="state.querying.value"
       :query-error="state.queryError.value"
@@ -205,8 +202,6 @@ function handleDeselectAll() {
       @hide="onHide"
       @filter="onFilter"
       @filters-off="onFiltersOff"
-      @select-all="handleSelectAll"
-      @deselect-all="handleDeselectAll"
       @reorder="onReorder"
       @resize="state.setColumnWidth"
       @reset-width="onResetWidth"

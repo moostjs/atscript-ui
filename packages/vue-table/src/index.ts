@@ -17,6 +17,8 @@ export type {
   RowClassHook,
   RowAttrsHook,
   RowSelectableVerdict,
+  SelectAllState,
+  SelectOn,
   TableActionsState,
   ActionResult,
   InvokeOpts,

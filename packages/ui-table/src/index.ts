@@ -8,6 +8,7 @@ export {
   isSimpleEq,
   conditionLabel,
   filledFilterCount,
+  compactFieldFilters,
   filterTokenLabel,
   NULL_OPS,
 } from "./filters/filter-conditions";
@@ -101,6 +102,7 @@ export { resolveSystemPresets } from "./presets/system-presets";
 // ── Hidden-field pruning ────────────────────────────────────
 export type { DroppedFields, KnownFields } from "./presets/prune-preset-snapshot";
 export {
+  canonicalPresetSnapshot,
   prunePresetSnapshot,
   pruneResidualFilters,
   restoreDroppedEntries,

@@ -2,6 +2,7 @@ import type { FilterExpr } from "@uniqu/core";
 import { describe, expect, it } from "vitest";
 import {
   type KnownFields,
+  canonicalPresetSnapshot,
   prunePresetSnapshot,
   pruneResidualFilters,
   restoreDroppedEntries,
@@ -190,5 +191,60 @@ describe("restoreDroppedEntries", () => {
   it("leaves aspects the capture does not carry alone", () => {
     const out = restoreDroppedEntries({ filterOps: {} }, dropped);
     expect(Object.keys(out)).toEqual(["filterOps"]);
+  });
+});
+
+describe("canonicalPresetSnapshot", () => {
+  const defaults = { name: "10em", status: "200px" };
+
+  it("drops widths equal to the column default and omits the emptied map", () => {
+    const out = canonicalPresetSnapshot(
+      { columns: { columnNames: ["name"], columnWidths: { name: "10em" } } },
+      defaults,
+    );
+    expect(out).toEqual({ columns: { columnNames: ["name"] } });
+  });
+
+  it("keeps genuine overrides, drops widths of paths with no default", () => {
+    const out = canonicalPresetSnapshot(
+      {
+        columns: {
+          columnNames: ["name"],
+          columnWidths: { name: "12em", status: "200px", gone: "5em" },
+        },
+      },
+      defaults,
+    );
+    expect(out.columns).toEqual({ columnNames: ["name"], columnWidths: { name: "12em" } });
+  });
+
+  it("omits an empty width map", () => {
+    const out = canonicalPresetSnapshot(
+      { columns: { columnNames: ["name"], columnWidths: {} } },
+      defaults,
+    );
+    expect(out.columns).toEqual({ columnNames: ["name"] });
+  });
+
+  it("drops filterOps fields with no filled condition", () => {
+    const out = canonicalPresetSnapshot(
+      { filterOps: { name: [], status: [{ type: "eq", value: ["a"] }] } },
+      defaults,
+    );
+    expect(out.filterOps).toEqual({ status: [{ type: "eq", value: ["a"] }] });
+  });
+
+  it("returns the input itself when nothing changes, never mutates it", () => {
+    const snap: PresetSnapshot = {
+      columns: { columnNames: ["name"], columnWidths: { name: "12em" } },
+      filterOps: { status: [{ type: "eq", value: ["a"] }] },
+      sorters: [{ field: "name", direction: "asc" }],
+    };
+    expect(canonicalPresetSnapshot(snap, defaults)).toBe(snap);
+    const withDefault: PresetSnapshot = {
+      columns: { columnNames: ["name"], columnWidths: { name: "10em" } },
+    };
+    canonicalPresetSnapshot(withDefault, defaults);
+    expect(withDefault.columns?.columnWidths).toEqual({ name: "10em" });
   });
 });

@@ -10,6 +10,7 @@ import type {
   RowClassHook,
   RowDeleteOpt,
   RowSelectableHook,
+  SelectOn,
 } from "../types";
 import { useRegisterMainActionListener, useTableContext } from "../composables/use-table-state";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
@@ -34,6 +35,8 @@ const props = withDefaults(
      * user's selected pks in place, surviving a future re-enable.
      */
     select?: SelectionMode;
+    /** See {@link SelectOn}. Since 0.1.142. */
+    selectOn?: SelectOn;
     /**
      * Force exactly N rows tall. Equivalent to setting both `min-rows` and
      * `max-rows` to N — overrides both when set. The table reserves N rows
@@ -124,6 +127,7 @@ const props = withDefaults(
     resizable: true,
     columnMinWidth: 48,
     select: "none",
+    selectOn: "row",
     rowDelete: false,
     rowActionsColumn: false,
     headless: false,
@@ -231,6 +235,7 @@ watch(
       :resizable="resizable"
       :column-min-width="columnMinWidth"
       :select="select"
+      :select-on="selectOn"
       :headless="headless"
       :enter-action="enterAction"
       :row-class="rowClass"

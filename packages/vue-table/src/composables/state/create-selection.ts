@@ -1,6 +1,6 @@
 import { computed, ref, shallowRef, type ComputedRef, type Ref } from "vue";
 import { rowsToPks, togglePk, type SelectionMode } from "@atscript/ui-table";
-import type { RowSelectableHook, RowSelectableVerdict } from "../../types";
+import type { RowSelectableHook, RowSelectableVerdict, SelectAllState } from "../../types";
 
 type Row = Record<string, unknown>;
 
@@ -18,6 +18,15 @@ export interface SelectionApiOptions {
 /** Shared verdicts — frozen, so the common case allocates nothing per row. */
 const SELECTABLE: RowSelectableVerdict = Object.freeze({ ok: true });
 const NOT_SELECTABLE: RowSelectableVerdict = Object.freeze({ ok: false });
+
+/**
+ * The header tri-state from how many of the rows in scope are eligible and
+ * how many of those are selected.
+ */
+export function toSelectAllState(selected: number, selectable: number): SelectAllState {
+  if (selected === 0) return "none";
+  return selected >= selectable ? "all" : "some";
+}
 
 /** Normalise a {@link RowSelectableHook} return value. `""` carries no reason. */
 function verdictOf(value: boolean | string | undefined | void): RowSelectableVerdict {
@@ -55,15 +64,30 @@ export interface SelectionApi {
   /** How many of `rows` the predicate lets through, without building an array. */
   selectableCount: (rows: readonly Row[]) => number;
   /**
-   * Select every eligible row in `rows`. An ineligible row that is ALREADY
-   * selected stays selected: the predicate governs what the user may newly
-   * pick, not what an earlier state (or the host's `v-model`) put there.
+   * Add every eligible row in `rows` to the selection. What is already
+   * selected stays selected — rows outside `rows` included, and an
+   * ineligible row that is already picked: the predicate governs what the
+   * user may newly pick, not what an earlier state (or the host's `v-model`)
+   * put there.
    *
    * `indexOf` maps a position in `rows` to the index handed to the
    * `rowSelectable` predicate — windowed callers pass it because their rows
    * come from a sparse cache keyed by ABSOLUTE index. Defaults to identity.
    */
   selectAll: (rows: readonly Row[], indexOf?: (position: number) => number) => void;
+  /**
+   * Remove every eligible row in `rows` from the selection; selections
+   * outside `rows` stay, and so does a picked row the predicate rejects (the
+   * user can no more unpick it here than by clicking it). Since 0.1.142.
+   */
+  deselectAll: (rows: readonly Row[]) => void;
+  /**
+   * The header checkbox's action over `rows`: deselect them when every
+   * eligible one is selected, otherwise select them. Since 0.1.142.
+   */
+  toggleAll: (rows: readonly Row[]) => void;
+  /** Empty the selection — every pk, loaded or not, eligible or not. Since 0.1.142. */
+  clearSelection: () => void;
   /**
    * Toggle the active row's selection in the requested mode. Mode is passed
    * by the caller because selection mode is a rendering concern owned by
@@ -118,22 +142,42 @@ export function createSelectionApi(
     return n;
   }
 
+  function eligiblePks(rows: readonly Row[]): unknown[] {
+    return rowsToPks(selectableRows(rows), rowValueFn);
+  }
+
+  function addPks(pks: readonly unknown[]): void {
+    const current = selectedSet.value;
+    const added = [...new Set(pks)].filter((pk) => !current.has(pk));
+    if (added.length > 0) selectedRows.value = [...selectedRows.value, ...added];
+  }
+
+  function removePks(pks: readonly unknown[]): void {
+    const drop = new Set(pks);
+    const next = selectedRows.value.filter((pk) => !drop.has(pk));
+    if (next.length !== selectedRows.value.length) selectedRows.value = next;
+  }
+
   function selectAll(rows: readonly Row[], indexOf?: (position: number) => number): void {
-    if (!rowSelectable.value) {
-      selectedRows.value = rowsToPks(rows, rowValueFn);
-      return;
-    }
-    const out: unknown[] = [];
-    const seen = new Set<unknown>();
-    for (let i = 0; i < rows.length; i++) {
-      const row = rows[i]!;
-      const pk = rowValueFn(row);
-      if (seen.has(pk)) continue;
-      if (!isRowSelectable(row, indexOf ? indexOf(i) : i).ok && !isPkSelected(pk)) continue;
-      seen.add(pk);
-      out.push(pk);
-    }
-    selectedRows.value = out;
+    const eligible = indexOf
+      ? rows.filter((row, i) => isRowSelectable(row, indexOf(i)).ok)
+      : selectableRows(rows);
+    addPks(rowsToPks(eligible, rowValueFn));
+  }
+
+  function deselectAll(rows: readonly Row[]): void {
+    removePks(eligiblePks(rows));
+  }
+
+  function toggleAll(rows: readonly Row[]): void {
+    const pks = eligiblePks(rows);
+    const selected = pks.filter((pk) => selectedSet.value.has(pk)).length;
+    if (toSelectAllState(selected, pks.length) === "all") removePks(pks);
+    else addPks(pks);
+  }
+
+  function clearSelection(): void {
+    if (selectedRows.value.length > 0) selectedRows.value = [];
   }
 
   function toggleActiveSelection(mode: SelectionMode): void {
@@ -155,6 +199,9 @@ export function createSelectionApi(
     selectableRows,
     selectableCount,
     selectAll,
+    deselectAll,
+    toggleAll,
+    clearSelection,
     toggleActiveSelection,
   };
 }

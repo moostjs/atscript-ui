@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { conditionLabel, hasSecondValue, isFilled } from "./filter-conditions";
+import { compactFieldFilters, conditionLabel, hasSecondValue, isFilled } from "./filter-conditions";
 
 describe("isFilled", () => {
   it("returns true for null/notNull regardless of value", () => {
@@ -74,5 +74,27 @@ describe("conditionLabel", () => {
     expect(conditionLabel("null")).toBe("is empty");
     expect(conditionLabel("notNull")).toBe("is not empty");
     expect(conditionLabel("regex")).toBe("matches pattern");
+  });
+});
+
+describe("compactFieldFilters", () => {
+  it("drops fields with no filled condition, keeps the rest verbatim", () => {
+    const partial = [
+      { type: "gt" as const, value: [5] },
+      { type: "eq" as const, value: [""] },
+    ];
+    expect(
+      compactFieldFilters({
+        name: [],
+        status: [{ type: "eq", value: [""] }],
+        priority: partial,
+        deleted: [{ type: "null", value: [] }],
+      }),
+    ).toEqual({ priority: partial, deleted: [{ type: "null", value: [] }] });
+  });
+
+  it("returns the input itself when every field is filled", () => {
+    const filters = { status: [{ type: "eq" as const, value: ["a"] }] };
+    expect(compactFieldFilters(filters)).toBe(filters);
   });
 });

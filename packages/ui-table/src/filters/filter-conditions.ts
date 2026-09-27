@@ -64,6 +64,22 @@ export function filledFilterCount(filters: FieldFilters): number {
   return count;
 }
 
+/**
+ * `filters` without the fields that have no filled condition — the shape
+ * table state holds (a field with nothing filled has no entry). Returns
+ * `filters` itself when every field has one; never mutates it.
+ *
+ * @since 0.1.142
+ */
+export function compactFieldFilters(filters: FieldFilters): FieldFilters {
+  if (filledFilterCount(filters) === Object.keys(filters).length) return filters;
+  const out: FieldFilters = {};
+  for (const path in filters) {
+    if (filters[path].some(isFilled)) out[path] = filters[path];
+  }
+  return out;
+}
+
 /** Summarize a field's conditions into a human-readable token label. */
 export function filterTokenLabel(
   path: string,

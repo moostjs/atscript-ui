@@ -163,13 +163,8 @@ if (hasDropdown) {
       type: "eq" as const,
       value: [v as string | number | boolean],
     }));
-    const merged = [...eqConditions, ...nonEq];
-
-    if (merged.some(isFilled)) {
-      state.setFieldFilter(props.column.path, merged);
-    } else {
-      state.removeFieldFilter(props.column.path);
-    }
+    // `setFieldFilter` drops the field when nothing is filled.
+    state.setFieldFilter(props.column.path, [...eqConditions, ...nonEq]);
   });
 
   watch(
@@ -305,12 +300,10 @@ const noEnumMatches = computed(() => {
 
 function removeChip(chip: ChipItem) {
   const existing = state.filters.value[props.column.path] ?? [];
-  const remaining = existing.filter((c) => c !== chip.condition);
-  if (remaining.some(isFilled)) {
-    state.setFieldFilter(props.column.path, remaining);
-  } else {
-    state.removeFieldFilter(props.column.path);
-  }
+  state.setFieldFilter(
+    props.column.path,
+    existing.filter((c) => c !== chip.condition),
+  );
 }
 
 function clearAll() {

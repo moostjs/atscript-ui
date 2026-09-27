@@ -1,5 +1,6 @@
 import type { SortControl } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
+import { compactFieldFilters } from "../filters/filter-conditions";
 import type { FieldFilters } from "../filters/filter-types";
 import { filterExprFields } from "../filters/uniquery-to-filters";
 import type { PresetSnapshot } from "./preset-types";
@@ -129,6 +130,45 @@ export function prunePresetSnapshot(
     ]),
   ];
   return { snapshot: out, dropped: dropped.fields.length > 0 ? dropped : null };
+}
+
+/**
+ * Spell a snapshot the way table state holds it, so it compares equal to a
+ * capture of the state it produces:
+ *
+ * - `columns.columnWidths` — an entry equal to its column's default width, or
+ *   on a path with no default (not a column), goes; an emptied map is
+ *   omitted. Capture writes overrides only.
+ * - `filterOps` — a field with no filled condition goes
+ *   (`compactFieldFilters`). Table state never holds one.
+ *
+ * `defaultWidths` maps each column path to its default width — the `d` of
+ * its `ColumnWidthsMap` entry. Other aspects pass through. Returns `snapshot`
+ * itself when nothing changes; the input is never mutated.
+ *
+ * @since 0.1.142
+ */
+export function canonicalPresetSnapshot(
+  snapshot: PresetSnapshot,
+  defaultWidths: Readonly<Record<string, string>>,
+): PresetSnapshot {
+  let out = snapshot;
+  const columns = snapshot.columns;
+  if (columns?.columnWidths) {
+    const entries = Object.entries(columns.columnWidths);
+    const [kept] = partition(entries, ([p, w]) => {
+      const d = defaultWidths[p];
+      return d !== undefined && d !== w;
+    });
+    if (kept.length !== entries.length || kept.length === 0) {
+      out = { ...out, columns: columnsAspect(columns.columnNames, Object.fromEntries(kept)) };
+    }
+  }
+  if (snapshot.filterOps) {
+    const filterOps = compactFieldFilters(snapshot.filterOps);
+    if (filterOps !== snapshot.filterOps) out = { ...out, filterOps };
+  }
+  return out;
 }
 
 /**

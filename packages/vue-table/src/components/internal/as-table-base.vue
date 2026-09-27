@@ -15,13 +15,15 @@ import type {
   RowClassHook,
   RowSelectableVerdict,
   SelectAllState,
+  SelectOn,
 } from "../../types";
 import { ComboboxItem, ComboboxItemIndicator, ListboxItem, ListboxItemIndicator } from "reka-ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import { useTableContextOptional } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
 import { useCellComponents } from "../../composables/use-cell-components";
-import { onSelectControlKeydown } from "../../composables/state/create-nav-controller";
+import { toSelectAllState } from "../../composables/state/create-selection";
+import AsSelectCell from "./as-select-cell.vue";
 import AsTableColgroup from "./as-table-colgroup.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
@@ -38,6 +40,8 @@ const props = withDefaults(
     selectedRows?: unknown[];
     /** Selection mode for standalone (non-combobox) rendering. */
     select?: "none" | "single" | "multi";
+    /** See {@link SelectOn}. Standalone only. */
+    selectOn?: SelectOn;
     /**
      * Row-rendering branch:
      * - `"standalone"` (default): plain `<tr>` driven by the custom keyboard
@@ -92,6 +96,7 @@ const props = withDefaults(
   }>(),
   {
     select: "none",
+    selectOn: "row",
     renderMode: "standalone",
     stickyHeader: true,
     virtualOverscan: 5,
@@ -177,12 +182,6 @@ function metaFor(index: number): RowMeta {
   return rowHooks.value.metas[index] ?? DEFAULT_ROW_META;
 }
 
-/** Accessible name for a row's selection control, carrying the disabled reason. */
-function selectLabel(verdict: RowSelectableVerdict): string {
-  if (verdict.ok) return "Select row";
-  return verdict.reason ? `Select row, ${verdict.reason}` : "Select row, not selectable";
-}
-
 const hasActiveFilters = computed(() =>
   props.filters ? filledFilterCount(props.filters) > 0 : false,
 );
@@ -193,12 +192,12 @@ const showSelectAllCheckbox = computed(
 
 const selectAllState = computed<SelectAllState | undefined>(() => {
   if (!showSelectAllCheckbox.value) return undefined;
-  if ((props.selectedRows ?? []).length === 0) return "none";
-  // Counted against the SELECTABLE rows only — with a `rowSelectable`
-  // predicate in play, "all" is reached once every eligible row is picked,
-  // and an ineligible pk left in the selection never blocks it.
+  // Measured against the LOADED rows — the rows the header acts on — and
+  // only the SELECTABLE ones: "all" is reached once every eligible loaded
+  // row is picked, and neither a pick on another page nor an ineligible pk
+  // left in the selection moves it off "none".
   const { selectable, selected } = rowHooks.value;
-  return selectable > 0 && selected >= selectable ? "all" : "some";
+  return toSelectAllState(selected, selectable);
 });
 
 const emit = defineEmits<{
@@ -208,8 +207,6 @@ const emit = defineEmits<{
   (e: "filters-off", column: ColumnDef): void;
   (e: "row-click", row: Record<string, unknown>, event: MouseEvent): void;
   (e: "row-dblclick", row: Record<string, unknown>, event: MouseEvent): void;
-  (e: "select-all"): void;
-  (e: "deselect-all"): void;
   (e: "reorder", fromPath: string, toPath: string, position: ColumnReorderPosition): void;
   (e: "resize", path: string, width: string): void;
   /** Reset this column's width back to its default (`d`). */
@@ -229,9 +226,9 @@ function isPkSelected(row: Record<string, unknown>): boolean {
   return ctx.state.isPkSelected(props.rowValueFn(row));
 }
 
-function ariaSelectedFor(row: Record<string, unknown>): "true" | "false" | undefined {
+function ariaSelectedFor(selected: boolean): "true" | "false" | undefined {
   if (props.select === "none") return undefined;
-  return isPkSelected(row) ? "true" : "false";
+  return selected ? "true" : "false";
 }
 
 function onRowClick(row: Record<string, unknown>, event: MouseEvent, index: number) {
@@ -242,7 +239,8 @@ function onRowClick(row: Record<string, unknown>, event: MouseEvent, index: numb
   // reserved for double-click and Enter-key (per the keyboard contract).
   // In select mode click toggles; in `select="none"` click is just an
   // active-row pointer.
-  if (props.select === "none") return;
+  // With `selectOn: "control"` only the checkbox toggles.
+  if (props.select === "none" || props.selectOn === "control") return;
   if (!ctx) return;
   // `toggleActiveSelection` gates on `rowSelectable` itself.
   ctx.state.toggleActiveSelection(props.select);
@@ -258,10 +256,9 @@ function onRowDblClick(row: Record<string, unknown>, event: MouseEvent, index: n
   ctx.state.requestMainAction(event);
 }
 
-function onSelectAllToggle(state: SelectAllState) {
-  // Tri-state semantics: only fully-checked deselects; partial/empty selects all.
-  if (state === "all") emit("deselect-all");
-  else emit("select-all");
+/** The header checkbox acts on the loaded (rendered) rows. */
+function onToggleAll() {
+  ctx?.state.toggleAll(props.rows);
 }
 
 function onTbodyKeydown(event: KeyboardEvent) {
@@ -274,12 +271,6 @@ function onTbodyKeydown(event: KeyboardEvent) {
   // `isInteractiveKeyTarget`); this handler is bound on the `<tbody>`, which
   // is the boundary the guard walks up to.
   ctx.state.handleNavKey(event, { mode: props.select });
-}
-
-/** Space on a row's selection control toggles just that row. */
-function onSelectCellKeydown(event: KeyboardEvent, index: number) {
-  if (!ctx) return;
-  onSelectControlKeydown(event, index, props.select, ctx.state);
 }
 
 const scrollContainerRef = ref<HTMLElement | null>(null);
@@ -465,6 +456,7 @@ function rowTextValue(row: Record<string, unknown>): string {
         :column-min-width="columnMinWidth"
         :has-select-column="hasValue"
         :select-all-state="selectAllState"
+        :selected-count="ctx?.state.selectedCount.value ?? 0"
         :with-filler="stretch"
         :enable-auto-fit="true"
         :aria-rowindex="isStandalone ? 1 : undefined"
@@ -475,10 +467,13 @@ function rowTextValue(row: Record<string, unknown>): string {
         @reset-width="(c) => emit('reset-width', c)"
         @reorder="(f, t, p) => emit('reorder', f, t, p)"
         @resize="(p, w) => emit('resize', p, w)"
-        @select-all-toggle="onSelectAllToggle"
+        @toggle-all="onToggleAll"
       >
         <template v-for="col in columns" #[`header-${col.path}`]="scope">
           <slot :name="`header-${col.path}`" v-bind="scope" />
+        </template>
+        <template #header-__select="scope">
+          <slot name="header-__select" v-bind="scope" />
         </template>
       </AsTableHeader>
 
@@ -567,18 +562,21 @@ function rowTextValue(row: Record<string, unknown>): string {
       >
         <template #default="{ item, index, spaceBefore }">
           <!--
-            `meta` is resolved ONCE per row (the row's hook results + its
-            selectability verdict); `v-bind="meta.attrs"` comes FIRST so every
+            `meta` (the row's hook results + its selectability verdict) and
+            `selected` are resolved ONCE per row; `v-bind="meta.attrs"` comes FIRST so every
             framework binding after it wins — consumer attrs can decorate a
             row but can never rewrite its id / role / aria / data contract.
           -->
-          <template v-for="meta in [metaFor(index)]" :key="0">
+          <template
+            v-for="[meta, selected] in [[metaFor(index), isPkSelected(item)] as const]"
+            :key="0"
+          >
             <tr
               v-bind="meta.attrs"
               :id="rowIdFor(index)"
               :role="'row'"
               :aria-rowindex="index + 2"
-              :aria-selected="ariaSelectedFor(item)"
+              :aria-selected="ariaSelectedFor(selected)"
               :data-selectable="meta.selectable.ok ? undefined : 'false'"
               :class="[{ 'as-table-row-active': isActiveRow(index) }, meta.cls]"
               :style="{
@@ -588,28 +586,19 @@ function rowTextValue(row: Record<string, unknown>): string {
               @click="onRowClick(item, $event, index)"
               @dblclick="onRowDblClick(item, $event, index)"
             >
-              <td v-if="hasValue" class="as-td-select" role="gridcell">
-                <span
-                  class="as-table-checkbox"
-                  :class="{
-                    'as-table-checkbox-checked': isPkSelected(item),
-                    'as-table-checkbox-disabled': !meta.selectable.ok,
-                  }"
-                  role="checkbox"
-                  :tabindex="meta.selectable.ok ? 0 : undefined"
-                  :aria-checked="isPkSelected(item) ? 'true' : 'false'"
-                  :aria-disabled="meta.selectable.ok ? undefined : 'true'"
-                  :aria-label="selectLabel(meta.selectable)"
-                  :title="meta.selectable.reason"
-                  @keydown="onSelectCellKeydown($event, index)"
-                >
-                  <span
-                    v-if="isPkSelected(item)"
-                    class="as-table-checkbox-tick"
-                    aria-hidden="true"
-                  />
-                </span>
-              </td>
+              <AsSelectCell
+                v-if="hasValue"
+                :row="item"
+                :index="index"
+                :selected="selected"
+                :verdict="meta.selectable"
+                :select="select"
+                :select-on="selectOn"
+              >
+                <template v-if="slots['cell-__select']" #default="scope">
+                  <slot name="cell-__select" v-bind="scope" />
+                </template>
+              </AsSelectCell>
               <template v-if="hasAnyCellBindings">
                 <template v-for="col in columns" :key="col.path">
                   <template v-for="bindings in [cellResolver(col, item, index)]" :key="0">

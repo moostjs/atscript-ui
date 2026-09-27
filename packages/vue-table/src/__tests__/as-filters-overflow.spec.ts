@@ -1,10 +1,16 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from "vitest";
-import type { mount } from "@vue/test-utils";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { enableAutoUnmount, type mount } from "@vue/test-utils";
+import { defineComponent, h, nextTick, ref, watch } from "vue";
+import type { ColumnDef } from "@atscript/ui";
+import { useTableContext } from "../composables/use-table-state";
 import AsFilters from "../components/as-filters.vue";
 import { mockColumn, mountWithTableContext } from "./helpers";
 
 const PATHS = ["name", "status", "owner", "region"];
+
+// Popovers portal to `document.body`; unmount so none outlives its test.
+enableAutoUnmount(afterEach);
 
 function setup(props: Record<string, unknown> = {}) {
   return mountWithTableContext(AsFilters, {
@@ -77,5 +83,177 @@ describe("<AsFilters> — overflow", () => {
     const { wrapper } = setup({ maxVisible: 2, overflow: "none" });
     expect(inlinePaths(wrapper)).toHaveLength(2);
     expect(wrapper.find(".as-filters-overflow-trigger").exists()).toBe(false);
+  });
+});
+
+const flush = async (n = 4) => {
+  for (let i = 0; i < n; i++) {
+    await nextTick();
+    await new Promise((r) => setTimeout(r, 0));
+  }
+};
+const panel = () => document.body.querySelector(".as-filters-overflow");
+
+/** Host binding `v-model:overflow-open` to a ref it exposes. */
+function setupControlled(extra: Record<string, unknown> = {}, slots?: Record<string, unknown>) {
+  const open = ref(false);
+  const Host = defineComponent({
+    setup: () => () =>
+      h(
+        AsFilters,
+        {
+          filterFields: PATHS,
+          maxVisible: 2,
+          overflowOpen: open.value,
+          "onUpdate:overflowOpen": (v: boolean) => (open.value = v),
+          ...extra,
+        },
+        slots,
+      ),
+  });
+  const mounted = mountWithTableContext(Host, { columns: PATHS.map((p) => mockColumn(p)) });
+  return { ...mounted, open };
+}
+
+describe("<AsFilters> — overflow popover control", () => {
+  it("v-model:overflow-open opens and closes the popover from the host", async () => {
+    const { open } = setupControlled();
+    expect(panel()).toBeNull();
+    open.value = true;
+    await flush();
+    expect(panel()).not.toBeNull();
+    open.value = false;
+    await flush();
+    expect(panel()).toBeNull();
+  });
+
+  it("the trigger updates the bound model", async () => {
+    const { wrapper, open } = setupControlled();
+    await wrapper.find(".as-filters-overflow-trigger").trigger("click");
+    await flush();
+    expect(open.value).toBe(true);
+    expect(panel()).not.toBeNull();
+  });
+
+  it("forwards the popover's auto-focus events", async () => {
+    const onOpen = vi.fn();
+    const onClose = vi.fn();
+    const { open } = setupControlled({
+      onOverflowOpenAutoFocus: onOpen,
+      onOverflowCloseAutoFocus: onClose,
+    });
+    open.value = true;
+    await flush();
+    expect(onOpen).toHaveBeenCalledTimes(1);
+    expect(onOpen.mock.calls[0][0]).toBeInstanceOf(Event);
+    open.value = false;
+    await flush();
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("a prevented close-auto-focus keeps focus off the trigger", async () => {
+    const { wrapper } = setupControlled({
+      onOverflowCloseAutoFocus: (e: Event) => e.preventDefault(),
+    });
+    const trigger = wrapper.find<HTMLButtonElement>(".as-filters-overflow-trigger");
+    await trigger.trigger("click");
+    await flush();
+    document.body.querySelector<HTMLInputElement>(".as-filters-overflow input")?.focus();
+    await trigger.trigger("click");
+    await flush();
+    expect(panel()).toBeNull();
+    expect(document.activeElement).not.toBe(trigger.element);
+  });
+
+  it("#overflow-trigger replaces the trigger and receives activeCount + open", async () => {
+    const seen: Array<{ activeCount: number; open: boolean }> = [];
+    const { wrapper, state, open } = setupControlled(
+      {},
+      {
+        "overflow-trigger": (p: { activeCount: number; open: boolean }) => {
+          seen.push({ ...p });
+          return h("button", { type: "button", class: "host-trigger" }, `More (${p.activeCount})`);
+        },
+      },
+    );
+    expect(wrapper.find(".as-filters-overflow-trigger").exists()).toBe(false);
+    state.setFieldFilter("owner", [{ type: "eq", value: ["y"] }]);
+    await flush();
+    const trigger = wrapper.find(".host-trigger");
+    expect(trigger.text()).toBe("More (1)");
+    // The popover's trigger wiring lands on the host's element.
+    expect(trigger.attributes("aria-expanded")).toBe("false");
+    await trigger.trigger("click");
+    await flush();
+    expect(open.value).toBe(true);
+    expect(seen.at(-1)).toEqual({ activeCount: 1, open: true });
+  });
+
+  it("#overflow replaces the body with the overflowed columns and a close()", async () => {
+    let close!: () => void;
+    const { open } = setupControlled(
+      {},
+      {
+        overflow: (p: { columns: ColumnDef[]; close: () => void }) => {
+          close = p.close;
+          return h("div", { class: "host-body" }, [
+            h("button", { type: "button" }, p.columns.map((c) => c.path).join(",")),
+          ]);
+        },
+      },
+    );
+    open.value = true;
+    await flush();
+    expect(panel()?.querySelector(".host-body")?.textContent).toBe("owner,region");
+    expect(panel()?.querySelector(".as-filter-field")).toBeNull();
+    close();
+    await flush();
+    expect(open.value).toBe(false);
+  });
+
+  it("host recipe: close the popover when a field opens the filter dialog", async () => {
+    const open = ref(true);
+    let ctx!: ReturnType<typeof useTableContext>;
+    const Host = defineComponent({
+      setup() {
+        ctx = useTableContext();
+        watch(
+          () => ctx.state.filterDialogColumn.value,
+          (c) => c && (open.value = false),
+        );
+        return () =>
+          h(AsFilters, {
+            filterFields: PATHS,
+            maxVisible: 2,
+            overflowOpen: open.value,
+            "onUpdate:overflowOpen": (v: boolean) => (open.value = v),
+          });
+      },
+    });
+    mountWithTableContext(Host, { columns: PATHS.map((p) => mockColumn(p)) });
+    await flush();
+    expect(panel()).not.toBeNull();
+    ctx.state.openFilterDialog(mockColumn("owner"));
+    await flush();
+    expect(open.value).toBe(false);
+    expect(panel()).toBeNull();
+  });
+
+  it("does not reopen by itself after the overflow empties and comes back", async () => {
+    const maxVisible = ref(2);
+    const Host = defineComponent({
+      setup: () => () => h(AsFilters, { filterFields: PATHS, maxVisible: maxVisible.value }),
+    });
+    const { wrapper } = mountWithTableContext(Host, { columns: PATHS.map((p) => mockColumn(p)) });
+    await wrapper.find(".as-filters-overflow-trigger").trigger("click");
+    await flush();
+    expect(panel()).not.toBeNull();
+    maxVisible.value = 10;
+    await flush();
+    expect(panel()).toBeNull();
+    maxVisible.value = 2;
+    await flush();
+    expect(wrapper.find(".as-filters-overflow-trigger").exists()).toBe(true);
+    expect(panel()).toBeNull();
   });
 });

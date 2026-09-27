@@ -11,6 +11,8 @@ import {
   type PresetSnapshot,
   type SystemPreset,
   STANDARD_PRESET_ID,
+  canonicalPresetSnapshot,
+  compactFieldFilters,
   fromWireSnapshot,
   isDirtyAgainst,
   isSystemPresetId,
@@ -126,7 +128,8 @@ export interface PresetStateSlice {
   activeId: Ref<string | null>;
   /**
    * Snapshot of the active preset (system presets are aspect-expanded),
-   * pruned of fields this table cannot use — what applying it wrote.
+   * pruned of fields this table cannot use — what applying it wrote — and
+   * canonical (`canonicalPresetSnapshot`) since 0.1.142.
    */
   activeSnapshot: ComputedRef<PresetSnapshot>;
   /** What the active preset names that this caller cannot use, or null. Since 0.1.141. */
@@ -337,7 +340,9 @@ export function createPresetState(opts: CreatePresetStateOptions): {
       },
       apply(o, value, isSystem) {
         if (!value && !isSystem) return;
-        o.filters.value = value ? { ...(value as FieldFilters) } : {};
+        // Written in the shape table state holds: a field with nothing filled
+        // has no entry (`setFieldFilter` removes it too).
+        o.filters.value = value ? { ...compactFieldFilters(value as FieldFilters) } : {};
         // The preset's filters are the whole population: residual conditions
         // (which a preset cannot store) go with the filters they refined.
         if (o.residualFilters?.value.length) o.residualFilters.value = [];
@@ -508,6 +513,16 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     return wire ? fromWireSnapshot(wire as Parameters<typeof fromWireSnapshot>[0]) : {};
   });
 
+  // Each column's default width, read from the `d` of its width entry. A
+  // resize replaces the width map, so this re-runs, but it hands back the
+  // previous object while every default is unchanged — `activeSnapshot`
+  // only recomputes when a default really moves.
+  const defaultWidths = computed<Record<string, string>>((prev) => {
+    const next: Record<string, string> = {};
+    for (const [path, entry] of Object.entries(opts.columnWidths.value)) next[path] = entry.d;
+    return prev && shallowEqual(prev, next) ? prev : next;
+  });
+
   // Pruned like every apply, so a preset applied without its hidden fields
   // is not dirty for lacking them. Comparison only — the row is untouched.
   const prunedActive = computed(() => {
@@ -515,7 +530,12 @@ export function createPresetState(opts: CreatePresetStateOptions): {
     const stored = storedActiveSnapshot.value;
     return known ? prunePresetSnapshot(stored, known) : { snapshot: stored, dropped: null };
   });
-  const activeSnapshot = computed<PresetSnapshot>(() => prunedActive.value.snapshot);
+  // Canonical — spelled the way capture spells the state applying it
+  // produces — so a width equal to the column default or a field with nothing
+  // filled is not a difference.
+  const activeSnapshot = computed<PresetSnapshot>(() =>
+    canonicalPresetSnapshot(prunedActive.value.snapshot, defaultWidths.value),
+  );
   const droppedFields = computed<DroppedFieldsReport | null>(() => {
     const dropped = prunedActive.value.dropped;
     const presetId = activeId.value;
@@ -719,6 +739,13 @@ export function createPresetState(opts: CreatePresetStateOptions): {
   };
 
   return { slice, internals: { gate, bootstrap } };
+}
+
+function shallowEqual(a: Record<string, string>, b: Record<string, string>): boolean {
+  const keys = Object.keys(a);
+  if (keys.length !== Object.keys(b).length) return false;
+  for (const k of keys) if (a[k] !== b[k]) return false;
+  return true;
 }
 
 function inertMutator(): never {

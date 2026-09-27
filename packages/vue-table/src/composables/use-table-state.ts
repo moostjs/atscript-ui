@@ -25,6 +25,7 @@ import {
   debounce,
   DEV,
   arraysEqual,
+  compactFieldFilters,
   filterExprFields,
   filterExprKey,
   isFilled,
@@ -844,6 +845,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     selectableRows,
     selectableCount,
     selectAll,
+    deselectAll,
+    toggleAll,
+    clearSelection,
     toggleActiveSelection,
   } = selection;
 
@@ -1071,6 +1075,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     selectableRows,
     selectableCount,
     selectAll,
+    deselectAll,
+    toggleAll,
+    clearSelection,
     rowDelete,
     rowActions,
     includeActions,
@@ -1138,13 +1145,9 @@ export function createTableState(opts: CreateTableStateOptions): {
       filterFields.value = filterFields.value.filter((f) => f !== path);
     },
     setFieldFilter(path: string, conditions: FilterCondition[]) {
-      if (!conditions.some(isFilled)) {
-        if (!(path in filters.value)) return;
-        const { [path]: _, ...rest } = filters.value;
-        filters.value = rest;
-      } else {
-        filters.value = { ...filters.value, [path]: conditions };
-      }
+      // A field with nothing filled has no entry.
+      if (!conditions.some(isFilled) && !(path in filters.value)) return;
+      filters.value = compactFieldFilters({ ...filters.value, [path]: conditions });
     },
     setColumnWidth(path: string, width: string) {
       writeColumnWidth(path, width);
