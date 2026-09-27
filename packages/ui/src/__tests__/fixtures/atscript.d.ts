@@ -72,16 +72,17 @@ declare global {
     "db.rel.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view": string | true
     "db.view.for": import("@atscript/typescript/utils").AtscriptRef
-    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode })[]
+    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode, kind?: string })[]
     "db.view.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view.materialized": boolean
     "db.view.renamed": string
     "db.view.having": import("@atscript/typescript/utils").AtscriptQueryNode
-    "db.agg.sum": string
-    "db.agg.avg": string
-    "db.agg.count": string | true
-    "db.agg.min": string
-    "db.agg.max": string
+    "db.agg.sum": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.avg": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.count": { field?: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.countDistinct": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.min": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.max": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
     "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
     "db.search.vector.threshold": number
     "db.search.filter": (string)[]
