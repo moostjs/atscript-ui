@@ -384,6 +384,13 @@ const dirty = isDirtyAgainst(activeSnapshot, currentSnapshot);
 
 Returns whether the current snapshot diverges from the active preset, scoped to the aspects the active preset claims. A column-only preset stays clean while filters change; a filter-ops-only preset doesn't dirty when columns reorder.
 
+| #   | Rule (0.1.142+)                                                                                                                                                                                                                                                |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | `state.preset.activeSnapshot` is CANONICAL (pruned + `canonicalPresetSnapshot`): no width equal to its column's default or on a non-column path, no emptied width map, no filter field with nothing filled.                                                    |
+| D2  | So a preset pinning `{ name: '10em' }` on a `10em`-default column stays clean; resizing away is dirty, back is clean. A genuine override (≠ default) stays an override.                                                                                        |
+| D3  | Preset apply writes `compactFieldFilters(filterOps)` — `{ f: [] }` never reaches `state.filters`; `setFieldFilter` removes a field whose conditions are all unfilled. Clearing a field the preset FILLED is still dirty.                                       |
+| D4  | The stored row is untouched and capture still writes overrides only (presets follow metadata defaults). Diffing a stored snapshot yourself → `canonicalPresetSnapshot(snapshot, defaultWidths)` with `defaultWidths` = each `state.columnWidths` entry's `.d`. |
+
 ## Server-side AsPresetsController
 
 `@atscript/moost-ui-presets`. Abstract class.

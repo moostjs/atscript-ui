@@ -154,6 +154,94 @@ from reading fully checked.
 The header's select-all control is a `role="checkbox"` too, with
 `aria-label="Select all rows"` and Space / Enter activation.
 
+### What the header checkbox acts on
+
+Since 0.1.142 the header checkbox acts on the **loaded** rows only —
+the rows the table is showing — and never touches the rest of the
+selection:
+
+| Header state           | Reads as                               | Click                                                  |
+| ---------------------- | -------------------------------------- | ------------------------------------------------------ |
+| `none` (unchecked)     | no eligible loaded row is selected     | adds every eligible loaded row to the selection        |
+| `some` (indeterminate) | some eligible loaded rows are selected | adds the rest                                          |
+| `all` (checked)        | every eligible loaded row is selected  | removes the eligible loaded rows; picks elsewhere stay |
+
+A pick on another page (with
+[`selectionPersistence: 'persist'`](/api/vue-table#usetableselection-state-opts)) survives both
+directions, and does not move the header off `none`. To empty the
+selection for real, call `state.clearSelection()`.
+
+`<AsWindowTable>` renders the header checkbox only once **every** row
+of the dataset is loaded; it then behaves as above over all rows. While
+part of the dataset is unloaded there is no select-all control —
+selecting whatever blocks happen to be cached would pick rows the user
+never saw. Render your own count and clear action there through the
+`#header-__select` slot (below).
+
+`state.selectAll(rows)` / `state.deselectAll(rows)` are the same
+operations for your own controls: they add or remove the eligible
+rows' keys and leave every other key alone; `state.toggleAll(rows)` is
+the header's click over `rows`. Before 0.1.142
+`selectAll` replaced the selection and the header's deselect cleared
+it entirely.
+
+### Row click vs. checkbox
+
+By default a click anywhere on a row toggles it. With
+`select-on="control"` only the row's checkbox toggles; a row click just
+moves the active row (and still emits `row-click`), which suits rows
+the user clicks to inspect. Since 0.1.142.
+
+```vue
+<AsTable select="multi" select-on="control" />
+```
+
+The keyboard is the same in both: Space / Enter on the active row
+toggles it, Space on a focused checkbox toggles that row. A click on
+the checkbox in `control` mode does not emit `row-click` and does not
+trigger the double-click main action.
+
+### Custom selection controls
+
+The selection column is addressed like a pseudo-column named
+`__select` (as `__actions` is for row actions), on both `<AsTable>`
+and `<AsWindowTable>`. Since 0.1.142.
+
+```vue
+<AsTable select="multi" select-on="control">
+  <template #header-__select="{ state, toggle, selectedCount }">
+    <MyCheckbox
+      v-if="state"
+      :checked="state === 'all'"
+      :indeterminate="state === 'some'"
+      aria-label="Select all rows"
+      @click.stop="toggle"
+    />
+    <span v-else-if="selectedCount">{{ selectedCount }}</span>
+  </template>
+  <template #cell-__select="{ selected, selectable, reason, toggle }">
+    <MyCheckbox
+      :checked="selected"
+      :disabled="!selectable"
+      :title="reason"
+      aria-label="Select row"
+      @click.stop="toggle"
+    />
+  </template>
+</AsTable>
+```
+
+| Slot               | Props                                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#header-__select` | `state` — `'none' \| 'some' \| 'all'`, or `undefined` when no select-all is available; `toggle()` — the header's action; `selectedCount` — size of the whole selection |
+| `#cell-__select`   | `row`; `index` (absolute in `<AsWindowTable>`); `selected`; `selectable` + `reason` from `:row-selectable`; `toggle()` — toggles the row (gated) and makes it active   |
+
+- Call `toggle` from a handler that stops propagation (`@click.stop`):
+  in the default `select-on="row"` the click would otherwise also reach
+  the row and toggle it back.
+- The slot replaces the default control's accessibility too — give
+  yours a checkbox role, `aria-checked` and a name.
+
 ### Announcing a running action
 
 While `state.actions.invoke` is in flight, the `<AsTableActions>`

@@ -115,6 +115,8 @@ interface AsTableProps {
   headless?: boolean;
   /** Selection mode: "none" | "single" | "multi". */
   select?: SelectionMode;
+  /** See `SelectOn`. Since 0.1.142. */
+  selectOn?: SelectOn;
   /** Row-delete opt-in. */
   rowDelete?: boolean | RowDeleteOpt;
   /**
@@ -151,9 +153,25 @@ The three hooks are typed under [Row hooks](#row-hooks). `AsWindowTable` accepts
 
 **Emits**: `row-click(row, event)`, `row-dblclick(row, event)`, `main-action(row, absIndex, event)`.
 
+**Slots**: `cell-<path>` / `header-<path>` per column, plus the selection pseudo-column `__select` (since 0.1.142):
+
+```typescript
+"header-__select": (props: { state: SelectAllState | undefined; toggle: () => void; selectedCount: number }) => unknown;
+"cell-__select": (props: {
+  row: Record<string, unknown>;
+  index: number;
+  selected: boolean;
+  selectable: boolean;
+  reason: string | undefined;
+  toggle: () => void;
+}) => unknown;
+```
+
+Behaviour and scope: [Custom selection controls](/tables/actions#custom-selection-controls), [What the header checkbox acts on](/tables/actions#what-the-header-checkbox-acts-on).
+
 ### `AsWindowTable`
 
-Windowed (virtualized) renderer for million-row datasets. Uses `planFetch` / page-aligned blocks under the hood. Same props as `AsTable` plus `rowHeight?: number`.
+Windowed (virtualized) renderer for million-row datasets. Uses `planFetch` / page-aligned blocks under the hood. Same props and selection slots as `AsTable` plus `rowHeight?: number`.
 
 ### `AsFilters`
 
@@ -192,6 +210,12 @@ interface AsFiltersProps {
   residual?: boolean;
 }
 ```
+
+Since 0.1.142 — behaviour in [Controlling the popover](/tables/filtering#controlling-the-popover):
+
+- **v-model**: `overflowOpen` (boolean).
+- **Emits**: `overflow-open-auto-focus(event: Event)`, `overflow-close-auto-focus(event: Event)`.
+- **Slots**: `#overflow-trigger="{ activeCount: number, open: boolean }"`, `#overflow="{ columns: ColumnDef[], close: () => void }"`.
 
 `$attrs` are still forwarded to every filter field: the component sets
 `inheritAttrs: false` and renders a multi-root fragment (no wrapper element),
@@ -826,7 +850,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Filters / sorters / search**: `filters`, `filterFields`, `residualFilters` (`ShallowRef<FilterExpr[]>`, since 0.1.140 — AND-ed conditions field filters cannot hold; `setResidualFilters(exprs)`, `removeResidualFilter(index)`, cleared by `resetFilters()`; see [Custom filter conditions](/tables/filtering#custom-filter-conditions)), `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
-- **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only.
+- **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only; since 0.1.142 `deselectAll(rows)`, `toggleAll(rows)` (the header's action) and `clearSelection()`. Semantics: [Selection](/tables/actions#what-the-header-checkbox-acts-on).
 - **Active row / nav**: `activeIndex`, `navMode`, `navViewportRowCount`, `hasMainActionListener`, `rowId`, `getActiveRow`, `setActive`, `clearActive`, `toggleActiveSelection`, `requestMainAction`, `handleNavKey`, `registerMainActionListener`.
 
   `getActiveRow(): Record<string, unknown> | undefined` resolves the currently-active row — nav-mode-aware: page-relative into `results` for paginated `<AsTable>`, absolute via `windowCache` for `<AsWindowTable>`. Returns `undefined` when no row is active (`activeIndex < 0`). It is the single resolver shared by selection, the `@main-action` emit, and the `level="row"` toolbar.
@@ -972,6 +996,17 @@ interface RowSelectableVerdict {
   /** Disabled reason, when the predicate returned a string. */
   reason?: string;
 }
+
+/** Header select-all tri-state, over the rows the header acts on. Exported since 0.1.142. */
+type SelectAllState = "none" | "some" | "all";
+
+/**
+ * What toggles a row's selection by pointer (`:select-on`): `"row"` — a click
+ * anywhere on the row (default); `"control"` — only the row's checkbox, a
+ * row click just moves the active row. Space / Enter behave the same in
+ * both. Since 0.1.142.
+ */
+type SelectOn = "row" | "control";
 ```
 
 A rejected row's selection control renders with `as-table-checkbox-disabled`

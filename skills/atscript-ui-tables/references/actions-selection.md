@@ -239,6 +239,10 @@ Invariants:
 | `state.selectedRows`             | `ShallowRef<unknown[]>` — PKs derived via `rowValueFn(row)`.                                                                                     |
 | `state.selectedCount`            | `ComputedRef<number>`.                                                                                                                           |
 | `state.isPkSelected(pk)`         | Quick membership check.                                                                                                                          |
+| `state.selectAll(rows)`          | ADD the eligible rows' PKs (0.1.142+; replaced the selection before). Everything else stays.                                                     |
+| `state.deselectAll(rows)`        | 0.1.142+. Remove the eligible rows' PKs; everything else (and ineligible picks) stays.                                                           |
+| `state.toggleAll(rows)`          | 0.1.142+. The header's action over `rows`: deselect when every eligible one is selected, else select.                                            |
+| `state.clearSelection()`         | 0.1.142+. The real clear — every PK, loaded or not, eligible or not.                                                                             |
 | `state.getActiveRow()`           | Active-row resolver — nav-mode-aware (see invariant below). Returns `undefined` when `activeIndex < 0`. Signature: API ref `ReactiveTableState`. |
 | `state.rowValueFn(row)`          | Default extracts `preferredId` field(s); consumer can override via `<AsTableRoot :row-value-fn>`.                                                |
 | `togglePk(sel, pk, mode)`        | `@atscript/ui-table` helper. `"none"` no-op; `"single"` replaces; `"multi"` toggles.                                                             |
@@ -270,6 +274,30 @@ Gated paths: row click, Space/Enter toggle, header select-all, and the select-al
 | Select-all is ADDITIVE for ineligible rows: a pk that is already selected but is now ineligible is KEPT, and it does not stop the header reading "all". |
 | The tri-state header compares the selection against ELIGIBLE rendered rows only.                                                                        |
 | The header select-all control is `role="checkbox"` + `aria-label="Select all rows"` and activates on Space / Enter as well as click.                    |
+
+### Header scope (0.1.142+)
+
+| #   | Rule                                                                                                                                                                                                                                     |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H1  | `<AsTable>` header acts on LOADED rows only: select = union with the selection, deselect = remove only loaded eligible PKs. Picks on other pages (`selectionPersistence: 'persist'`) survive both.                                       |
+| H2  | Header state `none`/`some`/`all` is measured against eligible LOADED rows — off-page picks alone read `none`. Before 0.1.142 they read `some` and a click CLEARED everything.                                                            |
+| H3  | `<AsWindowTable>` renders the header checkbox ONLY once every row of the dataset is loaded (then = H1 over all rows). Partial dataset → no control; `#header-__select` gets `state: undefined` + `selectedCount` for a host count/clear. |
+| H4  | Need "clear everything" → `state.clearSelection()`. "Select all N matching" (unloaded rows) is NOT supported.                                                                                                                            |
+
+### `select-on` + `__select` slots (0.1.142+)
+
+`<AsTable select="multi" select-on="control">` (also `<AsWindowTable>`): only the checkbox toggles; a row click just moves the active row and still emits `row-click`. Default `"row"` = click anywhere toggles. Space / Enter on the active row toggle in both. A checkbox click in `control` mode emits no `row-click` and no dblclick main-action.
+
+| Slot                                                                    | Props                                                                                                                  |
+| ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `#header-__select="{ state, toggle, selectedCount }"`                   | `state`: `SelectAllState` or `undefined` (no select-all available); `toggle()` = the header's action.                  |
+| `#cell-__select="{ row, index, selected, selectable, reason, toggle }"` | `index` absolute in window mode; `selectable`/`reason` from `:row-selectable`; `toggle()` toggles (gated) + activates. |
+
+| Rule                                                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Call `toggle` with `@click.stop` — in `select-on="row"` an unstopped click also reaches the row and toggles it back.                     |
+| A slot replaces the default control's a11y — supply `role="checkbox"`/`aria-checked`/a name (or a native checkbox) yourself.             |
+| Both slots are forwarded through `<AsTable>` / `<AsWindowTable>`; `__select` is a slot name only, never a column in `state.columnNames`. |
 
 ```vue
 <AsTable

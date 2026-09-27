@@ -69,9 +69,10 @@ Use any pagination component; you only need to write to
 
 The `<AsTable>` renderer accepts presentational props for the chrome:
 
-- **`:select="multi"`** — render a leading checkbox column. The full
-  multi-select wire (`Space`, `Shift+click`, `select all` from
-  `<AsTableActions>`) is automatic.
+- **`:select="multi"`** — render a leading checkbox column. Row click,
+  `Space` / `Enter` on the active row and the header select-all checkbox
+  (over the loaded rows) are wired automatically. See
+  [Selection](/tables/actions#selection).
 - **`:rowActionsColumn="first" | "last" | "merge-select"`** — synthesise
   a locked `__actions` pseudo-column from `state.actions.row`. See
   [Actions & Selection](/tables/actions).

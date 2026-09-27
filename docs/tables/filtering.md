@@ -208,6 +208,49 @@ toolbar row you wrap them in, and you style that row.
 Styling hooks: `as-filters-overflow-trigger`, `as-filters-overflow-badge`,
 `as-filters-overflow`.
 
+##### Controlling the popover
+
+_Since 0.1.142._ The popover keeps its own open state unless you bind it:
+
+| API                                         | What it does                                                                                                                                                                  |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `v-model:overflow-open`                     | Open state of the popover — drive it (close before your own dialog opens) or observe it. Unbound → uncontrolled.                                                              |
+| `@overflow-open-auto-focus`                 | The popover is about to focus its first field. Cancellable: `event.preventDefault()` keeps focus where it is.                                                                 |
+| `@overflow-close-auto-focus`                | The popover closed and is about to return focus to its trigger. Cancellable: `event.preventDefault()` to focus something else.                                                |
+| `#overflow-trigger="{ activeCount, open }"` | Replaces the trigger. Render **one** focusable element (a `<button>`, or a component that forwards attrs) — the popover merges its ARIA attributes and click handler onto it. |
+| `#overflow="{ columns, close }"`            | Replaces the popover body. `columns` = the overflowed fields' columns; `close()` closes the popover.                                                                          |
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+const moreOpen = ref(false);
+</script>
+
+<template>
+  <AsFilters v-model:overflow-open="moreOpen" :max-visible="3">
+    <template #overflow-trigger="{ activeCount }">
+      <button type="button" class="my-more-btn">More ({{ activeCount }})</button>
+    </template>
+  </AsFilters>
+</template>
+```
+
+<kbd>F4</kbd> inside an overflowed field opens the value help / filter dialog
+and leaves the popover open, so closing the dialog returns focus to the same
+input. When your app renders its own (non-reka) filter dialog that fights the
+popover for focus, close the popover as the dialog opens —
+`state.filterDialogColumn` is set while it is open:
+
+```ts
+const { state } = useTableContext();
+watch(
+  () => state.filterDialogColumn.value,
+  (column) => column && (moreOpen.value = false),
+);
+```
+
+`$attrs` still go to every filter field, never to the popover.
+
 ### `<AsFilterField>` — one inline filter
 
 The Tier-2 default for a single inline filter chip / input. Reads

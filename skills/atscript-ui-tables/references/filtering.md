@@ -210,6 +210,19 @@ off-screen stays discoverable.
 | `overflow: 'none'` does NOT clear anything: a filter applied to a dropped field still rides `state.filters` into the query. Only pick it when your app surfaces those fields elsewhere.                           |
 | The popover renders the same resolved `controls.filterField` component as the inline row.                                                                                                                         |
 
+Popover control (0.1.142+):
+
+| API                                                        | Use                                                                                                                                      |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `v-model:overflow-open`                                    | Drive / observe the open state. Unbound → uncontrolled.                                                                                  |
+| `@overflow-open-auto-focus` / `@overflow-close-auto-focus` | Forwarded popover focus events (`Event`); `preventDefault()` keeps focus where it is / stops the return to the trigger. Fired once each. |
+| `#overflow-trigger="{ activeCount, open }"`                | Own trigger. Render ONE focusable element (button, or component forwarding attrs) — the popover merges ARIA + click onto it.             |
+| `#overflow="{ columns, close }"`                           | Own popover body; `columns` = overflowed `ColumnDef[]`.                                                                                  |
+
+| Rule                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F4 in an overflowed field does NOT close the popover (focus returns to the same input after the dialog). A host with its own non-reka filter dialog closes it: `watch(() => state.filterDialogColumn.value, (c) => c && (open.value = false))`. |
+
 Use a separate `<AsFilters>` block in the toolbar to render the chip strip; the "Add filter" affordance is up to the consumer (or use the Filters tab inside `<AsConfigDialog>` — see [state-persistence.md](state-persistence.md)).
 
 ## AsFilterField component

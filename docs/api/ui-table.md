@@ -76,6 +76,7 @@ function hasSecondValue(type: FilterConditionType): boolean; // `true` only for 
 function isSimpleEq(cond: FilterCondition): boolean;
 function conditionLabel(type: FilterConditionType): string;
 function filledFilterCount(filters: FieldFilters): number;
+function compactFieldFilters(filters: FieldFilters): FieldFilters; // since 0.1.142
 function filterTokenLabel(
   path: string,
   conditions: FilterCondition[],
@@ -85,7 +86,7 @@ function filterTokenLabel(
 const NULL_OPS: ReadonlySet<FilterConditionType>; // { "null", "notNull" }
 ```
 
-`isFilled` returns true when the condition has at least one operand bound (or uses a `NULL_OPS` operator). `filledFilterCount` is used by toolbar badges. `filterTokenLabel` summarises a field's filled conditions into a chip-friendly token.
+`isFilled` returns true when the condition has at least one operand bound (or uses a `NULL_OPS` operator). `filledFilterCount` is used by toolbar badges. `compactFieldFilters` drops the fields with no filled condition — the shape table state holds (`state.setFieldFilter` and preset apply both write it) — returning the input itself when nothing goes. `filterTokenLabel` summarises a field's filled conditions into a chip-friendly token.
 
 ### Conditions per type
 
@@ -407,14 +408,16 @@ function resolveSystemPresets(
 
 ```typescript
 function stableStringify(value: unknown): string;
-function isDirtyAgainst(
-  current: PresetSnapshot,
-  claimed: AspectMask,
-  baseline: PresetSnapshot,
-): boolean;
+function isDirtyAgainst(active: PresetSnapshot, current: PresetSnapshot): boolean;
+function canonicalPresetSnapshot(
+  snapshot: PresetSnapshot,
+  defaultWidths: Readonly<Record<string, string>>,
+): PresetSnapshot;
 ```
 
-`stableStringify` produces deterministic JSON (sorted keys) so a snapshot's hash is stable across reorders. `isDirtyAgainst` returns true when at least one claimed aspect differs from baseline.
+`stableStringify` produces deterministic JSON (sorted keys) so a snapshot's hash is stable across reorders. `isDirtyAgainst` returns true when at least one aspect `active` claims differs in `current` (pass the full `captureSnapshot()` output as `current`).
+
+`canonicalPresetSnapshot` (since 0.1.142) spells a stored snapshot the way `captureSnapshot()` spells table state, so the two compare equal; `defaultWidths` maps column path → default width (the `d` of each `ColumnWidthsMap` entry). Returns the input itself when nothing changes. Rules: [What counts as a change](/tables/presets#what-counts-as-a-change).
 
 ## Hidden-field pruning
 

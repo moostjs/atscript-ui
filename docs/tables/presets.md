@@ -62,6 +62,29 @@ the current role cannot read are dropped on apply, the preset does not
 count as changed for lacking them, and **Save** keeps them in the stored
 row. See [Fields Hidden by Role](/tables/hidden-fields#presets).
 
+### What counts as a change
+
+The picker's unsaved marker (`state.preset.isDirty`) compares the table
+against the active preset's claimed aspects. Since 0.1.142
+`state.preset.activeSnapshot` is canonical — spelled the way the table
+holds state — so spelling out a default is not a change:
+
+- A width in `columns.columnWidths` equal to that column's default width —
+  or on a path that is not a column — is the same as no width. A system
+  preset can pin `{ name: '10em' }` on a column whose default is `10em` and
+  stays clean after apply. Resizing the column away from it, or a preset
+  width that differs from the default, still counts.
+- A `filterOps` entry with no filled condition (`{ status: [] }`, an empty
+  value) is the same as no entry; applying the preset does not write it.
+  Typing into that field and clearing it again leaves the preset clean;
+  clearing a field the preset filled does not.
+
+The stored preset is never rewritten, and capture still writes widths as
+overrides only, so a preset keeps following a column's default when the
+metadata changes. Hosts that diff a stored snapshot themselves use
+`canonicalPresetSnapshot` from `@atscript/ui-table`
+([signature](/api/ui-table#presets-dirty-detection)).
+
 ### What a system preset owns
 
 By default a system preset owns **every** available aspect: applying
