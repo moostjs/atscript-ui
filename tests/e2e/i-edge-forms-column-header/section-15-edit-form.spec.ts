@@ -119,7 +119,9 @@ test.describe("Section 15.1 — Edit row via default action", () => {
     // Demo-side: the SQL adapter chokes on the nested `profile` key (see
     // file-level wire-shape findings). The browser UI catches the resulting
     // 500 via the global `<ServerErrorDialog>` modal. Dismiss it before
-    // asserting the inline error.
+    // asserting the inline error — once every request has settled, so a late
+    // 500 cannot re-open it.
+    await page.waitForLoadState("networkidle");
     const serverErrorDialog = page.locator(`[role="dialog"]`).filter({
       has: page.locator(`text=Server error`),
     });

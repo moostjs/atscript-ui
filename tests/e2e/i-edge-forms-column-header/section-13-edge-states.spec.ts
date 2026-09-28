@@ -127,6 +127,10 @@ test.describe("Section 13.2 — Query error", () => {
     // Dismiss it before asserting on the underlying table — the contract
     // here is "table renders error-state", not "demo's global server-error
     // modal pops" (the latter is a demo-host concern).
+    // Every failed request re-opens it, and the table can issue more than one
+    // /pages on load — wait until they have all settled before dismissing, or
+    // a late 500 re-opens the modal over the toolbar.
+    await page.waitForLoadState("networkidle");
     const serverErrorDialog = page.locator(`[role="dialog"]`).filter({
       has: page.locator(`text=Server error`),
     });
