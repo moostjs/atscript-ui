@@ -8,6 +8,7 @@ import {
   useTableUrlQuery,
   type ActionResult,
   type ColumnMenuConfig,
+  type SelectOn,
   type TVueTableActionInfo,
 } from "@atscript/vue-table";
 import TableToolbar from "./TableToolbar.vue";
@@ -72,7 +73,14 @@ const canDeleteRows = computed(() => canWrite.value && !tableMeta.value?.noRowDe
 // actions render inline; the toolbar's flip button opts into `multi` for
 // the checkbox column + bulk-action paths.
 const selectMode = ref<"none" | "multi">("none");
-const select = computed<"none" | "multi">(() => (canWrite.value ? selectMode.value : "none"));
+// Selection showcases (`selection` in `DEMO_TABLES`) always render `multi`.
+const selection = computed(() => tableMeta.value?.selection);
+const select = computed<"none" | "multi">(() =>
+  selection.value ? "multi" : canWrite.value ? selectMode.value : "none",
+);
+// Live `select-on` + custom-control switches for the selection showcase strip.
+const selectOn = ref<SelectOn>("row");
+const customSelectControls = ref(false);
 function toggleSelectMode() {
   selectMode.value = selectMode.value === "multi" ? "none" : "multi";
 }
@@ -80,7 +88,10 @@ watch(
   () => props.path,
   () => {
     selectMode.value = "none";
+    selectOn.value = selection.value?.on ?? "row";
+    customSelectControls.value = false;
   },
+  { immediate: true },
 );
 
 let toastSeq = 0;
@@ -231,6 +242,7 @@ watch(
       :components="components"
       :limit="limit"
       :row-value-fn="rowValueFn"
+      :selection-persistence="selection?.persistence"
       :refresh-on-action="true"
       :force-filters="forceFilters"
       :preset="{ url: '/api/db/_presets', tableKey: path, systemPresets }"
@@ -242,9 +254,27 @@ watch(
           :title="label"
           :table-def="tableDef"
           :select-mode="select"
-          :can-toggle-select="canWrite"
+          :can-toggle-select="canWrite && !selection"
+          :filters-overflow="tableMeta?.filtersOverflow"
           @toggle-select-mode="toggleSelectMode"
         />
+
+        <div
+          v-if="selection"
+          class="demo-selection-controls flex items-center gap-$m mx-$l mb-$s text-callout"
+        >
+          <label class="flex items-center gap-$xs">
+            Select on
+            <select v-model="selectOn" class="demo-select-on" aria-label="Select on">
+              <option value="row">row</option>
+              <option value="control">control</option>
+            </select>
+          </label>
+          <label class="flex items-center gap-$xs">
+            <input v-model="customSelectControls" type="checkbox" class="demo-custom-select" />
+            Custom selection controls
+          </label>
+        </div>
 
         <div
           ref="tableWrap"
@@ -253,19 +283,62 @@ watch(
           <AsWindowTable
             v-if="kind === 'window'"
             :select="select"
+            :select-on="selectOn"
+            :row-selectable="selection?.rowSelectable"
             :row-delete="canDeleteRows"
             :column-menu="columnMenu"
           />
           <AsTable
             v-else
             :select="select"
+            :select-on="selectOn"
+            :row-selectable="selection?.rowSelectable"
             :row-delete="canDeleteRows"
             :column-menu="columnMenu"
             :row-actions-column="actionsColumn"
             sticky-header
             :virtual-row-height="36"
             :virtual-overscan="10"
-          />
+          >
+            <!-- Custom selection controls (`#header-__select` / `#cell-__select`). -->
+            <template
+              v-if="customSelectControls"
+              #header-__select="{ state: allState, toggle, selectedCount }"
+            >
+              <button
+                v-if="allState"
+                type="button"
+                class="demo-select-all"
+                role="checkbox"
+                :aria-checked="
+                  allState === 'all' ? 'true' : allState === 'some' ? 'mixed' : 'false'
+                "
+                aria-label="Select all rows"
+                :data-state="allState"
+                @click.stop="toggle"
+              >
+                {{ selectedCount }}
+              </button>
+            </template>
+            <template
+              v-if="customSelectControls"
+              #cell-__select="{ selected, selectable, reason, toggle, index }"
+            >
+              <button
+                type="button"
+                class="demo-select-row"
+                role="checkbox"
+                :aria-checked="selected ? 'true' : 'false'"
+                aria-label="Select row"
+                :disabled="!selectable"
+                :title="reason"
+                :data-index="index"
+                @click.stop="toggle"
+              >
+                {{ selected ? "on" : "off" }}
+              </button>
+            </template>
+          </AsTable>
           <div
             v-if="loadingMetadata"
             class="absolute inset-0 grid place-items-center text-current/60"

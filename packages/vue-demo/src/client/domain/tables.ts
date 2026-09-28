@@ -1,4 +1,11 @@
-import type { ColumnMenuConfig, SystemPresetInput, UrlQuerySync } from "@atscript/vue-table";
+import type {
+  ColumnMenuConfig,
+  RowSelectableHook,
+  SelectionPersistence,
+  SelectOn,
+  SystemPresetInput,
+  UrlQuerySync,
+} from "@atscript/vue-table";
 
 export type TableMode = "pagination" | "infinite";
 export type TableKind = "virtual" | "window" | "infinite-scroll";
@@ -78,7 +85,33 @@ export interface DemoTable {
    * and exercises the no-DropdownMenu fallback in `as-column-menu.vue`.
    */
   columnMenu?: ColumnMenuConfig;
+  /**
+   * Selection showcase. When set, the table always renders `select="multi"`
+   * (no title toggle) and a strip above it switches `select-on` and the
+   * custom `#header-__select` / `#cell-__select` controls live.
+   */
+  selection?: {
+    /** Initial `select-on`. Default `"row"`. */
+    on?: SelectOn;
+    /** `<AsTableRoot :selection-persistence>`. Default `"trim"`. */
+    persistence?: SelectionPersistence;
+    rowSelectable?: RowSelectableHook;
+  };
+  /**
+   * `<AsFilters>` overflow showcase: `:max-visible` plus a strip of controls
+   * for `v-model:overflow-open`, the auto-focus events, the `#overflow`
+   * body slot and the close-on-filter-dialog recipe.
+   */
+  filtersOverflow?: { maxVisible: number };
 }
+
+/** Cancelled orders are not selectable in the selection showcases. */
+const notCancelled: RowSelectableHook = (row) =>
+  row.status === "cancelled" ? "Cancelled orders cannot be picked" : true;
+
+/** Columns the `orders-presets` system presets name (a subset of the table). */
+const PRESET_COLUMNS = ["id", "customerId", "status", "total", "createdAt"];
+const PRESET_FILTERS = ["customerId", "status"];
 
 export const DEMO_TABLES: DemoTable[] = [
   {
@@ -153,6 +186,90 @@ export const DEMO_TABLES: DemoTable[] = [
     mode: "pagination",
     actionsColumn: "last",
     columnMenu: { sort: true, filters: true, hide: false, resetWidth: false },
+  },
+  // Preset "what counts as a change" showcase. System presets that spell out
+  // default widths (`id` 96px, `status` 128px — plus a width on `notAColumn`),
+  // a non-default width, an empty filter and a filled one. Own `tableKey`, so
+  // saved presets stay here.
+  {
+    path: "orders-presets",
+    apiPath: "orders",
+    label: "Orders (presets)",
+    resource: "orders",
+    icon: "i-ph:bookmarks",
+    systemPresets: [
+      { id: "standard", label: "Standard", content: { filters: PRESET_FILTERS } },
+      {
+        id: "default-widths",
+        label: "Default widths",
+        content: {
+          columns: {
+            columnNames: PRESET_COLUMNS,
+            columnWidths: { id: "96px", status: "128px", notAColumn: "50px" },
+          },
+          filters: PRESET_FILTERS,
+        },
+      },
+      {
+        id: "wide-status",
+        label: "Wide status",
+        content: {
+          columns: { columnNames: PRESET_COLUMNS, columnWidths: { status: "240px" } },
+          filters: PRESET_FILTERS,
+        },
+      },
+      {
+        id: "empty-status-filter",
+        label: "Empty status filter",
+        content: { filters: PRESET_FILTERS, filterOps: { status: [] } },
+      },
+      {
+        id: "shipped-only",
+        label: "Shipped only",
+        content: {
+          filters: PRESET_FILTERS,
+          filterOps: { status: [{ type: "eq", value: ["shipped"] }] },
+        },
+      },
+    ],
+  },
+  // Selection showcase: `select-on="control"`, persisted selection across
+  // pages, cancelled orders ineligible, custom selection controls on demand.
+  {
+    path: "orders-selection",
+    apiPath: "orders",
+    label: "Orders (selection)",
+    resource: "orders",
+    icon: "i-ph:check-square",
+    limit: 10,
+    selection: { on: "control", persistence: "persist", rowSelectable: notCancelled },
+  },
+  // `<AsWindowTable>` over the 15 orders — the whole dataset loads in one
+  // block, so the header select-all is available (audit_log's is not).
+  {
+    path: "orders-window",
+    apiPath: "orders",
+    label: "Orders (window)",
+    resource: "orders",
+    icon: "i-ph:rows",
+    kind: "window",
+    selection: { rowSelectable: notCancelled },
+  },
+  // `<AsFilters :max-visible="1">` — Customer inline, the rest in the popover.
+  {
+    path: "orders-filters",
+    apiPath: "orders",
+    label: "Orders (more filters)",
+    resource: "orders",
+    icon: "i-ph:funnel",
+    systemPresets: [
+      {
+        id: "standard",
+        label: "Standard",
+        content: { filters: ["customerId", "status", "total"] },
+      },
+    ],
+    filtersOverflow: { maxVisible: 1 },
   },
   {
     path: "audit_log",

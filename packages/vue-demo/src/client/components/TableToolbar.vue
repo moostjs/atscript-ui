@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { ref, watch } from "vue";
 import type { TableDef } from "@atscript/ui";
 import {
   useTableContext,
   useTableNavBridge,
+  AsFilterField,
   AsFilters,
   AsPresetPicker,
   AsTableActions,
@@ -17,6 +19,8 @@ const props = defineProps<{
   selectMode?: "none" | "multi";
   /** Hide the toggle entirely for read-only roles. */
   canToggleSelect?: boolean;
+  /** `<AsFilters>` overflow showcase (see `DemoTable.filtersOverflow`). */
+  filtersOverflow?: { maxVisible: number };
 }>();
 
 defineEmits<{ (e: "toggle-select-mode"): void }>();
@@ -45,8 +49,35 @@ function openConfig(tab: ConfigTab) {
 }
 
 function clearSelection() {
-  state.selectedRows.value = [];
+  state.clearSelection();
 }
+
+// ── Overflow-popover showcase (only rendered with `filtersOverflow`) ──
+const moreOpen = ref(false);
+const openFocusCount = ref(0);
+const closeFocusCount = ref(0);
+const keepFocusOnOpen = ref(false);
+const keepFocusOnClose = ref(false);
+const customOverflowBody = ref(false);
+const closeOnFilterDialog = ref(false);
+
+function onOverflowOpenAutoFocus(event: Event) {
+  openFocusCount.value++;
+  if (keepFocusOnOpen.value) event.preventDefault();
+}
+
+function onOverflowCloseAutoFocus(event: Event) {
+  closeFocusCount.value++;
+  if (keepFocusOnClose.value) event.preventDefault();
+}
+
+// Documented host recipe: close the popover as a filter dialog opens.
+watch(
+  () => state.filterDialogColumn.value,
+  (column) => {
+    if (column && closeOnFilterDialog.value) moreOpen.value = false;
+  },
+);
 </script>
 
 <template>
@@ -139,7 +170,72 @@ function clearSelection() {
     </div>
 
     <div class="as-page-filters-row">
-      <AsFilters />
+      <AsFilters v-if="!filtersOverflow" />
+      <AsFilters
+        v-else
+        v-model:overflow-open="moreOpen"
+        :max-visible="filtersOverflow.maxVisible"
+        @overflow-open-auto-focus="onOverflowOpenAutoFocus"
+        @overflow-close-auto-focus="onOverflowCloseAutoFocus"
+      >
+        <template #overflow-trigger="{ activeCount, open }">
+          <button
+            type="button"
+            class="as-page-toolbar-btn demo-more-filters"
+            :data-open="open ? 'true' : 'false'"
+          >
+            More ({{ activeCount }})
+          </button>
+        </template>
+        <template v-if="customOverflowBody" #overflow="{ columns, close }">
+          <div class="demo-overflow-body flex flex-col gap-$s">
+            <div class="demo-overflow-title text-callout">{{ columns.length }} more filters</div>
+            <AsFilterField v-for="col in columns" :key="col.path" :column="col" />
+            <button type="button" class="as-page-toolbar-btn demo-overflow-done" @click="close">
+              Done
+            </button>
+          </div>
+        </template>
+      </AsFilters>
+    </div>
+
+    <div
+      v-if="filtersOverflow"
+      class="demo-overflow-controls col-span-2 flex flex-wrap items-center gap-$m text-callout"
+    >
+      <button type="button" class="as-page-toolbar-btn demo-overflow-open" @click="moreOpen = true">
+        Open more filters
+      </button>
+      <button
+        type="button"
+        class="as-page-toolbar-btn demo-overflow-close"
+        @click="moreOpen = false"
+      >
+        Close more filters
+      </button>
+      <span class="demo-overflow-state">{{ moreOpen ? "open" : "closed" }}</span>
+      <span>
+        open-auto-focus: <span class="demo-open-focus-count">{{ openFocusCount }}</span>
+      </span>
+      <span>
+        close-auto-focus: <span class="demo-close-focus-count">{{ closeFocusCount }}</span>
+      </span>
+      <label class="flex items-center gap-$xs">
+        <input v-model="keepFocusOnOpen" type="checkbox" class="demo-keep-focus-open" />
+        Keep focus on open
+      </label>
+      <label class="flex items-center gap-$xs">
+        <input v-model="keepFocusOnClose" type="checkbox" class="demo-keep-focus-close" />
+        Keep focus on close
+      </label>
+      <label class="flex items-center gap-$xs">
+        <input v-model="customOverflowBody" type="checkbox" class="demo-custom-overflow" />
+        Custom popover body
+      </label>
+      <label class="flex items-center gap-$xs">
+        <input v-model="closeOnFilterDialog" type="checkbox" class="demo-close-on-dialog" />
+        Close on filter dialog
+      </label>
     </div>
   </div>
 </template>
