@@ -188,7 +188,9 @@ const form = useAsForm<Contact>({
 
 `useAsForm` MUST be called from `<script setup>` of a component (it issues `provide()` calls). Its return is shaped to back the `<AsForm>` template; reach for it only when you need a non-form root element or radically different layout.
 
-`createFormDef(type, { versionColumn })` — pass the second argument when consuming meta from an OCC-protected table (`@db.column.version`). The version column is excluded from `fields[]` so renderers don't paint it as an input, but stays in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift. See the OCC edit pattern in [`atscript-ui-forms/SKILL.md`](../SKILL.md) and the `atscript-db` skill's OCC reference.
+`createFormDef(type, { versionColumn })` — pass the second argument when consuming meta from an OCC-protected table (`@db.column.version`). The version column is excluded from `fields[]` so renderers don't paint it as an input, but stays in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift. `versionColumn` is the logical field name ([`MetaResponse`](https://ui.atscript.dev/api/ui#metaresponse)). See the OCC edit pattern in [`atscript-ui-forms/SKILL.md`](../SKILL.md) and the `atscript-db` skill's OCC reference.
+
+`@db.column.derived` fields need no option — `createFormDef` reads the annotation from the `/meta` type (`@atscript/db` 0.1.142+) and sets `FormFieldDef.derived`: `<AsField>` renders it read-only with no required marker, `getFormValidator` / `createFieldValidator` never fail it (a required derived field left empty on a create form passes), `buildFormDiff` never sends it. The validators also pass an absent `@db.default*` / `@db.column.version` value; a `@db.rel.FK` stays required. Since 0.1.144.
 
 ## AsForm slot-props bag
 

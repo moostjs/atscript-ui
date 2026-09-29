@@ -114,7 +114,7 @@ Renders blank for null-like values (`null` / `undefined` / `""` / unparseable) *
 - 1 action → single labelled / icon button.
 - ≥2 actions → `…` dropdown via `<AsActionMenuContent>`.
 
-Reads `state.actions.cellRow` (pre-flattened `[default?, ...others.row, ...rows]`). Per-row availability gate via `applyRowGate` — actions disabled by the server (per-row `$actions: string[]`) are hidden. See [actions-selection.md](actions-selection.md).
+Resolves the row's actions with `resolveRowActions(state, row)` — per-row `$actions` gate + `:row-actions` policy; a custom cell calls it too. See [actions-selection.md](actions-selection.md#asrowactions).
 
 ## provideCellLocale and useCellLocale
 

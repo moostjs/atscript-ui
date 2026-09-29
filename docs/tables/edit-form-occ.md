@@ -58,6 +58,10 @@ The version field still appears in `meta.fields` like any other column — the
 server doesn't add a hidden/readonly flag. Hiding it is the UI's job, which
 is exactly what `createFormDef`'s opt is for.
 
+`versionColumn` is the logical **field** name, so a version field renamed
+with `@db.column` needs nothing extra — see
+[`MetaResponse.versionColumn`](/api/ui#metaresponse).
+
 ## 2. Hide the version field from the form
 
 Pass `meta.versionColumn` to `createFormDef`:
@@ -71,6 +75,9 @@ const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
   versionColumn: meta.versionColumn,
 });
 ```
+
+A `@db.column.derived` field needs no option — it renders read-only and is
+never sent; see [`createFormDef`](/api/ui#createformdef-type-opts).
 
 `AsForm` iterates `def.fields[]` and the version prop is no longer there,
 so no input is painted. But the version value still lives on the loaded

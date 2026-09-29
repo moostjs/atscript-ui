@@ -86,6 +86,11 @@ interface FormFieldDef {
    * `<AsField>` forwards it to the control as the `valueHelp` prop.
    */
   valueHelpInfo?: ValueHelpInfo;
+  /**
+   * Set for a `@db.column.derived` field (server-computed). `<AsField>` renders
+   * it read-only; validators and `buildFormDiff` skip it. Since 0.1.144.
+   */
+  derived?: true;
 }
 ```
 
@@ -153,10 +158,16 @@ type TFormEntryOptions = { key: string; label: string } | string;
 Builds a `FormDef` from an annotated type. Walks props, pre-resolves structural sub-defs, and caches the flat map.
 
 ```typescript
-function createFormDef(type: TAtscriptAnnotatedType, opts?: { versionColumn?: string }): FormDef;
+function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef;
+
+interface CreateFormDefOptions {
+  versionColumn?: string;
+}
 ```
 
-When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly.
+When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly — it is the logical field name (see [`MetaResponse`](#metaresponse)).
+
+A `@db.column.derived` field (a top-level column the server computes from a `@db.json` leaf) needs no option: `createFormDef` reads the annotation from the type — `/meta` keeps it in the serialized type since `@atscript/db` 0.1.142 — and sets [`FormFieldDef.derived`](#formfielddef). `<AsField>` renders the field read-only with no required marker, the [validators](#validators) never fail it (a required derived field left empty on a create form passes), and `buildFormDiff` never sends it. Since 0.1.144.
 
 ```ts
 formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
@@ -288,6 +299,8 @@ interface FieldMeta {
   filterOps?: string[];
   /** The caller may write but not read this field (kept in `/meta` for forms). Never a column, never fetchable. Since 0.1.141. */
   writeOnly?: boolean;
+  /** `@db.column.derived` — server-computed; a written value is dropped (`@atscript/db` 0.1.141+). Forms read the annotation from the type instead. Since 0.1.144. */
+  derived?: boolean;
 }
 
 interface SearchIndexInfo {
@@ -303,7 +316,7 @@ interface RelationInfo {
 }
 ```
 
-**`versionColumn?: string`** — name of the server-managed row version column on OCC-protected tables (declared with `@db.column.version` in your `.as` schema). Absent on tables that don't opt into OCC. Consumer code should pass this through to `createFormDef` so the version field doesn't render as an editable input, while still riding in the form data for the server's `$cas` round-trip. See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide for the full flow.
+**`versionColumn?: string`** — logical field name of the server-managed row version field on OCC-protected tables (declared with `@db.column.version` in your `.as` schema). A `@db.column 'row_version'` rename changes only the storage column; `/meta` reports the field name you read and write (`@atscript/db` 0.1.141+ — earlier servers sent the storage name, which broke OCC for renamed fields). Absent on tables that don't opt into OCC. Consumer code should pass this through to `createFormDef` so the version field doesn't render as an editable input, while still riding in the form data for the server's `$cas` round-trip. See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide for the full flow.
 
 ### `TableActionsModel`
 
@@ -536,6 +549,8 @@ Every supported annotation has a stringly-typed constant exported from `@atscrip
 `META_LABEL`, `META_ID`, `META_DESCRIPTION`, `META_READONLY`, `META_REQUIRED`, `META_DEFAULT`, `META_SENSITIVE`, `EXPECT_MAX_LENGTH`.
 
 ## Validators
+
+Both validators let server-managed db fields through, so a create form built from a `/meta` type isn't blocked on values the server fills in: a `@db.column.derived` field is never validated, and an absent `@db.default*` or `@db.column.version` value passes. A `@db.rel.FK` field stays required — the form, not the server, supplies it. Since 0.1.144.
 
 ### `getFormValidator(def, opts?)`
 

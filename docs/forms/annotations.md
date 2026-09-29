@@ -143,6 +143,8 @@ use `@ui.form.fn.description` (see [Dynamic Fields](/forms/dynamic-fields)).
 For read-only, use `@meta.readonly` — it is the single source of truth
 that both forms and other surfaces read. For the dynamic counterpart
 use `@ui.form.fn.readonly`.
+A `@db.column.derived` field is read-only without any `@ui.*`
+annotation — see [`createFormDef`](/api/ui#createformdef-type-opts). Since 0.1.144.
 
 ### Layout
 

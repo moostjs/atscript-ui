@@ -6,6 +6,7 @@ Row / table / rows actions, selection model, recipes.
 - [Action levels](#action-levels)
 - [AsRowActions](#asrowactions)
 - [AsTableActions](#astableactions)
+  - [Disabled with a reason](#disabled-with-a-reason)
 - [AsActionFormDialog](#asactionformdialog)
 - [state.actions API](#stateactions-api)
 - [Action result processing](#action-result-processing)
@@ -64,13 +65,15 @@ Identifier objects are object-only (never bare scalars) — cross-link atscript-
 
 Href computed via `navigateHrefFor(action, id, preferredId)` (from `@atscript/ui`) then mapped through `resolveHref`. See [Action result processing](#action-result-processing) for click semantics.
 
-Reads `state.actions.cellRow` — pre-flattened `[default?, ...others.row, ...rows]`. Per-row availability gate:
+Resolves its actions with `resolveRowActions(state, row)` — the row's server-evaluated `$actions: string[]` + `$disabledReasons` (populated when `state.includeActions=true` → `controls.$actions=true` on the query) and the `:row-actions` policy in one pass. (`state.actions.cellRow` is the ungated, policy-free server list.)
 
-```typescript
-applyRowGate({ default, others, rows }, row);
-```
+| Row verdict                          | Rendered                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| name in `$actions`                   | enabled                                                                                           |
+| name in `$disabledReasons` (0.1.144) | shown disabled: copy with `disabledReason`, see [Disabled with a reason](#disabled-with-a-reason) |
+| neither                              | hidden                                                                                            |
 
-Reads the row's server-evaluated `$actions: string[]` field (populated when `state.includeActions=true` → `controls.$actions=true` on the query). Actions named in `$actions` are kept; others are filtered out. **Every server-declared action is gated regardless of processor** (`backend`, `navigate`, `custom`). The sole exemption is the client-synthesised `__remove` — its name never appears in `$actions`, so its visibility is governed by `tableDef.canRemove` (the server still authorises the delete at invoke).
+**Every server-declared action is gated regardless of processor** (`backend`, `navigate`, `custom`). The sole exemption is the client-synthesised `__remove` — its name never appears in `$actions`, so its visibility is governed by `tableDef.canRemove` (the server still authorises the delete at invoke).
 
 Opt in to the synthesized column via `<AsTable :row-actions-column="'first' | 'last' | 'merge-select'">` — `<AsWindowTable>` takes the same prop (since 0.1.138). The column is locked: no header dropdown, no resize, no drag-reorder, never in `state.columnNames`.
 
@@ -93,7 +96,7 @@ Renders nothing when no actions are visible. Single-action collapse: a sole non-
 
 The default CTA renders as an `<a href>` anchor when it's a linkable navigate action (same conditions as `<AsRowActions>`); confirmable navigate CTA stays a `<button>`. Menu items follow the same anchor/button split. See [Action result processing](#action-result-processing).
 
-**Per-row `$actions` gate.** The `row` surface (1 selected) gates against the active/selected row's `$actions`, same as `<AsRowActions>` (`applyRowGate(buckets, row)`). The `rows` surface (≥2 selected) gates against the **union** of the selected rows' `$actions` via `applyRowsGate(buckets, selectedRows)` — a bulk action shows when **at least one** selected row allows it (the server re-filters per row at invoke, so a subset-enabled action no-ops on the rest). `__remove` is the sole exemption. No `$actions` on any row → no gating (legacy / opt-out).
+**Per-row `$actions` gate.** The `row` surface (1 selected) resolves the active/selected row through `resolveRowActions`, same as `<AsRowActions>`. The `rows` surface (≥2 selected) gates against the **union** of the LOADED selected rows' `$actions` (`state.selectedRowObjects`) — a bulk action is enabled when **at least one** of them allows it; the server re-checks every row at invoke (`onDisabledRows: 'skip'` → runs on the qualifying rows; default `'reject'` → 409 with per-row reasons as an error result). Scalar selections (`rowValueFn` → PK) resolve through `state.rowOf` (since 0.1.144; before, the toolbar skipped gating for them). A selected value whose row is not loaded has no client verdict: it never enables an action by itself; a selection with NO loaded row → no gating (server decides). `__remove` is the sole exemption. No `$actions` on any row → no gating (legacy / opt-out).
 
 Slots:
 
@@ -102,6 +105,21 @@ Slots:
 | default (full layout)   | `{ defaultAction, otherActions, trailingRowActions, level, ids, invoke }` |
 | `#button` (default CTA) | `{ action }`                                                              |
 | `#menu-item` (per item) | `{ action }`                                                              |
+
+### Disabled with a reason
+
+Server `disabled` predicate returns a string → row gets `$disabledReasons: { name: reason }` (`@atscript/db` 0.1.141+) → action SHOWN disabled instead of hidden. Since 0.1.144.
+
+| #   | Rule                                                                                                                                                                                                                                                                                            |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Gated copies carry `action.disabledReason` (non-empty); `state.actions.*` never do. Test `!!action.disabledReason`.                                                                                                                                                                             |
+| 2   | Rendered `aria-disabled="true"`, never native / reka `disabled`: stays focusable (Tab, arrow keys) so the reason is announced. Accessible name + button `title` = `"Label, reason"`; menu items show the reason on its own line (`.as-*-menu-item-reason`).                                     |
+| 3   | Inert on every path: click, Enter, middle/cmd-click, slot `invoke`, the menu (`select` swallowed, menu stays open). A disabled `navigate` action gets no href (never an anchor).                                                                                                                |
+| 4   | Bulk (≥2 selected): allowed by no loaded row but reasoned by some → disabled with the distinct reasons (max 3, `"A; B; C; +2 more"`); any row allowing it wins.                                                                                                                                 |
+| 5   | Main action (dblclick / Enter fallback) resolves the active row's default through `resolveRowActions`: hidden, disabled, excluded or not `include`d → does NOT fire; `overrides` (e.g. `promptText`) apply. A registered `@main-action` listener still gets every request.                      |
+| 6   | `:row-actions` `overrides` keep the reason; `include`/`exclude` still hide. `extra[].enabled(row)`: non-empty string = disabled with that reason; `false` = hidden; `true` / `""` = enabled.                                                                                                    |
+| 7   | `#button` / `#menu-item` slots replace content only (wrapper keeps the disabled state). A `default`-slot replacement or a custom row-actions cell (`controls.rowActions` + `resolveRowActions(state, row)`) must render it and skip `invoke` itself (`state.actions.invoke` does not check it). |
+| 8   | A request that slips through → 409 `ActionDisabledError`; `message` is the reason (toast-ready via `result.error.message`); db-client error has `.reason` / `.reasons`.                                                                                                                         |
 
 ## AsActionFormDialog
 
@@ -158,7 +176,7 @@ Form-type and form-component dispatch maps for the dialog interior come from `<A
 | `default.row`    | `TVueTableActionInfo \| undefined`      | Never the synthesized `__remove`.                                          |
 | `default.rows`   | `TVueTableActionInfo \| undefined`      |                                                                            |
 | `others.<level>` | `TVueTableActionInfo[]`                 | The per-level list with the declared default removed.                      |
-| `cellRow`        | `TVueTableActionInfo[]`                 | `[default?, ...others.row, ...rows]` — pre-flattened for `<AsRowActions>`. |
+| `cellRow`        | `TVueTableActionInfo[]`                 | `[default?, ...others.row, ...rows]` — not gated; see `resolveRowActions`. |
 | `invoke`         | see below                               | Dispatcher.                                                                |
 | `invoking`       | `ShallowRef<Set<string>>`               | Action names with in-flight invokes.                                       |
 | `lastResult`     | `ShallowRef<Map<string, ActionResult>>` | Latest result per action name.                                             |
@@ -245,6 +263,9 @@ Invariants:
 | `state.clearSelection()`         | 0.1.142+. The real clear — every PK, loaded or not, eligible or not.                                                                             |
 | `state.getActiveRow()`           | Active-row resolver — nav-mode-aware (see invariant below). Returns `undefined` when `activeIndex < 0`. Signature: API ref `ReactiveTableState`. |
 | `state.rowValueFn(row)`          | Default extracts `preferredId` field(s); consumer can override via `<AsTableRoot :row-value-fn>`.                                                |
+| `state.rowOf(value)`             | 0.1.144+. Loaded row behind a selection value (object → itself, scalar → lookup); `undefined` if not loaded.                                     |
+| `state.selectedRowObjects`       | 0.1.144+. `ComputedRef` — the selection's LOADED rows, in order (unloaded values left out).                                                      |
+| `state.rowByValue`               | 0.1.144+. `ComputedRef<ReadonlyMap>` of loaded rows by `rowValueFn` value; rebuilt once per fetch, lazily.                                       |
 | `togglePk(sel, pk, mode)`        | `@atscript/ui-table` helper. `"none"` no-op; `"single"` replaces; `"multi"` toggles.                                                             |
 | `trimSelection(sel, presentPks)` | Drops PKs not in the result set. Identity-stable on no-op.                                                                                       |
 | `rowsToPks(rows, rowValueFn)`    | Map a row array → PK array.                                                                                                                      |
@@ -441,7 +462,7 @@ async function archiveSelected() {
 
 ### Disable an action per-row from the server
 
-Server `@DbAction` handler returns the action name in the row's `$actions: string[]` only when allowed. The client-side `applyRowGate` will hide the action for that row automatically. No client-side wiring required — `state.includeActions` is set on by `:row-actions-column` (on `<AsTable>` or `<AsWindowTable>`) so the query carries `?$actions=true` and the gate is fed.
+Server `@DbAction` `disabled` predicate decides per row; the row's `$actions: string[]` lists the allowed names. The row-actions cell and toolbar hide the others automatically — or show them disabled when the predicate returns a reason string ([Disabled with a reason](#disabled-with-a-reason)). No client-side wiring required — `state.includeActions` is set on by `:row-actions-column` (on `<AsTable>` or `<AsWindowTable>`) so the query carries `?$actions=true` and the gate is fed.
 
 ### Confirm dialog overrides
 

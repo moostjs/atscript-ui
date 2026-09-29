@@ -504,11 +504,13 @@ replaces the row actions wholesale. Each takes either:
   `kind: 'error'`).
 
 Add `promptText` for a confirmation, and `enabled(row)` to hide the
-action on rows it doesn't apply to.
+action on rows it doesn't apply to (`false`) or show it disabled with a
+reason (a string — see [Disabled with a reason](#disabled-with-a-reason)).
 
 The same policy drives the single-button form, the `…` dropdown, a
-standalone `<AsRowActions>` mounted inside the table, and the
-`<AsTableActions level="row">` toolbar — every surface
+standalone `<AsRowActions>` mounted inside the table, the
+`<AsTableActions level="row">` toolbar and the
+[main action](#row-level-default-action) — every surface
 reads one compiled policy from the table context, so an excluded or
 relabelled action cannot reappear in another one. Pass `:actions` on
 `<AsRowActions>` to render an explicit list instead, bypassing both the
@@ -541,6 +543,18 @@ windowed mode). This resolves correctly on **every page**, including
 page ≥ 2 in paginated tables. The same resolver backs selection and the
 `<AsTableActions level="row">` toolbar, so all three stay in sync.
 
+Without a `@main-action` listener, the default is resolved for the
+active row exactly like the row-actions cell resolves it: the row's
+[availability](#per-row-action-availability) first, then the
+[`:row-actions` policy](#selecting-and-extending-row-actions). So
+**Enter** and double-click do nothing on a row whose default the server
+hid or disabled (with or without a reason), or that the policy excludes
+or leaves out of `include`; `overrides` apply (an overridden
+`promptText` asks first). A registered `@main-action` listener still
+receives every request — your handler decides. Since 0.1.144; earlier
+releases fired the declared default regardless and let the server
+reject it with a 409.
+
 The selection state is reactive end-to-end: a `multi → none`
 transition auto-clears `selectedRows`; the actions column
 appears / disappears live without a remount; bulk action buttons
@@ -558,12 +572,23 @@ actions the server evaluated as **enabled** for that row.
 The table gates its action chrome against that list:
 
 - **Per-row dropdown** and the **single-selection toolbar** hide any
-  action whose name is absent from that row's `$actions`.
-- **Bulk selection** (≥2 rows) shows a bulk action when **at least
+  action whose name is absent from that row's `$actions` — unless the
+  server gave a reason (see [Disabled with a reason](#disabled-with-a-reason)).
+- **Bulk selection** (≥2 rows) enables a bulk action when **at least
   one** selected row allows it — the union of the selected rows'
   `$actions`. An action enabled for only part of the selection stays
-  visible; the server re-filters per row at invoke time, so it simply
-  no-ops on the rows that don't qualify.
+  available; the server re-checks every row at invoke time: with
+  `onDisabledRows: 'skip'` it runs on the rows that qualify, with the
+  default `'reject'` it answers 409 with the per-row reasons (an error
+  result, see below).
+- The toolbar gates on the **loaded** rows of the selection
+  (`state.selectedRowObjects`), so gating also works when `rowValueFn`
+  returns a scalar key. A selected row that is no longer loaded (another
+  page, scrolled out of the window cache) has no verdict on the client:
+  it never enables an action by itself, and a selection with no loaded
+  row at all is not gated — the server's invoke-time check decides.
+  Since 0.1.144; earlier the toolbar skipped gating for scalar
+  selections.
 
 Every server-declared action is gated this way **regardless of its
 processor** (`backend`, `navigate`, `custom`). The one exemption is the
@@ -572,6 +597,63 @@ appears in `$actions`, so its visibility is governed by the table's
 `canRemove` flag instead — the server still authorises the delete at
 call time. Tables that don't opt into the actions column (no `$actions`
 in the payload) skip gating entirely and render every declared action.
+
+### Disabled with a reason
+
+When a server `disabled` predicate returns a **string** instead of
+`true`, the row carries it in `$disabledReasons` (needs `@atscript/db`
+0.1.141+; see the server's
+[disabled reasons](https://db.atscript.dev/http/actions#disabled-reasons)).
+The table then **shows** the action disabled instead of hiding it.
+Since 0.1.144.
+
+```ts
+@DbAction<Order, ["status"]>("ship", {
+  label: "Ship",
+  requiredFields: ["status"],
+  disabled: perRow((o) => (o.status === "shipped" ? "Order already shipped" : false)),
+})
+```
+
+| Row verdict                 | In the table                    |
+| --------------------------- | ------------------------------- |
+| name in `$actions`          | enabled                         |
+| name in `$disabledReasons`  | shown disabled, with the reason |
+| in neither (`true` verdict) | hidden (unchanged)              |
+
+How a disabled action looks and behaves:
+
+- **Rendered, focusable, inert.** Buttons and menu items carry
+  `aria-disabled="true"` and dimmed styling but stay reachable by Tab /
+  arrow keys, and their accessible name appends the reason
+  (`"Ship, Order already shipped"`; buttons also use it as `title`).
+  Menu items show the reason on its own line under the label. Click,
+  Enter, middle-click and cmd-click do nothing, and a disabled
+  `navigate` action is never a link.
+- **Bulk:** an action no selected row allows is shown disabled when any
+  row gave a reason, listing the distinct reasons, up to three
+  (`"Locked; Already archived; +2 more"`). Enabled for any row wins.
+- `:row-actions` `overrides` relabel a disabled action and keep its
+  reason; `include` / `exclude` still hide it. A client-only
+  [`extra` action](#selecting-and-extending-row-actions) is disabled the
+  same way when `enabled(row)` returns a non-empty string.
+- **Custom chrome:** `<AsTableActions>`' `button` / `menu-item` slots
+  replace only the content — the wrapper keeps the disabled state, so
+  render `action.disabledReason` if you want it visible. A full
+  `default`-slot replacement must render the disabled state itself (its
+  `invoke` ignores a disabled action); so must a custom row-actions
+  cell, which gets its actions from `resolveRowActions` — see
+  [Customization](/tables/customization#worked-example-design-system-row-actions).
+
+The server stays authoritative: a request that gets past the UI anyway
+is rejected with a 409 `ActionDisabledError` whose `message` is the
+reason, so the `@action` emit's `result.error.message` is
+toast-ready. The db-client error also exposes `.reason` / `.reasons`.
+
+**DO** return reasons the user can act on ("Only processing orders can
+be shipped"). **DON'T** put data the caller may not see into a reason —
+it reaches the browser verbatim. **DON'T** return a reason for actions
+that make no sense on a row; `true` keeps them hidden.
 
 ## Next steps
 

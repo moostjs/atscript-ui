@@ -224,7 +224,7 @@ the host's filter row and no existing layout changed.
 
 ### `AsTableActions`
 
-Toolbar action row. Reads `state.actions` and renders default/other actions per level. Slot-customizable.
+Toolbar action row. Reads `state.actions` and renders default/other actions per level. Slot-customizable — slot actions may be disabled; see [Disabled with a reason](/tables/actions#disabled-with-a-reason).
 
 ### `AsPresetPicker`
 
@@ -308,7 +308,7 @@ Dropdown menu shown on header click — sort, filter, hide, reset width. Configu
 
 ### `AsRowActions`
 
-Per-row actions cell — single button or `…` dropdown.
+Per-row actions cell — single button or `…` dropdown. Actions the row disabled with a reason render `aria-disabled` with the reason (see [Disabled with a reason](/tables/actions#disabled-with-a-reason)).
 
 ## Composables — table root
 
@@ -850,7 +850,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Filters / sorters / search**: `filters`, `filterFields`, `residualFilters` (`ShallowRef<FilterExpr[]>`, since 0.1.140 — AND-ed conditions field filters cannot hold; `setResidualFilters(exprs)`, `removeResidualFilter(index)`, cleared by `resetFilters()`; see [Custom filter conditions](/tables/filtering#custom-filter-conditions)), `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
-- **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only; since 0.1.142 `deselectAll(rows)`, `toggleAll(rows)` (the header's action) and `clearSelection()`. Semantics: [Selection](/tables/actions#what-the-header-checkbox-acts-on).
+- **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only; since 0.1.142 `deselectAll(rows)`, `toggleAll(rows)` (the header's action) and `clearSelection()`; since 0.1.144 `rowByValue` (loaded rows keyed by `rowValueFn` value — lazy, rebuilt once per fetch), `rowOf(value)` (the loaded row behind a selection value: an object is itself, a scalar is looked up; `undefined` when not loaded) and `selectedRowObjects` (the loaded rows of the selection, in order — unloaded values left out). Semantics: [Selection](/tables/actions#what-the-header-checkbox-acts-on).
 - **Active row / nav**: `activeIndex`, `navMode`, `navViewportRowCount`, `hasMainActionListener`, `rowId`, `getActiveRow`, `setActive`, `clearActive`, `toggleActiveSelection`, `requestMainAction`, `handleNavKey`, `registerMainActionListener`.
 
   `getActiveRow(): Record<string, unknown> | undefined` resolves the currently-active row — nav-mode-aware: page-relative into `results` for paginated `<AsTable>`, absolute via `windowCache` for `<AsWindowTable>`. Returns `undefined` when no row is active (`activeIndex < 0`). It is the single resolver shared by selection, the `@main-action` emit, and the `level="row"` toolbar.
@@ -935,12 +935,12 @@ interface LocalRowAction {
   href?: (row: Record<string, unknown>) => string;
   /** Awaited locally, then settled as an `@action` emit with `kind: 'custom'`. */
   onInvoke?: (row: Record<string, unknown>, pk?: Record<string, unknown>) => void | Promise<void>;
-  /** Per-row gate. */
-  enabled?: (row: Record<string, unknown>) => boolean;
+  /** Per-row gate: `false` hides, a non-empty string disables with that reason (since 0.1.144). */
+  enabled?: (row: Record<string, unknown>) => boolean | string;
 }
 ```
 
-The server's per-row `$actions` gate runs **before** this policy, so `include` can only narrow what a row was already allowed and `overrides` never re-enable a gated action. `include` does not apply to `extra` — being listed there is the opt-in; `include: []` therefore hides every server action and keeps the extras. The policy applies wherever row actions render: the row-actions cell and the `level="row"` selection toolbar.
+The server's per-row `$actions` gate runs **before** this policy, so `include` can only narrow what a row was already allowed and `overrides` never re-enable a gated action. `include` does not apply to `extra` — being listed there is the opt-in; `include: []` therefore hides every server action and keeps the extras. The policy applies wherever row actions resolve: the row-actions cell, the `level="row"` selection toolbar and (since 0.1.144) the Enter / double-click main action — all through [`resolveRowActions`](#utilities).
 
 ### `ColumnMenuConfig`
 
@@ -1113,6 +1113,8 @@ type QueryErrorKind = "initial" | "query" | "queryNext" | "loadRange";
 
 type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
   processor: TDbActionProcessor | "__remove";
+  /** Set on the gated copy a surface renders when the row disabled it with a reason. Since 0.1.144. */
+  disabledReason?: string;
 };
 ```
 
@@ -1134,9 +1136,23 @@ function extractIdentifier(
   row: Record<string, unknown>,
   preferredId: readonly string[],
 ): Record<string, unknown>;
+function resolveRowActions(
+  state: ReactiveTableState,
+  row: Record<string, unknown> | undefined,
+  opts?: { withRows?: boolean },
+): ResolvedRowActions;
+
+interface ResolvedRowActions {
+  default: TVueTableActionInfo | undefined; // actions.default.row
+  others: TVueTableActionInfo[]; // actions.others.row
+  rows: TVueTableActionInfo[]; // actions.rows ([] with withRows: false)
+  extra: TVueTableActionInfo[]; // RowActionsConfig.extra
+}
 ```
 
 `extractIdentifier` builds the identifier object sent with action invocations and URL `$1` substitution. Per `@atscript/db-client` invariant #11 the server rejects bare scalars — even single-field PK tables send `{ id: '...' }`.
+
+`resolveRowActions` is the per-row pipeline every built-in surface uses (the row-actions cell, the `level="row"` toolbar, the main-action fallback), exported for a custom row-actions cell: the row's `$actions` / `$disabledReasons` gate and the `:row-actions` policy in one pass, plus the policy's `extra` actions. Hidden and excluded actions drop out; ones disabled with a reason come back as copies carrying `disabledReason` (render them disabled; `state.actions.invoke` does not check it). Untouched arrays keep their source reference. Since 0.1.144. See [Disabled with a reason](/tables/actions#disabled-with-a-reason).
 
 ## Cross-links
 

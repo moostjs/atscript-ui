@@ -312,7 +312,7 @@ the table own the action invocation.
 <!-- DesignSystemRowActions.vue -->
 <script setup lang="ts">
 import { computed } from "vue";
-import { useTableContext } from "@atscript/vue-table";
+import { resolveRowActions, useTableContext } from "@atscript/vue-table";
 import type { TVueTableActionInfo } from "@atscript/vue-table";
 import { DsButton, DsMenu, DsMenuItem } from "@my-org/design-system";
 
@@ -322,10 +322,14 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
-const actions = computed(() => state.actions.cellRow);
+const actions = computed(() => {
+  const r = resolveRowActions(state, props.row);
+  return [...(r.default ? [r.default] : []), ...r.others, ...r.rows, ...r.extra];
+});
 
 function onClick(action: TVueTableActionInfo) {
-  void state.actions.invoke(action, { id: props.row.id });
+  if (action.disabledReason) return;
+  void state.actions.invoke(action, { id: props.row.id }, { row: props.row });
 }
 </script>
 
@@ -335,6 +339,8 @@ function onClick(action: TVueTableActionInfo) {
       v-if="actions.length === 1"
       :icon="actions[0].icon"
       :label="actions[0].label"
+      :disabled="!!actions[0].disabledReason"
+      :title="actions[0].disabledReason"
       @click="onClick(actions[0])"
     />
     <DsMenu v-else trigger-icon="more-vertical">
@@ -344,6 +350,8 @@ function onClick(action: TVueTableActionInfo) {
         :icon="action.icon"
         :label="action.label"
         :destructive="action.intent === 'destructive'"
+        :disabled="!!action.disabledReason"
+        :hint="action.disabledReason"
         @select="onClick(action)"
       />
     </DsMenu>
@@ -355,10 +363,14 @@ function onClick(action: TVueTableActionInfo) {
 const controls = { rowActions: DesignSystemRowActions };
 ```
 
-`state.actions.cellRow` is the pre-flattened, per-row action list
-(`[default?, ...others.row, ...rows]`) — every row reads the same
-array, so the composable does the slicing once per table-def
-change. `state.actions.invoke()` returns the discriminated
+`resolveRowActions(state, row)` returns exactly what the built-in cell
+renders for the row — gated by the row's `$actions`, narrowed and
+relabelled by `:row-actions`, plus its `extra` actions — and a copy
+carrying `disabledReason` must render disabled (see
+[Disabled with a reason](/tables/actions#disabled-with-a-reason)).
+`state.actions.cellRow` is its server-declared part, ungated and without
+the policy.
+`state.actions.invoke()` returns the discriminated
 `ActionResult`; the table's `@action` emit fires after invoke
 resolves so the page chrome can toast.
 

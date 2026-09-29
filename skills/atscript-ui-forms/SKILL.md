@@ -204,7 +204,7 @@ import { VersionMismatchError } from "@atscript/db-client";
 
 const meta = await client.meta();
 const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
-  versionColumn: meta.versionColumn,
+  versionColumn: meta.versionColumn, // logical field name — https://ui.atscript.dev/api/ui#metaresponse
 });
 
 async function onSubmit(data: unknown) {
