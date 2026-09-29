@@ -11,6 +11,7 @@ import {
   type PresetTable,
   type WriteAction,
   buildCapabilities,
+  buildOwnershipGate,
   buildReadGate,
   processRemove,
   processWrite,
@@ -70,6 +71,12 @@ export abstract class AsPresetsController<
   protected override async transformFilter(filter: FilterExpr): Promise<FilterExpr> {
     const user = await this.getCurrentUser();
     return buildReadGate(user, filter);
+  }
+
+  /** `/one/:id` and `DELETE /:id` address one row — ownership gate only (no `app` / `tableKey` needed). */
+  protected override async transformOne(filter: FilterExpr): Promise<FilterExpr> {
+    const user = await this.getCurrentUser();
+    return buildOwnershipGate(user, filter);
   }
 
   protected override async onWrite(action: WriteAction, data: unknown): Promise<unknown> {

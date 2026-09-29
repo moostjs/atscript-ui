@@ -1,4 +1,4 @@
-import { describe, it } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 
 import { expectHttpRejection, seedPreset, setup } from "./helpers";
 
@@ -52,5 +52,15 @@ describe("ownership gate", () => {
       405,
       "action_unsupported",
     );
+  });
+});
+
+describe("buildOwnershipGate (id-addressed routes: /one/:id, DELETE /:id)", () => {
+  it("scopes to own rows + public presets without requiring app / tableKey", async () => {
+    const { buildOwnershipGate } = await import("../preset-rules");
+    const gate = { $or: [{ user: "bob" }, { $and: [{ type: "preset" }, { public: true }] }] };
+    expect(buildOwnershipGate("bob", {})).toEqual(gate);
+    expect(buildOwnershipGate("bob")).toEqual(gate);
+    expect(buildOwnershipGate("bob", { id: "x" })).toEqual({ $and: [gate, { id: "x" }] });
   });
 });

@@ -153,10 +153,19 @@ export function buildReadGate(user: string, filter: FilterExpr): FilterExpr {
       "missing_scope",
     );
   }
+  return buildOwnershipGate(user, filter);
+}
+
+/**
+ * The row-level part of {@link buildReadGate}: own rows, plus public presets.
+ * Id-addressed routes (`/one/:id`, `DELETE /:id`) need only this — the
+ * `app` / `tableKey` requirement exists to bound listing reads.
+ */
+export function buildOwnershipGate(user: string, filter?: FilterExpr): FilterExpr {
   const gate: FilterExpr = {
     $or: [{ user: user }, { $and: [{ type: "preset" }, { public: true }] }],
   };
-  return filter ? { $and: [gate, filter] } : gate;
+  return filter && Object.keys(filter).length > 0 ? { $and: [gate, filter] } : gate;
 }
 
 export type GetMaxPresetsPerUser = (app: string, tableKey: string, user: string) => Promise<number>;
