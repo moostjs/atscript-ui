@@ -1,4 +1,4 @@
-import { computed, ref, shallowRef, type ComputedRef, type Ref } from "vue";
+import { computed, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from "vue";
 import { rowsToPks, togglePk, type SelectionMode } from "@atscript/ui-table";
 import type { RowSelectableHook, RowSelectableVerdict, SelectAllState } from "../../types";
 
@@ -39,6 +39,12 @@ export interface SelectionApi {
   selectedCount: ComputedRef<number>;
   selectedSet: ComputedRef<ReadonlySet<unknown>>;
   rowValueFn: (row: Row) => unknown;
+  /** Loaded rows keyed by `rowValueFn` value — lazy, memoised per cache instance. */
+  rowByValue: ComputedRef<ReadonlyMap<unknown, Row>>;
+  /** The row behind a selection value (object → itself, scalar → {@link rowByValue}). */
+  rowOf: (value: unknown) => Row | undefined;
+  /** The loaded rows of the selection, in selection order; unloaded values left out. */
+  selectedRowObjects: ComputedRef<Row[]>;
   /**
    * Whether `pk` is in the current selection set. Mode-independent — in
    * `select="none"` the renderer should ensure `selectedRows` stays empty
@@ -101,10 +107,34 @@ export function createSelectionApi(
   opts: SelectionApiOptions | undefined,
   getActiveRow: () => Row | undefined,
   activeIndex: Ref<number>,
+  windowCache: ShallowRef<Map<number, Row>>,
 ): SelectionApi {
   const selectedRows = (opts?.selectedRows ?? shallowRef<unknown[]>([])) as Ref<unknown[]>;
   const selectedCount = computed(() => selectedRows.value.length);
   const rowValueFn = opts?.rowValueFn ?? ((row: Row) => row);
+
+  // Every writer replaces `windowCache` wholesale, so this rebuilds once per
+  // fetch — and only when a scalar selection value is actually resolved.
+  const rowByValue = computed<ReadonlyMap<unknown, Row>>(() => {
+    const map = new Map<unknown, Row>();
+    for (const row of windowCache.value.values()) map.set(rowValueFn(row), row);
+    return map;
+  });
+
+  function rowOf(value: unknown): Row | undefined {
+    if (value === undefined || value === null) return undefined;
+    if (typeof value === "object") return value as Row;
+    return rowByValue.value.get(value);
+  }
+
+  const selectedRowObjects = computed<Row[]>(() => {
+    const out: Row[] = [];
+    for (const value of selectedRows.value) {
+      const row = rowOf(value);
+      if (row) out.push(row);
+    }
+    return out;
+  });
 
   const selectedSet = computed<ReadonlySet<unknown>>(() => new Set(selectedRows.value));
 
@@ -193,6 +223,9 @@ export function createSelectionApi(
     selectedCount,
     selectedSet,
     rowValueFn,
+    rowByValue,
+    rowOf,
+    selectedRowObjects,
     isPkSelected,
     rowSelectable,
     isRowSelectable,

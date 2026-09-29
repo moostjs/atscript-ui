@@ -12,6 +12,7 @@ import {
   MergeNestedForm,
   OptionalMergeForm,
   PrimitiveArrayForm,
+  RenamedVersionForm,
   ScalarForm,
   StructNestedForm,
   UnionTupleForm,
@@ -613,6 +614,47 @@ describe("buildFormDiff — $cas (optimistic concurrency)", () => {
     const r = buildFormDiff(def, baseline, current);
     expect(r.patch).toEqual({ name: "Grace" });
     expect(r.patch.$cas).toBeUndefined();
+  });
+});
+
+// ── Renamed version + derived ────────────────────────────────
+
+describe("buildFormDiff — renamed version + derived fields", () => {
+  it("a storage-renamed version field lifts to $cas by its LOGICAL name, never a SET", () => {
+    const def = createFormDef(RenamedVersionForm, { versionColumn: "rev" });
+    const baseline = wrap({ name: "Ada", rev: 3, customerId: "c1" });
+    const current = wrap({ name: "Grace", rev: 4, customerId: "c1" });
+    const r = buildFormDiff(def, baseline, current);
+    expect(r.patch).toEqual({ name: "Grace", $cas: { rev: 3 } });
+  });
+
+  it("the engine finds the renamed version on its own (no versionColumn opt)", () => {
+    const def = createFormDef(RenamedVersionForm);
+    const r = buildFormDiff(
+      def,
+      wrap({ name: "Ada", rev: 3, customerId: "c1" }),
+      wrap({ name: "Grace", rev: 3, customerId: "c1" }),
+    );
+    expect(r.patch).toEqual({ name: "Grace", $cas: { rev: 3 } });
+  });
+
+  it("a @db.column.derived field is never a change or a SET", () => {
+    const def = createFormDef(RenamedVersionForm, { versionColumn: "rev" });
+    const r = buildFormDiff(
+      def,
+      wrap({ name: "Ada", rev: 3, customerId: "c1" }),
+      wrap({ name: "Ada", rev: 3, customerId: "c2" }),
+    );
+    expect(r.isDirty).toBe(false);
+    expect(r.patch).toEqual({});
+
+    const withEdit = buildFormDiff(
+      def,
+      wrap({ name: "Ada", rev: 3, customerId: "c1" }),
+      wrap({ name: "Grace", rev: 3, customerId: "c2" }),
+    );
+    expect(withEdit.changes.map((c) => c.path)).toEqual(["name"]);
+    expect(withEdit.patch).toEqual({ name: "Grace", $cas: { rev: 3 } });
   });
 });
 

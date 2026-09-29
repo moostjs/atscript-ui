@@ -18,6 +18,7 @@ import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
 import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
+  DB_COLUMN_DERIVED,
   DB_UNIT,
   DB_UNIT_REF,
   META_DESCRIPTION,
@@ -42,6 +43,17 @@ import { extractValueHelp } from "../value-help/extract-ref";
 /** Known atscript primitive extension tags that map directly to field types. */
 const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
 
+/** Options for {@link createFormDef}. */
+export interface CreateFormDefOptions {
+  /**
+   * `meta.versionColumn` — the server-managed OCC version field (its LOGICAL
+   * name; a `@db.column` rename changes only the storage column). Excluded
+   * from `fields[]`; it stays in `flatMap` so the wire payload is unchanged.
+   * Root-table concept; not propagated into nested recursive calls.
+   */
+  versionColumn?: string;
+}
+
 /**
  * Converts an ATScript annotated type into a FormDef.
  *
@@ -49,14 +61,9 @@ const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
  * - **Non-object types** (primitive, array, union, etc.): produces a single leaf root field
  *   with `path: ''`.
  *
- * @param opts.versionColumn - Name of a server-managed OCC version column to
- *   exclude from `fields[]` (it stays in `flatMap` so the wire payload is
- *   unchanged). Root-table concept; not propagated into nested recursive calls.
+ * A `@db.column.derived` field is marked `derived` straight from its metadata.
  */
-export function createFormDef(
-  type: TAtscriptAnnotatedType,
-  opts?: { versionColumn?: string },
-): FormDef {
+export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef {
   // Non-object types: single leaf field (never pushed down)
   if (type.type.kind !== "object") {
     const rootField = createFieldDef("", type);
@@ -143,7 +150,19 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
   // dispatch test, and again in `<AsField>`'s setup for the actual url /
   // targetField — so the renderer now reads `field.valueHelpInfo` instead.
   const valueHelpInfo = extractValueHelp(prop);
-  const base = { path, prop, phantom: false, name, allStatic, pushDown, valueHelpInfo };
+  // `@db.column.derived` is valid only on a top-level `@db.table` field, so
+  // the annotation alone marks the field — no path bookkeeping.
+  const derived = getFieldMeta(prop, DB_COLUMN_DERIVED) !== undefined;
+  const base = {
+    path,
+    prop,
+    phantom: false,
+    name,
+    allStatic,
+    pushDown,
+    valueHelpInfo,
+    ...(derived && { derived: true as const }),
+  };
   // Structured kinds (array, object, tuple, multi-variant union) need to
   // keep `type` equal to the kind so the `isArrayField` / `isObjectField`
   // / `isTupleField` / `isUnionField` guards (and the validator / path-

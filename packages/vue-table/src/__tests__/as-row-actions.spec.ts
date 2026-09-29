@@ -613,4 +613,167 @@ describe("<AsRowActions>", () => {
       expect(actionFn).not.toHaveBeenCalled();
     });
   });
+
+  // ── disabled with a reason ($disabledReasons) ───────────────────────────
+
+  describe("disabled actions with a reason", () => {
+    const ship: TDbActionInfo = {
+      name: "ship",
+      label: "Ship",
+      level: "row",
+      processor: "backend",
+      value: "/orders/actions/ship",
+      icon: "i-as-arrow-up",
+    };
+    const edit: TDbActionInfo = {
+      name: "edit",
+      label: "Edit",
+      level: "row",
+      processor: "navigate",
+      value: "/orders/$1/edit",
+    };
+    const reasonRow = {
+      id: "ord-1",
+      $actions: [] as string[],
+      $disabledReasons: { ship: "Order already shipped" },
+    };
+
+    async function openMenu(wrapper: ReturnType<typeof setup>["wrapper"]) {
+      const trigger = wrapper.find("button.as-row-actions-more");
+      await trigger.trigger("pointerdown", { button: 0, pointerType: "mouse" });
+      await trigger.trigger("click");
+      await flushPromises();
+      return Array.from(document.body.querySelectorAll<HTMLElement>('[role="menuitem"]'));
+    }
+
+    afterEach(() => {
+      document.body.innerHTML = "";
+    });
+
+    it("single button: shown aria-disabled with the reason in title + accessible name", () => {
+      const { wrapper } = setup({ rowActions: [ship], row: reasonRow });
+      const btn = wrapper.find("button.as-row-actions-btn");
+      expect(btn.exists()).toBe(true);
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      // NOT the native `disabled` attribute — the button stays focusable so
+      // the reason is reachable by keyboard and hover.
+      expect(btn.attributes("disabled")).toBeUndefined();
+      expect(btn.attributes("aria-label")).toBe("Ship, Order already shipped");
+      expect(btn.attributes("title")).toBe("Ship, Order already shipped");
+    });
+
+    it("single button: click does nothing", async () => {
+      const { wrapper, state, actionFn } = setup({
+        rowActions: [{ ...ship, promptText: "Ship $1?" }],
+        row: reasonRow,
+      });
+      await wrapper.find("button").trigger("click");
+      await flushPromises();
+      expect(state.confirmRequest.value).toBeNull();
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("a disabled navigate action renders a button, never a followable anchor", () => {
+      const { wrapper } = setup({
+        rowActions: [edit],
+        row: { id: "ord-1", $actions: [], $disabledReasons: { edit: "Archived" } },
+      });
+      expect(wrapper.find("a").exists()).toBe(false);
+      const btn = wrapper.find("button.as-row-actions-btn");
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      expect(btn.attributes("href")).toBeUndefined();
+    });
+
+    it("a disabled default keeps data-default (matched by name, not reference)", () => {
+      const def = { ...ship, default: true };
+      const { wrapper } = setup({ rowActions: [def], defaultRow: def, row: reasonRow });
+      expect(wrapper.find("button").attributes("data-default")).toBeDefined();
+    });
+
+    it("an action disabled WITHOUT a reason stays hidden", () => {
+      const { wrapper } = setup({
+        rowActions: [ship, edit],
+        row: { id: "ord-1", $actions: ["edit"] },
+      });
+      // ship hidden → edit alone collapses to the single anchor.
+      expect(wrapper.findAll("a.as-row-actions-btn")).toHaveLength(1);
+      expect(wrapper.find("button").exists()).toBe(false);
+    });
+
+    it("menu item: aria-disabled, reason inline + in the accessible name, no anchor", async () => {
+      const { wrapper } = setup({
+        rowActions: [ship, edit, block],
+        row: {
+          id: "ord-1",
+          $actions: ["block"],
+          $disabledReasons: { ship: "Order already shipped", edit: "Archived" },
+        },
+      });
+      const items = await openMenu(wrapper);
+      expect(items).toHaveLength(3);
+      const shipItem = items.find((el) => el.textContent?.includes("Ship"))!;
+      expect(shipItem.getAttribute("aria-disabled")).toBe("true");
+      expect(shipItem.getAttribute("aria-label")).toBe("Ship, Order already shipped");
+      expect(shipItem.querySelector(".as-row-actions-menu-item-reason")?.textContent).toBe(
+        "Order already shipped",
+      );
+      // Reka's own `disabled` prop is NOT used: it would drop the item from
+      // arrow-key navigation (it sets `data-disabled`).
+      expect(shipItem.hasAttribute("data-disabled")).toBe(false);
+      const editItem = items.find((el) => el.textContent?.includes("Edit"))!;
+      expect(editItem.tagName).not.toBe("A");
+      expect(editItem.getAttribute("href")).toBeNull();
+      const blockItem = items.find((el) => el.textContent?.includes("Block"))!;
+      expect(blockItem.hasAttribute("aria-disabled")).toBe(false);
+      expect(blockItem.querySelector(".as-row-actions-menu-item-reason")).toBeNull();
+    });
+
+    it("menu item: keyboard select and click do nothing; the menu stays open", async () => {
+      const { wrapper, actionFn } = setup({
+        rowActions: [ship, block],
+        row: { ...reasonRow, $actions: ["block"] },
+      });
+      const items = await openMenu(wrapper);
+      const shipItem = items.find((el) => el.textContent?.includes("Ship"))!;
+      shipItem.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }),
+      );
+      shipItem.dispatchEvent(
+        new PointerEvent("pointerdown", { button: 0, bubbles: true, cancelable: true }),
+      );
+      shipItem.dispatchEvent(
+        new MouseEvent("click", { bubbles: true, cancelable: true, button: 0 }),
+      );
+      shipItem.dispatchEvent(
+        new MouseEvent("auxclick", { button: 1, bubbles: true, cancelable: true }),
+      );
+      await flushPromises();
+      expect(actionFn).not.toHaveBeenCalled();
+      expect(document.body.querySelectorAll('[role="menuitem"]').length).toBe(2);
+    });
+
+    it("per-screen overrides relabel a disabled action and keep its reason", async () => {
+      const { wrapper, state } = setup({ rowActions: [ship], row: reasonRow });
+      state.rowActions.value = { overrides: { ship: { label: "Dispatch" } } };
+      await flushPromises();
+      expect(wrapper.find("button").attributes("aria-label")).toBe(
+        "Dispatch, Order already shipped",
+      );
+    });
+
+    it("a client-only action's enabled(row) string shows it disabled with that reason", async () => {
+      const onInvoke = vi.fn();
+      const { wrapper, state } = setup({ row: { id: "ord-1", $actions: [] } });
+      state.rowActions.value = {
+        extra: [{ name: "audit", label: "Audit", onInvoke, enabled: () => "No audit trail yet" }],
+      };
+      await flushPromises();
+      const btn = wrapper.find("button.as-row-actions-btn");
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      expect(btn.attributes("aria-label")).toBe("Audit, No audit trail yet");
+      await btn.trigger("click");
+      await flushPromises();
+      expect(onInvoke).not.toHaveBeenCalled();
+    });
+  });
 });

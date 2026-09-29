@@ -179,6 +179,69 @@ describe("as-field-status is visually hidden", () => {
   });
 });
 
+/** `[selector, declarations]` for every rule a token produced. */
+async function rules(token: string): Promise<[string, Record<string, string>][]> {
+  return (await parse(token)).map((u) => [String(u[1] ?? ""), parseBody(u[2] || "")]);
+}
+
+describe("disabled-with-reason action chrome (aria-disabled)", () => {
+  // Dimming comes from vunor's `disabled-soft` (its shared disabled
+  // definition covers `aria-disabled="true"`), and the c8 hover / press gate
+  // skips it — so nothing here pins hover / active by hand.
+  // `:is(<list>)` paints the disabled state; `:not(<list>)` gates the washes.
+  const WHEN_DISABLED = ":is(:disabled,[disabled],[aria-disabled=true],[data-disabled])";
+  const paintOf = async (token: string) =>
+    (await rules(token)).filter(([sel]) => sel.endsWith(WHEN_DISABLED));
+  for (const prefix of ["as-table-actions", "as-row-actions"]) {
+    it(`${prefix}-menu-item dims an aria-disabled item via disabled-soft`, async () => {
+      expect((await paintOf(`${prefix}-menu-item`))[0]?.[1]).toMatchObject({
+        cursor: "not-allowed",
+        opacity: "0.4",
+      });
+    });
+
+    it(`${prefix}-btn paints the disabled treatment on aria-disabled`, async () => {
+      // `as-table-actions-btn` also composes `btn`, whose own disabled paint
+      // (opacity 0.8) sits on the same selector list — either way the button
+      // is dimmed with a not-allowed cursor.
+      const paint = await paintOf(`${prefix}-btn`);
+      expect(paint.length).toBeGreaterThan(0);
+      for (const [, decls] of paint) {
+        expect(decls.cursor).toBe("not-allowed");
+        expect(Number(decls.opacity)).toBeLessThan(1);
+      }
+    });
+
+    it(`${prefix}-btn hover / press wash skips aria-disabled`, async () => {
+      const washes = (await rules(`${prefix}-btn`)).filter(
+        ([sel]) => sel.includes(":hover") || sel.includes(":active"),
+      );
+      expect(washes.length).toBeGreaterThan(0);
+      for (const [sel] of washes) expect(sel).toContain(`:not(`);
+    });
+
+    it(`${prefix}-menu-item-reason wraps under the label`, async () => {
+      expect(allDeclarations(await parse(`${prefix}-menu-item-reason`))).toMatchObject({
+        display: "block",
+        "white-space": "normal",
+        "max-width": "20em",
+      });
+    });
+
+    it(`${prefix}-intent-* never tints a disabled menu item`, async () => {
+      const itemRules = (await rules(`${prefix}-intent-negative`)).filter(([sel]) =>
+        sel.includes(`${prefix}-menu-item`),
+      );
+      // hover + highlighted background, hover + highlighted icon — all four
+      // compiled, each excluding `[aria-disabled]`.
+      expect(itemRules.flatMap(([sel]) => sel.split(",")).length).toBeGreaterThanOrEqual(4);
+      for (const [sel] of itemRules) {
+        for (const part of sel.split(",")) expect(part).toContain(":not([aria-disabled])");
+      }
+    });
+  }
+});
+
 const iconsPresetName = (presets: ReturnType<typeof asPresetVunor>) =>
   presets.filter((p) => /icons/i.test(p.name ?? ""));
 

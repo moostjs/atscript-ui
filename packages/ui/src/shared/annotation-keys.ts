@@ -64,6 +64,7 @@ export const DB_UNIT = "db.unit" as const;
 export const DB_UNIT_REF = "db.unit.ref" as const;
 export const DB_COLUMN_PRECISION = "db.column.precision" as const;
 export const DB_COLUMN_VERSION = "db.column.version" as const;
+export const DB_COLUMN_DERIVED = "db.column.derived" as const;
 export const DB_PATCH_STRATEGY = "db.patch.strategy" as const;
 
 // ── Workflow annotation keys (registered by @atscript/moost-wf plugin) ──

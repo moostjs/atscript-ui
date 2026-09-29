@@ -108,6 +108,7 @@ export { isArrayField, isObjectField, isUnionField, isTupleField } from "./form/
 
 // ── Form definition builder ─────────────────────────────────
 export { createFormDef, buildUnionVariants } from "./form/create-form-def";
+export type { CreateFormDefOptions } from "./form/create-form-def";
 
 // ── Declared form actions (host-fired action gating) ────────
 export { getDeclaredFormActions } from "./form/form-actions";

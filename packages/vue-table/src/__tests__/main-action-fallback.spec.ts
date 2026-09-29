@@ -3,13 +3,17 @@ import { defineComponent, h } from "vue";
 import { mount } from "@vue/test-utils";
 import type { Client, TDbActionInfo } from "@atscript/db-client";
 import { createTableState } from "../composables/use-table-state";
-import type { ReactiveTableState } from "../types";
+import type { ReactiveTableState, RowActionsConfig } from "../types";
 import { mockColumn, mockTableDef } from "./helpers";
 
 interface MountOpts {
   rowActions?: TDbActionInfo[];
   defaultRow?: TDbActionInfo;
   actionImpl?: () => Promise<unknown>;
+  /** The seeded active row (default `{ id: "user-1" }`). */
+  row?: Record<string, unknown>;
+  /** The root's `:row-actions` policy. */
+  policy?: RowActionsConfig;
 }
 
 function mountState(opts: MountOpts = {}) {
@@ -40,9 +44,11 @@ function mountState(opts: MountOpts = {}) {
           };
         }
         internals.init(def);
+        state.rowActions.value = opts.policy;
         // Seed a row at index 0 so getActiveRow() returns it.
-        state.windowCache.value = new Map([[0, { id: "user-1" }]]);
-        state.results.value = [{ id: "user-1" }];
+        const row = opts.row ?? { id: "user-1" };
+        state.windowCache.value = new Map([[0, row]]);
+        state.results.value = [row];
         state.totalCount.value = 1;
         return () => h("div");
       },
@@ -148,5 +154,100 @@ describe("main-action fallback", () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(actionFn).toHaveBeenCalledWith("block", undefined, undefined);
+  });
+
+  describe("resolves the row's default through the per-row pipeline", () => {
+    const def = { ...block, default: true };
+
+    async function fire(
+      row: Record<string, unknown>,
+      how: "request" | "enter" = "request",
+      action: TDbActionInfo = def,
+      policy?: RowActionsConfig,
+    ) {
+      const mounted = mountState({ rowActions: [action], defaultRow: action, row, policy });
+      mounted.state.setActive(0);
+      if (how === "enter") {
+        mounted.state.handleNavKey(
+          new KeyboardEvent("keydown", { key: "Enter", cancelable: true }),
+        );
+      } else {
+        mounted.state.requestMainAction(new MouseEvent("dblclick"));
+      }
+      await Promise.resolve();
+      await Promise.resolve();
+      return mounted;
+    }
+
+    it("fires when the row allows the default", async () => {
+      const { actionFn } = await fire({ id: "user-1", $actions: ["block"] });
+      expect(actionFn).toHaveBeenCalledWith("block", { id: "user-1" }, undefined);
+    });
+
+    it("does not fire when the row disables the default WITH a reason", async () => {
+      const { actionFn, state } = await fire({
+        id: "user-1",
+        $actions: [],
+        $disabledReasons: { block: "Already blocked" },
+      });
+      expect(actionFn).not.toHaveBeenCalled();
+      expect(state.actions.lastResult.value.has("block")).toBe(false);
+    });
+
+    it("does not fire on Enter either", async () => {
+      const { actionFn } = await fire(
+        { id: "user-1", $actions: [], $disabledReasons: { block: "Already blocked" } },
+        "enter",
+      );
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("does not fire when the row hides the default (disabled without a reason)", async () => {
+      const { actionFn } = await fire({ id: "user-1", $actions: [] });
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("does not prompt for a gated default that declares promptText", async () => {
+      const { state } = await fire(
+        { id: "user-1", $actions: [], $disabledReasons: { block: "Already blocked" } },
+        "request",
+        { ...def, promptText: "Block $1?" },
+      );
+      expect(state.confirmRequest.value).toBeNull();
+    });
+
+    it("does not fire a default the :row-actions policy excludes", async () => {
+      const { actionFn } = await fire({ id: "user-1", $actions: ["block"] }, "request", def, {
+        exclude: ["block"],
+      });
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("does not fire a default left out of the policy's include list (Enter)", async () => {
+      const { actionFn } = await fire({ id: "user-1" }, "enter", def, { include: ["other"] });
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("applies the policy's overrides — an overridden promptText asks first", async () => {
+      const { state, actionFn } = await fire({ id: "user-1" }, "request", def, {
+        overrides: { block: { promptText: "Really block $1?" } },
+      });
+      expect(state.confirmRequest.value?.message).toBe("Really block user-1?");
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("a registered @main-action listener still receives the request (the app decides)", async () => {
+      const { state, actionFn } = mountState({
+        rowActions: [def],
+        defaultRow: def,
+        row: { id: "user-1", $actions: [] },
+      });
+      const listener = vi.fn();
+      state.registerMainActionListener(listener);
+      state.setActive(0);
+      state.requestMainAction(new MouseEvent("dblclick"));
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(actionFn).not.toHaveBeenCalled();
+    });
   });
 });

@@ -506,8 +506,10 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
 
     await applyStatusPill(page, "active", "users");
     await clickColumnHeader(page, "username");
+    // Listen before the sort triggers the refetch — a fast response would otherwise be missed.
+    const pagesGet = waitForPagesGet(page, "users");
     await pickSort(page, "asc");
-    await waitForPagesGet(page, "users");
+    await pagesGet;
 
     // Save #1: filter-only.
     {
@@ -587,8 +589,10 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
 
     await applyStatusPill(page, "pending", "users");
     await clickColumnHeader(page, "email");
+    // Listen before the sort triggers the refetch — a fast response would otherwise be missed.
+    const pagesGet = waitForPagesGet(page, "users");
     await pickSort(page, "desc");
-    await waitForPagesGet(page, "users");
+    await pagesGet;
     await expect(sortIndicator(page, "email", "desc")).toHaveCount(1);
 
     // Apply `Active filter` → only filter changes; sorter unchanged.

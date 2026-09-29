@@ -2,8 +2,11 @@
 import { computed } from "vue";
 import { DropdownMenuItem } from "reka-ui";
 import {
+  ariaDisabled,
   ariaLabelFor,
   intentClass,
+  isActionDisabled,
+  isLinkTrigger,
   isModClick,
   isPlainLeftClick,
 } from "../../composables/state/intent-scope";
@@ -14,8 +17,9 @@ const props = defineProps<{
   /**
    * Class prefix shared by the consuming surface — e.g. `"as-row-actions"`
    * or `"as-table-actions"`. The atom composes `${prefix}-menu-item`,
-   * `${prefix}-menu-item-icon`, `${prefix}-menu-item-label`, and the intent
-   * variant `${prefix}-intent-{intent}` against this prefix. Consumers
+   * `${prefix}-menu-item-icon`, `${prefix}-menu-item-label`,
+   * `${prefix}-menu-item-reason`, and the intent variant
+   * `${prefix}-intent-{intent}` against this prefix. Consumers
    * declare the runtime classes in their `.vue` file's safelist comment.
    */
   prefix: string;
@@ -37,7 +41,7 @@ const emit = defineEmits<{
   (e: "newtab"): void;
 }>();
 
-const asLink = computed(() => props.href !== undefined && !props.action.promptText);
+const asLink = computed(() => isLinkTrigger(props.action, props.href));
 
 // Modifier state of the pointer gesture currently turning into a click.
 // Reka's `MenuItem` emits `select` with a synthetic `ITEM_SELECT` CustomEvent
@@ -67,6 +71,17 @@ function onClick(e: MouseEvent) {
 function onSelect(e: Event) {
   const p = pointer;
   pointer = null;
+  // Disabled-with-reason item (`action.disabledReason`). Deliberately NOT
+  // reka's `disabled` prop: that one skips the item in arrow-key navigation,
+  // so a keyboard user could never reach it to hear why it is unavailable.
+  // The item stays focusable with `aria-disabled` + the reason in its
+  // accessible name and inline under the label; activation is swallowed
+  // here, so the menu stays open and nothing runs. (It has no href — see
+  // `rowActionHref` — so there is no link or new-tab gesture to guard.)
+  if (isActionDisabled(props.action)) {
+    e.preventDefault();
+    return;
+  }
   if (p && props.href !== undefined) {
     // Anchor + modified click: no invoke, no emit — native anchor behaviour
     // already handled the navigation. The uncancelled select closes the menu.
@@ -90,24 +105,37 @@ function onAuxclick(e: MouseEvent) {
 </script>
 
 <template>
-  <DropdownMenuItem
-    :as="asLink ? 'a' : 'div'"
-    :href="asLink ? href : undefined"
-    :class="[`${prefix}-menu-item`, intentClass(prefix, action)]"
-    :data-default="props.default || undefined"
-    :aria-label="ariaLabelFor(action)"
-    @select="onSelect"
-    @pointerdown="onPointerdown"
-    @click="onClick"
-    @auxclick="onAuxclick"
-  >
-    <slot :action="action">
-      <span
-        v-if="action.icon"
-        :class="[`${prefix}-menu-item-icon`, action.icon]"
-        aria-hidden="true"
-      />
-      <span :class="`${prefix}-menu-item-label`">{{ action.label || action.name }}</span>
-    </slot>
+  <!--
+    `as-child` + our own element (not `:as`): reka's item binds its OWN
+    `aria-disabled` (from its `disabled` prop, unused here) after the
+    forwarded attrs, which would erase ours; on the as-child path the child's
+    attributes win the merge.
+  -->
+  <DropdownMenuItem as-child @select="onSelect">
+    <component
+      :is="asLink ? 'a' : 'div'"
+      :href="asLink ? href : undefined"
+      :class="[`${prefix}-menu-item`, intentClass(prefix, action)]"
+      :data-default="props.default || undefined"
+      :aria-label="ariaLabelFor(action)"
+      :aria-disabled="ariaDisabled(action)"
+      @pointerdown="onPointerdown"
+      @click="onClick"
+      @auxclick="onAuxclick"
+    >
+      <slot :action="action">
+        <span
+          v-if="action.icon"
+          :class="[`${prefix}-menu-item-icon`, action.icon]"
+          aria-hidden="true"
+        />
+        <span :class="`${prefix}-menu-item-label`"
+          >{{ action.label || action.name
+          }}<span v-if="action.disabledReason" :class="`${prefix}-menu-item-reason`">{{
+            action.disabledReason
+          }}</span></span
+        >
+      </slot>
+    </component>
   </DropdownMenuItem>
 </template>

@@ -6,6 +6,7 @@
 //   as-row-actions-menu-item
 //   as-row-actions-menu-item-icon
 //   as-row-actions-menu-item-label
+//   as-row-actions-menu-item-reason
 //   as-row-actions-menu-separator
 //   as-row-actions-intent-positive
 //   as-row-actions-intent-negative
@@ -17,14 +18,13 @@ import { computed } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
 import {
-  applyRowGate,
-  ariaLabelFor,
   createNavigateGestures,
   extractIdentifier,
   intentClass,
   triggerAction,
+  triggerBindings,
 } from "../../composables/state/intent-scope";
-import { rowActionHref } from "../../composables/state/row-actions-config";
+import { resolveRowActions, rowActionHref } from "../../composables/state/row-actions-config";
 import AsActionMenuContent from "../internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../../types";
 
@@ -59,45 +59,37 @@ function promptCtx() {
 
 const view = computed(() => {
   const explicit = props.actions;
-  const sourceDefault = explicit ? undefined : state.actions.default.row;
-  const policy = state.rowActionsPolicy.value;
-  // Backend gate FIRST, per-screen policy second: `include` can only narrow
-  // what the server allowed for this row, and `overrides` never re-enable a
-  // gated action.
-  const filtered = explicit
-    ? { default: undefined, others: explicit, rows: [] }
-    : policy.apply(
-        applyRowGate(
-          {
-            default: sourceDefault,
-            others: state.actions.others.row,
-            rows: state.actions.rows,
-          },
-          props.row,
-        ),
-      );
-  const extra = explicit ? [] : policy.extra(props.row);
+  // The shared per-row pipeline: the row's server gate + the root's
+  // `:row-actions` policy (an explicit `:actions` list bypasses both).
+  const resolved = explicit
+    ? { default: undefined, others: explicit, rows: [], extra: [] }
+    : resolveRowActions(state, props.row);
   const total =
-    (filtered.default ? 1 : 0) + filtered.others.length + filtered.rows.length + extra.length;
+    (resolved.default ? 1 : 0) +
+    resolved.others.length +
+    resolved.rows.length +
+    resolved.extra.length;
   const single =
     total === 1
-      ? (filtered.default ?? filtered.others[0] ?? filtered.rows[0] ?? extra[0])
+      ? (resolved.default ?? resolved.others[0] ?? resolved.rows[0] ?? resolved.extra[0])
       : undefined;
   const singleHref = single ? hrefFor(single) : undefined;
 
   return {
     total,
-    default: filtered.default,
+    default: resolved.default,
     single,
+    trigger: single ? triggerBindings(single, singleHref) : undefined,
     singleLabelOnly: !!single && !single.icon,
     singleIntentClass: single ? intentClass("as-row-actions", single) : undefined,
-    singleIsDefault: !!single && single === sourceDefault,
+    singleIsDefault: !!single && single === resolved.default,
     singleHref,
-    // No promptText → real anchor; with promptText the confirm dialog must
-    // guard navigation, so the action stays a button (mod/middle-click on it
-    // still confirms → window.open via `singleHref`).
-    singleAsLink: singleHref !== undefined && !single?.promptText,
-    menuGroups: [filtered.default ? [filtered.default] : [], filtered.others, filtered.rows, extra],
+    menuGroups: [
+      resolved.default ? [resolved.default] : [],
+      resolved.others,
+      resolved.rows,
+      resolved.extra,
+    ],
   };
 });
 
@@ -119,21 +111,18 @@ const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures
 <template>
   <!-- table-layout: fixed needs a placeholder cell so column widths line up. -->
   <td v-if="view.total === 0" class="as-row-actions" />
-  <td v-else-if="view.single" class="as-row-actions">
+  <td v-else-if="view.single && view.trigger" class="as-row-actions">
     <component
-      :is="view.singleAsLink ? 'a' : 'button'"
-      :href="view.singleAsLink ? view.singleHref : undefined"
-      :type="view.singleAsLink ? undefined : 'button'"
+      :is="view.trigger.tag"
+      v-bind="view.trigger.attrs"
       class="as-row-actions-btn"
       :class="[
         view.singleLabelOnly ? 'as-row-actions-btn-labelled' : undefined,
         view.singleIntentClass,
       ]"
       :data-default="view.singleIsDefault || undefined"
-      :aria-label="ariaLabelFor(view.single)"
-      :title="ariaLabelFor(view.single)"
-      @click.stop="onTriggerClick(view.single, view.singleHref, view.singleAsLink, $event)"
-      @auxclick.stop="onTriggerAuxClick(view.single, view.singleHref, view.singleAsLink, $event)"
+      @click.stop="onTriggerClick(view.single, view.singleHref, $event)"
+      @auxclick.stop="onTriggerAuxClick(view.single, view.singleHref, $event)"
     >
       <span
         v-if="view.single.icon"

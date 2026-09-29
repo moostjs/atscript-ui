@@ -19,21 +19,21 @@ export interface MainActionRegistry {
 export interface CreateMainActionRegistryOpts {
   getActiveIndex: () => number;
   getActiveRow: () => Row | undefined;
-  /** Fallback target when no `@main-action` listener is registered. */
+  /** The table's default row action — decides whether a fallback exists at all. */
   getDefaultRowAction?: () => TVueTableActionInfo | undefined;
-  /** Invoke the fallback action — orchestrator routes to `state.actions.invoke`. */
-  invokeFallback?: (
-    action: TVueTableActionInfo,
-    row: Row,
-    event: KeyboardEvent | MouseEvent,
-  ) => void;
+  /**
+   * Run the fallback for `row`. The orchestrator resolves the row's own
+   * default (it may be gated or policy-excluded for that row) — see
+   * `use-table-state.ts`.
+   */
+  invokeFallback?: (row: Row, event: KeyboardEvent | MouseEvent) => void;
 }
 
 /**
  * Listener registry for the `main-action` event. When listeners are present,
  * `requestMainAction` builds a `MainActionRequest` and dispatches it. When no
- * listener is registered, falls back to invoking `actions.default.row` against
- * the active row's PK (if both are defined). The fallback path SHALL NOT
+ * listener is registered and the table declares a default row action, it
+ * hands the active row to `invokeFallback`. The fallback path SHALL NOT
  * construct a `MainActionRequest` payload — there is nothing to receive it.
  */
 export function createMainActionRegistry(opts: CreateMainActionRegistryOpts): MainActionRegistry {
@@ -67,9 +67,8 @@ export function createMainActionRegistry(opts: CreateMainActionRegistryOpts): Ma
       return;
     }
 
-    const fallback = opts.getDefaultRowAction?.();
-    if (fallback && opts.invokeFallback) {
-      opts.invokeFallback(fallback, row, event);
+    if (opts.invokeFallback && opts.getDefaultRowAction?.()) {
+      opts.invokeFallback(row, event);
     }
   }
 

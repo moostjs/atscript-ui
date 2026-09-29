@@ -4,6 +4,8 @@ import type {
   TValidatorPlugin,
 } from "@atscript/typescript/utils";
 import { Validator } from "@atscript/typescript/utils";
+import { createDbValidatorPlugin, type DbValidationContext } from "@atscript/db/validator";
+import { DB_COLUMN_DERIVED, DB_REL_FK } from "../shared/annotation-keys";
 import type { FormDef } from "./types";
 
 /** Per-call options for the form validator function. */
@@ -11,6 +13,31 @@ export interface TFormValidatorCallOptions {
   data: Record<string, unknown>;
   context?: Record<string, unknown>;
 }
+
+// ── Server-managed fields ────────────────────────────────────
+
+const dbPlugin = createDbValidatorPlugin();
+const INSERT_CONTEXT: DbValidationContext = { mode: "insert" };
+
+/**
+ * Always-on plugin for fields the server fills in, so a create form is not
+ * blocked on them:
+ * - `@db.column.derived` — read-only and server-computed: never validated
+ *   (not even a loaded value, which the user could not fix).
+ * - an absent `@db.default*` / `@db.column.version` value — delegated to
+ *   `@atscript/db`'s own insert-mode rule, so the key list has one owner.
+ *   `db.rel.FK` is kept out: a form fills the FK itself (no nested nav
+ *   object), so an empty required FK must still fail.
+ *
+ * The db plugin reads its mode from the validation context, which here
+ * carries the form's `{ data, context }` — it gets a view of `ctx` with the
+ * insert context instead.
+ */
+const serverManagedPlugin: TValidatorPlugin = (ctx, def, value) => {
+  if (def.metadata.has(DB_COLUMN_DERIVED)) return true;
+  if (value !== undefined || def.metadata.has(DB_REL_FK)) return undefined;
+  return dbPlugin(Object.create(ctx, { context: { value: INSERT_CONTEXT } }), def, value);
+};
 
 // ── Default validator plugin registry ────────────────────────
 //
@@ -33,7 +60,8 @@ export function getDefaultValidatorPlugins(): TValidatorPlugin[] {
  * Returns a reusable validator function for a whole FormDef.
  *
  * Validator is created once and reused on every call.
- * ATScript's @expect.* validation runs automatically.
+ * ATScript's @expect.* validation runs automatically; server-managed db
+ * fields (`@db.column.derived`, absent `@db.default*` / version) pass.
  * For custom `ui.fn.*` validators, install ui-fns and pass its plugin via `opts.plugins`.
  */
 export function getFormValidator(
@@ -43,7 +71,7 @@ export function getFormValidator(
   const validator = new Validator(def.type, {
     unknownProps: "ignore",
     ...opts,
-    plugins: [...defaultValidatorPlugins, ...(opts?.plugins ?? [])],
+    plugins: [serverManagedPlugin, ...defaultValidatorPlugins, ...(opts?.plugins ?? [])],
   });
 
   return (callOpts: TFormValidatorCallOptions) => {
@@ -82,7 +110,7 @@ export function createFieldValidator(
   let cached: InstanceType<typeof Validator> | undefined;
 
   return (value: unknown, externalCtx?: { data: unknown; context: unknown }): true | string => {
-    cached ??= new Validator(prop, { plugins: defaultValidatorPlugins });
+    cached ??= new Validator(prop, { plugins: [serverManagedPlugin, ...defaultValidatorPlugins] });
     const isValid = cached.validate(value, true, externalCtx);
     if (!isValid) {
       if (opts?.rootOnly) {

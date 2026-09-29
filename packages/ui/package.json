@@ -64,6 +64,7 @@
   },
   "peerDependencies": {
     "@atscript/core": "catalog:",
+    "@atscript/db": "catalog:",
     "@atscript/typescript": "catalog:"
   }
 }

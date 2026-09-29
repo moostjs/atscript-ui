@@ -4,7 +4,11 @@ import { flushPromises } from "@vue/test-utils";
 import type { TDbActionInfo } from "@atscript/db-client";
 import AsRowActions from "../components/defaults/as-row-actions.vue";
 import AsTableActions from "../components/as-table-actions.vue";
-import type { RowActionsConfig, TVueTableActionInfo } from "../types";
+import {
+  compileRowActionsConfig,
+  resolveRowActions,
+} from "../composables/state/row-actions-config";
+import type { ReactiveTableState, RowActionsConfig, TVueTableActionInfo } from "../types";
 import { mockColumn, mountWithTableContext } from "./helpers";
 
 function action(name: string, extra: Partial<TDbActionInfo> = {}): TDbActionInfo {
@@ -108,6 +112,54 @@ describe("<AsRowActions> row-action policy", () => {
     });
     await flushPromises();
     expect(await openMenu(wrapper)).toEqual(["BLOCK", "Audit"]);
+  });
+
+  it("a string from enabled(row) keeps the extra action, disabled with that reason", async () => {
+    const { wrapper } = setup({
+      rowActions: {
+        include: ["block"],
+        extra: [
+          { name: "audit", label: "Audit", onInvoke: () => {}, enabled: () => "No history yet" },
+          { name: "blank", label: "Blank", onInvoke: () => {}, enabled: () => "" },
+        ],
+      },
+    });
+    await flushPromises();
+    // `""` is not a reason — it enables, like the server's verdict.
+    expect(await openMenu(wrapper)).toEqual(["BLOCK", "AuditNo history yet", "Blank"]);
+    const audit = document.querySelector('[aria-label="Audit, No history yet"]');
+    expect(audit?.getAttribute("aria-disabled")).toBe("true");
+  });
+
+  it("a disabled extra href action renders a button, not an anchor", async () => {
+    const { wrapper } = setup({
+      row: { id: 7 },
+      rowActions: {
+        include: [],
+        extra: [
+          {
+            name: "open",
+            label: "Open",
+            href: (row) => `/orders/${String(row.id)}`,
+            enabled: () => "Draft orders have no page",
+          },
+        ],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find("a").exists()).toBe(false);
+    expect(wrapper.find("button.as-row-actions-btn").attributes("aria-disabled")).toBe("true");
+  });
+
+  it("include / exclude narrow disabled-with-reason server actions too", async () => {
+    const row = {
+      id: 1,
+      $actions: ["approve"],
+      $disabledReasons: { block: "Already blocked", archive: "Locked" },
+    };
+    const { wrapper } = setup({ row, rowActions: { exclude: ["archive"] } });
+    await flushPromises();
+    expect(await openMenu(wrapper)).toEqual(["BLOCKAlready blocked", "APPROVE"]);
   });
 
   it("renders an extra action's href as a real anchor through resolveHref", async () => {
@@ -220,5 +272,70 @@ describe("<AsTableActions> reads the same policy", () => {
     await flushPromises();
     expect(wrapper.find("button.as-table-actions-more").exists()).toBe(false);
     expect(wrapper.find(".as-table-actions-btn").text()).toContain("APPROVE");
+  });
+});
+
+describe("resolveRowActions — the shared per-row pipeline", () => {
+  const [block, approve, archive] = serverActions as TVueTableActionInfo[];
+  const bulk = { ...action("purge"), level: "rows" } as TVueTableActionInfo;
+
+  function fakeState(config?: RowActionsConfig) {
+    return {
+      rowActionsPolicy: { value: compileRowActionsConfig(config) },
+      actions: {
+        default: { row: block },
+        others: { row: [approve, archive] },
+        rows: [bulk],
+      },
+    } as unknown as ReactiveTableState;
+  }
+
+  it("gates, narrows and relabels in one pass; the server verdict comes first", () => {
+    const out = resolveRowActions(
+      fakeState({ exclude: ["archive"], overrides: { block: { label: "Suspend" } } }),
+      { id: 1, $actions: ["approve", "archive"], $disabledReasons: { block: "Already blocked" } },
+    );
+    // Disabled by the server, relabelled by the policy — the reason survives.
+    expect(out.default).toMatchObject({
+      name: "block",
+      label: "Suspend",
+      disabledReason: "Already blocked",
+    });
+    expect(out.others).toEqual([approve]);
+    // Not in `$actions`, no reason → hidden.
+    expect(out.rows).toEqual([]);
+  });
+
+  it("an excluded action stays hidden even when the server gives a reason", () => {
+    const out = resolveRowActions(fakeState({ exclude: ["block"] }), {
+      $actions: [],
+      $disabledReasons: { block: "Already blocked" },
+    });
+    expect(out.default).toBeUndefined();
+  });
+
+  it("returns the source arrays untouched when nothing applies", () => {
+    const state = fakeState();
+    const out = resolveRowActions(state, { id: 1 });
+    expect(out.default).toBe(block);
+    expect(out.others).toBe(state.actions.others.row);
+    expect(out.rows).toBe(state.actions.rows);
+  });
+
+  it("withRows: false leaves the rows-level bucket out", () => {
+    expect(resolveRowActions(fakeState(), { id: 1 }, { withRows: false }).rows).toEqual([]);
+  });
+
+  it("extra: descriptors built once; enabled(row) verdicts gate them per row", () => {
+    const state = fakeState({
+      extra: [
+        { name: "audit", label: "Audit", enabled: (r) => (r.locked ? "Locked" : true) },
+        { name: "notes", label: "Notes", enabled: (r) => !r.hidden },
+      ],
+    });
+    const open = resolveRowActions(state, { id: 1 }).extra;
+    expect(resolveRowActions(state, { id: 2 }).extra).toBe(open);
+    const locked = resolveRowActions(state, { id: 3, locked: true, hidden: true }).extra;
+    expect(locked).toEqual([{ ...open[0], disabledReason: "Locked" }]);
   });
 });

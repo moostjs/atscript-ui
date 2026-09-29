@@ -1,5 +1,5 @@
 import { defineShortcuts } from "vunor/theme";
-import { buildActionsIntentVariants } from "./_shared";
+import { buildActionMenuItemShortcuts, buildActionsIntentVariants } from "./_shared";
 
 /**
  * Per-row actions cell shortcuts. Renders inside a `<td>`. Always exactly
@@ -26,8 +26,12 @@ export const asRowActionsShortcuts = defineShortcuts({
   // `decoration-none`: navigate actions render as real `<a href>` with this
   // same class — kill the UA underline (no-op on buttons). Link/visited
   // colors are already neutralized because `c8-flat` sets `text-current*`.
+  //
+  // Disabled-with-reason (`aria-disabled="true"`, kept focusable so the reason
+  // stays reachable): `disabled-soft` dims it; the c8 hover / press gate
+  // already skips `aria-disabled`.
   "as-row-actions-btn": {
-    "": "scope-neutral c8-flat decoration-none inline-flex items-center justify-center min-w-fingertip-s h-fingertip-s px-$s font-600 cursor-pointer shrink-0 leading-none whitespace-nowrap",
+    "": "scope-neutral c8-flat decoration-none inline-flex items-center justify-center min-w-fingertip-s h-fingertip-s px-$s font-600 cursor-pointer shrink-0 leading-none whitespace-nowrap disabled-soft",
     "[&[data-default]]:": "scope-primary font-500",
   },
   // Modifier applied by `<AsRowActions>` when the single row action has
@@ -41,18 +45,6 @@ export const asRowActionsShortcuts = defineShortcuts({
   "as-row-actions-btn-label": "text-callout",
   "as-row-actions-more": "",
   "as-row-actions-menu": "scope-primary popup-card whitespace-nowrap py-$xs min-w-[12em]",
-  "as-row-actions-menu-separator": "h-0 my-$xs border-t-1",
-  // Menu item base. Default-marked items get bold font so the primary CTA
-  // is visually distinct in the dropdown list. `decoration-none`: navigate
-  // items render as `DropdownMenuItem as="a"` — kill the UA underline
-  // (no-op on divs); `text-current` already beats UA link/visited colors.
-  "as-row-actions-menu-item": {
-    "": "flex items-center gap-$s w-full px-$m py-$xs border-0 bg-transparent text-current decoration-none text-left cursor-pointer outline-none",
-    "hover:": "layer-3",
-    "data-[highlighted]:": "layer-3",
-    "[&[data-default]]:": "font-700",
-  },
-  "as-row-actions-menu-item-icon": "inline-flex text-[1.25em] text-current/60 shrink-0",
-  "as-row-actions-menu-item-label": "flex-1 min-w-0 overflow-hidden text-ellipsis",
+  ...buildActionMenuItemShortcuts("as-row-actions"),
   ...buildActionsIntentVariants("as-row-actions"),
 });

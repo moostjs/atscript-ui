@@ -36,6 +36,13 @@ export interface FieldMeta {
    * fetchable. Since 0.1.141.
    */
   writeOnly?: boolean;
+  /**
+   * Server-computed (`@db.column.derived`, `@atscript/db` 0.1.141+): filterable
+   * and sortable like any column, but a value written to it is dropped. Forms
+   * read the annotation from the type itself (`FormFieldDef.derived`).
+   * Since 0.1.144.
+   */
+  derived?: boolean;
 }
 
 /** Meta response from moost-db `/meta` endpoint. */

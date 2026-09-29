@@ -363,3 +363,32 @@ export interface FormWithAction {
     @ui.form.action 'resend', 'Resend'
     resendAction: ui.action
 }
+
+// ── Server-managed db fields (derived / version / default) ───
+
+/// `customerId` is a REQUIRED `@db.column.derived` field, computed from a
+/// `@db.json` leaf. `@meta.required` would normally demand a value.
+@db.table 'derived_rows'
+export interface DerivedRow {
+    @meta.id
+    id: number
+
+    name: string
+
+    @db.json
+    payload: {
+        customer: {
+            id: string
+        }
+    }
+
+    @meta.required
+    @db.column.derived
+    customerId: DerivedRow.payload.customer.id
+
+    @db.default.now
+    createdAt: number.timestamp
+
+    @db.column.version
+    version: number
+}

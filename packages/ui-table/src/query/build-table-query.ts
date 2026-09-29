@@ -38,8 +38,10 @@ export interface BuildTableQueryOptions {
   /**
    * Set `controls.$actions = true` so each returned row carries
    * `$actions: string[]` — server-evaluated names of row/rows-level actions
-   * NOT disabled for that row. Off by default; renderers flip it on when a
-   * row-actions column will render gateable actions.
+   * NOT disabled for that row, plus `$disabledReasons` (action → reason)
+   * for the ones a predicate disabled with a reason. Off by default;
+   * renderers flip it on when a row-actions column will render gateable
+   * actions.
    */
   includeActions?: boolean;
 }

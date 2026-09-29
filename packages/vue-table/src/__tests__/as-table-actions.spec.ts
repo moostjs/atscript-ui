@@ -44,6 +44,8 @@ interface SetupOpts {
   patchState?: (state: ReactiveTableState) => void;
   /** Base-path mapper threaded to `state.resolveHref`. */
   resolveHref?: (url: string) => string;
+  /** Selection key (`selection.rowValueFn`) — e.g. a scalar PK. */
+  rowValueFn?: (row: Record<string, unknown>) => unknown;
 }
 
 function setup(opts: SetupOpts = {}) {
@@ -61,6 +63,7 @@ function setup(opts: SetupOpts = {}) {
         client,
         query: { queryOnMount: false },
         actions: { resolveHref: opts.resolveHref },
+        selection: opts.rowValueFn ? { rowValueFn: opts.rowValueFn } : undefined,
       });
       state = s;
       const def = mockTableDef([mockColumn("id"), mockColumn("name")]);
@@ -312,6 +315,129 @@ describe("<AsTableActions>", () => {
       expect(openSpy).toHaveBeenCalledWith("/base/dashboard", "_blank", "noopener,noreferrer");
       expect(actionFn).not.toHaveBeenCalled();
       openSpy.mockRestore();
+    });
+  });
+
+  describe("disabled actions with a reason", () => {
+    it("level=rows: no selected row allows it but reasons given → disabled button with the joined reasons", async () => {
+      const def: TDbActionInfo = { ...rowsBulk, default: true };
+      const { wrapper, actionFn } = setup({
+        rows: [def],
+        defaultRows: def,
+        selectedRows: [
+          { id: "a", $actions: [], $disabledReasons: { "bulk-lock": "Already locked" } },
+          { id: "b", $actions: [], $disabledReasons: { "bulk-lock": "Archived" } },
+        ],
+      });
+      const btn = wrapper.find("button.as-table-actions-btn");
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      expect(btn.attributes("disabled")).toBeUndefined();
+      expect(btn.attributes("title")).toBe("Lock, Already locked; Archived");
+      expect(btn.attributes("aria-label")).toBe("Lock, Already locked; Archived");
+      await btn.trigger("click");
+      await flushPromises();
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+
+    it("level=rows: enabled when any selected row allows it, despite another row's reason", () => {
+      const def: TDbActionInfo = { ...rowsBulk, default: true };
+      const { wrapper } = setup({
+        rows: [def],
+        defaultRows: def,
+        selectedRows: [
+          { id: "a", $actions: ["bulk-lock"] },
+          { id: "b", $actions: [], $disabledReasons: { "bulk-lock": "Already locked" } },
+        ],
+      });
+      expect(
+        wrapper.find("button.as-table-actions-btn").attributes("aria-disabled"),
+      ).toBeUndefined();
+    });
+
+    it("level=row: a disabled navigate default renders an aria-disabled button, not an anchor", () => {
+      const nav: TDbActionInfo = {
+        name: "open",
+        label: "Open",
+        level: "row",
+        processor: "navigate",
+        value: "/orders/$1",
+        default: true,
+      };
+      const { wrapper } = setup({
+        level: "row",
+        row: [nav],
+        defaultRow: nav,
+        patchState: (state) => {
+          state.results.value = [
+            { id: "o1", $actions: [], $disabledReasons: { open: "Archived" } },
+          ];
+          state.totalCount.value = 1;
+          state.setActive(0);
+        },
+      });
+      expect(wrapper.find("a").exists()).toBe(false);
+      const btn = wrapper.find("button.as-table-actions-btn");
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      expect(btn.attributes("title")).toBe("Open, Archived");
+    });
+
+    it("the default slot's invoke refuses a disabled action", async () => {
+      const def: TDbActionInfo = { ...rowsBulk, default: true };
+      let scope: Record<string, unknown> = {};
+      const { actionFn } = setup({
+        rows: [def],
+        defaultRows: def,
+        selectedRows: [
+          { id: "a", $actions: [], $disabledReasons: { "bulk-lock": "Already locked" } },
+          { id: "b", $actions: [] },
+        ],
+        slot: (s) => {
+          scope = s;
+          return h("span");
+        },
+      });
+      const action = scope.defaultAction as TVueTableActionInfo;
+      expect(action.disabledReason).toBe("Already locked");
+      await (scope.invoke as (a: TVueTableActionInfo) => Promise<void>)(action);
+      await flushPromises();
+      expect(actionFn).not.toHaveBeenCalled();
+    });
+    it("a scalar selection (rowValueFn → PK) resolves to the loaded rows, so the gates apply", () => {
+      const def: TDbActionInfo = { ...rowsBulk, default: true };
+      const rows = [
+        { id: "a", $actions: [], $disabledReasons: { "bulk-lock": "Already locked" } },
+        { id: "b", $actions: [], $disabledReasons: { "bulk-lock": "Already locked" } },
+      ];
+      const { wrapper } = setup({
+        rows: [def],
+        defaultRows: def,
+        rowValueFn: (row) => row.id,
+        patchState: (state) => {
+          state.windowCache.value = new Map(rows.map((r, i) => [i, r]));
+          state.selectedRows.value = ["a", "b"];
+        },
+      });
+      const btn = wrapper.find("button.as-table-actions-btn");
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      expect(btn.attributes("title")).toBe("Lock, Already locked");
+    });
+
+    it("a scalar single selection gates the row-level CTA against its loaded row", () => {
+      const ship: TDbActionInfo = { ...rowBlock, name: "ship", label: "Ship", default: true };
+      const { wrapper } = setup({
+        row: [ship],
+        defaultRow: ship,
+        rowValueFn: (row) => row.id,
+        patchState: (state) => {
+          state.windowCache.value = new Map([
+            [0, { id: "o1", $actions: [], $disabledReasons: { ship: "Already shipped" } }],
+          ]);
+          state.selectedRows.value = ["o1"];
+        },
+      });
+      const btn = wrapper.find("button.as-table-actions-btn");
+      expect(btn.attributes("aria-disabled")).toBe("true");
+      expect(btn.attributes("title")).toBe("Ship, Already shipped");
     });
   });
 });

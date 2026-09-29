@@ -1,12 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  applyGate,
   applyRowsGate,
+  ariaDisabled,
+  ariaLabelFor,
   confirmAction,
   extractIdentifier,
   idsForAction,
+  isActionDisabled,
   pkForLevel,
+  rowActionGate,
   rowsActionGate,
   substitute,
+  triggerAction,
+  triggerBindings,
+  withVerdict,
 } from "../composables/state/intent-scope";
 import { REMOVE_PROCESSOR, type ReactiveTableState, type TVueTableActionInfo } from "../types";
 
@@ -218,5 +226,225 @@ describe("rowsActionGate / applyRowsGate", () => {
     };
     // Rows without $actions → null gate → identity-stable pass-through.
     expect(applyRowsGate(buckets, [{ id: 1 }, { id: 2 }])).toBe(buckets);
+  });
+});
+
+describe("disabled reasons ($disabledReasons)", () => {
+  const ship = makeAction({ name: "ship", label: "Ship" });
+  const edit = makeAction({ name: "edit", label: "Edit" });
+  const archive = makeAction({ name: "archive", label: "Archive" });
+
+  describe("rowActionGate", () => {
+    it("enabled → true, reasoned → the reason, neither → false", () => {
+      const gate = rowActionGate({
+        $actions: ["edit"],
+        $disabledReasons: { ship: "Order already shipped" },
+      })!;
+      expect(gate(edit)).toBe(true);
+      expect(gate(ship)).toBe("Order already shipped");
+      expect(gate(archive)).toBe(false);
+    });
+
+    it("stays null without $actions, even when $disabledReasons is present", () => {
+      expect(rowActionGate({ $disabledReasons: { ship: "x" } })).toBeNull();
+    });
+
+    it("an allowed name wins over a stray reason for the same action", () => {
+      const gate = rowActionGate({ $actions: ["ship"], $disabledReasons: { ship: "x" } })!;
+      expect(gate(ship)).toBe(true);
+    });
+
+    it("the synthesised remove action stays exempt", () => {
+      const gate = rowActionGate({ $actions: [], $disabledReasons: {} })!;
+      expect(gate(makeAction({ name: REMOVE_PROCESSOR, processor: REMOVE_PROCESSOR }))).toBe(true);
+    });
+
+    it("reads only own non-empty string reasons; a malformed payload only hides", () => {
+      const reasons = { ship: "Already shipped", edit: "", archive: 1 };
+      const gate = rowActionGate({ $actions: [], $disabledReasons: reasons })!;
+      expect(gate(ship)).toBe("Already shipped");
+      expect(gate(edit)).toBe(false);
+      expect(gate(archive)).toBe(false);
+      for (const bad of [["ship"], "ship", null]) {
+        expect(rowActionGate({ $actions: [], $disabledReasons: bad })!(ship)).toBe(false);
+      }
+    });
+
+    it("an action named after an Object.prototype member is never enabled by inheritance", () => {
+      const ctor = makeAction({ name: "constructor" });
+      const toStr = makeAction({ name: "toString" });
+      const single = rowActionGate({ $actions: [], $disabledReasons: { ship: "x" } })!;
+      expect(single(ctor)).toBe(false);
+      expect(single(toStr)).toBe(false);
+      const bulk = rowsActionGate([{ $actions: [], $disabledReasons: { ship: "x" } }])!;
+      expect(bulk(ctor)).toBe(false);
+      expect(bulk(toStr)).toBe(false);
+      // …while an OWN reason under such a name works like any other.
+      const own = rowActionGate({ $actions: [], $disabledReasons: { constructor: "Nope" } })!;
+      expect(own(ctor)).toBe("Nope");
+      expect(
+        applyGate({ default: undefined, others: [ctor, toStr], rows: [] }, own).others,
+      ).toEqual([{ ...ctor, disabledReason: "Nope" }]);
+    });
+  });
+
+  describe("applyGate / withVerdict", () => {
+    const row = { $actions: ["edit"], $disabledReasons: { ship: "Order already shipped" } };
+
+    it("withVerdict: false drops, a non-empty string copies with the reason, else identity", () => {
+      expect(withVerdict(ship, false)).toBeUndefined();
+      expect(withVerdict(ship, true)).toBe(ship);
+      expect(withVerdict(ship, "")).toBe(ship);
+      expect(withVerdict(ship, "No")).toEqual({ ...ship, disabledReason: "No" });
+    });
+
+    it("keeps a reasoned action as a COPY carrying disabledReason; the source is untouched", () => {
+      const out = applyGate(
+        { default: ship, others: [edit, archive], rows: [] },
+        rowActionGate(row),
+      );
+      expect(out.default).not.toBe(ship);
+      expect(out.default).toEqual({ ...ship, disabledReason: "Order already shipped" });
+      expect(ship.disabledReason).toBeUndefined();
+      expect(out.others).toEqual([edit]);
+      expect(out.others[0]).toBe(edit);
+    });
+
+    it("returns the SAME arrays / buckets when every verdict keeps the action as is", () => {
+      const others = [edit];
+      const rows = [edit];
+      const buckets = { default: edit, others, rows };
+      expect(applyGate(buckets, () => true)).toBe(buckets);
+      const partly = applyGate({ default: ship, others, rows }, rowActionGate(row));
+      expect(partly.others).toBe(others);
+      expect(partly.rows).toBe(rows);
+    });
+
+    it("runs map on the disabled copy (per-screen overrides keep the reason)", () => {
+      const out = applyGate(
+        { default: undefined, others: [ship], rows: [] },
+        rowActionGate(row),
+        (a) => ({ ...a, label: "Dispatch" }),
+      );
+      expect(out.others[0]).toMatchObject({
+        label: "Dispatch",
+        disabledReason: "Order already shipped",
+      });
+    });
+
+    it("isActionDisabled / ariaDisabled read the gated copy", () => {
+      const out = applyGate({ default: ship, others: [edit], rows: [] }, rowActionGate(row));
+      expect(isActionDisabled(out.default!)).toBe(true);
+      expect(ariaDisabled(out.default!)).toBe("true");
+      expect(isActionDisabled(out.others[0]!)).toBe(false);
+      expect(ariaDisabled(out.others[0]!)).toBeUndefined();
+    });
+  });
+
+  describe("rowsActionGate (bulk)", () => {
+    const bulk = (name: string) => makeAction({ name, level: "rows" });
+
+    it("enabled when ANY selected row allows it, even if another row gives a reason", () => {
+      const gate = rowsActionGate([
+        { $actions: ["archive"] },
+        { $actions: [], $disabledReasons: { archive: "Locked" } },
+      ])!;
+      expect(gate(bulk("archive"))).toBe(true);
+    });
+
+    it("disabled with the distinct reasons joined when NO row allows it", () => {
+      const gate = rowsActionGate([
+        { $actions: [], $disabledReasons: { archive: "Locked" } },
+        { $actions: [], $disabledReasons: { archive: "Already archived" } },
+        { $actions: [], $disabledReasons: { archive: "Locked" } },
+        { $actions: [] },
+      ])!;
+      expect(gate(bulk("archive"))).toBe("Locked; Already archived");
+    });
+
+    it("caps the listed reasons at three and counts the rest", () => {
+      const rows = ["A", "B", "C", "D", "E"].map((r) => ({
+        $actions: [],
+        $disabledReasons: { archive: r },
+      }));
+      expect(rowsActionGate(rows)!(bulk("archive"))).toBe("A; B; C; +2 more");
+    });
+
+    it("hidden when no row allows it and none gave a reason", () => {
+      const gate = rowsActionGate([{ $actions: [] }, { $actions: ["other"] }])!;
+      expect(gate(bulk("archive"))).toBe(false);
+    });
+
+    it("applyRowsGate keeps the disabled copy in its bucket", () => {
+      const a = bulk("archive");
+      const out = applyRowsGate({ default: a, others: [], rows: [] }, [
+        { $actions: [], $disabledReasons: { archive: "Locked" } },
+      ]);
+      expect(out.default).toEqual({ ...a, disabledReason: "Locked" });
+    });
+  });
+
+  describe("triggers never run a disabled action", () => {
+    const disabled = { ...ship, disabledReason: "Order already shipped" };
+
+    function gestureState() {
+      const invoke = vi.fn(async () => ({ ok: true }));
+      const state = {
+        prompt: vi.fn(async () => true),
+        requestActionInput: vi.fn(async () => ({})),
+        actions: { invoke },
+        tableDef: { value: { preferredId: ["id"] } },
+        resolveHref: (h: string) => h,
+      } as unknown as ReactiveTableState;
+      return { state, invoke };
+    }
+
+    it("ariaLabelFor appends the reason", () => {
+      expect(ariaLabelFor(ship)).toBe("Ship");
+      expect(ariaLabelFor(disabled)).toBe("Ship, Order already shipped");
+    });
+
+    it("triggerAction is a no-op (no prompt, no form, no invoke)", async () => {
+      const { state, invoke } = gestureState();
+      await triggerAction(
+        state,
+        { ...disabled, promptText: "Sure?" },
+        { identifiers: [], preferredId: [] },
+      );
+      await triggerAction(state, { ...disabled, inputForm: { name: "f", url: "/f" } } as never, {
+        identifiers: [],
+        preferredId: [],
+      });
+      expect(state.prompt).not.toHaveBeenCalled();
+      expect(state.requestActionInput).not.toHaveBeenCalled();
+      expect(invoke).not.toHaveBeenCalled();
+    });
+
+    it("triggerBindings: a disabled trigger is an aria-disabled button with the reason", () => {
+      const nav = makeAction({ name: "open", label: "Open", processor: "navigate" });
+      expect(triggerBindings(nav, "/o/1")).toEqual({
+        tag: "a",
+        attrs: {
+          href: "/o/1",
+          type: undefined,
+          "aria-disabled": undefined,
+          "aria-label": "Open",
+          title: "Open",
+        },
+      });
+      // A disabled action never has an href (`rowActionHref`) — a button.
+      expect(triggerBindings({ ...nav, disabledReason: "Archived" }, undefined)).toEqual({
+        tag: "button",
+        attrs: {
+          href: undefined,
+          type: "button",
+          "aria-disabled": "true",
+          "aria-label": "Open, Archived",
+          title: "Open, Archived",
+        },
+      });
+      // promptText keeps a navigate action a button (the confirm guards it).
+      expect(triggerBindings({ ...nav, promptText: "Sure?" }, "/o/1").tag).toBe("button");
+    });
   });
 });

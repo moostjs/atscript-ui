@@ -58,6 +58,12 @@ export interface FormFieldDef {
    * the component layer.
    */
   valueHelpInfo?: ValueHelpInfo;
+  /**
+   * Server-computed `@db.column.derived` field, read from the type metadata.
+   * Rendered read-only, exempt from form validation and never sent by
+   * `buildFormDiff` (the server drops a written value anyway). Since 0.1.144.
+   */
+  derived?: true;
 }
 
 /**

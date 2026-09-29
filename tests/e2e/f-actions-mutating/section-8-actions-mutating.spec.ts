@@ -274,12 +274,16 @@ test.describe("Section 8 batch F — actions: backend gates / forms", () => {
         action?: string;
         id?: Record<string, unknown>;
         message?: string;
+        reason?: string;
       };
       expect(body.name).toBe("ActionDisabledError");
       expect(body.statusCode).toBe(409);
       expect(body.action).toBe("activate");
       expect(body.id).toEqual({ username: "admin" });
       expect(typeof body.message).toBe("string");
+      // Boolean predicate (`true`, no reason) → no `reason` on the body. The
+      // reasoned case is covered by 8.D5 (e-actions-render).
+      expect(body.reason).toBeUndefined();
 
       // Verify admin's status didn't change — read back via /one/:id.
       const q = await ctx.get("/api/db/tables/users/one/admin");

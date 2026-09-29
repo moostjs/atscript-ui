@@ -201,3 +201,25 @@ export interface ComboForm {
     @db.column.version
     version: number
 }
+
+// ── Renamed version + derived ─────────────────────────────────
+
+/// `@db.column` renames only the storage column — the version field keeps its
+/// LOGICAL name (`rev`), which is what `$cas` must carry. `customerId` is a
+/// `@db.column.derived` field (server-computed, never sent).
+@db.table 'renamed_version_form'
+export interface RenamedVersionForm {
+    name: string
+
+    @db.column 'row_version'
+    @db.column.version
+    rev: number
+
+    @db.json
+    payload?: {
+        customerId: string
+    }
+
+    @db.column.derived
+    customerId?: RenamedVersionForm.payload.customerId
+}

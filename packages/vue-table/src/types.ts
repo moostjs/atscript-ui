@@ -26,6 +26,17 @@ export type RowActionsColumnPlacement = "first" | "last" | "merge-select";
  */
 export type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
   processor: TDbActionProcessor | typeof REMOVE_PROCESSOR;
+  /**
+   * Set when the action is shown DISABLED for the targeted row(s): the
+   * reason the server's `disabled` predicate returned (row
+   * `$disabledReasons`), or a client-only action's `enabled(row)` string.
+   * Built-in surfaces render it greyed with `aria-disabled` and the reason,
+   * and never trigger it; a custom `button` / `menu-item` slot should render
+   * the reason too. Not to be confused with `TDbActionInfo.disabled` — the
+   * server predicate's source. Only on the gated copies a surface renders,
+   * never on `state.actions.*`. Since 0.1.144.
+   */
+  disabledReason?: string;
 };
 
 /** Per-call options for `state.actions.invoke`. */
@@ -69,8 +80,12 @@ export interface LocalRowAction {
   href?: (row: Record<string, unknown>) => string;
   /** Local handler. Awaited; a rejection settles the action as an error result. */
   onInvoke?: (row: Record<string, unknown>, pk?: Record<string, unknown>) => void | Promise<void>;
-  /** Per-row gate. Returning `false` hides the action for that row. */
-  enabled?: (row: Record<string, unknown>) => boolean;
+  /**
+   * Per-row gate. `false` hides the action for that row; a non-empty string
+   * shows it disabled with that string as the reason (since 0.1.144).
+   * Anything else — `true`, `""` — enables it.
+   */
+  enabled?: (row: Record<string, unknown>) => boolean | string;
 }
 
 /**
@@ -94,6 +109,24 @@ export interface RowActionsConfig {
   >;
   /** App-owned actions appended after the server ones. */
   extra?: LocalRowAction[];
+}
+
+/**
+ * The row actions a surface renders for one row — see `resolveRowActions`.
+ * The server-declared buckets come back gated and policy-applied (hidden
+ * actions dropped, disabled ones as copies carrying `disabledReason`,
+ * `overrides` applied); `extra` holds the policy's app-owned actions. Since
+ * 0.1.144.
+ */
+export interface ResolvedRowActions {
+  /** `state.actions.default.row`, if it survived the row's gate and the policy. */
+  default: TVueTableActionInfo | undefined;
+  /** `state.actions.others.row` (row-level, minus the default). */
+  others: TVueTableActionInfo[];
+  /** `state.actions.rows` — empty when resolved with `withRows: false`. */
+  rows: TVueTableActionInfo[];
+  /** `RowActionsConfig.extra`, gated by each one's `enabled(row)`. */
+  extra: TVueTableActionInfo[];
 }
 
 /** Discriminated result returned by `state.actions.invoke`. Never throws. */
@@ -568,6 +601,26 @@ export interface ReactiveTableState extends TableStateMethods {
   /** Extract unique value from a row for selection tracking. */
   rowValueFn: (row: Record<string, unknown>) => unknown;
   /**
+   * Every loaded row (`windowCache`) keyed by its `rowValueFn` value.
+   * Computed lazily and memoised per cache instance, so resolving scalar
+   * selections costs one map build per fetch, not one per read. Since
+   * 0.1.144.
+   */
+  rowByValue: ComputedRef<ReadonlyMap<unknown, Record<string, unknown>>>;
+  /**
+   * The row behind a selection value: an object value IS the row; a scalar
+   * (a `rowValueFn` returning the PK) is looked up in {@link rowByValue} —
+   * `undefined` when that row is not loaded. Since 0.1.144.
+   */
+  rowOf: (value: unknown) => Record<string, unknown> | undefined;
+  /**
+   * The loaded rows of the current selection, in selection order — selected
+   * values whose row is not loaded are left out. The toolbar's bulk action
+   * gate reads the rows' `$actions` / `$disabledReasons` from here. Since
+   * 0.1.144.
+   */
+  selectedRowObjects: ComputedRef<Record<string, unknown>[]>;
+  /**
    * Map a navigate action's interpolated href before it is used as an
    * anchor's `href` attribute or a mod/middle-click `window.open` target —
    * e.g. `router.resolve(url).href` for apps served under a base path.
@@ -595,7 +648,9 @@ export interface ReactiveTableState extends TableStateMethods {
    * `<AsTable>` / `<AsWindowTable>` flip this on whenever their
    * `:row-actions-column` prop is non-`false` AND the table has at least one
    * row/rows-level action. When on, `buildTableQuery` requests per-row
-   * `$actions: string[]` so the dropdown can hide server-disabled actions.
+   * `$actions: string[]` (plus `$disabledReasons` from servers that give
+   * reasons) so the action surfaces hide server-disabled actions — or show
+   * them disabled with the reason, when the server gave one.
    */
   includeActions: Ref<boolean>;
   /**

@@ -6,6 +6,7 @@
 //   as-table-actions-menu-item
 //   as-table-actions-menu-item-icon
 //   as-table-actions-menu-item-label
+//   as-table-actions-menu-item-reason
 //   as-table-actions-menu-separator
 //   as-table-actions-intent-positive
 //   as-table-actions-intent-negative
@@ -16,15 +17,15 @@ import { computed, ref, watch } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
 import {
-  applyRowGate,
   applyRowsGate,
   ariaLabelFor,
   collectIdentifiers,
   createNavigateGestures,
   intentClass,
   triggerAction,
+  triggerBindings,
 } from "../composables/state/intent-scope";
-import { rowActionHref } from "../composables/state/row-actions-config";
+import { resolveRowActions, rowActionHref } from "../composables/state/row-actions-config";
 import AsActionMenuContent from "./internal/as-action-menu-content.vue";
 import type { TVueTableActionInfo } from "../types";
 
@@ -94,9 +95,7 @@ const resolved = computed(() => {
   return {
     ...r,
     defaultHref,
-    // No promptText → real anchor; with promptText the button stays (mod/middle
-    // click on it still confirms → window.open via `defaultHref`).
-    defaultAsLink: defaultHref !== undefined && !r.defaultAction?.promptText,
+    defaultTrigger: r.defaultAction ? triggerBindings(r.defaultAction, defaultHref) : undefined,
   };
 });
 
@@ -123,46 +122,42 @@ function resolveBuckets(): Resolved {
       explicit === "auto" && selectedCount === 1
         ? state.selectedRows.value[0]
         : state.getActiveRow();
-    // Same `$actions` gate as the per-row dropdown — without it, the toolbar
-    // would surface row actions the server has just disabled for that row.
-    // Auto + 1 also surfaces bulk actions in the trailing menu so e.g.
-    // "Suspend selected" stays reachable while the row default renders as
-    // the CTA.
-    // …and the same per-screen policy as the cell: one compiled view, so an
-    // action the screen excluded or relabelled cannot come back here.
-    const policy = state.rowActionsPolicy.value;
-    const filtered = policy.apply(
-      applyRowGate(
-        {
-          default: state.actions.default.row,
-          others: state.actions.others.row,
-          rows: explicit === "auto" && selectedCount === 1 ? state.actions.rows : [],
-        },
-        source,
-      ),
-    );
-    const row = source as Record<string, unknown> | undefined;
-    const extra = policy.extra(row);
+    // A scalar selection (`rowValueFn` returning the PK) carries no
+    // `$actions` — resolve it back to the loaded row so the gate applies.
+    const row = state.rowOf(source);
+    // The same per-row pipeline as the row-actions cell (the row's `$actions`
+    // gate + the per-screen policy) — without it, the toolbar would surface
+    // row actions the server has just disabled for that row, or ones the
+    // screen excluded or relabelled. Auto + 1 also surfaces bulk actions in
+    // the trailing menu so e.g. "Suspend selected" stays reachable while the
+    // row default renders as the CTA.
+    const resolved = resolveRowActions(state, row, {
+      withRows: explicit === "auto" && selectedCount === 1,
+    });
     return collapseSingle({
-      defaultAction: filtered.default,
+      defaultAction: resolved.default,
       // Keep the source reference when there is nothing to append — consumers
       // compare array identity.
-      otherActions: extra.length > 0 ? [...filtered.others, ...extra] : filtered.others,
-      trailingRowActions: filtered.rows,
+      otherActions:
+        resolved.extra.length > 0 ? [...resolved.others, ...resolved.extra] : resolved.others,
+      trailingRowActions: resolved.rows,
       level: "row",
       ids: collectIdentifiers(state, [source], pid),
       row,
     });
   }
-  // Bulk gate = UNION of selected rows' `$actions` (shown when ≥1 selected
-  // row allows it); the server still filters each row per-row at invoke.
+  // Bulk gate = UNION of the LOADED selected rows' `$actions` (enabled when
+  // ≥1 of them allows it); the server still checks every row at invoke. A
+  // selected value whose row is not loaded has no verdict here: it can never
+  // enable an action on its own, and a selection with no loaded row at all
+  // is not gated (see `rowsActionGate`).
   const filtered = applyRowsGate(
     {
       default: state.actions.default.rows,
       others: state.actions.others.rows,
       rows: [],
     },
-    state.selectedRows.value,
+    state.selectedRowObjects.value,
   );
   return collapseSingle({
     defaultAction: filtered.default,
@@ -274,32 +269,16 @@ watch(running, (next, prev) => {
       :invoke="invokeWith"
     >
       <component
-        :is="resolved.defaultAsLink ? 'a' : 'button'"
-        v-if="resolved.defaultAction"
-        :href="resolved.defaultAsLink ? resolved.defaultHref : undefined"
-        :type="resolved.defaultAsLink ? undefined : 'button'"
+        :is="resolved.defaultTrigger.tag"
+        v-if="resolved.defaultAction && resolved.defaultTrigger"
+        v-bind="resolved.defaultTrigger.attrs"
         class="as-table-actions-btn"
         :class="intentClass('as-table-actions', resolved.defaultAction)"
         data-default
         :aria-label="triggerLabel(resolved.defaultAction)"
-        :title="ariaLabelFor(resolved.defaultAction)"
         :aria-busy="isRunning(resolved.defaultAction) ? 'true' : undefined"
-        @click="
-          onTriggerClick(
-            resolved.defaultAction,
-            resolved.defaultHref,
-            resolved.defaultAsLink,
-            $event,
-          )
-        "
-        @auxclick="
-          onTriggerAuxClick(
-            resolved.defaultAction,
-            resolved.defaultHref,
-            resolved.defaultAsLink,
-            $event,
-          )
-        "
+        @click="onTriggerClick(resolved.defaultAction, resolved.defaultHref, $event)"
+        @auxclick="onTriggerAuxClick(resolved.defaultAction, resolved.defaultHref, $event)"
       >
         <slot name="button" :action="resolved.defaultAction">
           <span

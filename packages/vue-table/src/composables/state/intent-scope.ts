@@ -21,27 +21,91 @@ function actionNamesOf(row: unknown): string[] | null {
 }
 
 /**
- * Predicate factory: an action is available when its name is in `allowed`. The
- * synthesised remove action (`REMOVE_PROCESSOR`) is the sole exemption — it is
- * built client-side and its name never appears in the server's `$actions`, so
- * its visibility is governed by `canRemove` (the server still authorises the
- * actual delete at call time). Shared by the single-row and bulk gates.
+ * A row's raw `$disabledReasons` object — action name → the reason its
+ * `disabled` predicate returned for that row (`@atscript/db` 0.1.141+) — or
+ * `null` when it is missing or not a plain object. Read lazily (no copy): the
+ * gates look names up with {@link ownReason}.
  */
-function gateFor(allowed: Set<string>): (a: TVueTableActionInfo) => boolean {
-  return (a) => a.processor === REMOVE_PROCESSOR || allowed.has(a.name);
+function reasonsObjectOf(row: unknown): Record<string, unknown> | null {
+  const raw = (row as { $disabledReasons?: unknown } | null | undefined)?.$disabledReasons;
+  return raw !== null && typeof raw === "object" && !Array.isArray(raw)
+    ? (raw as Record<string, unknown>)
+    : null;
 }
 
 /**
- * Build a per-row availability predicate from `row.$actions`. Every
- * server-declared row/rows action — regardless of processor (`backend`,
- * `navigate`, `custom`, …) — is gated by its per-row `$actions` verdict: the
- * server augmenter evaluates each action's `disabled` predicate for the row and
- * emits the surviving names. Returns `null` when the row carries no `$actions`
+ * `raw[name]` when it is an OWN non-empty string, else `undefined` — so an
+ * action named after an `Object.prototype` member (`constructor`,
+ * `toString`) never reads an inherited function as its verdict, and a
+ * malformed value can never surface an action (it only decides between
+ * disabled and hidden).
+ */
+function ownReason(raw: Record<string, unknown>, name: string): string | undefined {
+  if (!Object.hasOwn(raw, name)) return undefined;
+  const reason = raw[name];
+  return typeof reason === "string" && reason !== "" ? reason : undefined;
+}
+
+/**
+ * Per-action verdict of a gate: `true` keeps the action as is, `false` drops
+ * it (hidden), a non-empty string keeps it DISABLED with that string as the
+ * reason (`""` counts as `true`).
+ */
+export type ActionVerdict = boolean | string;
+export type ActionGate = (a: TVueTableActionInfo) => ActionVerdict;
+
+/**
+ * Apply one verdict to `a`: `false` → `undefined` (dropped), a non-empty
+ * string → a COPY carrying `disabledReason` (shared source descriptors are
+ * never mutated), anything else → `a` itself.
+ */
+export function withVerdict(
+  a: TVueTableActionInfo,
+  verdict: ActionVerdict,
+): TVueTableActionInfo | undefined {
+  if (verdict === false) return undefined;
+  return typeof verdict === "string" && verdict !== "" ? { ...a, disabledReason: verdict } : a;
+}
+
+/**
+ * Gate factory: an action is available when its name is in `allowed`; one
+ * that is not but has a reason (`reasonOf`) is shown disabled with it; any
+ * other is hidden (disabled without a reason). The synthesised remove action
+ * (`REMOVE_PROCESSOR`) is the sole exemption — it is built client-side and its
+ * name never appears in the server's `$actions`, so its visibility is
+ * governed by `canRemove` (the server still authorises the actual delete at
+ * call time). Shared by the single-row and bulk gates.
+ */
+function gateFor(allowed: Set<string>, reasonOf: (name: string) => string | undefined): ActionGate {
+  return (a) =>
+    a.processor === REMOVE_PROCESSOR || allowed.has(a.name) || (reasonOf(a.name) ?? false);
+}
+
+const NO_REASON = (): undefined => undefined;
+
+/**
+ * Build a per-row availability gate from `row.$actions` + `row.$disabledReasons`.
+ * Every server-declared row/rows action — regardless of processor (`backend`,
+ * `navigate`, `custom`, …) — is gated by its per-row verdict: the server
+ * augmenter evaluates each action's `disabled` predicate for the row and emits
+ * the surviving names, plus the reason of each action disabled WITH one.
+ * In `$actions` → enabled; in `$disabledReasons` → disabled with the reason;
+ * in neither → hidden. Returns `null` when the row carries no `$actions`
  * (see {@link actionNamesOf}).
  */
-export function rowActionGate(row: unknown): ((a: TVueTableActionInfo) => boolean) | null {
+export function rowActionGate(row: unknown): ActionGate | null {
   const names = actionNamesOf(row);
-  return names ? gateFor(new Set(names)) : null;
+  if (!names) return null;
+  const raw = reasonsObjectOf(row);
+  return gateFor(new Set(names), raw ? (name) => ownReason(raw, name) : NO_REASON);
+}
+
+/**
+ * `true` when `action` is a gated copy kept DISABLED (`disabledReason`) —
+ * rendered, never triggered. The one predicate every surface checks.
+ */
+export function isActionDisabled(action: TVueTableActionInfo): boolean {
+  return !!action.disabledReason;
 }
 
 export interface ActionBuckets {
@@ -51,65 +115,105 @@ export interface ActionBuckets {
 }
 
 /**
- * Walk a `{default, others, rows}` triple once: keep the actions `gate`
- * admits, then run each survivor through `map`. Both are optional — with
- * neither, the input `buckets` reference comes back unchanged so source-array
- * references stay stable downstream (no spurious recomputes in consumers that
- * compare array identity). Shared by the single-row (`applyRowGate`), bulk
+ * Walk a `{default, others, rows}` triple once: apply `gate`'s verdict to
+ * each action ({@link withVerdict}), then run each survivor through `map`.
+ * Both are optional. Source references stay stable downstream (no spurious
+ * recomputes in consumers that compare array identity): an array whose every
+ * action comes back unchanged is returned as is, and so is the whole
+ * `buckets` object when nothing changed. Shared by the single-row, bulk
  * (`applyRowsGate`) and per-screen-policy paths.
  */
 export function applyGate(
   buckets: ActionBuckets,
-  gate: ((a: TVueTableActionInfo) => boolean) | null,
+  gate: ActionGate | null,
   map?: (a: TVueTableActionInfo) => TVueTableActionInfo,
 ): ActionBuckets {
   if (!gate && !map) return buckets;
-  const keep = gate ?? (() => true);
-  const walk = (list: TVueTableActionInfo[]) => {
-    const kept = gate ? list.filter(keep) : list;
-    return map ? kept.map(map) : kept;
+  const admit = (a: TVueTableActionInfo): TVueTableActionInfo | undefined => {
+    const kept = gate ? withVerdict(a, gate(a)) : a;
+    return kept && map ? map(kept) : kept;
   };
-  const def = buckets.default;
-  return {
-    default: def && keep(def) ? (map ? map(def) : def) : undefined,
-    others: walk(buckets.others),
-    rows: walk(buckets.rows),
+  const walk = (list: TVueTableActionInfo[]): TVueTableActionInfo[] => {
+    let out: TVueTableActionInfo[] | null = null;
+    for (let i = 0; i < list.length; i++) {
+      const a = list[i]!;
+      const kept = admit(a);
+      if (out === null) {
+        if (kept === a) continue;
+        out = list.slice(0, i);
+      }
+      if (kept) out.push(kept);
+    }
+    return out ?? list;
   };
+  const def = buckets.default && admit(buckets.default);
+  const others = walk(buckets.others);
+  const rows = walk(buckets.rows);
+  return def === buckets.default && others === buckets.others && rows === buckets.rows
+    ? buckets
+    : { default: def, others, rows };
+}
+
+/** Distinct reasons listed on a bulk surface before the rest collapse into "+N more". */
+const MAX_BULK_REASONS = 3;
+
+function joinReasons(reasons: ReadonlySet<string>): string {
+  const list = [...reasons];
+  if (list.length <= MAX_BULK_REASONS) return list.join("; ");
+  const rest = list.length - MAX_BULK_REASONS;
+  return `${list.slice(0, MAX_BULK_REASONS).join("; ")}; +${rest} more`;
 }
 
 /**
- * Apply the single-row {@link rowActionGate} to a `{default, others, rows}`
- * triple; identity-stable when the row carries no `$actions` (see {@link applyGate}).
+ * Build a BULK availability gate from the UNION of every selected row's
+ * server `$actions`: an action is enabled when AT LEAST ONE selected row allows
+ * it, even if absent from the rest. The server re-checks every row at invoke
+ * time (`onDisabledRows`: `'skip'` runs on the qualifying rows, `'reject'` —
+ * the default — answers 409 with the per-row reasons, surfaced as the
+ * action's error result), so offering an action part of the selection can use
+ * is strictly better UX than hiding it. An action NO selected row allows is
+ * shown disabled when at least one row gave a reason (the distinct reasons
+ * joined, capped at {@link MAX_BULK_REASONS}), hidden otherwise. The
+ * synthesised remove action (`REMOVE_PROCESSOR`) is the sole exemption: it is
+ * built client-side and never appears in any server `$actions`. Returns `null`
+ * when NO row carries a `$actions` array (legacy server / `?$actions` opt-out)
+ * so callers skip the filter pass and keep array identity stable; rows with an
+ * empty `$actions: []` still count as "the server spoke" and therefore disable
+ * normal actions. Pass only rows that are loaded — see `state.selectedRowObjects`.
  */
-export function applyRowGate(buckets: ActionBuckets, row: unknown): ActionBuckets {
-  return applyGate(buckets, rowActionGate(row));
-}
-
-/**
- * Build a BULK availability predicate from the UNION of every selected row's
- * server `$actions`: an action is shown when AT LEAST ONE selected row allows
- * it, even if absent from the rest. This is safe because the `@atscript/db`
- * layer re-filters each row server-side at invoke time, so a subset-enabled
- * action simply no-ops on the rows that don't qualify — strictly better UX
- * than hiding an action a portion of the selection can use. The synthesised
- * remove action (`REMOVE_PROCESSOR`) is the sole exemption: it is built
- * client-side and never appears in any server `$actions`. Returns `null` when
- * NO selected row carries a `$actions` array (legacy server / `?$actions`
- * opt-out) so callers skip the filter pass and keep array identity stable;
- * rows with an empty `$actions: []` still count as "the server spoke" and
- * therefore disable normal actions.
- */
-export function rowsActionGate(
-  rows: readonly unknown[],
-): ((a: TVueTableActionInfo) => boolean) | null {
+export function rowsActionGate(rows: readonly unknown[]): ActionGate | null {
   let union: Set<string> | null = null;
+  let reasons: Map<string, Set<string>> | null = null;
   for (const row of rows) {
     const names = actionNamesOf(row);
     if (!names) continue;
-    if (union === null) union = new Set<string>();
+    union ??= new Set<string>();
     for (const name of names) union.add(name);
+    const raw = reasonsObjectOf(row);
+    if (!raw) continue;
+    for (const name of Object.keys(raw)) {
+      const reason = raw[name];
+      if (typeof reason !== "string" || reason === "") continue;
+      reasons ??= new Map();
+      let set = reasons.get(name);
+      if (!set) reasons.set(name, (set = new Set()));
+      set.add(reason);
+    }
   }
-  return union ? gateFor(union) : null;
+  if (!union) return null;
+  if (!reasons) return gateFor(union, NO_REASON);
+  // Joined lazily, once per asked name — most names are enabled and never ask.
+  const byName = reasons;
+  const joined = new Map<string, string>();
+  return gateFor(union, (name) => {
+    let text = joined.get(name);
+    if (text === undefined) {
+      const set = byName.get(name);
+      if (!set) return undefined;
+      joined.set(name, (text = joinReasons(set)));
+    }
+    return text;
+  });
 }
 
 /**
@@ -182,11 +286,10 @@ export function extractIdentifier(
 
 /**
  * Map a list of sources (full row objects or scalar `rowValueFn` values)
- * through `extractIdentifier`. Scalar sources rehydrate from
- * `state.windowCache` via `state.rowValueFn` so consumers that override
- * `rowValueFn` to return a scalar can still reconstruct multi-field
- * identifiers; the lookup `Map` is built lazily so all-object source
- * lists pay nothing.
+ * through `extractIdentifier`. Scalar sources resolve to their loaded row via
+ * `state.rowOf` so consumers that override `rowValueFn` to return a scalar
+ * can still reconstruct multi-field identifiers; a scalar whose row is not
+ * loaded falls back to itself (a single-field `preferredId` wraps it).
  */
 export function collectIdentifiers(
   state: ReactiveTableState,
@@ -195,28 +298,60 @@ export function collectIdentifiers(
 ): Record<string, unknown>[] {
   if (preferredId.length === 0 || sources.length === 0) return [];
   const out: Record<string, unknown>[] = [];
-  let lookup: Map<unknown, Record<string, unknown>> | null = null;
   for (const s of sources) {
     if (s === undefined || s === null) continue;
-    let row: Record<string, unknown> | undefined;
-    if (typeof s === "object") {
-      row = s as Record<string, unknown>;
-    } else {
-      if (lookup === null) {
-        const fn = state.rowValueFn;
-        lookup = new Map();
-        for (const r of state.windowCache.value.values()) lookup.set(fn(r), r);
-      }
-      row = lookup.get(s);
-    }
-    const id = extractIdentifier(row ?? s, preferredId);
+    const id = extractIdentifier(state.rowOf(s) ?? s, preferredId);
     if (id) out.push(id);
   }
   return out;
 }
 
+/**
+ * Accessible name of an action trigger. A disabled action appends its reason
+ * (`"Ship, Order already shipped"` — the same `label, reason` shape as the
+ * selection checkbox of a non-selectable row), so screen readers announce WHY
+ * next to the disabled state.
+ */
 export function ariaLabelFor(action: TVueTableActionInfo): string {
-  return action.label || action.name;
+  const label = action.label || action.name;
+  return action.disabledReason ? `${label}, ${action.disabledReason}` : label;
+}
+
+/** `aria-disabled` value for a rendered action — `"true"` on a disabled copy, else unset. */
+export function ariaDisabled(action: TVueTableActionInfo): "true" | undefined {
+  return isActionDisabled(action) ? "true" : undefined;
+}
+
+/**
+ * Whether a trigger renders as a real anchor: it has a resolved `href` and no
+ * `promptText` (a confirm dialog must guard the navigation, so a prompted
+ * action stays a button — mod/middle-click on it still confirms → new tab).
+ * A disabled action never has an href (see `rowActionHref`), so it is never
+ * a link.
+ */
+export function isLinkTrigger(action: TVueTableActionInfo, href: string | undefined): boolean {
+  return href !== undefined && !action.promptText;
+}
+
+/**
+ * Element + attributes of a primary action trigger (the single row-actions
+ * button, the toolbar default) — the one home for anchor-vs-button and the
+ * disabled rendering: a disabled action is an `aria-disabled` button (kept
+ * focusable so the reason in its accessible name / tooltip stays reachable).
+ */
+export function triggerBindings(action: TVueTableActionInfo, href: string | undefined) {
+  const asLink = isLinkTrigger(action, href);
+  const label = ariaLabelFor(action);
+  return {
+    tag: asLink ? "a" : "button",
+    attrs: {
+      href: asLink ? href : undefined,
+      type: asLink ? undefined : "button",
+      "aria-disabled": ariaDisabled(action),
+      "aria-label": label,
+      title: label,
+    },
+  } as const;
 }
 
 /**
@@ -282,6 +417,7 @@ export async function openNavigateInNewTab(
   ctx: PromptCtx,
   href: string,
 ): Promise<void> {
+  if (isActionDisabled(action)) return;
   const ok = await confirmAction(state, action, ctx);
   if (!ok) return;
   // Navigate URLs can be external — sever the opener link so the new tab
@@ -294,7 +430,9 @@ export async function openNavigateInNewTab(
  * shared by `<AsRowActions>` and `<AsTableActions>`. Parameterized only by
  * the surface's prompt-context getter and href resolver so the click-dispatch
  * policy — plain left → SPA invoke, cmd/ctrl or middle on a promptText
- * navigate button → confirm → new tab — has a single home.
+ * navigate button → confirm → new tab — has a single home. A disabled
+ * action needs no guard here: it has no href (`rowActionHref`), and the
+ * invoke path ends in `triggerAction`, which refuses it.
  */
 export function createNavigateGestures(
   state: ReactiveTableState,
@@ -309,13 +447,8 @@ export function createNavigateGestures(
      * promptText navigate action (`href` present while not an anchor)
      * through confirm → new tab, everything else through the invoke path.
      */
-    onTriggerClick(
-      action: TVueTableActionInfo,
-      href: string | undefined,
-      asLink: boolean,
-      event: MouseEvent,
-    ): void {
-      if (asLink) {
+    onTriggerClick(action: TVueTableActionInfo, href: string | undefined, event: MouseEvent): void {
+      if (isLinkTrigger(action, href)) {
         if (!isPlainLeftClick(event)) return;
         event.preventDefault();
       } else if (href !== undefined && isModClick(event)) {
@@ -331,10 +464,9 @@ export function createNavigateGestures(
     onTriggerAuxClick(
       action: TVueTableActionInfo,
       href: string | undefined,
-      asLink: boolean,
       event: MouseEvent,
     ): void {
-      if (asLink || href === undefined || event.button !== 1) return;
+      if (href === undefined || isLinkTrigger(action, href) || event.button !== 1) return;
       event.preventDefault();
       void openNavigateInNewTab(state, action, promptCtx(), href);
     },
@@ -393,7 +525,10 @@ export function substitute(template: string, ctx: PromptCtx): string {
 /**
  * Dispatch user-initiated invocation: actions with `inputForm` open the form
  * dialog (the form IS the confirm surface, so `promptText` is ignored);
- * others run `confirmAction()`. Cancelling either dialog short-circuits.
+ * others run `confirmAction()`. Cancelling either dialog short-circuits. A
+ * disabled action (`disabledReason`) never runs: this is the choke point
+ * every built-in trigger — and a custom slot's `invoke` — funnels through
+ * (the other is `rowActionHref`, which gives it no link to follow).
  */
 export async function triggerAction(
   state: ReactiveTableState,
@@ -401,6 +536,7 @@ export async function triggerAction(
   ctx: PromptCtx,
   event?: KeyboardEvent | MouseEvent,
 ): Promise<void> {
+  if (isActionDisabled(action)) return;
   const pk = pkForLevel(action.level, ctx.identifiers);
   if (action.inputForm) {
     const input = await state.requestActionInput(action, ctx);

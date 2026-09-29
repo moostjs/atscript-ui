@@ -17,6 +17,7 @@ import type {
 } from "./types";
 import {
   ActionTagObject,
+  DerivedRow,
   ArrayOfString,
   ArrayWithFormType,
   ComponentNestedObject,
@@ -161,6 +162,11 @@ describe("createFormDef", () => {
       const defNoOpt = createFormDef(VersionedObject);
       expect(defNoOpt.fields.map((f) => f.path)).toContain("version");
     });
+  });
+
+  it("marks a @db.column.derived field derived from its metadata", () => {
+    const def = createFormDef(DerivedRow);
+    expect(def.fields.filter((f) => f.derived).map((f) => f.path)).toEqual(["customerId"]);
   });
 
   describe("nested objects", () => {

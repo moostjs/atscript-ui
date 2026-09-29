@@ -149,10 +149,16 @@ function diffFields(
       diffLeafRoot(field, baseline, current, changes, patch);
       continue;
     }
-    if (field.phantom) continue; // ui.action / paragraph — no data
-
-    // Version column: server-managed, never a SET (only via $cas).
-    if (versionColumn !== undefined && !prefix && field.path === versionColumn) continue;
+    // Never a change, never a SET: phantoms (ui.action / paragraph) carry no
+    // data, a derived column is server-computed (a written value is dropped),
+    // the version column travels only via $cas.
+    if (
+      field.phantom ||
+      field.derived ||
+      (versionColumn !== undefined && !prefix && field.path === versionColumn)
+    ) {
+      continue;
+    }
 
     const fullPath = prefix ? `${prefix}.${field.path}` : field.path;
 

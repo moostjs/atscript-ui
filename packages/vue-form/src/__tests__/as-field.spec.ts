@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { mountForm } from "./helpers";
+import { mountForm, objectType, stringProp } from "./helpers";
 
 describe("AsField", () => {
   it("resolves label from @meta.label", async () => {
@@ -41,6 +41,21 @@ describe("AsField", () => {
     const visible = wrapper.find('input[name="visible"]');
     expect(visible.exists()).toBe(true);
     expect(section.element.contains(visible.element)).toBe(false);
+  });
+
+  it("renders a @db.column.derived field read-only, with no required marker", () => {
+    const required = { "meta.required": true };
+    const type = objectType({
+      name: stringProp(required),
+      customerId: stringProp({ ...required, "db.column.derived": true }),
+    });
+    const { wrapper } = mountForm(type, { initialValue: { name: "Ada", customerId: "c1" } });
+    const derived = wrapper.find('input[name="customerId"]');
+    const plain = wrapper.find('input[name="name"]');
+    expect(derived.attributes("readonly")).toBeDefined();
+    expect(derived.attributes("aria-required")).toBeUndefined();
+    expect(plain.attributes("readonly")).toBeUndefined();
+    expect(plain.attributes("aria-required")).toBe("true");
   });
 
   it("applies @ui.form.disabled (input has disabled attribute)", async () => {

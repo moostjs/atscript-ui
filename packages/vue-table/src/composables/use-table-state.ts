@@ -78,7 +78,7 @@ import { createMainActionRegistry } from "./state/create-main-action-registry";
 import { createNavController } from "./state/create-nav-controller";
 import { createPresetState } from "./state/create-preset-state";
 import { createWindowFetcher } from "./state/create-window-fetcher";
-import { compileRowActionsConfig } from "./state/row-actions-config";
+import { compileRowActionsConfig, resolveRowActions } from "./state/row-actions-config";
 import { collectIdentifiers, triggerAction, type PromptCtx } from "./state/intent-scope";
 import { getCellValue } from "../utils/get-cell-value";
 import type { UseLocalDraftReturn } from "./use-local-draft";
@@ -834,11 +834,14 @@ export function createTableState(opts: CreateTableStateOptions): {
   }
 
   // 3. Selection.
-  const selection = createSelectionApi(selectionOpts, getActiveRow, activeIndex);
+  const selection = createSelectionApi(selectionOpts, getActiveRow, activeIndex, windowCache);
   const {
     selectedRows,
     selectedCount,
     rowValueFn,
+    rowByValue,
+    rowOf,
+    selectedRowObjects,
     isPkSelected,
     rowSelectable,
     isRowSelectable,
@@ -865,9 +868,15 @@ export function createTableState(opts: CreateTableStateOptions): {
   });
   const { actions } = actionsNs;
 
-  // 5. Main-action registry — falls back to `actions.default.row` when no
-  // listener is registered. Routes through `triggerAction` so keyboard-Enter
-  // honours `promptText` / `inputForm` exactly like a click on the action.
+  // 5. Main-action registry — falls back to the row's default action when no
+  // listener is registered. The default is resolved through the same per-row
+  // pipeline as the row-actions cell (`resolveRowActions`: the row's
+  // `$actions` / `$disabledReasons` gate + the `:row-actions` policy), so an
+  // excluded default, or one the server hid or disabled for that row, does
+  // not fire on Enter / double-click, and `overrides` (e.g. `promptText`)
+  // apply. It then routes through `triggerAction`, so keyboard-Enter honours
+  // `promptText` / `inputForm` exactly like a click on the action — and a
+  // disabled default is refused there.
   // `stateRef` is patched after `state` is built below; the guard turns the
   // construction-order hazard into a typed early-return.
   let stateRef: ReactiveTableState | null = null;
@@ -875,11 +884,13 @@ export function createTableState(opts: CreateTableStateOptions): {
     getActiveIndex: () => activeIndex.value,
     getActiveRow,
     getDefaultRowAction: () => actions.default.row,
-    invokeFallback: (action, row, event) => {
+    invokeFallback: (row, event) => {
       if (!stateRef) return;
+      const action = resolveRowActions(stateRef, row, { withRows: false }).default;
+      if (!action) return;
       const preferredId = tableDef.value?.preferredId ?? [];
       const identifiers = collectIdentifiers(stateRef, [row], preferredId);
-      void triggerAction(stateRef, action, { identifiers, preferredId }, event);
+      void triggerAction(stateRef, action, { identifiers, preferredId, row }, event);
     },
   });
   const {
@@ -1068,6 +1079,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     selectedRows,
     selectedCount,
     rowValueFn,
+    rowByValue,
+    rowOf,
+    selectedRowObjects,
     resolveHref: opts.actions?.resolveHref ?? ((url: string) => url),
     isPkSelected,
     rowSelectable,

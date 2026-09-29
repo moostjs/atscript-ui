@@ -396,8 +396,11 @@ let classesBase: Record<string, boolean> | ComputedRef<Record<string, boolean>>;
 let phantomValue: unknown;
 let hasCustomValidators: boolean;
 
-// Whether @meta.required is present (static — shared by both paths)
-const hasMetaRequired = getFieldMeta(prop, META_REQUIRED) !== undefined;
+// Static — shared by both paths. A `@db.column.derived` field is
+// server-computed: always read-only, never marked required.
+const isDerived = props.field.derived === true;
+const staticReadonly = isDerived || getFieldMeta(prop, META_READONLY) !== undefined;
+const hasMetaRequired = !isDerived && getFieldMeta(prop, META_REQUIRED) !== undefined;
 
 if (props.field.allStatic) {
   // Fast path: no fn keys → no scope, no computeds.
@@ -407,7 +410,7 @@ if (props.field.allStatic) {
   disabled = getFieldMeta(prop, UI_FORM_DISABLED) !== undefined;
   hidden = hasFieldMeta(prop, UI_FORM_HIDDEN);
   optional = props.field.prop.optional ?? false;
-  readonly = getFieldMeta(prop, META_READONLY) !== undefined;
+  readonly = staticReadonly;
 
   // Required: based on @meta.required (skip for phantom)
   required = props.field.phantom ? undefined : hasMetaRequired;
@@ -492,14 +495,14 @@ if (props.field.allStatic) {
   optional = props.field.prop.optional ?? false;
 
   readonly = maybeComputed(
-    hasFn.has("readonly"),
+    hasFn.has("readonly") && !isDerived,
     () =>
       resolveFieldProp<boolean>(prop, UI_FORM_FN_READONLY, META_READONLY, bs.value, boolOpts) ??
       false,
-    getFieldMeta(prop, META_READONLY) !== undefined,
+    staticReadonly,
   );
 
-  // Derived: required based on @meta.required (skip for phantom)
+  // Required: based on @meta.required (skip for phantom)
   required = props.field.phantom ? undefined : hasMetaRequired;
 
   // ── Full scope with entry (derived from baseScope) ─────────
