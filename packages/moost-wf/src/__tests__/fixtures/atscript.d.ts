@@ -46,6 +46,7 @@ declare global {
     "db.column.renamed": string
     "db.column.collate": string
     "db.column.precision": { precision: number, scale: number }
+    "db.column.derived": boolean
     "db.column.dimension": boolean
     "db.column.measure": boolean
     "db.column.filterable": boolean
@@ -77,6 +78,7 @@ declare global {
     "db.view.materialized": boolean
     "db.view.renamed": string
     "db.view.having": import("@atscript/typescript/utils").AtscriptQueryNode
+    "db.alias": import("@atscript/typescript/utils").AtscriptRef
     "db.agg.sum": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
     "db.agg.avg": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
     "db.agg.count": { field?: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
