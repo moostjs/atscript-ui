@@ -108,6 +108,9 @@ const managerRole = defineRole<DemoUserAttrs, ArbacDbScope>()
     allowTableWrite("products"),
     allowTableWrite("customers"),
     allowTableWrite("orders"),
+    // tasks: read + write — the task actions (`@ArbacAction("update")`) too,
+    // also when the task board runs them by delegation.
+    allowTableWrite("tasks"),
     // audit_log: read-only
     allowTableRead("audit_log"),
     // wf_states intentionally omitted — admin-only via the admin wildcard.
@@ -127,6 +130,8 @@ const viewerBuilder = defineRole<DemoUserAttrs, ArbacDbScope>()
     allowTableRead("products", { scope: () => ({ projection: proj(VIEWER_PRODUCTS_COLS) }) }),
     allowTableRead("customers", { scope: () => ({ projection: proj(VIEWER_CUSTOMERS_COLS) }) }),
     allowTableRead("orders", { scope: () => ({ projection: proj(VIEWER_ORDERS_COLS) }) }),
+    // tasks: plain read — no task action, on /tasks or delegated on the board.
+    allowTableRead("tasks"),
     // audit_log: no rule → implicit 403.
     ...DECLARATIVE_ACTIONS,
   );

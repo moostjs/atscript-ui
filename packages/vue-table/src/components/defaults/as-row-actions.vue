@@ -20,6 +20,7 @@ import { useTableContext } from "../../composables/use-table-state";
 import {
   createNavigateGestures,
   extractIdentifier,
+  identifierFieldsOf,
   intentClass,
   triggerAction,
   triggerBindings,
@@ -42,10 +43,14 @@ const props = defineProps<{
 
 const { state } = useTableContext();
 
-/** The row's identifier — the `pk` prop when given, else extracted from the row. */
+/**
+ * The row's identifier — the `pk` prop when given, else extracted from the
+ * row (`identifierFields`: what a delegated action maps from rides along).
+ */
 function identifierOf(): Record<string, unknown> | undefined {
-  const preferredId = state.tableDef.value?.preferredId ?? [];
-  return props.pk !== undefined ? props.pk : extractIdentifier(props.row, preferredId);
+  return props.pk !== undefined
+    ? props.pk
+    : extractIdentifier(props.row, identifierFieldsOf(state.tableDef.value));
 }
 
 function promptCtx() {

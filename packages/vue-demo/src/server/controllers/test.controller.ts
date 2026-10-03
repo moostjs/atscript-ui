@@ -8,6 +8,7 @@ import {
   productsTable,
   customersTable,
   ordersTable,
+  tasksTable,
   auditLogTable,
   presetsTable,
   wfStateTable,
@@ -22,6 +23,7 @@ import {
   seedCustomers,
   seedOrders,
   seedAuditLog,
+  seedTasks,
 } from "../seed";
 
 /**
@@ -52,7 +54,7 @@ export class TestController {
    *
    * FK-safe delete order (children before parents):
    *   audit_log, presets   — no FK refs in/out
-   *   orders               — FK → customers, users
+   *   orders, tasks        — FK → customers, users / users
    *   products             — FK → categories, users
    *   customers            — referenced only by orders (now gone)
    *   users                — FK → roles, referenced by orders/products (now gone)
@@ -82,6 +84,7 @@ export class TestController {
       await auditLogTable.deleteMany({});
       await presetsTable.deleteMany({});
       await ordersTable.deleteMany({});
+      await tasksTable.deleteMany({});
       await productsTable.deleteMany({});
       await customersTable.deleteMany({});
       await usersTable.deleteMany({});
@@ -103,6 +106,7 @@ export class TestController {
       await customersTable.insertMany(seedCustomers() as Record<string, unknown>[]);
       await ordersTable.insertMany(seedOrders() as Record<string, unknown>[]);
       await auditLogTable.insertMany(seedAuditLog() as Record<string, unknown>[]);
+      await tasksTable.insertMany(seedTasks() as Record<string, unknown>[]);
     });
 
     return { ok: true, ms: Date.now() - started };

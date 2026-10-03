@@ -21,7 +21,7 @@ import {
 import { AsForm, createDefaultTypes } from "@atscript/vue-form";
 import { formatIdentifier } from "@atscript/db-client";
 import { useTableContext } from "../../composables/use-table-state";
-import { intentToScope } from "../../composables/state/intent-scope";
+import { intentToScope, rowsLabel } from "../../composables/state/intent-scope";
 
 const { state, client, formTypes, formComponents } = useTableContext();
 
@@ -118,8 +118,11 @@ const view = computed(() => {
   const allIds = slice.map((id) => formatIdentifier(id, r.preferredId));
   const intent = r.action.intent;
   const scope = intent ? intentToScope(intent) : undefined;
+  const title =
+    (d ? getFieldMeta(d.type, META_LABEL) : undefined) ?? r.action.label ?? r.action.name;
   return {
-    title: (d ? getFieldMeta(d.type, META_LABEL) : undefined) ?? r.action.label ?? r.action.name,
+    // A query-targeted run has no ids to list: the title carries its count.
+    title: r.count === undefined ? title : `${title} · ${rowsLabel(r.count)}`,
     // Default verb avoids collisions with "Cancel" on negative-intent actions
     // ("Cancel" vs "Cancel orders"); intent colour carries the semantic.
     submitText: (d && getFieldMeta(d.type, UI_FORM_SUBMIT_TEXT)) || "Proceed",

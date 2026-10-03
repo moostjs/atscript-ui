@@ -151,9 +151,31 @@ const eligibleLoadedPks = computed<Set<unknown> | null>(() => {
   return rows ? new Set(rowsToPks(state.selectableRows(rows), state.rowValueFn)) : null;
 });
 
+/**
+ * The header acts on the CACHED rows instead of the whole dataset while a
+ * query selection is held (it covers unloaded rows anyway), and — for a
+ * table that offers "Select all N matching" — while the dataset is only
+ * partly loaded: picking the cached rows is the step before the banner's
+ * offer. Since 0.1.147.
+ */
+const cachedScope = computed(
+  () =>
+    props.select === "multi" &&
+    (!!state.querySelection.value ||
+      (allLoadedRows.value === null && state.canSelectAllMatching.value)),
+);
+
 // Same rule as `<AsTableBase>`: measured against the selectable rows only.
-// O(|selection|) per selection change.
+// O(|selection|) per selection change. In a query selection: "all" while no
+// cached eligible row is excluded, "some" otherwise.
 const selectAllState = computed<SelectAllState | undefined>(() => {
+  if (cachedScope.value) {
+    return toSelectAllState(
+      state.loadedSelectedCount.value,
+      state.loadedEligiblePks.value.length,
+      !!state.querySelection.value,
+    );
+  }
   const eligible = eligibleLoadedPks.value;
   if (!eligible) return undefined;
   let selected = 0;
@@ -180,7 +202,9 @@ const visibleSlots = computed(() => {
   const top = state.topIndex.value;
   const rowValueFn = state.rowValueFn;
   const hasSelection = props.select !== "none";
-  const selectedSet = hasSelection ? new Set(state.selectedRows.value) : null;
+  // `isPkSelected` reads the memoised selection set — or, in a query
+  // selection, "not excluded".
+  const isSelected = state.isPkSelected;
   // Same three per-row hooks as `<AsTableBase>`, resolved once per slot pass.
   const gated = !!state.rowSelectable.value;
   const hasHooks = gated || !!props.rowClass || !!props.rowAttrs;
@@ -200,7 +224,7 @@ const visibleSlots = computed(() => {
     const abs = top + s;
     const row = state.dataAt(abs);
     const pk = row === undefined ? undefined : rowValueFn(row);
-    const selected = selectedSet !== null && row !== undefined && selectedSet.has(pk);
+    const selected = hasSelection && row !== undefined && isSelected(pk);
     let selectable = SELECTABLE;
     let cls: ReturnType<RowClassHook> | undefined;
     let attrs: Record<string, unknown> | undefined;
@@ -343,8 +367,17 @@ function onRowDblClick(row: Row, event: MouseEvent, absIdx: number) {
 
 // Only reachable with every row loaded; positions are absolute indexes.
 function onToggleAll() {
-  const rows = allLoadedRows.value;
-  if (rows) state.toggleAll(rows);
+  if (!cachedScope.value) {
+    const rows = allLoadedRows.value;
+    if (rows) state.toggleAll(rows);
+    return;
+  }
+  // Over the cached rows (see `cachedScope`), predicate indexes absolute.
+  const entries = [...state.windowCache.value.entries()];
+  state.toggleAll(
+    entries.map(([, row]) => row),
+    (i) => entries[i]![0],
+  );
 }
 
 const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClearFilters } =

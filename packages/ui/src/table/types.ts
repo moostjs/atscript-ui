@@ -16,6 +16,14 @@ export interface RelationInfo {
   name: string;
   direction: "to" | "from" | "via";
   isArray: boolean;
+  /**
+   * `true` when the relation is `@db.rel.filterable`: the server accepts
+   * filters by related rows on it (`ticket: { $some: {…} }` /
+   * `{ $none: {…} }`, URL `ticket=$some(status=open)`). Absent otherwise.
+   * Tables display such predicates (residual filters) but offer no UI to
+   * author them. Needs `@atscript/moost-db` 0.1.147+. Since 0.1.147.
+   */
+  filterable?: boolean;
 }
 
 /** Per-field capability flags. */
@@ -43,6 +51,14 @@ export interface FieldMeta {
    * Since 0.1.144.
    */
   derived?: boolean;
+  /**
+   * A computed view column (`@db.compute`, `@atscript/db` 0.1.147+): the
+   * database evaluates it from other fields of the view. It is a column like
+   * any other — sorting and filtering follow `sortable` / `filterable` —
+   * but never writable: `createFormDef` marks it `derived` when given these
+   * fields (`CreateFormDefOptions.metaFields`). Since 0.1.147.
+   */
+  computed?: boolean;
 }
 
 /** Meta response from moost-db `/meta` endpoint. */
@@ -115,6 +131,17 @@ export interface TableDef {
   primaryKeys: string[];
   /** Preferred row identifier — see `MetaResponse.preferredId`. */
   preferredId: string[];
+  /**
+   * The row fields an action identifier is built from: `preferredId` plus
+   * every path a delegated action's `idMap` reads (an action another
+   * controller owns, e.g. a view listing its source table's actions). The
+   * table keeps these values on every identifier it hands to an action, so
+   * the client can map them to the owner's identification. Equals
+   * `preferredId` when no action carries an `idMap`. Always set by
+   * `createTableDef`; a hand-built `TableDef` may omit it (consumers fall back
+   * to `preferredId`). Since 0.1.147.
+   */
+  identifierFields?: string[];
   /** Server-managed OCC column name — see `MetaResponse.versionColumn`. */
   versionColumn?: string;
   /** Per-op CRUD permissions advertised in `/meta`. Key absent → denied. */

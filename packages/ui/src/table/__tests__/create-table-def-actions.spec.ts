@@ -125,3 +125,33 @@ describe("createTableDef — actions grouping", () => {
     expect("insert" in def.crud).toBe(false);
   });
 });
+
+describe("createTableDef — identifierFields (since 0.1.147)", () => {
+  it("is preferredId when no action carries an idMap", () => {
+    const def = createTableDef(buildMeta([A("r1", "row")]));
+    expect(def.identifierFields).toEqual(["id"]);
+    expect(def.identifierFields).toBe(def.preferredId);
+  });
+
+  it("adds every delegated action's idMap path once, after preferredId", () => {
+    const def = createTableDef(
+      buildMeta([
+        A("close", "rows", { owner: "/api/issues", idMap: { id: "issueId" } }),
+        A("assign", "row", { owner: "/api/issues", idMap: { id: "issueId" } }),
+        A("ship", "row", { owner: "/api/orders", idMap: { tenant: "tenantId", no: "orderNo" } }),
+        A("own", "row"),
+      ]),
+    );
+    expect(def.identifierFields).toEqual(["id", "issueId", "tenantId", "orderNo"]);
+    expect(def.preferredId).toEqual(["id"]);
+  });
+
+  it("works for a view without a preferredId", () => {
+    const meta = buildMeta([
+      A("close", "rows", { owner: "/api/issues", idMap: { id: "issueId" } }),
+    ]);
+    meta.preferredId = [];
+    meta.primaryKeys = [];
+    expect(createTableDef(meta).identifierFields).toEqual(["issueId"]);
+  });
+});

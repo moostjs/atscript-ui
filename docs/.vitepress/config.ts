@@ -243,6 +243,7 @@ const tablesSidebar = [
       { text: "Presets", link: "/tables/presets" },
       { text: "Fields Hidden by Role", link: "/tables/hidden-fields" },
       { text: "Actions & Selection", link: "/tables/actions" },
+      { text: "Select All Matching", link: "/tables/select-all-matching" },
       { text: "Export", link: "/tables/export" },
       { text: "Edit Forms with OCC", link: "/tables/edit-form-occ" },
       { text: "Model Routes & Nav", link: "/tables/model-routes" },

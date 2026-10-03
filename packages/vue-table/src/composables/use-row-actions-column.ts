@@ -7,6 +7,7 @@ import {
   type ReactiveTableState,
   type RowActionsColumnPlacement,
 } from "../types";
+import { resolveRowActions } from "./state/row-actions-config";
 
 /**
  * The synthesised row-actions pseudo-column, shared by `<AsTable>` and
@@ -23,6 +24,14 @@ export function useRowActionsColumn(
     columns: () => ColumnDef[];
   },
 ): ComputedRef<ColumnDef[]> {
+  // What the cell can show before any row's gate: the row and rows-level
+  // actions (rows-level ones join the per-row menu) and the `:row-actions`
+  // policy's app-owned `extra` ones, after its `include` / `exclude`.
+  const cellActions = computed(() => {
+    const r = resolveRowActions(state, undefined);
+    return [...(r.default ? [r.default] : []), ...r.others, ...r.rows, ...r.extra];
+  });
+
   // `?$actions=true` is gated on this watcher so tables without a row-actions
   // column don't pay the per-row payload cost.
   watch(
@@ -30,7 +39,7 @@ export function useRowActionsColumn(
       const placement = opts.placement();
       if (!placement) return false;
       if (placement === "merge-select" && opts.select() !== "none") return false;
-      return state.actions.cellRow.length > 0;
+      return cellActions.value.length > 0;
     },
     (on) => {
       state.includeActions.value = on;
@@ -48,8 +57,8 @@ export function useRowActionsColumn(
   // `state.columnWidths` → `widthStyle` → inline `width` on the TH, which
   // `table-layout: fixed` then locks the column to.
   const actionsCol = computed<ColumnDef>(() => {
-    const acts = state.actions.row;
-    const isLabelOnly = acts.length === 1 && !acts[0]?.icon;
+    const acts = cellActions.value;
+    const isLabelOnly = acts.length === 1 && !acts[0].icon;
     return {
       path: ROW_ACTIONS_PATH,
       label: "",
@@ -67,7 +76,7 @@ export function useRowActionsColumn(
     const base = opts.columns();
     const placement = opts.placement();
     if (placement === false || placement === undefined) return base;
-    if (state.actions.row.length === 0) return base;
+    if (cellActions.value.length === 0) return base;
     if (placement === "first") return [actionsCol.value, ...base];
     if (placement === "last") return [...base, actionsCol.value];
     // 'merge-select': only in select="none". In select="multi" the checkbox

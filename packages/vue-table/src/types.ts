@@ -4,7 +4,9 @@ import type {
   PageResult,
   TDbActionInfo,
   TDbActionProcessor,
+  TDbActionTargetSummary,
   TDbDeleteResult,
+  TDbQueryTarget,
 } from "@atscript/db-client";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 
@@ -60,6 +62,70 @@ export interface InvokeOpts {
    * Since 0.1.134.
    */
   row?: Record<string, unknown>;
+  /**
+   * Run a `'rows'` action on every row matching this query instead of on
+   * `pk` (pass `pk` as `undefined`): `client.actionOnQuery`. The action's
+   * `/meta` entry must carry `queryTarget`. Since 0.1.147.
+   */
+  target?: ActionQueryTarget;
+  /**
+   * With `target`: the match count the user confirmed. The server answers
+   * `TARGET_CHANGED` when the query matches a different number of rows by
+   * the time it runs. Since 0.1.147.
+   */
+  expectCount?: number;
+  /**
+   * With `target` + `expectCount`: asked once with the new count when the
+   * server answers `TARGET_CHANGED`. Resolve `true` to run again on the new
+   * count; `false` settles the action as that error. Since 0.1.147.
+   */
+  confirmTargetChange?: (matched: number) => Promise<boolean>;
+}
+
+/**
+ * "Every row matching this query, minus `exclude`" — the target of a
+ * query-targeted action run (`InvokeOpts.target`). The `filter` / `search`
+ * / `index` of the table's query, never its sorting or paging. Since 0.1.147.
+ */
+export type ActionQueryTarget = Pick<
+  TDbQueryTarget,
+  "filter" | "search" | "index" | "exclude" | "maxRows"
+>;
+
+/**
+ * A symbolic selection of every row matching the table's query (the "Select
+ * all N matching" banner), held in `state.querySelection`. Since 0.1.147.
+ */
+export interface QuerySelection {
+  /** The filter / search / index the selection was made over. */
+  query: SelectionQuery;
+  /** `selectionSignature(query)` — a change of the live one drops the selection. */
+  signature: string;
+  /** `rowValueFn` values the user unticked after selecting all. */
+  excluded: unknown[];
+  /** Rows the query matched (`totalCount`), refreshed on same-scope refetches. */
+  total: number;
+}
+
+/**
+ * The selection as one value (`state.selection`): explicit row values, or
+ * every row matching a query minus the excluded ones. `count` is what the
+ * selection covers in both modes. Since 0.1.147.
+ */
+export type TableSelection =
+  | { mode: "ids"; ids: unknown[]; count: number }
+  | {
+      mode: "query";
+      query: SelectionQuery;
+      excluded: unknown[];
+      total: number;
+      count: number;
+    };
+
+/** Why the table dropped a selection on its own (`selection-reset`). Since 0.1.147. */
+export interface SelectionResetEvent {
+  /** `"scope"` — the filter, search or index changed under a query selection. */
+  reason: "scope";
 }
 
 /**
@@ -131,7 +197,18 @@ export interface ResolvedRowActions {
 
 /** Discriminated result returned by `state.actions.invoke`. Never throws. */
 export type ActionResult =
-  | { ok: true; kind: "backend"; data: unknown; message?: string }
+  | {
+      ok: true;
+      kind: "backend";
+      data: unknown;
+      message?: string;
+      /**
+       * A query-targeted run (`InvokeOpts.target`): how many rows the query
+       * matched, and the handler's `TDbActionTargetSummary` when it returned
+       * one (a delegated action always does). Since 0.1.147.
+       */
+      target?: { matched: number; summary?: TDbActionTargetSummary };
+    }
   | { ok: true; kind: "navigate" }
   | { ok: true; kind: "custom"; dispatched: true }
   | { ok: true; kind: "remove"; data: TDbDeleteResult }
@@ -176,6 +253,18 @@ export interface TableActionsState {
     pk?: Record<string, unknown> | Record<string, unknown>[],
     opts?: InvokeOpts,
   ) => Promise<ActionResult>;
+  /**
+   * How many rows a query-targeted run of `action` would cover right now
+   * (`client.countActionTarget` — a dry run, the handler does not run).
+   * Resolves `undefined` when the count failed; that failure is settled as
+   * the action's error result (`lastResult` + the `@action` emit), like an
+   * invoke. Since 0.1.147.
+   */
+  countTarget: (
+    action: TVueTableActionInfo,
+    target: ActionQueryTarget,
+    event?: KeyboardEvent | MouseEvent,
+  ) => Promise<number | undefined>;
   /** Set of action names with an in-flight invoke. */
   invoking: ShallowRef<Set<string>>;
   /** Latest result keyed by action name. */
@@ -254,6 +343,11 @@ export interface ActionFormRequest {
   /** Identifier objects for the targeted rows (used by `$1`/`$N` substitution in dialog copy). */
   identifiers: Record<string, unknown>[];
   preferredId: readonly string[];
+  /**
+   * A query-targeted run: how many rows it covers (`identifiers` is empty
+   * then). The dialog shows it in the title. Since 0.1.147.
+   */
+  count?: number;
   /** Internal — the dialog never calls this directly; use accept/dismiss. */
   resolve: (input: unknown) => void;
 }
@@ -283,6 +377,7 @@ import type {
   PresetCapabilities,
   PresetSnapshot,
   SelectionMode,
+  SelectionQuery,
   SystemPreset,
   SystemPresetInput,
   TableStateMethods,
@@ -696,15 +791,65 @@ export interface ReactiveTableState extends TableStateMethods {
   deselectAll: (rows: readonly Record<string, unknown>[]) => void;
   /**
    * The header checkbox's action over `rows`: deselect them when every
-   * eligible one is selected, otherwise select them. Since 0.1.142.
+   * eligible one is selected, otherwise select them. In a query selection
+   * a fully selected `rows` ends it. `indexOf` as in `selectAll` (since
+   * 0.1.147). Since 0.1.142.
    */
-  toggleAll: (rows: readonly Record<string, unknown>[]) => void;
+  toggleAll: (
+    rows: readonly Record<string, unknown>[],
+    indexOf?: (position: number) => number,
+  ) => void;
   /**
    * Empty the selection — every pk, whether or not its row is loaded or
    * eligible. The header checkbox only ever acts on loaded rows; this is the
-   * real clear. Since 0.1.142.
+   * real clear. Ends a query selection too. Since 0.1.142.
    */
   clearSelection: () => void;
+  /**
+   * The symbolic "every row matching the query" selection, or `null` while
+   * the selection is the explicit `selectedRows` (bound by
+   * `v-model:query-selection` on `<AsTableRoot>`). While set, `selectedRows`
+   * is empty, row toggles edit `excluded`, `isPkSelected` is "not excluded"
+   * and `selectedCount` is `total − excluded.length`. Dropped (with a
+   * `selection-reset` `{ reason: "scope" }`) as soon as the filter, search
+   * or index changes — sorting, columns, paging and scrolling keep it. A
+   * successful query-targeted action clears it. Since 0.1.147.
+   */
+  querySelection: Ref<QuerySelection | null>;
+  /** The selection as one value, in either mode — see {@link TableSelection}. Since 0.1.147. */
+  selection: ComputedRef<TableSelection>;
+  /**
+   * Opt-in for selecting every row matching the query — writable ref owned
+   * by `<AsTableRoot>`'s `select-all-matching` prop (default `false`).
+   * Since 0.1.147.
+   */
+  allowSelectAllMatching: Ref<boolean>;
+  /**
+   * The renderer's `select` mode — writable ref pushed by `<AsTable>` /
+   * `<AsWindowTable>` (default `"none"`). Since 0.1.147.
+   */
+  selectMode: Ref<SelectionMode>;
+  /**
+   * `rowValueFn` values of the LOADED rows the `rowSelectable` predicate
+   * lets through — the set "all rows on this page" covers (every cached row
+   * in window mode). Since 0.1.147.
+   */
+  loadedEligiblePks: ComputedRef<unknown[]>;
+  /** How many of `loadedEligiblePks` are selected. Since 0.1.147. */
+  loadedSelectedCount: ComputedRef<number>;
+  /**
+   * Whether "Select all N matching" can be offered: `allowSelectAllMatching`
+   * ∧ `selectMode === "multi"` ∧ a server-backed table (no custom query
+   * function, not local mode) ∧ more matching rows than loaded ones
+   * ∧ at least one `'rows'` action that takes a query target. Since 0.1.147.
+   */
+  canSelectAllMatching: ComputedRef<boolean>;
+  /**
+   * Select every row matching the current query (filter, search, index —
+   * force filters and custom filter conditions included). A no-op unless
+   * {@link canSelectAllMatching}. Since 0.1.147.
+   */
+  selectAllMatching: () => void;
   /** Column currently open in the filter dialog (null when closed). */
   filterDialogColumn: Ref<ColumnDef | null>;
 
@@ -801,7 +946,12 @@ export interface ReactiveTableState extends TableStateMethods {
    */
   requestActionInput: (
     action: TVueTableActionInfo,
-    ctx: { identifiers: Record<string, unknown>[]; preferredId: readonly string[] },
+    ctx: {
+      identifiers: Record<string, unknown>[];
+      preferredId: readonly string[];
+      /** A query-targeted run's row count (since 0.1.147). */
+      count?: number;
+    },
   ) => Promise<unknown>;
   /** Resolve the active form request with `input`. Internal — used by the dialog. */
   acceptActionForm: (input: unknown) => void;

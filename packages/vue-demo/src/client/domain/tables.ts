@@ -34,6 +34,8 @@ export interface DemoTable {
   icon: string;
   /** Default page size. Larger for infinite-scroll/window tables. */
   limit?: number;
+  /** `<AsTableRoot :block-size>` — rows per window-mode fetch. Default 100. */
+  blockSize?: number;
   /** UI mode: numbered pagination or scroll-to-load. Default: pagination. Ignored when `kind === "window"`. */
   mode?: TableMode;
   /**
@@ -103,6 +105,19 @@ export interface DemoTable {
    * body slot and the close-on-filter-dialog recipe.
    */
   filtersOverflow?: { maxVisible: number };
+  /**
+   * Enables the "Select all N matching" banner (`<AsTableRoot
+   * :select-all-matching>`): once every loaded row is selected, the user can
+   * widen the selection to every row matching the current filter/search and
+   * run `queryTarget` actions on the server-side query instead of ids.
+   */
+  selectAllMatching?: boolean;
+  /**
+   * Row field the selection keys on (`rowValueFn`). Default `"id"`. Views
+   * that expose their id under another name (e.g. `task-board`'s `taskId`)
+   * set it so rows stay distinct.
+   */
+  rowKey?: string;
 }
 
 /** Cancelled orders are not selectable in the selection showcases. */
@@ -270,6 +285,44 @@ export const DEMO_TABLES: DemoTable[] = [
       },
     ],
     filtersOverflow: { maxVisible: 1 },
+  },
+  // Query-target showcase: `selectAllMatching` adds the "Select all N
+  // matching" banner; `archive` / `set-priority` / `reopen` accept a query
+  // target (`reopen` caps it at 25 rows), `notify` does not.
+  {
+    path: "tasks",
+    label: "Tasks",
+    resource: "tasks",
+    icon: "i-ph:check-circle",
+    limit: 10,
+    selection: {},
+    selectAllMatching: true,
+  },
+  {
+    path: "tasks-window",
+    apiPath: "tasks",
+    label: "Tasks (window)",
+    resource: "tasks",
+    icon: "i-ph:list-checks",
+    kind: "window",
+    // Small blocks: the 60 tasks must NOT load in one block, otherwise every
+    // row is already loaded and "Select all N matching" has nothing to add.
+    blockSize: 15,
+    selection: {},
+    selectAllMatching: true,
+  },
+  // `@db.view` over tasks + assignee with the task actions delegated through
+  // `@DbActionsFrom` (`idMap: { id: "taskId" }`). No ARBAC on the view
+  // itself; nav visibility follows the `tasks` read grant.
+  {
+    path: "task-board",
+    label: "Task board",
+    resource: "tasks",
+    icon: "i-ph:kanban",
+    limit: 10,
+    rowKey: "taskId",
+    selection: {},
+    selectAllMatching: true,
   },
   {
     path: "audit_log",

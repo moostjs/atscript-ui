@@ -886,3 +886,37 @@ describe("applyUrlQuery — residual filter conditions", () => {
     }
   });
 });
+
+describe("applyUrlQuery — hand-written links", () => {
+  it("applies `status=in-progress` (a hyphenated value)", async () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("name")],
+      queryOnMount: false,
+      onUrlQueryChange: () => {},
+    });
+    await nextTick();
+    state.applyUrlQuery("status=in-progress");
+    await nextTick();
+    expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["in-progress"] }] });
+  });
+
+  it("reports a segment that does not parse and keeps the rest of the link", async () => {
+    const { state } = mountTableState({
+      columns: [mockColumn("status"), mockColumn("name")],
+      queryOnMount: false,
+      onUrlQueryChange: () => {},
+    });
+    await nextTick();
+    // No `onUnsupportedFilter` wired → the report is the dev-mode warning.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      state.applyUrlQuery("status=in-progress&name>>2");
+      await nextTick();
+      expect(state.filters.value).toEqual({ status: [{ type: "eq", value: ["in-progress"] }] });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0][0])).toContain("URL filter left out (syntax): name>>2");
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});

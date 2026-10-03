@@ -110,11 +110,24 @@ describe("rowActionsColumn — synthesized __actions column", () => {
     expect(ths[ths.length - 1]!.attributes("data-column-path")).toBe("__actions");
   });
 
-  it("hidden when actions.row is empty even with rowActionsColumn='first'", async () => {
+  it("hidden when the table has no row / rows action even with rowActionsColumn='first'", async () => {
     const wrapper = mountTable({ rowActionsColumn: "first", actions: [], url: "/rac-empty" });
     await flushPromises();
     await flushPromises();
     expect(wrapper.find('[data-column-path="__actions"]').exists()).toBe(false);
+  });
+
+  it("shown when the table has only rows-level actions (they join the row menu)", async () => {
+    const archive: TDbActionInfo = { ...block, name: "archive", label: "Archive", level: "rows" };
+    const wrapper = mountTable({
+      rowActionsColumn: "first",
+      actions: [archive],
+      url: "/rac-rows-only",
+    });
+    await flushPromises();
+    await flushPromises();
+    const ths = wrapper.findAll("thead th[data-column-path]");
+    expect(ths[0]!.attributes("data-column-path")).toBe("__actions");
   });
 
   it("__actions header is not draggable and has no resize handle", async () => {

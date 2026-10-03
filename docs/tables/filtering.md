@@ -384,6 +384,13 @@ hold restores its extra pieces here automatically — see
 | `formatFilterExpr(expr, labelOf?)`         | Words a condition like the chips do (`@atscript/ui-table`)    |
 | `decomposeUniqueryFilter(expr, { carry })` | Split a `FilterExpr` into field filters + residual conditions |
 
+A residual condition may filter by related rows on a relation the server
+marks filterable (`tableDef.relations[].filterable`, `@db.rel.filterable`
+on the server, `@atscript/moost-db` 0.1.147+) —
+`{ ticket: { $some: { status: "open" } } }`; the chip words it
+`Ticket has some (status equals open)` (`has none` for `$none`). The
+table offers no UI to author one. Since 0.1.147.
+
 They behave like the field filters: every change refetches (page 1),
 writes the URL and shows in exports (`buildQuery`). `<AsFilters>` shows
 each one as a chip in words — `(Lane equals fast and Opened at less or
@@ -450,6 +457,13 @@ reported** — never approximated (to keep those pieces instead, see
 | `"conjunction"` | `{ total: { $gt: 1, $lt: 5 } }` — keeps `$gt`     |
 | `"negation"`    | `{ $not: { total: { $gt: 5 } } }`                 |
 | `"operator"`    | `{ tags: { $all: ["a"] } }`, `{ n: { $in: [] } }` |
+| `"relation"`    | `{ ticket: { $some: { status: "open" } } }`       |
+| `"syntax"`      | URL segment `priority>>2` (URL decoding only)     |
+
+A relational predicate (`$some` / `$none`, since 0.1.147) filters by
+related rows, which no field chip expresses; `fields` names the relation
+only. `"syntax"` comes from [URL decoding](/tables/url-state#links-the-filter-model-cannot-hold):
+the segment is in `issue.raw` and `expr` is `{}`.
 
 Leaving out an AND-ed piece can only widen the match, so the result is a
 superset of the input — and the caller is told:

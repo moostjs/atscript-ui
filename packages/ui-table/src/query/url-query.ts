@@ -1,7 +1,7 @@
 import type { SortControl } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
 import { buildUrl } from "@uniqu/url/builder";
-import { parseUrl } from "@uniqu/url";
+import { parseUrl, splitUrlSegments } from "@uniqu/url";
 import type { FieldFilters } from "../filters/filter-types";
 import {
   decomposeUniqueryFilter,
@@ -64,7 +64,9 @@ export interface UrlQueryStateSnapshot {
   /**
    * Pieces of the URL's filter that are left out because field filters
    * cannot express them — see `uniqueryFilterToFieldFilters`. Since 0.1.140
-   * only the pieces NOT carried in `residual`. Omitted when none. Since 0.1.139.
+   * only the pieces NOT carried in `residual`. Since 0.1.147 also every URL
+   * segment the parser rejects (reason `"syntax"`, segment in `raw`).
+   * Omitted when none. Since 0.1.139.
    */
   unsupported?: UnsupportedFilter[];
   /**
@@ -330,6 +332,40 @@ export function urlQueryConsumesKey(key: string): boolean {
   return FILTER_OPERATOR_CHAR.test(key);
 }
 
+/**
+ * `parseUrl`, segment by segment when the whole string does not parse: the
+ * top-level segments that parse on their own are kept, the rest come back as
+ * `"syntax"` pieces. A segment that fails is left out whole — an unbalanced
+ * group swallows up to the end of the string, never splitting a `!( … )`
+ * whose halves alone would select fewer rows than the link meant.
+ */
+function parseLeniently(urlString: string): {
+  parsed: ReturnType<typeof parseUrl> | null;
+  rejected: UnsupportedFilter[];
+} {
+  try {
+    return { parsed: parseUrl(urlString), rejected: [] };
+  } catch {
+    // Fall through to the per-segment pass.
+  }
+  const kept: string[] = [];
+  const rejected: UnsupportedFilter[] = [];
+  for (const raw of splitUrlSegments(urlString)) {
+    if (!raw) continue;
+    try {
+      parseUrl(raw);
+      kept.push(raw);
+    } catch {
+      rejected.push({ reason: "syntax", expr: {} as FilterExpr, fields: [], raw });
+    }
+  }
+  try {
+    return { parsed: parseUrl(kept.join("&")), rejected };
+  } catch {
+    return { parsed: null, rejected };
+  }
+}
+
 export interface UrlQueryParseOptions {
   /**
    * Field paths the table knows about. Conditions and sorters on fields
@@ -362,7 +398,10 @@ export interface UrlQueryParseOptions {
  *   `sync.residual` is `false`, those whose fields are all known come back
  *   in `residual` instead
  * - unknown controls (e.g. `$weird=42`) → silently ignored
- * - malformed query → `{ filters: {}, sorters: [], searchTerm: "" }`
+ * - a segment the `@uniqu/url` parser rejects → left out and listed in
+ *   `unsupported` with reason `"syntax"` and the segment in `raw`; the other
+ *   segments still apply (since 0.1.147 — before, one bad segment dropped the
+ *   whole query silently)
  *
  * `page` and `itemsPerPage` are returned only when the URL specified them
  * (`$skip` / `$limit`); callers compose them onto state without overwriting
@@ -376,12 +415,8 @@ export function urlQueryStringToState(
     return { filters: {}, sorters: [], searchTerm: "" };
   }
 
-  let parsed: ReturnType<typeof parseUrl>;
-  try {
-    parsed = parseUrl(urlString);
-  } catch {
-    return { filters: {}, sorters: [], searchTerm: "" };
-  }
+  const { parsed, rejected } = parseLeniently(urlString);
+  if (!parsed) return { filters: {}, sorters: [], searchTerm: "" };
 
   const filtersGate = resolveAspectGate(opts.sync?.filters);
   const sortersGate = resolveAspectGate(opts.sync?.sorters);
@@ -436,7 +471,7 @@ export function urlQueryStringToState(
   const searchTerm = !searchOff && typeof $search === "string" ? $search : "";
 
   const out: UrlQueryStateSnapshot = { filters, sorters, searchTerm };
-  const unsupported = decomposed?.unsupported ?? [];
+  const unsupported = [...rejected, ...(decomposed?.unsupported ?? [])];
   const unknown: UnknownFilter[] = [];
   for (const piece of decomposed?.unknown ?? []) {
     const hidden = piece.fields.filter(isHidden);

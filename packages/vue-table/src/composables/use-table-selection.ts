@@ -12,7 +12,9 @@ export type SelectionPersistence = "clear" | "trim" | "persist";
  * clean; other transitions are no-ops (`'none' → 'multi'` already has an
  * empty selection, `'multi' → 'multi'` doesn't change semantics). The
  * getter is invoked once per change — NOT immediate, so the mount-time
- * default `'none'` doesn't clobber externally-seeded selections.
+ * default `'none'` doesn't clobber externally-seeded selections. Also pushes
+ * the mode into `state.selectMode` (immediately), and dropping into `'none'`
+ * ends a query selection too.
  *
  * Lives outside `useTableSelection` because selection mode is a renderer
  * concern (a prop, not state) — both `<AsTable>` and `<AsWindowTable>`
@@ -22,11 +24,18 @@ export function useSelectModeReset(
   state: ReactiveTableState,
   selectGetter: () => SelectionMode,
 ): void {
-  watch(selectGetter, (next, prev) => {
-    if (next === "none" && prev !== "none" && state.selectedRows.value.length > 0) {
-      state.selectedRows.value = [];
-    }
-  });
+  watch(
+    selectGetter,
+    (next, prev) => {
+      // The mode also feeds `state.canSelectAllMatching` (multi only).
+      state.selectMode.value = next;
+      if (prev === undefined) return; // mount: never clobber seeded selections
+      if (next === "none" && prev !== "none") state.clearSelection();
+      // A query selection exists only in multi-select.
+      else if (next !== "multi" && state.querySelection.value) state.querySelection.value = null;
+    },
+    { immediate: true },
+  );
 }
 
 /**

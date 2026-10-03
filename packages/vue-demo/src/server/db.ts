@@ -7,6 +7,8 @@ import { ProductsTable } from "./schemas/products.as";
 import { CustomersTable } from "./schemas/customers.as";
 import { OrdersTable } from "./schemas/orders.as";
 import { AuditLogTable } from "./schemas/audit-log.as";
+import { TasksTable } from "./schemas/tasks.as";
+import { TaskBoardView } from "./schemas/task-board.as";
 import { WfStateRow } from "./schemas/wf-state.as";
 
 const DB_PATH = process.env.DEMO_DB_PATH ?? ".data/demo.db";
@@ -19,5 +21,7 @@ export const productsTable = db.getTable(ProductsTable);
 export const customersTable = db.getTable(CustomersTable);
 export const ordersTable = db.getTable(OrdersTable);
 export const auditLogTable = db.getTable(AuditLogTable);
+export const tasksTable = db.getTable(TasksTable);
+export const taskBoardView = db.getView(TaskBoardView);
 export const presetsTable = db.getTable(AsPresetEntry);
 export const wfStateTable = db.getTable(WfStateRow);

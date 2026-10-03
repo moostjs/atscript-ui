@@ -43,7 +43,10 @@ function join(children: Part[], kind: "and" | "or"): Part {
  * filter-field chips: `(Status equals shipped and Total greater than 500) or
  * (Status equals pending and Total less or equal 50)`. `and` binds tighter
  * than `or`; groups are parenthesized only where needed. Operators without a
- * wording fall back to their `@uniqu/url` spelling.
+ * wording fall back to their `@uniqu/url` spelling. A relational predicate
+ * (`ticket: { $some: { status: "open" } }`) reads `Ticket has some (status
+ * equals open)` — `has none` for `$none`, `(any)` for an empty operand (since
+ * 0.1.147).
  *
  * @param labelOf — display label for a field path (e.g. the column label);
  *   the path itself when omitted or when it returns `undefined`.
@@ -61,6 +64,12 @@ export function formatFilterExpr(
     and: (children) => join(children, "and"),
     or: (children) => join(children, "or"),
     not: (child) => ({ s: child.s ? `not (${child.s})` : "", kind: "leaf" }),
+    // A relational predicate's operand filters the related rows — fields of
+    // the relation's target, so worded without this table's labels.
+    relation: (field, op, operand) => ({
+      s: `${labelOf?.(field) ?? field} ${op === "$some" ? "has some" : "has none"} (${formatFilterExpr(operand) || "any"})`,
+      kind: "leaf",
+    }),
   };
   try {
     return walkFilter(expr, visitor)?.s ?? "";

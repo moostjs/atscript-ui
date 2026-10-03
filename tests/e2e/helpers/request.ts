@@ -1,4 +1,9 @@
-import { request as playwrightRequest, type APIRequestContext } from "@playwright/test";
+import {
+  expect,
+  request as playwrightRequest,
+  type APIRequestContext,
+  type Page,
+} from "@playwright/test";
 
 import { workerUrl } from "../global-setup";
 import { authFileFor, type DemoRole } from "./auth";
@@ -44,4 +49,14 @@ export async function newAnonRequestContext(): Promise<APIRequestContext> {
     storageState: { cookies: [], origins: [] },
     extraHTTPHeaders: { "content-type": "application/json" },
   });
+}
+
+/**
+ * Rows of `/api/db/tables/<apiPath>` matching `filter` (a `/pages` query
+ * string), read straight from the API with the page's session.
+ */
+export async function countRows(page: Page, apiPath: string, filter: string): Promise<number> {
+  const res = await page.request.get(`/api/db/tables/${apiPath}/pages?${filter}&$size=1`);
+  expect(res.ok()).toBe(true);
+  return ((await res.json()) as { count: number }).count;
 }

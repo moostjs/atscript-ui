@@ -59,3 +59,20 @@ describe("navigateHrefFor", () => {
     expect(navigateHrefFor(action({}), { id: "42" }, [])).toBeUndefined();
   });
 });
+
+describe("navigateHrefFor — delegated actions (idMap, since 0.1.147)", () => {
+  it("encodes the owner's identification read through idMap", () => {
+    const a = action({ value: "/issues/$1", owner: "/api/issues", idMap: { id: "issueId" } });
+    expect(navigateHrefFor(a, { taskId: 7, issueId: "I-9" }, [])).toBe("/issues/I-9");
+  });
+
+  it("joins a composite map in Object.keys(idMap) order", () => {
+    const a = action({ value: "/o/$1", idMap: { tenant: "tenantId", no: "orderNo" } });
+    expect(navigateHrefFor(a, { orderNo: 5, tenantId: "t1" }, ["rowId"])).toBe("/o/t1/5");
+  });
+
+  it("has no link when the row lacks a mapped path", () => {
+    const a = action({ idMap: { id: "issueId" } });
+    expect(navigateHrefFor(a, { taskId: 7 }, [])).toBeUndefined();
+  });
+});

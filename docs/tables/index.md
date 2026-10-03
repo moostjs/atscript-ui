@@ -110,6 +110,10 @@ query on a timer without loading affordances. See
   name fields the caller cannot read degrade instead of failing.
 - [Pagination & Virtualization](/tables/pagination) — choosing between
   `<AsTable>` and `<AsWindowTable>`, tuning block size.
+- [Actions & Selection](/tables/actions) — row, bulk and table actions,
+  the selection model, row actions a view delegates to its source table.
+- [Select All Matching Rows](/tables/select-all-matching) — "Select all N
+  matching" and running bulk actions on every row of a query.
 - [Model Routes & Nav](/tables/model-routes) — generate router entries
   and side-nav items for every DB model with `buildModelRoutes`.
 

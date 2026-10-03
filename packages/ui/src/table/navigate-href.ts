@@ -1,4 +1,4 @@
-import { encodeNavigateId, type TDbActionInfo } from "@atscript/db-client";
+import { actionIdentifier, encodeNavigateId, type TDbActionInfo } from "@atscript/db-client";
 
 /**
  * Compute the href a `processor: 'navigate'` action would open — synchronously,
@@ -19,6 +19,11 @@ import { encodeNavigateId, type TDbActionInfo } from "@atscript/db-client";
  *
  * Table/rows-level navigate actions carry no `$1` placeholder and return
  * `action.value` verbatim.
+ *
+ * A delegated action (`action.idMap`, since 0.1.147) reads `id` as one of THIS
+ * table's rows (or identifiers) and encodes the owner's identification it maps
+ * to, in `Object.keys(idMap)` order — the same as `Client`. A row the map
+ * cannot address (a missing path) has no link.
  */
 export function navigateHrefFor(
   action: TDbActionInfo,
@@ -27,6 +32,16 @@ export function navigateHrefFor(
 ): string | undefined {
   if (action.processor !== "navigate") return undefined;
   if (action.level !== "row") return action.value;
-  if (id === undefined || preferredId.length === 0) return undefined;
+  if (id === undefined) return undefined;
+  if (action.idMap) {
+    let mapped: Record<string, unknown>;
+    try {
+      mapped = actionIdentifier(action, id, []);
+    } catch {
+      return undefined;
+    }
+    return action.value.replace(/\$1/g, encodeNavigateId(mapped, Object.keys(action.idMap)));
+  }
+  if (preferredId.length === 0) return undefined;
   return action.value.replace(/\$1/g, encodeNavigateId(id, preferredId));
 }

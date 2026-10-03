@@ -64,13 +64,17 @@
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/db": "catalog:",
+    "@atscript/db-sql-tools": "catalog:",
     "@atscript/db-sqlite": "catalog:",
     "@atscript/typescript": "catalog:",
     "@atscript/ui": "workspace:^",
     "@moostjs/event-wf": "catalog:",
     "@prostojs/wf": "^0.1.1",
+    "@uniqu/core": "catalog:",
     "@wooksjs/event-core": "catalog:",
+    "@wooksjs/event-http": "catalog:",
     "@wooksjs/event-wf": "catalog:",
+    "@wooksjs/http-body": "catalog:",
     "moost": "catalog:",
     "unplugin-atscript": "catalog:",
     "vitest": "catalog:"

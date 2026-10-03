@@ -14,8 +14,10 @@ import type {
   ActionResult,
   DroppedFieldsReport,
   PresetConfig,
+  QuerySelection,
   ReactiveTableState,
   RowActionsConfig,
+  SelectionResetEvent,
   TAsCellTypeComponents,
   TAsTableControls,
   TVueTableActionInfo,
@@ -137,6 +139,16 @@ const props = withDefaults(
      * - `"persist"` — never write to `selectedRows`; full consumer ownership.
      */
     selectionPersistence?: SelectionPersistence;
+    /**
+     * Offer "Select all N matching" — a selection of every row matching the
+     * current filter / search, not just the loaded ones (default `false`).
+     * Shown by `<AsTable>` / `<AsWindowTable>` in `select="multi"` once every
+     * loaded row is picked, for a server-backed table (no `queryFn`) whose
+     * row actions include one that takes a query target (`queryTarget` in
+     * `/meta`). The selection is bound by `v-model:query-selection`; see
+     * `state.querySelection`. Since 0.1.147.
+     */
+    selectAllMatching?: boolean;
     /** Page-alignment unit for `loadRange` and `queryNext` extension. */
     blockSize?: number;
     /** Debounce window for the topIndex/viewportRowCount watcher. */
@@ -219,6 +231,12 @@ const emit = defineEmits<{
    * ones is reported here, not as `unsupported-filter`.
    */
   (e: "fields-dropped", report: DroppedFieldsReport): void;
+  /**
+   * The table dropped a query selection on its own: `reason: "scope"` — the
+   * filter, search or index changed under it (sorting, columns, paging and
+   * scrolling keep it). Since 0.1.147.
+   */
+  (e: "selection-reset", event: SelectionResetEvent): void;
 }>();
 
 const filterFields = defineModel<string[]>("filterFields", { default: () => [] });
@@ -238,6 +256,11 @@ const ignoreSortersWhenSearched = defineModel<boolean>("ignoreSortersWhenSearche
   default: false,
 });
 const selectedRows = defineModel<unknown[]>("selectedRows", { default: () => [] });
+/**
+ * The "every row matching the query" selection (`state.querySelection`):
+ * `null` while the selection is `selectedRows`. Since 0.1.147.
+ */
+const querySelection = defineModel<QuerySelection | null>("querySelection", { default: null });
 
 /**
  * Bidirectional URL bridge bound via `v-model:url-query`. When unbound the
@@ -295,7 +318,7 @@ function createLocalState(): ReactiveTableState {
     displayColumns: props.displayColumns,
     limit: props.limit,
     queryOnMount: props.queryOnMount,
-    selection: { rowValueFn: props.rowValueFn, selectedRows },
+    selection: { rowValueFn: props.rowValueFn, selectedRows, querySelection },
     model: { filterFields, columnNames, columnWidths, sorters },
     actions: {
       resolveHref: props.resolveHref,
@@ -357,6 +380,8 @@ const state = localMode
       sorters,
       ignoreSortersWhenSearched,
       selectedRows,
+      querySelection,
+      onSelectionReset: (event) => emit("selection-reset", event),
       urlQueryReady: urlQueryActive ? urlQueryReady : undefined,
       onUrlQueryChange: urlQueryActive ? (s: string) => (urlQuery.value = s) : undefined,
       urlQuerySync: props.urlQuerySync,
@@ -377,6 +402,15 @@ watch(
   () => props.rowActions,
   (value) => {
     state.rowActions.value = value;
+  },
+  { immediate: true },
+);
+watch(
+  () => props.selectAllMatching === true,
+  (value) => {
+    state.allowSelectAllMatching.value = value;
+    // Turning the feature off ends a query selection already held.
+    if (!value && state.querySelection.value) state.clearSelection();
   },
   { immediate: true },
 );
@@ -474,6 +508,10 @@ defineExpose({ state, navBridge });
     :ignore-sorters-when-searched="state.ignoreSortersWhenSearched.value"
     :selected-rows="state.selectedRows.value"
     :selected-count="state.selectedCount.value"
+    :selection="state.selection.value"
+    :can-select-all-matching="state.canSelectAllMatching.value"
+    :select-all-matching="state.selectAllMatching"
+    :clear-selection="state.clearSelection"
     :nav-bridge="navBridge"
     :query="state.query"
     :query-next="state.queryNext"

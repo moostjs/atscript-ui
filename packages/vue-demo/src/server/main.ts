@@ -20,6 +20,8 @@ import { CategoriesController } from "./controllers/categories.controller";
 import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
+import { TasksController } from "./controllers/tasks.controller";
+import { TaskBoardController } from "./controllers/task-board.controller";
 import { AuditLogController } from "./controllers/audit-log.controller";
 import { WfStatesController } from "./controllers/wf-states.controller";
 import { PresetsController } from "./controllers/presets.controller";
@@ -94,6 +96,8 @@ app.registerControllers(
   ProductsController,
   CustomersController,
   OrdersController,
+  TasksController,
+  TaskBoardController,
   AuditLogController,
   WfStatesController,
   PresetsController,

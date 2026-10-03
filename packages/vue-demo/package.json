@@ -33,6 +33,7 @@
     "vunor": "catalog:"
   },
   "devDependencies": {
+    "@atscript/core": "catalog:",
     "@atscript/db": "catalog:",
     "@atscript/db-sql-tools": "catalog:",
     "@atscript/db-sqlite": "catalog:",
@@ -46,10 +47,12 @@
     "@moostjs/event-wf": "catalog:",
     "@moostjs/vite": "catalog:",
     "@swc/core": "catalog:",
+    "@uniqu/core": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
     "@wooksjs/event-core": "catalog:",
     "@wooksjs/event-http": "catalog:",
+    "@wooksjs/http-body": "catalog:",
     "better-sqlite3": "^11",
     "happy-dom": "catalog:",
     "moost": "catalog:",

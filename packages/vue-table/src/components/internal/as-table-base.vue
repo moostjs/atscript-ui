@@ -197,7 +197,7 @@ const selectAllState = computed<SelectAllState | undefined>(() => {
   // row is picked, and neither a pick on another page nor an ineligible pk
   // left in the selection moves it off "none".
   const { selectable, selected } = rowHooks.value;
-  return toSelectAllState(selected, selectable);
+  return toSelectAllState(selected, selectable, !!ctx?.state.querySelection.value);
 });
 
 const emit = defineEmits<{

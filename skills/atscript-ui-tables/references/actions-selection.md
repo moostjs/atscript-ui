@@ -12,7 +12,10 @@ Row / table / rows actions, selection model, recipes.
 - [Action result processing](#action-result-processing)
 - [Selection model](#selection-model)
 - [Per-screen row-action policy](#per-screen-row-action-policy-rowactions-since-01134)
+- [Row actions on a view (delegated, since 0.1.147)](#row-actions-on-a-view-delegated-since-01147)
 - [Recipes](#recipes)
+
+Query selection ("Select all N matching", run on every row of a query): [select-all-matching.md](select-all-matching.md).
 
 ## Action declaration on .as
 
@@ -75,7 +78,7 @@ Resolves its actions with `resolveRowActions(state, row)` — the row's server-e
 
 **Every server-declared action is gated regardless of processor** (`backend`, `navigate`, `custom`). The sole exemption is the client-synthesised `__remove` — its name never appears in `$actions`, so its visibility is governed by `tableDef.canRemove` (the server still authorises the delete at invoke).
 
-Opt in to the synthesized column via `<AsTable :row-actions-column="'first' | 'last' | 'merge-select'">` — `<AsWindowTable>` takes the same prop (since 0.1.138). The column is locked: no header dropdown, no resize, no drag-reorder, never in `state.columnNames`.
+Opt in to the synthesized column via `<AsTable :row-actions-column="'first' | 'last' | 'merge-select'">` — `<AsWindowTable>` takes the same prop (since 0.1.138). The column is locked: no header dropdown, no resize, no drag-reorder, never in `state.columnNames`. It renders when the row menu has anything to show — a row-level action, a rows-level one (they join every row's menu) or a `:row-actions` `extra` action; ≤ 0.1.146 only row-level actions counted, so a rows-only table got no column.
 
 Override the cell renderer via `controls.rowActions`.
 
@@ -178,6 +181,7 @@ Form-type and form-component dispatch maps for the dialog interior come from `<A
 | `others.<level>` | `TVueTableActionInfo[]`                 | The per-level list with the declared default removed.                      |
 | `cellRow`        | `TVueTableActionInfo[]`                 | `[default?, ...others.row, ...rows]` — not gated; see `resolveRowActions`. |
 | `invoke`         | see below                               | Dispatcher.                                                                |
+| `countTarget`    | `(action, target, event?)`              | 0.1.147+. Query-target dry-run count — see select-all-matching.md.         |
 | `invoking`       | `ShallowRef<Set<string>>`               | Action names with in-flight invokes.                                       |
 | `lastResult`     | `ShallowRef<Map<string, ActionResult>>` | Latest result per action name.                                             |
 
@@ -187,7 +191,15 @@ Invoke signature:
 state.actions.invoke(
   action: TVueTableActionInfo,
   pk?: Record<string, unknown> | Record<string, unknown>[],
-  opts?: { suppressRefresh?: boolean; event?: KeyboardEvent | MouseEvent; input?: unknown },
+  opts?: {
+    suppressRefresh?: boolean;
+    event?: KeyboardEvent | MouseEvent;
+    input?: unknown;
+    row?: Record<string, unknown>;
+    target?: ActionQueryTarget; // 0.1.147+: run on a query (pk = undefined) — select-all-matching.md
+    expectCount?: number;
+    confirmTargetChange?: (matched: number) => Promise<boolean>;
+  },
 ): Promise<ActionResult>;
 ```
 
@@ -384,6 +396,18 @@ interface LocalRowAction {
 Order of application: the per-row `$actions` gate runs FIRST, then the policy. So `include` can only narrow what the server already allowed for that row, and `overrides` are cosmetic — neither can surface a gated action. `include` does NOT apply to `extra` (being listed there is the opt-in); `exclude` and `enabled(row)` do. `include: []` therefore hides every server action and keeps the extras — the way to replace a screen's row actions wholesale.
 
 `<AsRowActions :actions="[...]">` renders an explicit list, bypassing both the server set and the policy — for a standalone cell that must show something hand-picked.
+
+## Row actions on a view (delegated, since 0.1.147)
+
+A view controller with `@DbActionsFrom(() => SourceController)` (moost-db) lists the source table's row/rows actions in its `/meta` and `$actions`. Nothing to wire in the UI.
+
+| #   | Rule                                                                                                                                                                                                                                                                                                                                                                                                            |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | Delegated `TDbActionInfo` carries `owner` (source base path), usually `idMap` (source id field → view column, e.g. `{ id: "taskId" }`), `formUrl` (source's form) and, when it takes one, `queryTarget.url` (the view's delegated route). `disabled` is not sent — `$actions` / `$disabledReasons` decide.                                                                                                      |
+| D2  | `tableDef.identifierFields` = `preferredId` ∪ every `idMap` value; every built-in surface extracts identifiers with it (`identifierFieldsOf(def)`). `actionIdentifiers(action, ids, preferredId)` narrows per action: delegated → exactly the `idMap` paths (db-client maps them to the owner's id and POSTs to `value`, the source route); own action → exactly `preferredId` (the server rejects extra keys). |
+| D3  | Views usually have no `preferredId` — identifiers come from the `idMap` columns alone; the server adds them to `$select` even when hidden. Keep the default `rowValueFn` (row object) or one keyed by an `idMap` column on view tables: a scalar key whose row is not loaded cannot be mapped → the client's `TypeError` settles as the action's error result.                                                  |
+| D4  | `navigateHrefFor` / row anchors map through `idMap` too (`$1` = owner id in `Object.keys(idMap)` order).                                                                                                                                                                                                                                                                                                        |
+| D5  | Delegated query-target actions work in a query selection like own ones (exclusions keyed by the `idMap` view paths).                                                                                                                                                                                                                                                                                            |
 
 ## Recipes
 

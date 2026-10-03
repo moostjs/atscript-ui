@@ -36,7 +36,7 @@ export { serverLogOffset, waitForOtp, waitForOutletEntry } from "./outlet";
 export type { OutletEntry } from "./outlet";
 
 // Raw-HTTP request client — Section 20.
-export { newAnonRequestContext, newRequestContext } from "./request";
+export { countRows, newAnonRequestContext, newRequestContext } from "./request";
 
 // Table navigation — `gotoTable` is the only DOM helper Phase 1 needs.
 export { gotoTable } from "./table";

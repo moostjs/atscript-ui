@@ -169,6 +169,15 @@ describe("createFormDef", () => {
     expect(def.fields.filter((f) => f.derived).map((f) => f.path)).toEqual(["customerId"]);
   });
 
+  it("marks a /meta `computed` field derived (the server strips @db.compute)", () => {
+    // Stand-in: a computed view column reaches the client as a plain typed
+    // field; only `/meta.fields[path].computed` tells it apart.
+    const def = createFormDef(DerivedRow, {
+      metaFields: { name: { computed: true }, id: { computed: false } },
+    });
+    expect(def.fields.filter((f) => f.derived).map((f) => f.path)).toEqual(["name", "customerId"]);
+  });
+
   describe("nested objects", () => {
     it("inlines an object that carries no annotation of its own", () => {
       const def = createFormDef(FlatNestedObject);

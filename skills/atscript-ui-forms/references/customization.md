@@ -192,6 +192,8 @@ const form = useAsForm<Contact>({
 
 `@db.column.derived` fields need no option — `createFormDef` reads the annotation from the `/meta` type (`@atscript/db` 0.1.142+) and sets `FormFieldDef.derived`: `<AsField>` renders it read-only with no required marker, `getFormValidator` / `createFieldValidator` never fail it (a required derived field left empty on a create form passes), `buildFormDiff` never sends it. The validators also pass an absent `@db.default*` / `@db.column.version` value; a `@db.rel.FK` stays required. Since 0.1.144.
 
+Computed view columns (`@db.compute`) reach the client without their annotation — pass `createFormDef(type, { metaFields: meta.fields })` and a field `/meta` marks `computed` gets the same `derived` treatment. Only matters for a form built from a view's type (views are read-only). Since 0.1.147.
+
 ## AsForm slot-props bag
 
 `useAsForm` returns a `slotProps` bag (a `ComputedRef`) that `<AsForm>` spreads onto **every** slot. Reach for it when overriding a form slot (custom header, error banner, submit button) or when building a fully custom root with `useAsForm` — read keys off the bag instead of re-deriving form state.

@@ -17,6 +17,7 @@ import { useSelectModeReset } from "../composables/use-table-selection";
 import { useTableColumnHandlers } from "../composables/use-table-column-handlers";
 import { useRowActionsColumn } from "../composables/use-row-actions-column";
 import AsTableBase from "./internal/as-table-base.vue";
+import AsSelectionBanner from "./internal/as-selection-banner.vue";
 
 const props = withDefaults(
   defineProps<{
@@ -61,7 +62,8 @@ const props = withDefaults(
      *
      * The column is locked: no header dropdown, no resize, no drag-reorder,
      * NOT in the `columnNames` v-model. Hidden entirely when
-     * `state.actions.row` is empty.
+     * the cell has no action to show (no row / rows-level action, no
+     * `:row-actions` `extra` one — since 0.1.147 rows-level ones count).
      *
      * Wrapper-only prop — not forwarded by `<AsTableRoot>`. Raw consumers
      * compose their own column layout.
@@ -172,6 +174,11 @@ const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClear
 
 <template>
   <div class="as-table-outer-wrap">
+    <AsSelectionBanner scope="page">
+      <template v-if="$slots['selection-banner']" #default="bannerProps">
+        <slot name="selection-banner" v-bind="bannerProps" />
+      </template>
+    </AsSelectionBanner>
     <AsTableBase
       render-mode="standalone"
       :columns="effectiveColumns"

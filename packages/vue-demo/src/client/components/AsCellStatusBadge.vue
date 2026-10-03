@@ -22,10 +22,13 @@ const scopeClass = computed<string>(() => {
     case "active":
     case "delivered":
     case "shipped":
+    case "done":
       return "scope-good";
     case "pending":
     case "processing":
     case "invited":
+    case "open":
+    case "in-progress":
       return "scope-warn";
     case "suspended":
     case "cancelled":

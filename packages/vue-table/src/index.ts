@@ -26,6 +26,10 @@ export type {
   LocalRowAction,
   ResolvedRowActions,
   RowActionsConfig,
+  ActionQueryTarget,
+  QuerySelection,
+  TableSelection,
+  SelectionResetEvent,
 } from "./types";
 
 // ── Composables ─────────────────────────────────────────────
@@ -70,6 +74,7 @@ export type {
   DisplayColumnDef,
   ExportScalar,
   QueryOptions,
+  SelectionQuery,
   UrlQuerySync,
 } from "@atscript/ui-table";
 export { ExportAbortError } from "@atscript/ui-table";
@@ -154,5 +159,11 @@ export { provideCellLocale, useCellLocale, type CellLocale } from "./composables
 export { getColumnWidth } from "./utils/column-width";
 export { getCellValue } from "./utils/get-cell-value";
 export { formatCellValue } from "./utils/format-cell";
-export { extractIdentifier } from "./composables/state/intent-scope";
+export {
+  actionIdentifiers,
+  extractIdentifier,
+  identifierFieldsOf,
+  QUERY_TARGET_UNSUPPORTED_REASON,
+  queryTargetGate,
+} from "./composables/state/intent-scope";
 export { resolveRowActions } from "./composables/state/row-actions-config";

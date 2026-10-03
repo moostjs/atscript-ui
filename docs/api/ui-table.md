@@ -176,11 +176,20 @@ interface UnsupportedFilter {
   reason: UnsupportedFilterReason;
   /** The left-out sub-expression, as it appeared in the input. */
   expr: FilterExpr;
-  /** Field paths it references. */
+  /** Field paths it references (a relational predicate: the relation name only). */
   fields: string[];
+  /** Reason `"syntax"` only: the URL segment as written (`expr` is `{}`). Since 0.1.147. */
+  raw?: string;
 }
 
-type UnsupportedFilterReason = "cross-field" | "operator" | "negation" | "conjunction";
+/** `"relation"` and `"syntax"` since 0.1.147. */
+type UnsupportedFilterReason =
+  | "cross-field"
+  | "operator"
+  | "negation"
+  | "conjunction"
+  | "relation"
+  | "syntax";
 
 /** Since 0.1.140. Split into exact field filters, carried residual conditions and reports. Never throws, never warns. */
 function decomposeUniqueryFilter(
@@ -680,7 +689,7 @@ interface UrlQueryStateSnapshot {
   sorters: SortControl[];
   /** `true` when the URL carried `$snapshot`; omitted otherwise (and when `sync.snapshot` is `false`). Since 0.1.139. */
   snapshot?: true;
-  /** Filter pieces left out of `filters` because field filters cannot express them (see `uniqueryFilterToFieldFilters`); omitted when none. The parser never warns — the caller decides. Since 0.1.139. */
+  /** Filter pieces left out of `filters` because field filters cannot express them (see `uniqueryFilterToFieldFilters`) and, since 0.1.147, every URL segment that does not parse (reason `"syntax"`, the segment in `raw` — the other segments still apply); omitted when none. The parser never warns — the caller decides. Since 0.1.139. */
   unsupported?: UnsupportedFilter[];
   /** Filter pieces field filters cannot express, carried as residual conditions (canonical order); omitted when none or `sync.residual` is `false`. `unsupported` then lists only the pieces left out and lost. Since 0.1.140. */
   residual?: FilterExpr[];
@@ -780,7 +789,13 @@ See [URL State](/tables/url-state).
 ```typescript
 type SelectionMode = "none" | "single" | "multi";
 
-function togglePk(set: unknown[], pk: unknown): unknown[];
+function togglePk(
+  selection: readonly unknown[],
+  pk: unknown,
+  mode: SelectionMode,
+  /** Compare by identity instead of reference (e.g. a query selection's excluded rows). Since 0.1.147. */
+  keyOf?: (value: unknown) => unknown,
+): unknown[];
 function trimSelection(set: unknown[], pks: Iterable<unknown>): unknown[];
 function rowsToPks(
   rows: Record<string, unknown>[],
@@ -789,6 +804,20 @@ function rowsToPks(
 ```
 
 `togglePk` returns a new array — never mutates. `trimSelection` drops any selected pk not present in `pks` (used when the row set narrows).
+
+Query selection helpers (since 0.1.147 — the framework-agnostic half of [Select All Matching Rows](/tables/select-all-matching)):
+
+```typescript
+interface SelectionQuery {
+  filter?: FilterExpr;
+  search?: string;
+  index?: string;
+}
+function selectionQueryOf(query: Uniquery): SelectionQuery;
+function selectionSignature(query: SelectionQuery): string;
+```
+
+`selectionQueryOf` keeps a table query's filter and `$search` / `$search:<index>` term — sorting, projection and paging are left out. `selectionSignature` is a stable string of it (keys sorted at every depth, empty parts dropped, `RegExp` / `Date` spelled out): a change of the live signature is what drops a query selection. To flip one row in the excluded list, use `togglePk(excluded, pk, "multi", keyOf)`.
 
 ## State contracts
 

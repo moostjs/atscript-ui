@@ -44,6 +44,8 @@ interface AsTableRootProps {
   limit?: number;
   rowValueFn?: (row: Record<string, unknown>) => unknown;
   selectionPersistence?: "clear" | "trim" | "persist";
+  /** Offer "Select all N matching" — a query selection of every row matching the filter / search. Default `false`. Since 0.1.147. See [Select All Matching Rows](/tables/select-all-matching). */
+  selectAllMatching?: boolean;
   forceFilters?: FilterExpr;
   forceSorters?: SortControl[];
   /** Opt in to suppressing user sorters while a search is active, to preserve relevance ranking. Default `false`. Also a `v-model`. See [Sorting](/tables/sorting#search-relevance-sort-suppression). */
@@ -81,13 +83,13 @@ interface AsTableRootProps {
 }
 ```
 
-**v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]), `ignoreSortersWhenSearched` (boolean).
+**v-models**: `urlQuery` (string), `filterFields` (string[]), `columnNames` (string[]), `columnWidths` (ColumnWidthsMap), `sorters` (SortControl[]), `selectedRows` (unknown[]), `ignoreSortersWhenSearched` (boolean), `querySelection` (`QuerySelection | null`, since 0.1.147).
 
-**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. Since 0.1.140 a piece on server-backed columns is kept as a residual condition instead and not reported — the event means "dropped"; `urlQuerySync: { residual: false }` restores 0.1.139. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)), `fields-dropped(report: DroppedFieldsReport)` (since 0.1.141 — once per apply of a preset (the local draft included) or a restored URL that named fields the caller cannot use, only when something was dropped; state written straight to the model is left out of the query without a report; unbound → a dev-mode `console.warn`. A URL piece mixing such a field with usable ones is reported here, no longer as `unsupported-filter`. See [Fields Hidden by Role](/tables/hidden-fields)).
+**Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. Since 0.1.140 a piece on server-backed columns is kept as a residual condition instead and not reported — the event means "dropped"; `urlQuerySync: { residual: false }` restores 0.1.139. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)), `fields-dropped(report: DroppedFieldsReport)` (since 0.1.141 — once per apply of a preset (the local draft included) or a restored URL that named fields the caller cannot use, only when something was dropped; state written straight to the model is left out of the query without a report; unbound → a dev-mode `console.warn`. A URL piece mixing such a field with usable ones is reported here, no longer as `unsupported-filter`. See [Fields Hidden by Role](/tables/hidden-fields)), `selection-reset(event: SelectionResetEvent)` (since 0.1.147 — the table dropped a query selection because the filter, search or index changed: `{ reason: "scope" }`).
 
 `forceFilters` / `forceSorters` are never pruned of hidden fields — keep them to fields every role reads.
 
-**Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
+**Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `selection`, `canSelectAllMatching`, `selectAllMatching`, `clearSelection` (these four since 0.1.147), `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
 
 ### `AsTable`
 
@@ -156,7 +158,15 @@ The three hooks are typed under [Row hooks](#row-hooks). `AsWindowTable` accepts
 **Slots**: `cell-<path>` / `header-<path>` per column, plus the selection pseudo-column `__select` (since 0.1.142):
 
 ```typescript
-"header-__select": (props: { state: SelectAllState | undefined; toggle: () => void; selectedCount: number }) => unknown;
+"header-__select": (props: {
+  state: SelectAllState | undefined;
+  toggle: () => void;
+  selectedCount: number;
+  /** Since 0.1.147. */
+  mode: "ids" | "query";
+  canSelectAllMatching: boolean;
+  selectAllMatching: () => void;
+}) => unknown;
 "cell-__select": (props: {
   row: Record<string, unknown>;
   index: number;
@@ -167,7 +177,20 @@ The three hooks are typed under [Row hooks](#row-hooks). `AsWindowTable` accepts
 }) => unknown;
 ```
 
-Behaviour and scope: [Custom selection controls](/tables/actions#custom-selection-controls), [What the header checkbox acts on](/tables/actions#what-the-header-checkbox-acts-on).
+Since 0.1.147 both renderers also take a `selection-banner` slot — it replaces the content of the "Select all N matching" banner (rendered only while the banner shows):
+
+```typescript
+"selection-banner": (props: {
+  selection: TableSelection;
+  canSelectAllMatching: boolean;
+  selectAllMatching: () => void;
+  clearSelection: () => void;
+  /** Loaded eligible rows ("all N rows on this page"). */
+  loadedCount: number;
+}) => unknown;
+```
+
+Behaviour and scope: [Custom selection controls](/tables/actions#custom-selection-controls), [What the header checkbox acts on](/tables/actions#what-the-header-checkbox-acts-on), [Select All Matching Rows](/tables/select-all-matching).
 
 ### `AsWindowTable`
 
@@ -851,6 +874,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.
 - **Selection**: `selectedRows`, `selectedCount`, `rowValueFn`, `isPkSelected`; since 0.1.133 `rowSelectable` (renderer-pushed hook ref), `isRowSelectable(row, index)`, `selectableRows(rows)`, `selectableCount(rows)`, `selectAll(rows, indexOf?)` — pre-selected ineligible pks survive select-all and the header tri-state counts eligible rows only; since 0.1.142 `deselectAll(rows)`, `toggleAll(rows)` (the header's action) and `clearSelection()`; since 0.1.144 `rowByValue` (loaded rows keyed by `rowValueFn` value — lazy, rebuilt once per fetch), `rowOf(value)` (the loaded row behind a selection value: an object is itself, a scalar is looked up; `undefined` when not loaded) and `selectedRowObjects` (the loaded rows of the selection, in order — unloaded values left out). Semantics: [Selection](/tables/actions#what-the-header-checkbox-acts-on).
+- **Query selection** (since 0.1.147): `querySelection` (`Ref<QuerySelection | null>` — "every row matching the query" minus `excluded`; while set `selectedRows` is empty, `isPkSelected` is "not excluded", `selectedCount` is `total − excluded.length` and `selectedRowObjects` lists the loaded non-excluded rows), `selection` (`ComputedRef<TableSelection>` — one value for both modes), `canSelectAllMatching`, `selectAllMatching()`, `allowSelectAllMatching` (`Ref<boolean>`, pushed by `<AsTableRoot :select-all-matching>`), `selectMode` (`Ref<SelectionMode>`, pushed by the renderers), `loadedEligiblePks` (keys of the loaded rows `rowSelectable` admits). `clearSelection()` ends a query selection too. Semantics: [Select All Matching Rows](/tables/select-all-matching).
 - **Active row / nav**: `activeIndex`, `navMode`, `navViewportRowCount`, `hasMainActionListener`, `rowId`, `getActiveRow`, `setActive`, `clearActive`, `toggleActiveSelection`, `requestMainAction`, `handleNavKey`, `registerMainActionListener`.
 
   `getActiveRow(): Record<string, unknown> | undefined` resolves the currently-active row — nav-mode-aware: page-relative into `results` for paginated `<AsTable>`, absolute via `windowCache` for `<AsWindowTable>`. Returns `undefined` when no row is active (`activeIndex < 0`). It is the single resolver shared by selection, the `@main-action` emit, and the `level="row"` toolbar.
@@ -890,6 +914,16 @@ interface TableActionsState {
     pk?: Record<string, unknown> | Record<string, unknown>[],
     opts?: InvokeOpts,
   ) => Promise<ActionResult>;
+  /**
+   * Dry-run count of a query-targeted run (`client.countActionTarget`).
+   * `undefined` when it failed — settled as the action's error result
+   * (`lastResult` + `@action`). Since 0.1.147.
+   */
+  countTarget: (
+    action: TVueTableActionInfo,
+    target: ActionQueryTarget,
+    event?: KeyboardEvent | MouseEvent,
+  ) => Promise<number | undefined>;
   invoking: ShallowRef<Set<string>>;
   lastResult: ShallowRef<Map<string, ActionResult>>;
 }
@@ -899,7 +933,14 @@ interface TableActionsState {
 
 ```typescript
 type ActionResult =
-  | { ok: true; kind: "backend"; data: unknown; message?: string }
+  | {
+      ok: true;
+      kind: "backend";
+      data: unknown;
+      message?: string;
+      /** A query-targeted run (since 0.1.147): rows matched + the handler's summary, if it returned one. */
+      target?: { matched: number; summary?: TDbActionTargetSummary };
+    }
   | { ok: true; kind: "navigate" }
   | { ok: true; kind: "custom"; dispatched: true }
   | { ok: true; kind: "remove"; data: TDbDeleteResult }
@@ -1087,6 +1128,34 @@ interface InvokeOpts {
   suppressRefresh?: boolean;
   event?: KeyboardEvent | MouseEvent;
   input?: unknown;
+  row?: Record<string, unknown>;
+  /** Since 0.1.147: run a `'rows'` action on every row matching this query (`pk` = `undefined`). */
+  target?: ActionQueryTarget;
+  /** With `target`: the confirmed count — a different one answers 409 `TARGET_CHANGED`. */
+  expectCount?: number;
+  /** With `target`: asked once with the new count on `TARGET_CHANGED`; `true` runs again. */
+  confirmTargetChange?: (matched: number) => Promise<boolean>;
+}
+
+/** Since 0.1.147. The filter / search / index of a query + identifiers to leave out. */
+type ActionQueryTarget = Pick<TDbQueryTarget, "filter" | "search" | "index" | "exclude" | "maxRows">;
+
+/** Since 0.1.147 — `state.querySelection`. */
+interface QuerySelection {
+  query: SelectionQuery; // { filter?, search?, index? }
+  signature: string; // selectionSignature(query)
+  excluded: unknown[]; // rowValueFn values unticked after "select all"
+  total: number; // rows the query matched (refreshed on same-scope refetches)
+}
+
+/** Since 0.1.147 — `state.selection`. */
+type TableSelection =
+  | { mode: "ids"; ids: unknown[]; count: number }
+  | { mode: "query"; query: SelectionQuery; excluded: unknown[]; total: number; count: number };
+
+/** Since 0.1.147 — `@selection-reset`. */
+interface SelectionResetEvent {
+  reason: "scope";
 }
 
 interface NavKeyOptions {
@@ -1120,7 +1189,7 @@ type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
 
 ### Re-exports from `@atscript/ui-table`
 
-`ConfigTab`, `UrlQuerySync`, `AppConfData`, `AsPresetEntryRow`, `PresetAspect`, `PresetCapabilities`, `PresetData`, `PresetSnapshot`, `PresetSnapshotWire`, `SystemPreset`, `SystemPresetInput`, `UserConfData`, `PRESET_ASPECTS`, `STANDARD_PRESET_ID`, `SYSTEM_PRESET_PREFIX`, `isSystemPresetId`, `resolveSystemPresets`. See [@atscript/ui-table](/api/ui-table) for definitions.
+`ConfigTab`, `UrlQuerySync`, `SelectionQuery` (since 0.1.147), `AppConfData`, `AsPresetEntryRow`, `PresetAspect`, `PresetCapabilities`, `PresetData`, `PresetSnapshot`, `PresetSnapshotWire`, `SystemPreset`, `SystemPresetInput`, `UserConfData`, `PRESET_ASPECTS`, `STANDARD_PRESET_ID`, `SYSTEM_PRESET_PREFIX`, `isSystemPresetId`, `resolveSystemPresets`. See [@atscript/ui-table](/api/ui-table) for definitions.
 
 ### Re-exports from `@atscript/ui`
 
@@ -1133,9 +1202,17 @@ function getColumnWidth(column: ColumnDef, widths: ColumnWidthsMap): string;
 function getCellValue(row: Record<string, unknown>, path: string): unknown;
 function formatCellValue(value: unknown, column: ColumnDef, opts?: { locale?: CellLocale }): string;
 function extractIdentifier(
-  row: Record<string, unknown>,
+  source: unknown, // a row, or a scalar rowValueFn value
+  fields: readonly string[],
+): Record<string, unknown> | undefined;
+function identifierFieldsOf(def: TableDef | null | undefined): readonly string[]; // since 0.1.147
+function actionIdentifiers(
+  action: Pick<TVueTableActionInfo, "idMap">,
+  ids: Record<string, unknown>[],
   preferredId: readonly string[],
-): Record<string, unknown>;
+): Record<string, unknown>[]; // since 0.1.147
+function queryTargetGate(count: number): (a: TVueTableActionInfo) => boolean | string; // since 0.1.147
+const QUERY_TARGET_UNSUPPORTED_REASON: string; // since 0.1.147
 function resolveRowActions(
   state: ReactiveTableState,
   row: Record<string, unknown> | undefined,
@@ -1150,7 +1227,9 @@ interface ResolvedRowActions {
 }
 ```
 
-`extractIdentifier` builds the identifier object sent with action invocations and URL `$1` substitution. Per `@atscript/db-client` invariant #11 the server rejects bare scalars — even single-field PK tables send `{ id: '...' }`.
+`extractIdentifier` builds the identifier object sent with action invocations and URL `$1` substitution. Per `@atscript/db-client` invariant #11 the server rejects bare scalars — even single-field PK tables send `{ id: '...' }`. Since 0.1.147 the built-in surfaces extract `identifierFieldsOf(tableDef)` — `preferredId` plus the columns a delegated action's `idMap` reads (dot paths keep their dotted key) — and `actionIdentifiers` narrows them per action: a delegated action keeps exactly its `idMap` paths (the client maps them to the owner's id), any other action exactly `preferredId`. See [Row actions on a view](/tables/actions#row-actions-on-a-view).
+
+`queryTargetGate(count)` is the toolbar's gate in a query selection: an action is enabled iff its `queryTarget.maxRows` covers `count`, else kept disabled with "At most N rows" or `QUERY_TARGET_UNSUPPORTED_REASON`. Use it in a custom toolbar. See [Select All Matching Rows](/tables/select-all-matching#running-actions-on-it).
 
 `resolveRowActions` is the per-row pipeline every built-in surface uses (the row-actions cell, the `level="row"` toolbar, the main-action fallback), exported for a custom row-actions cell: the row's `$actions` / `$disabledReasons` gate and the `:row-actions` policy in one pass, plus the policy's `extra` actions. Hidden and excluded actions drop out; ones disabled with a reason come back as copies carrying `disabledReason` (render them disabled; `state.actions.invoke` does not check it). Untouched arrays keep their source reference. Since 0.1.144. See [Disabled with a reason](/tables/actions#disabled-with-a-reason).
 

@@ -208,6 +208,7 @@ export function mockTableDef(columns: ColumnDef[], fetchableExtra: string[] = []
     fetchableFields: new Set([...columns.map((c) => c.path), ...fetchableExtra]),
     primaryKeys: ["id"],
     preferredId: ["id"],
+    identifierFields: ["id"],
     crud: { query: [], pages: [], one: [] },
     canRemove: false,
     actions: { table: [], row: [], rows: [], default: {} },

@@ -47,6 +47,7 @@ async function load() {
     const meta = await client.value.meta();
     formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
       versionColumn: meta.versionColumn,
+      metaFields: meta.fields,
     });
     primaryKeys.value = meta.primaryKeys ?? [];
     // Route param `:id` carries the preferredId value (e.g. `username`,

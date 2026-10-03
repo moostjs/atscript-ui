@@ -178,6 +178,7 @@
     "@atscript/vue-form": "workspace:^"
   },
   "devDependencies": {
+    "@atscript/core": "catalog:",
     "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
     "@tanstack/vue-virtual": "catalog:",

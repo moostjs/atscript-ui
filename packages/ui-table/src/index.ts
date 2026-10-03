@@ -165,8 +165,14 @@ export {
 } from "./query/url-query";
 
 // ── Selection ──────────────────────────────────────────────
-export type { SelectionMode } from "./selection/selection-fns";
-export { togglePk, trimSelection, rowsToPks } from "./selection/selection-fns";
+export type { SelectionMode, SelectionQuery } from "./selection/selection-fns";
+export {
+  togglePk,
+  trimSelection,
+  rowsToPks,
+  selectionQueryOf,
+  selectionSignature,
+} from "./selection/selection-fns";
 
 // ── State types ────────────────────────────────────────────
 export type {

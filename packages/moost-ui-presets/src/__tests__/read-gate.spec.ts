@@ -40,6 +40,26 @@ describe("read-gate", () => {
     expect(out).toMatchObject({ $and: expect.any(Array) });
   });
 
+  it("rejects a relational predicate as scope (400, not a walker crash)", async () => {
+    const { ctrl } = await setup();
+    await expectHttpRejection(
+      () =>
+        ctrl.callTransformFilter({
+          app: "demo",
+          owner: { $some: { tableKey: "products" } },
+        } as never),
+      400,
+      "missing_scope",
+    );
+    // Next to a real scope it pins nothing extra, and does not throw.
+    const out = await ctrl.callTransformFilter({
+      app: "demo",
+      tableKey: "products",
+      owner: { $none: {} },
+    } as never);
+    expect(out).toMatchObject({ $and: expect.any(Array) });
+  });
+
   it("rejects appConf reads that omit 'app'", async () => {
     const { ctrl } = await setup();
     await expectHttpRejection(

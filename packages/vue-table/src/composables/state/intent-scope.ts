@@ -1,7 +1,10 @@
 import { formatIdentifier, type TDbActionInfo } from "@atscript/db-client";
-import { navigateHrefFor } from "@atscript/ui";
+import { getCellValue } from "../../utils/get-cell-value";
+import { navigateHrefFor, setByPath, type TableDef } from "@atscript/ui";
+import type { SelectionQuery } from "@atscript/ui-table";
 import {
   REMOVE_PROCESSOR,
+  type ActionQueryTarget,
   type ConfirmScope,
   type ReactiveTableState,
   type TVueTableActionInfo,
@@ -216,6 +219,27 @@ export function rowsActionGate(rows: readonly unknown[]): ActionGate | null {
   });
 }
 
+/** Disabled reason of a non-query-target action in a query selection. Since 0.1.147. */
+export const QUERY_TARGET_UNSUPPORTED_REASON =
+  "Not available for all matching rows — select rows individually";
+
+/**
+ * The gate a query selection ("every row matching the query") puts on the
+ * `'rows'` actions: enabled iff the action takes a query target
+ * (`queryTarget`) of at least `count` rows; otherwise kept DISABLED with the
+ * reason ({@link QUERY_TARGET_UNSUPPORTED_REASON}, or "At most {max} rows").
+ * The loaded rows' `$actions` are deliberately not consulted — a sample of
+ * the matching rows cannot speak for the rest; the server gates every row
+ * when the action runs. Since 0.1.147.
+ */
+export function queryTargetGate(count: number): ActionGate {
+  return (a) => {
+    if (!a.queryTarget) return QUERY_TARGET_UNSUPPORTED_REASON;
+    const max = a.queryTarget.maxRows;
+    return count > max ? `At most ${rowsLabel(max)}` : true;
+  };
+}
+
 /**
  * Apply the BULK union gate to a `{default, others, rows}` triple. See
  * {@link rowsActionGate} for the union semantics; identity-stable (returns
@@ -250,35 +274,58 @@ export function intentToScope(intent: TDbActionInfo["intent"]): ConfirmScope | u
   }
 }
 
+/** The value at a dot `path` of `row` (a flat dotted key wins). */
+function valueAt(row: Record<string, unknown>, path: string): unknown {
+  return Object.hasOwn(row, path) ? row[path] : getCellValue(row, path);
+}
+
+/** Write `value` at a dot `path` of `out`, creating the nested objects. */
+function setAt(out: Record<string, unknown>, path: string, value: unknown): void {
+  setByPath({ value: out }, path, value);
+}
+
+/**
+ * The fields an action identifier is built from — `tableDef.identifierFields`
+ * (`preferredId` plus every delegated action's `idMap` path), falling back to
+ * `preferredId` for a hand-built `TableDef` without it. Since 0.1.147.
+ */
+export function identifierFieldsOf(def: TableDef | null | undefined): readonly string[] {
+  return def?.identifierFields ?? def?.preferredId ?? [];
+}
+
 /**
  * Build the identifier object to forward to `client.action` / `client.remove`.
  *
  * Per `@atscript/db-client` invariant #11, identifier bodies are object-only
  * — never bare scalars, even for single-field PK tables. This helper accepts:
- * - a row-shaped object (default `rowValueFn`) → picks `preferredId` fields;
- * - a scalar value when `preferredId` has exactly one field (consumers that
+ * - a row-shaped object (default `rowValueFn`) → picks the `fields` (a dot
+ *   path keeps the row's nesting: `ref.key` → `{ ref: { key } }`);
+ * - a scalar value when `fields` has exactly one entry (consumers that
  *   override `rowValueFn` to return the PK scalar) → wraps it.
  *
- * Returns `undefined` when no `preferredId` is declared, the source is
- * `null`/`undefined`, or a scalar can't be paired with a single-field
- * identifier.
+ * `fields` is usually `identifierFields` (see {@link identifierFieldsOf}), so
+ * the identifier carries what a delegated action maps from; each action then
+ * takes the part it needs ({@link actionIdentifiers}).
+ *
+ * Returns `undefined` when `fields` is empty, the source is
+ * `null`/`undefined`, or a scalar can't be paired with a single field.
  */
 export function extractIdentifier(
   source: unknown,
-  preferredId: readonly string[],
+  fields: readonly string[],
 ): Record<string, unknown> | undefined {
   if (source === undefined || source === null) return undefined;
-  if (preferredId.length === 0) return undefined;
+  if (fields.length === 0) return undefined;
 
   if (typeof source === "object" && !Array.isArray(source)) {
     const row = source as Record<string, unknown>;
     const out: Record<string, unknown> = {};
-    for (const k of preferredId) out[k] = row[k];
+    for (const k of fields) setAt(out, k, valueAt(row, k));
     return out;
   }
 
-  if (preferredId.length === 1) {
-    return { [preferredId[0]!]: source };
+  if (fields.length === 1) {
+    return { [fields[0]!]: source };
   }
 
   return undefined;
@@ -289,21 +336,87 @@ export function extractIdentifier(
  * through `extractIdentifier`. Scalar sources resolve to their loaded row via
  * `state.rowOf` so consumers that override `rowValueFn` to return a scalar
  * can still reconstruct multi-field identifiers; a scalar whose row is not
- * loaded falls back to itself (a single-field `preferredId` wraps it).
+ * loaded falls back to itself (a single field wraps it — or, when `fields`
+ * has several, the table's single-field `preferredId` does).
  */
 export function collectIdentifiers(
   state: ReactiveTableState,
   sources: readonly unknown[],
-  preferredId: readonly string[],
+  fields: readonly string[],
 ): Record<string, unknown>[] {
-  if (preferredId.length === 0 || sources.length === 0) return [];
+  if (fields.length === 0 || sources.length === 0) return [];
   const out: Record<string, unknown>[] = [];
   for (const s of sources) {
     if (s === undefined || s === null) continue;
-    const id = extractIdentifier(state.rowOf(s) ?? s, preferredId);
+    const row = state.rowOf(s);
+    const id =
+      extractIdentifier(row ?? s, fields) ??
+      (row ? undefined : extractIdentifier(s, preferredIdOf(state)));
     if (id) out.push(id);
   }
   return out;
+}
+
+/** The fields `action` is addressed by: its `idMap` paths, else `preferredId`. */
+function actionFields(
+  action: Pick<TVueTableActionInfo, "idMap">,
+  preferredId: readonly string[],
+): readonly string[] {
+  return action.idMap ? Object.values(action.idMap) : preferredId;
+}
+
+/**
+ * The identifiers `action` is sent, from the table's identifiers (built
+ * from `identifierFields`): a delegated action (`idMap`) keeps exactly its
+ * map's paths — the client maps them to the owner's identification — any
+ * other action exactly the `preferredId` fields, the identification the
+ * server validates. No fields → no identifiers. Identifiers already in that
+ * shape come back as the same array. Since 0.1.147.
+ */
+export function actionIdentifiers(
+  action: Pick<TVueTableActionInfo, "idMap">,
+  ids: Record<string, unknown>[],
+  preferredId: readonly string[],
+): Record<string, unknown>[] {
+  const fields = actionFields(action, preferredId);
+  if (fields.length === 0) return [];
+  const flat = !fields.some((f) => f.includes("."));
+  const exact = (id: Record<string, unknown>) => {
+    const keys = Object.keys(id);
+    return keys.length === fields.length && fields.every((f) => f in id);
+  };
+  if (flat && ids.every(exact)) return ids;
+  return project(ids, fields, setAt);
+}
+
+/** `ids` cut down to `fields`, each written with `write`. */
+function project(
+  ids: Record<string, unknown>[],
+  fields: readonly string[],
+  write: (out: Record<string, unknown>, field: string, value: unknown) => void,
+): Record<string, unknown>[] {
+  return ids.map((id) => {
+    const out: Record<string, unknown> = {};
+    for (const f of fields) write(out, f, valueAt(id, f));
+    return out;
+  });
+}
+
+/**
+ * A query target's `exclude` for `action`: like {@link actionIdentifiers},
+ * but keyed by the flat (dotted) field names — the shape the server matches
+ * exclusions by.
+ */
+function excludeIdentifiers(
+  action: Pick<TVueTableActionInfo, "idMap">,
+  ids: Record<string, unknown>[],
+  preferredId: readonly string[],
+): Record<string, unknown>[] {
+  const fields = actionFields(action, preferredId);
+  if (fields.length === 0) return [];
+  return project(ids, fields, (out, f, v) => {
+    out[f] = v;
+  });
 }
 
 /**
@@ -396,11 +509,7 @@ export function actionHref(
   id: Record<string, unknown> | undefined,
 ): string | undefined {
   if (action.processor !== "navigate" || action.inputForm) return undefined;
-  const href = navigateHrefFor(
-    action as TDbActionInfo,
-    id,
-    state.tableDef.value?.preferredId ?? [],
-  );
+  const href = navigateHrefFor(action as TDbActionInfo, id, preferredIdOf(state));
   return href === undefined ? undefined : state.resolveHref(href);
 }
 
@@ -479,9 +588,20 @@ export function createNavigateGestures(
   };
 }
 
+/** The table's `preferredId` (empty before its definition loads). */
+function preferredIdOf(state: ReactiveTableState): readonly string[] {
+  return state.tableDef.value?.preferredId ?? [];
+}
+
+/**
+ * The query a query selection targets, with the excluded rows' identifiers
+ * (built from `identifierFields`) — see `PromptCtx.target`. Since 0.1.147.
+ */
+export type PromptTarget = SelectionQuery & { exclude: Record<string, unknown>[] };
+
 /** Context for prompt-text substitution. */
 export interface PromptCtx {
-  /** Identifier objects for the targeted rows (in invocation order). `length` doubles as the row count for `$N` and singular/plural selection. */
+  /** Identifier objects for the targeted rows (in invocation order). `length` doubles as the row count for `$N` and singular/plural selection (unless `count` is set). */
   identifiers: Record<string, unknown>[];
   /** Preferred-id field order, used to render `$1`. */
   preferredId: readonly string[];
@@ -490,6 +610,19 @@ export interface PromptCtx {
    * client-only row action's `onInvoke(row, pk)` receives it. Since 0.1.134.
    */
   row?: Record<string, unknown>;
+  /**
+   * The selection is a query selection: run the action on every row matching
+   * this query instead of on `identifiers` (empty then). `triggerAction`
+   * counts the rows first and confirms with that count. Since 0.1.147.
+   */
+  target?: PromptTarget;
+  /** Row count for `$N` and singular/plural when it is not `identifiers.length` (a query target). Since 0.1.147. */
+  count?: number;
+}
+
+/** Row count a prompt speaks about — `count` when set, else the identifiers. */
+function countOf(ctx: PromptCtx): number {
+  return ctx.count ?? ctx.identifiers.length;
 }
 
 /**
@@ -500,7 +633,10 @@ export interface PromptCtx {
  * picks `singular` when there is at most one identifier, `plural` otherwise.
  * Substitutions:
  * - `$1` → `formatIdentifier(ctx.identifiers[0], ctx.preferredId)`
- * - `$N` → `String(ctx.identifiers.length)`
+ * - `$N` → the row count (`ctx.count`, else `ctx.identifiers.length`)
+ *
+ * A query-targeted run (`ctx.target`) is always confirmed: an action without
+ * a `promptText` asks "Run “{label}” on {N} rows?".
  */
 export async function confirmAction(
   state: ReactiveTableState,
@@ -508,8 +644,11 @@ export async function confirmAction(
   ctx: PromptCtx,
 ): Promise<boolean> {
   const raw = action.promptText;
-  if (!raw) return true;
-  const count = ctx.identifiers.length;
+  const count = countOf(ctx);
+  if (!raw) {
+    if (!ctx.target) return true;
+    return state.prompt(targetPrompt(action, count), { scope: intentToScope(action.intent) });
+  }
   const template = Array.isArray(raw) ? (count <= 1 ? raw[0]! : raw[1]!) : raw;
   const message = substitute(template, ctx);
   return state.prompt(message, { scope: intentToScope(action.intent) });
@@ -519,7 +658,17 @@ export async function confirmAction(
 export function substitute(template: string, ctx: PromptCtx): string {
   return template
     .replace(/\$1/g, () => formatIdentifier(ctx.identifiers[0], ctx.preferredId))
-    .replace(/\$N/g, () => String(ctx.identifiers.length));
+    .replace(/\$N/g, () => String(countOf(ctx)));
+}
+
+/** `N row(s)`. */
+export function rowsLabel(count: number): string {
+  return `${count} ${count === 1 ? "row" : "rows"}`;
+}
+
+/** Default confirmation of a query-targeted run without a `promptText`. */
+function targetPrompt(action: TVueTableActionInfo, count: number): string {
+  return `Run “${action.label || action.name}” on ${rowsLabel(count)}?`;
 }
 
 /**
@@ -537,7 +686,11 @@ export async function triggerAction(
   event?: KeyboardEvent | MouseEvent,
 ): Promise<void> {
   if (isActionDisabled(action)) return;
-  const pk = pkForLevel(action.level, ctx.identifiers);
+  if (ctx.target) {
+    await triggerTargetAction(state, action, ctx, ctx.target, event);
+    return;
+  }
+  const pk = pkForLevel(action.level, actionIdentifiers(action, ctx.identifiers, ctx.preferredId));
   if (action.inputForm) {
     const input = await state.requestActionInput(action, ctx);
     if (input === null) return;
@@ -547,6 +700,50 @@ export async function triggerAction(
   const ok = await confirmAction(state, action, ctx);
   if (!ok) return;
   void state.actions.invoke(action, pk, { event, row: ctx.row });
+}
+
+/**
+ * The query-target path of {@link triggerAction}: count the matching rows
+ * (`state.actions.countTarget` — a failure settles as the action's error
+ * result), confirm with that count (the input form, which shows it, or the
+ * prompt), then run with `expectCount` so a set that changed in between is
+ * re-confirmed once with its new count instead of silently run.
+ */
+async function triggerTargetAction(
+  state: ReactiveTableState,
+  action: TVueTableActionInfo,
+  ctx: PromptCtx,
+  selection: PromptTarget,
+  event?: KeyboardEvent | MouseEvent,
+): Promise<void> {
+  if (action.level !== "rows" || !action.queryTarget) return;
+  const exclude = excludeIdentifiers(action, selection.exclude, ctx.preferredId);
+  const target: ActionQueryTarget = {
+    filter: selection.filter as ActionQueryTarget["filter"],
+    search: selection.search,
+    index: selection.index,
+    exclude: exclude.length > 0 ? exclude : undefined,
+  };
+  const matched = await state.actions.countTarget(action, target, event);
+  if (matched === undefined) return;
+  const counted: PromptCtx = { ...ctx, identifiers: [], count: matched };
+  let input: unknown;
+  if (action.inputForm) {
+    input = await state.requestActionInput(action, counted);
+    if (input === null) return;
+  } else if (!(await confirmAction(state, action, counted))) {
+    return;
+  }
+  void state.actions.invoke(action, undefined, {
+    event,
+    input,
+    target,
+    expectCount: matched,
+    confirmTargetChange: (now) =>
+      state.prompt(`The rows matching the query changed. ${targetPrompt(action, now)}`, {
+        scope: intentToScope(action.intent),
+      }),
+  });
 }
 
 /**

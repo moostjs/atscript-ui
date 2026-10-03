@@ -70,10 +70,11 @@ declare global {
     "db.rel.onDelete": string
     "db.rel.onUpdate": string
     "db.rel.via": import("@atscript/typescript/utils").AtscriptRef
+    "db.rel.filterable": boolean
     "db.rel.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view": string | true
     "db.view.for": import("@atscript/typescript/utils").AtscriptRef
-    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode, kind?: string })[]
+    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode, kind?: string, order?: import("@atscript/typescript/utils").AtscriptOrderItem[] })[]
     "db.view.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view.materialized": boolean
     "db.view.renamed": string
@@ -85,6 +86,7 @@ declare global {
     "db.agg.countDistinct": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
     "db.agg.min": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
     "db.agg.max": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.compute": import("@atscript/typescript/utils").AtscriptExprNode
     "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
     "db.search.vector.threshold": number
     "db.search.filter": (string)[]

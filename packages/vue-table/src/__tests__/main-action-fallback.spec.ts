@@ -148,7 +148,7 @@ describe("main-action fallback", () => {
     // `primaryKeys` only when undefined on the wire, not when explicitly
     // emptied).
     const def = state.tableDef.value!;
-    state.tableDef.value = { ...def, primaryKeys: [], preferredId: [] };
+    state.tableDef.value = { ...def, primaryKeys: [], preferredId: [], identifierFields: [] };
     state.setActive(0);
     state.requestMainAction(new KeyboardEvent("keydown"));
     await Promise.resolve();

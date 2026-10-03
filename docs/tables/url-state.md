@@ -237,7 +237,15 @@ is then _broader_ than the link):
 - a piece that correlates a server-backed column with a client-owned
   (`local`) one — unreachable server-side;
 - everything, when `:url-query-sync="{ residual: false }"` — the 0.1.139
-  behaviour: nothing is carried, nothing extra is written.
+  behaviour: nothing is carried, nothing extra is written;
+- a segment that does not parse (`?status=open&priority>>2`) — reason
+  `"syntax"`, the segment in `issue.raw`; the rest of the link still
+  applies. Segments split at top-level `&`, so an unbalanced group
+  (`!(a=1&b=2`) is left out up to the end of the link, never cut into
+  pieces that would select fewer rows. Since 0.1.147 — before, one bad
+  segment silently dropped the whole link — and older `@uniqu/url`
+  releases rejected hand-written values such as `status=in-progress`,
+  which now parse.
 
 A piece that names a field the caller cannot read (hidden from their role,
 or gone from the schema) is dropped too, but reported as

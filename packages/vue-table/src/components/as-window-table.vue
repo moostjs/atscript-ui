@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
+import { useResizeObserver } from "@vueuse/core";
 import { DEFAULT_ROW_HEIGHT_PX, clampTopIndex, type SelectionMode } from "@atscript/ui-table";
 import type {
   ColumnMenuConfig,
@@ -17,6 +18,7 @@ import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useSelectModeReset } from "../composables/use-table-selection";
 import { useRowActionsColumn } from "../composables/use-row-actions-column";
 import AsWindowTableBase from "./internal/as-window-table-base.vue";
+import AsSelectionBanner from "./internal/as-selection-banner.vue";
 
 type Row = Record<string, unknown>;
 
@@ -84,7 +86,9 @@ const props = withDefaults(
      *
      * The column is locked: no header dropdown, no resize, no drag-reorder,
      * NOT in the `columnNames` v-model. Hidden entirely when
-     * `state.actions.row` is empty. Since 0.1.138.
+     * the cell has no action to show (no row / rows-level action, no
+     * `:row-actions` `extra` one — since 0.1.147 rows-level ones count).
+     * Since 0.1.138.
      */
     rowActionsColumn?: RowActionsColumnPlacement | false;
     /**
@@ -185,6 +189,35 @@ useRegisterMainActionListener(
 
 const containerRef = ref<HTMLElement | null>(null);
 
+// The selection banner sits inside the clamped container, above the rows:
+// its height is part of the chrome the row constraints must leave room for.
+const bannerRef = ref<{ $el?: Element } | null>(null);
+const bannerHeight = ref(0);
+useResizeObserver(
+  () => {
+    // A comment node while the banner renders nothing (not multi-select).
+    const el = bannerRef.value?.$el;
+    return el instanceof HTMLElement ? el : undefined;
+  },
+  (entries) => {
+    const el = entries[0]?.target as HTMLElement | undefined;
+    bannerHeight.value = el?.offsetHeight ?? 0;
+  },
+);
+let lastMetrics: { rowHeightPx: number; chromePx: number } | null = null;
+watch(bannerHeight, () => applyContainerSize());
+
+function applyContainerSize() {
+  const container = containerRef.value;
+  if (!container || !lastMetrics) return;
+  const minR = props.rows ?? props.minRows;
+  const maxR = props.rows ?? props.maxRows;
+  const { rowHeightPx, chromePx } = lastMetrics;
+  const px = (n: number) => `${n * rowHeightPx + chromePx + bannerHeight.value}px`;
+  container.style.minHeight = minR !== undefined ? px(minR) : "";
+  container.style.maxHeight = maxR !== undefined ? px(maxR) : "";
+}
+
 // Apply user-facing rows / minRows / maxRows constraints to the metrics
 // reported by the base, then write through to state + container styles.
 function onMetrics({
@@ -205,11 +238,8 @@ function onMetrics({
   const clamped = clampTopIndex(state.topIndex.value, state.totalCount.value, target);
   if (clamped !== state.topIndex.value) state.topIndex.value = clamped;
 
-  const container = containerRef.value;
-  if (!container) return;
-  const px = (n: number) => `${n * rowHeightPx + chromePx}px`;
-  container.style.minHeight = minR !== undefined ? px(minR) : "";
-  container.style.maxHeight = maxR !== undefined ? px(maxR) : "";
+  lastMetrics = { rowHeightPx, chromePx };
+  applyContainerSize();
 }
 
 // Re-emit any fetch error (initial / query / queryNext / loadRange) so
@@ -226,6 +256,11 @@ watch(
 
 <template>
   <div ref="containerRef" class="as-table-outer-wrap">
+    <AsSelectionBanner ref="bannerRef" scope="loaded">
+      <template v-if="$slots['selection-banner']" #default="bannerProps">
+        <slot name="selection-banner" v-bind="bannerProps" />
+      </template>
+    </AsSelectionBanner>
     <AsWindowTableBase
       :columns="effectiveColumns"
       :row-height="rowHeight"

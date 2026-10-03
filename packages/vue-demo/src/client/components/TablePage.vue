@@ -32,10 +32,12 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 // internally, and the dialogs stay lazy (bundled + mounted on first open).
 const types = createDemoTableTypes();
 const components = createDemoTableComponents();
-const rowValueFn = (row: Record<string, unknown>) => row.id;
 
 const props = defineProps<{ path: string; label: string }>();
 const tableMeta = computed(() => getDemoTable(props.path));
+// `<AsTableRoot :key="path">` remounts per table, so reading `tableMeta` at
+// call time picks the current table's key field (`taskId` on the board view).
+const rowValueFn = (row: Record<string, unknown>) => row[tableMeta.value?.rowKey ?? "id"];
 const kind = computed<TableKind>(() => tableMeta.value?.kind ?? "virtual");
 const mode = computed<TableMode>(() => tableMeta.value?.mode ?? "pagination");
 const limit = computed(() => tableMeta.value?.limit);
@@ -197,8 +199,29 @@ function onAction(
     // error) so render as a warning-style red toast.
     const data = result.data as { ok?: boolean; message?: string } | undefined;
     const ok = data?.ok !== false;
-    pushToast(ok, data?.message ?? result.message ?? `${action.label || action.name} ok`);
+    const label = action.label || action.name;
+    // Query-targeted run ("all matching"): `ids` is `[]`, the outcome is in
+    // `result.target`.
+    if (result.target) {
+      pushToast(ok, `${label}: ${describeTargetOutcome(result.target, result.message)}`);
+      return;
+    }
+    pushToast(ok, data?.message ?? result.message ?? `${label} ok`);
   }
+}
+
+type QueryTargetOutcome = NonNullable<Extract<ActionResult, { kind: "backend" }>["target"]>;
+
+/**
+ * "12 of 15 rows processed, 3 skipped" — the handler's `message` replaces the
+ * lead when it returned one; skipped / failed counts are always appended.
+ */
+function describeTargetOutcome({ matched, summary }: QueryTargetOutcome, message?: string): string {
+  if (!summary) return message ?? `${matched} matching row(s)`;
+  const parts = [message ?? `${summary.processed} of ${summary.matched} rows processed`];
+  if (summary.skipped.length > 0) parts.push(`${summary.skipped.length} skipped`);
+  if (summary.failed.length > 0) parts.push(`${summary.failed.length} failed`);
+  return parts.join(", ");
 }
 
 // Note: row-click / row-dblclick are NOT hand-wired here anymore. The
@@ -241,10 +264,12 @@ watch(
       :types="types"
       :components="components"
       :limit="limit"
+      :block-size="tableMeta?.blockSize"
       :row-value-fn="rowValueFn"
       :selection-persistence="selection?.persistence"
       :refresh-on-action="true"
       :force-filters="forceFilters"
+      :select-all-matching="tableMeta?.selectAllMatching === true"
       :preset="{ url: '/api/db/_presets', tableKey: path, systemPresets }"
       class="flex-1 flex flex-col min-h-0 min-w-0"
       @action="onAction"

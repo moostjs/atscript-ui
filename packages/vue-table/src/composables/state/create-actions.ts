@@ -1,8 +1,9 @@
 import { computed, shallowRef, watch, type ComputedRef, type ShallowRef } from "vue";
-import type { Client } from "@atscript/db-client";
+import type { Client, TDbActionTargetSummary } from "@atscript/db-client";
 import type { TableDef } from "@atscript/ui";
 import {
   REMOVE_PROCESSOR,
+  type ActionQueryTarget,
   type ActionResult,
   type InvokeOpts,
   type RowDeleteOpt,
@@ -48,6 +49,43 @@ interface CreateActionsOpts {
     result: ActionResult,
     event?: KeyboardEvent | MouseEvent,
   ) => void;
+  /** Called after a query-targeted run succeeded — the table clears its selection. */
+  onTargetSettled?: () => void;
+}
+
+/** `true` for a {@link TDbActionTargetSummary}-shaped handler return. */
+function isTargetSummary(data: unknown): data is TDbActionTargetSummary {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    typeof d.matched === "number" &&
+    typeof d.processed === "number" &&
+    Array.isArray(d.skipped) &&
+    Array.isArray(d.failed)
+  );
+}
+
+/** The new match count of a 409 `TARGET_CHANGED` refusal, else `undefined`. */
+function targetChangedCount(err: unknown): number | undefined {
+  // Duck-typed, not `instanceof ActionTargetError`: a client from another
+  // `@atscript/db-client` copy (or a custom `clientFactory`) throws its own class.
+  const e = err as { name?: unknown; code?: unknown; matched?: unknown } | null;
+  return e?.name === "ActionTargetError" &&
+    e.code === "TARGET_CHANGED" &&
+    typeof e.matched === "number"
+    ? e.matched
+    : undefined;
+}
+
+/** `data.message` when the handler returned one. */
+function messageOf(data: unknown): string | undefined {
+  return typeof data === "object" && data !== null && "message" in data
+    ? ((data as { message?: unknown }).message as string | undefined)
+    : undefined;
+}
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err));
 }
 
 interface GroupsValue {
@@ -138,21 +176,17 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
         }
         case "backend":
         default: {
+          if (callOpts?.target) {
+            result = await invokeOnTarget(action, callOpts.target, callOpts);
+            break;
+          }
           const data = await opts.client.action(action.name, pk, callOpts?.input);
-          const message =
-            typeof data === "object" && data !== null && "message" in data
-              ? ((data as { message?: unknown }).message as string | undefined)
-              : undefined;
-          result = { ok: true, kind: "backend", data, message };
+          result = { ok: true, kind: "backend", data, message: messageOf(data) };
           break;
         }
       }
     } catch (err) {
-      result = {
-        ok: false,
-        kind: "error",
-        error: err instanceof Error ? err : new Error(String(err)),
-      };
+      result = { ok: false, kind: "error", error: toError(err) };
     }
 
     setLastResult(name, result);
@@ -169,11 +203,62 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
       opts.scheduleQuery("query");
     }
 
+    if (result.ok && result.kind === "backend" && result.target) opts.onTargetSettled?.();
+
     if (opts.onResolved) {
       opts.onResolved(action, idsForAction(action.level, pk), result, callOpts?.event);
     }
 
     return result;
+  }
+
+  /**
+   * `client.actionOnQuery` with the confirmed `expectCount`; a 409
+   * `TARGET_CHANGED` asks `confirmTargetChange` once with the new count and,
+   * on yes, runs again expecting it. Throws what the client throws.
+   */
+  async function invokeOnTarget(
+    action: TVueTableActionInfo,
+    target: ActionQueryTarget,
+    callOpts: InvokeOpts,
+  ): Promise<ActionResult> {
+    let expectCount = callOpts.expectCount;
+    const run = () =>
+      opts.client.actionOnQuery<unknown>(action.name, { ...target, expectCount }, callOpts.input);
+    let data: unknown;
+    try {
+      data = await run();
+    } catch (err) {
+      const now = targetChangedCount(err);
+      if (now === undefined || !(await callOpts.confirmTargetChange?.(now))) throw err;
+      expectCount = now;
+      data = await run();
+    }
+    const summary = isTargetSummary(data) ? data : undefined;
+    return {
+      ok: true,
+      kind: "backend",
+      data,
+      message: messageOf(data),
+      target: { matched: summary?.matched ?? expectCount ?? 0, summary },
+    };
+  }
+
+  async function countTarget(
+    action: TVueTableActionInfo,
+    target: ActionQueryTarget,
+    event?: KeyboardEvent | MouseEvent,
+  ): Promise<number | undefined> {
+    // Not an invocation: `invoking` (and its "running / finished" live
+    // announcements) starts when the confirmed run does.
+    try {
+      return (await opts.client.countActionTarget(action.name, target)).matched;
+    } catch (err) {
+      const result: ActionResult = { ok: false, kind: "error", error: toError(err) };
+      setLastResult(action.name, result);
+      opts.onResolved?.(action, [], result, event);
+      return undefined;
+    }
   }
 
   const actions: TableActionsState = {
@@ -196,6 +281,7 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
       return groups.value.cellRow;
     },
     invoke,
+    countTarget,
     invoking,
     lastResult,
   };

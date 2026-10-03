@@ -98,6 +98,9 @@ export function createTableDef(
 
   const actions = groupActions(meta.actions ?? []);
   const crud = meta.crud ?? {};
+  // Older servers / stub fixtures may omit `preferredId` — fall back to PK
+  // so identifier extraction and `$1` substitution stay defined.
+  const preferredId = meta.preferredId ?? meta.primaryKeys;
 
   return {
     type,
@@ -105,9 +108,8 @@ export function createTableDef(
     flatMap,
     fetchableFields: new Set(Object.keys(meta.fields).filter((p) => isReadable(meta.fields[p]))),
     primaryKeys: meta.primaryKeys,
-    // Older servers / stub fixtures may omit `preferredId` — fall back to PK
-    // so identifier extraction and `$1` substitution stay defined.
-    preferredId: meta.preferredId ?? meta.primaryKeys,
+    preferredId,
+    identifierFields: identifierFieldsOf(preferredId, meta.actions ?? []),
     versionColumn: meta.versionColumn,
     crud,
     canRemove: "remove" in crud,
@@ -117,6 +119,22 @@ export function createTableDef(
     searchIndexes: meta.searchIndexes,
     relations: meta.relations,
   };
+}
+
+/**
+ * `preferredId` ∪ every delegated action's `idMap` paths, in that order —
+ * the same array when no action carries an `idMap`.
+ */
+function identifierFieldsOf(preferredId: string[], actions: TDbActionInfo[]): string[] {
+  let out: string[] | undefined;
+  for (const a of actions) {
+    if (!a.idMap) continue;
+    for (const path of Object.values(a.idMap)) {
+      if (preferredId.includes(path) || out?.includes(path)) continue;
+      (out ??= [...preferredId]).push(path);
+    }
+  }
+  return out ?? preferredId;
 }
 
 /** A field the caller may read: listed in `meta.fields` and not write-only. */

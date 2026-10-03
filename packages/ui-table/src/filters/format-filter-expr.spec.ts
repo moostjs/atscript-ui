@@ -35,6 +35,20 @@ describe("formatFilterExpr", () => {
     expect(formatFilterExpr({ a: { $regex: "/^ab/i" } })).toBe("a starts with ab");
   });
 
+  it("words a relational predicate, its operand in the related table's paths", () => {
+    const labels: Record<string, string> = { ticket: "Ticket", status: "Status" };
+    expect(
+      formatFilterExpr(
+        { title: "x", ticket: { $some: { status: "open", teamId: { $in: ["t1", "t2"] } } } },
+        (p) => labels[p],
+      ),
+    ).toBe("title equals x and Ticket has some (status equals open and teamId is one of t1, t2)");
+    expect(formatFilterExpr({ issues: { $none: {} } })).toBe("issues has none (any)");
+    expect(formatFilterExpr({ $not: { ticket: { $some: { status: "open" } } } })).toBe(
+      "not (ticket has some (status equals open))",
+    );
+  });
+
   it("falls back to the URL spelling for an operator it cannot word", () => {
     expect(formatFilterExpr({ a: { $weird: 1 } } as never)).toBe("a$weird1");
   });

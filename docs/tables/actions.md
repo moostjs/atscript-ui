@@ -118,6 +118,8 @@ mode is set on `<AsTable :select="...">`:
 table synthesises a `__remove` row action with a confirm prompt.
 
 `state.selectedCount` is a computed for badge counts.
+To act on every row matching the filter, not only the loaded ones, see
+[Select All Matching Rows](/tables/select-all-matching) (since 0.1.147).
 `state.isPkSelected(pk)` is the O(1) "is this row selected"
 predicate used internally by the checkbox cell.
 
@@ -564,8 +566,12 @@ disable when nothing is selected.
 
 `state.includeActions` is a writable ref controlled by the
 renderer. The `<AsTable :row-actions-column="...">` prop (or
-`<AsWindowTable>`'s equivalent) flips it on when the table has at
-least one row-level action. When on, `buildTableQuery` requests
+`<AsWindowTable>`'s equivalent) flips it on — and renders the column —
+when the row menu has anything to show: a row-level action, a
+rows-level one (they join every row's menu), or an app-owned
+[`extra` action](#selecting-and-extending-row-actions). Up to 0.1.146
+only row-level actions counted, so a table whose actions were all
+rows-level got no column. When on, `buildTableQuery` requests
 per-row `$actions: string[]` from the server — the names of the
 actions the server evaluated as **enabled** for that row.
 
@@ -654,6 +660,36 @@ toast-ready. The db-client error also exposes `.reason` / `.reasons`.
 be shipped"). **DON'T** put data the caller may not see into a reason —
 it reaches the browser verbatim. **DON'T** return a reason for actions
 that make no sense on a row; `true` keeps them hidden.
+
+## Row actions on a view
+
+A view controller that declares `@DbActionsFrom(() => SourceController)`
+(moost-db, see [view-delegated actions](https://db.atscript.dev/http/view-actions))
+lists its source table's row actions in its own `/meta` and `$actions`.
+The table needs nothing extra: the row menu, the toolbar, disabled
+reasons, input forms and confirmations work as for the table's own
+actions. Since 0.1.147.
+
+What happens under the hood, and what it means for your screen:
+
+- Each delegated entry carries `owner` (the source's base path) and,
+  usually, `idMap` — the source's identifier field → the view column that
+  holds it (`{ id: "taskId" }`). The table keeps those columns on every
+  identifier it builds (`tableDef.identifierFields` = `preferredId` + the
+  `idMap` paths) and the client maps them to the source's id before
+  POSTing to the source's route (`value`). Input forms load from the
+  source (`formUrl`).
+- The view usually has no `preferredId`; identifiers are then built from
+  the `idMap` columns alone. The server adds those columns to `$select`
+  even when they are not visible, so hiding the column is fine.
+- A selection key whose row is not loaded (a scalar `rowValueFn` after
+  paging away) cannot be mapped; the action settles as an error result
+  naming the missing column. Keep the default `rowValueFn` (the row
+  object) on view tables, or a key that is one of the `idMap` columns.
+- Delegated actions that accept a query target run on
+  [all matching rows](/tables/select-all-matching) like own ones — the
+  request goes to the view (`queryTarget.url`), which resolves the view
+  rows and runs the source action on them.
 
 ## Next steps
 

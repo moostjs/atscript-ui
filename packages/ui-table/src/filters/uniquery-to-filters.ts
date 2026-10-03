@@ -1,4 +1,4 @@
-import { isLogicalKey, type FilterExpr } from "@uniqu/core";
+import { hasRelationOp, isLogicalKey, type FilterExpr } from "@uniqu/core";
 import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
 import { unescapeRegex } from "./escape-regex";
 import { isExclusionType } from "./filters-to-uniquery";
@@ -16,10 +16,23 @@ import { buildUrl } from "@uniqu/url/builder";
  *   plain inversion of equality / emptiness.
  * - `"conjunction"` — a second positive group AND'd onto a field that already
  *   has one (`a>1 AND a<5`). A field's positive conditions are OR'd.
+ * - `"relation"` — a relational predicate (`ticket: { $some: {…} }` /
+ *   `{ $none: {…} }`): it filters by related rows, which no field condition
+ *   expresses. `fields` names the relation only, never its operand's fields
+ *   (those belong to the related table). Since 0.1.147.
+ * - `"syntax"` — a URL segment the `@uniqu/url` parser rejects; reported by
+ *   `urlQueryStringToState` with the segment in `raw` (the rest of the URL
+ *   still applies). Since 0.1.147.
  *
  * @since 0.1.139
  */
-export type UnsupportedFilterReason = "cross-field" | "operator" | "negation" | "conjunction";
+export type UnsupportedFilterReason =
+  | "cross-field"
+  | "operator"
+  | "negation"
+  | "conjunction"
+  | "relation"
+  | "syntax";
 
 /**
  * One AND-ed piece of a Uniquery filter that {@link uniqueryFilterToFieldFilters}
@@ -33,6 +46,11 @@ export interface UnsupportedFilter {
   expr: FilterExpr;
   /** Field paths the sub-expression references, in order of appearance. */
   fields: string[];
+  /**
+   * The URL segment as written — set for reason `"syntax"` only, whose
+   * `expr` is `{}` (nothing could be read from it). Since 0.1.147.
+   */
+  raw?: string;
 }
 
 /**
@@ -210,6 +228,12 @@ function pairRange(out: Collected, field: string, cond: FilterCondition): boolea
 function collectField(field: string, value: unknown, out: Collected): void {
   const whole = { [field]: value } as FilterExpr;
   if (value === null || value === undefined) return addTerms(out, field, [nullCond()], whole);
+  // Checked before the operator loop: `$some` / `$none` must never decode as
+  // a condition, and the operand's paths are the related table's, not ours.
+  if (hasRelationOp(value)) {
+    out.issues.push(unsupported("relation", whole));
+    return;
+  }
   if (isPrimitive(value)) return addTerms(out, field, [{ type: "eq", value: [value] }], whole);
   if (value instanceof RegExp) return addTerms(out, field, [regexToCondition(value)!], whole);
   if (!isPlainObject(value)) {

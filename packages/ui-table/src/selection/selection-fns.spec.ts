@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { togglePk, trimSelection, rowsToPks } from "./selection-fns";
+import {
+  togglePk,
+  trimSelection,
+  rowsToPks,
+  selectionQueryOf,
+  selectionSignature,
+} from "./selection-fns";
 
 describe("togglePk", () => {
   it("'none' is a no-op and returns the same reference", () => {
@@ -95,5 +101,78 @@ describe("rowsToPks", () => {
   it("supports identity rowValueFn", () => {
     const rows = [{ x: 1 }, { x: 2 }];
     expect(rowsToPks(rows, (r) => r)).toEqual(rows);
+  });
+});
+
+describe("selectionSignature", () => {
+  it("is insensitive to object key order at every depth", () => {
+    const a = selectionSignature({ filter: { status: "open", $or: [{ a: 1, b: 2 }] } });
+    const b = selectionSignature({ filter: { $or: [{ b: 2, a: 1 }], status: "open" } });
+    expect(a).toBe(b);
+  });
+
+  it("treats an empty filter, empty search and absent parts alike", () => {
+    expect(selectionSignature({ filter: {}, search: "" })).toBe(selectionSignature({}));
+  });
+
+  it("changes with the filter, the search term and the index", () => {
+    const base = selectionSignature({ filter: { status: "open" }, search: "x" });
+    expect(selectionSignature({ filter: { status: "done" }, search: "x" })).not.toBe(base);
+    expect(selectionSignature({ filter: { status: "open" }, search: "y" })).not.toBe(base);
+    expect(selectionSignature({ filter: { status: "open" }, search: "x", index: "idx" })).not.toBe(
+      base,
+    );
+  });
+
+  it("keeps different regular expressions and dates apart", () => {
+    expect(selectionSignature({ filter: { name: { $regex: /a/i } as never } })).not.toBe(
+      selectionSignature({ filter: { name: { $regex: /b/i } as never } }),
+    );
+    expect(selectionSignature({ filter: { at: new Date(0) as never } })).not.toBe(
+      selectionSignature({ filter: { at: new Date(1) as never } }),
+    );
+  });
+});
+
+const idOf = (v: unknown) => (v as { id: number }).id;
+
+describe("togglePk with keyOf (query-selection exclusions)", () => {
+  it("appends an absent pk and removes a present one", () => {
+    expect(togglePk([1], 2, "multi")).toEqual([1, 2]);
+    expect(togglePk([1, 2], 1, "multi")).toEqual([2]);
+  });
+
+  it("compares by `keyOf` when given", () => {
+    expect(togglePk([{ id: 1 }], { id: 1 }, "multi", idOf)).toEqual([]);
+    expect(togglePk([{ id: 1 }], { id: 2 }, "multi", idOf)).toEqual([{ id: 1 }, { id: 2 }]);
+  });
+
+  it("never mutates the input", () => {
+    const excluded = [1];
+    togglePk(excluded, 2, "multi");
+    togglePk(excluded, 1, "multi");
+    expect(excluded).toEqual([1]);
+  });
+});
+
+describe("selectionQueryOf", () => {
+  it("keeps the filter and the search term, drops sort / select / paging", () => {
+    expect(
+      selectionQueryOf({
+        filter: { status: "open" },
+        controls: { $search: "abc", $sort: { id: 1 }, $select: ["id"], $limit: 10 },
+      } as never),
+    ).toEqual({ filter: { status: "open" }, search: "abc" });
+  });
+
+  it("reads the index from a `$search:<index>` key", () => {
+    expect(selectionQueryOf({ controls: { "$search:by_title": "abc" } } as never)).toEqual({
+      search: "abc",
+      index: "by_title",
+    });
+  });
+
+  it("leaves out an empty filter and an empty term", () => {
+    expect(selectionQueryOf({ filter: {}, controls: { $search: "" } } as never)).toEqual({});
   });
 });

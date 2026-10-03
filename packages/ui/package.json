@@ -59,6 +59,7 @@
     "@atscript/core": "catalog:",
     "@atscript/db": "catalog:",
     "@atscript/typescript": "catalog:",
+    "@uniqu/core": "catalog:",
     "unplugin-atscript": "catalog:",
     "vitest": "catalog:"
   },

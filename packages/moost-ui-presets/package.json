@@ -49,6 +49,7 @@
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/db": "catalog:",
+    "@atscript/db-sql-tools": "catalog:",
     "@atscript/db-sqlite": "catalog:",
     "@atscript/moost-db": "catalog:",
     "@atscript/typescript": "catalog:",
@@ -57,6 +58,7 @@
     "@swc/core": "catalog:",
     "@uniqu/core": "catalog:",
     "@wooksjs/event-http": "catalog:",
+    "@wooksjs/http-body": "catalog:",
     "moost": "catalog:",
     "unplugin-atscript": "catalog:",
     "unplugin-swc": "catalog:",

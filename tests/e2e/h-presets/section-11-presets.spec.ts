@@ -66,6 +66,7 @@ import {
   applyPickerItem,
   authFileFor,
   capturePresetWire,
+  commitPillInput,
   clickColumnHeader,
   dialogRow,
   expectSinglePages,
@@ -1134,9 +1135,16 @@ test.describe("Section 11 — Presets (single-file batch)", () => {
       // No forced rewrite: the link stays as it came…
       expectUrlQuery(vPage, ["email~=/x/"]);
 
+      // The viewer has no search box: `users_search` also indexes `email`,
+      // which the viewer cannot read, so `/meta` lists no search index for
+      // them (the server would refuse `$search` on it — matching by a hidden
+      // column would leak it). Admin and manager keep searching by email.
+      await expect(vPage.getByPlaceholder("Search across all columns…")).toHaveCount(0);
+
       // …until the user's next change writes the table's own, clean URL.
-      await vPage.getByPlaceholder("Search across all columns…").fill("a");
-      await expect.poll(() => decodeURIComponent(vPage.url())).toContain("$search=a");
+      const username = await addFilterPill(vPage, "Username");
+      await commitPillInput(username, "a");
+      await expect.poll(() => decodeURIComponent(vPage.url())).toContain("username");
       expectUrlQuery(vPage, ["status=active", "$snapshot"]);
       expect(decodeURIComponent(vPage.url())).not.toMatch(HIDDEN);
 

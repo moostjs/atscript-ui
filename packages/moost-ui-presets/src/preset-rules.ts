@@ -121,6 +121,8 @@ interface ReadGateProbe {
 
 // `$or` / `$not` collapse to no-info: nothing inside them is guaranteed to hold,
 // so the request hasn't actually pinned a scope and the read gate must reject it.
+// A relational predicate (`nav: { $some | $none }`) pins nothing on this table
+// either — without `relation`, `walkFilter` would throw (a 500, not the gate's 400).
 const readGateVisitor: FilterVisitor<ReadGateProbe> = {
   comparison(field, op, value) {
     if (op !== "$eq") return { isAppConf: false };
@@ -141,6 +143,7 @@ const readGateVisitor: FilterVisitor<ReadGateProbe> = {
   },
   or: () => ({ isAppConf: false }),
   not: () => ({ isAppConf: false }),
+  relation: () => ({ isAppConf: false }),
 };
 
 export function buildReadGate(user: string, filter: FilterExpr): FilterExpr {

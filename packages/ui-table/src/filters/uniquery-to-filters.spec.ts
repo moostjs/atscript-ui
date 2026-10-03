@@ -129,6 +129,30 @@ describe("uniqueryFilterToFieldFilters — never broadens silently", () => {
   });
 });
 
+describe("uniqueryFilterToFieldFilters — relational predicates", () => {
+  it("reports `nav: { $some }` whole as `relation`, naming the relation only", () => {
+    const pred = { ticket: { $some: { status: "open", teamId: { $in: ["t1"] } } } };
+    const { filters, issues } = decode({ title: "x", ...pred } as FilterExpr);
+    expect(filters).toEqual({ title: [eq("x")] });
+    expect(issues).toEqual([{ reason: "relation", expr: pred, fields: ["ticket"] }]);
+  });
+
+  it("never decodes a malformed or mixed relation map as a condition", () => {
+    for (const value of [{ $none: {} }, { $some: undefined }, { $some: {}, $eq: 1 }]) {
+      const { filters, issues } = decode({ ticket: value } as FilterExpr);
+      expect(filters).toEqual({});
+      expect(issues.map((i) => [i.reason, i.fields])).toEqual([["relation", ["ticket"]]]);
+    }
+  });
+
+  it("a predicate inside an $or makes the whole OR unsupported", () => {
+    const or = { $or: [{ ticket: { $none: {} } }, { ticket: { $some: { status: "x" } } }] };
+    const { filters, issues } = decode(or as FilterExpr);
+    expect(filters).toEqual({});
+    expect(issues).toEqual([{ reason: "relation", expr: or, fields: ["ticket"] }]);
+  });
+});
+
 describe("uniqueryFilterToFieldFilters — sibling fields and logical nodes", () => {
   it("keeps plain fields that sit next to $or (regression: they were dropped)", () => {
     const { filters, issues } = decode({ team: "core", $or: [{ a: 1 }, { a: 2 }] });

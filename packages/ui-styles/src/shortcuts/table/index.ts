@@ -15,6 +15,7 @@ import { asPresetDialogShortcuts } from "./as-preset-dialog";
 import { asPresetPickerShortcuts } from "./as-preset-picker";
 import { asResidualFilterShortcuts } from "./as-residual-filter";
 import { asRowActionsShortcuts } from "./as-row-actions";
+import { asSelectionBannerShortcuts } from "./as-selection-banner";
 import { asSorterShortcuts } from "./as-sorter";
 import { asTableActionsShortcuts } from "./as-table-actions";
 import { asTableShortcuts } from "./as-table";
@@ -39,6 +40,7 @@ export {
   asPresetPickerShortcuts,
   asResidualFilterShortcuts,
   asRowActionsShortcuts,
+  asSelectionBannerShortcuts,
   asSorterShortcuts,
   asTableActionsShortcuts,
   asTableShortcuts,
@@ -65,6 +67,7 @@ export const tableShortcuts = mergeVunorShortcuts([
   asActionFormShortcuts,
   asOrderableListShortcuts,
   asRowActionsShortcuts,
+  asSelectionBannerShortcuts,
   asSorterShortcuts,
   asTableActionsShortcuts,
   asWindowTableShortcuts,

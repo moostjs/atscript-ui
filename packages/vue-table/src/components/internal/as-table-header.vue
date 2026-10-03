@@ -5,6 +5,7 @@ import type { ColumnReorderPosition, ColumnWidthsMap, FieldFilters } from "@atsc
 import { ROW_ACTIONS_PATH, type ColumnMenuConfig, type SelectAllState } from "../../types";
 import { useColumnHeaderDragResize } from "../../composables/use-column-header-drag-resize";
 import { useTableComponent } from "../../composables/use-table-component";
+import { useTableContextOptional } from "../../composables/use-table-state";
 import AsTableHeaderCell from "../defaults/as-table-header-cell.vue";
 
 // Static skin-slot resolution — `controls.headerCell ?? AsTableHeaderCell`.
@@ -56,6 +57,11 @@ const emit = defineEmits<{
    */
   (e: "toggle-all"): void;
 }>();
+
+// The selection model behind the `header-__select` slot's query-selection
+// props — absent in the Reka-wrapped (value-help) renderings.
+const tableState = useTableContextOptional()?.state;
+const NO_OP = () => {};
 
 const sortMap = computed(() => {
   const map: Record<string, "asc" | "desc"> = {};
@@ -172,6 +178,9 @@ function toggleSelectAll() {
           :state="selectAllState"
           :toggle="toggleSelectAll"
           :selected-count="selectedCount ?? 0"
+          :mode="tableState?.querySelection.value ? 'query' : 'ids'"
+          :can-select-all-matching="tableState?.canSelectAllMatching.value ?? false"
+          :select-all-matching="tableState?.selectAllMatching ?? NO_OP"
         >
           <span
             v-if="selectAllState"

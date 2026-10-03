@@ -12,6 +12,8 @@ import { CustomersTable } from "./schemas/customers.as";
 import { OrdersTable } from "./schemas/orders.as";
 import { ProductsTable } from "./schemas/products.as";
 import { RolesTable } from "./schemas/roles.as";
+import { TaskBoardView } from "./schemas/task-board.as";
+import { TasksTable } from "./schemas/tasks.as";
 import { UsersTable } from "./schemas/users.as";
 import { WfStateRow } from "./schemas/wf-state.as";
 
@@ -22,31 +24,14 @@ export const dbTables = [
   OrdersTable,
   ProductsTable,
   RolesTable,
+  TasksTable,
   UsersTable,
   WfStateRow,
 ] as const;
-export const dbViews = [];
+export const dbViews = [TaskBoardView] as const;
 /** Every @db.table / @db.view model in this project. */
-export const atscriptModels = [
-  AuditLogTable,
-  CategoriesTable,
-  CustomersTable,
-  OrdersTable,
-  ProductsTable,
-  RolesTable,
-  UsersTable,
-  WfStateRow,
-] as const;
+export const atscriptModels = [...dbTables, ...dbViews] as const;
 /** Models grouped by @db.space (absent annotation → "default"). */
 export const modelsBySpace = {
-  default: [
-    AuditLogTable,
-    CategoriesTable,
-    CustomersTable,
-    OrdersTable,
-    ProductsTable,
-    RolesTable,
-    UsersTable,
-    WfStateRow,
-  ] as const,
+  default: atscriptModels,
 } as const;

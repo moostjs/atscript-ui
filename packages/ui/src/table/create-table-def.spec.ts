@@ -276,15 +276,32 @@ describe("createTableDef", () => {
   it("passes through relations and searchIndexes", async () => {
     const { WithId } = await import(F);
     const meta = buildMeta(serializeAnnotatedType(WithId), ["id"], undefined, {
-      relations: [{ name: "author", direction: "to", isArray: false }],
+      relations: [{ name: "author", direction: "to", isArray: false, filterable: true }],
       searchIndexes: [{ name: "default", type: "text" }],
     });
     const def = createTableDef(meta);
 
-    expect(def.relations).toHaveLength(1);
-    expect(def.relations[0]!.name).toBe("author");
+    expect(def.relations).toEqual([
+      { name: "author", direction: "to", isArray: false, filterable: true },
+    ]);
     expect(def.searchIndexes).toHaveLength(1);
     expect(def.searchIndexes[0]!.name).toBe("default");
+  });
+
+  it("a computed view column is an ordinary column: sortable / filterable per /meta", async () => {
+    const { SimpleObject } = await import(F);
+    const meta = buildMeta(serializeAnnotatedType(SimpleObject), [], {
+      name: { sortable: true, filterable: true },
+      age: { sortable: true, filterable: true, computed: true },
+      active: { sortable: false, filterable: false },
+    });
+    const def = createTableDef(meta);
+
+    const age = def.columns.find((c) => c.path === "age")!;
+    expect(age).toMatchObject({ sortable: true, filterable: true, type: "number" });
+    expect(def.fetchableFields.has("age")).toBe(true);
+    expect(getSortableColumns(def).map((c) => c.path)).toContain("age");
+    expect(getFilterableColumns(def).map((c) => c.path)).toContain("age");
   });
 
   // ── FK / value-help columns (uses pre-compiled .as fixtures) ─

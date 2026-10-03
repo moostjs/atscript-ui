@@ -41,3 +41,10 @@ export interface CancelOrdersInput {
     @meta.default 'true'
     refund?: boolean
 }
+
+@meta.label 'Set priority'
+@ui.form.submit.text 'Apply'
+export interface SetPriorityInput {
+    @meta.label 'Priority'
+    priority: 'low' | 'normal' | 'high'
+}

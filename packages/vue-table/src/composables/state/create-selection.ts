@@ -1,6 +1,18 @@
 import { computed, ref, shallowRef, type ComputedRef, type Ref, type ShallowRef } from "vue";
-import { rowsToPks, togglePk, type SelectionMode } from "@atscript/ui-table";
-import type { RowSelectableHook, RowSelectableVerdict, SelectAllState } from "../../types";
+import {
+  rowsToPks,
+  selectionSignature,
+  togglePk,
+  type SelectionMode,
+  type SelectionQuery,
+} from "@atscript/ui-table";
+import type {
+  QuerySelection,
+  RowSelectableHook,
+  RowSelectableVerdict,
+  SelectAllState,
+  TableSelection,
+} from "../../types";
 
 type Row = Record<string, unknown>;
 
@@ -13,6 +25,18 @@ export interface SelectionApiOptions {
    * local `shallowRef([])` is created.
    */
   selectedRows?: Ref<unknown[]>;
+  /**
+   * External ref to back `querySelection` (`v-model:query-selection`).
+   * Writers replace the value wholesale. Since 0.1.147.
+   */
+  querySelection?: Ref<QuerySelection | null>;
+  /**
+   * Stable identity of a selection value for a query selection's
+   * exclusions. A row object (the default `rowValueFn`) is a new object on
+   * every refetch, so exclusions compare by this key, not by reference.
+   * Default: the value itself. Since 0.1.147.
+   */
+  identityOf?: (value: unknown) => unknown;
 }
 
 /** Shared verdicts — frozen, so the common case allocates nothing per row. */
@@ -21,10 +45,16 @@ const NOT_SELECTABLE: RowSelectableVerdict = Object.freeze({ ok: false });
 
 /**
  * The header tri-state from how many of the rows in scope are eligible and
- * how many of those are selected.
+ * how many of those are selected. In a query selection (`queryMode`) the
+ * header is never `"none"`: rows outside the loaded ones stay selected, so a
+ * page whose rows are all excluded still reads `"some"`.
  */
-export function toSelectAllState(selected: number, selectable: number): SelectAllState {
-  if (selected === 0) return "none";
+export function toSelectAllState(
+  selected: number,
+  selectable: number,
+  queryMode = false,
+): SelectAllState {
+  if (selected === 0 && !queryMode) return "none";
   return selected >= selectable ? "all" : "some";
 }
 
@@ -36,6 +66,14 @@ function verdictOf(value: boolean | string | undefined | void): RowSelectableVer
 
 export interface SelectionApi {
   selectedRows: Ref<unknown[]>;
+  /** The symbolic "every row matching the query" selection, or `null` (ids mode). */
+  querySelection: Ref<QuerySelection | null>;
+  /** The selection as one value — see {@link TableSelection}. */
+  selection: ComputedRef<TableSelection>;
+  /**
+   * `ids` mode: `selectedRows.length`. Query mode: `total − excluded.length`
+   * (the rows matching the query minus the ones the user unticked).
+   */
   selectedCount: ComputedRef<number>;
   selectedSet: ComputedRef<ReadonlySet<unknown>>;
   rowValueFn: (row: Row) => unknown;
@@ -50,9 +88,15 @@ export interface SelectionApi {
    * `select="none"` the renderer should ensure `selectedRows` stays empty
    * (the renderer's mode-transition watcher in `<AsTable>` /
    * `<AsWindowTable>` does this), so `isPkSelected` returns false naturally
-   * without needing to consult mode.
+   * without needing to consult mode. In a query selection: every pk that is
+   * not excluded.
    */
   isPkSelected: (pk: unknown) => boolean;
+  /**
+   * Switch to a query selection over `query`: `selectedRows` is emptied, no
+   * row is excluded, `total` is the query's current match count.
+   */
+  enterQuerySelection: (query: SelectionQuery, total: number) => void;
   /**
    * Per-row selectability predicate, pushed in by the renderer's
    * `:rowSelectable` prop the way `rowDelete` is. Every selection path —
@@ -89,9 +133,10 @@ export interface SelectionApi {
   deselectAll: (rows: readonly Row[]) => void;
   /**
    * The header checkbox's action over `rows`: deselect them when every
-   * eligible one is selected, otherwise select them. Since 0.1.142.
+   * eligible one is selected, otherwise select them. `indexOf` as in
+   * `selectAll`. Since 0.1.142.
    */
-  toggleAll: (rows: readonly Row[]) => void;
+  toggleAll: (rows: readonly Row[], indexOf?: (position: number) => number) => void;
   /** Empty the selection — every pk, loaded or not, eligible or not. Since 0.1.142. */
   clearSelection: () => void;
   /**
@@ -110,8 +155,26 @@ export function createSelectionApi(
   windowCache: ShallowRef<Map<number, Row>>,
 ): SelectionApi {
   const selectedRows = (opts?.selectedRows ?? shallowRef<unknown[]>([])) as Ref<unknown[]>;
-  const selectedCount = computed(() => selectedRows.value.length);
+  const querySelection = (opts?.querySelection ??
+    shallowRef<QuerySelection | null>(null)) as Ref<QuerySelection | null>;
+  const selectedCount = computed(() => {
+    const q = querySelection.value;
+    return q ? Math.max(0, q.total - q.excluded.length) : selectedRows.value.length;
+  });
+  const selection = computed<TableSelection>(() => {
+    const q = querySelection.value;
+    return q
+      ? {
+          mode: "query",
+          query: q.query,
+          excluded: q.excluded,
+          total: q.total,
+          count: selectedCount.value,
+        }
+      : { mode: "ids", ids: selectedRows.value, count: selectedCount.value };
+  });
   const rowValueFn = opts?.rowValueFn ?? ((row: Row) => row);
+  const identityOf = opts?.identityOf ?? ((value: unknown) => value);
 
   // Every writer replaces `windowCache` wholesale, so this rebuilds once per
   // fetch — and only when a scalar selection value is actually resolved.
@@ -129,6 +192,13 @@ export function createSelectionApi(
 
   const selectedRowObjects = computed<Row[]>(() => {
     const out: Row[] = [];
+    if (querySelection.value) {
+      // Informational only: the loaded rows the query selection covers.
+      for (const row of windowCache.value.values()) {
+        if (!excludedSet.value.has(identityOf(rowValueFn(row)))) out.push(row);
+      }
+      return out;
+    }
     for (const value of selectedRows.value) {
       const row = rowOf(value);
       if (row) out.push(row);
@@ -137,9 +207,26 @@ export function createSelectionApi(
   });
 
   const selectedSet = computed<ReadonlySet<unknown>>(() => new Set(selectedRows.value));
+  /** Identity keys of the excluded values (see `identityOf`). */
+  const excludedSet = computed<ReadonlySet<unknown>>(
+    () => new Set((querySelection.value?.excluded ?? []).map(identityOf)),
+  );
 
   function isPkSelected(pk: unknown): boolean {
-    return selectedSet.value.has(pk);
+    return querySelection.value
+      ? !excludedSet.value.has(identityOf(pk))
+      : selectedSet.value.has(pk);
+  }
+
+  /** Replace the query selection's `excluded` list (a no-op when unchanged). */
+  function setExcluded(next: unknown[]): void {
+    const q = querySelection.value;
+    if (q && next !== q.excluded) querySelection.value = { ...q, excluded: next };
+  }
+
+  function enterQuerySelection(query: SelectionQuery, total: number): void {
+    if (selectedRows.value.length > 0) selectedRows.value = [];
+    querySelection.value = { query, signature: selectionSignature(query), excluded: [], total };
   }
 
   const rowSelectable = ref<RowSelectableHook | undefined>() as Ref<RowSelectableHook | undefined>;
@@ -172,41 +259,69 @@ export function createSelectionApi(
     return n;
   }
 
-  function eligiblePks(rows: readonly Row[]): unknown[] {
-    return rowsToPks(selectableRows(rows), rowValueFn);
+  function eligiblePks(rows: readonly Row[], indexOf?: (position: number) => number): unknown[] {
+    const eligible = indexOf
+      ? rows.filter((row, i) => isRowSelectable(row, indexOf(i)).ok)
+      : selectableRows(rows);
+    return rowsToPks(eligible, rowValueFn);
   }
 
   function addPks(pks: readonly unknown[]): void {
+    if (querySelection.value) {
+      // Selecting = taking the rows back out of `excluded`.
+      const drop = new Set(pks.map(identityOf));
+      const excluded = querySelection.value.excluded;
+      const next = excluded.filter((pk) => !drop.has(identityOf(pk)));
+      setExcluded(next.length === excluded.length ? excluded : next);
+      return;
+    }
     const current = selectedSet.value;
     const added = [...new Set(pks)].filter((pk) => !current.has(pk));
     if (added.length > 0) selectedRows.value = [...selectedRows.value, ...added];
   }
 
   function removePks(pks: readonly unknown[]): void {
+    if (querySelection.value) {
+      const seen = new Set(excludedSet.value);
+      const added: unknown[] = [];
+      for (const pk of pks) {
+        const key = identityOf(pk);
+        if (seen.has(key)) continue;
+        seen.add(key);
+        added.push(pk);
+      }
+      if (added.length > 0) setExcluded([...querySelection.value.excluded, ...added]);
+      return;
+    }
     const drop = new Set(pks);
     const next = selectedRows.value.filter((pk) => !drop.has(pk));
     if (next.length !== selectedRows.value.length) selectedRows.value = next;
   }
 
   function selectAll(rows: readonly Row[], indexOf?: (position: number) => number): void {
-    const eligible = indexOf
-      ? rows.filter((row, i) => isRowSelectable(row, indexOf(i)).ok)
-      : selectableRows(rows);
-    addPks(rowsToPks(eligible, rowValueFn));
+    addPks(eligiblePks(rows, indexOf));
   }
 
   function deselectAll(rows: readonly Row[]): void {
     removePks(eligiblePks(rows));
   }
 
-  function toggleAll(rows: readonly Row[]): void {
-    const pks = eligiblePks(rows);
-    const selected = pks.filter((pk) => selectedSet.value.has(pk)).length;
-    if (toSelectAllState(selected, pks.length) === "all") removePks(pks);
+  function toggleAll(rows: readonly Row[], indexOf?: (position: number) => number): void {
+    const pks = eligiblePks(rows, indexOf);
+    const all = pks.every(isPkSelected);
+    // Query selection: unticking a fully selected header ends it (every
+    // matching row, not just the loaded ones, was what it selected).
+    if (querySelection.value) {
+      if (all) clearSelection();
+      else addPks(pks);
+      return;
+    }
+    if (pks.length > 0 && all) removePks(pks);
     else addPks(pks);
   }
 
   function clearSelection(): void {
+    if (querySelection.value) querySelection.value = null;
     if (selectedRows.value.length > 0) selectedRows.value = [];
   }
 
@@ -215,11 +330,19 @@ export function createSelectionApi(
     const row = getActiveRow();
     if (row === undefined) return;
     if (!isRowSelectable(row, activeIndex.value).ok) return;
+    const q = querySelection.value;
+    if (q) {
+      setExcluded(togglePk(q.excluded, rowValueFn(row), "multi", identityOf));
+      return;
+    }
     selectedRows.value = togglePk(selectedRows.value, rowValueFn(row), mode);
   }
 
   return {
     selectedRows,
+    querySelection,
+    selection,
+    enterQuerySelection,
     selectedCount,
     selectedSet,
     rowValueFn,

@@ -866,6 +866,50 @@ describe("urlQueryStringToState — unsupported filters", () => {
     }
   });
 
+  it("decodes a hand-written value with a hyphen (`status=in-progress`)", () => {
+    const out = urlQueryStringToState("status=in-progress&priority=high", {
+      knownFields: ["status", "priority"],
+    });
+    expect(out.filters).toEqual({
+      status: [{ type: "eq", value: ["in-progress"] }],
+      priority: [{ type: "eq", value: ["high"] }],
+    });
+    expect(out.unsupported).toBeUndefined();
+  });
+
+  it("leaves out a segment that does not parse, reports it as `syntax`, keeps the rest", () => {
+    const out = urlQueryStringToState("status=open&priority>>2&$sort=-title&$search=x", {
+      knownFields: ["status", "priority", "title"],
+    });
+    expect(out.filters).toEqual({ status: [{ type: "eq", value: ["open"] }] });
+    expect(out.sorters).toEqual([{ field: "title", direction: "desc" }]);
+    expect(out.searchTerm).toBe("x");
+    expect(out.unsupported).toEqual([
+      { reason: "syntax", expr: {}, fields: [], raw: "priority>>2" },
+    ]);
+  });
+
+  it("an unbalanced group is left out whole — never split into narrower halves", () => {
+    const out = urlQueryStringToState("status=open&!(a=1&b=2", { knownFields: ["status"] });
+    expect(out.filters).toEqual({ status: [{ type: "eq", value: ["open"] }] });
+    expect(out.unsupported).toEqual([{ reason: "syntax", expr: {}, fields: [], raw: "!(a=1&b=2" }]);
+  });
+
+  it("a relational predicate is reported as `relation`, never decoded as a condition", () => {
+    const out = urlQueryStringToState("ticket=$some(status=open)&title=x", {
+      knownFields: ["title", "ticket"],
+      sync: { residual: false },
+    });
+    expect(out.filters).toEqual({ title: [{ type: "eq", value: ["x"] }] });
+    expect(out.unsupported).toEqual([
+      {
+        reason: "relation",
+        expr: { ticket: { $some: { status: "open" } } },
+        fields: ["ticket"],
+      },
+    ]);
+  });
+
   it("decodes a URL in-list as the field's OR'd equalities", () => {
     const out = urlQueryStringToState("status{open,review}");
     expect(out.filters).toEqual({

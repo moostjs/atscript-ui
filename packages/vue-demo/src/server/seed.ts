@@ -224,6 +224,63 @@ export const seedOrders = () => {
   return rows;
 };
 
+// 12-step status cycle: 3 open, 3 in-progress, 4 done, 2 archived → over 60
+// tasks that is 15 / 15 / 20 / 10. Interleaved so every page mixes statuses.
+const TASK_STATUS_CYCLE = [
+  "open",
+  "in-progress",
+  "done",
+  "open",
+  "done",
+  "in-progress",
+  "done",
+  "archived",
+  "open",
+  "done",
+  "in-progress",
+  "archived",
+] as const;
+const TASK_VERBS = ["Review", "Update", "Fix", "Draft", "Plan", "Test"] as const;
+const TASK_SUBJECTS = [
+  "release notes",
+  "billing page",
+  "search ranking",
+  "onboarding email",
+  "API docs",
+  "invoice export",
+  "login flow",
+  "dashboard charts",
+  "data backup",
+  "mobile layout",
+] as const;
+
+/**
+ * 60 deterministic tasks for the query-target / view-delegation showcase.
+ * Assignees cycle users 1..5 with every 7th task unassigned (left join →
+ * empty `assignee` on the board); eve (user 6) stays FK-orphan.
+ */
+export const seedTasks = () => {
+  const rows: Record<string, unknown>[] = [];
+  const priorities = ["low", "normal", "high"] as const;
+  const now = Date.now();
+  for (let i = 1; i <= 60; i++) {
+    const verb = TASK_VERBS[i % TASK_VERBS.length];
+    const subject = TASK_SUBJECTS[i % TASK_SUBJECTS.length];
+    rows.push({
+      title: `${verb} ${subject} #${i}`,
+      status: TASK_STATUS_CYCLE[(i - 1) % TASK_STATUS_CYCLE.length],
+      priority: priorities[(i * 7) % priorities.length],
+      assigneeId: i % 7 === 0 ? null : ((i - 1) % 5) + 1,
+      // Hours; `remaining` (task-board, computed) = estimate - spent goes
+      // negative for over-budget tasks.
+      estimate: (i % 8) + 1,
+      spent: (i * 3) % 7,
+      createdAt: now - i * 3_600_000,
+    });
+  }
+  return rows;
+};
+
 // 4-step cycle Login -> Logout -> Note -> null, indexed by 1-based seeded-row
 // position (= PK, since `insertMany` honours array order).
 const pickAuditPayload = (i: number): Record<string, unknown> | undefined => {

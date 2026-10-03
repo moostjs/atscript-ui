@@ -17,13 +17,18 @@ import { computed, ref, watch } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
 import {
+  applyGate,
   applyRowsGate,
   ariaLabelFor,
   collectIdentifiers,
   createNavigateGestures,
+  identifierFieldsOf,
   intentClass,
+  queryTargetGate,
   triggerAction,
   triggerBindings,
+  type PromptCtx,
+  type PromptTarget,
 } from "../composables/state/intent-scope";
 import { resolveRowActions, rowActionHref } from "../composables/state/row-actions-config";
 import AsActionMenuContent from "./internal/as-action-menu-content.vue";
@@ -38,6 +43,11 @@ const props = withDefaults(
      * separator inside the `…` menu so bulk operations on the single
      * selection are still reachable); ≥2 → rows. Force a specific level
      * with `'table'` / `'rows'` / `'row'`.
+     *
+     * A query selection ("every row matching the query", since 0.1.147)
+     * resolves to `'rows'` in `'auto'`: an action is enabled iff it takes a
+     * query target of that many rows, others are shown disabled with the
+     * reason; running one counts the matching rows and confirms first.
      */
     level?: "auto" | "table" | "rows" | "row";
   }>(),
@@ -58,6 +68,10 @@ interface Resolved {
   trailingRowActions: TVueTableActionInfo[];
   level: "table" | "rows" | "row";
   ids: Record<string, unknown>[];
+  /** A query selection's target (`ids` is empty then). Since 0.1.147. */
+  target?: PromptTarget;
+  /** Rows a query selection covers. */
+  count?: number;
   /**
    * The row the `'row'` level resolved to — forwarded to `invoke` so a
    * client-only action's `onInvoke(row, pk)` and `href(row)` see it.
@@ -78,14 +92,17 @@ function collapseSingle(r: Resolved): Resolved {
 function resolveLevel(
   explicit: typeof props.level,
   selectedCount: number,
+  querySelection: boolean,
 ): "table" | "rows" | "row" {
   if (explicit !== "auto") return explicit;
   if (selectedCount === 0) return "table";
+  if (querySelection) return "rows";
   if (selectedCount === 1) return "row";
   return "rows";
 }
 
 const preferredId = computed(() => state.tableDef.value?.preferredId ?? []);
+const identifierFields = computed(() => identifierFieldsOf(state.tableDef.value));
 
 const resolved = computed(() => {
   const r = resolveBuckets();
@@ -102,8 +119,27 @@ const resolved = computed(() => {
 function resolveBuckets(): Resolved {
   const selectedCount = state.selectedCount.value;
   const explicit = props.level;
-  const effectiveLevel = resolveLevel(explicit, selectedCount);
-  const pid = preferredId.value;
+  const query = state.querySelection.value;
+  const effectiveLevel = resolveLevel(explicit, selectedCount, query !== null);
+  const pid = identifierFields.value;
+
+  if (query && effectiveLevel === "rows") {
+    // Every row matching the query: no loaded-row union gate (a sample
+    // cannot speak for the rest — the server gates every row at run time).
+    const gated = applyGate(
+      { default: state.actions.default.rows, others: state.actions.others.rows, rows: [] },
+      queryTargetGate(selectedCount),
+    );
+    return collapseSingle({
+      defaultAction: gated.default,
+      otherActions: gated.others,
+      trailingRowActions: [],
+      level: "rows",
+      ids: [],
+      target: { ...query.query, exclude: collectIdentifiers(state, query.excluded, pid) },
+      count: selectedCount,
+    });
+  }
 
   if (effectiveLevel === "table") {
     return collapseSingle({
@@ -175,11 +211,13 @@ const hasAny = computed(
     resolved.value.trailingRowActions.length > 0,
 );
 
-function promptCtx() {
+function promptCtx(): PromptCtx {
   return {
     identifiers: resolved.value.ids,
     preferredId: preferredId.value,
     row: resolved.value.row,
+    target: resolved.value.target,
+    count: resolved.value.count,
   };
 }
 
@@ -266,6 +304,8 @@ watch(running, (next, prev) => {
       :trailing-row-actions="resolved.trailingRowActions"
       :level="resolved.level"
       :ids="resolved.ids"
+      :target="resolved.target"
+      :count="resolved.count ?? resolved.ids.length"
       :invoke="invokeWith"
     >
       <component

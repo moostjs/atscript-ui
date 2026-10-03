@@ -46,10 +46,12 @@ declare global {
     "db.column.renamed": string
     "db.column.collate": string
     "db.column.precision": { precision: number, scale: number }
+    "db.column.derived": boolean
     "db.column.dimension": boolean
     "db.column.measure": boolean
     "db.column.filterable": boolean
     "db.column.sortable": boolean
+    "db.column.searchable": boolean
     "db.column.version": boolean
     "db.default": string
     "db.default.increment": number | true
@@ -58,6 +60,7 @@ declare global {
     "db.json": boolean
     "db.ignore": boolean
     "db.encrypted": boolean
+    "db.writeOnly": boolean
     "db.http.path": string
     "db.sync.method": string
     "db.depth.limit": number
@@ -67,19 +70,23 @@ declare global {
     "db.rel.onDelete": string
     "db.rel.onUpdate": string
     "db.rel.via": import("@atscript/typescript/utils").AtscriptRef
+    "db.rel.filterable": boolean
     "db.rel.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view": string | true
     "db.view.for": import("@atscript/typescript/utils").AtscriptRef
-    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode })[]
+    "db.view.joins": ({ target: import("@atscript/typescript/utils").AtscriptRef, condition: import("@atscript/typescript/utils").AtscriptQueryNode, kind?: string, order?: import("@atscript/typescript/utils").AtscriptOrderItem[] })[]
     "db.view.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view.materialized": boolean
     "db.view.renamed": string
     "db.view.having": import("@atscript/typescript/utils").AtscriptQueryNode
-    "db.agg.sum": string
-    "db.agg.avg": string
-    "db.agg.count": string | true
-    "db.agg.min": string
-    "db.agg.max": string
+    "db.alias": import("@atscript/typescript/utils").AtscriptRef
+    "db.agg.sum": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.avg": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.count": { field?: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.countDistinct": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.min": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.agg.max": { field: string, condition?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "db.compute": import("@atscript/typescript/utils").AtscriptExprNode
     "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
     "db.search.vector.threshold": number
     "db.search.filter": (string)[]
@@ -146,6 +153,9 @@ declare global {
     "ui.dict.filterable": boolean
     "ui.dict.sortable": boolean
     "ui.dict.searchable": boolean
+    "ui.nav.group": string
+    "ui.nav.order": number
+    "ui.nav.hidden": boolean
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "wf.context.pass": (string)[]

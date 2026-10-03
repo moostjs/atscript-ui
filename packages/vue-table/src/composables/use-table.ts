@@ -19,7 +19,9 @@ import type {
   ActionResult,
   DroppedFieldsReport,
   PresetConfig,
+  QuerySelection,
   ReactiveTableState,
+  SelectionResetEvent,
   TAsCellTypeComponents,
   TAsTableControls,
   TVueTableActionInfo,
@@ -79,6 +81,16 @@ export interface UseTableOptions {
    * this ref directly.
    */
   selectedRows?: Ref<unknown[]>;
+  /**
+   * External ref for the "every row matching the query" selection
+   * (`v-model:query-selection`). Since 0.1.147.
+   */
+  querySelection?: Ref<QuerySelection | null>;
+  /**
+   * Called when the table drops a query selection because its filter,
+   * search or index changed. Since 0.1.147.
+   */
+  onSelectionReset?: (event: SelectionResetEvent) => void;
   /** Always-applied Uniquery filter expression (AND'd with user filters). */
   forceFilters?: FilterExpr;
   /** Always-applied sorters (prepended before user sorters). */
@@ -256,6 +268,8 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     selection: {
       rowValueFn: opts?.rowValueFn,
       selectedRows: opts?.selectedRows,
+      querySelection: opts?.querySelection,
+      onSelectionReset: opts?.onSelectionReset,
     },
     model: {
       filterFields: opts?.filterFields,

@@ -162,12 +162,16 @@ function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions
 
 interface CreateFormDefOptions {
   versionColumn?: string;
+  /** `meta.fields` — a field marked `computed` is marked `derived`. Since 0.1.147. */
+  metaFields?: Record<string, { computed?: boolean }>;
 }
 ```
 
 When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly — it is the logical field name (see [`MetaResponse`](#metaresponse)).
 
 A `@db.column.derived` field (a top-level column the server computes from a `@db.json` leaf) needs no option: `createFormDef` reads the annotation from the type — `/meta` keeps it in the serialized type since `@atscript/db` 0.1.142 — and sets [`FormFieldDef.derived`](#formfielddef). `<AsField>` renders the field read-only with no required marker, the [validators](#validators) never fail it (a required derived field left empty on a create form passes), and `buildFormDiff` never sends it. Since 0.1.144.
+
+A computed view column (`@db.compute`) carries no annotation on the client — the server keeps it out of the serialized type — so pass `opts.metaFields: meta.fields`: a field `/meta` marks `computed` gets the same `derived` treatment. Views are read-only, so this matters only for a form you build from a view's type (a read-only detail form, say). Since 0.1.147.
 
 ```ts
 formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
@@ -225,6 +229,8 @@ interface TableDef {
   primaryKeys: string[];
   /** Preferred row identifier for URL/wire addressing. */
   preferredId: string[];
+  /** `preferredId` + every delegated action's `idMap` path — the fields action identifiers are built from. Equals `preferredId` when no action has an `idMap`. Since 0.1.147. */
+  identifierFields: string[];
   /** Mirrors `MetaResponse.versionColumn` — name of the OCC version column when the table opts into `@db.column.version`. */
   versionColumn?: string;
   crud: TCrudPermissions;
@@ -301,6 +307,8 @@ interface FieldMeta {
   writeOnly?: boolean;
   /** `@db.column.derived` — server-computed; a written value is dropped (`@atscript/db` 0.1.141+). Forms read the annotation from the type instead. Since 0.1.144. */
   derived?: boolean;
+  /** Computed view column (`@db.compute`, `@atscript/db` 0.1.147+). An ordinary column for sorting / filtering; read-only in forms via `CreateFormDefOptions.metaFields`. Since 0.1.147. */
+  computed?: boolean;
 }
 
 interface SearchIndexInfo {
@@ -313,6 +321,8 @@ interface RelationInfo {
   name: string;
   direction: "to" | "from" | "via";
   isArray: boolean;
+  /** `@db.rel.filterable` — the server accepts `name: { $some | $none: … }` filters (`@atscript/moost-db` 0.1.147+). Since 0.1.147. */
+  filterable?: boolean;
 }
 ```
 
@@ -373,7 +383,7 @@ Only readable fields become columns: a path must be listed in `meta.fields` and 
 
 ### `navigateHrefFor(action, id, preferredId)`
 
-Computes, at render time, the href a `processor: 'navigate'` action would open — interpolating `$1` in `action.value` with the row's URL-encoded `preferredId`. Lets a custom action-chrome renderer produce the same anchor the built-in `<AsRowActions>` / `<AsTableActions>` do. Returns `undefined` when no link is possible (not a navigate action, or a row-level action with no identifiable pk) → render a `<button>` and let the client handle the invoke.
+Computes, at render time, the href a `processor: 'navigate'` action would open — interpolating `$1` in `action.value` with the row's URL-encoded `preferredId`. Lets a custom action-chrome renderer produce the same anchor the built-in `<AsRowActions>` / `<AsTableActions>` do. Returns `undefined` when no link is possible (not a navigate action, or a row-level action with no identifiable pk) → render a `<button>` and let the client handle the invoke. Since 0.1.147 a delegated action (`action.idMap`) reads `id` as this table's row and encodes the owner's identification it maps to, in `Object.keys(idMap)` order (no link when a mapped column is missing).
 
 ```typescript
 function navigateHrefFor(

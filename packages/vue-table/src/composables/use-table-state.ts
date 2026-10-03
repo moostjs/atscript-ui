@@ -35,6 +35,8 @@ import {
   prunePresetSnapshot,
   pruneResidualFilters,
   reconcileColumnWidthDefaults,
+  selectionQueryOf,
+  selectionSignature,
   gateOwns,
   residualGateOwns,
   resolveAspectGate,
@@ -49,6 +51,7 @@ import {
   type FilterCondition,
   type KnownFields,
   type QueryOptions,
+  type SelectionMode,
   type UnsupportedFilter,
   type UrlQuerySync,
 } from "@atscript/ui-table";
@@ -68,6 +71,7 @@ import type {
   ReactiveTableState,
   RowActionsConfig,
   RowDeleteOpt,
+  SelectionResetEvent,
   TAsCellTypeComponents,
   TAsTableControls,
   TVueTableActionInfo,
@@ -79,7 +83,13 @@ import { createNavController } from "./state/create-nav-controller";
 import { createPresetState } from "./state/create-preset-state";
 import { createWindowFetcher } from "./state/create-window-fetcher";
 import { compileRowActionsConfig, resolveRowActions } from "./state/row-actions-config";
-import { collectIdentifiers, triggerAction, type PromptCtx } from "./state/intent-scope";
+import {
+  collectIdentifiers,
+  extractIdentifier,
+  identifierFieldsOf,
+  triggerAction,
+  type PromptCtx,
+} from "./state/intent-scope";
 import { getCellValue } from "../utils/get-cell-value";
 import type { UseLocalDraftReturn } from "./use-local-draft";
 import type { UsePresetsReturn } from "./use-presets";
@@ -160,7 +170,14 @@ export interface TableModelRefs {
   ignoreSortersWhenSearched?: Ref<boolean>;
 }
 
-export type TableSelectionOptions = SelectionApiOptions;
+export interface TableSelectionOptions extends SelectionApiOptions {
+  /**
+   * Called when the table drops a query selection on its own — the filter,
+   * search or index changed under it (`<AsTableRoot>`'s `selection-reset`).
+   * Since 0.1.147.
+   */
+  onSelectionReset?: (event: SelectionResetEvent) => void;
+}
 
 export interface TableQueryOptions {
   /** Override the default query function. */
@@ -230,6 +247,9 @@ export interface TableQueryOptions {
    * Since 0.1.140 such pieces are carried as `residualFilters` instead
    * whenever every field they reference is a server-backed column (and
    * `urlQuerySync.residual` is not `false`); only the rest are reported.
+   * Since 0.1.147 it also receives each URL segment that does not parse
+   * (reason `"syntax"`, the segment in `issue.raw`) — the rest of the URL
+   * still applies.
    */
   onUnsupportedFilter?: (issue: UnsupportedFilter) => void;
   /**
@@ -403,9 +423,10 @@ function sameResidualFilters(a: FilterExpr[], b: FilterExpr[]): boolean {
  */
 export function warnUnsupportedFilter(issue: UnsupportedFilter): void {
   if (!DEV) return;
+  const why = issue.reason === "syntax" ? "It does not parse" : "Field filters cannot express it";
   console.warn(
-    `[vue-table] URL filter left out (${issue.reason}): ${JSON.stringify(issue.expr)}. ` +
-      "Field filters cannot express it, so the table shows more rows than the URL described.",
+    `[vue-table] URL filter left out (${issue.reason}): ${issue.raw ?? JSON.stringify(issue.expr)}. ` +
+      `${why}, so the table shows more rows than the URL described.`,
   );
 }
 
@@ -460,6 +481,8 @@ export function createTableState(opts: CreateTableStateOptions): {
   // Renderer-owned: pushed in by `<AsTable>` / `<AsWindowTable>` watchers.
   const rowDelete = ref<boolean | RowDeleteOpt>(false);
   const includeActions = ref(false);
+  const selectMode = ref<SelectionMode>("none");
+  const allowSelectAllMatching = ref(false);
   const rowActions = ref<RowActionsConfig | undefined>(undefined);
   /**
    * The per-screen row-action policy, compiled once per config change instead
@@ -582,6 +605,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       action,
       identifiers: ctx.identifiers,
       preferredId: ctx.preferredId,
+      count: ctx.count,
     });
   }
   const actionFormDisplay = formSlot.display;
@@ -707,6 +731,12 @@ export function createTableState(opts: CreateTableStateOptions): {
     if (queryOpts?.alwaysSelected)
       // alwaysSelected: same gate
       for (const p of queryOpts.alwaysSelected) if (available.has(p)) extra.add(p);
+    // The columns a delegated action's `idMap` reads (beyond `preferredId`,
+    // which the server adds itself): its identifiers are built from them.
+    const def = tableDef.value;
+    if (def?.identifierFields && def.identifierFields !== def.preferredId)
+      for (const p of def.identifierFields)
+        if (available.has(p) && !def.preferredId.includes(p)) extra.add(p);
     const model = queryModel.value;
     if (DEV && model.stripped.length > 0) {
       const key = model.stripped.join(",");
@@ -833,10 +863,40 @@ export function createTableState(opts: CreateTableStateOptions): {
     return navMode.value === "window" ? dataAt(idx) : results.value[idx];
   }
 
+  /**
+   * A query selection's exclusions compare row objects (the default
+   * `rowValueFn`) by their identifier — a refetch replaces every row object.
+   */
+  // Memoised per row object (checked per row on every render / scroll while a
+  // query selection is held); reading `tableDef.value` first keeps callers
+  // reactive to it, and a new definition starts a new cache.
+  let identityDef: TableDef | null = null;
+  let identityCache = new WeakMap<object, unknown>();
+  function selectionIdentity(value: unknown): unknown {
+    const def = tableDef.value;
+    if (value === null || typeof value !== "object") return value;
+    if (def !== identityDef) {
+      identityDef = def;
+      identityCache = new WeakMap();
+    }
+    if (identityCache.has(value)) return identityCache.get(value);
+    const id = extractIdentifier(value, identifierFieldsOf(def));
+    const key = id ? JSON.stringify(Object.values(id)) : value;
+    identityCache.set(value, key);
+    return key;
+  }
+
   // 3. Selection.
-  const selection = createSelectionApi(selectionOpts, getActiveRow, activeIndex, windowCache);
+  const selection = createSelectionApi(
+    { ...selectionOpts, identityOf: selectionIdentity },
+    getActiveRow,
+    activeIndex,
+    windowCache,
+  );
   const {
     selectedRows,
+    querySelection,
+    selection: tableSelection,
     selectedCount,
     rowValueFn,
     rowByValue,
@@ -854,6 +914,78 @@ export function createTableState(opts: CreateTableStateOptions): {
     toggleActiveSelection,
   } = selection;
 
+  // 3b. Query selection ("Select all N matching"). Loaded eligible rows are
+  // the cached ones the predicate admits — `index` in the space the renderer
+  // hands the predicate (absolute in window mode, page-relative otherwise).
+  const loadedEligiblePks = computed<unknown[]>(() => {
+    const out: unknown[] = [];
+    const offset = navMode.value === "window" ? 0 : resultsStart.value;
+    const gated = !!rowSelectable.value;
+    for (const [abs, row] of windowCache.value) {
+      if (!gated || isRowSelectable(row, abs - offset).ok) out.push(rowValueFn(row));
+    }
+    return out;
+  });
+  const loadedSelectedCount = computed(() => {
+    let n = 0;
+    for (const pk of loadedEligiblePks.value) if (isPkSelected(pk)) n++;
+    return n;
+  });
+
+  const hasQueryTargetAction = computed(
+    () => tableDef.value?.actions.rows.some((a) => !!a.queryTarget) ?? false,
+  );
+
+  const canSelectAllMatching = computed(
+    () =>
+      allowSelectAllMatching.value &&
+      selectMode.value === "multi" &&
+      !queryOpts?.fn &&
+      // More rows match than are loaded (ineligible loaded rows included —
+      // they are no reason to offer more).
+      totalCount.value > windowCache.value.size &&
+      hasQueryTargetAction.value,
+  );
+
+  /** The filter / search / index of the query the table would send now. */
+  function currentSelectionQuery() {
+    return selectionQueryOf(buildCurrentQuery({ includeActions: false }));
+  }
+
+  function selectAllMatching(): void {
+    if (!canSelectAllMatching.value) return;
+    selection.enterQuerySelection(currentSelectionQuery(), totalCount.value);
+  }
+
+  // Invalidation: a query selection belongs to its filter / search / index.
+  // The getter only builds the query while one is held; sorting, columns,
+  // paging and scrolling leave the signature unchanged.
+  // `holding` (not `querySelection`) gates it: excluding a row or a count
+  // refresh replaces the selection object without touching the scope.
+  const holdingQuerySelection = computed(() => querySelection.value !== null);
+  watch(
+    () => (holdingQuerySelection.value ? selectionSignature(currentSelectionQuery()) : null),
+    (live) => {
+      const q = querySelection.value;
+      if (live === null || !q || live === q.signature) return;
+      querySelection.value = null;
+      selectionOpts?.onSelectionReset?.({ reason: "scope" });
+    },
+  );
+  // Same-scope refetches refresh the match count and keep the exclusions —
+  // a failed one (which zeroes `totalCount`) leaves the count alone.
+  watch([totalCount, querying], ([count, busy]) => {
+    const q = querySelection.value;
+    if (!q || busy || queryError.value || count === q.total) return;
+    // `invalidate()` zeroes the count before anything is loaded again.
+    if (count === 0 && windowCache.value.size === 0) return;
+    querySelection.value = { ...q, total: count };
+  });
+  // An explicit selection written from outside ends a query selection.
+  watch(selectedRows, (rows) => {
+    if (rows.length > 0 && querySelection.value) querySelection.value = null;
+  });
+
   // 4. Actions namespace. Built before `mainAction` so the registry's fallback
   // path can resolve `actions.default.row` and call `actions.invoke`. Refetch
   // policy is honored inline inside `invoke` — `createActions` calls
@@ -865,6 +997,8 @@ export function createTableState(opts: CreateTableStateOptions): {
     scheduleQuery,
     refreshOnAction: () => opts.actions?.refreshOnAction?.(),
     onResolved: opts.actions?.onResolved,
+    // The rows a query-targeted run touched have changed: its selection is spent.
+    onTargetSettled: clearSelection,
   });
   const { actions } = actionsNs;
 
@@ -889,7 +1023,7 @@ export function createTableState(opts: CreateTableStateOptions): {
       const action = resolveRowActions(stateRef, row, { withRows: false }).default;
       if (!action) return;
       const preferredId = tableDef.value?.preferredId ?? [];
-      const identifiers = collectIdentifiers(stateRef, [row], preferredId);
+      const identifiers = collectIdentifiers(stateRef, [row], identifierFieldsOf(tableDef.value));
       void triggerAction(stateRef, action, { identifiers, preferredId, row }, event);
     },
   });
@@ -1078,6 +1212,14 @@ export function createTableState(opts: CreateTableStateOptions): {
     filterDialogColumn,
     selectedRows,
     selectedCount,
+    querySelection,
+    selection: tableSelection,
+    allowSelectAllMatching,
+    selectMode,
+    loadedEligiblePks,
+    loadedSelectedCount,
+    canSelectAllMatching,
+    selectAllMatching,
     rowValueFn,
     rowByValue,
     rowOf,
@@ -1704,6 +1846,7 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
     flatMap: new Map(),
     fetchableFields: new Set(opts.columns.map((c) => c.path)),
     primaryKeys: [],
+    identifierFields: [],
     preferredId: [],
     crud: { query: [], pages: [], one: [] },
     canRemove: false,

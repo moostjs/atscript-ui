@@ -44,6 +44,7 @@ const DEMO_RESOURCES = [
   "products",
   "customers",
   "orders",
+  "tasks",
   "audit_log",
   "wf_states",
 ] as const;

@@ -52,6 +52,14 @@ export interface CreateFormDefOptions {
    * Root-table concept; not propagated into nested recursive calls.
    */
   versionColumn?: string;
+  /**
+   * `meta.fields` of the `/meta` the type came from. A field it marks
+   * `computed` (a computed view column, whose `@db.compute` annotation the
+   * server does not send) is marked `derived` like a `@db.column.derived`
+   * one: read-only, never validated, never sent. Root-table concept; not
+   * propagated into nested recursive calls. Since 0.1.147.
+   */
+  metaFields?: Record<string, { computed?: boolean }>;
 }
 
 /**
@@ -61,7 +69,8 @@ export interface CreateFormDefOptions {
  * - **Non-object types** (primitive, array, union, etc.): produces a single leaf root field
  *   with `path: ''`.
  *
- * A `@db.column.derived` field is marked `derived` straight from its metadata.
+ * A `@db.column.derived` field is marked `derived` straight from its metadata;
+ * a computed view column, from `opts.metaFields`.
  */
 export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef {
   // Non-object types: single leaf field (never pushed down)
@@ -101,7 +110,9 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
       structuredPrefixes.add(path + ".");
     }
 
-    fields.push(createFieldDef(path, originalProp));
+    const field = createFieldDef(path, originalProp);
+    if (opts?.metaFields?.[path]?.computed) field.derived = true;
+    fields.push(field);
   }
 
   // Sort by ui.form.order (cache order values to avoid repeated metadata lookups during sort)

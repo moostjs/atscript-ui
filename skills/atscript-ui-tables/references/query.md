@@ -135,7 +135,7 @@ interface MetaResponse {
   crud: TCrudPermissions; // per-op booleans from @atscript/db-client
   actions: TDbActionInfo[]; // flat array on the wire; the table groups it client-side by level
   relations: RelationInfo[];
-  fields: Record<string, FieldMeta>; // FieldMeta = { sortable, filterable }
+  fields: Record<string, FieldMeta>; // FieldMeta = { sortable, filterable, filterOps?, writeOnly?, derived?, computed? }
   type: TSerializedAnnotatedType;
 }
 ```
