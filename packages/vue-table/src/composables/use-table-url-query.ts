@@ -1,7 +1,36 @@
 import { computed, type WritableComputedRef } from "vue";
-import { urlQueryConsumesKey } from "@atscript/ui-table";
-import { splitUrlSegments } from "@uniqu/url";
-import type { Router, RouteLocationNormalizedLoaded } from "vue-router";
+import {
+  DEV,
+  leadingKey,
+  mergeUrlQueryRecord,
+  urlQueryConsumesKey,
+  urlQueryRecordToString,
+  type UrlQueryRecord,
+  type UrlQueryRecordInput,
+  type UrlQueryRecordOptions,
+} from "@atscript/ui-table";
+
+/**
+ * The slice of a router's current route the bridge reads — vue-router's
+ * `useRoute()` fits (with or without typed routes).
+ * @since 0.1.148
+ */
+export interface TableUrlQueryRoute {
+  readonly query: UrlQueryRecordInput;
+}
+
+/**
+ * The slice of a router the bridge writes through — vue-router's
+ * `useRouter()` fits. Structural on purpose: `@atscript/vue-table` has no
+ * `vue-router` dependency, and a router with typed-route augmentation is
+ * accepted as is.
+ * @since 0.1.148
+ */
+export interface TableUrlQueryRouter {
+  replace(to: { query: UrlQueryRecord }): unknown;
+  /** Required only for `mode: "push"` (checked at setup). */
+  push?(to: { query: UrlQueryRecord }): unknown;
+}
 
 /** Options for {@link useTableUrlQuery}. */
 export interface UseTableUrlQueryOptions {
@@ -23,30 +52,23 @@ export interface UseTableUrlQueryOptions {
    * so two tables can share one route. Since 0.1.133.
    */
   prefix?: string;
-}
-
-const KEY_CHAR = /[A-Za-z0-9_.$-]/;
-
-/**
- * Index of `=` if every char before it is URL-key-safe. Returns -1 when any
- * non-key char (uniqu operator, whitespace, etc.) appears first — those
- * segments must round-trip as a single bare key because vue-router's `query`
- * record has no encoding for non-`=` separators.
- */
-function findCleanEq(segment: string): number {
-  for (let i = 0; i < segment.length; i++) {
-    const c = segment[i];
-    if (c === "=") return i > 0 ? i : -1;
-    if (!KEY_CHAR.test(c)) return -1;
-  }
-  return -1;
+  /**
+   * Host keys (wire form) the table never reads, writes or removes — even
+   * when a column has the same name. Without it, a host key that is also a
+   * column path (`?team=…` on a table with a `team` column) is read as a
+   * user filter. A filter the user sets on such a column stays private to the
+   * table: it is kept across navigation but never written to the URL, and
+   * the host's value is left alone. Pass a list of keys or a predicate. Only
+   * matters without a `prefix`. Since 0.1.148.
+   */
+  preserveKeys?: UrlQueryRecordOptions["preserveKeys"];
 }
 
 /**
- * Bridge `<AsTableRoot v-model:url-query>` to vue-router. Uses **type-only**
- * imports of `Router` and `RouteLocationNormalizedLoaded` — no runtime
- * dependency on `vue-router` is added to `@atscript/vue-table`. Consumers
- * pass in their already-resolved `useRoute()` and `useRouter()` instances.
+ * Bridge `<AsTableRoot v-model:url-query>` to a router. Takes the structural
+ * {@link TableUrlQueryRoute} / {@link TableUrlQueryRouter} slices, so
+ * `@atscript/vue-table` imports nothing from `vue-router`: consumers pass
+ * their already-resolved `useRoute()` and `useRouter()` instances.
  *
  * Scope: the bridge owns **only what the table reads back** (since 0.1.133).
  * A key is the table's iff `urlQueryStringToState` would consume it — see
@@ -58,10 +80,11 @@ function findCleanEq(segment: string): number {
  * written as one block in the table's order.
  *
  * Without a `prefix` the bridge cannot tell a plain `field=value` filter from
- * a page-owned flag of the same shape, so a plain key that was already in the
- * URL when the bridge mounted counts as foreign until the bridge writes it
- * itself. Pass `prefix` when a route carries a host key that could collide
- * with a column path, or when it carries two tables.
+ * a page-owned flag of the same shape: the table reads every unprefixed key,
+ * so a host key that is also a column path becomes a user filter. Pass
+ * `preserveKeys` to fence such host keys off (or `prefix` to namespace the
+ * table, which changes its URLs), and `prefix` when a route carries two
+ * tables.
  *
  * @example
  * ```vue
@@ -79,13 +102,21 @@ function findCleanEq(segment: string): number {
  * ```
  */
 export function useTableUrlQuery(
-  route: RouteLocationNormalizedLoaded,
-  router: Router,
+  route: TableUrlQueryRoute,
+  router: TableUrlQueryRouter,
   opts: UseTableUrlQueryOptions = {},
 ): WritableComputedRef<string> {
-  const navigate =
-    (opts.mode ?? "replace") === "push" ? router.push.bind(router) : router.replace.bind(router);
+  const usePush = (opts.mode ?? "replace") === "push";
+  if (usePush && typeof router.push !== "function") {
+    throw new TypeError('[vue-table] useTableUrlQuery: mode "push" needs router.push.');
+  }
+  const navigate = (query: UrlQueryRecord) =>
+    usePush ? router.push?.({ query }) : router.replace({ query });
   const prefix = opts.prefix ? `${opts.prefix}.` : "";
+  const recordOpts: UrlQueryRecordOptions = {
+    prefix: opts.prefix,
+    preserveKeys: opts.preserveKeys,
+  };
 
   // Keys this bridge has written, in their on-the-wire (prefixed) form. A key
   // that drops out of a later write is removed from the query; keys never
@@ -97,58 +128,51 @@ export function useTableUrlQuery(
     return written.has(key) || urlQueryConsumesKey(key);
   }
 
+  // Segments the table emitted on a preserved key are not in the URL, so the
+  // getter hands them back (`held`): the table's private filter must survive a
+  // navigation that did not write it. `lastSet` / `expectedOwn` keep the echo
+  // exact — while the route still reads as what we wrote, the table gets its
+  // own string back verbatim (withheld segments and all). `undefined` while
+  // nothing is withheld.
+  let withheld: { held: string[]; lastSet: string; expectedOwn: string } | undefined;
+  const warned = new Set<string>();
+
   return computed<string>({
     get: () => {
-      const q = route.query;
-      const parts: string[] = [];
-      for (const key in q) {
-        if (prefix && !key.startsWith(prefix)) continue;
-        const own = prefix ? key.slice(prefix.length) : key;
-        const v = q[key];
-        if (Array.isArray(v)) {
-          for (const item of v) {
-            parts.push(item == null ? own : `${own}=${item}`);
-          }
-        } else if (v == null) {
-          parts.push(own);
-        } else {
-          parts.push(`${own}=${v}`);
-        }
-      }
-      return parts.join("&");
+      const own = urlQueryRecordToString(route.query, recordOpts);
+      if (!withheld) return own;
+      if (own === withheld.expectedOwn) return withheld.lastSet;
+      return [own, ...withheld.held].filter(Boolean).join("&");
     },
     set: (urlString) => {
-      const serialized = new Map<string, string | null>();
-      // The parser's own top-level split: an `&` inside a group is not a
-      // separator. The table's string comes from `buildUrl`, which
-      // percent-encodes `&` and parens inside values.
-      for (const segment of splitUrlSegments(urlString)) {
-        if (!segment) continue;
-        const eqIdx = findCleanEq(segment);
-        const key = eqIdx > 0 ? `${prefix}${segment.slice(0, eqIdx)}` : `${prefix}${segment}`;
-        serialized.set(key, eqIdx > 0 ? segment.slice(eqIdx + 1) : null);
-        written.add(key);
-      }
-
       // Foreign keys keep their slots. Own keys belong wholly to the table, so
       // they are rewritten as one block in the table's order — where the first
       // own key sat, else at the end — and read back in that order: a key the
       // table adds must not trail the ones it kept, or its own URL would come
       // back spelled differently and miss its echo guard. An own key absent
       // from this write is dropped.
-      const query: Record<string, string | string[] | null> = {};
-      let placed = false;
-      const place = () => {
-        if (placed) return;
-        placed = true;
-        for (const [key, value] of serialized) query[key] = value;
-      };
-      for (const key in route.query) {
-        if (isOwn(key)) place();
-        else query[key] = route.query[key] as string | string[] | null;
+      const merged = mergeUrlQueryRecord(route.query, urlString, { ...recordOpts, isOwn });
+      const { query } = merged;
+      for (const key of merged.own) written.add(key);
+      withheld = merged.withheld.length
+        ? {
+            held: merged.withheld,
+            lastSet: urlString,
+            expectedOwn: urlQueryRecordToString(query, recordOpts),
+          }
+        : undefined;
+      if (DEV) {
+        for (const segment of merged.withheld) {
+          const name = leadingKey(segment) || segment;
+          if (warned.has(name)) continue;
+          warned.add(name);
+          console.warn(
+            `[vue-table] useTableUrlQuery: "${name}" is in preserveKeys, so the table's own ` +
+              `"${name}" filter is kept private and is not written to the URL.`,
+          );
+        }
       }
-      place();
-      void navigate({ query });
+      void navigate(query);
     },
   });
 }

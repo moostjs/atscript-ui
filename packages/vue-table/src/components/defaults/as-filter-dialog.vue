@@ -3,7 +3,6 @@ import { computed, ref } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import {
   columnDefaultCondition,
-  formatFilterCondition,
   isFilled,
   isSimpleEq,
   type FilterCondition,
@@ -22,6 +21,7 @@ import {
   TabsTrigger,
   TabsContent,
 } from "reka-ui";
+import { useConditionFormat } from "../../composables/use-condition-format";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTableComponent } from "../../composables/use-table-component";
 import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
@@ -30,6 +30,7 @@ import AsFilterConditions from "../internal/as-filter-conditions.vue";
 import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
 const { state } = useTableContext();
+const { formatCondition } = useConditionFormat(state);
 // Static skin-slot resolution — `controls.filterValueHelp` replaces the
 // internal default without it ever being a public export.
 const FilterValueHelp = useTableComponent("filterValueHelp", AsFilterValueHelp);
@@ -94,7 +95,7 @@ const chips = computed<ChipItem[]>(() => {
     if (isFilled(c)) {
       result.push({
         key: `vh:${i}:${String(c.value[0] ?? "")}`,
-        label: formatFilterCondition(c),
+        label: formatCondition(column.value, c),
         bucket: "value-help",
         index: i,
       });
@@ -104,7 +105,7 @@ const chips = computed<ChipItem[]>(() => {
     if (isFilled(c)) {
       result.push({
         key: `fc:${i}:${c.type}:${String(c.value[0] ?? "")}`,
-        label: formatFilterCondition(c),
+        label: formatCondition(column.value, c),
         bucket: "free",
         index: i,
       });

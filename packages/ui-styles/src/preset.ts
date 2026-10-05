@@ -15,6 +15,7 @@ import { allShortcuts } from "./shortcuts";
 export const defaultAsIconAliases: Record<string, string> = {
   search: "ph:magnifying-glass",
   close: "ph:x",
+  clock: "ph:clock",
   plus: "ph:plus",
   "chevron-up": "ph:caret-up",
   "chevron-down": "ph:caret-down",

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { parseFilterInput, formatFilterCondition } from "./filter-input-format";
+import {
+  parseColumnFilterInput,
+  parseFilterInput,
+  formatFilterCondition,
+} from "./filter-input-format";
 
 describe("parseFilterInput", () => {
   // ── Null / not-null literals ───────────────────────────────
@@ -148,8 +152,8 @@ describe("parseFilterInput", () => {
     expect(parseFilterInput("!=true", "boolean")).toEqual({ type: "ne", value: [true] });
   });
 
-  it("leaves non-vocabulary boolean input as a string", () => {
-    expect(parseFilterInput("yes", "boolean")).toEqual({ type: "eq", value: ["yes"] });
+  it("rejects non-vocabulary boolean input — the server only takes true / false", () => {
+    expect(parseFilterInput("yes", "boolean")).toBeUndefined();
   });
 
   it("round-trips a parsed boolean through formatFilterCondition", () => {
@@ -276,4 +280,65 @@ describe("round-trip: format(parse(x)) ≈ x", () => {
       expect(formatFilterCondition(parsed!)).toBe(expected);
     });
   }
+});
+
+describe("parseColumnFilterInput — storage-aware values (0.1.148)", () => {
+  const ts = {
+    type: "datetime",
+    valueKind: "timestamp",
+    nullable: true,
+    filterable: true,
+  } as never;
+
+  it("a timestamp column takes the temporal grammar, default operator eq", () => {
+    expect(parseColumnFilterInput("2026-10-05", ts)).toEqual({ type: "eq", value: ["2026-10-05"] });
+    expect(parseColumnFilterInput(">=2026-01-01", ts)).toEqual({
+      type: "gte",
+      value: ["2026-01-01"],
+    });
+    expect(parseColumnFilterInput("today-6...today", ts)).toEqual({
+      type: "bw",
+      value: ["today-6", "today"],
+    });
+    expect(parseColumnFilterInput(">2026-10-05T14:30", ts)).toEqual({
+      type: "gt",
+      value: ["2026-10-05T14:30"],
+    });
+    expect(parseColumnFilterInput("month-1", ts)).toEqual({ type: "eq", value: ["month-1"] });
+    expect(parseColumnFilterInput("1759622400000", ts)).toEqual({
+      type: "eq",
+      value: [1759622400000],
+    });
+  });
+
+  it("a non-temporal value sends nothing", () => {
+    expect(parseColumnFilterInput("abc", ts)).toBeUndefined();
+    expect(parseColumnFilterInput("2026-13-40", ts)).toBeUndefined();
+    expect(parseColumnFilterInput("*oct*", ts)).toBeUndefined();
+    expect(parseColumnFilterInput("2026-10-05...nope", ts)).toBeUndefined();
+  });
+
+  it("existence conditions still parse on a nullable temporal column", () => {
+    expect(parseColumnFilterInput("<empty>", ts)).toEqual({ type: "null", value: [] });
+  });
+
+  it("a boolean column rejects anything but true / false", () => {
+    const c = { type: "boolean", valueKind: "boolean", nullable: true, filterable: true } as never;
+    expect(parseColumnFilterInput("TRUE", c)).toEqual({ type: "eq", value: [true] });
+    expect(parseColumnFilterInput("yes", c)).toBeUndefined();
+  });
+
+  it("an integer column rejects fractions; a decimal always stays a string", () => {
+    const int = { type: "number", valueKind: "integer", nullable: true, filterable: true } as never;
+    expect(parseColumnFilterInput("5", int)).toEqual({ type: "eq", value: [5] });
+    expect(parseColumnFilterInput("5.5", int)).toBeUndefined();
+    const dec = { type: "number", valueKind: "decimal", nullable: true, filterable: true } as never;
+    expect(parseColumnFilterInput(">12.50", dec)).toEqual({ type: "gt", value: ["12.50"] });
+    expect(parseColumnFilterInput("100", dec)).toEqual({ type: "eq", value: ["100"] });
+    expect(parseColumnFilterInput(">1234567890.1234567", dec)).toEqual({
+      type: "gt",
+      value: ["1234567890.1234567"],
+    });
+    expect(parseColumnFilterInput("12.5x", dec)).toBeUndefined();
+  });
 });

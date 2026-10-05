@@ -631,6 +631,19 @@ export interface ReactiveTableState extends TableStateMethods {
    * when present, otherwise type+`@expect.maxLen`-derived (see `computeDefaultColumnWidth`).
    */
   columnWidths: Ref<ColumnWidthsMap>;
+  /**
+   * The app-authored `forceFilters` scope, read live. For chrome such as a
+   * "scoped to ..." badge. Since 0.1.148.
+   */
+  forceFilters: ComputedRef<FilterExpr | undefined>;
+  /** The app-authored `forceSorters`, read live (empty when none). Since 0.1.148. */
+  forceSorters: ComputedRef<SortControl[]>;
+  /**
+   * The IANA time zone the table reads dates in (`undefined` = the browser's):
+   * the `timeZone` option, else the cell locale's. Date filters, their chips
+   * and their inputs all follow it. Since 0.1.148.
+   */
+  timeZone: ComputedRef<string | undefined>;
   filterFields: ShallowRef<string[]>;
   filters: ShallowRef<FieldFilters>;
   /**

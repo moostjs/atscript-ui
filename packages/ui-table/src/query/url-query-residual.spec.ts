@@ -723,3 +723,42 @@ describe("urlQueryConsumesKey — grouped and list filter keys", () => {
     expect(urlQueryConsumesKey("$exists")).toBe(false);
   });
 });
+
+// An empty `$in` is written as `status{}`. @uniqu/url's parser only reads it
+// back from 0.1.13; on an older parser the segment is dropped, which these
+// cases would flag — so they run only where the parser supports it.
+const parsesEmptyIn = (() => {
+  try {
+    return urlQueryStringToState("status{}").residual?.length === 1;
+  } catch {
+    return false;
+  }
+})();
+
+describe.skipIf(!parsesEmptyIn)("empty $in survives a reload (@uniqu/url >= 0.1.13)", () => {
+  it("`status{}` comes back as the residual, with nothing unsupported", () => {
+    const parsed = urlQueryStringToState("status{}");
+    expect(parsed.residual).toEqual([{ status: { $in: [] } }]);
+    expect(parsed.unsupported).toEqual([]);
+  });
+
+  it("`status!{}` excludes nothing: no filters, no issues", () => {
+    const parsed = urlQueryStringToState("status!{}");
+    expect(parsed.filters).toEqual({});
+    expect(parsed.unsupported).toEqual([]);
+  });
+
+  it("is a fixed point, so a reload never widens the rows", () => {
+    const url = "status{}&$snapshot";
+    const parsed = urlQueryStringToState(url);
+    const again = stateToUrlQueryString(
+      {
+        filters: parsed.filters,
+        residualFilters: parsed.residual,
+        sorters: parsed.sorters,
+      },
+      DEFAULTS,
+    );
+    expect(again).toBe(url);
+  });
+});

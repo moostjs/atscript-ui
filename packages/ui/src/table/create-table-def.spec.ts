@@ -524,4 +524,74 @@ describe("column-resolver", () => {
     expect(getColumn(def, "name")?.path).toBe("name");
     expect(getColumn(def, "nonexistent")).toBeUndefined();
   });
+
+  describe("valueKind / options[].value", () => {
+    async function kinds() {
+      const { ValueKinds } = await import(F);
+      const names = [
+        "ts",
+        "tsCreated",
+        "tsOptional",
+        "dateStr",
+        "isoStr",
+        "intNum",
+        "expectInt",
+        "autoId",
+        "plain",
+        "money",
+        "flag",
+        "text",
+        "numLiterals",
+        "mixed",
+        "nullableLiterals",
+        "list",
+        "nested",
+      ];
+      const def = createTableDef(buildMeta(serializeAnnotatedType(ValueKinds), names));
+      return (path: string) => getColumn(def, path);
+    }
+
+    it("derives the storage kind from the atscript type", async () => {
+      const col = await kinds();
+      expect(col("ts")!.valueKind).toBe("timestamp");
+      expect(col("tsCreated")!.valueKind).toBe("timestamp");
+      expect(col("dateStr")!.valueKind).toBe("date");
+      expect(col("isoStr")!.valueKind).toBe("isoDate");
+      expect(col("intNum")!.valueKind).toBe("integer");
+      expect(col("expectInt")!.valueKind).toBe("integer");
+      expect(col("autoId")!.valueKind).toBe("integer");
+      expect(col("plain")!.valueKind).toBe("number");
+      expect(col("money")!.valueKind).toBe("decimal");
+      expect(col("flag")!.valueKind).toBe("boolean");
+      expect(col("text")!.valueKind).toBe("string");
+    });
+
+    it("an optional (nullable) timestamp keeps its kind", async () => {
+      const col = await kinds();
+      expect(col("tsOptional")!.valueKind).toBe("timestamp");
+      expect(col("tsOptional")!.nullable).toBe(true);
+    });
+
+    it("a union takes the kind its non-null members agree on; a mixed one has none", async () => {
+      const col = await kinds();
+      expect(col("numLiterals")!.valueKind).toBe("number");
+      expect(col("nullableLiterals")!.valueKind).toBe("string");
+      expect(col("mixed")!.valueKind).toBeUndefined();
+    });
+
+    it("arrays and objects have no kind", async () => {
+      const col = await kinds();
+      expect(col("list")!.valueKind).toBeUndefined();
+      expect(col("nested")?.valueKind).toBeUndefined();
+    });
+
+    it("options carry the typed literal beside the string key", async () => {
+      const col = await kinds();
+      expect(col("numLiterals")!.options).toEqual([
+        { key: "1", label: "1", value: 1 },
+        { key: "2", label: "2", value: 2 },
+        { key: "3", label: "3", value: 3 },
+      ]);
+    });
+  });
 });

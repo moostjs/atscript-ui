@@ -4,10 +4,10 @@ import { extractLiteralOptions, isPureLiteralUnion } from "./extract-literals";
 
 // ── Helpers ──────────────────────────────────────────────────
 
-function literal(value: string | number) {
+function literal(value: string | number | boolean) {
   return defineAnnotatedType()
-    .designType(typeof value === "string" ? "string" : "number")
-    .value(value).$type;
+    .designType(typeof value as "string" | "number" | "boolean")
+    .value(value as never).$type;
 }
 
 function stringType() {
@@ -28,9 +28,9 @@ describe("extractLiteralOptions", () => {
       .item(literal("c")).$type;
 
     expect(extractLiteralOptions(union)).toEqual([
-      { key: "a", label: "a" },
-      { key: "b", label: "b" },
-      { key: "c", label: "c" },
+      { key: "a", label: "a", value: "a" },
+      { key: "b", label: "b", value: "b" },
+      { key: "c", label: "c", value: "c" },
     ]);
   });
 
@@ -41,9 +41,9 @@ describe("extractLiteralOptions", () => {
       .item(literal(3)).$type;
 
     expect(extractLiteralOptions(union)).toEqual([
-      { key: "1", label: "1" },
-      { key: "2", label: "2" },
-      { key: "3", label: "3" },
+      { key: "1", label: "1", value: 1 },
+      { key: "2", label: "2", value: 2 },
+      { key: "3", label: "3", value: 3 },
     ]);
   });
 
@@ -51,8 +51,16 @@ describe("extractLiteralOptions", () => {
     const union = defineAnnotatedType("union").item(literal("a")).item(literal(1)).$type;
 
     expect(extractLiteralOptions(union)).toEqual([
-      { key: "a", label: "a" },
-      { key: "1", label: "1" },
+      { key: "a", label: "a", value: "a" },
+      { key: "1", label: "1", value: 1 },
+    ]);
+  });
+
+  it("keeps the typed literal on `value` (booleans stay booleans)", () => {
+    const union = defineAnnotatedType("union").item(literal(true)).item(literal(false)).$type;
+    expect(extractLiteralOptions(union)).toEqual([
+      { key: "true", label: "true", value: true },
+      { key: "false", label: "false", value: false },
     ]);
   });
 
@@ -78,9 +86,9 @@ describe("extractLiteralOptions", () => {
     const outer = defineAnnotatedType("union").item(inner).item(literal("c")).$type;
 
     expect(extractLiteralOptions(outer)).toEqual([
-      { key: "a", label: "a" },
-      { key: "b", label: "b" },
-      { key: "c", label: "c" },
+      { key: "a", label: "a", value: "a" },
+      { key: "b", label: "b", value: "b" },
+      { key: "c", label: "c", value: "c" },
     ]);
   });
 
@@ -91,8 +99,8 @@ describe("extractLiteralOptions", () => {
       .item(literal("b")).$type;
 
     expect(extractLiteralOptions(union)).toEqual([
-      { key: "a", label: "a" },
-      { key: "b", label: "b" },
+      { key: "a", label: "a", value: "a" },
+      { key: "b", label: "b", value: "b" },
     ]);
   });
 });

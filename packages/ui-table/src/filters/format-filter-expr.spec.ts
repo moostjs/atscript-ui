@@ -52,4 +52,17 @@ describe("formatFilterExpr", () => {
   it("falls back to the URL spelling for an operator it cannot word", () => {
     expect(formatFilterExpr({ a: { $weird: 1 } } as never)).toBe("a$weird1");
   });
+
+  it("a value formatter does not touch the decoder's output", () => {
+    const expr = { total: { $gt: 5 } };
+    const seen: unknown[] = [];
+    const text = formatFilterExpr(expr, undefined, (_path, v) => {
+      seen.push(v);
+      return `<${String(v)}>`;
+    });
+    expect(text).toBe("total greater than <5>");
+    expect(seen).toEqual([5]);
+    // the same expression words the same way again (no state kept between calls)
+    expect(formatFilterExpr(expr)).toBe("total greater than 5");
+  });
 });

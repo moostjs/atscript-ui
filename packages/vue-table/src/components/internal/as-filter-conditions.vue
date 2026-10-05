@@ -2,11 +2,11 @@
 import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import {
-  columnDefaultCondition,
-  columnFilterConditions,
-  columnFilterType,
+  columnFilter,
   conditionLabel,
-  dateShortcuts,
+  isTemporalKind,
+  temporalShortcuts,
+  type TemporalShortcut,
   type FilterCondition,
   type FilterConditionType,
 } from "@atscript/ui-table";
@@ -22,11 +22,13 @@ const FilterInput = useTableComponent("filterInput", AsFilterInput);
 
 const model = defineModel<FilterCondition[]>({ required: true });
 
-const filterType = computed(() => columnFilterType(props.column.type));
-const availableConditions = computed(() => columnFilterConditions(props.column));
-const defCondition = computed<FilterConditionType>(() => columnDefaultCondition(props.column));
-const isDateType = computed(() => filterType.value === "date");
-const shortcuts = computed(() => (isDateType.value ? dateShortcuts() : []));
+const spec = computed(() => columnFilter(props.column));
+const filterType = computed(() => spec.value.kind);
+const availableConditions = computed(() => spec.value.conditions);
+const defCondition = computed(() => spec.value.defaultCondition);
+// Relative conditions (`today-6`…`today`): a saved or shared filter keeps its meaning.
+const allShortcuts = temporalShortcuts();
+const shortcuts = computed(() => (isTemporalKind(filterType.value) ? allShortcuts : []));
 
 function updateCondition(index: number, update: Partial<FilterCondition>) {
   model.value = model.value.map((c, i) => (i === index ? { ...c, ...update } : c));
@@ -41,8 +43,8 @@ function removeCondition(index: number) {
   model.value = next.length > 0 ? next : [{ type: defCondition.value, value: [] }];
 }
 
-function applyShortcut(dates: [string, string]) {
-  model.value = [{ type: "bw", value: [dates[0], dates[1]] }];
+function applyShortcut(sc: TemporalShortcut) {
+  model.value = sc.conditions.map((c) => ({ type: c.type, value: [...c.value] }));
 }
 </script>
 
@@ -59,7 +61,7 @@ function applyShortcut(dates: [string, string]) {
       "
     >
       <option v-for="ct in availableConditions" :key="ct" :value="ct">
-        {{ conditionLabel(ct) }}
+        {{ conditionLabel(ct, filterType) }}
       </option>
     </select>
 
@@ -87,14 +89,14 @@ function applyShortcut(dates: [string, string]) {
     + Add condition
   </button>
 
-  <div v-if="isDateType && shortcuts.length > 0" class="as-filter-shortcuts">
+  <div v-if="shortcuts.length > 0" class="as-filter-shortcuts">
     <span class="as-filter-shortcuts-label">Quick:</span>
     <button
       v-for="sc in shortcuts"
-      :key="sc.label"
+      :key="sc.id"
       type="button"
       class="as-filter-shortcut-btn"
-      @click="applyShortcut(sc.dates)"
+      @click="applyShortcut(sc)"
     >
       {{ sc.label }}
     </button>

@@ -2,8 +2,8 @@
 import { computed } from "vue";
 import { formatTimeAgoIntl } from "@vueuse/core";
 import type { ColumnDef } from "@atscript/ui";
+import { getDateTimeFormat } from "@atscript/ui-table";
 import { getCellValue } from "../../utils/get-cell-value";
-import { getDateTimeFormat } from "../../utils/intl-cache";
 import { useCellLocale } from "../../composables/use-cell-locale";
 
 // `title` always carries the absolute ISO so e2e tests can grep the canonical

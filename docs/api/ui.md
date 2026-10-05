@@ -254,6 +254,14 @@ interface ColumnDef {
   path: string;
   label: string;
   type: string;
+  /**
+   * Scalar storage kind of the value — what the server's filter guard checks,
+   * derived from the atscript type by `createTableDef`. Filter UIs and the
+   * query builder read it to pick the filter kind (a `timestamp` gets a
+   * date-time filter) and to encode values. `undefined` for arrays, objects,
+   * JSON and mixed unions: no coercion. Since 0.1.148.
+   */
+  valueKind?: ColumnValueKind;
   component?: string;
   /** Extra sibling leaf paths to fetch when this column is visible — see [Custom Cells](/tables/custom-cells). */
   selectWith?: string[];
@@ -267,7 +275,8 @@ interface ColumnDef {
   width?: string;
   maxLen?: number;
   order: number;
-  options?: { key: string; label: string }[];
+  /** `value` (since 0.1.148) is the typed literal — `true`, `3` — that a filter sends; `key` is its string form. Always set by `createTableDef`; a hand-built column may omit it. */
+  options?: { key: string; label: string; value?: string | number | boolean }[];
   valueHelpInfo?: ValueHelpInfo;
   currencyCode?: string;
   currencyRefField?: string;
@@ -278,6 +287,24 @@ interface ColumnDef {
   fixed?: boolean;
 }
 ```
+
+### `ColumnValueKind`
+
+Since 0.1.148.
+
+```typescript
+type ColumnValueKind =
+  | "string"
+  | "date"
+  | "isoDate" // string, string.date, string.isoDate
+  | "number"
+  | "integer"
+  | "decimal"
+  | "timestamp" // number, number.int (or @expect.int / @db.default.increment / now / agg.count), decimal, number.timestamp
+  | "boolean";
+```
+
+A union whose non-null members agree on one kind takes it (`1 | 2` is `number`, `'a' | 'b' | null` is `string`); anything else has none. See [Filterable columns](/tables/filtering#storage-kind-valuekind).
 
 ### `MetaResponse`
 
@@ -789,7 +816,7 @@ interface ValueHelpInfo {
 function extractValueHelp(prop: TAtscriptAnnotatedType): ValueHelpInfo | undefined;
 function extractLiteralOptions(
   prop: TAtscriptAnnotatedType,
-): { key: string; label: string }[] | undefined;
+): { key: string; label: string; value: string | number | boolean }[] | undefined; // `value` since 0.1.148
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 ```
 

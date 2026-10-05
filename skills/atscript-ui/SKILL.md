@@ -180,6 +180,7 @@ import {
   uniqueryFilterToFieldFilters, // lossy pieces → 3rd arg onUnsupportedFilter / dev warn (0.1.139+)
   conditionsForType,
   columnFilterType,
+  columnFilterKind, // filter kind from valueKind first (0.1.148+)
   columnFilterConditions, // per-column ops incl. existence-only columns (0.1.139+)
   isColumnFilterable,
   parseFilterInput,
@@ -187,7 +188,9 @@ import {
   formatFilterCondition,
   defaultCondition,
   columnDefaultCondition, // per column (0.1.139+)
-  dateShortcuts,
+  temporalShortcuts, // relative date shortcuts (0.1.148+); dateShortcuts is deprecated
+  createColumnValueEncoder, // typed / temporal filter values per column (0.1.148+)
+  stateToUrlQueryRecord, // router `{ query }` for links (0.1.148+)
   // preset model
   PresetSnapshot,
   PresetSnapshotWire,

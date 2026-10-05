@@ -1,4 +1,4 @@
-/** A date shortcut produces a label and a [start, end] ISO date range. */
+/** @deprecated See `dateShortcuts`. A date shortcut produces a label and a [start, end] ISO date range. */
 export interface DateShortcut {
   label: string;
   dates: [start: string, end: string];
@@ -7,6 +7,9 @@ export interface DateShortcut {
 /**
  * Generate date filter shortcuts relative to the given date (defaults to now).
  * Each shortcut produces a `bw` (between) condition range using ISO date strings (YYYY-MM-DD).
+ *
+ * @deprecated Absolute dates go stale in a saved filter and ignore the table's
+ * time zone. Use `temporalShortcuts()`, whose conditions carry relative tokens.
  */
 export function dateShortcuts(now?: Date): DateShortcut[] {
   const today = now ?? new Date();

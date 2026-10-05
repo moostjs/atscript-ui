@@ -1,7 +1,8 @@
 import type { FilterExpr } from "@uniqu/core";
-import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
+import type { FieldFilters, FilterConditionType } from "./filter-types";
 import { isFilled } from "./filter-conditions";
-import { escapeRegex } from "./escape-regex";
+import { conditionToExpr } from "./condition-to-expr";
+import type { ConditionEncoder } from "./value-encoder";
 
 /** Exclusion condition types — AND'd together per field. */
 const EXCLUSION_TYPES = new Set<FilterConditionType>(["ne", "notNull"]);
@@ -11,46 +12,20 @@ export function isExclusionType(type: FilterConditionType): boolean {
   return EXCLUSION_TYPES.has(type);
 }
 
-/**
- * Convert a single condition to a Uniquery filter expression.
- * Returns a ComparisonNode with the field as key.
- */
-function conditionToExpr(field: string, condition: FilterCondition): FilterExpr {
-  const v = condition.value;
-  switch (condition.type) {
-    case "eq":
-      return { [field]: v[0] };
-    case "ne":
-      return { [field]: { $ne: v[0] } };
-    case "gt":
-      return { [field]: { $gt: v[0] } };
-    case "gte":
-      return { [field]: { $gte: v[0] } };
-    case "lt":
-      return { [field]: { $lt: v[0] } };
-    case "lte":
-      return { [field]: { $lte: v[0] } };
-    case "contains":
-      return { [field]: { $regex: `/${escapeRegex(String(v[0]))}/i` } };
-    case "starts":
-      return { [field]: { $regex: `/^${escapeRegex(String(v[0]))}/i` } };
-    case "ends":
-      return { [field]: { $regex: `/${escapeRegex(String(v[0]))}$/i` } };
-    case "bw":
-      return { [field]: { $gte: v[0], $lte: v[1] } };
-    case "null":
-      return { [field]: { $exists: false } };
-    case "notNull":
-      return { [field]: { $exists: true } };
-    case "regex":
-      return { [field]: { $regex: String(v[0]) } };
-  }
-}
-
 /** Push a group of expressions: unwrap single, wrap multiple with the given operator. */
 function pushGroup(target: FilterExpr[], items: FilterExpr[], op: "$or" | "$and"): void {
   if (items.length === 1) target.push(items[0]);
   else if (items.length > 1) target.push({ [op]: items } as FilterExpr);
+}
+
+/** Options for {@link filtersToUniqueryFilter}. */
+export interface FiltersToUniqueryOptions {
+  /**
+   * Column-aware value encoder (see `createColumnValueEncoder`), consulted for
+   * each condition before the default conversion — an `undefined` result
+   * falls through to it. Since 0.1.148.
+   */
+  encode?: ConditionEncoder;
 }
 
 /**
@@ -62,7 +37,13 @@ function pushGroup(target: FilterExpr[], items: FilterExpr[], op: "$or" | "$and"
  *
  * Returns `undefined` when no filled conditions exist.
  */
-export function filtersToUniqueryFilter(fieldFilters: FieldFilters): FilterExpr | undefined {
+export function filtersToUniqueryFilter(
+  fieldFilters: FieldFilters,
+  opts?: FiltersToUniqueryOptions,
+): FilterExpr | undefined {
+  const encode = opts?.encode;
+  // One clock reading for the whole query: every relative date means the same "today".
+  const now = encode ? Date.now() : undefined;
   const topGroups: FilterExpr[] = [];
 
   for (const field in fieldFilters) {
@@ -72,7 +53,7 @@ export function filtersToUniqueryFilter(fieldFilters: FieldFilters): FilterExpr 
 
     for (const condition of conditions) {
       if (!isFilled(condition)) continue;
-      const expr = conditionToExpr(field, condition);
+      const expr = encode?.(field, condition, now) ?? conditionToExpr(field, condition);
       if (isExclusionType(condition.type)) {
         (exclusions ??= []).push(expr);
       } else {

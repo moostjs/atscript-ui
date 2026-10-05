@@ -1,9 +1,13 @@
-import type { ColumnDef } from "@atscript/ui";
+import { NUMERIC_VALUE_KINDS, type ColumnDef } from "@atscript/ui";
 import { NULL_OPS } from "./filter-conditions";
 import type { FilterConditionType } from "./filter-types";
 
-/** Column type categories for condition availability. */
-export type ColumnFilterType = "text" | "number" | "date" | "boolean" | "enum" | "ref";
+/**
+ * Column type categories for condition availability. `datetime` (since
+ * 0.1.148) is a date filter on a column that stores instants — a timestamp or
+ * an ISO date-time; it offers the same conditions as `date`.
+ */
+export type ColumnFilterType = "text" | "number" | "date" | "datetime" | "boolean" | "enum" | "ref";
 
 const TEXT_CONDITIONS: FilterConditionType[] = [
   "eq",
@@ -43,33 +47,67 @@ const DATE_CONDITIONS: FilterConditionType[] = [
   "notNull",
 ];
 
+/** The one source of what each kind offers; the tables below are derived from it. */
 const CONDITIONS_MAP: Record<ColumnFilterType, FilterConditionType[]> = {
   text: TEXT_CONDITIONS,
   number: NUMBER_CONDITIONS,
   boolean: BOOLEAN_CONDITIONS,
   date: DATE_CONDITIONS,
+  datetime: DATE_CONDITIONS,
   enum: TEXT_CONDITIONS,
   ref: TEXT_CONDITIONS,
 };
 
-const NON_NULLABLE_CONDITIONS_MAP = {
-  text: TEXT_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
-  number: NUMBER_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
-  boolean: BOOLEAN_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
-  date: DATE_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
-  enum: TEXT_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
-  ref: TEXT_CONDITIONS.filter((c) => !NULL_OPS.has(c)),
-} satisfies Record<ColumnFilterType, readonly FilterConditionType[]>;
+const PATTERN_CONDITIONS: ReadonlySet<FilterConditionType> = new Set([
+  "contains",
+  "starts",
+  "ends",
+  "regex",
+]);
+
+/** `CONDITIONS_MAP` without the `null` / `notNull` and/or the pattern conditions. */
+function deriveMap(
+  dropNull: boolean,
+  dropPatterns: boolean,
+): Record<ColumnFilterType, readonly FilterConditionType[]> {
+  const out = {} as Record<ColumnFilterType, readonly FilterConditionType[]>;
+  for (const kind of Object.keys(CONDITIONS_MAP) as ColumnFilterType[]) {
+    out[kind] = CONDITIONS_MAP[kind].filter(
+      (c) => !(dropNull && NULL_OPS.has(c)) && !(dropPatterns && PATTERN_CONDITIONS.has(c)),
+    );
+  }
+  return out;
+}
+
+const DERIVED = {
+  full: CONDITIONS_MAP,
+  nonNullable: deriveMap(true, false),
+  noPatterns: deriveMap(false, true),
+  nonNullableNoPatterns: deriveMap(true, true),
+} as const;
 
 /**
  * Available filter conditions for a given column filter type.
- * Non-nullable columns drop `null` / `notNull` since they can never match.
+ *
+ * - A non-nullable column drops `null` / `notNull` (they can never match).
+ * - A column whose storage (`valueKind`) is not `string` drops the pattern
+ *   conditions (`contains` / `starts` / `ends` / `regex`): pattern matching is
+ *   `$regex`, which the server only takes on a string field — a numeric `ref` /
+ *   `enum` cannot.
  */
 export function conditionsForType(
   type: ColumnFilterType,
   nullable = true,
+  valueKind?: ColumnDef["valueKind"],
 ): readonly FilterConditionType[] {
-  const map = nullable ? CONDITIONS_MAP : NON_NULLABLE_CONDITIONS_MAP;
+  const noPatterns = valueKind !== undefined && valueKind !== "string";
+  const map = nullable
+    ? noPatterns
+      ? DERIVED.noPatterns
+      : DERIVED.full
+    : noPatterns
+      ? DERIVED.nonNullableNoPatterns
+      : DERIVED.nonNullable;
   return map[type] ?? map.text;
 }
 
@@ -77,56 +115,50 @@ export function conditionsForType(
 export function columnFilterType(columnType: string): ColumnFilterType {
   switch (columnType) {
     case "number":
-      return "number";
     case "boolean":
-      return "boolean";
     case "date":
-      return "date";
+    case "datetime":
     case "enum":
-      return "enum";
     case "ref":
-      return "ref";
+      return columnType;
     default:
       return "text";
   }
 }
 
-/** The `ColumnDef` fields that decide which filter conditions a column offers. */
-export type FilterableColumn = Pick<ColumnDef, "type" | "nullable" | "filterable" | "filterOps">;
-
-const EXISTENCE_CONDITIONS: readonly FilterConditionType[] = ["null", "notNull"];
-const NO_CONDITIONS: readonly FilterConditionType[] = [];
-
-/**
- * Filter conditions a column offers — the one answer every filter UI (column
- * menu, filter dialog, filter bar, config dialog) reads.
- *
- * - Value-filterable (`filterable: true`) → {@link conditionsForType} for its
- *   display type.
- * - Existence-only (`filterable: false`, `filterOps` includes `$exists` — a
- *   JSON-stored column) → `null` / `notNull`: whether a value is present,
- *   never what it is.
- * - Otherwise → `[]`: the column takes no filter.
- *
- * `null` / `notNull` are dropped for non-nullable columns, so an existence-only
- * column that is never empty offers nothing.
- *
- * @since 0.1.139
- */
-export function columnFilterConditions(column: FilterableColumn): readonly FilterConditionType[] {
-  if (column.filterable) return conditionsForType(columnFilterType(column.type), column.nullable);
-  if (column.nullable && column.filterOps?.includes("$exists")) return EXISTENCE_CONDITIONS;
-  return NO_CONDITIONS;
+/** Whether a filter kind is a date filter (`date` or `datetime`). */
+export function isTemporalKind(kind: ColumnFilterType): kind is "date" | "datetime" {
+  return kind === "date" || kind === "datetime";
 }
 
+/** The `ColumnDef` fields that decide which filter conditions a column offers. */
+export type FilterableColumn = Pick<
+  ColumnDef,
+  "type" | "nullable" | "filterable" | "filterOps" | "valueKind"
+>;
+
 /**
- * Whether a column takes any filter at all — value comparisons or the
- * existence-only `null` / `notNull` pair. Use it (not
- * `column.filterable`, which is value comparison only) to decide whether to
- * show a column in a filter UI.
- *
- * @since 0.1.139
+ * The filter kind of a column from its display type and storage kind. See
+ * `columnFilterKind` for the rules.
  */
-export function isColumnFilterable(column: FilterableColumn): boolean {
-  return columnFilterConditions(column).length > 0;
+export function resolveFilterKind(
+  column: Pick<FilterableColumn, "type" | "valueKind">,
+): ColumnFilterType {
+  const display = columnFilterType(column.type);
+  const valueKind = column.valueKind;
+  switch (valueKind) {
+    case "timestamp":
+      if (display === "number") return "number";
+      return display === "date" ? "date" : "datetime";
+    case "isoDate":
+      return display === "date" ? "date" : "datetime";
+    case "date":
+      return "date";
+    case "boolean":
+      return display === "text" ? "boolean" : display;
+    default:
+      return display === "text" && valueKind && NUMERIC_VALUE_KINDS.has(valueKind)
+        ? "number"
+        : display;
+  }
 }

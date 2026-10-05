@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 import { buildTableQuery } from "./build-table-query";
 import type { SortControl } from "@atscript/ui";
 import type { FieldFilters } from "../filters/filter-types";
+import { createColumnValueEncoder } from "../filters/value-encoder";
+import { urlQueryStringToState } from "./url-query";
 
 const emptyFilters: FieldFilters = {};
 
@@ -324,5 +326,57 @@ describe("buildTableQuery — residual filters", () => {
       filters: { c: [{ type: "eq" as const, value: [3] }] },
     };
     expect(buildTableQuery({ ...base, residualFilters: [] })).toEqual(buildTableQuery(base));
+  });
+});
+
+describe("buildTableQuery — encodeCondition (0.1.148)", () => {
+  it("encodes field filters but not residual or forced filters", () => {
+    const query = buildTableQuery({
+      visibleColumnPaths: ["createdAt"],
+      sorters: [],
+      filters: { createdAt: [{ type: "eq", value: ["2026-10-05"] }] },
+      residualFilters: [{ updatedAt: "2026-10-05" }],
+      forceFilters: { archivedAt: "2026-10-05" },
+      encodeCondition: (field, cond) =>
+        field === "createdAt" ? { [field]: { $gte: 1, $lt: 2, tag: cond.type } } : undefined,
+    });
+    expect(query.filter).toEqual({
+      $and: [
+        { archivedAt: "2026-10-05" },
+        { createdAt: { $gte: 1, $lt: 2, tag: "eq" } },
+        { updatedAt: "2026-10-05" },
+      ],
+    });
+  });
+
+  it("an undefined result falls back to the default conversion", () => {
+    const query = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: { name: [{ type: "eq", value: ["a"] }] },
+      encodeCondition: () => undefined,
+    });
+    expect(query.filter).toEqual({ name: "a" });
+  });
+});
+
+describe("buildTableQuery — typed values from a URL", () => {
+  const columns = [
+    { path: "qty", type: "number", valueKind: "integer" },
+    { path: "total", type: "number", valueKind: "decimal" },
+    { path: "active", type: "boolean", valueKind: "boolean" },
+  ] as const;
+
+  it("a URL-decoded numeric filter reaches the server typed", () => {
+    const { filters } = urlQueryStringToState("qty>'5'&total>100&active='true'");
+    const query = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters,
+      encodeCondition: createColumnValueEncoder(columns),
+    });
+    expect(query.filter).toEqual({
+      $and: [{ qty: { $gt: 5 } }, { total: { $gt: "100" } }, { active: true }],
+    });
   });
 });

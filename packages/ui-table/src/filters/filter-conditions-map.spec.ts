@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { columnFilterType, conditionsForType, isTemporalKind } from "./filter-conditions-map";
 import {
+  columnDefaultCondition,
+  columnFilter,
   columnFilterConditions,
-  columnFilterType,
-  conditionsForType,
+  columnFilterKind,
   isColumnFilterable,
-} from "./filter-conditions-map";
-import { columnDefaultCondition, parseColumnFilterInput } from "./filter-input-format";
+} from "./column-filter";
+import { parseColumnFilterInput } from "./filter-input-format";
 
 describe("conditionsForType", () => {
   it("text has contains, starts, ends, regex", () => {
@@ -134,5 +136,128 @@ describe("columnFilterConditions / isColumnFilterable", () => {
       type: "gt",
       value: [5],
     });
+  });
+});
+
+describe("columnFilterKind (0.1.148)", () => {
+  const cases: [string, string | undefined, string][] = [
+    ["datetime", "timestamp", "datetime"],
+    ["text", "timestamp", "datetime"],
+    ["date", "timestamp", "date"],
+    ["number", "timestamp", "number"],
+    ["text", "isoDate", "datetime"],
+    ["datetime", "isoDate", "datetime"],
+    ["date", "isoDate", "date"],
+    ["text", "date", "date"],
+    ["number", "integer", "number"],
+    ["text", "integer", "number"],
+    ["text", "decimal", "number"],
+    ["text", "boolean", "boolean"],
+    ["enum", "boolean", "enum"],
+    ["enum", "number", "enum"],
+    ["ref", "integer", "ref"],
+    ["text", "string", "text"],
+    ["text", undefined, "text"],
+    ["datetime", undefined, "datetime"],
+    ["date", undefined, "date"],
+  ];
+  it.each(cases)("display %s + valueKind %s → %s", (type, valueKind, expected) => {
+    expect(columnFilterKind({ type, valueKind: valueKind as never })).toBe(expected);
+  });
+
+  it("columnFilterType maps datetime to its own kind", () => {
+    expect(columnFilterType("datetime")).toBe("datetime");
+    expect(conditionsForType("datetime")).toEqual(conditionsForType("date"));
+  });
+});
+
+describe("columnFilterConditions — storage kinds (0.1.148)", () => {
+  const base = { filterable: true, nullable: true };
+  const PATTERN = ["contains", "starts", "ends", "regex"];
+
+  it("a numeric ref / enum drops the pattern operators", () => {
+    for (const type of ["ref", "enum"]) {
+      const offered = columnFilterConditions({ ...base, type, valueKind: "integer" });
+      for (const p of PATTERN) expect(offered).not.toContain(p);
+      expect(offered).toContain("eq");
+      expect(offered).toContain("bw");
+    }
+  });
+
+  it("a string ref / enum keeps them; so does a column with no valueKind", () => {
+    expect(columnFilterConditions({ ...base, type: "ref", valueKind: "string" })).toContain(
+      "contains",
+    );
+    expect(columnFilterConditions({ ...base, type: "enum" })).toContain("regex");
+  });
+
+  it("timestamp and string.date columns offer date conditions, no contains / regex", () => {
+    for (const valueKind of ["timestamp", "isoDate", "date"] as const) {
+      const offered = columnFilterConditions({ ...base, type: "text", valueKind });
+      for (const p of PATTERN) expect(offered).not.toContain(p);
+      expect(offered).toEqual(expect.arrayContaining(["eq", "gt", "lt", "bw", "null"]));
+    }
+  });
+
+  it("a non-nullable timestamp offers no empty / not-empty", () => {
+    const offered = columnFilterConditions({
+      ...base,
+      nullable: false,
+      type: "datetime",
+      valueKind: "timestamp",
+    });
+    expect(offered).not.toContain("null");
+    expect(offered).not.toContain("notNull");
+  });
+
+  it("the default condition falls back to eq when contains is not offered", () => {
+    expect(columnDefaultCondition({ ...base, type: "ref", valueKind: "integer" })).toBe("eq");
+    expect(columnDefaultCondition({ ...base, type: "ref", valueKind: "string" })).toBe("contains");
+    expect(columnDefaultCondition({ ...base, type: "text", valueKind: "timestamp" })).toBe("eq");
+  });
+});
+
+describe("the per-column filter resolver", () => {
+  const base = { type: "text", nullable: true, filterable: true } as const;
+
+  it("is derived once per column object", () => {
+    const column = { ...base, valueKind: "timestamp" } as const;
+    expect(columnFilter(column)).toBe(columnFilter(column));
+    expect(columnFilter(column).kind).toBe("datetime");
+    expect(columnFilter({ ...column })).not.toBe(columnFilter(column));
+  });
+
+  it("owns pattern stripping through conditionsForType", () => {
+    expect(conditionsForType("text", true, "string")).toContain("contains");
+    expect(conditionsForType("text", true, "integer")).not.toContain("contains");
+    expect(conditionsForType("ref", false, "integer")).toEqual(["eq", "ne", "bw"]);
+  });
+
+  it("filterOps the server reports win over the storage rules", () => {
+    const column = { ...base, filterOps: ["$eq", "$ne", "$regex"] };
+    const offered = columnFilterConditions(column);
+    expect(offered).toEqual(expect.arrayContaining(["eq", "ne", "contains", "regex"]));
+    for (const c of ["gt", "bw", "null", "notNull"]) expect(offered).not.toContain(c);
+    // a range needs both bounds
+    expect(columnFilterConditions({ ...base, filterOps: ["$eq", "$gte"] })).not.toContain("bw");
+    expect(columnFilterConditions({ ...base, filterOps: ["$eq", "$gte", "$lte"] })).toContain("bw");
+  });
+
+  it("a date filter is checked against the period bounds it sends", () => {
+    const ts = { ...base, valueKind: "timestamp" } as const;
+    const offered = columnFilterConditions({ ...ts, filterOps: ["$gte", "$lt"] });
+    expect(offered).toEqual(expect.arrayContaining(["eq", "ne", "gt", "gte", "lt", "lte", "bw"]));
+    expect(columnFilterConditions({ ...ts, filterOps: ["$gte"] })).not.toContain("lt");
+  });
+
+  it("without reported filterOps the valueKind rule is the fallback", () => {
+    expect(columnFilterConditions({ ...base, valueKind: "integer" })).not.toContain("regex");
+    expect(columnFilterConditions(base)).toContain("regex");
+  });
+
+  it("isTemporalKind", () => {
+    expect(isTemporalKind("date")).toBe(true);
+    expect(isTemporalKind("datetime")).toBe(true);
+    expect(isTemporalKind("text")).toBe(false);
   });
 });

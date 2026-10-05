@@ -242,22 +242,29 @@ zero-cost opt-in.
 
 ## Date shortcuts
 
-`dateShortcuts()` returns a fixed list of date-range presets useful
-for `bw` (between) conditions: **Last 7 Days**, **Last 30 Days**,
-**Month to Date**, **Last 90 Days**, **Last 6 Months**, **Last 12
-Months**, **Year to Date**. The filter dialog's date input renders
-them as quick-pick buttons.
+The filter dialog's date inputs render quick-pick buttons from
+`temporalShortcuts()` (since 0.1.148): **Today**, **Yesterday**,
+**Last 7 days**, **Last 30 days**, **This week**, **Last week**,
+**This month**, **Last month**, **This year**. Their conditions carry
+**relative** tokens (`today-6` … `today`), so a preset or a shared link
+that stores one keeps meaning "the last 7 days" when it is applied — a
+user who wants fixed dates picks an absolute range instead. See
+[Date and time filters](/tables/filtering#date-and-time-filters).
 
 ```ts
-import { dateShortcuts } from "@atscript/ui-table";
+import { temporalShortcuts } from "@atscript/ui-table";
 
-for (const sc of dateShortcuts()) {
-  // { label: 'Last 7 Days', dates: ['2026-05-06', '2026-05-13'] }
+for (const sc of temporalShortcuts()) {
+  // { id: 'last-7-days', label: 'Last 7 days',
+  //   conditions: [{ type: 'bw', value: ['today-6', 'today'] }] }
 }
 ```
 
-Pass `dateShortcuts(now)` with an explicit reference date for
-deterministic tests.
+`dateShortcuts()` — a fixed list of absolute `[start, end]` ISO date
+pairs (**Last 7 Days**, **Month to Date**, …) — is deprecated: absolute
+dates go stale inside a saved preset and ignore the table's time zone.
+It stays exported and unchanged, and will be removed in a future
+breaking release.
 
 ## End-to-end wiring
 

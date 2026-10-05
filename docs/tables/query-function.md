@@ -251,6 +251,13 @@ remove:
 />
 ```
 
+All three scope props — `forceFilters`, `forceSorters` and
+`alwaysSelected` — are **live** since 0.1.148: bind them to a computed and a
+change re-queries the mounted table (page 1 for a filter, the same page for
+sorters and `$select`), comparing structurally, so no `:key` is needed. Combine
+with `:block-query` to hold the first fetch until the scope is known. See
+[Forced scope is live](/tables/filtering#forced-scope-is-live).
+
 `buildTableQuery` merges these with user state via `mergeFilters` and
 `mergeSorters`:
 

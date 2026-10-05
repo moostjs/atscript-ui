@@ -2,6 +2,7 @@ import type { SortControl } from "@atscript/ui";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { FieldFilters } from "../filters/filter-types";
 import { filtersToUniqueryFilter } from "../filters/filters-to-uniquery";
+import type { ConditionEncoder } from "../filters/value-encoder";
 import { mergeSorters } from "./merge-sorters";
 import { mergeFilters } from "./merge-filters";
 
@@ -23,6 +24,13 @@ export interface BuildTableQueryOptions {
   ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
+  /**
+   * Column-aware value encoder for `filters` (see `createColumnValueEncoder`):
+   * temporal conditions become epoch / ISO / date bounds, boolean text becomes
+   * a boolean. Not applied to `residualFilters` or `forceFilters`, which are
+   * already Uniquery. Since 0.1.148.
+   */
+  encodeCondition?: ConditionEncoder;
   /**
    * Residual filter conditions — AND-ed conjuncts the field-filter model
    * cannot hold (a cross-field `$or`, a second range on one field, …). AND'd
@@ -57,7 +65,7 @@ export interface BuildTableQueryOptions {
 export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
   const filter = mergeFilters(
     opts.forceFilters,
-    filtersToUniqueryFilter(opts.filters),
+    filtersToUniqueryFilter(opts.filters, { encode: opts.encodeCondition }),
     ...(opts.residualFilters ?? []),
   );
 

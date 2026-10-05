@@ -5,6 +5,17 @@ import type {
 } from "@atscript/typescript/utils";
 
 /**
+ * One literal of a union: `key` / `label` are the string forms the UI keys
+ * on; `value` is the typed literal (`true`, `3`, `'a'`) — what a filter or a
+ * form must send to the server. `value` since 0.1.148.
+ */
+export interface LiteralOption {
+  key: string;
+  label: string;
+  value: string | number | boolean;
+}
+
+/**
  * Extracts options from a union of literal types (e.g. 'a' | 'b' | 'c').
  * Returns undefined if the type is not a pure union of literals.
  *
@@ -12,9 +23,7 @@ import type {
  * into union items and produces synthetic unions containing both individual
  * literals and the original union type as nested items.
  */
-export function extractLiteralOptions(
-  prop: TAtscriptAnnotatedType,
-): { key: string; label: string }[] | undefined {
+export function extractLiteralOptions(prop: TAtscriptAnnotatedType): LiteralOption[] | undefined {
   if (prop.type.kind !== "union") return undefined;
   const result = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
   return result && result.length > 0 ? result : undefined;
@@ -47,14 +56,15 @@ function checkAllLiterals(items: TAtscriptAnnotatedType[]): boolean {
 function collectLiterals(
   items: TAtscriptAnnotatedType[],
   seen: Set<string>,
-): { key: string; label: string }[] | null {
-  const result: { key: string; label: string }[] = [];
+): LiteralOption[] | null {
+  const result: LiteralOption[] = [];
   for (const item of items) {
     if (item.type.kind === "" && (item.type as TAtscriptTypeFinal).value !== undefined) {
-      const val = String((item.type as TAtscriptTypeFinal).value);
+      const raw = (item.type as TAtscriptTypeFinal).value as string | number | boolean;
+      const val = String(raw);
       if (!seen.has(val)) {
         seen.add(val);
-        result.push({ key: val, label: val });
+        result.push({ key: val, label: val, value: raw });
       }
     } else if (item.type.kind === "union") {
       const nested = collectLiterals((item.type as TAtscriptTypeComplex).items, seen);

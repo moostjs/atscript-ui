@@ -921,3 +921,33 @@ describe("urlQueryStringToState — unsupported filters", () => {
     expect(out.unsupported).toBeUndefined();
   });
 });
+
+describe("temporal filters round-trip raw through the URL (0.1.148)", () => {
+  function roundTrip(filters: FieldFilters) {
+    const url = stateToUrlQueryString({ filters, sorters: [] }, DEFAULTS);
+    return { url, back: urlQueryStringToState(url).filters };
+  }
+
+  it("bw [today-6, today] stays relative", () => {
+    const filters: FieldFilters = {
+      createdAt: [{ type: "bw", value: ["today-6", "today"] }],
+    };
+    const { url, back } = roundTrip(filters);
+    expect(decodeURIComponent(url)).toContain("createdAt>='today-6'");
+    expect(decodeURIComponent(url)).toContain("createdAt<=");
+    expect(decodeURIComponent(url)).not.toMatch(/\d{9,}/);
+    expect(back).toEqual(filters);
+  });
+
+  it("eq 2026-10-05T14:30 and eq month-1", () => {
+    for (const value of ["2026-10-05T14:30", "month-1", "2026-10-05", "2026-10"]) {
+      const filters: FieldFilters = { createdAt: [{ type: "eq", value: [value] }] };
+      expect(roundTrip(filters).back).toEqual(filters);
+    }
+  });
+
+  it("an epoch number keeps its meaning", () => {
+    const filters: FieldFilters = { createdAt: [{ type: "gte", value: [1759622400000] }] };
+    expect(roundTrip(filters).back).toEqual(filters);
+  });
+});

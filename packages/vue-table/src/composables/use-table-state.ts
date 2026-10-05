@@ -22,6 +22,9 @@ import {
 import {
   buildTableQuery,
   cellAsString,
+  columnFilterKind,
+  createColumnValueEncoder,
+  isTemporalKind,
   debounce,
   DEV,
   arraysEqual,
@@ -37,6 +40,7 @@ import {
   reconcileColumnWidthDefaults,
   selectionQueryOf,
   selectionSignature,
+  stableValueKey,
   gateOwns,
   residualGateOwns,
   resolveAspectGate,
@@ -187,14 +191,22 @@ export interface TableQueryOptions {
    * App-authored, so never pruned of fields the caller cannot see — keep it
    * to fields every role reads, or the query is rejected.
    */
-  forceFilters?: FilterExpr;
+  forceFilters?: MaybeRefOrGetter<FilterExpr | undefined>;
   /** Always-applied sorters (prepended before user sorters). Never pruned, like `forceFilters`. */
-  forceSorters?: SortControl[];
+  forceSorters?: MaybeRefOrGetter<SortControl[] | undefined>;
   /**
    * Leaf field paths always added to `$select` (deduped, gated by available
    * meta), regardless of which columns are visible. Additive only.
    */
-  alwaysSelected?: string[];
+  alwaysSelected?: MaybeRefOrGetter<string[] | undefined>;
+  /**
+   * The IANA time zone dates are read in — where "today" starts and which
+   * instant a day filter means. Read live: a change re-queries when a date
+   * filter is set. Default: the browser's zone. Since 0.1.148.
+   */
+  timeZone?: MaybeRefOrGetter<string | undefined>;
+  /** First day of the week for `week` filters (`1` Monday … `7` Sunday). Default `1`. Since 0.1.148. */
+  weekStart?: MaybeRefOrGetter<number | undefined>;
   /**
    * When true, all triggers (query/queryNext/loadRange) early-return. Pass a
    * getter (or a ref) to keep it reactive: when it flips back to `false` the
@@ -659,6 +671,32 @@ export function createTableState(opts: CreateTableStateOptions): {
   /** Reads the value a sorter orders by — a display column's `sortValue` wins. */
   const sortValueOf = createSortValueReader(opts.displayColumns);
 
+  /** The app-authored scope, read live — the query, local sort and chrome all go through these. */
+  const forceFilters = computed(() => toValue(queryOpts?.forceFilters));
+  const timeZone = computed(() => toValue(queryOpts?.timeZone));
+  const weekStart = computed(() => toValue(queryOpts?.weekStart));
+  /**
+   * Turns a typed filter value into what the server accepts (date periods in
+   * `timeZone`, boolean text → boolean). Rebuilt when the columns, the zone or
+   * the week start change; "today" is read at each query build.
+   */
+  const encodeCondition = computed(() =>
+    createColumnValueEncoder(allColumns.value, {
+      timeZone: timeZone.value,
+      weekStart: weekStart.value,
+    }),
+  );
+  const forceSorters = computed(() => toValue(queryOpts?.forceSorters) ?? []);
+
+  /** Whether a date filter is set — the only filters a zone or week-start change affects. */
+  function hasFilledTemporalFilter(): boolean {
+    for (const c of allColumns.value) {
+      if (!c.valueKind || !isTemporalKind(columnFilterKind(c))) continue;
+      if (filters.value[c.path]?.some(isFilled)) return true;
+    }
+    return false;
+  }
+
   function applyLocalSort<T extends Record<string, unknown>>(rows: T[]): T[] {
     // A query function that owns its ordering (static/local mode) has already
     // sorted the whole dataset by every sorter — re-sorting the page here
@@ -669,9 +707,8 @@ export function createTableState(opts: CreateTableStateOptions): {
     // the server already ordered the page by its own fields, so those are a
     // no-op tiebreak here, and a local sorter slots in at its real priority
     // instead of overriding everything before it.
-    const merged = queryOpts?.forceSorters?.length
-      ? mergeSorters(queryOpts.forceSorters, sorters.value)
-      : sorters.value;
+    const forced = forceSorters.value;
+    const merged = forced.length ? mergeSorters(forced, sorters.value) : sorters.value;
     return sortRowsLocally(rows, merged, sortValueOf);
   }
 
@@ -728,9 +765,8 @@ export function createTableState(opts: CreateTableStateOptions): {
     const extra = new Set<string>();
     for (const c of columns.value) // selectWith: VISIBLE columns only
       for (const p of c.selectWith ?? []) if (available.has(p)) extra.add(p);
-    if (queryOpts?.alwaysSelected)
-      // alwaysSelected: same gate
-      for (const p of queryOpts.alwaysSelected) if (available.has(p)) extra.add(p);
+    // alwaysSelected: same gate
+    for (const p of toValue(queryOpts?.alwaysSelected) ?? []) if (available.has(p)) extra.add(p);
     // The columns a delegated action's `idMap` reads (beyond `preferredId`,
     // which the server adds itself): its identifiers are built from them.
     const def = tableDef.value;
@@ -757,10 +793,11 @@ export function createTableState(opts: CreateTableStateOptions): {
       visibleColumnPaths,
       extraSelect: extra.size ? [...extra] : undefined,
       sorters: model.sorters,
-      forceSorters: queryOpts?.forceSorters,
+      forceSorters: forceSorters.value,
       filters: model.filters,
+      encodeCondition: encodeCondition.value,
       residualFilters: model.residual,
-      forceFilters: queryOpts?.forceFilters,
+      forceFilters: forceFilters.value,
       search: searchTerm.value || undefined,
       ignoreSorters: sortersIgnored(),
       includeActions: buildOpts?.includeActions ?? includeActions.value,
@@ -1205,6 +1242,9 @@ export function createTableState(opts: CreateTableStateOptions): {
     metadataError,
     lastError,
     mustRefresh,
+    forceFilters,
+    forceSorters,
+    timeZone,
     searchTerm,
     ignoreSortersWhenSearched,
     configDialogOpen,
@@ -1610,6 +1650,47 @@ export function createTableState(opts: CreateTableStateOptions): {
     resetPagination();
     debouncedFilterQuery();
   });
+
+  // The query scope is live: a host that derives the forced filter / sorters
+  // from a route or a picker changes them on the mounted table, and the zone
+  // or week start moves what a date filter means. One watcher over the lot, so
+  // changes landing in the same tick are one request. The parts are compared
+  // structurally (a new object with the same content — an inline literal
+  // re-created each render — is no change; an in-place edit of a reactive
+  // filter is). Not `immediate`: before the first query the bootstrap watcher
+  // reads the live values, so a change landing early costs no extra fetch.
+  const readScope = () => ({
+    filter: stableValueKey(forceFilters.value ?? null),
+    sorters: stableValueKey(forceSorters.value),
+    selected: (toValue(queryOpts?.alwaysSelected) ?? []).join("\0"),
+    zone: `${timeZone.value ?? ""}|${weekStart.value ?? ""}`,
+  });
+  let scope = readScope();
+  watch(
+    () => Object.values(readScope()).join("\u0001"),
+    () => {
+      const prev = scope;
+      scope = readScope();
+      if (!queryDetected) return;
+      const filterChanged = scope.filter !== prev.filter;
+      if (
+        !filterChanged &&
+        scope.sorters === prev.sorters &&
+        scope.selected === prev.selected &&
+        // The zone only matters while a date filter is set.
+        (scope.zone === prev.zone || !hasFilledTemporalFilter())
+      ) {
+        return;
+      }
+      mustRefresh.value = true;
+      // A new scope starts at page 1 (the sorters and columns keep the page).
+      // A URL applied in the same flush owns the page — and, through its
+      // hydration tail, the one request.
+      if (hydratingFromUrl) return;
+      if (filterChanged) resetPagination();
+      scheduleQuery();
+    },
+  );
 
   watch(
     () => sorters.value,

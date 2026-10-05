@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { FilterExpr } from "@uniqu/core";
 import { formatFilterExpr } from "@atscript/ui-table";
+import { useConditionFormat } from "../../composables/use-condition-format";
 import { useTableContext } from "../../composables/use-table-state";
 
 /**
@@ -19,11 +20,9 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+const { formatValue, labelOf } = useConditionFormat(state);
 
-const text = computed(() => {
-  const labels = new Map(state.allColumns.value.map((c) => [c.path, c.label]));
-  return formatFilterExpr(props.expr, (path) => labels.get(path));
-});
+const text = computed(() => formatFilterExpr(props.expr, labelOf, formatValue));
 </script>
 
 <template>

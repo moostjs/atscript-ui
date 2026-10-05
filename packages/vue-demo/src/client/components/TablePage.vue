@@ -20,14 +20,6 @@ import { onActionToast } from "../api/error-bus";
 import { clientForTable } from "../api/client-factory";
 import { createDemoTableTypes, createDemoTableComponents } from "../types/demo-table-types";
 
-// Shareable URLs: filters, sorters, pagination, and search are reflected in
-// the browser query string (e.g. `?status=active&$sort=-createdAt&$skip=50`).
-// Pasting a URL in another tab opens the same view in one fetch. Per-aspect
-// gating (`urlQuerySync` below) lets each table opt out of any of the four —
-// e.g. orders sets `{ pagination: false }` so a shared URL restores filters
-// but lands recipients on page 1 instead of pinning them to the linker's page.
-const urlQuery = useTableUrlQuery(useRoute(), useRouter());
-
 // No `:controls` map — every chrome slot falls back to its built-in
 // internally, and the dialogs stay lazy (bundled + mounted on first open).
 const types = createDemoTableTypes();
@@ -35,6 +27,22 @@ const components = createDemoTableComponents();
 
 const props = defineProps<{ path: string; label: string }>();
 const tableMeta = computed(() => getDemoTable(props.path));
+
+// Shareable URLs: filters, sorters, pagination, and search are reflected in
+// the browser query string (e.g. `?status=active&$sort=-createdAt&$skip=50`).
+// Pasting a URL in another tab opens the same view in one fetch. Per-aspect
+// gating (`urlQuerySync` below) lets each table opt out of any of the four —
+// e.g. orders sets `{ pagination: false }` so a shared URL restores filters
+// but lands recipients on page 1 instead of pinning them to the linker's page.
+const route = useRoute();
+const router = useRouter();
+// A table with a host-owned scope (`hostScope`) fences that route key off from
+// the table's URL bridge: a column filter of the same name never reads or
+// writes it.
+const urlQuery = useTableUrlQuery(route, router, {
+  preserveKeys: (key) => key === tableMeta.value?.hostScope?.key,
+});
+
 // `<AsTableRoot :key="path">` remounts per table, so reading `tableMeta` at
 // call time picks the current table's key field (`taskId` on the board view).
 const rowValueFn = (row: Record<string, unknown>) => row[tableMeta.value?.rowKey ?? "id"];
@@ -44,7 +52,33 @@ const limit = computed(() => tableMeta.value?.limit);
 const actionsColumn = computed<ActionsColumn>(() => tableMeta.value?.actionsColumn ?? "last");
 const urlQuerySync = computed(() => tableMeta.value?.urlQuerySync);
 const apiPath = computed(() => tableMeta.value?.apiPath ?? props.path);
-const forceFilters = computed(() => tableMeta.value?.forceFilters);
+// Host-owned scope: the page's own route key (`?status=shipped`) is the
+// table's forced filter. A getter-backed prop, so a switch re-queries the
+// mounted table on page 1 — no `:key`, no remount.
+const hostScope = computed(() => tableMeta.value?.hostScope);
+const scopeValue = computed(() => {
+  const key = hostScope.value?.key;
+  const v = key ? route.query[key] : undefined;
+  return typeof v === "string" && v ? v : undefined;
+});
+function setScope(value: string | undefined) {
+  const key = hostScope.value?.key;
+  if (!key) return;
+  const query = { ...route.query };
+  if (value) query[key] = value;
+  else delete query[key];
+  void router.replace({ query });
+}
+// "Hold queries": `:block-query` — a switch while held sends nothing, and
+// releasing it sends one query with the latest scope.
+const holdQueries = ref(false);
+const forceFilters = computed(() =>
+  hostScope.value
+    ? scopeValue.value
+      ? { [hostScope.value.key]: scopeValue.value }
+      : undefined
+    : tableMeta.value?.forceFilters,
+);
 const systemPresets = computed(() => tableMeta.value?.systemPresets);
 const DEFAULT_COLUMN_MENU: ColumnMenuConfig = {
   sort: true,
@@ -92,6 +126,7 @@ watch(
     selectMode.value = "none";
     selectOn.value = selection.value?.on ?? "row";
     customSelectControls.value = false;
+    holdQueries.value = false;
   },
   { immediate: true },
 );
@@ -269,6 +304,7 @@ watch(
       :selection-persistence="selection?.persistence"
       :refresh-on-action="true"
       :force-filters="forceFilters"
+      :block-query="holdQueries"
       :select-all-matching="tableMeta?.selectAllMatching === true"
       :preset="{ url: '/api/db/_presets', tableKey: path, systemPresets }"
       class="flex-1 flex flex-col min-h-0 min-w-0"
@@ -283,6 +319,31 @@ watch(
           :filters-overflow="tableMeta?.filtersOverflow"
           @toggle-select-mode="toggleSelectMode"
         />
+
+        <div
+          v-if="hostScope"
+          class="demo-host-scope flex items-center gap-$m mx-$l mb-$s text-callout"
+          data-testid="host-scope"
+        >
+          <span class="text-current/60">{{ hostScope.key }}</span>
+          <div class="flex items-center gap-$xs" role="group" aria-label="Status scope">
+            <button
+              v-for="opt in [undefined, ...hostScope.options]"
+              :key="opt ?? 'all'"
+              type="button"
+              class="demo-scope-btn px-$s h-fingertip-s rounded-base border-1 cursor-pointer"
+              :class="scopeValue === opt ? 'scope-primary c8-filled' : 'layer-0'"
+              :aria-pressed="scopeValue === opt"
+              @click="setScope(opt)"
+            >
+              {{ opt ?? "All" }}
+            </button>
+          </div>
+          <label class="flex items-center gap-$xs">
+            <input v-model="holdQueries" type="checkbox" class="demo-hold-queries" />
+            Hold queries
+          </label>
+        </div>
 
         <div
           v-if="selection"
@@ -303,6 +364,7 @@ watch(
 
         <div
           ref="tableWrap"
+          data-testid="table-wrap"
           class="relative flex flex-col flex-1 mx-$l mb-$l min-h-0 min-w-0 border-1 rounded-r2 layer-0 overflow-hidden"
         >
           <AsWindowTable

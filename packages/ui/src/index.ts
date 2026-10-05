@@ -221,6 +221,7 @@ export type {
   TableDef,
   TableActionsModel,
   ColumnDef,
+  ColumnValueKind,
   MetaResponse,
   FieldMeta,
   SearchIndexInfo,
@@ -242,6 +243,7 @@ export type {
 
 // ── Table definition builder ────────────────────────────────
 export { createTableDef } from "./table/create-table-def";
+export { NUMERIC_VALUE_KINDS, optionValue } from "./table/value-kind";
 
 // ── Value-help (unified options resolution) ─────────────────
 export {

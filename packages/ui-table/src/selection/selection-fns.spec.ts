@@ -5,6 +5,7 @@ import {
   rowsToPks,
   selectionQueryOf,
   selectionSignature,
+  stableValueKey,
 } from "./selection-fns";
 
 describe("togglePk", () => {
@@ -174,5 +175,16 @@ describe("selectionQueryOf", () => {
 
   it("leaves out an empty filter and an empty term", () => {
     expect(selectionQueryOf({ filter: {}, controls: { $search: "" } } as never)).toEqual({});
+  });
+});
+
+describe("stableValueKey", () => {
+  it("ignores key order at every depth and spells out RegExp / Date", () => {
+    expect(stableValueKey({ b: 1, a: { d: 1, c: [{ y: 1, x: 2 }] } })).toBe(
+      stableValueKey({ a: { c: [{ x: 2, y: 1 }], d: 1 }, b: 1 }),
+    );
+    expect(stableValueKey({ a: /x/i })).not.toBe(stableValueKey({ a: /y/i }));
+    expect(stableValueKey({ a: new Date(0) })).not.toBe(stableValueKey({ a: new Date(1) }));
+    expect(stableValueKey(null)).toBe("null");
   });
 });

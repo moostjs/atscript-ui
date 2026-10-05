@@ -109,17 +109,46 @@ exactly those two conditions; up to 0.1.138 it was hidden from
 filtering. As everywhere, `null` / `notNull` are dropped for a
 non-nullable column, which leaves such a column with nothing to offer.
 
+### Storage kind (`valueKind`)
+
+_Since 0.1.148._ A column also carries `valueKind` — the scalar storage kind
+`createTableDef` derives from its atscript type, which is what the server's
+filter guard checks. The filter UI follows it, so a column never offers a
+filter the server would refuse:
+
+| Atscript type                                            | `valueKind` | Filter kind                                                      |
+| -------------------------------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `number.timestamp` (and `.created` / `.updated`)         | `timestamp` | `datetime` — see [Date and time filters](#date-and-time-filters) |
+| `string.isoDate`                                         | `isoDate`   | `datetime`                                                       |
+| `string.date`                                            | `date`      | `date`                                                           |
+| `number.int`, `@expect.int`, `@db.default.increment`…    | `integer`   | `number` (whole numbers only)                                    |
+| `number`                                                 | `number`    | `number`                                                         |
+| `decimal`                                                | `decimal`   | `number`                                                         |
+| `boolean`                                                | `boolean`   | `boolean` (`true` / `false` only)                                |
+| `string`                                                 | `string`    | `text`                                                           |
+| a union of literals of one kind (`1 \| 2`, `'a' \| 'b'`) | that kind   | `enum`, with typed option values                                 |
+| arrays, objects, JSON, mixed unions                      | none        | as before, no value coercion                                     |
+
+A column whose `valueKind` is anything but `string` no longer offers the
+pattern conditions (`contains`, `starts`, `ends`, `regex`) — they compile to
+`$regex`, which the server only accepts on a string field. That removes them
+from a numeric `ref` or `enum` column too. `@ui.table.type` and `@ui.type`
+still choose how a cell renders; they change the filter kind only where noted
+below (`number` on a timestamp column opts out to raw milliseconds).
+
 Building your own filter UI? Read the same answer the built-ins read:
 
 ```ts
 import {
   columnDefaultCondition,
   columnFilterConditions,
+  columnFilterKind,
   isColumnFilterable,
   parseColumnFilterInput,
 } from "@atscript/ui-table";
 
 const filterable = state.allColumns.value.filter(isColumnFilterable);
+const kind = columnFilterKind(column); // "datetime" for a timestamp, "number" for an integer…
 const ops = columnFilterConditions(column); // e.g. ["null", "notNull"]
 const initial = columnDefaultCondition(column); // "null" there, "contains" on text
 const typed = parseColumnFilterInput("!<empty>", column); // { type: "notNull", value: [] }
@@ -133,6 +162,160 @@ const typed = parseColumnFilterInput("!<empty>", column); // { type: "notNull", 
   typed input stay inside what the column offers. The type-level
   `defaultCondition(type)` / `parseFilterInput(text, type, nullable)`
   know nothing about existence-only columns.
+
+## Date and time filters
+
+_Since 0.1.148._ Timestamp (`number.timestamp`, epoch milliseconds),
+`string.isoDate` and `string.date` columns get a **date filter** (`date` or
+`datetime` kind): the same conditions as a number (`on`, `not on`, `before`,
+`on or before`, `after`, `on or after`, `between`, plus _is empty_ / _is not
+empty_ when nullable), with calendar-aware inputs. The text conditions
+(`contains`, `regex`) are not offered — the server refuses them on non-string
+storage.
+
+The model stays in **calendar terms**; it is turned into what the server
+takes only when the query is built, in the table's time zone. So URLs and
+saved presets stay readable (`createdAt>='today-6'`), and "last 7 days" keeps
+meaning that.
+
+### Values
+
+A date condition value is one of these, and each denotes a **period**
+`[start, end)`:
+
+| Value        | Example                                                                    | Period                                                   |
+| ------------ | -------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Day          | `2026-10-05`                                                               | that day in the table's time zone                        |
+| Minute       | `2026-10-05T14:30`                                                         | that minute                                              |
+| Month        | `2026-10`                                                                  | that month                                               |
+| Relative     | `today`, `today-6`, `week`, `week-1`, `month`, `month-1`, `year`, `year-1` | the current (minus N) day, week, month or year           |
+| ISO instant  | `2026-10-05T12:00:00Z`, `…+02:00`                                          | that exact instant (1 ms)                                |
+| Epoch number | `1759622400000`                                                            | that instant (1 ms) — app-built links and old deep links |
+
+How a condition compares against its period `[s, e)` (for `between`, from the
+first value's start to the second value's end):
+
+| Condition          | Meaning           | Sent as                                            |
+| ------------------ | ----------------- | -------------------------------------------------- |
+| `eq`               | on                | `{ $gte: s, $lt: e }`                              |
+| `ne`               | not on            | `{ $or: [{ f: { $lt: s } }, { f: { $gte: e } }] }` |
+| `lt`               | before            | `{ $lt: s }`                                       |
+| `lte`              | on or before      | `{ $lt: e }`                                       |
+| `gt`               | after             | `{ $gte: e }`                                      |
+| `gte`              | on or after       | `{ $gte: s }`                                      |
+| `bw`               | between           | `{ $gte: s(a), $lt: e(b) }`                        |
+| `null` / `notNull` | empty / not empty | unchanged (`$exists`; nullable columns only)       |
+
+The bounds are written in the column's storage form: epoch milliseconds for a
+timestamp (and for a number column shown as a date), an ISO string
+(`toISOString()`) for `string.isoDate`, `YYYY-MM-DD` for `string.date` —
+where an instant's time of day is cut and the end is the next day. Two rules
+keep it exact: an **epoch number** against an epoch column is compared as is
+(`eq 1759622400000` is `= 1759622400000`), and a string the grammar cannot
+read (a hand-edited URL) is sent unchanged, so the server answers a clear 400
+instead of the filter quietly meaning something else.
+
+::: warning ISO strings compare lexically
+A `string.isoDate` column is compared as text. The bounds are UTC
+(`…Z`), which is exactly right when stored values are UTC-normalized — what
+`toISOString()` and the database adapters write. A value stored with an
+offset (`…+02:00`) compares by its spelling, not its instant.
+:::
+
+### Time zone
+
+"Which instant is Oct 5" and "when does today start" belong to the **viewer**.
+The table reads them in this order, and cells, filter inputs, chips and queries
+all use the same one:
+
+1. `<AsTableRoot :time-zone="…">` (or `useTable(url, { timeZone })`) — it is
+   also provided to the subtree as the cell locale's time zone;
+2. the surrounding [cell locale](/tables/cells) (`provideCellLocale({ timezone })`
+   — what an app's preferences feed);
+3. the browser's zone.
+
+`state.timeZone` exposes the effective zone. Changing it re-queries when a
+date filter is set (and only then). The week starts on the day the locale says
+(`Intl.Locale#getWeekInfo`), Monday when the runtime cannot tell; override it
+with `useTable(url, { weekStart: 7 })`. Wall times a daylight-saving change
+skips take the later valid instant, repeated ones the earlier; days that are
+23 or 25 hours long are measured, not assumed.
+
+### Inputs, shortcuts and chips
+
+- **Date** column: a native `<input type="date">`. **Date-time** column: the
+  same, plus a clock button that switches the input (or both inputs of a
+  _between_) to `datetime-local`; the precision follows the value's shape, so
+  it survives a reload. No picker library is added — an app that wants one
+  overrides `controls.filterInput`.
+- A relative token or an epoch number shows as a **pill** worded like its chip
+  ("yesterday", "Oct 5, 2026, 14:30"). Click the pill to edit it as a day (or
+  minute); `×` empties it.
+- The conditions panel's **Quick** row writes relative conditions —
+  `temporalShortcuts()`: Today, Yesterday, Last 7 days (`bw today-6…today`),
+  Last 30 days, This week, Last week, This month, Last month, This year.
+- Chips word a condition for the column: an exact shortcut shows its name
+  ("Last 7 days"), anything else an operator and a date in the table's zone and
+  locale ("on Oct 5, 2026", "Oct 1 – Oct 5, 2026", "after Oct 5, 2026, 14:30").
+- The filter bar takes the same grammar: `>=2026-01-01`, `today-6...today`,
+  `month-1`. A value that is not a date sends nothing.
+
+### URLs and presets stay relative
+
+The URL carries the raw model — `createdAt>='today-6'&createdAt<=today`,
+`createdAt='2026-10-05'` — and a saved preset stores it too. A shared "Last 7
+days" link therefore means the recipient's last 7 days, in their time zone.
+There is deliberately no "freeze to absolute dates" option: a user who wants
+fixed dates picks an absolute range.
+
+### Typed values, everywhere
+
+One encoder turns every filter value — typed in, from a URL, from a preset or
+from a dropdown — into the type the column stores, when the query is built.
+Text input only **validates** (text that is not a value for the column is not
+a filter and sends nothing); it shares the encoder's helpers, so a value means
+the same whatever its source.
+
+| `valueKind`                    | What is sent                                                                                                                                                           |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `timestamp`, `isoDate`, `date` | the date periods above                                                                                                                                                 |
+| `number`                       | a number (`'5'` from a URL becomes `5`); an empty box stays unfilled, never `0`                                                                                        |
+| `integer`                      | a whole number; `5.5` is not a filter                                                                                                                                  |
+| `decimal`                      | a numeric **string** (`'12.50'`; a number from a URL is stringified) — decimals are strings end to end, so no digit is rounded, and the server accepts numeric strings |
+| `boolean`                      | `true` / `false` (case-insensitive text becomes a boolean; anything else is not a filter)                                                                              |
+| literal union dropdown         | the typed literal (`true`, `3`), not its string key                                                                                                                    |
+| anything else                  | as it is                                                                                                                                                               |
+
+A string the encoder cannot read (a hand-edited URL) is sent unchanged, so the
+server answers a clear 400.
+
+### Upgrading to 0.1.148
+
+- `number.timestamp` columns now get a date-time filter. Before, they got a
+  text filter the server refused. **Remove** any table client that marks
+  timestamps non-filterable in `/meta` as a workaround.
+- `string.date` and `string.isoDate` columns move from the text filter to a
+  date filter, so `contains` and `regex` are no longer offered on them. This
+  is a fix — a lexical `contains` on dates is rarely what users want, and the
+  encoded ranges are exact for ISO / UTC storage. `@ui.table.type`, `@ui.type`
+  and cell rendering are unchanged.
+- Columns with non-string storage (numeric `enum` and `ref` included) no
+  longer offer the pattern conditions.
+- `ColumnFilterType` gains `"datetime"`. A custom `controls.filterInput` with
+  an exhaustive `switch` must handle it; falling through to a text input still
+  works, because the encoder accepts typed day, minute and ISO strings.
+- Clearing a number filter input no longer applies `= 0`; a boolean column
+  rejects text other than `true` / `false`.
+- `dateShortcuts()` (absolute dates) is deprecated in favour of
+  `temporalShortcuts()` (relative conditions).
+- Presets and URLs saved with `YYYY-MM-DD` values on a timestamp column now
+  work (they used to fail); epoch-number links keep their exact meaning.
+- A decimal filter value is now always a numeric string (`total>'100'` in the
+  URL), where it used to be a number below 15 digits.
+- `forceFilters` / `forceSorters` / `alwaysSelected` are live, so the `:key`
+  that remounted a scoped table is no longer needed.
+- `useTableUrlQuery` no longer inlines `vue-router` types (about 1,400 lines in
+  the published typings), so the cast an app's own router needed can go.
 
 ## Display state vs applied state
 
@@ -307,7 +490,8 @@ Initial filters flow through whichever channel makes sense:
 - **`v-model:url-query`** — let users bookmark filter state via the
   URL bridge.
 - **`:force-filters`** — a `FilterExpr` that's AND-merged on top of the
-  user's filters (and survives `state.resetFilters()`).
+  user's filters (and survives `state.resetFilters()`). See
+  [Forced scope is live](#forced-scope-is-live).
 
 For one-off programmatic application from the parent component:
 
@@ -322,6 +506,51 @@ For one-off programmatic application from the parent component:
 
 `setFieldFilter` writes to `state.filters` only. If you also want the
 chip visible in `<AsFilters>`, call `addFilterField('status')`.
+
+### Forced scope is live
+
+_Since 0.1.148._ `:force-filters`, `:force-sorters` and `:always-selected`
+are **live**: pass a computed (or any changing value) and the mounted table
+follows it — no `:key`, no remount.
+
+```vue
+<script setup>
+const route = useRoute();
+const forceFilters = computed(() => ({ status: String(route.query.status) }));
+</script>
+<template>
+  <AsTableRoot url="/api/db/tables/orders" :force-filters="forceFilters" />
+</template>
+```
+
+What a change does:
+
+- **`forceFilters`** — one new query on **page 1**, with the new filter. The
+  user's filters, search, sorters and columns are kept. The value is compared
+  structurally: a new object with the same content (an inline literal
+  re-created on every render) does nothing, and editing a `reactive` filter in
+  place is picked up. A held query selection ("select all matching") is
+  dropped, as for any scope change (`@selection-reset` with `reason: "scope"`).
+- **`forceSorters`** — one new query that keeps the page, like a user sorter
+  change.
+- **`alwaysSelected`** — one new query with the new `$select`.
+- Changes landing in the same tick — several of these props, or one of them
+  together with a URL change — send **one** query. Only a filter change resets
+  the page; with a URL change the URL's page wins.
+- Nothing is sent before the first query: a change that lands before `/meta`
+  resolves is simply what the first fetch uses. To avoid fetching before the
+  scope is known at all, hold the table with `:block-query` — a table that is
+  blocked never sends the stale initial scope; on release it sends one query
+  with the current one.
+
+`state.forceFilters` and `state.forceSorters` expose the current values for
+chrome (a "scoped to …" badge); the config dialog shows forced sorters locked.
+
+Everything else on `<AsTableRoot>` that wires the table up — `url`,
+`queryFn`, `clientFactory`, `preset`, `urlQuerySync`, `displayColumns`,
+`limit`, `components`, `types`, and `columns` in `:rows` mode — is read once.
+Changing one after mount warns in development; `:key` the component to switch
+it.
 
 ### Read current filters
 
@@ -415,6 +644,32 @@ equal 100) or (…)` — with a remove button; swap the chip through the
   the URL.
 - Server tables only: the in-memory (`:rows`) mode ignores them, as it
   ignores field filters.
+
+### Encoding values for the server
+
+_Since 0.1.148._ `filtersToUniqueryFilter(filters, { encode })` and
+`buildTableQuery({ …, encodeCondition })` take a `ConditionEncoder` — a
+function `(field, condition, now?) => FilterExpr | undefined` consulted before the
+default conversion (`undefined` means "no opinion"; `now` is the query's one
+clock reading). The table passes
+`createColumnValueEncoder(columns, { timeZone, weekStart })`, which is how
+[date filters and the other typed values](#typed-values-everywhere) become
+what the server accepts; build your own queries with the same one:
+
+```ts
+import { buildTableQuery, createColumnValueEncoder } from "@atscript/ui-table";
+
+const query = buildTableQuery({
+  visibleColumnPaths: ["id", "createdAt"],
+  sorters: [],
+  filters: { createdAt: [{ type: "bw", value: ["today-6", "today"] }] },
+  encodeCondition: createColumnValueEncoder(columns, { timeZone: "Europe/Berlin" }),
+});
+// → createdAt: { $gte: <Berlin midnight 6 days ago>, $lt: <tomorrow midnight> }
+```
+
+Residual and forced filters are already Uniquery and are never encoded. URLs
+and presets carry the raw model — `stateToUrlQueryString` never encodes.
 
 ## `filtersToUniqueryFilter` directly
 

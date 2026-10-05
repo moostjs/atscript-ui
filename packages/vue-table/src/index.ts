@@ -68,7 +68,12 @@ export { useTableNavBridge } from "./composables/use-table-nav-bridge";
 export { useTableFilter } from "./composables/use-table-filter";
 export { useTableSearch } from "./composables/use-table-search";
 export { useTableActions } from "./composables/use-table-actions";
-export { useTableUrlQuery, type UseTableUrlQueryOptions } from "./composables/use-table-url-query";
+export {
+  useTableUrlQuery,
+  type TableUrlQueryRoute,
+  type TableUrlQueryRouter,
+  type UseTableUrlQueryOptions,
+} from "./composables/use-table-url-query";
 export type {
   CsvOptions,
   DisplayColumnDef,

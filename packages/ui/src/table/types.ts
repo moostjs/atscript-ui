@@ -155,6 +155,22 @@ export interface TableDef {
   relations: RelationInfo[];
 }
 
+/**
+ * Scalar storage kind of a column's value — what the server's filter guard
+ * checks. `string` / `date` / `isoDate` are `string`, `string.date` and
+ * `string.isoDate`; `timestamp` is `number.timestamp` (epoch ms).
+ * Since 0.1.148.
+ */
+export type ColumnValueKind =
+  | "string"
+  | "date"
+  | "isoDate"
+  | "number"
+  | "integer"
+  | "decimal"
+  | "timestamp"
+  | "boolean";
+
 /** A single column definition — built from field metadata + annotations. */
 export interface ColumnDef {
   /** Field path in dot-notation (e.g. 'address.city'). */
@@ -163,6 +179,14 @@ export interface ColumnDef {
   label: string;
   /** Display type — from @ui.table.type, then @ui.type, then inferred from designType. */
   type: string;
+  /**
+   * Scalar storage kind of the column's value, derived from the atscript type
+   * (a union of one kind counts; arrays, objects, JSON and mixed unions have
+   * none). Filter UIs and the query builder read it to pick the filter kind
+   * and to encode values the way the server's filter guard expects.
+   * Since 0.1.148.
+   */
+  valueKind?: ColumnValueKind;
   /** Named component override from @ui.table.component — looked up in the table components map. */
   component?: string;
   /**
@@ -194,8 +218,13 @@ export interface ColumnDef {
   maxLen?: number;
   /** Initial column ordering from @ui.table.order (lower = first). */
   order: number;
-  /** Enumerated options for union literal types (e.g. 'a' | 'b' | 'c'). */
-  options?: { key: string; label: string }[];
+  /**
+   * Enumerated options for union literal types (e.g. 'a' | 'b' | 'c'). `value` is
+   * the typed literal (`true`, `3`) — what a filter sends to the server; the
+   * `key` is its string form. `createTableDef` always sets it (since 0.1.148);
+   * a hand-built column may omit it, and the string `key` is used.
+   */
+  options?: { key: string; label: string; value?: string | number | boolean }[];
   /** Value-help info for FK columns (from extractValueHelp). */
   valueHelpInfo?: ValueHelpInfo;
   /** Literal currency code from `@db.amount.currency 'EUR'`. */

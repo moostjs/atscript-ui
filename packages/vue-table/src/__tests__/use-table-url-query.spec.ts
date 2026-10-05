@@ -1,34 +1,37 @@
-import { describe, expect, it, vi } from "vitest";
-import { reactive } from "vue";
-import type { Router, RouteLocationNormalizedLoaded } from "vue-router";
-import { useTableUrlQuery } from "../composables/use-table-url-query";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { defineComponent, h, reactive } from "vue";
+import { flushPromises, mount } from "@vue/test-utils";
+import type { Client } from "@atscript/db-client";
+import AsTableRoot from "../components/as-table-root.vue";
+import { clearTableCache } from "../composables/use-table";
+import type { ReactiveTableState } from "../types";
+import { createMockClient, createMockMeta } from "./helpers";
+import type { UrlQueryRecord } from "@atscript/ui-table";
+import { useTableUrlQuery, type TableUrlQueryRoute } from "../composables/use-table-url-query";
 
 type QueryShape = Record<string, string | string[] | null>;
 
-function createMockRoute(initial: QueryShape = {}) {
-  return reactive({ query: { ...initial } }) as unknown as RouteLocationNormalizedLoaded;
+interface FakeRoute extends TableUrlQueryRoute {
+  query: QueryShape;
 }
 
-function createMockRouter(route: RouteLocationNormalizedLoaded): Router & {
-  push: ReturnType<typeof vi.fn>;
-  replace: ReturnType<typeof vi.fn>;
-} {
-  const apply = (target: { query: unknown }) => {
-    (route as { query: unknown }).query = target.query as QueryShape;
+function createMockRoute(initial: QueryShape = {}): FakeRoute {
+  return reactive({ query: { ...initial } }) as FakeRoute;
+}
+
+function createMockRouter(route: FakeRoute) {
+  const apply = (target: { query: UrlQueryRecord }) => {
+    route.query = target.query as QueryShape;
   };
-  const router = {
-    push: vi.fn((to: { query: QueryShape }) => {
+  return {
+    push: vi.fn((to: { query: UrlQueryRecord }) => {
       apply(to);
       return Promise.resolve();
     }),
-    replace: vi.fn((to: { query: QueryShape }) => {
+    replace: vi.fn((to: { query: UrlQueryRecord }) => {
       apply(to);
       return Promise.resolve();
     }),
-  };
-  return router as unknown as Router & {
-    push: ReturnType<typeof vi.fn>;
-    replace: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -175,7 +178,7 @@ describe("useTableUrlQuery", () => {
 
     expect(urlQuery.value).toBe("");
 
-    (route as { query: unknown }).query = { status: "active" };
+    route.query = { status: "active" };
     expect(urlQuery.value).toBe("status=active");
   });
 
@@ -423,5 +426,158 @@ describe("useTableUrlQuery — $snapshot marker", () => {
 
     expect(route.query).toEqual({ "t1.$snapshot": null });
     expect(urlQuery.value).toBe("$snapshot");
+  });
+});
+
+describe("useTableUrlQuery — preserveKeys", () => {
+  it("skips a preserved host key on read, keeps it verbatim on write", () => {
+    const route = createMockRoute({ status: "pending", demo: "1" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { preserveKeys: ["status"] });
+
+    expect(urlQuery.value).toBe("demo=1");
+    urlQuery.value = "total>100&$snapshot";
+    expect(route.query).toEqual({
+      status: "pending",
+      demo: "1",
+      "total>100": null,
+      $snapshot: null,
+    });
+  });
+
+  it("withholds a table segment on a preserved key and warns once", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const route = createMockRoute({ status: "pending" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { preserveKeys: ["status"] });
+
+    urlQuery.value = "status=shipped&total>100";
+    urlQuery.value = "status=shipped&total>200";
+
+    expect(route.query).toEqual({ status: "pending", "total>200": null });
+    expect(warn.mock.calls.filter((c) => String(c[0]).includes('"status"'))).toHaveLength(1);
+    warn.mockRestore();
+  });
+
+  it("returns the table's own string verbatim while the route reads as written (echo)", () => {
+    const route = createMockRoute({ status: "pending" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { preserveKeys: ["status"] });
+
+    urlQuery.value = "status=shipped&total>100&$snapshot";
+    expect(urlQuery.value).toBe("status=shipped&total>100&$snapshot");
+  });
+
+  it("hands the withheld segment back after an external navigation", () => {
+    const route = createMockRoute({ status: "pending" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { preserveKeys: ["status"] });
+    urlQuery.value = "status=shipped&total>100";
+
+    route.query = { status: "pending", "total>5": null };
+    expect(urlQuery.value).toBe("total>5&status=shipped");
+  });
+
+  it("re-appends the held segments when the host changes the route between a set and the next get", () => {
+    const route = createMockRoute({ status: "pending" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { preserveKeys: ["status"] });
+    urlQuery.value = "status=shipped&total>100";
+    expect(urlQuery.value).toBe("status=shipped&total>100");
+
+    // the host adds its own key right after the table wrote
+    route.query = { ...route.query, demo: "2" };
+    expect(urlQuery.value).toBe("total>100&demo=2&status=shipped");
+
+    // a later write that withholds nothing drops the held segments
+    urlQuery.value = "total>100";
+    route.query = { ...route.query, demo: "3" };
+    expect(urlQuery.value).toBe("total>100&demo=3");
+  });
+
+  it("accepts a predicate and covers the operator forms of a preserved field", () => {
+    const route = createMockRoute({ team: "a", "status!='x'": null });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, {
+      preserveKeys: (key) => key === "team" || key === "status",
+    });
+    expect(urlQuery.value).toBe("");
+    urlQuery.value = "status!='y'&total>1";
+    expect(route.query).toEqual({ team: "a", "status!='x'": null, "total>1": null });
+  });
+
+  it("requires router.push for mode push", () => {
+    const route = createMockRoute({});
+    expect(() => useTableUrlQuery(route, { replace: () => {} }, { mode: "push" })).toThrow(/push/);
+  });
+});
+
+describe("useTableUrlQuery — preserveKeys through <AsTableRoot>", () => {
+  afterEach(() => {
+    clearTableCache();
+    document.body.innerHTML = "";
+  });
+
+  it("a host key that is also a column is no chip; a user filter on it stays private; one query per change", async () => {
+    const route = createMockRoute({ status: "pending" });
+    const router = createMockRouter(route);
+    const urlQuery = useTableUrlQuery(route, router, { preserveKeys: ["status"] });
+    const { client, pagesFn } = createMockClient({
+      meta: createMockMeta(["id", "status", "total"]),
+      data: [],
+    });
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          return () =>
+            h(
+              AsTableRoot as unknown as Parameters<typeof h>[0],
+              {
+                url: "/orders",
+                clientFactory: () => client as Client,
+                urlQuery: urlQuery.value,
+                "onUpdate:urlQuery": (v: string) => {
+                  urlQuery.value = v;
+                },
+              },
+              { default: () => [] },
+            );
+        },
+      }),
+    );
+    const state = (
+      wrapper.findComponent(AsTableRoot).vm as unknown as { state: ReactiveTableState }
+    ).state;
+    await flushPromises();
+    await flushPromises();
+    expect(state.filters.value).toEqual({});
+    expect(pagesFn).toHaveBeenCalledTimes(1);
+
+    // A user filter on the colliding column: private, host key untouched.
+    pagesFn.mockClear();
+    state.setFieldFilter("status", [{ type: "eq", value: ["shipped"] }]);
+    await new Promise((r) => setTimeout(r, 600));
+    await flushPromises();
+    expect(route.query.status).toBe("pending");
+    expect(pagesFn).toHaveBeenCalledTimes(1);
+
+    // A table-owned filter round-trips and Back keeps the private one.
+    pagesFn.mockClear();
+    state.setFieldFilter("total", [{ type: "gt", value: [100] }]);
+    await new Promise((r) => setTimeout(r, 600));
+    await flushPromises();
+    expect(Object.keys(route.query)).toContain("total>100");
+    expect(pagesFn).toHaveBeenCalledTimes(1);
+    route.query = { status: "pending", "total>100": null };
+    await flushPromises();
+    expect(state.filters.value.status).toEqual([{ type: "eq", value: ["shipped"] }]);
+    expect(state.filters.value.total).toBeTruthy();
+
+    // Clearing every filter keeps the host key.
+    state.filters.value = {};
+    await new Promise((r) => setTimeout(r, 600));
+    await flushPromises();
+    expect(route.query.status).toBe("pending");
+    expect(Object.keys(route.query)).not.toContain("total>100");
   });
 });

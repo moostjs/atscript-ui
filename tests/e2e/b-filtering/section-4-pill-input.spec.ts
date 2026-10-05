@@ -122,22 +122,22 @@ test.describe("Section 4.13 — Pill-input special prefix / wildcard syntax", ()
       column: "Total",
       table: "orders",
       typed: ">100",
-      fragment: "total>100",
+      fragment: "total>'100'",
     },
     {
       label: "<=200",
       column: "Total",
       table: "orders",
       typed: "<=200",
-      fragment: "total<=200",
+      fragment: "total<='200'",
     },
     {
       label: "10...50",
       column: "Total",
       table: "orders",
       typed: "10...50",
-      fragment: "total>=10",
-      notFragment: "total>=200",
+      fragment: "total>='10'",
+      notFragment: "total>='200'",
     },
   ];
 
@@ -224,7 +224,7 @@ test.describe("Section 4.14 — Filter pill hotkeys", () => {
       },
       { table: "orders" },
     );
-    expect(decodeURIComponent(captured.url)).toContain("total>42");
+    expect(decodeURIComponent(captured.url)).toContain("total>'42'");
   });
 });
 

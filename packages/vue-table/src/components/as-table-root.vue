@@ -9,7 +9,7 @@ import type {
   UnsupportedFilter,
   UrlQuerySync,
 } from "@atscript/ui-table";
-import { DEV } from "@atscript/ui-table";
+import { DEV, stableValueKey } from "@atscript/ui-table";
 import type {
   ActionResult,
   DroppedFieldsReport,
@@ -29,6 +29,7 @@ import {
   warnFieldsDropped,
   warnUnsupportedFilter,
 } from "../composables/use-table-state";
+import { provideCellLocale, useCellLocale } from "../composables/use-cell-locale";
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
@@ -112,16 +113,26 @@ const props = withDefaults(
     formComponents?: Record<string, Component>;
     limit?: number;
     /**
+     * IANA time zone the table reads dates in — where "today" starts and which
+     * instant a day filter means. Cells, date filters and their chips all use
+     * it (it is also provided to the subtree as the cell locale's time zone).
+     * Default: the surrounding cell locale's, else the browser's. Since 0.1.148.
+     */
+    timeZone?: string;
+    /**
      * Always-applied filter. App-authored: unlike presets and URLs it is
      * never pruned of fields the caller cannot see — keep it to fields every
-     * role reads.
+     * role reads. Live since 0.1.148: a changed value re-queries the mounted
+     * table on page 1 (compared structurally — an equal new object does
+     * nothing); user filters, search, sorters and columns are kept. Pair with
+     * `blockQuery` to hold the fetch until the scope is known.
      */
     forceFilters?: FilterExpr;
-    /** Always-applied sorters. Never pruned, like `forceFilters`. */
+    /** Always-applied sorters. Never pruned, like `forceFilters`. Live; keeps the page. */
     forceSorters?: SortControl[];
     /**
      * Leaf field paths always added to `$select` (deduped, gated by available
-     * meta), regardless of which columns are visible. Additive only.
+     * meta), regardless of which columns are visible. Additive only. Live.
      */
     alwaysSelected?: string[];
     queryOnMount?: boolean;
@@ -343,6 +354,14 @@ function createLocalState(): ReactiveTableState {
   return localState;
 }
 
+// A `:time-zone` re-provides the cell locale for the subtree (language kept),
+// so cells and date filters never disagree about what day it is.
+const parentLocale = useCellLocale();
+provideCellLocale(() => ({
+  language: parentLocale.locale.value,
+  timezone: props.timeZone ?? parentLocale.timezone.value,
+}));
+
 const hasUnsupportedFilterListener = useHasEmitListener("onUnsupportedFilter");
 const hasFieldsDroppedListener = useHasEmitListener("onFieldsDropped");
 
@@ -353,9 +372,12 @@ const state = localMode
       // `select` is owned by `<AsTable>` / `<AsWindowTable>`, not the orchestrator.
       rowValueFn: props.rowValueFn,
       selectionPersistence: props.selectionPersistence,
-      forceFilters: props.forceFilters,
-      forceSorters: props.forceSorters,
-      alwaysSelected: props.alwaysSelected,
+      // Getters: the forced scope is live (a route-derived filter can change
+      // on the mounted table) — see `useTable`.
+      forceFilters: () => props.forceFilters,
+      forceSorters: () => props.forceSorters,
+      alwaysSelected: () => props.alwaysSelected,
+      timeZone: () => props.timeZone,
       queryFn: props.queryFn,
       queryOnMount: props.queryOnMount,
       // Getter, not a snapshot: a table mounted while blocked must start fetching
@@ -395,6 +417,57 @@ const state = localMode
       preset: props.preset,
       displayColumns: props.displayColumns,
     });
+
+/** A column's key in a `displayColumns` / `columns` list. */
+const listKey = (c: { key?: string; path?: string }) => c.key ?? c.path;
+
+// Setup-only props are read once; a change after mount does nothing. Say so
+// instead of failing silently — `:key` the component to switch one. (The
+// query-scope data props — forceFilters, forceSorters, alwaysSelected — are live.)
+if (DEV) {
+  const setupOnly = [
+    "url",
+    "queryFn",
+    "preset",
+    "urlQuerySync",
+    "displayColumns",
+    "limit",
+    "clientFactory",
+    ...(localMode ? (["columns"] as const) : []),
+  ] as const;
+  // A column list is the same while its keys are; the render functions on a
+  // column are neither compared nor serialized.
+  const sameValue = (a: unknown, b: unknown): boolean => {
+    // A function is a wiring prop too, but its identity churns with inline
+    // arrows: only providing or removing one counts.
+    if (typeof a === "function" || typeof b === "function") return typeof a === typeof b;
+    if (Array.isArray(a) && Array.isArray(b)) {
+      return a.length === b.length && a.every((c, i) => listKey(c) === listKey(b[i]));
+    }
+    try {
+      return stableValueKey(a ?? null) === stableValueKey(b ?? null);
+    } catch {
+      return false; // not serializable (a cycle): treat as changed
+    }
+  };
+  const warned = new Set<string>();
+  for (const name of setupOnly) {
+    watch(
+      () => props[name],
+      (next, prev) => {
+        // Identity first: an unchanged prop is the common case, an inline object
+        // literal re-created each parent render the next (compared by content).
+        if (next === prev || warned.has(name) || sameValue(next, prev)) return;
+        warned.add(name);
+        const fn = typeof next === "function" || typeof prev === "function";
+        console.warn(
+          `[vue-table] <AsTableRoot>: :${name} ${fn ? "provided/removed" : "changed"} after mount; ` +
+            "it is read once — key the component (:key) to switch it.",
+        );
+      },
+    );
+  }
+}
 
 // Renderer-pushed, like `<AsTable :row-delete>`: the row-actions cell reads
 // the policy off the state so a standalone `<AsRowActions>` honours it too.

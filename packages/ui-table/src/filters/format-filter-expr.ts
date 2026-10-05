@@ -15,14 +15,22 @@ function show(v: unknown): string {
 }
 
 /** One comparison, worded like the filter chips (the decoder's operator table). */
-function leaf(label: string, op: string, value: unknown): string {
+function leaf(
+  label: string,
+  op: string,
+  value: unknown,
+  render: (v: unknown) => string = show,
+): string {
   // A bare RegExp value is a regex match, as the URL builder spells it.
   if (op === "$eq" && value instanceof RegExp) op = "$regex";
   if ((op === "$in" || op === "$nin") && Array.isArray(value)) {
-    return `${label} ${op === "$in" ? "is one of" : "is none of"} ${value.map(show).join(", ")}`;
+    return `${label} ${op === "$in" ? "is one of" : "is none of"} ${value.map(render).join(", ")}`;
   }
   const conds = decodeOperator(op, value);
-  if (conds?.length === 1) return filterTokenLabel(label, conds, label);
+  if (conds?.length === 1) {
+    const [cond] = conds;
+    return filterTokenLabel(label, [{ ...cond, value: cond.value.map((v) => render(v)) }], label);
+  }
   // No wording for it — fall back to the URL spelling, with the label.
   return buildUrl({ filter: { [label]: { [op]: value } } as FilterExpr }) || `${label}${op}`;
 }
@@ -50,15 +58,24 @@ function join(children: Part[], kind: "and" | "or"): Part {
  *
  * @param labelOf — display label for a field path (e.g. the column label);
  *   the path itself when omitted or when it returns `undefined`.
+ * @param formatValue — optional wording for a value on a field (e.g. an epoch
+ *   number on a timestamp column as a date); `undefined` keeps the plain
+ *   rendering. Since 0.1.148.
  * @since 0.1.140
  */
 export function formatFilterExpr(
   expr: FilterExpr,
   labelOf?: (path: string) => string | undefined,
+  formatValue?: (path: string, value: unknown) => string | undefined,
 ): string {
   const visitor: FilterVisitor<Part> = {
     comparison: (field, op, value) => ({
-      s: leaf(labelOf?.(field) ?? field, op, value),
+      s: leaf(
+        labelOf?.(field) ?? field,
+        op,
+        value,
+        formatValue ? (v) => formatValue(field, v) ?? show(v) : show,
+      ),
       kind: "leaf",
     }),
     and: (children) => join(children, "and"),

@@ -46,11 +46,15 @@ interface AsTableRootProps {
   selectionPersistence?: "clear" | "trim" | "persist";
   /** Offer "Select all N matching" — a query selection of every row matching the filter / search. Default `false`. Since 0.1.147. See [Select All Matching Rows](/tables/select-all-matching). */
   selectAllMatching?: boolean;
+  /** Always-applied filter, AND-ed with the user's. Live since 0.1.148: a changed value re-queries on page 1 (structural compare, user state kept). */
   forceFilters?: FilterExpr;
+  /** Always-applied sorters. Live since 0.1.148 (keeps the page). */
   forceSorters?: SortControl[];
+  /** IANA zone dates are read in — "today", which instant a day filter means. Default: the cell locale's, else the browser's. Also re-provided to the subtree as the cell locale's zone. Since 0.1.148. */
+  timeZone?: string;
   /** Opt in to suppressing user sorters while a search is active, to preserve relevance ranking. Default `false`. Also a `v-model`. See [Sorting](/tables/sorting#search-relevance-sort-suppression). */
   ignoreSortersWhenSearched?: boolean;
-  /** Leaf paths always added to `$select`, regardless of visible columns — for renderless cell renderers. */
+  /** Leaf paths always added to `$select`, regardless of visible columns — for renderless cell renderers. Live since 0.1.148. */
   alwaysSelected?: string[];
   queryFn?: (
     query: Uniquery,
@@ -88,6 +92,8 @@ interface AsTableRootProps {
 **Emits**: `action(action, ids, result, event?)`, `main-action(row, absIndex, event)`, `unsupported-filter(issue: UnsupportedFilter)` (since 0.1.139 — once per piece of a restored URL's filter that field filters cannot express and that was left out; unbound → a dev-mode `console.warn`. Since 0.1.140 a piece on server-backed columns is kept as a residual condition instead and not reported — the event means "dropped"; `urlQuerySync: { residual: false }` restores 0.1.139. See [Links the filter model cannot hold](/tables/url-state#links-the-filter-model-cannot-hold)), `fields-dropped(report: DroppedFieldsReport)` (since 0.1.141 — once per apply of a preset (the local draft included) or a restored URL that named fields the caller cannot use, only when something was dropped; state written straight to the model is left out of the query without a report; unbound → a dev-mode `console.warn`. A URL piece mixing such a field with usable ones is reported here, no longer as `unsupported-filter`. See [Fields Hidden by Role](/tables/hidden-fields)), `selection-reset(event: SelectionResetEvent)` (since 0.1.147 — the table dropped a query selection because the filter, search or index changed: `{ reason: "scope" }`).
 
 `forceFilters` / `forceSorters` are never pruned of hidden fields — keep them to fields every role reads.
+
+**Live vs setup-only props (since 0.1.148).** `forceFilters`, `forceSorters` and `alwaysSelected` are live; the props that wire the table up (`url`, `queryFn`, `clientFactory`, `preset`, `urlQuerySync`, `displayColumns`, `limit`, …) are read once and warn in development when changed after mount. See [Forced scope is live](/tables/filtering#forced-scope-is-live).
 
 **Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `selection`, `canSelectAllMatching`, `selectAllMatching`, `clearSelection` (these four since 0.1.147), `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
 
@@ -317,7 +323,9 @@ Since 0.1.140. One [custom filter condition](/tables/filtering#custom-filter-con
 
 ### `AsFilterInput`
 
-Input control for one condition — switches between text / number / date / boolean / ref based on column type.
+Input control for one condition — switches between text / number / date / date-time / boolean / ref based on the column's filter kind. Props: `column: ColumnDef`, `condition: FilterCondition`, `filterType: ColumnFilterType`; emits `update:condition`.
+
+`filterType` may be `"datetime"` (since 0.1.148 — a timestamp or ISO date-time column, see [Date and time filters](/tables/filtering#date-and-time-filters)). A custom `controls.filterInput` with an exhaustive `switch` must handle it; falling through to a text input keeps working, because the query encoder accepts typed day, minute and ISO strings. The default input renders a number box that stays empty (never `0`) when cleared, a native date input — plus a clock toggle (`as-filter-input-time-toggle`, `aria-label="Pick a time"`) on date-time columns that switches to `datetime-local` — and a pill (`as-filter-input-token`) for a relative or epoch value.
 
 ## Tier 2 — Headers & rows
 
@@ -355,12 +363,18 @@ interface UseTableOptions {
   columnWidths?: Ref<ColumnWidthsMap>;
   sorters?: Ref<SortControl[]>;
   selectedRows?: Ref<unknown[]>;
-  forceFilters?: FilterExpr;
-  forceSorters?: SortControl[];
+  /** Live since 0.1.148: a ref or getter; a change re-queries on page 1 (structural compare). Plain values still work. */
+  forceFilters?: MaybeRefOrGetter<FilterExpr | undefined>;
+  /** Live since 0.1.148; a change re-queries and keeps the page. */
+  forceSorters?: MaybeRefOrGetter<SortControl[] | undefined>;
+  /** IANA zone dates are read in (date filters, "today"). Default: the cell locale's zone, else the browser's. Since 0.1.148. */
+  timeZone?: MaybeRefOrGetter<string | undefined>;
+  /** First day of the week for `week` filters, `1` Monday … `7` Sunday. Default: from the locale, else Monday. Since 0.1.148. */
+  weekStart?: MaybeRefOrGetter<number | undefined>;
   /** Suppress user sorters while searching (preserve relevance). `boolean` = configured default; `Ref<boolean>` = external model whose initial value is the default. Default `false`. */
   ignoreSortersWhenSearched?: boolean | Ref<boolean>;
   /** Leaf paths always added to `$select`, regardless of visible columns — see [Custom Cells](/tables/custom-cells). */
-  alwaysSelected?: string[];
+  alwaysSelected?: MaybeRefOrGetter<string[] | undefined>;
   queryFn?: QueryFn;
   queryOnMount?: boolean;
   /** When true, all triggers (query/queryNext/loadRange) early-return. Pass a getter (or a ref) to keep it reactive — the held-back query runs once when it flips back to `false` (since 0.1.133). */
@@ -504,7 +518,7 @@ function useTableActions(): TableActionsState;
 
 ### `useTableUrlQuery(route, router, opts?)`
 
-Bridge `<AsTableRoot v-model:url-query>` to vue-router. Uses type-only imports of `Router` / `RouteLocationNormalizedLoaded` — no runtime dependency on `vue-router` is added to `@atscript/vue-table`.
+Bridge `<AsTableRoot v-model:url-query>` to a router. Since 0.1.148 it takes **structural** route and router types — `TableUrlQueryRoute` (`{ query }`) and `TableUrlQueryRouter` (`{ replace(to), push?(to) }`) — so `@atscript/vue-table` imports nothing from `vue-router`: `useRoute()` / `useRouter()` type-check as they are, with or without typed-route augmentation, and a plain fake works in tests.
 
 **Scope (since 0.1.133): the bridge owns only the keys it serializes.** It used
 to replace `route.query` wholesale; now every write merges into the current
@@ -516,12 +530,21 @@ untouched, in place. Read and write agree: a key the parser ignores is never
 deleted.
 
 Without a `prefix` the bridge cannot tell a plain `field=value` filter from a
-page-owned flag of the same shape, so a plain key that was already in the URL
-when the bridge mounted counts as foreign until the bridge writes it itself.
-Pass `prefix` when a route carries a host key that could collide with a column
-path, or when it carries two tables.
+page-owned flag of the same shape: the table reads every unprefixed key, so a
+host key that is also a column path (`?team=…` on a table with a `team` column)
+becomes a user filter. Pass `preserveKeys` to fence such host keys off, or
+`prefix` to namespace the table (which changes its URLs) — and `prefix` when a
+route carries two tables.
 
 ```typescript
+interface TableUrlQueryRoute {
+  readonly query: UrlQueryRecordInput; // vue-router's LocationQuery fits
+}
+interface TableUrlQueryRouter {
+  replace(to: { query: UrlQueryRecord }): unknown;
+  push?(to: { query: UrlQueryRecord }): unknown; // required only for mode "push" (throws at setup if missing)
+}
+
 interface UseTableUrlQueryOptions {
   /** `"replace"` (default) or `"push"`. */
   mode?: "replace" | "push";
@@ -533,20 +556,29 @@ interface UseTableUrlQueryOptions {
    * table's prefix, are foreign and preserved untouched.
    */
   prefix?: string;
+  /**
+   * Host keys (wire form) the table never reads, writes or removes, even when
+   * a column has the same name — a list or a predicate. Since 0.1.148.
+   */
+  preserveKeys?: readonly string[] | ((key: string) => boolean);
 }
 
 function useTableUrlQuery(
-  route: RouteLocationNormalizedLoaded,
-  router: Router,
+  route: TableUrlQueryRoute,
+  router: TableUrlQueryRouter,
   opts?: UseTableUrlQueryOptions,
 ): WritableComputedRef<string>;
 ```
+
+**`preserveKeys`** (since 0.1.148) keeps a host key that is also a column path out of the table's filters. See [A host key that is also a column](/tables/url-state#a-host-key-that-is-also-a-column).
 
 ```vue
 <script setup>
 import { useRoute, useRouter } from "vue-router";
 import { useTableUrlQuery } from "@atscript/vue-table";
 const urlQuery = useTableUrlQuery(useRoute(), useRouter());
+// A `?status=` the page owns, beside a `status` column:
+// const urlQuery = useTableUrlQuery(useRoute(), useRouter(), { preserveKeys: ["status"] });
 // Two tables on one route:
 // const left = useTableUrlQuery(useRoute(), useRouter(), { prefix: "a" });
 // const right = useTableUrlQuery(useRoute(), useRouter(), { prefix: "b" });
@@ -555,6 +587,8 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
   <AsTableRoot v-model:url-query="urlQuery" url="/db/products" />
 </template>
 ```
+
+For links, use `stateToUrlQueryRecord` from `@atscript/ui-table` ([API](/api/ui-table#url-query-records), [Building links](/tables/url-state#building-links)).
 
 ### `useTableExport(ctx?)`
 
@@ -652,6 +686,8 @@ function useCellLocale(): {
   timezone: ComputedRef<string | undefined>;
 };
 ```
+
+Since 0.1.148 the cell locale's `timezone` is also the zone the table's **date filters** read ("today", which instant a day means), so cells, filter inputs, chips and queries agree. `<AsTableRoot :time-zone>` overrides it for the table and re-provides it to the subtree.
 
 ## Composables — presets
 
@@ -870,6 +906,7 @@ The full reactive state object. See the canonical definition in `packages/vue-ta
 
 - **Metadata**: `tableDef`, `loadingMetadata`, `metadataError`.
 - **Columns**: `columns`, `allColumns`, `columnNames`, `columnWidths`.
+- **Forced scope** (since 0.1.148): `forceFilters` (`ComputedRef<FilterExpr | undefined>`) and `forceSorters` (`ComputedRef<SortControl[]>`) — the live app-authored scope, for chrome such as a "scoped to …" badge — and `timeZone` (`ComputedRef<string | undefined>`; `undefined` = the browser's) — the zone dates are read in.
 - **Filters / sorters / search**: `filters`, `filterFields`, `residualFilters` (`ShallowRef<FilterExpr[]>`, since 0.1.140 — AND-ed conditions field filters cannot hold; `setResidualFilters(exprs)`, `removeResidualFilter(index)`, cleared by `resetFilters()`; see [Custom filter conditions](/tables/filtering#custom-filter-conditions)), `sorters`, `searchTerm`, `ignoreSortersWhenSearched` (`Ref<boolean>` — suppress user sorters while searching; see [Sorting](/tables/sorting#search-relevance-sort-suppression)).
 - **Results**: `results`, `windowCache`, `windowLoading`, `topIndex`, `viewportRowCount`, `totalCount`, `loadedCount`, `resultsStart`.
 - **Pagination**: `pagination`.

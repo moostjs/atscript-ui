@@ -196,7 +196,12 @@ function onOpenAutoFocus(event: Event) {
           </TabsContent>
 
           <TabsContent value="sorters" class="as-config-tab-content">
-            <component :is="SortersConfig" :columns="sortableColumns" v-model="sortersModel" />
+            <component
+              :is="SortersConfig"
+              :columns="sortableColumns"
+              :force-sorters="state.forceSorters.value"
+              v-model="sortersModel"
+            />
           </TabsContent>
         </TabsRoot>
 

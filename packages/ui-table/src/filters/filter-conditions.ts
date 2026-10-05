@@ -1,3 +1,4 @@
+import type { ColumnFilterType } from "./filter-conditions-map";
 import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
 
 /** Conditions that operate purely on nullability — value is ignored. */
@@ -50,8 +51,26 @@ const CONDITION_LABELS: Record<FilterConditionType, string> = {
   regex: "matches pattern",
 };
 
-/** Human-readable label for a condition type. */
-export function conditionLabel(type: FilterConditionType): string {
+/** Wording of the comparisons on a date / date-time column. */
+const TEMPORAL_CONDITION_LABELS: Partial<Record<FilterConditionType, string>> = {
+  eq: "on",
+  ne: "not on",
+  lt: "before",
+  lte: "on or before",
+  gt: "after",
+  gte: "on or after",
+  bw: "between",
+};
+
+/**
+ * Human-readable label for a condition type. Pass the column's filter kind for
+ * wording that fits it (`on` / `before` / `after` on `date` and `datetime`).
+ */
+export function conditionLabel(type: FilterConditionType, kind?: ColumnFilterType): string {
+  if (kind === "date" || kind === "datetime") {
+    const temporal = TEMPORAL_CONDITION_LABELS[type];
+    if (temporal) return temporal;
+  }
   return CONDITION_LABELS[type] ?? type;
 }
 

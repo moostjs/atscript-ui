@@ -14,6 +14,7 @@ Filter model, condition types, dialogs, OR/AND semantics.
 - [AsFilterField component](#asfilterfield-component)
 - [AsFilterDialog component](#asfilterdialog-component)
 - [AsFilterValueHelp](#asfiltervaluehelp)
+- [Date and time filters (since 0.1.148)](#date-and-time-filters-since-01148)
 - [Date shortcuts](#date-shortcuts)
 - [Recipes](#recipes)
 
@@ -157,16 +158,39 @@ Words for a condition: `formatFilterExpr(expr, labelOf?)` → `(Status equals sh
 
 ## Condition availability per column type
 
-| Column type | Available conditions                                                       |
-| ----------- | -------------------------------------------------------------------------- |
-| `text`      | `eq`, `ne`, `contains`, `starts`, `ends`, `bw`, `null`, `notNull`, `regex` |
-| `number`    | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`              |
-| `boolean`   | `eq`, `ne`, `null`, `notNull`                                              |
-| `date`      | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`              |
-| `enum`      | same as `text`                                                             |
-| `ref`       | same as `text`                                                             |
+| Filter kind | Available conditions                                                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `text`      | `eq`, `ne`, `contains`, `starts`, `ends`, `bw`, `null`, `notNull`, `regex`                                                                 |
+| `number`    | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull`                                                                              |
+| `boolean`   | `eq`, `ne`, `null`, `notNull`                                                                                                              |
+| `date`      | `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `bw`, `null`, `notNull` (worded on / not on / before / on or before / after / on or after / between) |
+| `datetime`  | same as `date` (0.1.148+: timestamp and ISO date-time columns)                                                                             |
+| `enum`      | same as `text`, minus the pattern ops when `valueKind` is not `string`                                                                     |
+| `ref`       | same as `text`, minus the pattern ops when `valueKind` is not `string`                                                                     |
 
-Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Use `conditionsForType(type, nullable)` to read the resolved list. Map a `ColumnDef.type` string to `ColumnFilterType` via `columnFilterType(columnType)`. For a concrete column use `columnFilterConditions(column)` (next section) — it also covers existence-only columns.
+Non-nullable columns (per `@expect.optional` absent) drop `null` / `notNull`. Use `conditionsForType(type, nullable)` to read the resolved list. **Since 0.1.148 the kind comes from `columnFilterKind(column)`**, which reads `ColumnDef.valueKind` (the scalar storage kind `createTableDef` derives from the atscript type) before the display type: `timestamp` → `datetime` (`date` when displayed as a date, `number` when displayed as a plain number — an opt-out to raw ms), `isoDate` → `datetime` / `date`, `date` → `date`, a text kind over a numeric or boolean `valueKind` → `number` / `boolean`; `enum` and `ref` keep their kind. `columnFilterType(columnType)` maps a display type string only (`"datetime"` → `"datetime"`). `columnFilterConditions(column)` additionally drops `contains` / `starts` / `ends` / `regex` whenever `valueKind` is set and is not `string` (a numeric `ref` / `enum` cannot take `$regex`), and covers existence-only columns (next section). `conditionLabel(type, kind?)` words date comparisons.
+
+## Date and time filters (since 0.1.148)
+
+The model stays in calendar terms; the query is encoded in the table time zone. A date condition value is one of: day `2026-10-05`, minute `2026-10-05T14:30`, month `2026-10`, relative `today` / `today-6` / `week` / `week-1` / `month` / `month-1` / `year` / `year-1`, ISO instant (`Z` or offset), or an epoch-ms number. Each denotes a period `[s, e)`: `eq` → `{ $gte: s, $lt: e }`, `ne` → `$or` of `$lt s` / `$gte e`, `lt` → `$lt s`, `lte` → `$lt e`, `gt` → `$gte e`, `gte` → `$gte s`, `bw [a,b]` → `$gte s(a), $lt e(b)`; `null` / `notNull` unchanged. Storage form by `valueKind`: epoch ms (`timestamp`, numeric columns), `toISOString()` strings (`isoDate` — right for UTC-normalized storage; offset-stored strings compare lexically), `YYYY-MM-DD` (`date`: precision cut to the day, `e` the next day). An epoch number against an epoch column keeps its raw comparison; a string the grammar cannot read passes through unchanged so the server answers 400 (never approximated).
+
+```typescript
+import { buildTableQuery, createColumnValueEncoder } from "@atscript/ui-table";
+
+buildTableQuery({
+  visibleColumnPaths: [],
+  sorters: [],
+  filters: { createdAt: [{ type: "bw", value: ["today-6", "today"] }] },
+  encodeCondition: createColumnValueEncoder(state.allColumns.value, { timeZone: "Europe/Berlin" }),
+}); // state.buildQuery() already does this with state.timeZone
+```
+
+- **Time zone**: `<AsTableRoot :time-zone>` / `useTable({ timeZone })` → the cell locale's zone (`provideCellLocale`) → browser; `state.timeZone` is the effective one; cells, inputs, chips and queries share it; a change re-queries only when a date filter is set. Week start from `Intl.Locale#getWeekInfo` (`useTable({ weekStart })` overrides). DST gaps take the later instant, repeats the earlier; 23 / 25-hour days are exact.
+- **URL / presets**: raw model — `createdAt>='today-6'&createdAt<=today` — so relative stays relative ("last 7 days" means the opener's last 7 days). No "freeze to absolute" option by design.
+- **Inputs**: default `AsFilterInput` → native `date` input (plus a clock toggle `as-filter-input-time-toggle` → `datetime-local` on `datetime` kinds, precision from the value shape); a relative or epoch value shows as a pill (`as-filter-input-token`) that opens into a prefilled input. A custom `controls.filterInput` must tolerate `filterType === "datetime"`.
+- **Shortcuts**: `temporalShortcuts()` → `{ id, label, conditions }` (Today, Yesterday, Last 7 / 30 days, This / Last week, This / Last month, This year), relative conditions. **Chips** word a condition for the column ("Last 7 days", "on Oct 5, 2026", "after Oct 5, 2026, 14:30"); `formatFilterExpr(expr, labelOf, formatValue)` takes a value formatter for residual chips.
+- **Bar text**: `parseColumnFilterInput` accepts the grammar after the operator (`>=2026-01-01`, `today-6...today`); a non-date sends nothing.
+- **Upgrading**: timestamps used to get a text filter the server refused (drop any "timestamps non-filterable in /meta" workaround); `string.date` / `string.isoDate` move from the text filter to a date filter (no `contains` / `regex`); non-string `valueKind`s lose the pattern ops; clearing a number input is unfilled (never `= 0`); a boolean column accepts only `true` / `false`; `ColumnFilterType` gains `"datetime"`.
 
 ## Existence-only columns
 
@@ -181,7 +205,7 @@ Since 0.1.139 (needs `@atscript/moost-db` 0.1.132+): `/meta.fields[P]` = `{ filt
 
 ### Value coercion in inline input
 
-`parseFilterInput(text, columnType, nullable?)` (and `parseColumnFilterInput(text, column)`) coerces the typed value to the column's JS type: `number` columns get numbers, and since 0.1.133 `boolean` columns understand the `true` / `false` vocabulary (case-insensitive) and produce real booleans, so `false` round-trips through the URL as a boolean and actually matches. Any other text on a boolean column stays a string — the existing "no match" behaviour is unchanged.
+`parseFilterInput(text, columnType, nullable?)` (and `parseColumnFilterInput(text, column)`) validates the typed value against the column and returns `undefined` (nothing is sent) when it is not one: `number` columns get numbers, `integer` rejects fractions, `decimal` keeps the typed text as a **string**, `boolean` takes `true` / `false` (case-insensitive) as real booleans, date / date-time columns take the temporal grammar (default operator `eq`). Values from URLs, presets and dropdowns are typed the same way at query time — see "Typed values" in [tables/filtering](https://ui.atscript.dev/tables/filtering#typed-values-everywhere).
 
 ## AsFilters component
 
@@ -270,6 +294,8 @@ Not directly imported by consumers — `<AsFilterDialog>` / `<AsFilterInput>` mo
 
 ## Date shortcuts
 
+> **Deprecated (0.1.148).** `dateShortcuts()` produces absolute dates; use `temporalShortcuts()` ([above](#date-and-time-filters-since-01148)), whose conditions carry relative tokens. It stays exported unchanged and will be removed in a future breaking release.
+
 ```typescript
 import { dateShortcuts } from "@atscript/ui-table";
 
@@ -325,7 +351,7 @@ Use `<AsTableRoot :force-filters>`:
 <AsTableRoot url="/api/db/tables/orders" :force-filters="{ tenantId: currentTenantId }" />
 ```
 
-`forceFilters` is a Uniquery `FilterExpr` — see atscript-db skill. AND'd at the top level with user filters; not visible in `state.filters`; not echoed in the URL bridge.
+`forceFilters` is a Uniquery `FilterExpr` — see atscript-db skill. AND'd at the top level with user filters; not visible in `state.filters`; not echoed in the URL bridge. **Live since 0.1.148**: bind it to a computed (e.g. from a route key) and a change re-queries the mounted table on page 1, keeping the user's filters, search, sorters and columns — structural compare, no `:key` remount; add `:block-query` to hold the first fetch until the scope is known. See [query.md](query.md#force-filters-and-sorters).
 
 ### Replace the filter chip strip
 

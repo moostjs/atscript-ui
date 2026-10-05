@@ -83,8 +83,8 @@ describe("resolveOptions", () => {
 
     const result = resolveOptions(union, {});
     expect(result).toEqual([
-      { key: "a", label: "a" },
-      { key: "b", label: "b" },
+      { key: "a", label: "a", value: "a" },
+      { key: "b", label: "b", value: "b" },
     ]);
   });
 

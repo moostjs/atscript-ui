@@ -2,7 +2,7 @@ import type { ColumnDef, MetaResponse, TableDef } from "@atscript/ui";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import type { Client } from "@atscript/db-client";
 import { mount, type VueWrapper } from "@vue/test-utils";
-import { defineComponent, h, type Slots } from "vue";
+import { defineComponent, h, type MaybeRefOrGetter, type Slots } from "vue";
 import { vi } from "vitest";
 import {
   createTableState,
@@ -234,9 +234,12 @@ type MountTableStateOptions = {
   queryOnMount?: boolean;
   blockSize?: number;
   blockQuery?: boolean | (() => boolean);
-  forceFilters?: FilterExpr;
-  forceSorters?: SortControl[];
-  alwaysSelected?: string[];
+  forceFilters?: MaybeRefOrGetter<FilterExpr | undefined>;
+  forceSorters?: MaybeRefOrGetter<SortControl[] | undefined>;
+  alwaysSelected?: MaybeRefOrGetter<string[] | undefined>;
+  /** The IANA zone dates are read in (`createTableState`'s `query.timeZone`). */
+  timeZone?: MaybeRefOrGetter<string | undefined>;
+  weekStart?: MaybeRefOrGetter<number | undefined>;
   /** Configured default for the runtime relevance flag. */
   ignoreSortersWhenSearched?: boolean;
   queryFn?: QueryFn;
@@ -293,6 +296,8 @@ function mountWith(
             forceFilters: opts.forceFilters,
             forceSorters: opts.forceSorters,
             alwaysSelected: opts.alwaysSelected,
+            timeZone: opts.timeZone,
+            weekStart: opts.weekStart,
             ignoreSortersWhenSearched: opts.ignoreSortersWhenSearched,
             fn: opts.queryFn,
             preSorted: opts.preSorted,

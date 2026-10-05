@@ -144,8 +144,9 @@ slot. Key props:
 | `components`   | Named component overrides looked up via `@ui.table.component "name"`.                                                                                                   |
 | `controls`     | Skin-slot overrides — header cell, column menu, filter dialog, config dialog, etc. Pass only the entries you replace; every slot falls back to its built-in internally. |
 | `queryFn`      | Replace the built-in moost-db data fetcher with your own. See [Query Function](/tables/query-function).                                                                 |
-| `forceFilters` | Always-applied `FilterExpr` (Uniquery shape), AND-merged with user filters.                                                                                             |
-| `forceSorters` | Always-applied `SortControl[]`, prepended before user sorters; user can't remove them.                                                                                  |
+| `forceFilters` | Always-applied `FilterExpr` (Uniquery shape), AND-merged with user filters. Live since 0.1.148 — a change re-queries on page 1, no `:key` needed.                       |
+| `forceSorters` | Always-applied `SortControl[]`, prepended before user sorters; user can't remove them. Live since 0.1.148.                                                              |
+| `timeZone`     | IANA zone dates are read in (date filters, "today"). Default: the cell locale's, else the browser's. Since 0.1.148.                                                     |
 | `preset`       | Opt-in preset configuration. Omit to disable presets.                                                                                                                   |
 | `queryOnMount` | Default `true`. Set `false` if you want to defer the first fetch.                                                                                                       |
 

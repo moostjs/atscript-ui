@@ -15,12 +15,17 @@ export {
 
 // ── Filter conditions map ───────────────────────────────────
 export type { ColumnFilterType, FilterableColumn } from "./filters/filter-conditions-map";
+export { conditionsForType, columnFilterType } from "./filters/filter-conditions-map";
 export {
-  conditionsForType,
-  columnFilterType,
+  columnFilterKind,
   columnFilterConditions,
+  columnDefaultCondition,
   isColumnFilterable,
-} from "./filters/filter-conditions-map";
+} from "./filters/column-filter";
+// Internal: the per-column resolver the filter UIs of `@atscript/vue-table` read.
+export { columnFilter } from "./filters/column-filter";
+export type { ColumnFilter, ValueEncoding } from "./filters/column-filter";
+export { isTemporalKind } from "./filters/filter-conditions-map";
 
 // ── Escape regex ────────────────────────────────────────────
 export { escapeRegex, unescapeRegex } from "./filters/escape-regex";
@@ -31,10 +36,10 @@ export {
   parseColumnFilterInput,
   formatFilterCondition,
   defaultCondition,
-  columnDefaultCondition,
 } from "./filters/filter-input-format";
 
 // ── Filters to Uniquery ─────────────────────────────────────
+export type { FiltersToUniqueryOptions } from "./filters/filters-to-uniquery";
 export { filtersToUniqueryFilter } from "./filters/filters-to-uniquery";
 export type {
   DecomposedUniqueryFilter,
@@ -51,6 +56,18 @@ export {
   uniqueryFilterToFieldFilters,
 } from "./filters/uniquery-to-filters";
 export { formatFilterExpr } from "./filters/format-filter-expr";
+
+// ── Temporal filters (date / date-time) ─────────────────────
+export type { TemporalOptions, TemporalShortcut } from "./filters/temporal";
+export { isTemporalValue, temporalShortcuts } from "./filters/temporal";
+// Internal: shared with `@atscript/vue-table`.
+export { temporalInputValue, temporalKind } from "./filters/temporal";
+export type { ConditionEncoder } from "./filters/value-encoder";
+export { createColumnValueEncoder } from "./filters/value-encoder";
+// Internal: shared with `@atscript/vue-table`.
+export type { FormatColumnConditionOptions } from "./filters/temporal-format";
+export { formatColumnCondition, formatColumnValue } from "./filters/temporal-format";
+export { getDateTimeFormat } from "./utils/intl-cache";
 
 // ── Date shortcuts ──────────────────────────────────────────
 export type { DateShortcut } from "./filters/date-shortcuts";
@@ -154,6 +171,14 @@ export type {
   UrlQueryParseOptions,
   UrlQuerySync,
 } from "./query/url-query";
+export type {
+  UrlQueryRecord,
+  UrlQueryRecordInput,
+  UrlQueryRecordOptions,
+} from "./query/url-query-record";
+export { stateToUrlQueryRecord, urlQueryRecordToString } from "./query/url-query-record";
+// Internal: the bridge behind `useTableUrlQuery` in `@atscript/vue-table`.
+export { leadingKey, mergeUrlQueryRecord, urlQueryStringToRecord } from "./query/url-query-record";
 export {
   URL_SNAPSHOT_KEY,
   gateOwns,
@@ -172,6 +197,7 @@ export {
   rowsToPks,
   selectionQueryOf,
   selectionSignature,
+  stableValueKey,
 } from "./selection/selection-fns";
 
 // ── State types ────────────────────────────────────────────

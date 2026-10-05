@@ -15,14 +15,14 @@ describe("filterNavByPermissions", () => {
     };
     const vis = filterNavByPermissions(DEMO_TABLES, perms);
     expect(vis.map((t) => t.path)).not.toContain("audit_log");
-    expect(vis).toHaveLength(12);
+    expect(vis).toHaveLength(13);
   });
 
   it("admin sees everything", () => {
     const perms = Object.fromEntries(
       DEMO_TABLES.map((t) => [t.resource, { read: true, write: true }]),
     );
-    expect(filterNavByPermissions(DEMO_TABLES, perms)).toHaveLength(18);
+    expect(filterNavByPermissions(DEMO_TABLES, perms)).toHaveLength(19);
   });
 
   it("no perms → empty", () => {

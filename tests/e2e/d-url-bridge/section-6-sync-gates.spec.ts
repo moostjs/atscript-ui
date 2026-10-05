@@ -98,7 +98,7 @@ test.describe("Section 6.3 — urlQuerySync allowlist (orders)", () => {
     // wire query.
     const decoded = decodeURIComponent(captured.url);
     expect(decoded).toContain("status=shipped");
-    expect(decoded).toContain("total>100");
+    expect(decoded).toContain("total>'100'");
     // Browser URL: `status` lands, `total` does not.
     expectUrlQuery(page, ["status=shipped"]);
     expectUrlQuery(page, ["total"], { not: true });

@@ -2,14 +2,21 @@
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, useId, watch } from "vue";
 import { until } from "@vueuse/core";
 import type { ColumnDef, ResolvedValueHelp, ValueHelpInfo } from "@atscript/ui";
-import { ValueHelpClient, getMetaEntry, resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
+import {
+  ValueHelpClient,
+  getMetaEntry,
+  optionValue,
+  resolveValueHelp,
+  valueHelpDictPaths,
+} from "@atscript/ui";
 import {
   arraysEqual,
   debounce,
   isFilled,
   isSimpleEq,
+  columnFilterKind,
+  isTemporalKind,
   parseColumnFilterInput,
-  formatFilterCondition,
   type FilterCondition,
 } from "@atscript/ui-table";
 import {
@@ -19,6 +26,7 @@ import {
   ComboboxContent,
   ComboboxViewport,
 } from "reka-ui";
+import { useConditionFormat } from "../../composables/use-condition-format";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTable } from "../../composables/use-table";
 import { useDragScroll } from "../../composables/use-drag-scroll";
@@ -29,6 +37,8 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+const { formatCondition } = useConditionFormat(state);
+const isTemporal = computed(() => isTemporalKind(columnFilterKind(props.column)));
 
 const chipsScrollEl = ref<HTMLElement | null>(null);
 useDragScroll(chipsScrollEl);
@@ -81,6 +91,8 @@ const enumRows = hasOptions
       (props.column.options ?? []).map((opt) => ({
         __key: opt.key,
         __label: opt.label,
+        // The typed literal (`true`, `3`) — what the server's filter accepts.
+        __value: optionValue(opt),
       })),
     )
   : undefined;
@@ -181,7 +193,7 @@ const chips = computed<ChipItem[]>(() => {
   const conditions = state.filters.value[props.column.path] ?? [];
   return conditions.filter(isFilled).map((cond, i) => ({
     key: `${cond.type}:${i}:${String(cond.value[0] ?? "")}`,
-    label: formatFilterCondition(cond),
+    label: formatCondition(props.column, cond),
     condition: cond,
   }));
 });
@@ -203,7 +215,7 @@ watch(
 // ── Row value extraction ───────────────────────────────────
 function rowValueFn(row: Record<string, unknown>): unknown {
   if (hasValueHelp && info) return row[info.targetField];
-  if (hasOptions) return row.__key;
+  if (hasOptions) return row.__value;
   return undefined;
 }
 
@@ -470,6 +482,7 @@ function onF4(event: KeyboardEvent) {
           :id="inputId"
           class="as-filter-field-search"
           :value="searchTerm"
+          :placeholder="isTemporal ? 'YYYY-MM-DD' : undefined"
           @input="searchTerm = ($event.target as HTMLInputElement).value"
           @keydown.backspace="onBackspace"
           @keydown.enter.prevent="onEnter"

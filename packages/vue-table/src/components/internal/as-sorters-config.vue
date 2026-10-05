@@ -13,8 +13,7 @@ const externalModel = defineModel<SortControl[]>({ default: () => [] });
 const forceSortersList = computed(() => props.forceSorters?.map((s) => s.field) ?? undefined);
 
 const selected = ref<string[]>([
-  ...(forceSortersList.value ?? []),
-  ...externalModel.value.map((s) => s.field),
+  ...new Set([...(forceSortersList.value ?? []), ...externalModel.value.map((s) => s.field)]),
 ]);
 
 const directionMap = reactive(new Map<string, "asc" | "desc">());
@@ -41,10 +40,13 @@ function setDirection(field: string, dir: "asc" | "desc") {
 }
 
 function updateExternalModel() {
-  externalModel.value = selected.value.map((field) => ({
-    field,
-    direction: directionMap.get(field) ?? "asc",
-  }));
+  // Forced sorters are shown (locked) but belong to the app, not the user's sorter model.
+  externalModel.value = selected.value
+    .filter((field) => !forceMap.has(field))
+    .map((field) => ({
+      field,
+      direction: directionMap.get(field) ?? "asc",
+    }));
 }
 
 function onListUpdate(values: string[]) {

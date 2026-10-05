@@ -27,10 +27,13 @@ const urlQuery = useTableUrlQuery(useRoute(), useRouter());
 </template>
 ```
 
-The composable does **type-only** imports of `Router` and
-`RouteLocationNormalizedLoaded`, so `@atscript/vue-table` has no
-runtime dependency on `vue-router`. Pass in already-resolved
-instances from the consumer app.
+The composable takes **structural** route and router types — only
+`{ query }` for the route and `{ replace(to), push?(to) }` for the
+router (`push` is needed for `mode: 'push'` only) — so
+`@atscript/vue-table` imports nothing from `vue-router`. Pass in the
+already-resolved `useRoute()` / `useRouter()` as they are: they
+type-check with or without typed-route augmentation, no cast, and a
+plain `{ query: {} }` / `{ replace() {} }` fake works in tests.
 
 ## What syncs
 
@@ -341,7 +344,88 @@ parser ignores (`$limit`, or anything of your own) stays with the
 page. A plain `field=value` key is indistinguishable from a
 page-owned flag of the same name, so one that was already in the URL
 at mount counts as foreign until the bridge writes it itself. Pass a
-`prefix` when that matters.
+`prefix` when that matters — or, for a key that must keep its plain
+name, [`preserveKeys`](#a-host-key-that-is-also-a-column).
+
+### A host key that is also a column
+
+The table reads every unprefixed key. A host key that happens to be a
+column path — `?status=pending` on a table with a `status` column — is
+therefore read as a **user filter**: it becomes a chip, and once the
+bridge has written it the table counts it as its own and removes it when
+the user clears their filters, so the host loses its key. A `prefix`
+avoids that but changes the table's URLs.
+
+`preserveKeys` fences such keys off without renaming anything:
+
+```ts
+const urlQuery = useTableUrlQuery(useRoute(), useRouter(), {
+  preserveKeys: ["status"], // or (key) => key.startsWith("host.")
+});
+```
+
+- The table never reads a preserved key — no chip, no filter — and never
+  writes or removes it. It also covers the operator forms of the field
+  (`status!='x'`).
+- A segment the table emits on a preserved key is **withheld**: not
+  written, the host's value stays (a development warning fires once per
+  key). A user filter on the colliding column therefore behaves like a
+  private (unsynced) one — kept across navigation, never in the URL, the
+  way a [`urlQuerySync` allowlist](#per-aspect-gating) treats private
+  fields.
+- The table's own keys (`total>100`, `$sort`) round-trip beside it, a
+  reload restores both, and clearing the table's filters leaves the host
+  key alone.
+
+The usual partner is a live
+[`:force-filters`](/tables/filtering#forced-scope-is-live) derived from
+the same key:
+
+```vue
+<script setup lang="ts">
+const route = useRoute();
+const urlQuery = useTableUrlQuery(route, useRouter(), { preserveKeys: ["status"] });
+const forceFilters = computed(() =>
+  route.query.status ? { status: String(route.query.status) } : undefined,
+);
+</script>
+<template>
+  <AsTableRoot
+    url="/api/db/tables/orders"
+    v-model:url-query="urlQuery"
+    :force-filters="forceFilters"
+  />
+</template>
+```
+
+## Building links
+
+`stateToUrlQueryRecord` (from `@atscript/ui-table`) turns a table state
+into a router query record — what `<RouterLink :to="{ query }">` and
+`router.push({ query })` take — so a link to a filtered view goes
+through the same encoder the bridge uses, instead of a hand-built string:
+
+```vue
+<script setup lang="ts">
+import { stateToUrlQueryRecord } from "@atscript/ui-table";
+
+const query = stateToUrlQueryRecord(
+  { filters: { status: [{ type: "eq", value: ["open"] }] }, sorters: [] },
+  { defaultItemsPerPage: 25 },
+  // { prefix: "orders" } to target a prefixed table
+);
+</script>
+<template>
+  <RouterLink :to="{ path: '/orders', query }">Open orders</RouterLink>
+</template>
+```
+
+The record is the table's own entries — a repeated key becomes an array,
+an operator-bearing filter key (`total>100`) a `null`-valued one.
+`urlQueryRecordToString` is its inverse; both are pure and
+framework-free (see the [API](/api/ui-table#url-query-records)). Date filters link in
+their raw, relative form (`createdAt>='today-6'`); see
+[Date and time filters](/tables/filtering#urls-and-presets-stay-relative).
 
 ## Two tables on one route
 

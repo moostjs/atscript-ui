@@ -113,6 +113,14 @@ export interface DemoTable {
    */
   selectAllMatching?: boolean;
   /**
+   * Host-owned scope: a route query key the PAGE owns (`?status=shipped`),
+   * driven by a segmented control above the table. The key becomes the
+   * table's `forceFilters` (live — no remount) and is fenced off from the
+   * table's own URL bridge with `preserveKeys`, so a `status` column filter
+   * never collides with it. A "Hold queries" toggle shows `:block-query`.
+   */
+  hostScope?: { key: string; options: string[] };
+  /**
    * Row field the selection keys on (`rowValueFn`). Default `"id"`. Views
    * that expose their id under another name (e.g. `task-board`'s `taskId`)
    * set it so rows stay distinct.
@@ -172,7 +180,7 @@ export const DEMO_TABLES: DemoTable[] = [
     // the `string[]` form of `urlQuerySync.filters` — only `status` and
     // `customerId` round-trip; other filters (e.g. ad-hoc `total` ranges)
     // stay private to the linker.
-    urlQuerySync: { pagination: false, filters: ["status", "customerId"] },
+    urlQuerySync: { pagination: false, filters: ["status", "customerId", "createdAt"] },
   },
   // Sticky-filter alias of `orders` — `forceFilters` pins `status =
   // 'cancelled'` server-side. Users see the filter applied but cannot remove
@@ -188,6 +196,19 @@ export const DEMO_TABLES: DemoTable[] = [
     mode: "pagination",
     actionsColumn: "last",
     forceFilters: { status: "cancelled" },
+  },
+  // Host-owned scope: the page's `?status=` key (not the table's) forces the
+  // filter, live — switching it never remounts the table. The table's own
+  // filters, sorters and page round-trip beside it.
+  {
+    path: "orders-by-status",
+    apiPath: "orders",
+    label: "Orders by status",
+    resource: "orders",
+    icon: "i-ph:funnel",
+    mode: "pagination",
+    limit: 10,
+    hostScope: { key: "status", options: ["pending", "shipped", "cancelled"] },
   },
   // Sticky-config alias of `orders` — disables Hide + Reset width so the
   // `@db.json` `lines` column collapses all four column-menu gates and

@@ -1,5 +1,6 @@
 import type {
   TAtscriptAnnotatedType,
+  TAtscriptTypeComplex,
   TAtscriptTypeFinal,
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
@@ -21,7 +22,14 @@ import { extractMeasurement } from "../form/measurement";
 import { humanizePath } from "../shared/str";
 import { extractLiteralOptions } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
-import type { ColumnDef, FieldMeta, MetaResponse, TableActionsModel, TableDef } from "./types";
+import type {
+  ColumnDef,
+  ColumnValueKind,
+  FieldMeta,
+  MetaResponse,
+  TableActionsModel,
+  TableDef,
+} from "./types";
 
 /**
  * Builds a TableDef from a moost-db MetaResponse.
@@ -79,6 +87,7 @@ export function createTableDef(
       path,
       label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
       type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
+      valueKind: inferValueKind(prop),
       component: tableComponent,
       selectWith: getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined,
       sortable: fieldMeta.sortable ?? false,
@@ -199,4 +208,75 @@ function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: unknown): 
     return "text";
   }
   return "text";
+}
+
+/**
+ * Number metadata that makes the server treat a plain `number` column as an
+ * integer (mirrors the db layer's `valueTypeOf`), beside the `int` / `expect.int` tags.
+ */
+const INTEGER_NUMBER_META = [
+  "expect.int",
+  "db.default.increment",
+  "db.default.now",
+  "db.agg.count",
+  "db.agg.countDistinct",
+] as const;
+
+/** The kind of one scalar leaf, or `undefined` for a non-scalar / unknown design type. */
+function scalarValueKind(prop: TAtscriptAnnotatedType): ColumnValueKind | undefined {
+  const final = prop.type as TAtscriptTypeFinal;
+  const tags = final.tags;
+  switch (final.designType) {
+    case "string":
+      return tags?.has("isoDate") ? "isoDate" : tags?.has("date") ? "date" : "string";
+    case "number":
+      if (tags?.has("timestamp")) return "timestamp";
+      if (tags?.has("int") || INTEGER_NUMBER_META.some((k) => prop.metadata.has(k as never))) {
+        return "integer";
+      }
+      return "number";
+    case "decimal":
+      return "decimal";
+    case "boolean":
+      return "boolean";
+    default:
+      return undefined;
+  }
+}
+
+/** Kinds of every non-null leaf of a (possibly nested) union; `null` when one is not a scalar. */
+function collectUnionKinds(
+  items: TAtscriptAnnotatedType[],
+  out: Set<ColumnValueKind | undefined>,
+): void {
+  for (const item of items) {
+    if (item.type.kind === "union") {
+      collectUnionKinds((item.type as TAtscriptTypeComplex).items, out);
+      continue;
+    }
+    if (item.type.kind === "") {
+      const dt = (item.type as TAtscriptTypeFinal).designType;
+      if (dt === "null" || dt === "undefined") continue;
+      out.add(scalarValueKind(item));
+      continue;
+    }
+    out.add(undefined);
+  }
+}
+
+/**
+ * Scalar storage kind of the column's value — what the server's filter guard
+ * checks. A scalar maps to its kind; a union that agrees on one kind across
+ * its non-null members (`'a' | 'b'`, `1 | 2`, `number.timestamp | null`)
+ * takes it; arrays, objects, JSON and mixed unions have none (`undefined`),
+ * which means no value coercion.
+ */
+function inferValueKind(prop: TAtscriptAnnotatedType): ColumnValueKind | undefined {
+  const kind = prop.type.kind;
+  if (kind === "") return scalarValueKind(prop);
+  if (kind !== "union") return undefined;
+  const kinds = new Set<ColumnValueKind | undefined>();
+  collectUnionKinds((prop.type as TAtscriptTypeComplex).items, kinds);
+  if (kinds.size !== 1) return undefined;
+  return [...kinds][0];
 }

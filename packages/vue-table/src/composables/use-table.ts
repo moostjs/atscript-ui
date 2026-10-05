@@ -7,7 +7,7 @@ import {
 } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { Client } from "@atscript/db-client";
-import type { Component, Ref } from "vue";
+import { getCurrentInstance, toValue, type Component, type MaybeRefOrGetter, type Ref } from "vue";
 import type { FilterExpr } from "@uniqu/core";
 import type {
   ColumnWidthsMap,
@@ -29,6 +29,8 @@ import type {
 import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
 import { useTableSelection, type SelectionPersistence } from "./use-table-selection";
 import { injectPresetsApp } from "./as-presets-app";
+import { useCellLocale } from "./use-cell-locale";
+import { weekStartOf } from "../utils/week-start";
 import { useLocalDraft } from "./use-local-draft";
 import { usePresets } from "./use-presets";
 import { DEFAULT_AVAILABLE_ASPECTS } from "./state/create-preset-state";
@@ -91,15 +93,33 @@ export interface UseTableOptions {
    * search or index changed. Since 0.1.147.
    */
   onSelectionReset?: (event: SelectionResetEvent) => void;
-  /** Always-applied Uniquery filter expression (AND'd with user filters). */
-  forceFilters?: FilterExpr;
-  /** Always-applied sorters (prepended before user sorters). */
-  forceSorters?: SortControl[];
+  /**
+   * Always-applied Uniquery filter expression (AND'd with user filters).
+   * Live since 0.1.148: pass a ref or getter and a change re-queries the
+   * mounted table on page 1, keeping the user's filters, search, sorters and
+   * columns. Compared structurally, so an equal new object is no change.
+   */
+  forceFilters?: MaybeRefOrGetter<FilterExpr | undefined>;
+  /** Always-applied sorters (prepended before user sorters). Live, like `forceFilters`; keeps the page. */
+  forceSorters?: MaybeRefOrGetter<SortControl[] | undefined>;
   /**
    * Leaf field paths always added to `$select` (deduped, gated by available
-   * meta), regardless of which columns are visible. Additive only.
+   * meta), regardless of which columns are visible. Additive only. Live, like
+   * `forceFilters`.
    */
-  alwaysSelected?: string[];
+  alwaysSelected?: MaybeRefOrGetter<string[] | undefined>;
+  /**
+   * IANA time zone the table reads dates in: where "today" starts, which
+   * instant a day filter means. Default: the cell locale's time zone
+   * (`provideCellLocale`), else the browser's. Pass a ref or getter to follow
+   * a preference. Since 0.1.148.
+   */
+  timeZone?: MaybeRefOrGetter<string | undefined>;
+  /**
+   * First day of the week for `week` filters, `1` = Monday … `7` = Sunday.
+   * Default: from the cell locale's language, else Monday. Since 0.1.148.
+   */
+  weekStart?: MaybeRefOrGetter<number | undefined>;
   /** Override the default query function. */
   queryFn?: QueryFn;
   /** Auto-query when metadata loads (default: true). */
@@ -241,6 +261,9 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   const { client } = entry;
   const defPromise = entry.tableDef;
 
+  // The zone the filters read dates in is the zone the cells render them in.
+  const cellLocale = getCurrentInstance() ? useCellLocale() : undefined;
+
   const preset = opts?.preset;
   const presetsHandle = preset
     ? usePresets({
@@ -286,6 +309,8 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
       forceFilters: opts?.forceFilters,
       forceSorters: opts?.forceSorters,
       alwaysSelected: opts?.alwaysSelected,
+      timeZone: () => toValue(opts?.timeZone) ?? cellLocale?.timezone.value,
+      weekStart: () => toValue(opts?.weekStart) ?? weekStartOf(cellLocale?.locale.value),
       blockQuery: opts?.blockQuery,
       queryOnMount: opts?.queryOnMount,
       ignoreSortersWhenSearched:

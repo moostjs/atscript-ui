@@ -227,8 +227,9 @@ test.describe("Section 4.3 — Operator coverage on /orders", () => {
       { table: "orders" },
     );
     const decoded = decodeURIComponent(captured.url);
-    // Numbers are emitted unquoted by `serializeValue` (number branch).
-    expect(decoded).toContain("total>50");
+    // `total` is a decimal column: its value stays a numeric string, which
+    // `serializeValue` quotes.
+    expect(decoded).toContain("total>'50'");
   });
 
   test("bw — Total between `50...100`", async ({ page }) => {
@@ -244,8 +245,8 @@ test.describe("Section 4.3 — Operator coverage on /orders", () => {
       { table: "orders" },
     );
     const decoded = decodeURIComponent(captured.url);
-    expect(decoded).toContain("total>=50");
-    expect(decoded).toContain("total<=100");
+    expect(decoded).toContain("total>='50'");
+    expect(decoded).toContain("total<='100'");
   });
 });
 

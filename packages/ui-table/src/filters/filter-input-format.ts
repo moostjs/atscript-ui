@@ -1,56 +1,17 @@
 import type { FilterCondition, FilterConditionType } from "./filter-types";
+import { conditionsForType, type ColumnFilterType } from "./filter-conditions-map";
 import {
-  columnFilterConditions,
-  columnFilterType,
-  conditionsForType,
-  type ColumnFilterType,
-  type FilterableColumn,
-} from "./filter-conditions-map";
+  coercerOf,
+  columnFilter,
+  defaultConditionOf,
+  type FilterColumnInput,
+} from "./column-filter";
 
-/**
- * Coerce a raw string value to the appropriate JS type for the column.
- * Number columns get numeric values, boolean columns understand the
- * `true` / `false` vocabulary (case-insensitive) so the condition carries a
- * real boolean and round-trips through the URL as one. Anything else stays
- * a string. Since 0.1.133 for booleans.
- */
-function coerceValue(raw: string, columnType: ColumnFilterType): string | number | boolean {
-  if (columnType === "number") {
-    const n = Number(raw);
-    return Number.isNaN(n) ? raw : n;
-  }
-  if (columnType === "boolean") {
-    const lower = raw.toLowerCase();
-    if (lower === "true") return true;
-    if (lower === "false") return false;
-    return raw;
-  }
-  return raw;
-}
+type Coerce = (raw: string) => string | number | boolean | undefined;
 
 /** Default condition type when no symbol matches the input. */
 export function defaultCondition(columnType: ColumnFilterType): FilterConditionType {
-  switch (columnType) {
-    case "text":
-    case "enum":
-    case "ref":
-      return "contains";
-    default:
-      return "eq";
-  }
-}
-
-/**
- * The condition a column's filter input starts with: its type's
- * {@link defaultCondition} when the column offers it, otherwise the first
- * condition it does offer (`null` on an existence-only column).
- *
- * @since 0.1.139
- */
-export function columnDefaultCondition(column: FilterableColumn): FilterConditionType {
-  const type = defaultCondition(columnFilterType(column.type));
-  const offered = columnFilterConditions(column);
-  return offered.length === 0 || offered.includes(type) ? type : offered[0];
+  return defaultConditionOf(columnType);
 }
 
 /** Prefix operators in match order (longest first). */
@@ -95,46 +56,51 @@ export function parseFilterInput(
   columnType: ColumnFilterType,
   nullable = true,
 ): FilterCondition | undefined {
-  return parseInput(text, columnType, conditionsForType(columnType, nullable));
+  return parseInput(
+    text,
+    coercerOf(columnType, undefined),
+    defaultConditionOf(columnType),
+    conditionsForType(columnType, nullable),
+  );
 }
 
 /**
- * {@link parseFilterInput} for a column: the type comes from the column and
- * the accepted operators are {@link columnFilterConditions} — the ones the
- * column's filter UI offers.
+ * {@link parseFilterInput} for a column: the type comes from the column
+ * (`columnFilterKind`) and the accepted operators are
+ * `columnFilterConditions` — the ones the column's filter UI offers. The
+ * values are checked against the column's storage (`valueKind`): a date column
+ * takes the temporal grammar, a boolean column `true` / `false`, an integer
+ * column integers; anything else returns `undefined`, so no request is sent.
  *
  * @since 0.1.139
  */
 export function parseColumnFilterInput(
   text: string,
-  column: FilterableColumn,
+  column: FilterColumnInput,
 ): FilterCondition | undefined {
-  return parseInput(text, columnFilterType(column.type), columnFilterConditions(column));
+  const spec = columnFilter(column);
+  // The kind's own default, not the column's fallback: an operator the column does not offer is no filter.
+  return parseInput(text, spec.coerce, defaultConditionOf(spec.kind), spec.conditions);
 }
 
 function parseInput(
   text: string,
-  columnType: ColumnFilterType,
+  coerce: Coerce,
+  fallback: FilterConditionType,
   available: readonly FilterConditionType[],
 ): FilterCondition | undefined {
   const trimmed = text.trim();
   if (trimmed === "") return undefined;
 
-  const isNumber = columnType === "number";
+  // Wildcard and regex operands are text: they are not typed like the column.
   const build = (
     type: FilterConditionType,
-    value: (string | number | boolean)[],
+    value: (string | number | boolean | undefined)[],
   ): FilterCondition | undefined => {
     if (!available.includes(type)) return undefined;
-    if (isNumber) {
-      for (const v of value) {
-        if (typeof v === "string" && v !== "") return undefined;
-        if (typeof v === "number" && Number.isNaN(v)) return undefined;
-      }
-    }
-    return { type, value };
+    if (value.includes(undefined)) return undefined;
+    return { type, value: value as (string | number | boolean)[] };
   };
-  const coerce = (raw: string) => coerceValue(raw, columnType);
 
   const lower = trimmed.toLowerCase();
 
@@ -180,7 +146,7 @@ function parseInput(
   }
 
   // 6. Default: no symbol matched
-  return build(defaultCondition(columnType), [coerce(trimmed)]);
+  return build(fallback, [coerce(trimmed)]);
 }
 
 /**

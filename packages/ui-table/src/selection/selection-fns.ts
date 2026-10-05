@@ -113,7 +113,20 @@ export function selectionSignature(query: SelectionQuery): string {
   if (query.filter && Object.keys(query.filter).length > 0) out.filter = query.filter;
   if (query.search) out.search = query.search;
   if (query.index) out.index = query.index;
-  return JSON.stringify(out, function (key, val: unknown) {
+  return stableValueKey(out);
+}
+
+/**
+ * A stable string for any JSON-like value: object keys sorted at every depth,
+ * `RegExp` and `Date` values spelled out (plain `JSON.stringify` would
+ * collapse every regex to `{}`). Structurally equal values produce the same
+ * string whatever their key order, so a change of it means a real change.
+ * Reading it traverses reactive objects, so it also tracks in-place edits.
+ *
+ * @internal
+ */
+export function stableValueKey(value: unknown): string {
+  return JSON.stringify(value, function (key, val: unknown) {
     // `this[key]` is the raw value — `Date#toJSON` has already run on `val`.
     const raw = (this as Record<string, unknown>)[key];
     if (raw instanceof RegExp) return { $re: raw.source, flags: raw.flags };

@@ -249,3 +249,29 @@ export interface ResolverHelpers {
     @ui.table.order 3
     secret: string
 }
+
+/// One prop per storage kind the filter UI cares about. Backs:
+///   - "valueKind: ..." tests
+export interface ValueKinds {
+    ts: number.timestamp
+    tsCreated: number.timestamp.created
+    tsOptional?: number.timestamp
+    dateStr: string.date
+    isoStr: string.isoDate
+    intNum: number.int
+    @expect.int
+    expectInt: number
+    @db.default.increment
+    autoId: number
+    plain: number
+    money: decimal
+    flag: boolean
+    text: string
+    numLiterals: 1 | 2 | 3
+    mixed: 'a' | 1
+    nullableLiterals: 'a' | 'b' | null
+    list: string[]
+    nested: {
+        inner: string
+    }
+}

@@ -7,6 +7,7 @@ Framework-agnostic table model. Filter conditions, filter→Uniquery conversion,
 - [Filter model](#filter-model)
 - [Filter input format](#filter-input-format)
 - [Filters and Uniquery](#filters-and-uniquery)
+- [Date and time filters](#date-and-time-filters)
 - [Date shortcuts](#date-shortcuts)
 - [Presets — wire types](#presets-wire-types)
 - [Presets — application types](#presets-application-types)
@@ -74,7 +75,8 @@ type FieldFilters = Record<string, FilterCondition[]>;
 function isFilled(cond: FilterCondition): boolean;
 function hasSecondValue(type: FilterConditionType): boolean; // `true` only for `"bw"`
 function isSimpleEq(cond: FilterCondition): boolean;
-function conditionLabel(type: FilterConditionType): string;
+/** `kind` (since 0.1.148): on `"date"` / `"datetime"` the comparisons read on / not on / before / on or before / after / on or after / between. */
+function conditionLabel(type: FilterConditionType, kind?: ColumnFilterType): string;
 function filledFilterCount(filters: FieldFilters): number;
 function compactFieldFilters(filters: FieldFilters): FieldFilters; // since 0.1.142
 function filterTokenLabel(
@@ -91,20 +93,46 @@ const NULL_OPS: ReadonlySet<FilterConditionType>; // { "null", "notNull" }
 ### Conditions per type
 
 ```typescript
-type ColumnFilterType = "text" | "number" | "boolean" | "date" | "enum" | "ref";
+/** `"datetime"` since 0.1.148 — a date filter on a column that stores instants. Same conditions as `"date"`. */
+type ColumnFilterType = "text" | "number" | "boolean" | "date" | "datetime" | "enum" | "ref";
 
-/** Drops `"null"` / `"notNull"` when `nullable === false`. */
+/**
+ * Drops `"null"` / `"notNull"` when `nullable === false`, and (since 0.1.148)
+ * the pattern conditions when `valueKind` is set and is not `"string"`.
+ */
 function conditionsForType(
   type: ColumnFilterType,
   nullable?: boolean,
+  valueKind?: ColumnValueKind,
 ): readonly FilterConditionType[];
 
-/** Map a `ColumnDef.type` string to its filter-type bucket. */
+/** Map a `ColumnDef.type` string to its filter-type bucket (`"datetime"` maps to `"datetime"` since 0.1.148). */
 function columnFilterType(columnType: string): ColumnFilterType;
 
-type FilterableColumn = Pick<ColumnDef, "type" | "nullable" | "filterable" | "filterOps">;
+/** Adds `valueKind` since 0.1.148. */
+type FilterableColumn = Pick<
+  ColumnDef,
+  "type" | "nullable" | "filterable" | "filterOps" | "valueKind"
+>;
 
-/** The conditions a column offers; `[]` when it takes no filter. Since 0.1.139. */
+/**
+ * The filter kind of a column — what its input and conditions follow; every
+ * built-in filter UI reads it instead of `columnFilterType(column.type)`.
+ * `valueKind` wins: `timestamp` → `"datetime"` (`"date"` when shown as a date,
+ * `"number"` when shown as a number — an opt-out to raw ms), `isoDate` →
+ * `"datetime"` (`"date"` when shown as a date), `date` → `"date"`; a text kind
+ * over a numeric / boolean `valueKind` becomes `"number"` / `"boolean"`;
+ * `"enum"` and `"ref"` keep their kind. Since 0.1.148.
+ */
+function columnFilterKind(column: Pick<FilterableColumn, "type" | "valueKind">): ColumnFilterType;
+
+/**
+ * The conditions a column offers; `[]` when it takes no filter. Since 0.1.139.
+ * Since 0.1.148 follows `columnFilterKind`, drops `contains` / `starts` /
+ * `ends` / `regex` (`$regex`, string fields only) when `valueKind` is set and
+ * is not `"string"`, and offers only what the server's reported `filterOps`
+ * accept when it reports them.
+ */
 function columnFilterConditions(column: FilterableColumn): readonly FilterConditionType[];
 
 /** `columnFilterConditions(column).length > 0`. Since 0.1.139. */
@@ -123,8 +151,8 @@ Tools for parsing and formatting filter values typed by the user.
  * `!<empty>`, `/regex/`). Values are coerced per `columnType`: `number`
  * columns get numbers, and (since 0.1.133) `boolean` columns understand the
  * `true` / `false` vocabulary case-insensitively, so the condition carries a
- * real boolean and round-trips through the URL as one. Anything else — on a
- * boolean column too — stays a string.
+ * real boolean and round-trips through the URL as one. Since 0.1.148 any other
+ * text on a boolean column is not a filter (`undefined`, so nothing is sent).
  */
 function parseFilterInput(
   raw: string,
@@ -133,8 +161,13 @@ function parseFilterInput(
 ): FilterCondition | undefined;
 
 /**
- * `parseFilterInput` for a column: type from the column, accepted operators
- * from `columnFilterConditions(column)`. Since 0.1.139.
+ * `parseFilterInput` for a column: type from `columnFilterKind(column)`,
+ * accepted operators from `columnFilterConditions(column)`. Since 0.1.139.
+ * Since 0.1.148 the values are checked against the column's `valueKind`:
+ * date / date-time columns take the [temporal grammar](/tables/filtering#date-and-time-filters)
+ * (default operator `eq`; a non-date value returns `undefined`), an `integer`
+ * column rejects fractions, a `decimal` keeps its typed text as a string,
+ * a boolean column accepts `true` / `false` only.
  */
 function parseColumnFilterInput(raw: string, column: FilterableColumn): FilterCondition | undefined;
 
@@ -162,7 +195,15 @@ See [Filtering](/tables/filtering).
 `filtersToUniqueryFilter` produces a `@uniqu/core` filter the server consumes; `uniqueryFilterToFieldFilters` rebuilds `FieldFilters` from a Uniquery filter (the URL bridge's decoder uses it).
 
 ```typescript
-function filtersToUniqueryFilter(filters: FieldFilters): FilterExpr | undefined;
+/**
+ * `opts.encode` (since 0.1.148) is consulted per condition before the default
+ * conversion — an `undefined` result falls through to it. `ne` and `notNull`
+ * results stay in the AND-ed exclusion group.
+ */
+function filtersToUniqueryFilter(
+  filters: FieldFilters,
+  opts?: { encode?: ConditionEncoder },
+): FilterExpr | undefined;
 
 function uniqueryFilterToFieldFilters(
   expr: FilterExpr | undefined,
@@ -226,14 +267,76 @@ interface UnknownFilter {
 function filterExprKey(expr: FilterExpr): string;
 
 /** Since 0.1.140. Human-readable rendering, worded like the filter chips. `labelOf` maps a path to a display label. */
-function formatFilterExpr(expr: FilterExpr, labelOf?: (path: string) => string | undefined): string;
+function formatFilterExpr(
+  expr: FilterExpr,
+  labelOf?: (path: string) => string | undefined,
+  /** Wording for a value on a field (e.g. an epoch number on a timestamp column as a date); `undefined` keeps the plain rendering. Since 0.1.148. */
+  formatValue?: (path: string, value: unknown) => string | undefined,
+): string;
 ```
 
 The decoder is exact for everything `filtersToUniqueryFilter` produces, maps `$in` / `$nin` / same-field `$or` / invertible `$not` exactly, and leaves out whole — and reports — every AND-ed piece field filters cannot express, so the result never selects fewer rows than the input and never silently more. Up to 0.1.138 such pieces were dropped or reshaped without a report. `$not: { $not: p }` reads as `p` (since 0.1.140). `decomposeUniqueryFilter(expr, { carry: true })` keeps those pieces as residual conditions instead — with `carry`, a field with two positive groups keeps neither as a field filter, so an encode/decode round trip is a fixed point. See [Converting a Uniquery filter back](/tables/filtering#converting-a-uniquery-filter-back) and [Custom filter conditions](/tables/filtering#custom-filter-conditions).
 
+## Date and time filters
+
+Since 0.1.148. The filter model keeps date conditions in calendar terms (`2026-10-05`, `today-6`, `month`); these functions resolve and encode them in the viewer's time zone when a query is built. The concepts — values, operators, time zone, shortcuts, URLs — are in [Date and time filters](/tables/filtering#date-and-time-filters).
+
+```typescript
+interface TemporalOptions {
+  /** IANA zone; the runtime's local zone when omitted (an invalid name falls back to it, with a dev warning). */
+  timeZone?: string;
+  /** `1` = Monday … `7` = Sunday. Default `1`. */
+  weekStart?: number;
+  /** "Now" in epoch ms. Default: the query's clock reading, else the clock. */
+  now?: number;
+}
+/** A day, minute, month, relative token, ISO instant (`Z` / offset) or epoch-ms number. */
+function isTemporalValue(v: unknown): boolean;
+
+/**
+ * `now` is the clock reading of the query being built (`filtersToUniqueryFilter`
+ * and `buildTableQuery` pass one reading for the whole query); `undefined` =
+ * "no opinion" — the default conversion runs.
+ */
+type ConditionEncoder = (
+  field: string,
+  cond: FilterCondition,
+  now?: number,
+) => FilterExpr | undefined;
+
+/**
+ * The one choke point where a typed filter value becomes what the server's
+ * filter guard accepts, per column. Temporal columns (`columnFilterKind` is
+ * `date` / `datetime`, with a `valueKind`): periods as epoch ms (`timestamp`,
+ * numeric columns), ISO strings (`isoDate`) or `YYYY-MM-DD` (`date`; a plain
+ * `string` column keeps a time of day rather than cutting it). Boolean columns:
+ * `"true"` / `"false"` → boolean. Number / integer columns: numeric text →
+ * number. Decimal columns: numbers → strings. Fields without a `valueKind`
+ * (display columns, older servers): untouched. An unresolvable string is sent
+ * as typed so the server refuses it; an epoch number against an epoch column
+ * keeps its plain comparison. Pass the result as `encode` / `encodeCondition`.
+ */
+function createColumnValueEncoder(
+  columns: readonly Pick<ColumnDef, "path" | "type" | "valueKind">[],
+  opts?: TemporalOptions,
+): ConditionEncoder;
+
+interface TemporalShortcut {
+  id: string;
+  label: string;
+  conditions: FilterCondition[]; // relative tokens
+}
+/** Today, Yesterday, Last 7 days (`bw today-6…today`), Last 30 days, This week, Last week, This month, Last month, This year. */
+function temporalShortcuts(): TemporalShortcut[];
+```
+
 ## Date shortcuts
 
-Pre-built date-range presets used by the date filter picker. Each shortcut produces an ISO date pair (`YYYY-MM-DD`) intended for a `bw` (between) condition.
+::: warning Deprecated
+`dateShortcuts()` produces **absolute** dates, which go stale in a saved filter and ignore the table's time zone. Use [`temporalShortcuts()`](#date-and-time-filters), whose conditions carry relative tokens. It stays exported and unchanged, and will be removed in a future breaking release.
+:::
+
+Pre-built absolute date-range presets. Each shortcut produces an ISO date pair (`YYYY-MM-DD`) intended for a `bw` (between) condition.
 
 ```typescript
 interface DateShortcut {
@@ -634,6 +737,8 @@ interface BuildTableQueryOptions {
   ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
+  /** Column-aware value encoder for `filters` (see `createColumnValueEncoder`) — dates become epoch / ISO / date bounds, boolean text a boolean. Not applied to `residualFilters` or `forceFilters`. Since 0.1.148. */
+  encodeCondition?: ConditionEncoder;
   /** Residual filter conditions, AND'd after `filters`. Since 0.1.140. */
   residualFilters?: FilterExpr[];
   /** Always-applied Uniquery filter (AND'd with user filters). */
@@ -783,6 +888,38 @@ function urlQueryConsumesKey(key: string): boolean;
 Since 0.1.133. `true` for the keys `urlQueryStringToState` would read: the `$sort` / `$search` / `$relevance` / `$skip` / `$snapshot` (since 0.1.139) controls and operator-bearing filter keys (`total>100`; since 0.1.140 also groups and lists — keys containing `(`, `)`, `^`, `{`, `}`). `useTableUrlQuery` treats exactly these (plus keys it wrote itself) as table-owned; everything else in the query is host-owned and preserved.
 
 See [URL State](/tables/url-state).
+
+### URL query records
+
+Since 0.1.148. Pure helpers between the table's query string and a router's query record (`{ [key]: string | null | (string | null)[] }`) — reusable from any framework, for links and custom bridges. `useTableUrlQuery` is built on them.
+
+```typescript
+type UrlQueryRecord = Record<string, string | null | (string | null)[]>;
+/** What the helpers read — vue-router's `LocationQuery` fits. */
+type UrlQueryRecordInput = Readonly<
+  Record<string, string | null | readonly (string | null)[] | undefined>
+>;
+
+interface UrlQueryRecordOptions {
+  /** Own keys are `<prefix>.<key>` — same meaning as the bridge's `prefix`. */
+  prefix?: string;
+  /**
+   * Host keys (wire form) the table never reads, writes or removes, even when
+   * a column has the same name; covers the operator forms of the field
+   * (`status!='x'`). A list or a predicate.
+   */
+  preserveKeys?: readonly string[] | ((key: string) => boolean);
+}
+
+/** Route query → the table's query string (prefix-filtered, preserved keys skipped, arrays expanded). */
+function urlQueryRecordToString(query: UrlQueryRecordInput, opts?: UrlQueryRecordOptions): string;
+/** The record for a table state — for links: `<RouterLink :to="{ query: stateToUrlQueryRecord(state, defaults) }">`. */
+function stateToUrlQueryRecord(
+  state: UrlQueryStateLike,
+  defaults: UrlQueryDefaults,
+  opts?: UrlQueryRecordOptions,
+): UrlQueryRecord;
+```
 
 ## Selection
 

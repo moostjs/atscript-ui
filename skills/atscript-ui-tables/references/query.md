@@ -112,9 +112,21 @@ Pure function, no framework dependencies. Returns a `Uniquery` ready for `client
 
 Use these for tenancy filters, soft-delete gates, role-derived defaults — the user-facing `state.filters` / `state.sorters` stay independent and can be saved / shared without leaking the force layer.
 
+**Live since 0.1.148.** `forceFilters`, `forceSorters` and `alwaysSelected` accept a value, a ref or a getter (`MaybeRefOrGetter`; `<AsTableRoot>` passes getters), and a change re-queries the mounted table:
+
+| Prop             | A change sends…                                                                                                                                                             |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `forceFilters`   | one query on **page 1** (`topIndex` 0 in window mode); user filters, search, sorters, columns kept; a held query selection is reset (`selection-reset { reason: "scope" }`) |
+| `forceSorters`   | one query, page kept (like a user sorter change)                                                                                                                            |
+| `alwaysSelected` | one query with the new `$select`, page kept                                                                                                                                 |
+
+Values compare structurally: an equal new object (an inline literal re-created per render) is no change, while an in-place edit of a `reactive` filter is picked up. Changes in the same tick (several of these props, or one plus a URL change) send one query. While `blockQuery` is on a change sends nothing; the unblock replay carries the **current** scope. `state.forceFilters` / `state.forceSorters` (`ComputedRef`) expose the live scope. Wiring props (`url`, `queryFn`, `preset`, …) are setup-only and warn in dev when changed. Full rules: [tables/filtering](https://ui.atscript.dev/tables/filtering#forced-scope-is-live).
+
 Force filters and sorters are **never pruned** of fields the caller cannot read (0.1.141+ prunes presets, drafts and URLs — [hidden-fields.md](hidden-fields.md)). Name only fields every role reads, or the query 400s for the narrower roles.
 
 ## blockQuery
+
+Use it to hold the first fetch until a live `forceFilters` scope is known (a route-derived value) — it never sends the stale initial scope.
 
 `<AsTableRoot :block-query>` / `useTable(url, { blockQuery })` short-circuits every fetch trigger: the bootstrap query, `query()`, `queryNext()` and `loadRange()`.
 

@@ -78,6 +78,23 @@ export const asFilterDialogShortcuts = defineShortcuts({
   "as-filter-select": "cursor-pointer",
   "as-filter-input-range": "flex items-center gap-$xs flex-1",
   "as-filter-input-range-sep": "text-current/50 flex-shrink-0",
+  "as-filter-input-temporal": "flex items-center gap-$xs flex-1 min-w-0",
+  "as-filter-input-time-toggle": {
+    "": "inline-grid place-items-center size-fingertip-m border-1 rounded-base layer-0 text-current/60 cursor-pointer flex-shrink-0 transition-colors duration-120 text-[1.1em]",
+    "hover:": "text-current-hl border-current-hl",
+  },
+  "as-filter-input-time-toggle-on":
+    "scope-primary text-current-hl border-current-hl bg-current-hl/10",
+  "as-filter-input-token":
+    "scope-primary layer-0 i8-bare flex flex-1 items-center h-fingertip-m min-w-0 pl-$s pr-$xs gap-$xs overflow-hidden",
+  "as-filter-input-token-label": {
+    "": "flex-1 min-w-0 truncate border-0 bg-transparent p-0 text-left text-current-hl cursor-pointer",
+    "hover:": "underline",
+  },
+  "as-filter-input-token-remove": {
+    "": "inline-grid place-items-center size-fingertip-xs border-0 bg-transparent text-current/60 cursor-pointer rounded-base flex-shrink-0 text-[1em]",
+    "hover:": "text-current",
+  },
 
   "as-filter-shortcuts": "flex flex-wrap items-center gap-$xs pt-$xs border-t-1",
   "as-filter-shortcuts-label": "text-callout text-current/50 flex-shrink-0",
