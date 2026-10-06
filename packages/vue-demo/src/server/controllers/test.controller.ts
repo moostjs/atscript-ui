@@ -5,6 +5,7 @@ import {
   usersTable,
   rolesTable,
   categoriesTable,
+  attributeValuesTable,
   productsTable,
   customersTable,
   ordersTable,
@@ -24,6 +25,7 @@ import {
   seedOrders,
   seedAuditLog,
   seedTasks,
+  seedAttributeValues,
 } from "../seed";
 
 /**
@@ -90,6 +92,7 @@ export class TestController {
       await usersTable.deleteMany({});
       await categoriesTable.deleteMany({});
       await rolesTable.deleteMany({});
+      await attributeValuesTable.deleteMany({});
 
       // Reset AUTOINCREMENT counters so the next inserts start at id=1 and
       // the cross-references in the seed factories (`roleId: 1`, etc.) line
@@ -107,6 +110,7 @@ export class TestController {
       await ordersTable.insertMany(seedOrders() as Record<string, unknown>[]);
       await auditLogTable.insertMany(seedAuditLog() as Record<string, unknown>[]);
       await tasksTable.insertMany(seedTasks() as Record<string, unknown>[]);
+      await attributeValuesTable.insertMany(seedAttributeValues() as Record<string, unknown>[]);
     });
 
     return { ok: true, ms: Date.now() - started };

@@ -1,7 +1,13 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
 import { UI_FORM_OPTIONS } from "../shared/annotation-keys";
-import { optKey, optLabel, parseStaticOptions, resolveOptions } from "./resolve-options";
+import {
+  optKey,
+  optLabel,
+  optionLabel,
+  parseStaticOptions,
+  resolveOptions,
+} from "./resolve-options";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -102,5 +108,58 @@ describe("resolveOptions", () => {
   it("returns undefined for non-union with no annotation", () => {
     const prop = defineAnnotatedType().designType("string").$type;
     expect(resolveOptions(prop, {})).toBeUndefined();
+  });
+});
+
+describe("optionLabel", () => {
+  const column = {
+    options: [
+      { key: "open", label: "Open" },
+      { key: "1", label: "One" },
+      { key: "true", label: "Yes" },
+    ],
+  };
+
+  it("finds the label by the string form of a string, number or boolean", () => {
+    expect(optionLabel(column, "open")).toBe("Open");
+    expect(optionLabel(column, 1)).toBe("One");
+    expect(optionLabel(column, true)).toBe("Yes");
+  });
+
+  it("is undefined for an unknown value, a non-scalar, or a column without options", () => {
+    expect(optionLabel(column, "nope")).toBeUndefined();
+    expect(optionLabel(column, { a: 1 })).toBeUndefined();
+    expect(optionLabel(column, null)).toBeUndefined();
+    expect(optionLabel({}, "open")).toBeUndefined();
+    expect(optionLabel({ options: [] }, "open")).toBeUndefined();
+  });
+});
+
+describe("resolveOptions — @ui.literalLabel on an array of a literal union", () => {
+  const propsOf = async () => {
+    const { Ticket } = await import("../__tests__/fixtures/value-help-binding.as");
+    return (Ticket.type as unknown as { props: Map<string, never> }).props;
+  };
+
+  it("the array prop's own label wins over the element type's", async () => {
+    const props = await propsOf();
+    expect(
+      resolveOptions(props.get("statuses")!, {})?.map((o) => [optKey(o), optLabel(o)]),
+    ).toEqual([
+      ["open", "Open"],
+      ["in_progress", "In progress"],
+      ["closed", "Finished"],
+    ]);
+  });
+
+  it("without a prop label the element type's labels apply", async () => {
+    const props = await propsOf();
+    expect(
+      resolveOptions(props.get("plainStatuses")!, {})?.map((o) => [optKey(o), optLabel(o)]),
+    ).toEqual([
+      ["open", "Open"],
+      ["in_progress", "In progress"],
+      ["closed", "closed"],
+    ]);
   });
 });

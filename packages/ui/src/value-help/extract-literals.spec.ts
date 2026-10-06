@@ -122,3 +122,50 @@ describe("isPureLiteralUnion", () => {
     expect(isPureLiteralUnion(stringType())).toBe(false);
   });
 });
+
+describe("extractLiteralOptions — @ui.literalLabel", () => {
+  it("maps labels per literal; unlabelled literals keep the raw text", async () => {
+    const { Ticket } = await import("../__tests__/fixtures/value-help-binding.as");
+    const props = (Ticket.type as unknown as { props: Map<string, never> }).props;
+    // type-level labels (open, in_progress) and the prop-level one (closed) both apply:
+    // the runtime concatenates the referenced type's set with the prop's own, and a later
+    // entry for the same literal wins
+    expect(extractLiteralOptions(props.get("status")!)).toEqual([
+      { key: "open", label: "Open", value: "open" },
+      { key: "in_progress", label: "In progress", value: "in_progress" },
+      { key: "closed", label: "Done", value: "closed" },
+    ]);
+    expect(extractLiteralOptions(props.get("plainStatus")!)?.map((o) => o.label)).toEqual([
+      "a",
+      "b",
+    ]);
+  });
+
+  it("a prop label overrides the type label of the same literal across a ref", async () => {
+    const { Ticket } = await import("../__tests__/fixtures/value-help-binding.as");
+    const props = (Ticket.type as unknown as { props: Map<string, never> }).props;
+    expect(extractLiteralOptions(props.get("relabelled")!)?.map((o) => [o.key, o.label])).toEqual([
+      ["open", "Opened"],
+      ["in_progress", "In progress"],
+      ["closed", "closed"],
+    ]);
+  });
+
+  it("type-level labels apply to a prop that does not set its own", async () => {
+    const { TicketStatus } = await import("../__tests__/fixtures/value-help-binding.as");
+    expect(extractLiteralOptions(TicketStatus as never)?.map((o) => [o.key, o.label])).toEqual([
+      ["open", "Open"],
+      ["in_progress", "In progress"],
+      ["closed", "closed"],
+    ]);
+  });
+
+  it("reads the serialized form (labels as plain records)", () => {
+    const union = defineAnnotatedType("union").item(literal(1)).item(literal(2)).$type;
+    union.metadata.set("ui.literalLabel", [{ value: "2", label: "Two" }] as never);
+    expect(extractLiteralOptions(union)).toEqual([
+      { key: "1", label: "1", value: 1 },
+      { key: "2", label: "Two", value: 2 },
+    ]);
+  });
+});

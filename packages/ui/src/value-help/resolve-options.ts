@@ -1,8 +1,8 @@
-import type { TAtscriptAnnotatedType, TAtscriptTypeArray } from "@atscript/typescript/utils";
+import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { TFormEntryOptions } from "./types";
 import { UI_FORM_FN_OPTIONS, UI_FORM_OPTIONS } from "../shared/annotation-keys";
 import { resolveFieldProp, asArray } from "../shared/field-resolver";
-import { extractLiteralOptions } from "./extract-literals";
+import { extractFieldLiteralOptions } from "./extract-literals";
 
 /** Extracts the key from an option entry. */
 export function optKey(opt: TFormEntryOptions): string {
@@ -12,6 +12,32 @@ export function optKey(opt: TFormEntryOptions): string {
 /** Extracts the display label from an option entry. */
 export function optLabel(opt: TFormEntryOptions): string {
   return typeof opt === "string" ? opt : opt.label;
+}
+
+const labelMaps = new WeakMap<object, Map<string, string>>();
+
+/**
+ * The display label of a literal-union column's option (`@ui.literalLabel`) for
+ * `value` — `undefined` when the column has no options or none matches. Map-backed
+ * per options array, so rendering a table does not scan the options per cell.
+ * The one lookup behind the table cell, the filter chips, export and a custom cell.
+ * Since 0.1.148.
+ */
+export function optionLabel(
+  column: { options?: { key: string; label: string }[] },
+  value: unknown,
+): string | undefined {
+  const options = column.options;
+  if (!options?.length) return undefined;
+  if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+    return undefined;
+  }
+  let labels = labelMaps.get(options);
+  if (!labels) {
+    labels = new Map(options.map((o) => [o.key, o.label]));
+    labelMaps.set(options, labels);
+  }
+  return labels.get(String(value));
 }
 
 /**
@@ -47,10 +73,5 @@ export function resolveOptions(
     { transform: parseStaticOptions },
   );
   if (resolved !== undefined) return resolved;
-  const literals = extractLiteralOptions(prop);
-  if (literals !== undefined) return literals;
-  if (prop.type.kind === "array") {
-    return extractLiteralOptions((prop.type as TAtscriptTypeArray).of);
-  }
-  return undefined;
+  return extractFieldLiteralOptions(prop);
 }

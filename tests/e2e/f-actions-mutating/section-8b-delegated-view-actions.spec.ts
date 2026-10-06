@@ -114,9 +114,9 @@ test.describe("Section 8b — Delegated view actions on /task-board", () => {
   test("8b.2 row menu honours each row's delegated $actions", async ({ page }) => {
     await gotoTable(page, "task-board");
 
-    // Task 8 is archived: Archive / Start / Reopen disabled with the source's reasons.
+    // Badges show the `@ui.literalLabel` of tasks.status. Task 8 is archived: Archive / Start / Reopen disabled with the source's reasons.
     const archived = await boardRow(page, 8);
-    await expect(archived.locator(".as-status-badge")).toHaveText("archived");
+    await expect(archived.locator(".as-status-badge")).toHaveText("Archived");
     let menu = await openRowActionsMenu(page, archived);
     const item = (label: string) =>
       menu.locator(".as-row-actions-menu-item").filter({ hasText: label });
@@ -161,7 +161,7 @@ test.describe("Section 8b — Delegated view actions on /task-board", () => {
     }
     await findToast(page, "Task 1 started");
     expect((await task(page, 1)).status).toBe("in-progress");
-    await expect((await boardRow(page, 1)).locator(".as-status-badge")).toHaveText("in-progress");
+    await expect((await boardRow(page, 1)).locator(".as-status-badge")).toHaveText("In progress");
   });
 
   test("8b.4 toolbar bulk run on two selected rows changes the source tasks", async ({ page }) => {
@@ -187,7 +187,7 @@ test.describe("Section 8b — Delegated view actions on /task-board", () => {
     }
     expect((await task(page, 2)).status).toBe("archived");
     expect((await task(page, 4)).status).toBe("archived");
-    await expect((await boardRow(page, 2)).locator(".as-status-badge")).toHaveText("archived");
+    await expect((await boardRow(page, 2)).locator(".as-status-badge")).toHaveText("Archived");
   });
 
   test("8b.5 Set priority opens the source's form (formUrl) and submits through the source", async ({

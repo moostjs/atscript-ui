@@ -6,6 +6,7 @@
  *
  * Re-generate with `npx asc -f dts`.
  */
+import { AttributeValuesTable } from "./schemas/attribute-values.as";
 import { AuditLogTable } from "./schemas/audit-log.as";
 import { CategoriesTable } from "./schemas/categories.as";
 import { CustomersTable } from "./schemas/customers.as";
@@ -18,6 +19,7 @@ import { UsersTable } from "./schemas/users.as";
 import { WfStateRow } from "./schemas/wf-state.as";
 
 export const dbTables = [
+  AttributeValuesTable,
   AuditLogTable,
   CategoriesTable,
   CustomersTable,

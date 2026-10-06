@@ -193,6 +193,37 @@ window tables were caught by it too.
 An unknown key in a stored preset is ignored, so removing a display
 column later doesn't break saved views.
 
+## Server-declared decoration columns
+
+_Since 0.1.148._ A controller that computes display-only values (an unread
+count, an owner's name) declares them with `@DbDecorations(TicketDecorations)`
+in `@atscript/moost-db`. The declared plain interface reaches the table in
+`/meta.decorations`, and each prop the server lists in `meta.fields` with
+`decoration: true` becomes a column — nothing to configure on the client.
+
+```atscript
+// tickets.decorations.as — a plain interface (no @db.table / @db.view)
+export interface TicketDecorations {
+    @meta.label 'Unread'
+    @ui.table.width '6em'
+    unreadCount?: number.int
+
+    @meta.label 'Owner'
+    ownerName?: string
+}
+```
+
+It is the same column code as any other: `@meta.label`, `@ui.table.*` and the
+display type apply, the value is part of `$select`, and CSV export reads it.
+What differs: the column is **never sortable or filterable** (no menu entries,
+no filter input), is nullable, and has no value help. The server drops a
+decoration from `/meta` while its source fields are hidden from the caller, so
+such a column simply does not appear. A server without the feature sends no
+`decorations` and the table is unchanged.
+
+Use a decoration when the **server** owns the value; use
+[`:display-columns`](#display-only-columns) for a value only this screen knows.
+
 ## Cell-type map (`:types`)
 
 Replace whole categories per table. The map is keyed by column

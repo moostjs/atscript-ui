@@ -330,6 +330,12 @@ up. Full coverage at [db.atscript.dev](https://db.atscript.dev).
 When both are present the field renders an `AsRef` picker by default
 (searchable, paged, server-driven). See [References](/forms/references).
 
+`@ui.valueHelp` (since 0.1.148) binds a field to a dictionary without a foreign
+key — see [References](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
+`@ui.literalLabel` labels the literals of a union field's select / radio options
+without restating them in `@ui.form.options` — see
+[Union labels](/tables/filtering#union-labels).
+
 ## Cross-cutting reads
 
 A few patterns you'll see again and again:

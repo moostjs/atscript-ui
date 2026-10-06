@@ -94,6 +94,24 @@ export const seedCategories = () => [
   { name: "Fiction", parentId: 4, slug: "fiction" },
 ];
 
+/** Dictionary rows behind the `@ui.valueHelp` bindings (products' colour / size). */
+export const seedAttributeValues = () => [
+  { attribute: "color", value: "red", label: "Red", active: true },
+  { attribute: "color", value: "blue", label: "Blue", active: true },
+  { attribute: "color", value: "green", label: "Green", active: true },
+  { attribute: "color", value: "black", label: "Black", active: true },
+  { attribute: "size", value: "S", label: "Small", active: true },
+  { attribute: "size", value: "M", label: "Medium", active: true },
+  { attribute: "size", value: "L", label: "Large", active: true },
+  { attribute: "size", value: "XL", label: "Extra large", active: false },
+  { attribute: "material", value: "cotton", label: "Cotton", active: true },
+  { attribute: "team", value: "support", label: "Support", active: true },
+  { attribute: "team", value: "sales", label: "Sales", active: true },
+];
+
+const COLORS = ["red", "blue", "green", "black"];
+const SIZES = ["S", "M", "L", "XL"];
+
 export const seedProducts = () => {
   const rows: Record<string, unknown>[] = [];
   const TAG_POOL = [
@@ -119,6 +137,10 @@ export const seedProducts = () => {
       weight,
       tags: TAG_POOL[i % TAG_POOL.length],
       publishedAt: i % 4 === 0 ? undefined : Date.now() - i * 3_600_000,
+      color: COLORS[i % COLORS.length],
+      size: SIZES[(i >> 2) % SIZES.length],
+      // 130 distinct values over 2000 rows: de-duplicated, paged by the distinct picker
+      brand: `Brand ${String((i % 130) + 1).padStart(3, "0")}`,
     });
   }
   return rows;
@@ -139,12 +161,16 @@ const pickPrimaryContact = (i: number): Record<string, unknown> | undefined => {
   }
 };
 
+const CITIES = ["Berlin", "Bonn", "Boston", "Berlin", "Austin", "Bonn", "Chicago", "Berlin"];
+
 export const seedCustomers = () => {
   const rows: Record<string, unknown>[] = [];
   for (let i = 1; i <= 10; i++) {
     rows.push({
       name: `Customer ${i}`,
       email: `customer${i}@demo.test`,
+      // customers 9 and 10 have no city: the NULL group is never offered
+      city: i <= CITIES.length ? CITIES[i - 1] : undefined,
       address: {
         street: `${i} Demo Rd`,
         city: "Demoville",
@@ -259,6 +285,10 @@ const TASK_SUBJECTS = [
  * Assignees cycle users 1..5 with every 7th task unassigned (left join →
  * empty `assignee` on the board); eve (user 6) stays FK-orphan.
  */
+const isoDay = (ms: number) => new Date(ms).toISOString().slice(0, 10);
+
+const TASK_LABEL_SETS = [["bug"], ["feature"], ["bug", "feature"], ["chore"]];
+
 export const seedTasks = () => {
   const rows: Record<string, unknown>[] = [];
   const priorities = ["low", "normal", "high"] as const;
@@ -275,7 +305,15 @@ export const seedTasks = () => {
       // negative for over-budget tasks.
       estimate: (i % 8) + 1,
       spent: (i * 3) % 7,
+      // Calendar days (`string.date`) and ISO date-times (`string.isoDate`): task 1
+      // is due 2026-10-01, one more day per task; every 5th has no due date.
+      dueOn: i % 5 === 0 ? undefined : isoDay(Date.UTC(2026, 9, i)),
+      reviewedAt:
+        i % 4 === 0 ? undefined : new Date(Date.UTC(2026, 9, 1 + (i % 28), i % 24)).toISOString(),
       createdAt: now - i * 3_600_000,
+      // Arrays of a literal union (`@ui.literalLabel` labels): task 1 is a bug, 2 a feature,
+      // 3 both, 4 a chore; every 5th has none.
+      labels: i % 5 === 0 ? undefined : TASK_LABEL_SETS[(i - 1) % TASK_LABEL_SETS.length],
     });
   }
   return rows;

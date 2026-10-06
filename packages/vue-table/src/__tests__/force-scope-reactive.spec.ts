@@ -312,6 +312,30 @@ describe("reactive forceFilters / forceSorters / alwaysSelected", () => {
     expect(lastQuery(pagesFn).controls.$sort).toEqual({ total: -1 });
   });
 
+  it("(n2) with urlQuerySync.pagination:false a scope change in the same tick as a URL still lands on page 1", async () => {
+    const scope = ref<FilterExpr | undefined>({ status: "pending" });
+    const { state, pagesFn } = mountTableState({
+      columns,
+      queryOnMount: true,
+      forceFilters: scope,
+      urlQuerySync: { pagination: false },
+      limit: 50,
+    });
+    await flushPromises();
+    state.pagination.value = { ...state.pagination.value, page: 3 };
+    await flushPromises();
+    expect(state.pagination.value.page).toBe(3);
+    pagesFn.mockClear();
+    // the URL does not own the page here, so the new scope must restart it
+    state.applyUrlQuery("name=bob");
+    scope.value = { status: "shipped" };
+    await flushPromises();
+    expect(state.pagination.value.page).toBe(1);
+    expect(pagesFn).toHaveBeenCalledTimes(1);
+    expect(pagesFn.mock.calls[0][1]).toBe(1);
+    expect(JSON.stringify(lastQuery(pagesFn).filter)).toContain("shipped");
+  });
+
   it("(o) a URL applied by a later watcher in the same flush still gives one request with its page", async () => {
     const scope = ref<FilterExpr | undefined>({ status: "pending" });
     const route = ref("");

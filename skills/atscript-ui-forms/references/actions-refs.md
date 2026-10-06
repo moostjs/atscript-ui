@@ -323,6 +323,10 @@ const { items } = await vh.search(resolved, { text: "acme", mode: "form", limit:
 // commit `item[info.targetField]` to your model
 ```
 
+### Binding without a foreign key
+
+_Since 0.1.148._ `@ui.valueHelp` binds a field to a dictionary with no `@db.rel.FK` (composite-key dictionaries, view fields). `extractValueHelp` reads it first and it beats an FK on the field or its chain; it returns `{ url, targetField, filter?, pinned? }`, and `useAsValueHelp` passes `filter` and `valueField: targetField` to `ValueHelpClient.search`, so the picker is scoped and commits `item[targetField]`. A target without `@db.http.path` is ignored (the FK walk runs); workflow forms get the same binding. Annotation reference: the atscript-ui skill, `annotations.md`.
+
 ### Reference chains
 
 _Since 0.1.134._ The FK does not have to sit on the field itself. For a view
@@ -338,7 +342,7 @@ The server resolves the same chains on its side: since `@atscript/db` 0.1.128
 TERMINAL field and `db.rel.FK: true` lifted onto it. Form defs built from a
 compiled `.as` type and from `/meta` therefore agree on the dictionary.
 
-`resolveValueHelp(url)` caches per URL across the app — call `resetValueHelpCache()` to invalidate (e.g. on logout). `ValueHelpClient.search` accepts `{ text?, mode?: 'form' | 'filter', limit?, select? }`.
+`resolveValueHelp(url)` caches per URL across the app — call `resetValueHelpCache()` to invalidate (e.g. on logout). `ValueHelpClient.search` accepts `{ text?, mode?: 'form' | 'filter', limit?, select?, filter?, valueField? }` (`filter` / `valueField` since 0.1.148).
 
 ## `@ui.dict.*` on the target type
 

@@ -724,28 +724,19 @@ describe("urlQueryConsumesKey — grouped and list filter keys", () => {
   });
 });
 
-// An empty `$in` is written as `status{}`. @uniqu/url's parser only reads it
-// back from 0.1.13; on an older parser the segment is dropped, which these
-// cases would flag — so they run only where the parser supports it.
-const parsesEmptyIn = (() => {
-  try {
-    return urlQueryStringToState("status{}").residual?.length === 1;
-  } catch {
-    return false;
-  }
-})();
-
-describe.skipIf(!parsesEmptyIn)("empty $in survives a reload (@uniqu/url >= 0.1.13)", () => {
+// An empty `$in` is written as `status{}`. @uniqu/url reads it back since the
+// empty-`$in` grammar (the release after 0.1.12); an older parser drops the segment.
+describe("empty $in survives a reload (@uniqu/url empty-$in grammar)", () => {
   it("`status{}` comes back as the residual, with nothing unsupported", () => {
     const parsed = urlQueryStringToState("status{}");
     expect(parsed.residual).toEqual([{ status: { $in: [] } }]);
-    expect(parsed.unsupported).toEqual([]);
+    expect(parsed.unsupported).toBeUndefined();
   });
 
   it("`status!{}` excludes nothing: no filters, no issues", () => {
     const parsed = urlQueryStringToState("status!{}");
     expect(parsed.filters).toEqual({});
-    expect(parsed.unsupported).toEqual([]);
+    expect(parsed.unsupported).toBeUndefined();
   });
 
   it("is a fixed point, so a reload never widens the rows", () => {

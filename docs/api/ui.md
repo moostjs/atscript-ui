@@ -278,6 +278,8 @@ interface ColumnDef {
   /** `value` (since 0.1.148) is the typed literal — `true`, `3` — that a filter sends; `key` is its string form. Always set by `createTableDef`; a hand-built column may omit it. */
   options?: { key: string; label: string; value?: string | number | boolean }[];
   valueHelpInfo?: ValueHelpInfo;
+  /** Distinct-values picker (`@ui.valueHelp.distinct`): the table's own controller answers the values of `field`. Since 0.1.148. */
+  distinct?: { url: string; field: string };
   currencyCode?: string;
   currencyRefField?: string;
   unitCode?: string;
@@ -294,13 +296,13 @@ Since 0.1.148.
 
 ```typescript
 type ColumnValueKind =
-  | "string"
-  | "date"
-  | "isoDate" // string, string.date, string.isoDate
-  | "number"
-  | "integer"
-  | "decimal"
-  | "timestamp" // number, number.int (or @expect.int / @db.default.increment / now / agg.count), decimal, number.timestamp
+  | "string" // string
+  | "date" // string.date (stored as `YYYY-MM-DD`)
+  | "isoDate" // string.isoDate (stored as an ISO date-time string)
+  | "number" // number, float
+  | "integer" // number.int (or @expect.int / @db.default.increment / now / agg.count)
+  | "decimal" // decimal (strings end to end)
+  | "timestamp" // number.timestamp (epoch milliseconds)
   | "boolean";
 ```
 
@@ -323,6 +325,8 @@ interface MetaResponse {
   relations: RelationInfo[];
   fields: Record<string, FieldMeta>;
   type: TSerializedAnnotatedType;
+  /** The controller's declared display-only fields (`@DbDecorations`, `@atscript/moost-db` 0.1.148+) as a serialized plain interface. Absent on older servers. Since 0.1.148. */
+  decorations?: TSerializedAnnotatedType;
 }
 
 interface FieldMeta {
@@ -336,6 +340,10 @@ interface FieldMeta {
   derived?: boolean;
   /** Computed view column (`@db.compute`, `@atscript/db` 0.1.147+). An ordinary column for sorting / filtering; read-only in forms via `CreateFormDefOptions.metaFields`. Since 0.1.147. */
   computed?: boolean;
+  /** Display-only value the controller computes (`@DbDecorations`) — selectable, never filterable / sortable / groupable. `createTableDef` builds its column from `MetaResponse.decorations`. Since 0.1.148. */
+  decoration?: boolean;
+  /** `$groupBy` on this field passes the server's gate (`@atscript/moost-db` 0.1.148+). With `filterable` and `@ui.valueHelp.distinct` it enables the distinct-values picker. Since 0.1.148. */
+  groupable?: boolean;
 }
 
 interface SearchIndexInfo {
@@ -403,6 +411,8 @@ function createTableDef(meta: MetaResponse, type: TAtscriptAnnotatedType): Table
 ```
 
 See [Annotations Reference](/tables/annotations) for how `@ui.table.*` and `@db.*` annotations populate `ColumnDef`.
+
+Since 0.1.148 the server's declared display-only fields become columns too: the top-level props of `meta.decorations` that `meta.fields` lists with `decoration: true` are built by the same code (label, `@ui.table.*`, display type) as `sortable: false`, `filterable: false`, `nullable: true` columns with no value help, and join `flatMap` / `fetchableFields`. A server that sends no `decorations` is unchanged — see [Customization](/tables/customization#server-declared-decoration-columns).
 
 Only readable fields become columns: a path must be listed in `meta.fields` and not be `writeOnly`. Since 0.1.141 a `writeOnly` field and a top-level field missing from `meta.fields` are no longer columns — either would fail the query's `$select`. See [Fields Hidden by Role](/tables/hidden-fields#which-fields-a-table-can-use).
 
@@ -799,14 +809,18 @@ function detectUnionVariant(value: unknown, variants: FormUnionVariant[]): numbe
 
 ### `ValueHelpInfo`
 
-Sync probe for a value-help-eligible prop (FK or ref).
+Sync probe for a dictionary value-help prop (FK or `@ui.valueHelp` binding).
 
 ```typescript
 interface ValueHelpInfo {
   /** HTTP path of the value-help target. */
   url: string;
-  /** Field on the target that this FK references. */
+  /** Field on the target that this FK / binding references — the value a pick commits. */
   targetField: string;
+  /** Static dictionary scope (`@ui.valueHelp`'s filter), AND'd into every picker query. Since 0.1.148. */
+  filter?: FilterExpr;
+  /** Target fields the filter pins with `=` — constant in the picker, hidden from its columns. Since 0.1.148. */
+  pinned?: string[];
 }
 ```
 
@@ -820,7 +834,7 @@ function extractLiteralOptions(
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 ```
 
-`extractValueHelp` follows reference chains since 0.1.134: when the prop itself has no `@db.rel.FK`, it hops through `ref.type().props[ref.field]` (bounded, cycle-safe) until it meets a link that carries `@db.rel.FK` and whose target has `@db.http.path`, so a view field projected from an FK column resolves to the dictionary, not the intermediate table. The server does the same in `/meta` since @atscript/db 0.1.128.
+`extractValueHelp` reads a `@ui.valueHelp` binding first (since 0.1.148) and returns its `filter` / `pinned`; a binding beats `@db.rel.FK`, and one whose target has no `@db.http.path` is ignored. It follows reference chains since 0.1.134: when the prop itself has no `@db.rel.FK`, it hops through `ref.type().props[ref.field]` (bounded, cycle-safe) until it meets a link that carries `@db.rel.FK` and whose target has `@db.http.path`, so a view field projected from an FK column resolves to the dictionary, not the intermediate table. The server does the same in `/meta` since @atscript/db 0.1.128.
 
 You rarely call it directly: `createFormDef()` and `createTableDef()` run it once per field and store the result on the def ([`FormFieldDef.valueHelpInfo`](#formfielddef) / [`ColumnDef.valueHelpInfo`](#columndef)), which is where renderers read it from.
 
@@ -843,6 +857,13 @@ interface ValueHelpSearchOptions {
   limit?: number;
   /** Override the computed `$select` fields. */
   select?: string[];
+  /** Static scope (`ValueHelpInfo.filter`), AND'd with the search filter and with `$search`. Since 0.1.148. */
+  filter?: FilterExpr;
+  /**
+   * The field the picker commits (`ValueHelpInfo.targetField`). It is always selected and is the
+   * exact-match key of a non-searchable search. Default: `primaryKeys[0]`. Since 0.1.148.
+   */
+  valueField?: string;
 }
 
 interface ValueHelpResult {
@@ -886,6 +907,11 @@ See [Forms — References (FK)](/forms/references).
 ```typescript
 function optKey(opt: TFormEntryOptions): string;
 function optLabel(opt: TFormEntryOptions): string;
+/** The `@ui.literalLabel` label of a union column's value (`undefined` when none) — what a custom cell shows. Since 0.1.148. */
+function optionLabel(
+  column: { options?: { key: string; label: string }[] },
+  value: unknown,
+): string | undefined;
 function parseStaticOptions(value: unknown): TFormEntryOptions[] | undefined;
 function resolveOptions(
   prop: TAtscriptAnnotatedType,

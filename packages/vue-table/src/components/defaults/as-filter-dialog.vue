@@ -22,6 +22,7 @@ import {
   TabsContent,
 } from "reka-ui";
 import { useConditionFormat } from "../../composables/use-condition-format";
+import { hasValuePicker } from "../../composables/use-value-pickers";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTableComponent } from "../../composables/use-table-component";
 import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
@@ -47,11 +48,7 @@ const column = computed<ColumnDef | null>(() => state.filterDialogColumn.value);
 // Value help picks values, so it needs a value-filterable column — an
 // existence-only one (JSON storage) offers just the empty / not-empty pair.
 const hasValueHelp = computed(
-  () =>
-    !!column.value &&
-    column.value.filterable &&
-    (!!column.value.valueHelpInfo ||
-      (column.value.options != null && column.value.options.length > 0)),
+  () => !!column.value && column.value.filterable && hasValuePicker(state, column.value),
 );
 
 const defCondition = computed<FilterConditionType>(() =>

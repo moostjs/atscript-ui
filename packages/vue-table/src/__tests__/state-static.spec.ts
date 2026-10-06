@@ -90,3 +90,37 @@ describe("createStaticTableState", () => {
     expect(state.queryError.value).toBeNull();
   });
 });
+
+describe("createStaticTableState — remote pages", () => {
+  it("takes each page (and its count) from `remote` instead of slicing rows; passes the search term", async () => {
+    const seen: Array<[string, number, number]> = [];
+    const state = mountSetup(() => {
+      const { state } = createStaticTableState({
+        rows: [],
+        columns: [mockColumn("label", { sortable: false, filterable: false })],
+        searchPaths: ["label"],
+        limit: 2,
+        selection: { rowValueFn: (r) => r.id },
+        remote: async ({ searchTerm }, page, size) => {
+          seen.push([searchTerm, page, size]);
+          return {
+            data: [
+              { id: "a", label: `A:${searchTerm}` },
+              { id: "b", label: "B" },
+            ],
+            count: 3,
+            page,
+            itemsPerPage: size,
+            pages: 2,
+          };
+        },
+      });
+      return state;
+    });
+    await flushPromises();
+    expect(seen[0]).toEqual(["", 1, 2]);
+    expect(state.totalCount.value).toBe(3);
+    expect(state.results.value).toHaveLength(2);
+    expect(state.tableDef.value?.searchable).toBe(true);
+  });
+});

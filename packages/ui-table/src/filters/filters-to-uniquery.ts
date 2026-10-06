@@ -26,6 +26,12 @@ export interface FiltersToUniqueryOptions {
    * falls through to it. Since 0.1.148.
    */
   encode?: ConditionEncoder;
+  /**
+   * The clock reading the encoder resolves relative dates against. A caller
+   * building a larger query passes its own so every condition shares one "today";
+   * defaults to `Date.now()` (read once per call).
+   */
+  now?: number;
 }
 
 /**
@@ -43,7 +49,7 @@ export function filtersToUniqueryFilter(
 ): FilterExpr | undefined {
   const encode = opts?.encode;
   // One clock reading for the whole query: every relative date means the same "today".
-  const now = encode ? Date.now() : undefined;
+  const now = encode ? (opts?.now ?? Date.now()) : undefined;
   const topGroups: FilterExpr[] = [];
 
   for (const field in fieldFilters) {

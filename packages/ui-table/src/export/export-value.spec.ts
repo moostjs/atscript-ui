@@ -17,6 +17,17 @@ describe("resolveExportValue", () => {
     expect(resolveExportValue("zzz", c)).toBe("zzz");
   });
 
+  it("labels each element of an array of a union column", () => {
+    const c = col({
+      options: [
+        { key: "a", label: "Active" },
+        { key: "b", label: "Blocked" },
+      ],
+    });
+    expect(resolveExportValue(["a", "b", "zzz"], c)).toBe("Active, Blocked, zzz");
+    expect(resolveExportValue(["a", "b"])).toBe("a, b");
+  });
+
   it("keeps numbers and booleans as scalars", () => {
     expect(resolveExportValue(42)).toBe(42);
     expect(resolveExportValue(false)).toBe(false);

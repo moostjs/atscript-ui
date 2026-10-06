@@ -1,3 +1,4 @@
+import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, reactive, ref } from "vue";
@@ -98,6 +99,56 @@ describe("useAsForm — customer-reuse contract", () => {
     expect(error).toHaveBeenCalledTimes(1);
     const errs = error.mock.calls[0]![0] as { path: string; message: string }[];
     expect(errs.some((e) => e.message === "Name is required")).toBe(true);
+  });
+
+  describe("non-finite numbers are rejected by validation, never submitted as null", () => {
+    const numberProp = (optional: boolean) =>
+      defineAnnotatedType().designType("number").optional(optional).$type;
+
+    async function submitWith(qty: unknown) {
+      const submit = vi.fn();
+      const error = vi.fn();
+      const { api } = mountCustomForm({
+        type: objectType({ name: stringProp(), qty: numberProp(true) }),
+        initialValue: { name: "Alice", qty },
+        emits: { submit, error },
+      });
+      api.onSubmit();
+      await nextTick();
+      return { submit, error };
+    }
+
+    it.each([
+      ["NaN", Number.NaN],
+      ["Infinity", Number.POSITIVE_INFINITY],
+      ["-Infinity", Number.NEGATIVE_INFINITY],
+    ])("an optional number set to %s emits `error` and never `submit`", async (_label, value) => {
+      const { submit, error } = await submitWith(value);
+      expect(submit).not.toHaveBeenCalled();
+      expect(error).toHaveBeenCalledTimes(1);
+      const errs = error.mock.calls[0]![0] as { path: string; message: string }[];
+      expect(errs.some((e) => e.path === "qty")).toBe(true);
+    });
+
+    it("a required number set to NaN is rejected too", async () => {
+      const submit = vi.fn();
+      const error = vi.fn();
+      const { api } = mountCustomForm({
+        type: objectType({ qty: numberProp(false) }),
+        initialValue: { qty: Number.NaN },
+        emits: { submit, error },
+      });
+      api.onSubmit();
+      await nextTick();
+      expect(submit).not.toHaveBeenCalled();
+      expect(error).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([0, 1.5, -2])("a finite %s still submits, unchanged", async (value) => {
+      const { submit, error } = await submitWith(value);
+      expect(error).not.toHaveBeenCalled();
+      expect(submit).toHaveBeenCalledWith({ name: "Alice", qty: value });
+    });
   });
 
   it("`errors` reflects external errors and `dismissError(path)` removes a leaf", async () => {

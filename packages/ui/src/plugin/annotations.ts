@@ -1,5 +1,13 @@
 import type { TAnnotationsTree } from "@atscript/core";
 import { AnnotationSpec } from "@atscript/core";
+import {
+  isValueHelpTarget,
+  validateDistinct,
+  literalLabelValues,
+  validateLiteralLabel,
+  validateValueHelp,
+  valueHelpScopes,
+} from "./value-help-validation";
 
 const BUILTIN_TYPES = [
   "text",
@@ -46,6 +54,7 @@ const ROW_SPAN_VALUES: string[] = ["1", "2", "3", "4", "5", "6"];
  * - `ui.form.<key>`   — form-only static
  * - `ui.table.<key>`  — table-only static
  * - `ui.dict.<key>`   — value-help annotations
+ * - `ui.valueHelp`, `ui.literalLabel` — dictionary binding, union literal labels
  * - `ui.nav.<key>`    — model-level navigation annotations
  * - `ui.array.<key>`  — array control annotations
  *
@@ -666,6 +675,93 @@ export const uiAnnotations: TAnnotationsTree = {
         },
       }),
     },
+
+    // ── Value-help bindings (since 0.1.148) ───────────────────────
+
+    valueHelp: {
+      $self: new AnnotationSpec({
+        description:
+          "Binds this field to a value-help dictionary **without a foreign key** — no constraint, " +
+          "no query semantics, presentation only. Filter pickers (table filter dialog / inline field) " +
+          "and form reference pickers search the target's controller and commit the target's " +
+          "`field`. The binding wins over a `@db.rel.FK` on the field or its chain, and travels " +
+          "through chain refs and `extends`. The optional `filter` is a static scope AND'd into every " +
+          "picker query; fields it pins with `=` are hidden from the picker columns." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@ui.valueHelp AttributeValue, 'value', `attribute = 'color'`\n" +
+          "color: Ticket.color\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        multiple: false,
+        argument: [
+          {
+            name: "target",
+            type: "ref",
+            description:
+              "The dictionary interface (served by a controller exposing `@db.http.path`). Not a `@db.alias`.",
+            refFilter: isValueHelpTarget,
+          },
+          {
+            name: "field",
+            type: "string",
+            description:
+              "Top-level scalar field of the target whose value this field stores. Same type as this field.",
+            fieldScope: valueHelpScopes.field,
+          },
+          {
+            optional: true,
+            name: "filter",
+            type: "query",
+            description:
+              "Static scope on the target (`attribute = 'color' and active = true`) — field-to-value " +
+              "comparisons of the target's fields only.",
+            fieldScope: valueHelpScopes.filter,
+          },
+        ],
+        validate: validateValueHelp,
+      }),
+      distinct: new AnnotationSpec({
+        description:
+          "Offers a **distinct-values picker** for this column in table filters: the values already " +
+          "stored, read from the table's own controller via `$groupBy`. Shown only when the server " +
+          "reports the field filterable and groupable, and the field has no dictionary binding, FK " +
+          "help or literal options. Not offered in forms." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@ui.valueHelp.distinct\n" +
+          "city?: string\n" +
+          "```\n",
+        nodeType: ["prop", "type"],
+        validate: validateDistinct,
+      }),
+    },
+
+    literalLabel: new AnnotationSpec({
+      description:
+        "Display label for one literal of a union (`'open' | 'closed'`). Repeat per literal; " +
+        "unlabelled literals keep their raw text. Used by form selects/radios, table cells, " +
+        "enum filter options, filter chips and export. A prop's labels are added to the referenced " +
+        "type's (`append` merge: the type's other labels stay); for the same literal the prop's label wins." +
+        "\n\n**Example:**\n" +
+        "```atscript\n" +
+        "@ui.literalLabel 'in_progress', 'In progress'\n" +
+        "export type Status = 'open' | 'in_progress'\n" +
+        "```\n",
+      nodeType: ["prop", "type"],
+      multiple: true,
+      mergeStrategy: "append",
+      argument: [
+        {
+          name: "value",
+          type: "string",
+          description: "The literal as text (`'2'` for the number literal `2`).",
+          valueScope: literalLabelValues,
+        },
+        { name: "label", type: "string", description: "Display label." },
+      ],
+      validate: validateLiteralLabel,
+    }),
 
     // ── Dictionary annotations (value-help display + capabilities) ──
     //

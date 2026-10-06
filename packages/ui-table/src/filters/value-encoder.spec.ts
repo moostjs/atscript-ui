@@ -211,3 +211,34 @@ describe("createColumnValueEncoder", () => {
     ).toBeUndefined();
   });
 });
+
+describe("distinct-picker isoDate columns", () => {
+  const columns = [
+    {
+      path: "picked",
+      type: "text",
+      valueKind: "isoDate",
+      distinct: { url: "/x", field: "picked" },
+    },
+    { path: "typed", type: "text", valueKind: "isoDate" },
+  ] as const;
+  const enc = createColumnValueEncoder(columns, { timeZone: "UTC", now: Date.UTC(2026, 9, 5) });
+  const eq = (v: string): FilterCondition => ({ type: "eq", value: [v] });
+
+  it.each(["2026-10-05T12:00:00Z", "2026-10-05T12:00:00.000Z", "2026-10-05T14:00:00+02:00"])(
+    "sends the picked stored string %s as a raw $eq",
+    (v) => {
+      expect(enc("picked", eq(v))).toBeUndefined();
+      expect(filtersToUniqueryFilter({ picked: [eq(v)] }, { encode: enc })).toEqual({ picked: v });
+    },
+  );
+
+  it("still encodes a day typed into a distinct column, and an instant on a plain column", () => {
+    expect(enc("picked", eq("2026-10-05"))).toEqual({
+      picked: { $gte: "2026-10-05T00:00:00.000Z", $lt: "2026-10-06T00:00:00.000Z" },
+    });
+    expect(enc("typed", eq("2026-10-05T12:00:00Z"))).toEqual({
+      typed: { $gte: "2026-10-05T12:00:00.000Z", $lt: "2026-10-05T12:00:00.001Z" },
+    });
+  });
+});

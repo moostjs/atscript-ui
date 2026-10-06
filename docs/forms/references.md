@@ -83,6 +83,66 @@ that:
 The client is created lazily and shared by every ref field in the form — see
 the `clientFactory` provide in `packages/vue-form/src/components/as-form.vue`.
 
+## Binding without a foreign key: `@ui.valueHelp`
+
+_Since 0.1.148._ A foreign key is a real constraint, and it needs a unique target
+column. A dictionary keyed by `(attribute, value)` has none, and a view field
+cannot point its `@db.rel.FK` at a second table without changing its column
+source. `@ui.valueHelp` binds a field to a dictionary for the picker alone:
+**no constraint, no query semantics, presentation only.**
+
+```atscript
+import { AttributeValue } from './attribute-value'
+
+@db.view 'ticket_overview'
+@db.view.for Ticket
+export interface TicketOverview {
+    @ui.valueHelp AttributeValue, 'value', `attribute = 'color'`
+    color: Ticket.color
+
+    @ui.valueHelp AttributeValue, 'value', `attribute = 'size' and active = true`
+    size?: Ticket.size
+
+    @ui.valueHelp Country, 'code'
+    countryCode: Ticket.countryCode
+}
+```
+
+| Argument | Meaning                                                                                                               |
+| -------- | --------------------------------------------------------------------------------------------------------------------- |
+| target   | The dictionary interface (a `@db.alias` is refused). Served by a moost-db controller; the controller stamps its path. |
+| `field`  | A top-level scalar field of the target. The picker stores this field's value, and it must have the host field's type. |
+| `filter` | Optional static scope, field-to-literal comparisons of the target only. AND'd into **every** picker query.            |
+
+- **It wins over `@db.rel.FK`** on the field or on its chain, and it travels
+  through chain refs and `extends` (the field's own annotation wins, nearest
+  first). A binding whose target arrives without a path (an interface that is neither a
+  `@db.table` / `@db.view` nor declares `@db.http.path`) is ignored and the FK
+  walk runs. A `@db.table` / `@db.view` target needs no literal `@db.http.path`:
+  its controller stamps the path at runtime.
+- **Pinned fields are hidden.** A field the filter pins with `=`
+  (`attribute = 'color'`) is constant inside the picker, so the table pickers
+  drop its column and filter input.
+- **The committed value is `field`**, never the label or the key head. The
+  picker also fetches it when it is a unique non-key field, and the exact-match
+  search runs on it.
+- The same binding drives the form picker, the table's filter dialog and inline
+  filter field, and workflow forms (the server sends the target's path with the
+  form schema).
+- The compiler checks the binding — target kind (a warning when the target is
+  neither a `@db.table` / `@db.view` nor has `@db.http.path`), field
+  existence and type, the filter's scope, repeating values and a
+  manual-filterable target whose filter fields lack `@db.column.filterable`
+  (the last two are warnings) — and the editor completes the target, the field
+  and the filter. On `@ui.literalLabel` it completes the union's literals for the
+  value and jumps from the value to the literal it names.
+
+A custom picker that builds its own query passes `info.filter` and selects
+`info.targetField` — see the [API reference](/api/ui#valuehelpinfo).
+
+For union labels see [Union labels](/tables/filtering#union-labels); for
+distinct-value filters, [Distinct values](/tables/filtering#distinct-values).
+
 ## Controlling display with `@ui.dict.*`
 
 The target type's dictionary annotations decide what the picker shows for each

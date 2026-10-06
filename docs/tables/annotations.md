@@ -17,6 +17,9 @@ Annotations cluster into five namespaces:
 - **`@ui.dict.*`** — value-help / dictionary display + capabilities.
   Read both by the table (FK target columns) and by the value-help
   picker UI.
+- **`@ui.valueHelp`**, **`@ui.valueHelp.distinct`**, **`@ui.literalLabel`** —
+  value-help without a foreign key, distinct-values picker, union labels
+  (see [below](#ui-valuehelp-ui-valuehelp-distinct-ui-literallabel)).
 - **`@ui.type`** — cross-cutting renderer override (applies wherever
   there's no surface-specific override).
 - **`@ui.nav.*`** — model-level navigation metadata, read by
@@ -116,6 +119,18 @@ typeahead searches against `name` / `description`.
 parsed by moost-db's `AsValueHelpController` and emitted into the
 `/meta` response. No additional client wiring is needed.
 :::
+
+## `@ui.valueHelp`, `@ui.valueHelp.distinct`, `@ui.literalLabel`
+
+_Since 0.1.148._ Declared by the `@atscript/ui` plugin, so the compiler and the
+editor check them. All three apply to `prop` and `type`.
+
+- `@ui.valueHelp` — binds the field to a dictionary
+  without a foreign key: [References](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
+- `@ui.valueHelp.distinct` — offers the column's own stored values in the table
+  filters: [Distinct values](/tables/filtering#distinct-values).
+- `@ui.literalLabel` — labels one literal of a union:
+  [Union labels](/tables/filtering#union-labels).
 
 ## `@ui.type` — shared renderer override
 

@@ -1,5 +1,6 @@
 import { CategoriesTable } from './categories'
 import { UsersTable } from './users'
+import { AttributeValuesTable } from './attribute-values'
 
 @db.table 'products'
 @db.table.preferredId.uniqueIndex 'products_sku_idx'
@@ -45,6 +46,21 @@ export interface ProductsTable {
     @db.column.precision 6, 2
     @ui.form.grid.colSpan 'half'
     weight?: decimal
+
+    @meta.label 'Color'
+    @ui.valueHelp AttributeValuesTable, 'value', `attribute = 'color'`
+    @ui.form.grid.colSpan 'half'
+    color?: string
+
+    @meta.label 'Size'
+    @ui.valueHelp AttributeValuesTable, 'value', `attribute = 'size' and active = true`
+    @ui.form.grid.colSpan 'half'
+    size?: string
+
+    @meta.label 'Brand'
+    @ui.valueHelp.distinct
+    @db.column.dimension
+    brand?: string
 
     @meta.label 'Tags'
     @ui.form.label.singular 'tag'

@@ -11,6 +11,7 @@ Authoritative reference for every `@ui.*` and `@wf.*` annotation.
 - [@ui.table.\* (static)](#uitable-static)
 - [@ui.table.fn.\* (dynamic)](#uitablefn-dynamic)
 - [@ui.dict.\* (value-help target)](#uidict-value-help-target)
+- [@ui.valueHelp, @ui.valueHelp.distinct, @ui.literalLabel](#uivaluehelp-uivaluehelpdistinct-uiliterallabel)
 - [@ui.nav.\* (model-level navigation)](#uinav-model-level-navigation)
 - [@ui.array.\* (array control)](#uiarray-array-control)
 - [@wf.\* (workflow side)](#wf-workflow-side)
@@ -168,6 +169,18 @@ Read server-side by `AsValueHelpController` (`@atscript/moost-db`) and surfaced 
 | `@ui.dict.filterable` | `UI_DICT_FILTERABLE` | `prop`              | Picker UI shows this column as filterable. Surfaces as `meta.fields[name].filterable`.                                            |
 | `@ui.dict.sortable`   | `UI_DICT_SORTABLE`   | `prop`              | Picker UI shows this column as sortable. Surfaces as `meta.fields[name].sortable`.                                                |
 | `@ui.dict.searchable` | `UI_DICT_SEARCHABLE` | `prop`, `interface` | Participates in `$search`. On an interface, marks every `string` prop on the target as searchable. Surfaces as `meta.searchable`. |
+
+## @ui.valueHelp, @ui.valueHelp.distinct, @ui.literalLabel
+
+Since 0.1.148. Declared by the `@atscript/ui` plugin (editor completion / hover / go-to-definition included); need `@atscript/core` 0.1.100. All `nodeType: ["prop", "type"]`, travel through chain refs and `extends` (`passedWhenReferred` default).
+
+| Annotation                                   | Constant                 | What it does                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------------------------------- | ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.valueHelp` (`Target, 'field', filter?`) | `UI_VALUE_HELP`          | Binds the field to a dictionary **without a foreign key** (presentation only). `field`: top-level scalar of the target, same design type as the host. `filter` (optional): field-to-literal comparisons of the target, AND'd into every picker query; fields pinned by `=` are hidden in the picker. Beats `@db.rel.FK`; the target is served by a moost-db controller (a `@db.table` / `@db.view` needs no literal `@db.http.path`, the controller stamps it). |
+| `@ui.valueHelp.distinct`                     | `UI_VALUE_HELP_DISTINCT` | Table filters offer the column's stored values via `/query?$groupBy=`. Needs `/meta` `filterable` **and** `groupable`, and no dictionary / FK / literal help. Not in forms. A 4xx shows as an error in the picker.                                                                                                                                                                                                                                              |
+| `@ui.literalLabel 'value', 'Label'` (repeat) | `UI_LITERAL_LABEL`       | Label for one union literal (`'2'` for the number `2`); unlabelled literals keep the raw text. Read by `extractLiteralOptions` → form options, cells, filter options and chips, export. A prop's labels are added to the referenced type's; for the same literal the prop's label wins, also on an array of a union (form options and table cells). The editor completes the union's literals for `value` and go-to-definition on it jumps to the literal.      |
+
+The compiler reports a wrong target or field, a host / field type mismatch, a filter outside the target, repeating values (warning) and a target that is neither a `@db.table` / `@db.view` nor has `@db.http.path` (warning); `@ui.valueHelp.distinct` on a non-string / non-number field (a `number.timestamp` included), off a DB table, or on a non-dimension of a strict aggregate table; `@ui.literalLabel` on a non-union, for a non-literal, or twice for one literal.
 
 ## @ui.nav.\* (model-level navigation)
 

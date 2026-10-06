@@ -65,15 +65,15 @@ test.describe("Section 3 — Schema-driven flags", () => {
     await expect(menu).toHaveCount(0);
 
     // Toolbar Filters dialog: footer summary advertises filterable count.
-    // Customers has 6 columns; address + preferences are `@db.json` →
-    // 4 filterable remain. Customers has no `systemPresets` so the empty
+    // Customers has 7 columns; address + preferences are `@db.json` →
+    // 5 filterable remain (id, name, email, city, created). Customers has no `systemPresets` so the empty
     // Standard preset expands to no filter pills — model count is 0.
     await page.getByTitle("Filters", { exact: true }).click();
     const dialog = page.locator(".as-config-dialog-content");
     await expect(dialog).toBeVisible();
 
     const summary = dialog.locator(".as-config-tab-summary-count");
-    await expect(summary).toContainText(/0[\s\S]*of[\s\S]*4[\s\S]*filterable columns/u);
+    await expect(summary).toContainText(/0[\s\S]*of[\s\S]*5[\s\S]*filterable columns/u);
 
     // Within the active "Filters" tab, the field selector lists only the
     // filterable columns — neither @db.json column appears. The Filters
@@ -90,6 +90,7 @@ test.describe("Section 3 — Schema-driven flags", () => {
     expect(trimmedFilter).toContain("Id");
     expect(trimmedFilter).toContain("Name");
     expect(trimmedFilter).toContain("Email");
+    expect(trimmedFilter).toContain("City");
     expect(trimmedFilter).toContain("Created");
 
     // Sorters tab — switch via the in-dialog tab trigger. Reka's

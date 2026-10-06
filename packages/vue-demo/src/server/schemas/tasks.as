@@ -11,6 +11,10 @@ export interface TasksTable {
     title: string
 
     @meta.label 'Status'
+    @ui.literalLabel 'open', 'Open'
+    @ui.literalLabel 'in-progress', 'In progress'
+    @ui.literalLabel 'done', 'Done'
+    @ui.literalLabel 'archived', 'Archived'
     @db.index.plain 'tasks_status_idx'
     @db.default 'open'
     @ui.table.component 'status-badge'
@@ -30,7 +34,19 @@ export interface TasksTable {
     @meta.label 'Spent (h)'
     spent: number
 
+    @meta.label 'Due on'
+    dueOn?: string.date
+
+    @meta.label 'Reviewed at'
+    reviewedAt?: string.isoDate
+
     @meta.label 'Created'
     @db.default.now
     createdAt: number.timestamp
+
+    /// An array of a labelled literal union: the table shows each element's label
+    @meta.label 'Labels'
+    @ui.literalLabel 'bug', 'Defect'
+    @ui.literalLabel 'feature', 'Feature request'
+    labels?: ('bug' | 'feature' | 'chore')[]
 }

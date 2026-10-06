@@ -1,4 +1,4 @@
-import { str, type ColumnDef } from "@atscript/ui";
+import { optionLabel, str, type ColumnDef } from "@atscript/ui";
 import type { ExportScalar } from "./csv";
 
 /**
@@ -20,19 +20,16 @@ import type { ExportScalar } from "./csv";
 export function resolveExportValue(value: unknown, column?: ColumnDef): ExportScalar {
   if (value === null || value === undefined) return null;
 
-  const options = column?.options;
-  if (options?.length) {
-    const key = typeof value === "string" || typeof value === "number" ? String(value) : undefined;
-    if (key !== undefined) {
-      const hit = options.find((o) => o.key === key);
-      if (hit) return hit.label;
-    }
-  }
+  const label = column && optionLabel(column, value);
+  if (label !== undefined) return label;
 
   if (typeof value === "number" || typeof value === "boolean") return value;
   if (typeof value === "string") return value;
   if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value)) return value.map((v) => scalarText(v)).join(", ");
+  if (Array.isArray(value)) {
+    // an array of a union (`tags: Tag[]`): each element shows its option label
+    return value.map((v) => (column && optionLabel(column, v)) || scalarText(v)).join(", ");
+  }
   return scalarText(value);
 }
 

@@ -4,6 +4,11 @@ export function humanizePath(path: string): string {
   return last.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, (s) => s.toUpperCase());
 }
 
+/** Escape special regex characters in user input for safe embedding in a `$regex` filter. */
+export function escapeRegex(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 /** Safely convert an unknown value to a string without triggering no-base-to-string lint errors. */
 export function str(value: unknown): string {
   if (typeof value === "string") return value;

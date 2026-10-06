@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@atscript/ui";
+import { optionLabel, type ColumnDef } from "@atscript/ui";
 import { columnFilterKind } from "./column-filter";
 import { isTemporalKind } from "./filter-conditions-map";
 import { formatFilterCondition } from "./filter-input-format";
@@ -116,6 +116,15 @@ function shortcutLabel(cond: FilterCondition): string | undefined {
   return undefined;
 }
 
+/** `eq` / `ne` conditions on a union column show the option labels, not the raw literals. */
+function withOptionLabels(
+  column: Pick<ColumnDef, "options">,
+  cond: FilterCondition,
+): FilterCondition {
+  if (!column.options?.length || (cond.type !== "eq" && cond.type !== "ne")) return cond;
+  return { ...cond, value: cond.value.map((v) => optionLabel(column, v) ?? v) };
+}
+
 /**
  * A filter condition as a chip label, worded for the column. On a date or
  * date-time column an exact shortcut shows its name ("Last 7 days"); anything
@@ -126,11 +135,13 @@ function shortcutLabel(cond: FilterCondition): string | undefined {
  * @internal Shared with `@atscript/vue-table`.
  */
 export function formatColumnCondition(
-  column: Pick<ColumnDef, "type" | "valueKind">,
+  column: Pick<ColumnDef, "type" | "valueKind" | "options">,
   cond: FilterCondition,
   opts: FormatColumnConditionOptions = {},
 ): string {
-  if (!isTemporalKind(columnFilterKind(column))) return formatFilterCondition(cond);
+  if (!isTemporalKind(columnFilterKind(column))) {
+    return formatFilterCondition(withOptionLabels(column, cond));
+  }
 
   const shortcut = shortcutLabel(cond);
   if (shortcut) return shortcut;
@@ -172,11 +183,11 @@ export function formatColumnCondition(
  * @internal Shared with `@atscript/vue-table`.
  */
 export function formatColumnValue(
-  column: Pick<ColumnDef, "type" | "valueKind">,
+  column: Pick<ColumnDef, "type" | "valueKind" | "options">,
   value: unknown,
   opts: FormatColumnConditionOptions = {},
 ): string | undefined {
-  if (!isTemporalKind(columnFilterKind(column))) return undefined;
+  if (!isTemporalKind(columnFilterKind(column))) return optionLabel(column, value);
   const p = parseTemporal(value);
   return p ? formatTemporal(p, opts) : undefined;
 }

@@ -132,7 +132,7 @@ export {
   parseStaticAttrs,
   resolveAttrs,
 } from "./shared/field-resolver";
-export { optKey, optLabel, parseStaticOptions, resolveOptions } from "./value-help";
+export { optKey, optLabel, optionLabel, parseStaticOptions, resolveOptions } from "./value-help";
 
 // ── Path utilities ──────────────────────────────────────────
 export {
@@ -247,11 +247,14 @@ export { NUMERIC_VALUE_KINDS, optionValue } from "./table/value-kind";
 
 // ── Value-help (unified options resolution) ─────────────────
 export {
+  extractFieldLiteralOptions,
   extractLiteralOptions,
   isPureLiteralUnion,
   extractValueHelp,
   valueHelpDictPaths,
   ValueHelpClient,
+  fetchDistinctValues,
+  isPickerDeclined,
   resolveValueHelp,
   resetValueHelpCache,
 } from "./value-help";
@@ -275,7 +278,7 @@ export { getMetaEntry, resetMetaCache } from "./shared/meta-cache";
 export type { MetaCacheEntry } from "./shared/meta-cache";
 
 // ── Shared utilities ────────────────────────────────────────
-export { str } from "./shared/str";
+export { str, escapeRegex } from "./shared/str";
 
 // ── Table column helpers ────────────────────────────────────
 export { getSortableColumns, getFilterableColumns, getColumn } from "./table/column-resolver";

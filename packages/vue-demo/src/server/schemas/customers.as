@@ -42,6 +42,10 @@ export interface CustomersTable {
     @ui.form.grid.colSpan 'half'
     email: string
 
+    @meta.label 'City'
+    @ui.valueHelp.distinct
+    city?: string
+
     @meta.label 'Address'
     @db.json
     address: {

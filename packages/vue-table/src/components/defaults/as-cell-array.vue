@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ColumnDef } from "@atscript/ui";
+import { optionLabel, type ColumnDef } from "@atscript/ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import AsCellJsonPopover from "../internal/as-cell-json-popover.vue";
 
@@ -27,7 +27,9 @@ const view = computed<{ items: unknown[]; primitive: boolean } | undefined>(() =
 <template>
   <td>
     <span v-if="view && view.primitive" class="as-cell-chips">
-      <span v-for="(item, i) in view.items" :key="i" class="as-cell-chip">{{ item }}</span>
+      <span v-for="(item, i) in view.items" :key="i" class="as-cell-chip">{{
+        optionLabel(column, item) ?? item
+      }}</span>
     </span>
     <AsCellJsonPopover v-else-if="view" :value="view.items">
       <template #trigger>

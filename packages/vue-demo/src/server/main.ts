@@ -17,6 +17,7 @@ import { AuthController, MeController } from "./controllers/auth.controller";
 import { UsersController } from "./controllers/users.controller";
 import { RolesController } from "./controllers/roles.controller";
 import { CategoriesController } from "./controllers/categories.controller";
+import { AttributeValuesController } from "./controllers/attribute-values.controller";
 import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
@@ -93,6 +94,7 @@ app.registerControllers(
   UsersController,
   RolesController,
   CategoriesController,
+  AttributeValuesController,
   ProductsController,
   CustomersController,
   OrdersController,

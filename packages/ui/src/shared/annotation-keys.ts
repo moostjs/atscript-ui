@@ -46,6 +46,11 @@ export const UI_DICT_FILTERABLE = "ui.dict.filterable" as const;
 export const UI_DICT_SORTABLE = "ui.dict.sortable" as const;
 export const UI_DICT_SEARCHABLE = "ui.dict.searchable" as const;
 
+// ── Value-help bindings (registered by @atscript/ui plugin, since 0.1.148) ──
+export const UI_VALUE_HELP = "ui.valueHelp" as const;
+export const UI_VALUE_HELP_DISTINCT = "ui.valueHelp.distinct" as const;
+export const UI_LITERAL_LABEL = "ui.literalLabel" as const;
+
 // ── Navigation annotations (registered by @atscript/ui plugin) ──
 export const UI_NAV_GROUP = "ui.nav.group" as const;
 export const UI_NAV_ORDER = "ui.nav.order" as const;

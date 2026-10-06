@@ -737,7 +737,7 @@ interface BuildTableQueryOptions {
   ignoreSorters?: boolean;
   /** User-configured field filters. */
   filters: FieldFilters;
-  /** Column-aware value encoder for `filters` (see `createColumnValueEncoder`) — dates become epoch / ISO / date bounds, boolean text a boolean. Not applied to `residualFilters` or `forceFilters`. Since 0.1.148. */
+  /** Column-aware value encoder for `filters` (see `createColumnValueEncoder`) — dates become epoch / ISO / date bounds, boolean text a boolean. Also applied to `residualFilters` (comparison by comparison, including the elements of `$in` / `$nin`), never to `forceFilters`. Since 0.1.148. */
   encodeCondition?: ConditionEncoder;
   /** Residual filter conditions, AND'd after `filters`. Since 0.1.140. */
   residualFilters?: FilterExpr[];

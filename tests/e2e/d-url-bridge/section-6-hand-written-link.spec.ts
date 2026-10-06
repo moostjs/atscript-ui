@@ -26,7 +26,7 @@ function collectWarnings(page: Page): string[] {
 async function expectAllRowsInProgress(page: Page): Promise<void> {
   const badges = page.locator("table[data-as-main-table] tbody .as-status-badge");
   await expect(badges.first()).toBeVisible();
-  for (const text of await badges.allTextContents()) expect(text.trim()).toBe("in-progress");
+  for (const text of await badges.allTextContents()) expect(text.trim()).toBe("In progress"); // `@ui.literalLabel` on tasks.status
 }
 
 test.describe("Section 6.8 — Hand-written deep links", () => {

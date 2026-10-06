@@ -59,6 +59,19 @@ export interface FieldMeta {
    * fields (`CreateFormDefOptions.metaFields`). Since 0.1.147.
    */
   computed?: boolean;
+  /**
+   * Display-only value the controller computes (`@DbDecorations`,
+   * `@atscript/moost-db` 0.1.148+): selectable, never filterable, sortable or
+   * groupable. `createTableDef` turns it into a column from
+   * `MetaResponse.decorations`. Since 0.1.148.
+   */
+  decoration?: boolean;
+  /**
+   * `$groupBy` on this field passes the server's gate (`@atscript/moost-db`
+   * 0.1.148+). Together with `filterable` and `@ui.valueHelp.distinct` it
+   * enables the distinct-values picker. Since 0.1.148.
+   */
+  groupable?: boolean;
 }
 
 /** Meta response from moost-db `/meta` endpoint. */
@@ -88,6 +101,11 @@ export interface MetaResponse {
   relations: RelationInfo[];
   fields: Record<string, FieldMeta>;
   type: TSerializedAnnotatedType;
+  /**
+   * The controller's declared display-only fields (`@DbDecorations`) as a
+   * serialized plain interface. Absent on older servers. Since 0.1.148.
+   */
+  decorations?: TSerializedAnnotatedType;
 }
 
 // ── Table action model ──────────────────────────────────────
@@ -227,6 +245,13 @@ export interface ColumnDef {
   options?: { key: string; label: string; value?: string | number | boolean }[];
   /** Value-help info for FK columns (from extractValueHelp). */
   valueHelpInfo?: ValueHelpInfo;
+  /**
+   * Distinct-values picker (`@ui.valueHelp.distinct`): the table's own controller
+   * (`url`) answers the values of `field` via `$groupBy`. Set only when the server
+   * lists the field `filterable` and `groupable` and no dictionary help or literal
+   * options apply — independent of `valueHelpInfo`. Since 0.1.148.
+   */
+  distinct?: { url: string; field: string };
   /** Literal currency code from `@db.amount.currency 'EUR'`. */
   currencyCode?: string;
   /** Sibling field path from `@db.amount.currency.ref 'fieldName'`. */

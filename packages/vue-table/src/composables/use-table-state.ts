@@ -1685,8 +1685,12 @@ export function createTableState(opts: CreateTableStateOptions): {
       mustRefresh.value = true;
       // A new scope starts at page 1 (the sorters and columns keep the page).
       // A URL applied in the same flush owns the page — and, through its
-      // hydration tail, the one request.
-      if (hydratingFromUrl) return;
+      // hydration tail, the one request — unless it does not carry the page
+      // (`urlQuerySync.pagination: false`): then the old page would stay.
+      if (hydratingFromUrl) {
+        if (filterChanged && urlQuerySync?.pagination === false) resetPagination();
+        return;
+      }
       if (filterChanged) resetPagination();
       scheduleQuery();
     },
@@ -1881,6 +1885,17 @@ export interface CreateStaticTableStateOptions {
   /** Auto-query once the synthetic definition is in place (default: true). Since 0.1.134. */
   queryOnMount?: boolean;
   /**
+   * Supplies each page itself (server-backed values, e.g. the distinct-values
+   * picker) instead of slicing `rows` in memory: `rows` is ignored, local
+   * search / sort do not run, and the returned `count` sizes the window.
+   * Since 0.1.148.
+   */
+  remote?: (
+    ctx: { searchTerm: string },
+    page: number,
+    size: number,
+  ) => Promise<PageResult<Record<string, unknown>>>;
+  /**
    * Action settings. Only the client-free parts apply — there is no client to
    * invoke a server action with. Since 0.1.134.
    */
@@ -1905,6 +1920,7 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
     if (!_state) {
       return Promise.resolve({ data: [], count: 0, page, itemsPerPage: size, pages: 1 });
     }
+    if (opts.remote) return opts.remote({ searchTerm: _state.searchTerm.value }, page, size);
     fetcher ??= buildStaticQueryFn(opts, _state);
     return fetcher(q, page, size);
   };

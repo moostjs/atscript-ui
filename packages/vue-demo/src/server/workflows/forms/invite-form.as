@@ -1,4 +1,5 @@
 import { RolesTable } from '../../schemas/roles'
+import { AttributeValuesTable } from '../../schemas/attribute-values'
 
 @meta.label 'Invite User'
 @ui.form.submit.text 'Send Invite'
@@ -14,6 +15,12 @@ export interface InviteStartForm {
     @db.rel.FK
     @ui.form.grid.colSpan 'half'
     roleId: RolesTable.id
+
+    @meta.label 'Team'
+    @ui.form.placeholder 'Pick a team'
+    @ui.valueHelp AttributeValuesTable, 'value', `attribute = 'team'`
+    @ui.form.grid.colSpan 'half'
+    team?: string
 }
 
 @wf.context.pass 'email'

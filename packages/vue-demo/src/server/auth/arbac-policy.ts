@@ -41,10 +41,13 @@ const VIEWER_PRODUCTS_COLS = [
   "tags",
   "publishedAt",
   "createdAt",
+  "color",
+  "size",
+  "brand",
 ];
 
 /** Columns the viewer role may read on `customers` (no address, no preferences). */
-const VIEWER_CUSTOMERS_COLS = ["id", "name", "email", "createdAt"];
+const VIEWER_CUSTOMERS_COLS = ["id", "name", "email", "city", "createdAt"];
 
 /** Columns the viewer role may read on `orders` (no lines). */
 const VIEWER_ORDERS_COLS = [
@@ -108,6 +111,7 @@ const managerRole = defineRole<DemoUserAttrs, ArbacDbScope>()
     allowTableWrite("products"),
     allowTableWrite("customers"),
     allowTableWrite("orders"),
+    allowTableWrite("attribute_values"),
     // tasks: read + write — the task actions (`@ArbacAction("update")`) too,
     // also when the task board runs them by delegation.
     allowTableWrite("tasks"),
@@ -128,7 +132,10 @@ const viewerBuilder = defineRole<DemoUserAttrs, ArbacDbScope>()
     allowTableRead("categories"),
     // products, customers, orders: narrow reads
     allowTableRead("products", { scope: () => ({ projection: proj(VIEWER_PRODUCTS_COLS) }) }),
-    allowTableRead("customers", { scope: () => ({ projection: proj(VIEWER_CUSTOMERS_COLS) }) }),
+    // `$groupBy: false`: no distinct-values picker (grouped reads are refused)
+    allowTableRead("customers", {
+      scope: () => ({ projection: proj(VIEWER_CUSTOMERS_COLS), controls: { $groupBy: false } }),
+    }),
     allowTableRead("orders", { scope: () => ({ projection: proj(VIEWER_ORDERS_COLS) }) }),
     // tasks: plain read — no task action, on /tasks or delegated on the board.
     allowTableRead("tasks"),

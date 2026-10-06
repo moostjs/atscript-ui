@@ -104,6 +104,9 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
         text: text || undefined,
         mode: "form",
         limit: 20,
+        // `@ui.valueHelp` scope + the field the picker commits (since 0.1.148)
+        filter: info.filter,
+        valueField: info.targetField,
       });
       results.value = result.items;
     } catch {

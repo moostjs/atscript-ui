@@ -128,7 +128,7 @@ export function useTableExport(ctx?: TableContext): UseTableExportReturn {
 
   /**
    * One value resolver per column, built once per run: the formatter lookup
-   * and the union-option index happen here instead of per cell.
+   * happens here instead of per cell (union-option labels are Map-backed in `optionLabel`).
    */
   function resolversFor(
     columns: ColumnDef[],
@@ -137,9 +137,6 @@ export function useTableExport(ctx?: TableContext): UseTableExportReturn {
     return columns.map((column) => {
       const perColumn = opts.formatters?.[column.path];
       const formatCell = opts.formatCell;
-      const labels = column.options?.length
-        ? new Map(column.options.map((o) => [o.key, o.label]))
-        : null;
       return (row) => {
         const raw = getCellValue(row, column.path);
         if (perColumn) {
@@ -150,13 +147,7 @@ export function useTableExport(ctx?: TableContext): UseTableExportReturn {
           const out = formatCell(raw, column, row);
           if (out !== undefined) return out;
         }
-        if (labels !== null && (typeof raw === "string" || typeof raw === "number")) {
-          const hit = labels.get(String(raw));
-          if (hit !== undefined) return hit;
-        }
-        // Options are already resolved above — the column would only make
-        // `resolveExportValue` scan them a second time.
-        return resolveExportValue(raw);
+        return resolveExportValue(raw, column);
       };
     });
   }

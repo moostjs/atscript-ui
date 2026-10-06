@@ -166,6 +166,9 @@ function encodeScalarCondition(
  * - **Number / integer columns**: numeric text becomes a number, so a value
  *   from a URL or a preset reaches the server typed like one typed in.
  * - **Decimal columns**: numbers become strings, like typed-in values.
+ * - **Distinct-picker columns** (`column.distinct`, stored as `isoDate`): a full instant
+ *   (`eq` / `ne`) is a value the server listed itself, so it is sent exactly as picked
+ *   (a raw `$eq` / `$ne`) instead of becoming a millisecond range.
  * - Anything else — including fields without a `valueKind` — returns
  *   `undefined`, so the default conversion runs.
  *
@@ -176,19 +179,34 @@ function encodeScalarCondition(
  * @since 0.1.148
  */
 export function createColumnValueEncoder(
-  columns: readonly Pick<ColumnDef, "path" | "type" | "valueKind">[],
+  columns: readonly Pick<ColumnDef, "path" | "type" | "valueKind" | "distinct">[],
   opts: TemporalOptions = {},
 ): ConditionEncoder {
   const plan = new Map<string, ValueEncoding>();
+  /** Columns whose picker lists the server's own stored values (`@ui.valueHelp.distinct`). */
+  const stored = new Set<string>();
   for (const column of columns) {
     const { encoding } = columnFilter(column);
     if (encoding) plan.set(column.path, encoding);
+    if (column.distinct) stored.add(column.path);
   }
   if (plan.size === 0) return () => undefined;
 
   return (field, cond, now) => {
     const encoding = plan.get(field);
     if (!encoding) return undefined;
+    // A full instant picked from the column's own distinct list IS a stored string (maybe
+    // without milliseconds, maybe with an offset): sent as is, an exact `$eq`, never widened
+    // to a one-millisecond range that the stored string would fall outside of.
+    if (
+      encoding === "iso" &&
+      stored.has(field) &&
+      (cond.type === "eq" || cond.type === "ne") &&
+      typeof cond.value[0] === "string" &&
+      parseTemporal(cond.value[0])?.kind === "instant"
+    ) {
+      return undefined;
+    }
     return encoding === "epoch" ||
       encoding === "iso" ||
       encoding === "date" ||

@@ -4,8 +4,9 @@ import { defineComponent, h } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import AsCellArray from "../components/defaults/as-cell-array.vue";
 
-function makeColumn(): ColumnDef {
+function makeColumn(options?: ColumnDef["options"]): ColumnDef {
   return {
+    ...(options && { options }),
     path: "items",
     label: "Items",
     type: "array",
@@ -16,10 +17,12 @@ function makeColumn(): ColumnDef {
   };
 }
 
-function mountCell(row: Record<string, unknown>) {
+function mountCell(row: Record<string, unknown>, options?: ColumnDef["options"]) {
   const Host = defineComponent({
     render() {
-      return h("table", [h("tbody", [h("tr", [h(AsCellArray, { row, column: makeColumn() })])])]);
+      return h("table", [
+        h("tbody", [h("tr", [h(AsCellArray, { row, column: makeColumn(options) })])]),
+      ]);
     },
   });
   return mount(Host, { attachTo: document.body });
@@ -32,6 +35,14 @@ describe("AsCellArray", () => {
     expect(chips).toHaveLength(3);
     expect(chips[0]!.text()).toBe("new");
     expect(chips[1]!.text()).toBe("featured");
+  });
+
+  it("labels the elements of an array of a union (@ui.literalLabel); unlabelled ones keep their text", () => {
+    const wrapper = mountCell({ items: ["bug", "chore"] }, [
+      { key: "bug", label: "Defect", value: "bug" },
+      { key: "chore", label: "chore", value: "chore" },
+    ]);
+    expect(wrapper.findAll(".as-cell-chip").map((c) => c.text())).toEqual(["Defect", "chore"]);
   });
 
   it("renders chips for primitive number array", () => {

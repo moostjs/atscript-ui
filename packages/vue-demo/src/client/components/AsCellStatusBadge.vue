@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import type { ColumnDef } from "@atscript/ui";
+import { optionLabel, type ColumnDef } from "@atscript/ui";
 import { getCellValue } from "@atscript/vue-table";
 
 // Registered under both `status` (cell-type) and `status-badge` (named
@@ -16,6 +16,9 @@ const value = computed(() => {
   const v = getCellValue(props.row, props.column.path);
   return typeof v === "string" ? v : "";
 });
+
+// A union column's option label (`@ui.literalLabel`) when it has one; the raw key otherwise.
+const text = computed(() => optionLabel(props.column, value.value) ?? value.value);
 
 const scopeClass = computed<string>(() => {
   switch (value.value) {
@@ -41,6 +44,6 @@ const scopeClass = computed<string>(() => {
 
 <template>
   <td>
-    <span v-if="value" class="as-status-badge" :class="scopeClass">{{ value }}</span>
+    <span v-if="value" class="as-status-badge" :class="scopeClass">{{ text }}</span>
   </td>
 </template>

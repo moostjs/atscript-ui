@@ -595,3 +595,173 @@ describe("column-resolver", () => {
     });
   });
 });
+
+describe("createTableDef — decoration columns (@DbDecorations)", () => {
+  const D = "../__tests__/fixtures/create-table-def-distinct.as";
+  const decorationFields = {
+    unreadCount: { sortable: false, filterable: false, decoration: true },
+    ownerName: { sortable: false, filterable: false, decoration: true },
+    hidden: { sortable: false, filterable: false, decoration: true },
+    details: { sortable: false, filterable: false, decoration: true },
+  };
+
+  async function decorated(fields: MetaResponse["fields"] = decorationFields) {
+    const { DistinctCustomer, CustomerDecorations } = await import(D);
+    return buildMeta(
+      serializeAnnotatedType(DistinctCustomer),
+      [],
+      {
+        id: { sortable: true, filterable: true },
+        city: { sortable: true, filterable: true, groupable: true },
+        ...fields,
+      },
+      { decorations: serializeAnnotatedType(CustomerDecorations) },
+    );
+  }
+
+  it("pushes the top-level decoration props the server lists, after the real columns", async () => {
+    const def = createTableDef(await decorated());
+    const paths = def.columns.map((c) => c.path);
+    // `hidden` is @ui.table.exclude; `details` is an object (not a scalar display) — still listed
+    expect(paths.slice(0, 2)).toEqual(["id", "city"]);
+    expect(paths).toEqual(expect.arrayContaining(["unreadCount", "ownerName", "details"]));
+    expect(paths).not.toContain("hidden");
+  });
+
+  it("builds them with the same code: label, width, display type; never sortable/filterable", async () => {
+    const def = createTableDef(await decorated());
+    const unread = def.columns.find((c) => c.path === "unreadCount")!;
+    expect(unread).toMatchObject({
+      label: "Unread",
+      width: "6em",
+      type: "number",
+      sortable: false,
+      filterable: false,
+      nullable: true,
+    });
+    expect(unread.valueHelpInfo).toBeUndefined();
+    const owner = def.columns.find((c) => c.path === "ownerName")!;
+    expect(owner).toMatchObject({ label: "Owner Name", type: "text", nullable: true });
+  });
+
+  it("adds them to flatMap and fetchableFields", async () => {
+    const def = createTableDef(await decorated());
+    expect(def.flatMap.has("unreadCount")).toBe(true);
+    expect(def.fetchableFields.has("ownerName")).toBe(true);
+  });
+
+  it("honours @ui.table.exclude and skips props the server did not list (hidden sources)", async () => {
+    const def = createTableDef(
+      await decorated({
+        unreadCount: { sortable: false, filterable: false, decoration: true },
+        hidden: { sortable: false, filterable: false, decoration: true },
+      }),
+    );
+    const paths = def.columns.map((c) => c.path);
+    expect(paths).toContain("unreadCount");
+    expect(paths).not.toContain("hidden");
+    expect(paths).not.toContain("ownerName");
+  });
+
+  it("a decoration prop without the `decoration` flag in meta.fields is ignored", async () => {
+    const def = createTableDef(
+      await decorated({ ownerName: { sortable: false, filterable: false } }),
+    );
+    expect(def.columns.map((c) => c.path)).not.toContain("ownerName");
+  });
+
+  it("an older server (no `decorations`) is unchanged", async () => {
+    const { DistinctCustomer } = await import(D);
+    const meta = buildMeta(serializeAnnotatedType(DistinctCustomer), ["id", "city"]);
+    const def = createTableDef(meta);
+    expect(def.columns.map((c) => c.path)).toEqual(["id", "city"]);
+  });
+});
+
+const col = (def: ReturnType<typeof createTableDef>, path: string) =>
+  def.columns.find((c) => c.path === path)!;
+
+describe("createTableDef — distinct-values help (@ui.valueHelp.distinct)", () => {
+  const D = "../__tests__/fixtures/create-table-def-distinct.as";
+
+  async function meta(fields: MetaResponse["fields"]) {
+    const { DistinctCustomer } = await import(D);
+    return buildMeta(serializeAnnotatedType(DistinctCustomer), [], fields);
+  }
+
+  it("offered when the field is filterable, groupable and annotated", async () => {
+    const def = createTableDef(
+      await meta({
+        id: { sortable: true, filterable: true },
+        city: { sortable: true, filterable: true, groupable: true },
+      }),
+    );
+    expect(col(def, "city").distinct).toEqual({ url: "/customers", field: "city" });
+    expect(col(def, "city").valueHelpInfo).toBeUndefined();
+    // not a dictionary reference: keeps its natural display type
+    expect(col(def, "city").type).toBe("text");
+  });
+
+  it("not offered without groupable, without filterable, or without the annotation", async () => {
+    const def = createTableDef(
+      await meta({
+        id: { sortable: true, filterable: true },
+        city: { sortable: true, filterable: true },
+        country: { sortable: true, filterable: false, groupable: true },
+        region: { sortable: true, filterable: true, groupable: true },
+      }),
+    );
+    expect(col(def, "city").distinct).toBeUndefined();
+    expect(col(def, "country").distinct).toBeUndefined();
+    expect(col(def, "region").distinct).toBeUndefined();
+  });
+
+  it("not offered on a column that has literal options", async () => {
+    const def = createTableDef(
+      await meta({
+        id: { sortable: true, filterable: true },
+        tier: { sortable: true, filterable: true, groupable: true },
+      }),
+    );
+    expect(col(def, "tier").distinct).toBeUndefined();
+    expect(col(def, "tier").options).toHaveLength(2);
+  });
+});
+
+describe("createTableDef — array of a literal union", () => {
+  async function ticketDef() {
+    const { Ticket } = await import("../__tests__/fixtures/value-help-binding.as");
+    return createTableDef(
+      buildMeta(serializeAnnotatedType(Ticket), ["statuses", "plainStatuses", "status"]),
+    );
+  }
+
+  it("an array column gets the element literals as options, the array prop's labels winning", async () => {
+    const def = await ticketDef();
+    expect(col(def, "statuses").options?.map((o) => [o.key, o.label])).toEqual([
+      ["open", "Open"],
+      ["in_progress", "In progress"],
+      ["closed", "Finished"],
+    ]);
+    // it stays an array column
+    expect(col(def, "statuses").type).toBe("array");
+  });
+
+  it("without a prop label the element type's labels apply; typed values are kept", async () => {
+    const def = await ticketDef();
+    expect(col(def, "plainStatuses").options?.map((o) => [o.key, o.label, o.value])).toEqual([
+      ["open", "Open", "open"],
+      ["in_progress", "In progress", "in_progress"],
+      ["closed", "closed", "closed"],
+    ]);
+  });
+
+  it("a scalar union column is unchanged", async () => {
+    const def = await ticketDef();
+    expect(col(def, "status").options?.map((o) => o.label)).toEqual([
+      "Open",
+      "In progress",
+      "Done",
+    ]);
+  });
+});

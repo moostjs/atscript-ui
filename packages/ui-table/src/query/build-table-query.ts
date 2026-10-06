@@ -3,6 +3,7 @@ import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type { FieldFilters } from "../filters/filter-types";
 import { filtersToUniqueryFilter } from "../filters/filters-to-uniquery";
 import type { ConditionEncoder } from "../filters/value-encoder";
+import { encodeFilterExpr } from "../filters/encode-expr";
 import { mergeSorters } from "./merge-sorters";
 import { mergeFilters } from "./merge-filters";
 
@@ -27,8 +28,9 @@ export interface BuildTableQueryOptions {
   /**
    * Column-aware value encoder for `filters` (see `createColumnValueEncoder`):
    * temporal conditions become epoch / ISO / date bounds, boolean text becomes
-   * a boolean. Not applied to `residualFilters` or `forceFilters`, which are
-   * already Uniquery. Since 0.1.148.
+   * a boolean. Also applied to `residualFilters` (URL deep links, presets), so
+   * every condition source reaches the server typed the same way; not applied
+   * to `forceFilters`, which the app authors as Uniquery. Since 0.1.148.
    */
   encodeCondition?: ConditionEncoder;
   /**
@@ -63,10 +65,15 @@ export interface BuildTableQueryOptions {
  * projects visible columns, and applies pagination.
  */
 export function buildTableQuery(opts: BuildTableQueryOptions): Uniquery {
+  const encode = opts.encodeCondition;
+  // One clock reading for the whole query (field filters and residuals): relative dates mean the same "today".
+  const now = Date.now();
   const filter = mergeFilters(
     opts.forceFilters,
-    filtersToUniqueryFilter(opts.filters, { encode: opts.encodeCondition }),
-    ...(opts.residualFilters ?? []),
+    filtersToUniqueryFilter(opts.filters, { encode, now }),
+    ...(opts.residualFilters ?? []).map((expr) =>
+      encode ? encodeFilterExpr(expr, encode, now) : expr,
+    ),
   );
 
   const userSorters = opts.ignoreSorters ? [] : opts.sorters;

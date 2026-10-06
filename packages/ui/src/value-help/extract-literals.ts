@@ -1,8 +1,10 @@
 import type {
   TAtscriptAnnotatedType,
+  TAtscriptTypeArray,
   TAtscriptTypeComplex,
   TAtscriptTypeFinal,
 } from "@atscript/typescript/utils";
+import { UI_LITERAL_LABEL } from "../shared/annotation-keys";
 
 /**
  * One literal of a union: `key` / `label` are the string forms the UI keys
@@ -23,10 +25,42 @@ export interface LiteralOption {
  * into union items and produces synthetic unions containing both individual
  * literals and the original union type as nested items.
  */
-export function extractLiteralOptions(prop: TAtscriptAnnotatedType): LiteralOption[] | undefined {
+export function extractLiteralOptions(
+  prop: TAtscriptAnnotatedType,
+  outer?: TAtscriptAnnotatedType,
+): LiteralOption[] | undefined {
   if (prop.type.kind !== "union") return undefined;
   const result = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
-  return result && result.length > 0 ? result : undefined;
+  if (!result || result.length === 0) return undefined;
+  // `@ui.literalLabel` (since 0.1.148): a label per literal, raw text otherwise.
+  // `mergeStrategy: "append"` lists the referenced type's labels first, then the prop's own,
+  // so the later entry of a Map wins: for the same literal the prop's label overrides the type's.
+  // `outer` is the array prop whose element type this is (`tags: Tag[]`): its own labels
+  // are the prop's and win over the element type's.
+  const labels = [prop, outer].flatMap(
+    (node) =>
+      (node?.metadata.get(UI_LITERAL_LABEL) as { value: string; label: string }[] | undefined) ??
+      [],
+  );
+  if (labels.length) {
+    const byValue = new Map(labels.map((l) => [l.value, l.label]));
+    for (const option of result) option.label = byValue.get(option.key) ?? option.label;
+  }
+  return result;
+}
+
+/**
+ * The literal options of a field: a literal union's, or those of an array of one
+ * (`tags: Tag[]`), where the array prop's own `@ui.literalLabel` labels win over the
+ * element type's. `undefined` when the field is neither. Since 0.1.148.
+ */
+export function extractFieldLiteralOptions(
+  prop: TAtscriptAnnotatedType,
+): LiteralOption[] | undefined {
+  if (prop.type.kind === "array") {
+    return extractLiteralOptions((prop.type as TAtscriptTypeArray).of, prop);
+  }
+  return extractLiteralOptions(prop);
 }
 
 /** Returns true when the annotated type is a union composed entirely of literal values. */

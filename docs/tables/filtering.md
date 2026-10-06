@@ -316,6 +316,20 @@ server answers a clear 400.
   that remounted a scoped table is no longer needed.
 - `useTableUrlQuery` no longer inlines `vue-router` types (about 1,400 lines in
   the published typings), so the cast an app's own router needed can go.
+- New, all additive: [`@ui.valueHelp`](/forms/references#binding-without-a-foreign-key-ui-valuehelp),
+  [`@ui.valueHelp.distinct`](#distinct-values) and
+  [`@ui.literalLabel`](#union-labels); `FieldMeta.groupable` / `.decoration` and
+  `MetaResponse.decorations`, which turn the server's declared display-only fields
+  into [columns](/tables/customization#server-declared-decoration-columns).
+  They need `@atscript/db` 0.1.148 on the server and `@atscript/core` 0.1.100 for
+  the new annotations; an older server simply offers no distinct picker and no
+  decoration columns.
+- A custom picker that builds its own query passes `ValueHelpInfo.filter` and
+  selects `info.targetField`; `ValueHelpClient.search` takes `filter` and
+  `valueField`, and now matches the value field exactly instead of
+  `primaryKeys[0]` — see the [API reference](/api/ui#valuehelpinfo).
+- A custom cell for a union column shows the option label, not the raw literal:
+  see [Union labels](#union-labels).
 
 ## Display state vs applied state
 
@@ -469,15 +483,92 @@ const controls = { filterDialog: MyFilterDialog };
 
 ### Value-help filters
 
-When a column has `valueHelpInfo` (because the field carries
-`@db.rel.FK`), the filter dialog mounts `AsFilterValueHelp` — a mini
-table or typeahead that lets the user pick FK targets by their
-`@ui.dict.label`. The picker queries the referenced table's value-help
-endpoint with the columns flagged `@ui.dict.filterable` /
-`@ui.dict.sortable` / `@ui.dict.searchable`.
+A column gets a picker (in the filter dialog and as a dropdown in the inline
+field) from one of four sources, in this order:
 
-The resulting filter is a plain `eq` (or `OR` of `eq`s) on the FK
-column — no special wire shape; the value-help is purely a UI affordance.
+1. a **`@ui.valueHelp` binding** to a dictionary, with no foreign key;
+2. a foreign key (`@db.rel.FK`), including chains through views;
+3. a **literal union** (`'open' | 'closed'`) — static options;
+4. **distinct values** of the column (`@ui.valueHelp.distinct`).
+
+A dictionary picker (1, 2) lists the target's rows by `@ui.dict.label` and
+searches the target's controller. The result is a plain `eq` (or `OR` of `eq`s)
+on the column; the picker is purely a UI affordance.
+
+#### Dictionary bindings
+
+The binding's static `filter` is applied to every picker query, and fields it
+pins with `=` are hidden from the picker's columns and filter inputs — see
+[`@ui.valueHelp`](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
+If the dictionary answers 4xx — the caller cannot read it — that table's column
+falls back to a free-text filter instead of an empty picker, until the table
+reloads.
+
+#### Distinct values
+
+_Since 0.1.148._ `@ui.valueHelp.distinct` offers values already stored — a city,
+a brand — read from the table's own controller:
+
+```atscript
+@db.table 'customers'
+export interface Customer {
+    @ui.valueHelp.distinct
+    city?: string
+}
+```
+
+- **Offered only when** `/meta.fields[path]` is `filterable` **and** `groupable`
+  (`@atscript/moost-db` 0.1.148+), the column carries the annotation, and it has
+  no dictionary binding, FK help or literal options. On a table that declares
+  `@db.column.dimension` / `@db.column.measure` fields, only dimensions group, so
+  declare the column a dimension.
+- Values are distinct, with the null group dropped (use the `is empty`
+  condition). The table's `forceFilters` narrow them like they narrow the rows,
+  so the picker never offers a value the table cannot show. On a **sortable** column they come back ordered and the picker pages
+  through them as you scroll. On a column that is not sortable the order is not
+  stable, so the picker does not page: it lists the first 100 values — type to
+  narrow them.
+- Search is a case-insensitive prefix for text and an exact match for numbers.
+  The inline dropdown shows the first 10 values and **See All** opens the dialog.
+- The server's gates apply as for any grouped read — a hidden field, an ARBAC
+  `$groupBy` control, the row scope. A 4xx answer shows as an error in that
+  picker; the next open asks again.
+- The field must be a string or a number; `@ui.valueHelp.distinct` on a
+  `number.timestamp` is a compile error (a timestamp is not a value to pick from
+  a list — use the date filter).
+- Tables only. It is not offered in forms: picking among stored values defeats
+  entering new ones.
+
+#### Union labels
+
+_Since 0.1.148._ A literal union lists its raw literals unless labelled:
+
+```atscript
+@ui.literalLabel 'open', 'Open'
+@ui.literalLabel 'in_progress', 'In progress'
+export type TicketStatus = 'open' | 'in_progress' | 'closed'
+```
+
+A prop's labels are added to the referenced type's; for the same literal the
+prop's label wins:
+
+```atscript
+export interface Ticket {
+    @ui.literalLabel 'open', 'Opened'   // wins for 'open'; the type's other labels stay
+    status: TicketStatus
+}
+```
+
+The labels reach every consumer of the column's `options`: the dropdown and
+dialog, the default cell, the filter chips (an `eq` / `ne` chip reads the label),
+form selects and radios, and CSV export. The filter value on the wire stays the
+literal. Unlabelled literals keep their raw text. A custom cell component reads
+the label with `optionLabel(column, value)` from `@atscript/ui`.
+
+An array of a union (`tags: Tag[]`) takes the labels too: the array prop's own
+`@ui.literalLabel` is added to the element type's labels (per literal, the array prop's label wins), and form selects and table cells and chips show them. On a SQL adapter the array is JSON storage (existence-only), so its filter bar input is the empty / not-empty one, not the value picker; where the adapter reports the column filterable (Mongo, memory), the picker emits `$in` / `eq`, which match by element containment.
+In the editor, `@ui.literalLabel` completes the union's literals for its first
+argument, hovering that value shows the literal, and go-to-definition on it jumps to the literal. This works in `annotate` blocks too.
 
 ## Programmatic filters
 
@@ -668,8 +759,19 @@ const query = buildTableQuery({
 // → createdAt: { $gte: <Berlin midnight 6 days ago>, $lt: <tomorrow midnight> }
 ```
 
-Residual and forced filters are already Uniquery and are never encoded. URLs
-and presets carry the raw model — `stateToUrlQueryString` never encodes.
+Residual conditions (a deep link such as
+`createdAt>='2026-10-01'&createdAt<'2026-10-05'`, whose second range on one field
+the field-filter model cannot hold) go through the same encoder: each comparison
+(`$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, or a bare value) on a date or boolean
+column is typed like a condition built in the dialog, and so is each element of an
+`$in` / `$nin` list (a mixed list of epoch numbers and date strings is typed per
+element), however deep it sits in
+`$and` / `$or` / `$not`. Forced filters are Uniquery you author and are never
+encoded. A full ISO instant picked from a distinct-values picker (`@ui.valueHelp.distinct`)
+on an `isoDate` column is a string the server itself listed, so it is sent exactly as picked
+(`$eq` / `$ne` of the stored string, not a one-millisecond range); a day or month typed into
+that column is still encoded as a period. URLs and presets carry the raw model — `stateToUrlQueryString` never
+encodes — so a link stays readable and is typed when the query is built.
 
 ## `filtersToUniqueryFilter` directly
 

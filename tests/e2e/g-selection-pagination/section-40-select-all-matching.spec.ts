@@ -224,7 +224,7 @@ test.describe("Section 40.2 — Which query changes keep the selection", () => {
     await selectAllMatching(page, 15);
 
     // Widen the Status pill to open + done: new query, no selection.
-    await pickPillEnumValue(page, pillByLabel(page, "Status"), "done");
+    await pickPillEnumValue(page, pillByLabel(page, "Status"), "Done"); // option label (`@ui.literalLabel`)
     await expect(page.locator(BANNER)).toHaveCount(0);
     await expectSelectedCount(page, 0);
   });

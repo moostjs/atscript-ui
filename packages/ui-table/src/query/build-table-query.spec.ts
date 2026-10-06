@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { buildTableQuery } from "./build-table-query";
 import type { SortControl } from "@atscript/ui";
 import type { FieldFilters } from "../filters/filter-types";
@@ -330,7 +330,7 @@ describe("buildTableQuery — residual filters", () => {
 });
 
 describe("buildTableQuery — encodeCondition (0.1.148)", () => {
-  it("encodes field filters but not residual or forced filters", () => {
+  it("encodes field filters and residuals, but not forced filters", () => {
     const query = buildTableQuery({
       visibleColumnPaths: ["createdAt"],
       sorters: [],
@@ -338,13 +338,15 @@ describe("buildTableQuery — encodeCondition (0.1.148)", () => {
       residualFilters: [{ updatedAt: "2026-10-05" }],
       forceFilters: { archivedAt: "2026-10-05" },
       encodeCondition: (field, cond) =>
-        field === "createdAt" ? { [field]: { $gte: 1, $lt: 2, tag: cond.type } } : undefined,
+        field === "createdAt" || field === "updatedAt"
+          ? { [field]: { $gte: 1, $lt: 2, tag: cond.type } }
+          : undefined,
     });
     expect(query.filter).toEqual({
       $and: [
         { archivedAt: "2026-10-05" },
         { createdAt: { $gte: 1, $lt: 2, tag: "eq" } },
-        { updatedAt: "2026-10-05" },
+        { updatedAt: { $gte: 1, $lt: 2, tag: "eq" } },
       ],
     });
   });
@@ -378,5 +380,153 @@ describe("buildTableQuery — typed values from a URL", () => {
     expect(query.filter).toEqual({
       $and: [{ qty: { $gt: 5 } }, { total: { $gt: "100" } }, { active: true }],
     });
+  });
+});
+
+describe("buildTableQuery — temporal deep links (residual conditions)", () => {
+  const columns = [
+    { path: "createdAt", type: "datetime", valueKind: "timestamp" },
+    { path: "dueOn", type: "text", valueKind: "date" },
+    { path: "seenAt", type: "text", valueKind: "isoDate" },
+  ] as const;
+  const encodeCondition = createColumnValueEncoder(columns, { timeZone: "UTC" });
+  const build = (url: string) => {
+    const parsed = urlQueryStringToState(url);
+    return buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: parsed.filters,
+      residualFilters: parsed.residual,
+      encodeCondition,
+    }).filter;
+  };
+
+  it("a two-sided date range from a URL is sent as epoch bounds, never as raw text", () => {
+    const filter = JSON.stringify(build("createdAt>='2026-10-01'&createdAt<'2026-10-05'"));
+    expect(filter).not.toContain("2026-10-01'");
+    expect(filter).toContain(String(Date.UTC(2026, 9, 1)));
+    expect(filter).toContain(String(Date.UTC(2026, 9, 5)));
+  });
+
+  it("date and isoDate columns get their own storage form for residual ranges", () => {
+    const { $and } = build("dueOn>='2026-10-01'&dueOn<'2026-10-05'") as { $and: unknown[] };
+    expect($and).toHaveLength(2);
+    expect($and).toEqual(
+      expect.arrayContaining([{ dueOn: { $gte: "2026-10-01" } }, { dueOn: { $lt: "2026-10-05" } }]),
+    );
+    expect(JSON.stringify(build("seenAt>='2026-10-01'&seenAt<'2026-10-05'"))).toContain(
+      "2026-10-01T00:00:00.000Z",
+    );
+  });
+
+  it("recurses through $or / $not and leaves non-temporal fields alone", () => {
+    const query = buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: {},
+      residualFilters: [
+        { $or: [{ createdAt: { $gte: "2026-10-01" } }, { name: "x" }] },
+        { $not: { createdAt: { $lt: "2026-10-01", $exists: true } } },
+      ],
+      encodeCondition,
+    });
+    expect(query.filter).toEqual({
+      $and: [
+        { $or: [{ createdAt: { $gte: Date.UTC(2026, 9, 1) } }, { name: "x" }] },
+        {
+          $not: {
+            $and: [{ createdAt: { $lt: Date.UTC(2026, 9, 1) } }, { createdAt: { $exists: true } }],
+          },
+        },
+      ],
+    });
+  });
+});
+
+describe("buildTableQuery — $in / $nin residuals are typed per element", () => {
+  const columns = [
+    { path: "createdAt", type: "datetime", valueKind: "timestamp" },
+    { path: "dueOn", type: "text", valueKind: "date" },
+    { path: "qty", type: "number", valueKind: "integer" },
+    { path: "active", type: "boolean", valueKind: "boolean" },
+  ] as const;
+  const encodeCondition = createColumnValueEncoder(columns, { timeZone: "UTC" });
+  const build = (...residualFilters: Record<string, unknown>[]) =>
+    buildTableQuery({
+      visibleColumnPaths: [],
+      sorters: [],
+      filters: {},
+      residualFilters: residualFilters as never,
+      encodeCondition,
+    }).filter;
+  const day = (m: number, d: number) => Date.UTC(2026, m, d);
+
+  it("a $in of date strings on a timestamp column expands to a $or of day ranges", () => {
+    expect(build({ createdAt: { $in: ["2026-10-05", "2026-10-07"] } })).toEqual({
+      $or: [
+        { createdAt: { $gte: day(9, 5), $lt: day(9, 6) } },
+        { createdAt: { $gte: day(9, 7), $lt: day(9, 8) } },
+      ],
+    });
+  });
+
+  it("a $nin of date strings becomes an $and of excluded day ranges, never raw text", () => {
+    const filter = JSON.stringify(build({ createdAt: { $nin: ["2026-10-05"] } }));
+    expect(filter).not.toContain("2026-10-05");
+    expect(filter).toContain(String(day(9, 5)));
+  });
+
+  it("a $in on a date column matches each day, like a single $eq would", () => {
+    expect(build({ dueOn: { $in: ["2026-10-05", "2026-10-07"] } })).toEqual({
+      $or: [
+        { dueOn: { $gte: "2026-10-05", $lt: "2026-10-06" } },
+        { dueOn: { $gte: "2026-10-07", $lt: "2026-10-08" } },
+      ],
+    });
+  });
+
+  it("a $in of numeric / boolean text is typed and stays a list", () => {
+    expect(build({ qty: { $in: ["1", "2"] } })).toEqual({ qty: { $in: [1, 2] } });
+    expect(build({ active: { $nin: ["true", "false"] } })).toEqual({
+      active: { $nin: [true, false] },
+    });
+  });
+
+  it("leaves a $in on an unencoded field, and other operators beside it, alone", () => {
+    expect(build({ name: { $in: ["a", "b"] } })).toEqual({ name: { $in: ["a", "b"] } });
+    expect(build({ qty: { $in: ["1"], $exists: true } })).toEqual({
+      $and: [{ qty: { $in: [1] } }, { qty: { $exists: true } }],
+    });
+  });
+
+  it("keeps an element that is not a scalar", () => {
+    const filter = build({ createdAt: { $in: ["2026-10-05", null] } });
+    expect(JSON.stringify(filter)).toContain("null");
+    expect(JSON.stringify(filter)).toContain(String(day(9, 5)));
+  });
+});
+
+describe("buildTableQuery — one clock per build", () => {
+  it("field filters and residuals are encoded against the same `now`", () => {
+    const seen: (number | undefined)[] = [];
+    const encodeCondition = ((_f: string, _c: unknown, now?: number) => {
+      seen.push(now);
+      return undefined;
+    }) as never;
+    let tick = 1000;
+    const spy = vi.spyOn(Date, "now").mockImplementation(() => (tick += 1000));
+    try {
+      buildTableQuery({
+        visibleColumnPaths: [],
+        sorters: [],
+        filters: { a: [{ type: "eq", value: ["x"] }] },
+        residualFilters: [{ b: "y" }] as never,
+        encodeCondition,
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    expect(seen.length).toBeGreaterThanOrEqual(2);
+    expect(new Set(seen).size).toBe(1);
   });
 });

@@ -12,7 +12,16 @@ import {
 import type { Client } from "@atscript/db-client";
 import type { ReactiveTableState } from "../../types";
 import { useTable } from "../../composables/use-table";
-import { createStaticTableState, provideTableContext } from "../../composables/use-table-state";
+import {
+  createStaticTableState,
+  provideTableContext,
+  useTableContextOptional,
+} from "../../composables/use-table-state";
+import {
+  createDistinctPager,
+  declineIfRejected,
+  valueColumn,
+} from "../../composables/use-value-pickers";
 import { useTableNavBridge } from "../../composables/use-table-nav-bridge";
 import AsWindowTable from "../as-window-table.vue";
 import AsFilterDialog from "../defaults/as-filter-dialog.vue";
@@ -25,7 +34,13 @@ const props = defineProps<{
 
 const model = defineModel<FilterCondition[]>({ default: () => [] });
 
+// The table this dialog belongs to — read before the inner state is provided below.
+const outer = useTableContextOptional();
+// A dictionary target (FK or `@ui.valueHelp`): a full inner table.
 const info = props.column.valueHelpInfo;
+// Distinct values of the column itself (`@ui.valueHelp.distinct`) read like an
+// enum picker (one value column) but page + search on the server.
+const distinct = props.column.distinct;
 const options = props.column.options;
 
 function modelToValues(conds: FilterCondition[]): unknown[] {
@@ -62,22 +77,33 @@ if (info) {
     rowValueFn: (row) => row[info.targetField],
     selectionPersistence: "persist",
     selectedRows: selectionRef,
+    // The binding's static scope, AND'd into every query (since 0.1.148); the
+    // committed field is always fetched, even when it is not a key / label.
+    forceFilters: info.filter,
+    alwaysSelected: [info.targetField],
   });
+} else if (distinct) {
+  const fetchPage = createDistinctPager(outer?.state, props.column);
+  const { state } = createStaticTableState({
+    rows: [],
+    columns: [valueColumn(false)],
+    searchPaths: ["__label"],
+    // one page = one window block (100), so a follow-up block is the next page
+    limit: 100,
+    selection: {
+      rowValueFn: (row) => row.__value,
+      selectedRows: selectionRef,
+    },
+    remote: ({ searchTerm }, page, size) => fetchPage(searchTerm.trim(), page, size),
+  });
+  innerState = state;
+  provideTableContext({ state, client: {} as Client, controls: {} });
 } else if (options) {
   const enumRows: Record<string, unknown>[] = options.map((o) => ({
     __value: o.key,
     __label: o.label,
   }));
-  const enumColumns: ColumnDef[] = [
-    {
-      path: "__label",
-      label: "Value",
-      type: "text",
-      sortable: true,
-      filterable: false,
-      order: 0,
-    },
-  ];
+  const enumColumns: ColumnDef[] = [valueColumn(true)];
   const { state } = createStaticTableState({
     rows: enumRows,
     columns: enumColumns,
@@ -99,9 +125,11 @@ if (info) {
       .then((r) => {
         resolved.value = r;
       })
-      .catch(() => {
-        // If meta fails, the inner table will still show whatever came through
-        // its own meta fetch; resolved stays null and dict clamping is skipped.
+      .catch((err) => {
+        // 4xx: the dictionary is not readable for this caller — the dialog
+        // falls back to its conditions tab. Anything else: the inner table
+        // shows whatever came through its own meta fetch; dict clamping is skipped.
+        declineIfRejected(outer?.state, info, err);
       });
   });
 }
@@ -122,7 +150,11 @@ if (info && innerState) {
       initialized = true;
       stop();
       const dictPaths = valueHelpDictPaths(r);
-      const dictCols = fkState.allColumns.value.filter((c) => dictPaths.has(c.path));
+      // Fields the filter pins with `=` are constant in the picker — no column, no filter input.
+      const pinned = new Set(info.pinned);
+      const dictCols = fkState.allColumns.value.filter(
+        (c) => dictPaths.has(c.path) && !pinned.has(c.path),
+      );
       fkState.columnNames.value = dictCols.map((c) => c.path);
       if (fkState.filterFields.value.length === 0) {
         fkState.filterFields.value = dictCols.filter(isColumnFilterable).map((c) => c.path);

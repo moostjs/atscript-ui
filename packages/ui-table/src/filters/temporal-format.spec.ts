@@ -90,3 +90,31 @@ describe("formatFilterExpr formatValue", () => {
     expect(text).toContain("status equals open");
   });
 });
+
+describe("chips on union columns (@ui.literalLabel)", () => {
+  const column = {
+    type: "enum",
+    valueKind: "string" as const,
+    options: [
+      { key: "open", label: "Open" },
+      { key: "in-progress", label: "In progress" },
+    ],
+  };
+
+  it("`eq` / `ne` chips read the option label", () => {
+    expect(formatColumnCondition(column, { type: "eq", value: ["in-progress"] })).toBe(
+      "In progress",
+    );
+    expect(formatColumnCondition(column, { type: "ne", value: ["open"] })).toBe("!=Open");
+  });
+
+  it("pattern operators keep the typed text; unknown literals stay raw", () => {
+    expect(formatColumnCondition(column, { type: "contains", value: ["in-"] })).toBe("*in-*");
+    expect(formatColumnCondition(column, { type: "eq", value: ["archived"] })).toBe("archived");
+  });
+
+  it("formatColumnValue labels a single value for residual-filter display", () => {
+    expect(formatColumnValue(column, "open")).toBe("Open");
+    expect(formatColumnValue(column, "zzz")).toBeUndefined();
+  });
+});

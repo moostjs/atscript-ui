@@ -8,6 +8,7 @@ import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typesc
 import type { TDbActionInfo } from "@atscript/db-client";
 import { getFieldMeta } from "../shared/field-resolver";
 import {
+  DB_HTTP_PATH,
   EXPECT_MAX_LENGTH,
   META_LABEL,
   UI_TABLE_COMPONENT,
@@ -17,11 +18,13 @@ import {
   UI_TABLE_TYPE,
   UI_TABLE_WIDTH,
   UI_TYPE,
+  UI_VALUE_HELP_DISTINCT,
 } from "../shared/annotation-keys";
 import { extractMeasurement } from "../form/measurement";
 import { humanizePath } from "../shared/str";
-import { extractLiteralOptions } from "../value-help/extract-literals";
+import { extractFieldLiteralOptions, type LiteralOption } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
+import type { ValueHelpInfo } from "../value-help/types";
 import type {
   ColumnDef,
   ColumnValueKind,
@@ -72,35 +75,37 @@ export function createTableDef(
     // `fetchableFields` below so they remain valid `@ui.table.selectWith` targets.
     if (getFieldMeta(prop, UI_TABLE_EXCLUDE) !== undefined) continue;
 
-    const options = extractLiteralOptions(prop);
+    const options = extractFieldLiteralOptions(prop);
     const valueHelpInfo = extractValueHelp(prop);
+    let distinct: ColumnDef["distinct"];
+    if (!valueHelpInfo && !options && fieldMeta.groupable && fieldMeta.filterable) {
+      // Distinct-values picker: opt-in per field, served by this table's own controller.
+      const url = type.metadata.get(DB_HTTP_PATH) as string | undefined;
+      if (url && getFieldMeta(prop, UI_VALUE_HELP_DISTINCT) !== undefined) {
+        distinct = { url, field: path };
+      }
+    }
 
-    const maxLengthMeta = getFieldMeta(prop, EXPECT_MAX_LENGTH) as
-      | { length: number; message?: string }
-      | undefined;
+    columns.push(buildColumn(path, prop, fieldMeta, { options, valueHelpInfo, distinct }));
+  }
 
-    const tableType = getFieldMeta(prop, UI_TABLE_TYPE) as string | undefined;
-    const sharedType = getFieldMeta(prop, UI_TYPE) as string | undefined;
-    const tableComponent = getFieldMeta(prop, UI_TABLE_COMPONENT) as string | undefined;
-
-    columns.push({
-      path,
-      label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
-      type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
-      valueKind: inferValueKind(prop),
-      component: tableComponent,
-      selectWith: getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined,
-      sortable: fieldMeta.sortable ?? false,
-      filterable: fieldMeta.filterable ?? false,
-      ...(fieldMeta.filterOps && { filterOps: [...fieldMeta.filterOps] }),
-      nullable: prop.optional === true,
-      width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
-      maxLen: maxLengthMeta?.length,
-      order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
-      options,
-      valueHelpInfo,
-      ...extractMeasurement(prop),
-    });
+  // Server-declared display-only columns (`@DbDecorations`): top-level props of
+  // `meta.decorations` the server lists in `meta.fields` with `decoration: true`.
+  // Not sortable, not filterable, no value help; absent on older servers.
+  if (meta.decorations) {
+    const decoType = deserializeAnnotatedType(meta.decorations);
+    if (decoType.type.kind === "object") {
+      for (const [path, prop] of (decoType as TAtscriptAnnotatedType<TAtscriptTypeObject>).type
+        .props) {
+        const fieldMeta = meta.fields[path];
+        if (!fieldMeta?.decoration || flatMap.has(path)) continue;
+        if (getFieldMeta(prop, UI_TABLE_EXCLUDE) !== undefined) continue;
+        flatMap.set(path, prop);
+        columns.push(
+          buildColumn(path, prop, fieldMeta, { options: extractFieldLiteralOptions(prop) }),
+        );
+      }
+    }
   }
 
   columns.sort((a, b) => a.order - b.order);
@@ -127,6 +132,51 @@ export function createTableDef(
     vectorSearchable: meta.vectorSearchable,
     searchIndexes: meta.searchIndexes,
     relations: meta.relations,
+  };
+}
+
+/**
+ * One column. A server-declared display-only column (`fieldMeta.decoration`)
+ * is never sortable, filterable or groupable and always nullable (a decoration
+ * can be absent); an ordinary one takes its capabilities from `/meta`.
+ */
+function buildColumn(
+  path: string,
+  prop: TAtscriptAnnotatedType,
+  fieldMeta: FieldMeta,
+  resolved: {
+    options?: LiteralOption[];
+    valueHelpInfo?: ValueHelpInfo;
+    distinct?: ColumnDef["distinct"];
+  },
+): ColumnDef {
+  const { options, valueHelpInfo, distinct } = resolved;
+  const maxLengthMeta = getFieldMeta(prop, EXPECT_MAX_LENGTH) as
+    | { length: number; message?: string }
+    | undefined;
+  const tableType = getFieldMeta(prop, UI_TABLE_TYPE) as string | undefined;
+  const sharedType = getFieldMeta(prop, UI_TYPE) as string | undefined;
+  const tableComponent = getFieldMeta(prop, UI_TABLE_COMPONENT) as string | undefined;
+  const decoration = fieldMeta.decoration === true;
+  const filterOps = decoration ? undefined : fieldMeta.filterOps;
+  return {
+    path,
+    label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
+    type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
+    valueKind: inferValueKind(prop),
+    component: tableComponent,
+    selectWith: getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined,
+    sortable: !decoration && (fieldMeta.sortable ?? false),
+    filterable: !decoration && (fieldMeta.filterable ?? false),
+    ...(filterOps && { filterOps: [...filterOps] }),
+    nullable: decoration || prop.optional === true,
+    width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
+    maxLen: maxLengthMeta?.length,
+    order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
+    options,
+    valueHelpInfo,
+    ...(distinct && { distinct }),
+    ...extractMeasurement(prop),
   };
 }
 

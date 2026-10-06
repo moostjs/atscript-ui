@@ -86,6 +86,10 @@ Gotchas:
 - An unknown key in a stored preset is ignored, so removing a display column later does not break saved views.
 - Pure helper in `@atscript/ui-table`: `mergeDisplayColumns`; `ColumnDef` gained `local` (a `local` column with `sortable: true` is ordered in memory).
 
+## Server-declared decoration columns (since 0.1.148)
+
+A `@DbDecorations(Iface)` controller (`@atscript/moost-db` 0.1.148) computes display-only values and sends the plain interface as `/meta.decorations`, each prop listed in `meta.fields` with `decoration: true`. `createTableDef` turns every such TOP-LEVEL prop (not `@ui.table.exclude`) into a column through the same code (label, `@ui.table.*`, display type): `sortable: false`, `filterable: false`, `nullable: true`, no `valueHelpInfo`, added to `flatMap` and `fetchableFields` (so it is valid in `$select`, `selectWith`, `alwaysSelected` and CSV export). The server omits a decoration while its source fields are hidden from the caller. No `decorations` (older server) = no change. Unlike `:displayColumns`, the value is fetched. Types: `MetaResponse.decorations?`, `FieldMeta.decoration?`.
+
 ## Cell maps — `:types` and `:components`
 
 ```ts

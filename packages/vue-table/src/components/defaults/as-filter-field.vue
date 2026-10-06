@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, shallowRef, useId, watch } from "vue";
 import { until } from "@vueuse/core";
-import type { ColumnDef, ResolvedValueHelp, ValueHelpInfo } from "@atscript/ui";
+import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
 import {
   ValueHelpClient,
   getMetaEntry,
@@ -17,6 +17,7 @@ import {
   columnFilterKind,
   isTemporalKind,
   parseColumnFilterInput,
+  stableValueKey,
   type FilterCondition,
 } from "@atscript/ui-table";
 import {
@@ -29,6 +30,13 @@ import {
 import { useConditionFormat } from "../../composables/use-condition-format";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTable } from "../../composables/use-table";
+import {
+  createDistinctPager,
+  declineIfRejected,
+  hasValuePicker,
+  useDistinctPicker,
+  valueColumn,
+} from "../../composables/use-value-pickers";
 import { useDragScroll } from "../../composables/use-drag-scroll";
 import AsTableBase from "../internal/as-table-base.vue";
 
@@ -44,16 +52,19 @@ const chipsScrollEl = ref<HTMLElement | null>(null);
 useDragScroll(chipsScrollEl);
 
 // ── Determine column mode ──────────────────────────────────
-const info = props.column.valueHelpInfo as ValueHelpInfo | undefined;
-const hasValueHelp = !!info;
+// A dictionary target (FK or `@ui.valueHelp`) and the distinct values of the
+// column itself (`@ui.valueHelp.distinct`) are separate pickers; a column has
+// at most one of them, or literal options.
+const info = props.column.valueHelpInfo;
+const distinct = props.column.distinct;
 const hasOptions = !!(props.column.options && props.column.options.length > 0);
-const hasDropdown = hasValueHelp || hasOptions;
+const hasDropdown = computed(() => hasValuePicker(state, props.column));
 
 let vhClient: ValueHelpClient | undefined;
 let innerState: ReturnType<typeof useTable> | undefined;
 const resolved = shallowRef<ResolvedValueHelp | null>(null);
 
-if (hasValueHelp && info) {
+if (info) {
   vhClient = new ValueHelpClient(getMetaEntry(info.url).client);
 
   innerState = useTable(info.url, {
@@ -61,13 +72,25 @@ if (hasValueHelp && info) {
     queryOnMount: false,
     limit: 10,
     provideContext: false,
+    // the binding's static scope + the committed field (since 0.1.148)
+    forceFilters: info.filter,
+    alwaysSelected: [info.targetField],
   });
 }
+
+// ── Distinct values (server-searched flat list) ─────────────
+// One window-sized first page (shared with the dialog), the first 10 shown.
+const DISTINCT_WINDOW = 100;
+const DISTINCT_SHOWN = 10;
+const distinctPicker = distinct
+  ? useDistinctPicker(createDistinctPager(state, props.column), DISTINCT_WINDOW, DISTINCT_SHOWN)
+  : undefined;
 
 const dictColumns = computed<ColumnDef[]>(() => {
   if (!resolved.value || !innerState) return [];
   const paths = valueHelpDictPaths(resolved.value);
-  return innerState.allColumns.value.filter((c) => paths.has(c.path));
+  const pinned = new Set(info?.pinned);
+  return innerState.allColumns.value.filter((c) => paths.has(c.path) && !pinned.has(c.path));
 });
 
 async function ensureResolved(): Promise<ResolvedValueHelp | null> {
@@ -76,7 +99,9 @@ async function ensureResolved(): Promise<ResolvedValueHelp | null> {
   try {
     resolved.value = await resolveValueHelp(info.url);
     return resolved.value;
-  } catch {
+  } catch (err) {
+    // The target answered 4xx (not readable for this caller): no picker, free text.
+    declineIfRejected(state, info, err);
     return null;
   }
 }
@@ -97,40 +122,31 @@ const enumRows = hasOptions
     )
   : undefined;
 
-const enumColumns: ColumnDef[] | undefined = hasOptions
-  ? [
-      {
-        path: "__label",
-        label: "Value",
-        type: "text",
-        sortable: false,
-        filterable: false,
-        order: 0,
-      },
-    ]
-  : undefined;
+const enumColumns: ColumnDef[] | undefined =
+  hasOptions || distinct ? [valueColumn(false)] : undefined;
 
 // ── Dropdown rows & columns (unified) ──────────────────────
 const dropdownRows = computed(() => {
   if (innerState) return innerState.results.value;
+  if (distinctPicker) return distinctPicker.rows.value;
   if (enumRows) return enumRows.value;
   return [];
 });
 
 const dropdownColumns = computed(() => {
-  if (hasValueHelp) return dictColumns.value;
+  if (info) return dictColumns.value;
   if (enumColumns) return enumColumns;
   return [];
 });
 
 const dropdownQuerying = computed(() => {
   if (innerState) return innerState.querying.value;
-  return false;
+  return distinctPicker?.querying.value ?? false;
 });
 
 const dropdownQueryError = computed<Error | null>(() => {
   if (innerState) return innerState.queryError.value;
-  return null;
+  return distinctPicker?.error.value ?? null;
 });
 
 const dropdownLoadingMetadata = computed(() => {
@@ -140,9 +156,17 @@ const dropdownLoadingMetadata = computed(() => {
 
 const seeAllCount = computed(() => {
   if (innerState) return innerState.totalCount.value;
+  // distinct: the dialog pages the rest — `count` is one past the window when more follow
+  if (distinctPicker) return distinctPicker.count.value;
   if (enumRows) return enumRows.value.length;
   return 0;
 });
+/** "100+" when a distinct picker has more values than its first page (its count is one past it). */
+const seeAllLabel = computed(() =>
+  !innerState && distinctPicker?.more.value
+    ? `${distinctPicker.count.value - 1}+`
+    : String(seeAllCount.value),
+);
 
 // ── Chip model ───────────────────────────────────────────────
 interface ChipItem {
@@ -160,11 +184,12 @@ function extractEqValues(conditions: FilterCondition[] | undefined): unknown[] {
   return values;
 }
 
+const dropdownCapable = !!info || hasOptions || !!distinct;
 const selectedValues = ref<unknown[]>(
-  hasDropdown ? extractEqValues(state.filters.value[props.column.path]) : [],
+  dropdownCapable ? extractEqValues(state.filters.value[props.column.path]) : [],
 );
 
-if (hasDropdown) {
+if (dropdownCapable) {
   watch(selectedValues, (values) => {
     const current = extractEqValues(state.filters.value[props.column.path]);
     if (arraysEqual(values, current)) return;
@@ -214,8 +239,8 @@ watch(
 
 // ── Row value extraction ───────────────────────────────────
 function rowValueFn(row: Record<string, unknown>): unknown {
-  if (hasValueHelp && info) return row[info.targetField];
-  if (hasOptions) return row.__value;
+  if (info) return row[info.targetField];
+  if (hasOptions || distinct) return row.__value;
   return undefined;
 }
 
@@ -248,11 +273,28 @@ if (innerState) {
   );
 }
 
-const debouncedSearch = hasValueHelp
+const serverSearch = !!info || !!distinct;
+const debouncedSearch = serverSearch
   ? debounce(() => {
       void doSearch(searchTerm.value);
     }, 500)
   : undefined;
+
+if (distinctPicker) {
+  // A changed table scope makes the loaded values stale: the next open asks again.
+  watch(
+    () => stableValueKey(state.forceFilters.value ?? null),
+    () => {
+      distinctPicker.loaded.value = false;
+    },
+  );
+  // First open loads the first page; typing re-queries the server.
+  watch(dropdownOpen, (open) => {
+    if (open && !distinctPicker.loaded.value && !distinctPicker.querying.value) {
+      void distinctPicker.load("");
+    }
+  });
+}
 
 onBeforeUnmount(() => {
   debouncedSearch?.cancel();
@@ -260,12 +302,13 @@ onBeforeUnmount(() => {
 
 function onSearchInput(event: Event) {
   searchTerm.value = (event.target as HTMLInputElement).value;
-  if (hasValueHelp) {
+  if (serverSearch) {
     debouncedSearch!();
   }
 }
 
 async function doSearch(text: string) {
+  if (distinctPicker) return distinctPicker.load(text);
   if (!vhClient || !innerState) return;
   const r = await ensureResolved();
   if (!r) return;
@@ -275,6 +318,8 @@ async function doSearch(text: string) {
       text: text || undefined,
       mode: "filter",
       limit: 10,
+      filter: info?.filter,
+      valueField: info?.targetField,
     });
     innerState.results.value = result.items;
     innerState.queryError.value = null;
@@ -306,7 +351,15 @@ function filterFunction(val: unknown[]): unknown[] {
 }
 
 const noEnumMatches = computed(() => {
-  if (!dropdownOpen.value || !enumRows) return false;
+  if (!dropdownOpen.value) return false;
+  if (distinctPicker) {
+    return (
+      !distinctPicker.querying.value &&
+      !distinctPicker.error.value &&
+      distinctPicker.rows.value.length === 0
+    );
+  }
+  if (!enumRows) return false;
   return filterFunction(enumRows.value).length === 0;
 });
 
@@ -352,7 +405,7 @@ function onInputFocus() {
 }
 
 function onEnter() {
-  if (hasDropdown || !searchTerm.value.trim()) return;
+  if (hasDropdown.value || !searchTerm.value.trim()) return;
 
   const parsed = parseColumnFilterInput(searchTerm.value, props.column);
   if (!parsed) return;
@@ -385,7 +438,7 @@ function onF4(event: KeyboardEvent) {
         v-model:open="dropdownOpen"
         :multiple="true"
         :reset-search-term-on-blur="false"
-        :ignore-filter="hasValueHelp"
+        :ignore-filter="serverSearch"
         as-child
       >
         <ComboboxAnchor as-child>
@@ -456,7 +509,7 @@ function onF4(event: KeyboardEvent) {
           <div v-if="chips.length > 0 || seeAllCount > 10" class="as-filter-field-dropdown-footer">
             <button v-if="chips.length > 0" type="button" @click="clearAll">Reset</button>
             <button v-if="seeAllCount > 10" type="button" @click="openFilterDialog">
-              See All ({{ seeAllCount }})
+              See All ({{ seeAllLabel }})
               <span class="as-kbd">F4</span>
             </button>
           </div>

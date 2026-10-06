@@ -128,6 +128,9 @@ declare global {
     "ui.table.styles": (string)[]
     "ui.table.type": string
     "ui.table.order": number
+    "ui.valueHelp": { target: import("@atscript/typescript/utils").AtscriptRef, field: string, filter?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "ui.valueHelp.distinct": boolean
+    "ui.literalLabel": ({ value: string, label: string })[]
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]

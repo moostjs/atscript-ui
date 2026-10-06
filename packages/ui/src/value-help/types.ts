@@ -1,3 +1,5 @@
+import type { FilterExpr } from "@atscript/db-client";
+
 /** An option for select/radio fields — either a plain string or a `{ key, label }` pair. */
 export type TFormEntryOptions = { key: string; label: string } | string;
 
@@ -18,4 +20,14 @@ export interface ValueHelpInfo {
    * This is the value committed to the FK field when the user picks a row.
    */
   targetField: string;
+  /**
+   * Static dictionary scope from `@ui.valueHelp`'s filter — AND'd into every
+   * picker query. Since 0.1.148.
+   */
+  filter?: FilterExpr;
+  /**
+   * Target fields the filter pins with `=` — constant in the picker, hidden
+   * from its columns. Since 0.1.148.
+   */
+  pinned?: string[];
 }
