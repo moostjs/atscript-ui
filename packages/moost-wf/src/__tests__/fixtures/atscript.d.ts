@@ -53,6 +53,7 @@ declare global {
     "db.column.sortable": boolean
     "db.column.searchable": boolean
     "db.column.version": boolean
+    "db.column.version.exempt": boolean
     "db.default": string
     "db.default.increment": number | true
     "db.default.uuid": boolean
