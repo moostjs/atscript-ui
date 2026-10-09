@@ -52,6 +52,7 @@ function makeFactory(impl: { meta?: () => Promise<unknown>; query?: () => Promis
     ({
       meta: metaSpy,
       query: querySpy,
+      invalidateMeta: vi.fn(),
     }) as unknown as Client;
   return { factory, metaSpy };
 }

@@ -39,7 +39,11 @@ function column(over: Partial<ColumnDef> = {}): ColumnDef {
 }
 
 function fakeClient(aggregate: (q: unknown) => Promise<unknown>) {
-  return { meta: () => Promise.resolve(META), aggregate: vi.fn(aggregate) } as never;
+  return {
+    meta: () => Promise.resolve(META),
+    aggregate: vi.fn(aggregate),
+    invalidateMeta: () => {},
+  } as never;
 }
 
 afterEach(() => {

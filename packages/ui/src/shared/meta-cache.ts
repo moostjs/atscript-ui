@@ -62,8 +62,10 @@ export function getMetaEntry(url: string, factory?: ClientFactory): MetaCacheEnt
  * handed out keep working; the next `getMetaEntry` refetches.
  */
 export function resetMetaCache(): void {
-  for (const entry of cache.values()) entry.client.invalidateMeta();
+  const entries = [...cache.values()];
   cache.clear();
+  // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
+  for (const entry of entries) entry.client.invalidateMeta?.();
   // Shared value-help search results belong to the same session.
   invalidateValueHelpCache();
 }

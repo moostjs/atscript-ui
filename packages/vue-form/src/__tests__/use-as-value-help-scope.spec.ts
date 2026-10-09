@@ -33,7 +33,9 @@ afterEach(() => {
 describe("useAsValueHelp — @ui.valueHelp scope", () => {
   it("applies the static filter and commits the `value` field, not the composite key head", async () => {
     const query = vi.fn().mockResolvedValue([{ attribute: "color", value: "blue", label: "Blue" }]);
-    setDefaultClientFactory(() => ({ meta: () => Promise.resolve(DICT_META), query }) as never);
+    setDefaultClientFactory(
+      () => ({ meta: () => Promise.resolve(DICT_META), query, invalidateMeta: () => {} }) as never,
+    );
 
     const model = { value: undefined as unknown };
     const filter = { attribute: { $eq: "color" } };
