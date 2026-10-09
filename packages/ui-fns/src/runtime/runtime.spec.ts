@@ -44,6 +44,15 @@ describe("fn-compiler", () => {
     expect(fn1).toBe(fn2);
   });
 
+  it("compiled functions run in the deserialize-fn sandbox", () => {
+    const fn = compileFieldFn<unknown[]>(
+      "(v, data) => [typeof window, typeof process, typeof Math, data.n, v]",
+    );
+    const scope = { v: "x", data: { n: 1 }, context: {}, entry: undefined };
+    expect(fn(scope)).toEqual(["object", "object", "object", 1, "x"]);
+    expect(compileTopFn("() => { data = null; return data }")(scope)).toEqual({ n: 1 });
+  });
+
   it("compileTopFn compiles a form-level function", () => {
     const fn = compileTopFn<number>("(data) => data.items.length");
     const result = fn({ data: { items: [1, 2, 3] }, context: {}, entry: undefined });

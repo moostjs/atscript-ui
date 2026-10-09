@@ -18,7 +18,7 @@ catalog:
   "@moostjs/event-wf": ^0.6.48
   "@moostjs/vite": ^0.6.48
   "@playwright/test": ^1.60.0
-  "@prostojs/deserialize-fn": ^0.0.5
+  "@prostojs/deserialize-fn": ^0.0.6
   "@swc/core": ^1.15.40
   "@tanstack/vue-virtual": ^3.13.26
   "@tsdown/css": ^0.21.4

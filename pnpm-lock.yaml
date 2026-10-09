@@ -304,6 +304,9 @@ importers:
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
+      '@prostojs/deserialize-fn':
+        specifier: ^0.0.6
+        version: 0.0.6
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
@@ -311,9 +314,6 @@ importers:
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.1.102(@atscript/core@0.1.102(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.151)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.5)(@wooksjs/event-core@0.7.27)(wooks@0.7.27)
-      '@prostojs/deserialize-fn':
-        specifier: ^0.0.5
-        version: 0.0.5
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@0.1.14
         version: '@voidzero-dev/vite-plus-test@0.1.14(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -1742,8 +1742,8 @@ packages:
   '@prostojs/cli-help@0.0.12':
     resolution: {integrity: sha512-mUpJFU7/cIULB4pQoPd8OzwiO3wZlt7NGoF4IwNdwa9UUNDi1SA8pyRPGM8v9Gd3iKjygZf8LVHW7WrLZ7ySfg==}
 
-  '@prostojs/deserialize-fn@0.0.5':
-    resolution: {integrity: sha512-pXyp6be5qKXl776woeucIRwWMcTlDX2DyuTnq+otgDs5hF/0iNXfLnEsuW0zSxjwNs1V7Sdk2rYP8rS8DaJivQ==}
+  '@prostojs/deserialize-fn@0.0.6':
+    resolution: {integrity: sha512-YRdAzFmXWJaSXWnZnKf2oJj2VB3huynYjS9cEDjZIXEB0d0pGxT1i//mMT+XKZjSAXilG6zGzvW49EpmZ0xw7Q==}
 
   '@prostojs/ftring@0.0.4':
     resolution: {integrity: sha512-oLrPVn/UkifSfRRqDH1W055YvwxZRVHdLjlVQBPhM7xsosn0nFIQaRSNiZJH/GIRXR9ghj+INoJ9aNDJlvaogg==}
@@ -4678,7 +4678,7 @@ snapshots:
 
   '@prostojs/cli-help@0.0.12': {}
 
-  '@prostojs/deserialize-fn@0.0.5': {}
+  '@prostojs/deserialize-fn@0.0.6': {}
 
   '@prostojs/ftring@0.0.4': {}
 
