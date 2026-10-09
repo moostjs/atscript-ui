@@ -54,8 +54,11 @@ export function planFetch(args: PlanFetchArgs): FetchPlan | null {
     return { skip, limit: blockSize, mode: "steady" };
   }
 
+  // Both buffer scans stop at `buffer`: only "fewer than `buffer` cached rows"
+  // matters below, so walking the rest of a long cached run (every scroll
+  // frame) cannot change the plan.
   let fwdBuffer = 0;
-  while (cache.has(end + 1 + fwdBuffer)) fwdBuffer++;
+  while (fwdBuffer < buffer && cache.has(end + 1 + fwdBuffer)) fwdBuffer++;
 
   // STEADY (forward prefetch).
   const forwardEdge = end + 1 + fwdBuffer;
@@ -64,7 +67,7 @@ export function planFetch(args: PlanFetchArgs): FetchPlan | null {
   }
 
   let bwdBuffer = 0;
-  while (start - 1 - bwdBuffer >= 0 && cache.has(start - 1 - bwdBuffer)) {
+  while (bwdBuffer < buffer && start - 1 - bwdBuffer >= 0 && cache.has(start - 1 - bwdBuffer)) {
     bwdBuffer++;
   }
 

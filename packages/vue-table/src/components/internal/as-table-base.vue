@@ -1,5 +1,15 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, useSlots, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUpdate,
+  onMounted,
+  ref,
+  shallowRef,
+  useSlots,
+  watch,
+  type Slots,
+} from "vue";
 import { useResizeObserver } from "@vueuse/core";
 import type { ColumnDef, SortControl } from "@atscript/ui";
 import {
@@ -23,11 +33,11 @@ import { useTableContextOptional } from "../../composables/use-table-state";
 import { useCellResolver } from "../../composables/use-cell-resolver";
 import { useCellComponents } from "../../composables/use-cell-components";
 import { toSelectAllState } from "../../composables/state/create-selection";
-import AsSelectCell from "./as-select-cell.vue";
 import AsTableColgroup from "./as-table-colgroup.vue";
 import AsTableHeader from "./as-table-header.vue";
 import AsTableStatus from "./as-table-status.vue";
 import AsTableVirtualizer from "./as-table-virtualizer.vue";
+import AsTableRow from "./as-table-row.vue";
 
 type RenderMode = "standalone" | "combobox" | "listbox";
 
@@ -93,6 +103,12 @@ const props = withDefaults(
      * Since 0.1.133.
      */
     rowAttrs?: RowAttrsHook;
+    /**
+     * The consumer's own slots when they are re-forwarded (by `<AsTable>`):
+     * rows re-render on a change of THESE functions, not of the forwarding
+     * closures. Internal.
+     */
+    slotSource?: Slots;
   }>(),
   {
     select: "none",
@@ -215,7 +231,38 @@ const emit = defineEmits<{
 
 const slots = useSlots();
 
+// Rows render the renderer's cell slots straight from `slots` (a prop), so a
+// row re-renders only when its own props change. `slotRev` moves when the
+// slot functions themselves change (a dynamic consumer slot): every row
+// re-renders then, exactly when its slot content could differ. The functions
+// are read from `slotSource` (the `<AsTable>` consumer's own slots) when
+// given — `<AsTable>` re-forwards slots with fresh closures on each render.
+const slotRev = shallowRef(0);
+let slotFns = snapshotSlotFns();
+function snapshotSlotFns(): Map<string, unknown> {
+  const source = (props.slotSource ?? slots) as Record<string, unknown>;
+  const out = new Map<string, unknown>();
+  for (const name in source) if (name.startsWith("cell-")) out.set(name, source[name]);
+  return out;
+}
+onBeforeUpdate(() => {
+  const next = snapshotSlotFns();
+  let same = next.size === slotFns.size;
+  if (same) for (const [name, fn] of next) if (slotFns.get(name) !== fn) same = false;
+  if (!same) {
+    slotFns = next;
+    slotRev.value++;
+  }
+});
+
+// `slots` is not reactive: both read `slotRev` so a slot added / removed by
+// the consumer is picked up.
+const hasSelectSlot = computed(() => {
+  void slotRev.value;
+  return !!slots["cell-__select"];
+});
 const cellSlotFlags = computed(() => {
+  void slotRev.value;
   const out: Record<string, boolean> = {};
   for (const c of props.columns) out[c.path] = !!slots[`cell-${c.path}`];
   return out;
@@ -224,11 +271,6 @@ const cellSlotFlags = computed(() => {
 function isPkSelected(row: Record<string, unknown>): boolean {
   if (!ctx || !props.rowValueFn) return false;
   return ctx.state.isPkSelected(props.rowValueFn(row));
-}
-
-function ariaSelectedFor(selected: boolean): "true" | "false" | undefined {
-  if (props.select === "none") return undefined;
-  return selected ? "true" : "false";
 }
 
 function onRowClick(row: Record<string, unknown>, event: MouseEvent, index: number) {
@@ -563,85 +605,38 @@ function rowTextValue(row: Record<string, unknown>): string {
         <template #default="{ item, index, spaceBefore }">
           <!--
             `meta` (the row's hook results + its selectability verdict) and
-            `selected` are resolved ONCE per row; `v-bind="meta.attrs"` comes FIRST so every
-            framework binding after it wins — consumer attrs can decorate a
-            row but can never rewrite its id / role / aria / data contract.
+            `selected` are resolved ONCE per row. Each row is its own
+            component: a change that touches one row re-renders that row only.
           -->
           <template
             v-for="[meta, selected] in [[metaFor(index), isPkSelected(item)] as const]"
             :key="0"
           >
-            <tr
-              v-bind="meta.attrs"
-              :id="rowIdFor(index)"
-              :role="'row'"
-              :aria-rowindex="index + 2"
-              :aria-selected="ariaSelectedFor(selected)"
-              :data-selectable="meta.selectable.ok ? undefined : 'false'"
-              :class="[{ 'as-table-row-active': isActiveRow(index) }, meta.cls]"
-              :style="{
-                height: virtualRowHeight ? `${virtualRowHeight}px` : undefined,
-                transform: spaceBefore ? `translateY(${spaceBefore}px)` : undefined,
-              }"
-              @click="onRowClick(item, $event, index)"
-              @dblclick="onRowDblClick(item, $event, index)"
-            >
-              <AsSelectCell
-                v-if="hasValue"
-                :row="item"
-                :index="index"
-                :selected="selected"
-                :verdict="meta.selectable"
-                :select="select"
-                :select-on="selectOn"
-              >
-                <template v-if="slots['cell-__select']" #default="scope">
-                  <slot name="cell-__select" v-bind="scope" />
-                </template>
-              </AsSelectCell>
-              <template v-if="hasAnyCellBindings">
-                <template v-for="col in columns" :key="col.path">
-                  <template v-for="bindings in [cellResolver(col, item, index)]" :key="0">
-                    <td v-if="cellSlotFlags[col.path]" role="gridcell" v-bind="bindings">
-                      <slot
-                        :name="`cell-${col.path}`"
-                        :row="item"
-                        :value="getCellValue(item, col.path)"
-                        :column="col"
-                      />
-                    </td>
-                    <component
-                      v-else
-                      :is="cellComponents[col.path]"
-                      :row="item"
-                      :column="col"
-                      role="gridcell"
-                      v-bind="bindings"
-                    />
-                  </template>
-                </template>
-              </template>
-              <template v-else>
-                <template v-for="col in columns" :key="col.path">
-                  <td v-if="cellSlotFlags[col.path]" role="gridcell">
-                    <slot
-                      :name="`cell-${col.path}`"
-                      :row="item"
-                      :value="getCellValue(item, col.path)"
-                      :column="col"
-                    />
-                  </td>
-                  <component
-                    v-else
-                    :is="cellComponents[col.path]"
-                    :row="item"
-                    :column="col"
-                    role="gridcell"
-                  />
-                </template>
-              </template>
-              <td v-if="stretch" class="as-td-filler" role="gridcell" />
-            </tr>
+            <AsTableRow
+              :row="item"
+              :index="index"
+              :space-before="spaceBefore"
+              :selectable="meta.selectable"
+              :row-class="meta.cls"
+              :row-attrs="meta.attrs"
+              :selected="selected"
+              :active="isActiveRow(index)"
+              :row-id="rowIdFor(index)"
+              :row-height="virtualRowHeight"
+              :has-value="hasValue"
+              :select="select"
+              :select-on="selectOn"
+              :columns="columns"
+              :cell-components="cellComponents"
+              :cell-slot-flags="cellSlotFlags"
+              :cell-resolver="hasAnyCellBindings ? cellResolver : undefined"
+              :stretch="stretch"
+              :slots="slots"
+              :has-select-slot="hasSelectSlot"
+              :slot-rev="slotRev"
+              :on-row-click="onRowClick"
+              :on-row-dbl-click="onRowDblClick"
+            />
           </template>
         </template>
       </AsTableVirtualizer>

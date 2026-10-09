@@ -1,13 +1,14 @@
-import type { Client } from "@atscript/db-client";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { Client } from "@atscript/db-client";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resetDefaultClientFactory,
   setDefaultClientFactory,
   type ClientFactory,
 } from "../client-factory";
 import { resolveValueHelp } from "../value-help/resolve";
-import { getMetaEntry, resetMetaCache } from "./meta-cache";
+import { getMetaEntry, resetMetaCache, setMetaCacheIdentity } from "./meta-cache";
 
 async function buildSerialized() {
   const { Author } = await import("../__tests__/fixtures/value-help-target.as");
@@ -40,13 +41,43 @@ function makeFactory(metaImpl: () => Promise<unknown>): {
   const factory: ClientFactory = () =>
     ({
       meta: metaSpy,
+      invalidateMeta: vi.fn(),
     }) as unknown as Client;
   return { factory, metaSpy };
 }
 
+/** One shared client per URL that memoizes `/meta` like `@atscript/db-client`'s `Client`. */
+function makeMemoClient(metaImpl: () => Promise<unknown>) {
+  const fetchMeta = vi.fn(metaImpl);
+  let memo: Promise<unknown> | undefined;
+  const client = {
+    meta: () => (memo ??= fetchMeta()),
+    invalidateMeta: vi.fn(() => {
+      memo = undefined;
+    }),
+  };
+  return { client, fetchMeta, factory: (() => client) as unknown as ClientFactory };
+}
+
+function deferred<T>() {
+  let resolve!: (v: T) => void;
+  let reject!: (e: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+// The cache lives only in the browser — `packages/ui` tests run in node.
+beforeEach(() => {
+  vi.stubGlobal("window", {});
+});
+
 afterEach(() => {
   resetMetaCache();
   resetDefaultClientFactory();
+  vi.unstubAllGlobals();
 });
 
 describe("meta-cache", () => {
@@ -103,5 +134,112 @@ describe("meta-cache", () => {
 
     expect(metaSpy).toHaveBeenCalledTimes(2);
     expect(retried.labelField).toBe("name");
+  });
+
+  it("resetMetaCache drops the /meta each cached client memoizes", async () => {
+    const serialized = await buildSerialized();
+    const { client, fetchMeta, factory } = makeMemoClient(async () =>
+      buildMetaResponse(serialized),
+    );
+
+    await getMetaEntry("/authors", factory).meta;
+    resetMetaCache();
+    expect(client.invalidateMeta).toHaveBeenCalledTimes(1);
+
+    await getMetaEntry("/authors", factory).meta;
+    expect(fetchMeta).toHaveBeenCalledTimes(2);
+  });
+
+  it("setMetaCacheIdentity resets on a new identity and keeps the cache for the same one", async () => {
+    const serialized = await buildSerialized();
+    const { client, fetchMeta, factory } = makeMemoClient(async () =>
+      buildMetaResponse(serialized),
+    );
+    setMetaCacheIdentity("1:admin");
+    client.invalidateMeta.mockClear();
+
+    const first = getMetaEntry("/authors", factory);
+    setMetaCacheIdentity("1:admin");
+    expect(getMetaEntry("/authors", factory)).toBe(first);
+    expect(client.invalidateMeta).not.toHaveBeenCalled();
+
+    setMetaCacheIdentity(null);
+    expect(client.invalidateMeta).toHaveBeenCalledTimes(1);
+    setMetaCacheIdentity(undefined); // still anonymous
+    const second = getMetaEntry("/authors", factory);
+    expect(second).not.toBe(first);
+
+    setMetaCacheIdentity("2:viewer");
+    expect(getMetaEntry("/authors", factory)).not.toBe(second);
+    expect(client.invalidateMeta).toHaveBeenCalledTimes(2);
+    expect(fetchMeta).toHaveBeenCalledTimes(3); // once per identity
+  });
+
+  it("a /meta request in flight across a reset never touches the new entry", async () => {
+    const serialized = await buildSerialized();
+    const stale = deferred<unknown>();
+    const fresh = deferred<unknown>();
+    const responses = [stale.promise, fresh.promise];
+    const { factory } = makeFactory(() => responses.shift()!);
+
+    const before = getMetaEntry("/authors", factory);
+    before.type.catch(() => {});
+    resetMetaCache();
+    const after = getMetaEntry("/authors", factory);
+    expect(after).not.toBe(before);
+
+    stale.reject(new Error("aborted"));
+    await expect(before.meta).rejects.toThrow("aborted");
+    expect(getMetaEntry("/authors", factory)).toBe(after);
+
+    fresh.resolve(buildMetaResponse(serialized));
+    await after.meta;
+    expect(getMetaEntry("/authors", factory)).toBe(after);
+  });
+
+  it("caches nothing without a browser window", async () => {
+    vi.unstubAllGlobals();
+    const serialized = await buildSerialized();
+    const { client, fetchMeta, factory } = makeMemoClient(async () =>
+      buildMetaResponse(serialized),
+    );
+
+    const a = getMetaEntry("/authors", factory);
+    const b = getMetaEntry("/authors", factory);
+    expect(a).not.toBe(b);
+    resetMetaCache();
+    expect(client.invalidateMeta).not.toHaveBeenCalled();
+    await Promise.all([a.meta, b.meta]);
+    expect(fetchMeta).toHaveBeenCalledTimes(1); // the shared client's own memo
+  });
+
+  it("two server renders for different viewers each get their own /meta", async () => {
+    vi.unstubAllGlobals();
+    const serialized = await buildSerialized();
+    // Stands in for SSR self-fetch: the request carries the viewer whose
+    // render issued it (moost forwards it through async context).
+    const viewer = new AsyncLocalStorage<string>();
+    const fetchMeta = vi.fn(async () => {
+      const meta = buildMetaResponse(serialized);
+      if (viewer.getStore() === "viewer") delete (meta.fields as Record<string, unknown>).name;
+      return new Response(JSON.stringify(meta), {
+        headers: { "content-type": "application/json" },
+      });
+    });
+    setDefaultClientFactory((url) => new Client(url, { fetch: fetchMeta }));
+
+    const render = (who: string) =>
+      viewer.run(who, async () => {
+        const entry = getMetaEntry("/authors");
+        await entry.type;
+        return Object.keys((await entry.meta).fields);
+      });
+    const [admin, view] = await Promise.all([render("admin"), render("viewer")]);
+    const adminAgain = await render("admin");
+
+    expect(admin).toEqual(["id", "name"]);
+    expect(view).toEqual(["id"]);
+    expect(adminAgain).toEqual(["id", "name"]);
+    expect(fetchMeta).toHaveBeenCalledTimes(3);
   });
 });

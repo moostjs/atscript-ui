@@ -14,7 +14,11 @@ export {
   parseStaticOptions,
   resolveOptions,
 } from "./resolve-options";
-export { ValueHelpClient } from "./value-help-client";
+export {
+  ValueHelpClient,
+  invalidateValueHelpCache,
+  setValueHelpCacheTtl,
+} from "./value-help-client";
 export { fetchDistinctValues, isPickerDeclined } from "./distinct-client";
 export { resolveValueHelp, resetValueHelpCache } from "./resolve";
 export type { ResolvedValueHelp } from "./resolve";

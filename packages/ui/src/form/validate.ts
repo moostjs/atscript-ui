@@ -98,10 +98,27 @@ export interface TFieldValidatorOptions {
 }
 
 /**
+ * Root-only plugin: passes every descendant without visiting it. Only
+ * `object` / `array` / `tuple` roots use it — their root-path errors (shape,
+ * length, a container-level `@ui.form.validate`) are all decided before the
+ * walk descends, so skipping the children cannot change the root error. A
+ * union or intersection root evaluates its branches AT the root path, where
+ * a branch's verdict depends on its children — those keep the full walk.
+ */
+const skipDescendantsPlugin: TValidatorPlugin = (ctx) => (ctx.path === "" ? undefined : true);
+
+function skipsDescendants(prop: TAtscriptAnnotatedType): boolean {
+  const kind = prop.type.kind;
+  return kind === "object" || kind === "array" || kind === "tuple";
+}
+
+/**
  * Creates a cached validator function for a single ATScript prop.
  *
  * The `Validator` instance is created lazily on first call and reused.
  * Returns `true` when valid, or the first error message string when invalid.
+ * With `rootOnly`, an object / array / tuple prop is validated at its root
+ * only (descendants are not walked — their errors would be discarded anyway).
  */
 export function createFieldValidator(
   prop: TAtscriptAnnotatedType,
@@ -110,7 +127,12 @@ export function createFieldValidator(
   let cached: InstanceType<typeof Validator> | undefined;
 
   return (value: unknown, externalCtx?: { data: unknown; context: unknown }): true | string => {
-    cached ??= new Validator(prop, { plugins: [serverManagedPlugin, ...defaultValidatorPlugins] });
+    cached ??= new Validator(prop, {
+      plugins:
+        opts?.rootOnly && skipsDescendants(prop)
+          ? [skipDescendantsPlugin, serverManagedPlugin, ...defaultValidatorPlugins]
+          : [serverManagedPlugin, ...defaultValidatorPlugins],
+    });
     const isValid = cached.validate(value, true, externalCtx);
     if (!isValid) {
       if (opts?.rootOnly) {

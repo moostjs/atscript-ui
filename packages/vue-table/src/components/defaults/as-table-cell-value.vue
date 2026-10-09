@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { ColumnDef } from "@atscript/ui";
-import { getCellValue } from "../../utils/get-cell-value";
-import { formatCellValue } from "../../utils/format-cell";
+import { displayCellValue } from "../../utils/display-cell-value";
 
 const props = defineProps<{
   row: Record<string, unknown>;
@@ -10,14 +9,7 @@ const props = defineProps<{
 
 /** Union columns show the option label (`@ui.literalLabel`); anything else formats by type. */
 function display(): string {
-  const value = getCellValue(props.row, props.column.path);
-  const options = props.column.options;
-  if (options?.length && value !== null && typeof value !== "object") {
-    const key = String(value);
-    const hit = options.find((o) => o.key === key);
-    if (hit) return hit.label;
-  }
-  return formatCellValue(value, props.column.type);
+  return displayCellValue(props.row, props.column);
 }
 </script>
 

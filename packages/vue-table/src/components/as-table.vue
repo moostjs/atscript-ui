@@ -205,6 +205,7 @@ const { onSort, onHide, onFilter, onFiltersOff, onResetWidth, onReorder, onClear
       :column-widths="state.columnWidths.value"
       :row-class="rowClass"
       :row-attrs="rowAttrs"
+      :slot-source="$slots"
       @sort="onSort"
       @hide="onHide"
       @filter="onFilter"

@@ -553,7 +553,10 @@ watch(() => [props.rowHeight, columns.value], scheduleRecompute);
                 :select="select"
                 :select-on="selectOn"
               >
-                <template v-if="slots['cell-__select']" #default="scope">
+                <!-- Always forwarded (a conditional slot would re-render every
+                     row's select cell on each pass); an absent renderer slot
+                     renders empty, so the default control shows. -->
+                <template #default="scope">
                   <slot name="cell-__select" v-bind="scope" />
                 </template>
               </AsSelectCell>

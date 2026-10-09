@@ -272,9 +272,11 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     formData: data,
     formContext,
     firstValidation: computed(() => options.firstValidation?.()),
+    // Runs from the submit handler (never inside an effect), so it walks the
+    // RAW data — same values, without a proxy hop on every leaf read.
     submitValidator: () =>
       formValidator.value({
-        data: getDomainData(),
+        data: domainData() as Record<string, unknown>,
         context: (formContext.value ?? {}) as Record<string, unknown>,
       }),
   });

@@ -1,5 +1,5 @@
 import type { WfState } from "@prostojs/wf/outlets";
-import { describe, expect, it } from "vite-plus/test";
+import { describe, expect, it, vi } from "vite-plus/test";
 
 import { setupStore } from "./helpers";
 
@@ -163,5 +163,63 @@ describe("AsWfStore", () => {
     if (!row) return;
     expect(row.createdAt).toBe(1000);
     expect(row.updatedAt).toBe(1000);
+  });
+
+  it("persists a fresh handle with one conflict-ignoring insert and no read", async () => {
+    const { store, table } = await setupStore();
+    const findOne = vi.spyOn(table, "findOne");
+    const insertOne = vi.spyOn(table, "insertOne");
+    const replaceMany = vi.spyOn(table, "replaceMany");
+    await store.set("h-fresh", makeState());
+    expect(findOne).not.toHaveBeenCalled();
+    expect(replaceMany).not.toHaveBeenCalled();
+    expect(insertOne).toHaveBeenCalledTimes(1);
+    expect(insertOne.mock.calls[0]![1]).toEqual({ onConflict: "ignore" });
+    expect(await store.get("h-fresh")).toEqual({ state: makeState() });
+  });
+
+  it("falls back to read-then-write when the adapter cannot ignore conflicts, and remembers it", async () => {
+    let t = 1000;
+    const { store, table } = await setupStore({ clock: { now: () => t } });
+    const original = table.insertOne.bind(table);
+    const insertOne = vi.spyOn(table, "insertOne").mockImplementation(((
+      payload: never,
+      opts?: { onConflict?: string },
+    ) => {
+      if (opts?.onConflict === "ignore") {
+        return Promise.reject(
+          Object.assign(new Error("unsupported"), { code: "ON_CONFLICT_NOT_SUPPORTED" }),
+        );
+      }
+      return original(payload);
+    }) as never);
+    await store.set("h-fb", makeState({ context: { v: 1 } }));
+    t = 2000;
+    await store.set("h-fb", makeState({ context: { v: 2 } }));
+    await store.set("h-fb2", makeState());
+    // Only the first call tried the ignore mode.
+    expect(insertOne.mock.calls.filter((c) => c[1]).length).toBe(1);
+    const row = await table.findOne({ filter: { handle: "h-fb" } });
+    expect(row).toBeTruthy();
+    expect(row!.createdAt).toBe(1000);
+    expect(row!.updatedAt).toBe(2000);
+    expect((row!.state as WfState).context).toEqual({ v: 2 });
+    expect(await store.get("h-fb2")).toEqual({ state: makeState() });
+  });
+
+  it("propagates insert errors other than an unsupported conflict mode", async () => {
+    const { store, table } = await setupStore();
+    vi.spyOn(table, "insertOne").mockRejectedValue(new Error("disk full"));
+    await expect(store.set("h-err", makeState())).rejects.toThrow("disk full");
+  });
+
+  it("resume → pause on a consumed handle writes once (getAndDelete then set)", async () => {
+    const { store, table } = await setupStore();
+    await store.set("h-cycle", makeState({ context: { v: 1 } }));
+    expect(await store.getAndDelete("h-cycle")).toBeTruthy();
+    const findOne = vi.spyOn(table, "findOne");
+    await store.set("h-cycle", makeState({ context: { v: 2 } }));
+    expect(findOne).not.toHaveBeenCalled();
+    expect(await store.get("h-cycle")).toEqual({ state: makeState({ context: { v: 2 } }) });
   });
 });

@@ -853,4 +853,44 @@ test.describe("Section 19 — workflows", () => {
       }
     });
   });
+
+  test.describe("19.12 — role switch without a page reload", () => {
+    test("19.12 UI — admin logs out, viewer signs in (SPA); /users shows the viewer's /meta columns", async ({
+      browser,
+    }) => {
+      const ctx = await browser.newContext({ storageState: authFileFor("admin") });
+      try {
+        const page = await ctx.newPage();
+        await gotoTable(page, "users");
+        const headers = page.locator("table[data-as-main-table] thead");
+        await expect(headers.locator('th[data-column-path="email"]')).toHaveCount(1);
+        // Survives only while the document does — proves no reload below.
+        await page.evaluate(() => {
+          (window as unknown as { __spa?: boolean }).__spa = true;
+        });
+
+        await page.locator("nav").getByRole("button", { name: "Log out" }).click();
+        await page.waitForURL(/\/login$/);
+        await page.locator('input[name="username"]').fill("viewer");
+        await page.locator('input[name="password"]').fill(DEMO_PASSWORD);
+        await Promise.all([
+          page.waitForURL(/\/$/),
+          page.getByRole("button", { name: /Sign In/i }).click(),
+        ]);
+        await expectSignedInAs(page, "viewer");
+
+        // `/meta` is projected per role — the viewer's must be fetched anew.
+        const meta = page.waitForResponse("**/api/db/tables/users/meta");
+        await page.locator("nav").getByRole("link", { name: "Users", exact: true }).click();
+        await meta;
+        await expect(headers.locator('th[data-column-path="username"]')).toHaveCount(1);
+        await expect(headers.locator('th[data-column-path="email"]')).toHaveCount(0);
+        expect(await page.evaluate(() => (window as unknown as { __spa?: boolean }).__spa)).toBe(
+          true,
+        );
+      } finally {
+        await ctx.close();
+      }
+    });
+  });
 });

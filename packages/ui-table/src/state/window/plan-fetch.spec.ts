@@ -235,3 +235,65 @@ describe("planFetch", () => {
     expect(plan).toBeNull();
   });
 });
+
+// The buffer scans are bounded by `buffer`; the plan must equal the unbounded
+// scan's for every scroll position (dense, holey and edge caches alike).
+function planFetchUnbounded(args: Parameters<typeof planFetch>[0]) {
+  const { top, viewport, totalCount, cache, blockSize, buffer } = args;
+  if (viewport <= 0 || top >= totalCount) return null;
+  const start = top;
+  const effectiveViewport = Math.min(viewport, totalCount - start);
+  if (effectiveViewport <= 0) return null;
+  const end = start + effectiveViewport - 1;
+  if (!cache.has(start) && !cache.has(start - 1)) {
+    const half = Math.floor(blockSize / 2);
+    const lookBack = Math.min(half, start);
+    const skip = Math.max(0, start - lookBack);
+    const limit = Math.min(totalCount - skip, effectiveViewport + lookBack + half);
+    return limit <= 0 ? null : { skip, limit, mode: "jump" };
+  }
+  let inView = 0;
+  while (inView < effectiveViewport && cache.has(start + inView)) inView++;
+  if (inView < effectiveViewport) {
+    const skip = start + inView;
+    return skip >= totalCount ? null : { skip, limit: blockSize, mode: "steady" };
+  }
+  let fwd = 0;
+  while (cache.has(end + 1 + fwd)) fwd++;
+  if (fwd < buffer && end + 1 + fwd < totalCount) {
+    return { skip: end + 1 + fwd, limit: blockSize, mode: "steady" };
+  }
+  let bwd = 0;
+  while (start - 1 - bwd >= 0 && cache.has(start - 1 - bwd)) bwd++;
+  if (bwd < buffer && start > 0) {
+    const skip = Math.max(0, start - bwd - blockSize);
+    const limit = start - bwd - skip;
+    return limit <= 0 ? null : { skip, limit, mode: "steady" };
+  }
+  return null;
+}
+
+describe("planFetch bounded buffer scans", () => {
+  it("matches the unbounded scan for every position", () => {
+    const caches: Map<number, unknown>[] = [];
+    const dense = new Map<number, unknown>();
+    for (let i = 0; i < 600; i++) dense.set(i, i);
+    caches.push(dense);
+    const holey = new Map<number, unknown>();
+    for (let i = 0; i < 600; i++) if (i % 97 > 10) holey.set(i, i);
+    caches.push(holey);
+    const middle = new Map<number, unknown>();
+    for (let i = 200; i < 420; i++) middle.set(i, i);
+    caches.push(middle);
+    for (const cache of caches) {
+      for (const buffer of [0, 1, 7.5, 25, 1000]) {
+        for (const totalCount of [450, 600, 5000]) {
+          for (let top = 0; top < 640; top++) {
+            const args = { top, viewport: 40, totalCount, cache, blockSize: 100, buffer };
+            expect(planFetch(args)).toEqual(planFetchUnbounded(args));
+          }
+        }
+      }
+    }
+  });
+});

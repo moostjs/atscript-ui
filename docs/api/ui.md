@@ -871,6 +871,17 @@ interface ValueHelpResult {
 }
 ```
 
+### `setValueHelpCacheTtl(ms)` / `invalidateValueHelpCache(client?)`
+
+_Since 0.1.151._ In the browser, identical `ValueHelpClient.search()` calls on the same `Client` are shared: a call joins a request still in flight, and a settled result is reused for `ms` milliseconds (default 5000). A form with many pickers on one dictionary sends one request instead of one per picker. Server-side rendering never shares.
+
+```typescript
+function setValueHelpCacheTtl(ms: number): void; // 0 = share in-flight only, < 0 = off
+function invalidateValueHelpCache(client?: Client): void; // one client, or all when omitted
+```
+
+`resetMetaCache()` clears every shared search, and so does a backend action or delete run through `<AsTable>`. Call `invalidateValueHelpCache()` after writing a dictionary any other way when pickers must refetch immediately.
+
 ### `resolveValueHelp(url)` / `resetValueHelpCache()`
 
 Globally caches resolved value-help endpoints by URL so multiple fields pointing at the same target share one `/meta` fetch.
@@ -1069,6 +1080,7 @@ A single `/meta` fetch per URL is cached across `useTable` instances and `resolv
 ```typescript
 function getMetaEntry(url: string, factory?: ClientFactory): MetaCacheEntry;
 function resetMetaCache(): void;
+function setMetaCacheIdentity(key: string | null | undefined): void; // since 0.1.151
 
 interface MetaCacheEntry {
   client: Client; // from `@atscript/db-client`
@@ -1078,6 +1090,12 @@ interface MetaCacheEntry {
   tableDef?: Promise<TableDef>; // populated lazily by Vue `useTable`
 }
 ```
+
+`/meta` is projected per user — the server strips the columns, actions and value-help a role may not use — so the cache belongs to one signed-in viewer:
+
+- **Bind it to the viewer** (_since 0.1.151_). Call `setMetaCacheIdentity(key)` with a key naming the user and role (e.g. `` `${userId}:${role}` ``, `null` when signed out) after login, after logout and whenever you reload the current user. A different key resets the cache; the same key keeps it. Without it, an SPA that logs out and signs in as another user without a page reload keeps rendering the previous user's columns and actions.
+- **`resetMetaCache()`** drops every entry, the value-help searches shared under them and — _since 0.1.151_, with `@atscript/db-client` ≥ 0.1.151 — the `/meta` each cached `Client` memoizes (`Client.invalidateMeta()`), so a `ClientFactory` that reuses `Client` instances refetches too. Components already mounted keep the entry they hold; remount them (e.g. navigate) to pick up the new `/meta`. Clients you use outside the cache (`client.meta()`, `client.action()` on a client you keep yourself) need their own `invalidateMeta()` call.
+- **Server rendering never caches** (_since 0.1.151_). Without a browser `window`, every `getMetaEntry` call builds a fresh entry, so one viewer's render never sees another's `/meta`. Your server-side `ClientFactory` must not hand one `Client` to several requests either — a `Client` memoizes its `/meta`. Never mutate the `meta` object an entry resolves to: in-process consumers may share it by reference.
 
 ## Cross-links
 

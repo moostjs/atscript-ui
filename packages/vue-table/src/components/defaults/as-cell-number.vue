@@ -16,38 +16,16 @@ const props = defineProps<{
 
 const { locale } = useCellLocale();
 
-const value = computed(() => getCellValue(props.row, props.column.path));
-
-const currency = computed(() => {
-  const c = props.column.currencyCode;
-  if (c) return c;
-  const ref = props.column.currencyRefField;
-  if (ref) {
-    const v = props.row[ref];
-    if (typeof v === "string" && v.length > 0) return v;
-  }
-  return undefined;
-});
-
-const unit = computed(() => {
-  const u = props.column.unitCode;
-  if (u) return u;
-  const ref = props.column.unitRefField;
-  if (ref) {
-    const v = props.row[ref];
-    if (typeof v === "string" && v.length > 0) return v;
-  }
-  return undefined;
-});
-
+// One computed per cell: the value, the currency / unit (static or per-row
+// ref field) and the formatting are all read here.
 const formatted = computed(() => {
-  const v = value.value;
+  const v = getCellValue(props.row, props.column.path);
   if (v === null || v === undefined || v === "") return "";
 
   // Money wins over precisionScale (currency CLDR digits beat static config).
   // The helper passes `scale: undefined` when currency is set, so Intl uses
   // the currency's natural fraction digits.
-  const cur = currency.value;
+  const cur = refCode(props.column.currencyCode, props.column.currencyRefField);
   if (cur) {
     const out = formatDecimalForDisplay({ value: v, locale: locale.value, currency: cur });
     if (out !== "") return out;
@@ -59,11 +37,21 @@ const formatted = computed(() => {
     value: v,
     scale: props.column.precisionScale,
     locale: locale.value,
-    unit: unit.value,
+    unit: refCode(props.column.unitCode, props.column.unitRefField),
   });
   if (out !== "") return out;
   return typeof v === "string" ? v : String(v);
 });
+
+/** A static code, else a non-empty string read from the row's ref field. */
+function refCode(code: string | undefined, refField: string | undefined): string | undefined {
+  if (code) return code;
+  if (refField) {
+    const v = props.row[refField];
+    if (typeof v === "string" && v.length > 0) return v;
+  }
+  return undefined;
+}
 </script>
 
 <template>

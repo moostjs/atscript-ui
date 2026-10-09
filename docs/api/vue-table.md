@@ -403,7 +403,7 @@ interface UseTableOptions {
 
 ### `clearTableCache()`
 
-Drops the shared `/meta` cache. Use after auth changes that invalidate server metadata.
+Drops the shared `/meta` cache (alias of `resetMetaCache` from `@atscript/ui`). For login / logout / role changes prefer `setMetaCacheIdentity` — see the [meta cache reference](/api/ui#meta-cache).
 
 ## Composables — state contracts
 

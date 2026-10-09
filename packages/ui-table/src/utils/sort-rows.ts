@@ -27,19 +27,37 @@ export function sortRowsLocally<T extends Record<string, unknown>>(
   getValue: (row: T, field: string) => unknown = (row, field) => row[field],
 ): T[] {
   if (sorters.length === 0 || rows.length < 2) return rows;
-  return rows.toSorted((a, b) => {
-    for (const s of sorters) {
-      const dir = s.direction === "desc" ? -1 : 1;
-      const av = getValue(a, s.field);
-      const bv = getValue(b, s.field);
+  // Read every sort key once per row (not once per comparison) and sort row
+  // indexes. The comparator answers exactly what a row comparator would, and
+  // the sort is the same stable one, so the order is identical.
+  const n = rows.length;
+  const m = sorters.length;
+  const values: unknown[] = Array.from({ length: n * m });
+  const texts: string[] = Array.from({ length: n * m }, () => "");
+  for (let i = 0; i < n; i++) {
+    const row = rows[i]!;
+    for (let j = 0; j < m; j++) {
+      const v = getValue(row, sorters[j]!.field);
+      values[i * m + j] = v;
+      texts[i * m + j] = cellAsString(v);
+    }
+  }
+  const dirs = sorters.map((s) => (s.direction === "desc" ? -1 : 1));
+  const order = Array.from({ length: n }, (_, i) => i);
+  order.sort((x, y) => {
+    for (let j = 0; j < m; j++) {
+      const dir = dirs[j]!;
+      const av = values[x * m + j];
+      const bv = values[y * m + j];
       if (typeof av === "number" && typeof bv === "number") {
         if (av < bv) return -dir;
         if (av > bv) return dir;
       } else {
-        const cmp = cellAsString(av).localeCompare(cellAsString(bv));
+        const cmp = texts[x * m + j]!.localeCompare(texts[y * m + j]!);
         if (cmp !== 0) return cmp * dir;
       }
     }
     return 0;
   });
+  return order.map((i) => rows[i]!);
 }

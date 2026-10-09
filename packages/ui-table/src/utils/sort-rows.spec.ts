@@ -40,3 +40,81 @@ describe("sortRowsLocally", () => {
     expect(out.map((r) => r.o.v)).toEqual([1, 2]);
   });
 });
+
+function asString(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  return typeof v === "number" || typeof v === "boolean" ? v.toString() : "";
+}
+
+function getPath(row: Record<string, unknown>, field: string): unknown {
+  return field.split(".").reduce<unknown>((c, k) => (c as Record<string, unknown>)?.[k], row);
+}
+
+/** The original per-comparison implementation. */
+function reference<T extends Record<string, unknown>>(
+  rows: T[],
+  sorters: { field: string; direction: "asc" | "desc" }[],
+  getValue: (row: T, field: string) => unknown = (row, field) => row[field],
+): T[] {
+  return rows.toSorted((a, b) => {
+    for (const s of sorters) {
+      const dir = s.direction === "desc" ? -1 : 1;
+      const av = getValue(a, s.field);
+      const bv = getValue(b, s.field);
+      if (typeof av === "number" && typeof bv === "number") {
+        if (av < bv) return -dir;
+        if (av > bv) return dir;
+      } else {
+        const cmp = asString(av).localeCompare(asString(bv));
+        if (cmp !== 0) return cmp * dir;
+      }
+    }
+    return 0;
+  });
+}
+
+describe("sortRowsLocally equivalence", () => {
+  it("orders exactly like the per-comparison sort (mixed types, ties, unicode)", () => {
+    let seed = 7;
+    const rnd = () => (seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+    const pool: unknown[] = [
+      1,
+      2,
+      10,
+      "10",
+      "9",
+      "a",
+      "B",
+      "Ärger",
+      "öl",
+      "Émile",
+      "zulu",
+      "",
+      null,
+      undefined,
+      true,
+      false,
+      { o: 1 },
+      2.5,
+      -1,
+      NaN,
+    ];
+    for (let round = 0; round < 40; round++) {
+      const n = 2 + Math.floor(rnd() * 300);
+      const rows = Array.from({ length: n }, (_, i) => ({
+        id: i,
+        a: pool[Math.floor(rnd() * pool.length)],
+        b: pool[Math.floor(rnd() * 6)],
+        nested: { c: pool[Math.floor(rnd() * pool.length)] },
+      }));
+      const sorters = [
+        { field: round % 2 ? "b" : "a", direction: (round % 3 ? "asc" : "desc") as "asc" | "desc" },
+        { field: "nested.c", direction: "desc" as const },
+      ];
+      expect(sortRowsLocally(rows, sorters, getPath).map((r) => r.id)).toEqual(
+        reference(rows, sorters, getPath).map((r) => r.id),
+      );
+    }
+  });
+});

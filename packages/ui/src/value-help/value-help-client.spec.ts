@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from "vitest";
-import { ValueHelpClient } from "./value-help-client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { resetMetaCache } from "../shared/meta-cache";
+import {
+  ValueHelpClient,
+  invalidateValueHelpCache,
+  setValueHelpCacheTtl,
+} from "./value-help-client";
 import type { ResolvedValueHelp } from "./resolve";
 
 function resolved(over: Partial<ResolvedValueHelp> = {}): ResolvedValueHelp {
@@ -69,5 +74,112 @@ describe("ValueHelpClient.search", () => {
     const { query, vh } = setup();
     await vh.search(resolved({ primaryKeys: ["id"], labelField: "name" }), { text: "7" });
     expect(query.mock.calls[0][0].filter.$or).toContainEqual({ id: 7 });
+  });
+});
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
+
+describe("ValueHelpClient search sharing", () => {
+  const rows = [{ attribute: "color", value: "red", label: "Red" }];
+  function deferredClient() {
+    const pending: Array<{ resolve: (v: unknown) => void; reject: (e: unknown) => void }> = [];
+    const query = vi.fn(
+      () =>
+        new Promise((resolve, reject) => {
+          pending.push({ resolve, reject });
+        }),
+    );
+    return { query, pending, client: { query } as never };
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal("window", {});
+    invalidateValueHelpCache();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    setValueHelpCacheTtl(5000);
+  });
+
+  it("N identical searches on one client share one request; each caller gets its own array", async () => {
+    const { query, pending, client } = deferredClient();
+    const calls = Array.from({ length: 50 }, () =>
+      new ValueHelpClient(client).search(resolved(), { valueField: "value" }),
+    );
+    expect(query).toHaveBeenCalledTimes(1);
+    pending[0]!.resolve(rows);
+    const results = await Promise.all(calls);
+    expect(results[0]!.items).toEqual(rows);
+    expect(results[0]!.items).not.toBe(results[1]!.items);
+    expect(results[0]!.items[0]).toBe(results[1]!.items[0]);
+  });
+
+  it("reuses a settled result within the TTL; differing text / limit / filter / mode do not share", async () => {
+    const query = vi.fn().mockResolvedValue(rows);
+    const vh = new ValueHelpClient({ query } as never);
+    await vh.search(resolved(), { text: "re" });
+    await vh.search(resolved(), { text: "re" });
+    expect(query).toHaveBeenCalledTimes(1);
+    await vh.search(resolved(), { text: "r" });
+    await vh.search(resolved(), { text: "re", limit: 5 });
+    await vh.search(resolved(), { text: "re", filter: { attribute: "size" } as never });
+    await vh.search(resolved(), { text: "re", mode: "filter", select: ["label"] });
+    expect(query).toHaveBeenCalledTimes(5);
+  });
+
+  it("different Client instances never share", async () => {
+    const a = vi.fn().mockResolvedValue(rows);
+    const b = vi.fn().mockResolvedValue(rows);
+    await new ValueHelpClient({ query: a } as never).search(resolved());
+    await new ValueHelpClient({ query: b } as never).search(resolved());
+    expect(a).toHaveBeenCalledTimes(1);
+    expect(b).toHaveBeenCalledTimes(1);
+  });
+
+  it("TTL 0 shares only in-flight searches; a negative TTL shares nothing", async () => {
+    setValueHelpCacheTtl(0);
+    const query = vi.fn().mockResolvedValue(rows);
+    const vh = new ValueHelpClient({ query } as never);
+    await Promise.all([vh.search(resolved()), vh.search(resolved())]);
+    expect(query).toHaveBeenCalledTimes(1);
+    await vh.search(resolved());
+    expect(query).toHaveBeenCalledTimes(2);
+    setValueHelpCacheTtl(-1);
+    await Promise.all([vh.search(resolved()), vh.search(resolved())]);
+    expect(query).toHaveBeenCalledTimes(4);
+  });
+
+  it("a failed search is not cached — the next call retries", async () => {
+    const query = vi.fn().mockRejectedValueOnce(new Error("down")).mockResolvedValue(rows);
+    const vh = new ValueHelpClient({ query } as never);
+    await expect(vh.search(resolved())).rejects.toThrow("down");
+    await expect(vh.search(resolved())).resolves.toEqual({ items: rows });
+    expect(query).toHaveBeenCalledTimes(2);
+  });
+
+  it("invalidateValueHelpCache(client) and resetMetaCache() force a refetch, also past an in-flight request", async () => {
+    const { query, pending, client } = deferredClient();
+    const vh = new ValueHelpClient(client);
+    const first = vh.search(resolved());
+    invalidateValueHelpCache(client);
+    const second = vh.search(resolved());
+    expect(query).toHaveBeenCalledTimes(2);
+    pending[0]!.resolve(rows);
+    pending[1]!.resolve(rows);
+    await Promise.all([first, second]);
+    await flush();
+    resetMetaCache();
+    const third = vh.search(resolved());
+    expect(query).toHaveBeenCalledTimes(3);
+    pending[2]!.resolve(rows);
+    await third;
+  });
+
+  it("never shares without a browser window (server rendering serves many viewers)", async () => {
+    vi.unstubAllGlobals();
+    const query = vi.fn().mockResolvedValue(rows);
+    const vh = new ValueHelpClient({ query } as never);
+    await Promise.all([vh.search(resolved()), vh.search(resolved())]);
+    expect(query).toHaveBeenCalledTimes(2);
   });
 });

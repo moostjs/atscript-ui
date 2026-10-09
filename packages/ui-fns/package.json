@@ -53,12 +53,12 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@atscript/ui": "workspace:^",
-    "@prostojs/deserialize-fn": "^0.0.5"
+    "@atscript/ui": "workspace:^"
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/typescript": "catalog:",
+    "@prostojs/deserialize-fn": "^0.0.5",
     "vitest": "catalog:"
   },
   "peerDependencies": {

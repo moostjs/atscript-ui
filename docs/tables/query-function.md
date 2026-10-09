@@ -298,6 +298,11 @@ fields all consult the same `MetaCacheEntry`. The cache lives in
 `clearTableCache()` (alias for `resetMetaCache`) if you need to drop a
 stale entry — for instance after a schema reload during development.
 
+`/meta` is projected per user, so the cache is per viewer: call
+`setMetaCacheIdentity(key)` from `@atscript/ui` after login, logout and
+every reload of the current user, and server rendering never caches. See
+the [meta cache reference](/api/ui#meta-cache).
+
 ## Next steps
 
 - [Filtering](/tables/filtering) — how `state.filters` becomes the

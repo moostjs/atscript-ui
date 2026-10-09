@@ -59,6 +59,13 @@ function fieldFor(idx: number): FormFieldDef {
   return getItemField(idx, singular);
 }
 
+// One stable remove callback per index: an inline closure would be a new prop
+// on every render and re-render every item when one is added or removed.
+const removers: Array<() => void> = [];
+function removerFor(idx: number): () => void {
+  return (removers[idx] ??= () => removeItem(idx));
+}
+
 function handleAdd(variantIndex = 0) {
   collapsibleRef.value?.runAndFocusNew(
     composeAction(() => addItem(variantIndex)),
@@ -121,7 +128,7 @@ function handleEnableOptional() {
         :key="itemKeys[idx]"
         :field="fieldFor(idx)"
         :array-index="idx"
-        :on-remove="() => removeItem(idx)"
+        :on-remove="removerFor(idx)"
         :can-remove="canRemove"
       />
 

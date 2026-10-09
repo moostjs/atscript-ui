@@ -1,9 +1,10 @@
-import { computed, inject, ref, toRaw, watch, type ComputedRef } from "vue";
+import { computed, inject, isProxy, isRef, ref, toRaw, watch, type ComputedRef } from "vue";
 import {
   buildFormDiff,
   buildFormRebase,
   collectDirtyPaths,
   deepClone,
+  getByPath,
   setByPath,
   unionVariantChanged,
   type FormDef,
@@ -124,20 +125,17 @@ export interface AsFormPatchHandle {
  * edits and the diff would always come back empty.
  *
  * Reactivity: a single revert-aware `diff` computed drives `isDirty` /
- * `changes`. `buildFormDiff` reads most reactive leaves of the live container
- * (via `getByPath` + the `deepEqual` walk), so the computed auto-tracks scalar
- * edits, nested-object edits, and `$update` edits to EXISTING keyed-array items.
- * But the `$insert` branch pushes a freshly-added (not-yet-saved) keyed-array
- * element BY REFERENCE without reading its leaves, so editing such a row's
- * non-key leaves (qty/description) would NOT invalidate the computed. To close
- * that blind spot we add a single deep `watch` on the live data — created ONLY
- * when tracking is active, owned by the component scope (it disposes on unmount)
- * — that bumps `dataRev`; the `diff` computed reads `dataRev` so every leaf
- * mutation, including an inserted row's, re-evaluates it. OFF stays zero-cost:
- * `createAsFormPatch` is never called when tracking is disabled, so neither the
- * baseline nor this watcher is ever created. It recomputes only when the live
- * data (`dataRev`) or the baseline (`baselineRev`) changes, and Vue caches the
- * result between reads.
+ * `changes`. It subscribes to EVERY leaf of the live data (one tracking walk,
+ * like a deep watch, but synchronous and only when read) — so any leaf
+ * mutation re-evaluates it, including the leaves of a freshly-inserted keyed
+ * row that `buildFormDiff` pushes by reference without reading — and then
+ * diffs the RAW data, so the diff walk itself pays no proxy overhead. The
+ * change list still carries the live reactive `after` references. OFF stays
+ * zero-cost: `createAsFormPatch` is never called when tracking is disabled.
+ * It recomputes only when the live data or the baseline (`baselineRev`)
+ * changes, and Vue caches the result between reads. The dirty-path closure
+ * keeps its identity while its membership is unchanged, so per-field
+ * `isDirty` computeds re-run only when a field actually flips.
  *
  * @param def       getter for the form's `FormDef`
  * @param getData   getter for the WRAPPED form-data container `{ value }`. Before
@@ -164,10 +162,6 @@ export function createAsFormPatch(
   // computeds whenever the baseline is (re)captured.
   let baseline: Record<string, unknown> | undefined;
   const baselineRev = ref(0);
-  // Bumped by the deep watch below on every leaf mutation. The `diff` computed
-  // reads it so even an inserted keyed-array row's leaves (which `buildFormDiff`
-  // pushes by reference WITHOUT reading) re-trigger the reactive change list.
-  const dataRev = ref(0);
 
   /**
    * Deep-clones the current wrapped container, or returns `undefined` when no
@@ -225,35 +219,29 @@ export function createAsFormPatch(
     { flush: "sync" },
   );
 
-  // Deep dependency on the live form data. `buildFormDiff`'s read-walk covers
-  // most leaves, but its keyed-array `$insert` branch pushes a freshly-inserted
-  // row by reference WITHOUT reading the row's leaves — so editing that row's
-  // non-key leaves would otherwise never invalidate the `diff` computed. This
-  // watcher bumps `dataRev` on every mutation (inserted-row leaves included).
-  // It is created ONLY here (i.e. only when tracking is active), and because
-  // `createAsFormPatch` runs inside the component's setup scope, the watcher is
-  // owned by that scope and disposes on unmount — OFF remains zero-overhead.
-  watch(
-    () => getData(),
-    () => dataRev.value++,
-    { deep: true },
-  );
-
-  // Revert-aware reactive diff. It depends on `dataRev` (bumped by the deep
-  // watch on every leaf edit, including inserted-row leaves), `baselineRev` (so
-  // a `rebase()` re-evaluates), and the leaves `buildFormDiff` reads directly.
-  // It is revert-aware, so a value edited back to baseline yields
-  // `isDirty === false`.
+  // Revert-aware reactive diff. It depends on every leaf of the live data
+  // (`trackDeep` — the same walk a deep watch does, but synchronous, so a read
+  // right after a mutation is never stale), on `baselineRev` (so a `rebase()`
+  // re-evaluates) and on `def()`. The diff itself runs on the RAW data: the
+  // subscription is already complete, so walking proxies again would only add
+  // overhead.
   const diff = computed(() => {
-    void dataRev.value; // re-run on any leaf mutation (incl. inserted rows)
     void baselineRev.value; // re-run after a (re)capture
     // `baseline === undefined` is the single "no real data yet" sentinel — set
     // by `snapshot()` when the wrapped container has no `value`.
     if (baseline === undefined) {
       return { isDirty: false, changes: [] as FormFieldChange[] };
     }
-    const result = buildFormDiff(def(), baseline, getData());
-    return { isDirty: result.isDirty, changes: result.changes };
+    const data = getData();
+    trackDeep(data);
+    const result = buildFormDiff(def(), baseline, rawContainer(data));
+    // `after` is a live reference into the current data — hand out the
+    // reactive one, exactly as a diff over the live proxies would.
+    const changes =
+      result.changes.length === 0
+        ? result.changes
+        : result.changes.map((change) => ({ ...change, after: getByPath(data, change.path) }));
+    return { isDirty: result.isDirty, changes };
   });
 
   const isDirty = computed(() => diff.value.isDirty);
@@ -266,7 +254,14 @@ export function createAsFormPatch(
   // on the public handle. Memoised by Vue — rebuilt only when the change list
   // invalidates (`collectDirtyPaths` returns the same membership as
   // `isPathDirty`, locked by an `@atscript/ui` invariant test).
-  const dirtyPaths = computed(() => collectDirtyPaths(changes.value));
+  //
+  // Kept by identity while the membership is unchanged (the common keystroke
+  // in an already-dirty field), so per-field `isDirty` computeds built on
+  // `isDirtyPath` re-run only when some path actually flips.
+  const dirtyPaths = computed<Set<string>>((prev) => {
+    const next = collectDirtyPaths(changes.value);
+    return prev !== undefined && sameMembers(prev, next) ? prev : next;
+  });
 
   // On-demand builders — diff against a frozen RAW clone of the current data so
   // the returned patch/changes are de-aliased and proxy-free. `buildFormDiff`
@@ -366,6 +361,47 @@ export function createAsFormPatch(
   }
 
   return { isDirty, changes, getPatch, getChanges, isDirtyPath, rebase, rebaseOnto };
+}
+
+/**
+ * Subscribes the running effect to every leaf reachable from `value` — the
+ * walk Vue's deep watch performs (refs, arrays, Map/Set, plain objects;
+ * `markRaw` values skipped).
+ */
+function trackDeep(value: unknown, seen: Set<unknown> = new Set()): void {
+  if (typeof value !== "object" || value === null || seen.has(value)) return;
+  if ((value as Record<string, unknown>).__v_skip) return;
+  seen.add(value);
+  if (isRef(value)) {
+    trackDeep(value.value, seen);
+  } else if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) trackDeep(value[i], seen);
+  } else if (value instanceof Set || value instanceof Map) {
+    value.forEach((v: unknown) => trackDeep(v, seen));
+  } else if (isPlainObjectLike(value)) {
+    for (const key in value) trackDeep((value as Record<string, unknown>)[key], seen);
+    for (const key of Object.getOwnPropertySymbols(value)) {
+      if (Object.prototype.propertyIsEnumerable.call(value, key)) {
+        trackDeep((value as Record<symbol, unknown>)[key], seen);
+      }
+    }
+  }
+}
+
+function isPlainObjectLike(value: object): boolean {
+  return Object.prototype.toString.call(value) === "[object Object]";
+}
+
+/** The wrapped container with its domain value de-proxied. */
+function rawContainer(data: Record<string, unknown>): Record<string, unknown> {
+  const raw = toRaw(data);
+  return isProxy(raw.value) ? { ...raw, value: toRaw(raw.value) } : raw;
+}
+
+function sameMembers(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const k of a) if (!b.has(k)) return false;
+  return true;
 }
 
 // ── Public reader ────────────────────────────────────────────

@@ -432,29 +432,13 @@ function diffKeyedArray(
     return { $replace: after };
   }
 
-  // Reorder-only detection: identical key sets AND every matched item deep-equal
-  // → membership/content unchanged, only order differs. db arrays are ordered
-  // and key-ops can't express a pure reorder, so $replace is the only faithful op.
-  if (beforeByKey.size === afterByKey.size) {
-    let sameMembershipAndContent = true;
-    for (const [k, el] of afterByKey) {
-      const prev = beforeByKey.get(k);
-      if (prev === undefined || !deepEqual(prev, el)) {
-        sameMembershipAndContent = false;
-        break;
-      }
-    }
-    if (sameMembershipAndContent) {
-      // Same keys + same content but the diff fired → order changed.
-      return { $replace: after };
-    }
-  }
-
+  // One pass over the after side: classify every key as insert / update /
+  // unchanged, comparing each matched pair once.
   const $insert: unknown[] = [];
   const $update: Record<string, unknown>[] = [];
   const $remove: Record<string, unknown>[] = [];
+  let contentChanged = false;
 
-  // Inserts + updates from the after side.
   for (const [k, el] of afterByKey) {
     const prev = beforeByKey.get(k);
     if (prev === undefined) {
@@ -462,10 +446,19 @@ function diffKeyedArray(
       continue;
     }
     if (!deepEqual(prev, el)) {
+      contentChanged = true;
       // Partial: key fields + only the changed leaves.
       const partial = buildKeyedUpdate(prev, el, keyProps);
       if (partial) $update.push(partial);
     }
+  }
+
+  // Reorder-only: identical key sets AND every matched item deep-equal →
+  // membership/content unchanged, only order differs. db arrays are ordered
+  // and key-ops can't express a pure reorder, so $replace is the only faithful op.
+  if (beforeByKey.size === afterByKey.size && $insert.length === 0 && !contentChanged) {
+    // Same keys + same content but the diff fired → order changed.
+    return { $replace: after };
   }
 
   // Removals: keys present in before but gone from after.

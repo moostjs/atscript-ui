@@ -40,7 +40,7 @@ describe("fn-compiler", () => {
   it("compileFieldFn caches compiled functions", () => {
     const fn1 = compileFieldFn("(v) => v");
     const fn2 = compileFieldFn("(v) => v");
-    // Same code string → same function reference (from FNPool cache)
+    // Same fn string → same function reference (compiled once, cached)
     expect(fn1).toBe(fn2);
   });
 

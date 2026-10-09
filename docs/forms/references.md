@@ -79,6 +79,11 @@ that:
 3. On search, sends `$search` to a `@db.index.fulltext` target, or builds an
    `$or` regex filter for non-searchable targets, plus an exact-PK match.
 4. Honours `$limit` (default 20).
+5. Shares identical searches on the same client (_since 0.1.151_): pickers
+   mounting together send one request, and a result is reused for 5 s. Tune
+   with `setValueHelpCacheTtl(ms)`; after writing a dictionary outside
+   `<AsTable>` actions, call `invalidateValueHelpCache()` so pickers refetch at
+   once. See the [API reference](/api/ui#setvaluehelpcachettl-ms-invalidatevaluehelpcache-client).
 
 The client is created lazily and shared by every ref field in the form — see
 the `clientFactory` provide in `packages/vue-form/src/components/as-form.vue`.

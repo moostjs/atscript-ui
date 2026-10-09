@@ -253,6 +253,8 @@ export {
   extractValueHelp,
   valueHelpDictPaths,
   ValueHelpClient,
+  invalidateValueHelpCache,
+  setValueHelpCacheTtl,
   fetchDistinctValues,
   isPickerDeclined,
   resolveValueHelp,
@@ -274,7 +276,7 @@ export {
 } from "./client-factory";
 
 // ── Shared meta cache (single /meta fetch per URL across tables + value-help)
-export { getMetaEntry, resetMetaCache } from "./shared/meta-cache";
+export { getMetaEntry, resetMetaCache, setMetaCacheIdentity } from "./shared/meta-cache";
 export type { MetaCacheEntry } from "./shared/meta-cache";
 
 // ── Shared utilities ────────────────────────────────────────

@@ -128,6 +128,8 @@ import {
   ValueHelpClient,
   resolveValueHelp,
   resetValueHelpCache,
+  setValueHelpCacheTtl,
+  invalidateValueHelpCache,
   // grid layout helpers
   parseColSpan,
   parseRowSpan,
@@ -261,6 +263,8 @@ setDefaultClientFactory(
 ```
 
 Per-component overrides exist where it matters (`<AsTableRoot :client-factory>`, `<AsForm>` value-help passes its own factory through `useAsValueHelp`).
+
+`/meta` is projected per user and cached per URL in the browser. Call `setMetaCacheIdentity(key)` from `@atscript/ui` (key = user id + role, `null` when signed out) after login, logout and every reload of the current user (since 0.1.151) — a new key resets the cache and each cached `Client`'s memoized `/meta`. Server rendering never caches; on the server, never reuse one `Client` across requests.
 
 ### Style consequence
 

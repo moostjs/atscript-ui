@@ -1,6 +1,6 @@
 import { computed, shallowRef, watch, type ComputedRef, type ShallowRef } from "vue";
 import type { Client, TDbActionTargetSummary } from "@atscript/db-client";
-import type { TableDef } from "@atscript/ui";
+import { invalidateValueHelpCache, type TableDef } from "@atscript/ui";
 import {
   REMOVE_PROCESSOR,
   type ActionQueryTarget,
@@ -191,6 +191,12 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
 
     setLastResult(name, result);
     setInvoking(name, false);
+
+    // A backend action or delete may have written any table (a failed one
+    // possibly in part) — drop shared value-help searches so pickers refetch.
+    if (action.processor !== "custom" && action.processor !== "navigate") {
+      invalidateValueHelpCache();
+    }
 
     // Refetch only for ops that mutated the dataset, gated by per-call
     // `suppressRefresh` and the root-prop `refreshOnAction`.

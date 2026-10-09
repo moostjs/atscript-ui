@@ -77,6 +77,8 @@ export class AsWfStore implements WfStateStore {
   readonly #actor?: () => string | undefined;
   #shadowFieldsCache: ShadowFieldSpec[] | null = null;
   readonly #warnedFields = new Set<string>();
+  /** Whether the table's adapter supports `insertOne(…, { onConflict: "ignore" })`; `undefined` until first tried. */
+  #insertIgnore: boolean | undefined;
 
   constructor(opts: AsWfStoreOptions) {
     this.table = opts.table;
@@ -84,9 +86,29 @@ export class AsWfStore implements WfStateStore {
     this.#actor = opts.actor;
   }
 
+  /**
+   * Persist `state` under `handle`. A new handle (the common case: a fresh
+   * handle, or one just consumed by `getAndDelete`) is written with a single
+   * conflict-ignoring insert; only when the handle already exists is the row
+   * read back (to keep `createdAt` / `createdBy`) and replaced. Adapters
+   * without `onConflict: "ignore"` take the read-then-write path every time.
+   */
   async set(handle: string, state: WfState, expiresAt?: number): Promise<void> {
     const now = this.clock.now();
     const actor = this.getActor();
+
+    if (this.#insertIgnore !== false) {
+      const fresh = this.buildSetPayload(handle, state, { expiresAt, existing: null, now, actor });
+      try {
+        const result = await this.table.insertOne(fresh, { onConflict: "ignore" });
+        this.#insertIgnore = true;
+        if (!result.conflict) return;
+      } catch (error) {
+        if ((error as { code?: unknown } | null)?.code !== "ON_CONFLICT_NOT_SUPPORTED") throw error;
+        this.#insertIgnore = false;
+      }
+    }
+
     const existing = await this.findRow(handle);
     const payload = this.buildSetPayload(handle, state, { expiresAt, existing, now, actor });
 

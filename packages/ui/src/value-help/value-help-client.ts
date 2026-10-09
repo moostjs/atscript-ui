@@ -29,6 +29,96 @@ export interface ValueHelpResult {
   items: Record<string, unknown>[];
 }
 
+// ── Search result sharing ─────────────────────────────────────
+//
+// A form with N pickers on one dictionary mounts N `ValueHelpClient`s that
+// all fire the same initial search. Searches are shared per `Client`
+// instance: an identical request (same filter + controls) joins the one in
+// flight, and a settled result is reused for a short TTL. Keyed by the
+// `Client`, so the cache is dropped with it; `resetMetaCache()` (login /
+// logout) clears every client's cache, and so does a backend action or
+// delete run through vue-table's actions.
+
+interface SharedSearch {
+  promise: Promise<Record<string, unknown>[]>;
+  /** `performance.now()`-style timestamp the response settled at; `undefined` while in flight. */
+  settledAt?: number;
+}
+
+const DEFAULT_VALUE_HELP_CACHE_TTL = 5000;
+let cacheTtl = DEFAULT_VALUE_HELP_CACHE_TTL;
+let searches = new WeakMap<Client, Map<string, SharedSearch>>();
+
+/**
+ * How long (ms) a settled value-help search is reused for an identical
+ * search on the same client. Default 5000. `0` shares only searches still in
+ * flight; a negative value turns sharing off. Server-side rendering never
+ * shares (one process serves many viewers).
+ */
+export function setValueHelpCacheTtl(ms: number): void {
+  cacheTtl = ms;
+}
+
+/**
+ * Drop shared value-help search results — for one `client`, or for every
+ * client when omitted. Call after writing to a dictionary outside the
+ * built-in table actions to make pickers refetch at once.
+ */
+export function invalidateValueHelpCache(client?: Client): void {
+  if (client) searches.get(client)?.clear();
+  else searches = new WeakMap();
+}
+
+function now(): number {
+  return typeof performance === "undefined" ? Date.now() : performance.now();
+}
+
+/** Cache key of a plain-JSON request; `undefined` when it holds anything else (never shared). */
+function requestKey(request: Record<string, unknown>): string | undefined {
+  let plain = true;
+  try {
+    const key = JSON.stringify(request, (_k, v: unknown) => {
+      if (typeof v === "function" || typeof v === "symbol") plain = false;
+      else if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+        const proto = Object.getPrototypeOf(v) as unknown;
+        if (proto !== Object.prototype && proto !== null) plain = false;
+      }
+      return v;
+    });
+    return plain ? key : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function sharedQuery(
+  client: Client,
+  request: Record<string, unknown>,
+): Promise<Record<string, unknown>[]> {
+  const run = () => client.query(request as any) as Promise<Record<string, unknown>[]>;
+  if (cacheTtl < 0 || typeof window === "undefined") return run();
+  const key = requestKey(request);
+  if (key === undefined) return run();
+  let byKey = searches.get(client);
+  if (!byKey) searches.set(client, (byKey = new Map()));
+  const hit = byKey.get(key);
+  if (hit && (hit.settledAt === undefined || now() - hit.settledAt < cacheTtl)) return hit.promise;
+  const entry: SharedSearch = {
+    promise: run().then(
+      (items) => {
+        entry.settledAt = now();
+        return items;
+      },
+      (err: unknown) => {
+        if (byKey.get(key) === entry) byKey.delete(key);
+        throw err;
+      },
+    ),
+  };
+  byKey.set(key, entry);
+  return entry.promise;
+}
+
 /**
  * Value-help query client. Wraps a `Client` from `@atscript/db-client`
  * with FK-specific search logic (regex fallback for non-searchable tables,
@@ -37,6 +127,9 @@ export interface ValueHelpResult {
  * Consumers resolve the target's metadata once via `resolveValueHelp(url)`
  * and pass the resulting `ResolvedValueHelp` to `search()`. Label resolution
  * for cells is deliberately unsupported — cells always display raw ids.
+ *
+ * Identical searches on the same `Client` are shared (see
+ * {@link setValueHelpCacheTtl}).
  */
 export class ValueHelpClient {
   private readonly _client: Client;
@@ -75,8 +168,9 @@ export class ValueHelpClient {
       }
     }
 
-    const items = await this._client.query({ ...(filter && { filter }), controls } as any);
-    return { items: items as Record<string, unknown>[] };
+    const items = await sharedQuery(this._client, { ...(filter && { filter }), controls });
+    // Each caller gets its own array (the rows themselves are shared).
+    return { items: Array.isArray(items) ? items.slice() : items };
   }
 }
 

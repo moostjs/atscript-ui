@@ -13,11 +13,30 @@ export function provideCellLocale(source: MaybeRefOrGetter<CellLocale | undefine
   provide(CELL_LOCALE_KEY, source);
 }
 
-export function useCellLocale(): {
+interface CellLocaleRefs {
   locale: ComputedRef<string>;
   timezone: ComputedRef<string | undefined>;
-} {
+}
+
+/**
+ * One pair of computeds per provided source: every cell under the same
+ * provider shares them instead of allocating its own two per cell.
+ */
+const bySource = new WeakMap<object, CellLocaleRefs>();
+
+export function useCellLocale(): CellLocaleRefs {
   const source = inject<MaybeRefOrGetter<CellLocale | undefined>>(CELL_LOCALE_KEY, undefined);
+  if (source === null || (typeof source !== "object" && typeof source !== "function")) {
+    return createCellLocale(source);
+  }
+  let refs = bySource.get(source);
+  if (!refs) bySource.set(source, (refs = createCellLocale(source)));
+  return refs;
+}
+
+function createCellLocale(
+  source: MaybeRefOrGetter<CellLocale | undefined> | undefined,
+): CellLocaleRefs {
   const locale = computed(() => {
     const lang = source ? toValue(source)?.language : undefined;
     if (lang && lang.trim().length > 0) return lang;

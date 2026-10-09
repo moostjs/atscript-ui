@@ -297,17 +297,22 @@ test.describe("Section 5.5 — ARBAC: no help when the server declines", () => {
       const pill = await addFilterPill(page, "Color");
       const input = pill.locator(".as-filter-field-search");
 
-      const denied = page.waitForResponse(
-        (r) => /\/api\/db\/tables\/attribute-values\/meta/.test(r.url()) && r.status() === 403,
-      );
+      // Since @aooth/arbac-moost 0.1.75 the products `/meta` drops the `ui.valueHelp` binding
+      // for a caller who cannot read the dictionary, so the client never asks the dictionary
+      // at all; older releases kept the binding and the dictionary `/meta` answered 403.
+      // Either way no dictionary data reaches the viewer and the filter takes free text.
+      const dictionary: number[] = [];
+      page.on("response", (r) => {
+        if (/\/api\/db\/tables\/attribute-values\//.test(r.url())) dictionary.push(r.status());
+      });
       await input.click();
-      await denied;
       // the picker is gone: typing + Enter applies a plain predicate chip
       await expect(page.locator(DROPDOWN)).toHaveCount(0);
       await input.fill("blue");
       await input.press("Enter");
       await expect(pill.locator(".as-filter-field-chip")).toHaveCount(1);
       await expect(page).toHaveURL(/color/);
+      expect(dictionary.every((status) => status === 403)).toBe(true);
     } finally {
       await ctx.close();
     }

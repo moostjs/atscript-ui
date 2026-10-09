@@ -1,6 +1,6 @@
 import type { Client } from "@atscript/db-client";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   resetDefaultClientFactory,
   setDefaultClientFactory,
@@ -40,13 +40,20 @@ function makeFactory(metaImpl: () => Promise<unknown>): {
   const factory: ClientFactory = () =>
     ({
       meta: metaSpy,
+      invalidateMeta: vi.fn(),
     }) as unknown as Client;
   return { factory, metaSpy };
 }
 
+// The meta cache lives only in the browser — `packages/ui` tests run in node.
+beforeEach(() => {
+  vi.stubGlobal("window", {});
+});
+
 afterEach(() => {
   resetValueHelpCache();
   resetDefaultClientFactory();
+  vi.unstubAllGlobals();
 });
 
 describe("resolveValueHelp", () => {

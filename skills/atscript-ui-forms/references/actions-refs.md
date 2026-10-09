@@ -342,7 +342,7 @@ The server resolves the same chains on its side: since `@atscript/db` 0.1.128
 TERMINAL field and `db.rel.FK: true` lifted onto it. Form defs built from a
 compiled `.as` type and from `/meta` therefore agree on the dictionary.
 
-`resolveValueHelp(url)` caches per URL across the app — call `resetValueHelpCache()` to invalidate (e.g. on logout). `ValueHelpClient.search` accepts `{ text?, mode?: 'form' | 'filter', limit?, select?, filter?, valueField? }` (`filter` / `valueField` since 0.1.148).
+`resolveValueHelp(url)` caches per URL in the browser (shared meta cache; never on the server) — bind it to the signed-in user with `setMetaCacheIdentity(key | null)` after login / logout / current-user reload (since 0.1.151; a new key resets it), or call `resetValueHelpCache()` to invalidate explicitly. Since 0.1.151 identical `search()` calls on one `Client` are shared in the browser (in-flight join + 5 s reuse; never on the server): `setValueHelpCacheTtl(ms)` tunes it (`0` = in-flight only, `< 0` = off); after writing a dictionary outside `<AsTable>` actions call `invalidateValueHelpCache(client?)` or pickers may show rows up to the TTL old (`resetMetaCache()` and table backend/delete actions clear it). `ValueHelpClient.search` accepts `{ text?, mode?: 'form' | 'filter', limit?, select?, filter?, valueField? }` (`filter` / `valueField` since 0.1.148).
 
 ## `@ui.dict.*` on the target type
 

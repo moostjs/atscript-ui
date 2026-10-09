@@ -1,4 +1,5 @@
 import { readonly, ref } from "vue";
+import { setMetaCacheIdentity } from "@atscript/ui";
 import { sharedFetch } from "./fetch";
 
 export interface Me {
@@ -13,17 +14,33 @@ const _loading = ref(false);
 const _error = ref<string | null>(null);
 const _loaded = ref(false);
 
+/**
+ * Every write to the current user goes through here: `/meta` (and the
+ * value-help searches shared under it) is projected per user and role, so
+ * the shared meta cache is bound to who is signed in.
+ */
+function setMe(me: Me | null) {
+  _me.value = me;
+  setMetaCacheIdentity(me ? `${me.userId}:${me.roleName}` : null);
+}
+
+function clear() {
+  setMe(null);
+  _loaded.value = false;
+  _error.value = null;
+}
+
 async function load() {
   _loading.value = true;
   _error.value = null;
   try {
     const res = await sharedFetch("/api/me");
     if (res.status === 401) {
-      _me.value = null;
+      setMe(null);
       return;
     }
     if (!res.ok) throw new Error(`/api/me ${res.status}`);
-    _me.value = (await res.json()) as Me;
+    setMe((await res.json()) as Me);
   } catch (e) {
     _error.value = (e as Error).message;
   } finally {
@@ -36,9 +53,7 @@ async function logout() {
   try {
     await sharedFetch("/api/auth/logout", { method: "POST" });
   } finally {
-    _me.value = null;
-    _loaded.value = false;
-    _error.value = null;
+    clear();
   }
 }
 
@@ -51,10 +66,6 @@ export function useMe() {
     loaded: readonly(_loaded),
     refresh: load,
     logout,
-    reset: () => {
-      _me.value = null;
-      _loaded.value = false;
-      _error.value = null;
-    },
+    reset: clear,
   };
 }
