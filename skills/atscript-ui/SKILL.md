@@ -254,8 +254,9 @@ import { setDefaultClientFactory } from "@atscript/ui";
 import { Client } from "@atscript/db-client";
 
 setDefaultClientFactory(
-  (url) =>
+  (url, options) =>
     new Client(url, {
+      ...options, // library-requested `metaKey` / `metaStore` (0.1.153) — always spread it
       fetch: (input, init) => fetch(input, { ...init, credentials: "include" }),
       // headers, base URL rewriting, retry, etc.
     }),
@@ -264,7 +265,9 @@ setDefaultClientFactory(
 
 Per-component overrides exist where it matters (`<AsTableRoot :client-factory>`, `<AsForm>` value-help passes its own factory through `useAsValueHelp`).
 
-`/meta` is projected per user and cached per URL in the browser. Call `setMetaCacheIdentity(key)` from `@atscript/ui` (key = user id + role, `null` when signed out) after login, logout and every reload of the current user (since 0.1.151) — a new key resets the cache and each cached `Client`'s memoized `/meta`. Server rendering never caches; on the server, never reuse one `Client` across requests.
+`/meta` is projected per user and cached per URL in the browser. Call `setMetaCacheIdentity(key)` from `@atscript/ui` (key = user id + role, `null` when signed out) after login, logout and every reload of the current user (since 0.1.151) — a new key resets the cache, each cached `Client`'s memoized `/meta`, the db-client meta stores (0.1.153) and the table-presets cache (which is only ON once an identity is bound, 0.1.153). Server rendering never caches (factory gets `metaStore: false`); on the server, never reuse one `Client` across requests.
+
+Parametric mounts (`/api/db/ticket-issue/:key`, 0.1.153): pass the route template as `metaKey` (`<AsTableRoot meta-key="/api/db/ticket-issue/:key">`, `useTable(url, { metaKey })`, `getMetaEntry(url, factory, { metaKey })`) — a new key then costs a `304` instead of the full `/meta`. Same-ETag `/meta` bodies share the deserialized type + `TableDef` (`getMetaTableDef(entry)`). Needs `@atscript/db-client` ≥ 0.1.153 and a factory that spreads its options.
 
 ### Style consequence
 

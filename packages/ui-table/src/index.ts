@@ -152,6 +152,22 @@ export {
   isUnavailableError,
 } from "./presets/presets-client";
 
+// ── Presets session cache (browser, identity-bound) ─────────
+export type { PresetRows, PresetsCacheListener } from "./presets/presets-cache";
+export {
+  cachedPresetCapabilities,
+  cachedPresetRows,
+  invalidatePresetsCache,
+  isPresetsCacheActive,
+  loadPresetCapabilities,
+  loadPresetRows,
+  presetsCacheKey,
+  publishPresetsWrite,
+  setPresetsCacheMaxAge,
+  sharedPresetsClient,
+  subscribePresetsCache,
+} from "./presets/presets-cache";
+
 // ── AppPrefsClient (app-wide user prefs) ────────────────────
 export type { AppPrefsClientConfig, AppPrefsLoadResult } from "./presets/app-prefs-client";
 export { AppPrefsClient } from "./presets/app-prefs-client";

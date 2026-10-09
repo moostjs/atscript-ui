@@ -91,6 +91,7 @@ declare global {
     "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
     "db.search.vector.threshold": number
     "db.search.filter": (string)[]
+    "db.sort.nulls": string
     "db.amount.currency": string
     "db.amount.currency.ref": string
     "db.unit": string

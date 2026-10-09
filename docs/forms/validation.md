@@ -54,8 +54,13 @@ the validator's format-specific message.
 
 ::: tip Optional + required
 `field?: string` with `@meta.required` means "if present, can't be
-empty". vue-form does **not** paint the required marker on these —
-see `as-field.vue:167-181`.
+empty". vue-form does **not** paint the required marker on these.
+
+Since atscript 0.1.103 such a field rejects `null` (it may only be
+omitted). An emptied date, datetime, time, number or decimal input on an
+optional field therefore commits `undefined` (since 0.1.153); on a
+non-optional field it keeps committing `null`. Declare the field
+`field?: string | null` when `null` is a value your API accepts.
 :::
 
 ### Layer 3: `@ui.form.validate`

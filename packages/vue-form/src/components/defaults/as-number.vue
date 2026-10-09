@@ -4,6 +4,7 @@ import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import AsInputControl from "../internal/as-input-control.vue";
 import { useAsNumber } from "../../composables/use-as-number";
+import { committedValue } from "../../composables/_shape";
 
 /**
  * Default number renderer — single input with optional leading prefix
@@ -27,7 +28,7 @@ const props = defineProps<TAsComponentProps>();
 const { displayValue, rawValue, setFromInput } = useAsNumber({
   modelValue: () => props.model.value as string | number | null | undefined,
   onCommit: (v) => {
-    props.model.value = v;
+    props.model.value = committedValue(v, props.optional);
   },
 });
 

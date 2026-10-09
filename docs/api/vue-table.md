@@ -74,6 +74,8 @@ interface AsTableRootProps {
   blockSize?: number;
   dragReleaseDebounceMs?: number;
   clientFactory?: ClientFactory;
+  /** `/meta` revalidation key (default: the URL). The route template of a parametric mount, e.g. `"/api/db/ticket-issue/:key"`. Setup-only. Since 0.1.153 — see [Parametric mounts](/api/ui#parametric-mounts-metakey). */
+  metaKey?: string;
   controls?: TAsTableControls;
   types?: TAsCellTypeComponents;
   components?: Record<string, Component>;
@@ -93,7 +95,7 @@ interface AsTableRootProps {
 
 `forceFilters` / `forceSorters` are never pruned of hidden fields — keep them to fields every role reads.
 
-**Live vs setup-only props (since 0.1.148).** `forceFilters`, `forceSorters` and `alwaysSelected` are live; the props that wire the table up (`url`, `queryFn`, `clientFactory`, `preset`, `urlQuerySync`, `displayColumns`, `limit`, …) are read once and warn in development when changed after mount. See [Forced scope is live](/tables/filtering#forced-scope-is-live).
+**Live vs setup-only props (since 0.1.148).** `forceFilters`, `forceSorters` and `alwaysSelected` are live; the props that wire the table up (`url`, `queryFn`, `clientFactory`, `metaKey`, `preset`, `urlQuerySync`, `displayColumns`, `limit`, …) are read once and warn in development when changed after mount. See [Forced scope is live](/tables/filtering#forced-scope-is-live).
 
 **Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `selection`, `canSelectAllMatching`, `selectAllMatching`, `clearSelection` (these four since 0.1.147), `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
 
@@ -382,6 +384,8 @@ interface UseTableOptions {
   blockSize?: number;
   dragReleaseDebounceMs?: number;
   clientFactory?: ClientFactory;
+  /** `/meta` revalidation key (default: the URL). The route template of a parametric mount, e.g. `"/api/db/ticket-issue/:key"`. Setup-only. Since 0.1.153 — see [Parametric mounts](/api/ui#parametric-mounts-metakey). */
+  metaKey?: string;
   controls?: TAsTableControls;
   types?: TAsCellTypeComponents;
   components?: Record<string, Component>;
@@ -716,6 +720,7 @@ interface UsePresetsReturn {
   systemPresetsById: ComputedRef<Map<string, SystemPreset>>;
   /** False when the initial load returned 401/403/404 — UI hides itself. */
   available: ComputedRef<boolean>;
+  /** Preset rows loading. Capabilities never hold it (since 0.1.153); a load served from the session cache never sets it. */
   loading: Ref<boolean>;
   /** Last failure. Since 0.1.133 the mutators write here as well as rethrowing. */
   error: Ref<unknown>;
@@ -739,6 +744,8 @@ interface UsePresetsReturn {
   setFavorites(ids: string[]): Promise<void>;
 }
 ```
+
+Once the app calls `setMetaCacheIdentity()`, loads and writes go through the [presets session cache](/tables/presets#session-cache) (since 0.1.153): a re-mount applies cached rows synchronously, and a write refreshes every other mounted `usePresets` on the same `(url, app, tableKey)`, in this tab and others.
 
 Every mutator rethrows on failure; `error` here is the **load** channel only.
 Mutation failures are recorded on the wired `state.preset.lastError`

@@ -201,8 +201,9 @@ prop to `<AsForm>` (or `<AsWfForm>`):
 import { AsForm, type ClientFactory } from "@atscript/vue-form";
 import { Client } from "@atscript/db-client";
 
-const clientFactory: ClientFactory = (url) =>
+const clientFactory: ClientFactory = (url, options) =>
   new Client(url, {
+    ...options,
     fetch: (req) => fetch(req, { headers: { Authorization: `Bearer ${getToken()}` } }),
   });
 </script>
@@ -218,15 +219,19 @@ For an app-wide default, call `setDefaultClientFactory` once at startup:
 import { setDefaultClientFactory } from "@atscript/vue-form";
 
 setDefaultClientFactory(
-  (url) =>
+  (url, options) =>
     new Client(url, {
+      ...options,
       /* auth */
     }),
 );
 ```
 
 Per-form `clientFactory` props override the default. Both fall back to the
-built-in `new Client(url)` factory when unset.
+built-in `new Client(url, options)` factory when unset. Spread the second
+argument into the `Client` options (since 0.1.153): it carries the
+library's `metaKey` / `metaStore` requests — see
+[Client factory](/api/ui#client-factory).
 
 ## Picker UX
 

@@ -297,6 +297,49 @@ its own built-in views. `systemAspects` keeps those built-in views
 from resetting the user's layout, and `draftScope` keeps local
 drafts private to the signed-in user.
 
+### Session cache
+
+_Since 0.1.153._ Once the app binds the signed-in viewer with
+[`setMetaCacheIdentity()`](/api/ui#meta-cache), preset loads go
+through a browser session cache keyed by `(presets url, app, tableKey)`:
+
+- **Re-mounts are free.** A table that mounts again (SPA navigation)
+  applies the cached preset rows synchronously — the default preset
+  resolves and the first data query fires with no presets request.
+  Rows older than the max age (30 s by default) are still applied
+  from the cache, then refreshed in the background. A refresh updates
+  the picker's list and favourites but **never re-applies the default
+  preset** mid-session.
+- **Capabilities load once per session**, and never hold the first
+  data query (also without the cache): only the preset rows and the
+  table definition do. Until they arrive, save / publish controls may
+  briefly read as not permitted.
+- **Writes stay in sync.** A save, rename, delete, public toggle,
+  default or favourite change refreshes the shared entry, so every
+  other mounted table on the same scope updates its list, and other
+  tabs of the same viewer are told through a `BroadcastChannel`.
+- **One db `Client` per presets URL** serves every table, so the
+  first write validates against one `_presets/meta`, not one per mount.
+- **Failures are never cached** — a failed or denied load is retried
+  on the next mount.
+
+Identity scoping:
+
+| Situation                                                     | Behaviour                                               |
+| ------------------------------------------------------------- | ------------------------------------------------------- |
+| App never calls `setMetaCacheIdentity()`                      | No cache — every mount loads, as before 0.1.153         |
+| Server rendering (no `window`)                                | No cache                                                |
+| `setMetaCacheIdentity()` with a new key                       | Cache dropped (with the meta cache, `resetMetaCache()`) |
+| Rows owned by a user other than the one the capabilities name | Cache dropped, mounted tables reload                    |
+
+Tune or turn it off with `setPresetsCacheMaxAge(ms)` from
+`@atscript/ui-table` (`0` = refresh in the background on every
+mount, negative = off). Call `invalidatePresetsCache()` after
+changing presets outside the presets API (e.g. a server-side
+import). Do bind the identity on login, logout and every reload of
+the current user — the cache relies on it to never show one user's
+private presets to the next.
+
 ### When a preset write fails
 
 Every mutator on `state.preset` (`saveActive`, `saveAs`, `rename`,

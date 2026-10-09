@@ -189,6 +189,8 @@ Three layers, run in order on submit. Live (pre-submit) validation runs only the
 | `@meta.required`            | Implicit non-empty check                     | Same as above. Renders the `*` marker.                                                                                                          |
 | `@ui.form.validate '(...)'` | Custom validator strings (requires ui-fns)   | Same as above. Receives `TFnScope` with `v`/`data`/`context`/`entry`.                                                                           |
 
+Optional + `@meta.required` (`name?: string`): atscript ≥ 0.1.103 rejects `null` there. Emptied date / datetime / time / number / decimal inputs on optional fields commit `undefined` (0.1.153); non-optional keep `null`. Custom input components on optional fields must also commit `undefined`, not `null`, when emptied (use `props.optional`).
+
 `@expect.*` rules live in the atscript skill — see `expect.md` there for the catalog.
 
 Custom validator example (requires `installDynamicResolver()` from `@atscript/ui-fns`):

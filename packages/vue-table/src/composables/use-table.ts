@@ -1,6 +1,6 @@
 import {
-  createTableDef,
   getMetaEntry,
+  getMetaTableDef,
   resetMetaCache,
   type ClientFactory,
   type SortControl,
@@ -136,6 +136,14 @@ export interface UseTableOptions {
   dragReleaseDebounceMs?: number;
   /** Factory to create a client from a URL. Only honored on the first `useTable`/`resolveValueHelp` call per URL — subsequent callers reuse the cached client. */
   clientFactory?: ClientFactory;
+  /**
+   * Store key for `/meta` revalidation (default: the URL). Pass the route
+   * template of a parametric mount (e.g. `"/api/db/ticket-issue/:key"`) so
+   * every key shares one stored `/meta`: a new key costs a `304`, not the
+   * full body. Only honored on the first call per URL, like `clientFactory`.
+   * Since 0.1.153.
+   */
+  metaKey?: string;
   /** Skin-slot overrides for table chrome (header cells, filter dialog, column menu, etc.). */
   controls?: TAsTableControls;
   /** Cell-type → component dispatch map. Use {@link createDefaultCellTypes} to seed defaults. */
@@ -252,14 +260,9 @@ export function finalizeTableState(
  * @param url — Table endpoint URL (e.g. "/db/tables/products")
  */
 export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
-  const entry = getMetaEntry(url, opts?.clientFactory);
-  if (!entry.tableDef) {
-    entry.tableDef = Promise.all([entry.meta, entry.type]).then(([meta, type]) =>
-      createTableDef(meta, type),
-    );
-  }
+  const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey });
   const { client } = entry;
-  const defPromise = entry.tableDef;
+  const defPromise = getMetaTableDef(entry);
 
   // The zone the filters read dates in is the zone the cells render them in.
   const cellLocale = getCurrentInstance() ? useCellLocale() : undefined;

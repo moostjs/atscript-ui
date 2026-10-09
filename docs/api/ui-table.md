@@ -672,6 +672,18 @@ class PresetsClient {
 }
 ```
 
+### Presets session cache
+
+_Since 0.1.153._ Browser-only, identity-bound cache of preset rows, capabilities and the presets db `Client`, keyed by `(url, app, tableKey)`. Behaviour and guarantees: [Presets — Session cache](/tables/presets#session-cache).
+
+```typescript
+function setPresetsCacheMaxAge(ms: number): void; // default 30000; 0 = always revalidate on mount; < 0 = off
+function invalidatePresetsCache(): void; // also runs on every `resetMetaCache()` / identity change
+function isPresetsCacheActive(): boolean; // browser && identity bound && max age >= 0
+```
+
+Building blocks for framework adapters (`usePresets` in `@atscript/vue-table` is built on them): `presetsCacheKey(url, app, tableKey)`, `cachedPresetRows(key)`, `cachedPresetCapabilities(key)`, `loadPresetRows(key, fetchRows, { force?, origin? })`, `loadPresetCapabilities(key, fetchCaps, origin?)`, `subscribePresetsCache(key, listener)`, `publishPresetsWrite(key)`, `sharedPresetsClient(url, factory?)`, and the `PresetRows` / `PresetsCacheListener` types.
+
 ### `PresetsHttpError` / `isUnavailableError`
 
 ```typescript

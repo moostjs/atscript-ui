@@ -98,6 +98,13 @@ const props = withDefaults(
     rowActions?: RowActionsConfig;
     /** Factory to create a client from a URL. Falls back to the app-wide default set via `setDefaultClientFactory` (or the built-in `new Client(url)` factory if unset). */
     clientFactory?: ClientFactory;
+    /**
+     * Store key for `/meta` revalidation (default: the URL). Pass the route
+     * template of a parametric mount (e.g. `"/api/db/ticket-issue/:key"`) so
+     * a table opened for a new key revalidates the `/meta` already loaded for
+     * another key (a `304`) instead of downloading it. Since 0.1.153.
+     */
+    metaKey?: string;
     /** Skin-slot overrides for table chrome — header cells, filter dialog, column menu, etc. Use {@link createDefaultControls} to seed defaults. */
     controls?: TAsTableControls;
     /** Cell-type → component dispatch map. Use {@link createDefaultCellTypes} to seed defaults. */
@@ -386,6 +393,7 @@ const state = localMode
       blockSize: props.blockSize,
       dragReleaseDebounceMs: props.dragReleaseDebounceMs,
       clientFactory: props.clientFactory,
+      metaKey: props.metaKey,
       controls: props.controls,
       types: props.types,
       components: props.components,
@@ -433,6 +441,7 @@ if (DEV) {
     "displayColumns",
     "limit",
     "clientFactory",
+    "metaKey",
     ...(localMode ? (["columns"] as const) : []),
   ] as const;
   // A column list is the same while its keys are; the render functions on a

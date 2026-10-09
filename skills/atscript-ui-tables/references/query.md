@@ -156,6 +156,8 @@ interface MetaResponse {
 
 Meta is fetched **once** per URL and cached (browser only — server rendering never caches, so viewers never share `/meta`). Remount of `<AsTableRoot>` with the same URL reuses the cache. `/meta` is projected per user: call `setMetaCacheIdentity(key)` from `@atscript/ui` (key = user id + role, `null` when signed out) after login, logout and every current-user reload — a new key resets the cache, including each cached `Client`'s memoized `/meta` (needs `@atscript/db-client` ≥ 0.1.151). Without it an SPA role switch without reload keeps the previous user's columns/actions. Use `clearTableCache()` from `@atscript/vue-table` (alias of `resetMetaCache` in `@atscript/ui`) to flush during HMR / tests. Never mutate the resolved `meta` object.
 
+Parametric controller (`/api/db/ticket-issue/:key`, since 0.1.153): set `meta-key="/api/db/ticket-issue/:key"` (setup-only prop; `useTable(url, { metaKey })`). Each new key revalidates the stored `/meta` (`If-None-Match` → `304`) and reuses the deserialized type + `TableDef` (shared per ETag). Requires `@atscript/db-client` ≥ 0.1.153 and a `ClientFactory` that spreads its 2nd argument into `new Client(url, { ...options, … })`. Don't use it when an app meta overlay depends on the route param.
+
 ## ReactiveTableState
 
 The public state surface exposed via the default slot, `useTableContext().state`, and `<AsTableRoot ref>.state`.

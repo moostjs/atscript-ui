@@ -15,3 +15,16 @@ export function preserveShape(
   if (typeof original === "string") return normalized;
   return Number(normalized);
 }
+
+/**
+ * The value an emptied input commits: `undefined` (omitted) on an optional
+ * field — `null` is not a value of `name?: T`, and atscript >= 0.1.103
+ * rejects it there when the field also carries `@meta.required` — else
+ * `null`. Shared by the number / decimal / date / datetime / time inputs.
+ */
+export function committedValue<T>(
+  value: T | null,
+  optional: boolean | undefined,
+): T | null | undefined {
+  return value === null && optional ? undefined : value;
+}

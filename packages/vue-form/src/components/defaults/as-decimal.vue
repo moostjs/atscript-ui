@@ -4,6 +4,7 @@ import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import { useAsDecimal } from "../../composables/use-as-decimal";
 import { useAsDualInput } from "../../composables/use-as-dual-input";
+import { committedValue } from "../../composables/_shape";
 
 /**
  * Default decimal renderer — the "bank UX": one bordered shell with an
@@ -28,7 +29,7 @@ const { scale, decimalSeparator, rawValue, parts, setFromInput, setFromParts } =
   scale: () => props.scale,
   storageScale: () => props.precisionScale,
   onCommit: (v) => {
-    props.model.value = v;
+    props.model.value = committedValue(v, props.optional);
   },
 });
 

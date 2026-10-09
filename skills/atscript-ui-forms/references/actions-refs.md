@@ -395,8 +395,9 @@ For the full `@ui.dict.*` reference see the general **atscript-ui** skill's `ann
 import type { ClientFactory } from "@atscript/vue-form";
 import { Client } from "@atscript/db-client";
 
-const clientFactory: ClientFactory = (url) =>
+const clientFactory: ClientFactory = (url, options) =>
   new Client(url, {
+    ...options, // library-requested metaKey / metaStore (0.1.153)
     fetch: (input, init) =>
       fetch(input, {
         ...init,
@@ -423,7 +424,7 @@ Apply once globally if every form needs the same auth wiring:
 import { setDefaultClientFactory } from "@atscript/vue-form";
 import { Client } from "@atscript/db-client";
 
-setDefaultClientFactory((url) => new Client(url, { fetch: authedFetch }));
+setDefaultClientFactory((url, options) => new Client(url, { ...options, fetch: authedFetch }));
 ```
 
 `getDefaultClientFactory()` and `resetDefaultClientFactory()` are also exported (the latter primarily for tests).

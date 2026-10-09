@@ -273,11 +273,19 @@ export {
   getDefaultClientFactory,
   resetDefaultClientFactory,
   type ClientFactory,
+  type ClientFactoryOptions,
 } from "./client-factory";
 
 // ── Shared meta cache (single /meta fetch per URL across tables + value-help)
-export { getMetaEntry, resetMetaCache, setMetaCacheIdentity } from "./shared/meta-cache";
-export type { MetaCacheEntry } from "./shared/meta-cache";
+export {
+  getMetaEntry,
+  getMetaTableDef,
+  resetMetaCache,
+  setMetaCacheIdentity,
+  getMetaCacheIdentity,
+  onMetaCacheReset,
+} from "./shared/meta-cache";
+export type { MetaCacheEntry, MetaEntryOptions } from "./shared/meta-cache";
 
 // ── Shared utilities ────────────────────────────────────────
 export { str, escapeRegex } from "./shared/str";

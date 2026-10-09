@@ -1066,11 +1066,18 @@ function str(value: unknown): string;
 `ClientFactory` is the contract Vue tables and value-help use to build HTTP clients. Override globally to inject auth headers / retries / interceptors.
 
 ```typescript
-type ClientFactory = (url: string) => Client; // `Client` from `@atscript/db-client`
+type ClientFactory = (url: string, options?: ClientFactoryOptions) => Client; // `Client` from `@atscript/db-client`
+type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore">; // since 0.1.153
 
 function setDefaultClientFactory(factory: ClientFactory): void;
-function getDefaultClientFactory(): ClientFactory; // never `undefined` — falls back to `(url) => new Client(url)`
+function getDefaultClientFactory(): ClientFactory; // never `undefined` — falls back to `(url, options) => new Client(url, options)`
 function resetDefaultClientFactory(): void;
+```
+
+Spread the optional second argument into the `Client` options you build (_since 0.1.153_): the library passes `metaKey` for a table given [`metaKey`](#meta-cache), and `metaStore: false` during server rendering. A factory that ignores it still works, but loses those two behaviors.
+
+```typescript
+setDefaultClientFactory((url, options) => new Client(url, { ...options, fetch: appFetch }));
 ```
 
 ## Meta cache
@@ -1078,24 +1085,50 @@ function resetDefaultClientFactory(): void;
 A single `/meta` fetch per URL is cached across `useTable` instances and `resolveValueHelp` calls. `getMetaEntry` is synchronous — the promises on the entry resolve once the underlying fetch settles.
 
 ```typescript
-function getMetaEntry(url: string, factory?: ClientFactory): MetaCacheEntry;
+function getMetaEntry(
+  url: string,
+  factory?: ClientFactory,
+  options?: MetaEntryOptions,
+): MetaCacheEntry;
+function getMetaTableDef(entry: MetaCacheEntry): Promise<TableDef>; // since 0.1.153
 function resetMetaCache(): void;
 function setMetaCacheIdentity(key: string | null | undefined): void; // since 0.1.151
+function getMetaCacheIdentity(): string | null | undefined; // since 0.1.153
+function onMetaCacheReset(listener: () => void): () => void; // since 0.1.153
+
+interface MetaEntryOptions {
+  metaKey?: string; // since 0.1.153 — `/meta` revalidation key, default the URL
+}
 
 interface MetaCacheEntry {
   client: Client; // from `@atscript/db-client`
   meta: Promise<MetaResponse>;
   type: Promise<TAtscriptAnnotatedType>; // pre-deserialized
   resolved?: Promise<ResolvedValueHelp>; // populated lazily by `resolveValueHelp`
-  tableDef?: Promise<TableDef>; // populated lazily by Vue `useTable`
+  tableDef?: Promise<TableDef>; // populated lazily by `getMetaTableDef` (Vue `useTable`)
 }
 ```
 
 `/meta` is projected per user — the server strips the columns, actions and value-help a role may not use — so the cache belongs to one signed-in viewer:
 
-- **Bind it to the viewer** (_since 0.1.151_). Call `setMetaCacheIdentity(key)` with a key naming the user and role (e.g. `` `${userId}:${role}` ``, `null` when signed out) after login, after logout and whenever you reload the current user. A different key resets the cache; the same key keeps it. Without it, an SPA that logs out and signs in as another user without a page reload keeps rendering the previous user's columns and actions.
-- **`resetMetaCache()`** drops every entry, the value-help searches shared under them and — _since 0.1.151_, with `@atscript/db-client` ≥ 0.1.151 — the `/meta` each cached `Client` memoizes (`Client.invalidateMeta()`), so a `ClientFactory` that reuses `Client` instances refetches too. Components already mounted keep the entry they hold; remount them (e.g. navigate) to pick up the new `/meta`. Clients you use outside the cache (`client.meta()`, `client.action()` on a client you keep yourself) need their own `invalidateMeta()` call.
-- **Server rendering never caches** (_since 0.1.151_). Without a browser `window`, every `getMetaEntry` call builds a fresh entry, so one viewer's render never sees another's `/meta`. Your server-side `ClientFactory` must not hand one `Client` to several requests either — a `Client` memoizes its `/meta`. Never mutate the `meta` object an entry resolves to: in-process consumers may share it by reference.
+- **Bind it to the viewer** (_since 0.1.151_). Call `setMetaCacheIdentity(key)` with a key naming the user and role (e.g. `` `${userId}:${role}` ``, `null` when signed out) after login, after logout and whenever you reload the current user. A different key resets the cache; the same key keeps it. Without it, an SPA that logs out and signs in as another user without a page reload keeps rendering the previous user's columns and actions. Binding an identity also turns on the [table-presets cache](/tables/presets#session-cache) (_since 0.1.153_).
+- **`resetMetaCache()`** drops every entry, the value-help searches shared under them and — _since 0.1.151_, with `@atscript/db-client` ≥ 0.1.151 — the `/meta` each cached `Client` memoizes (`Client.invalidateMeta()`), so a `ClientFactory` that reuses `Client` instances refetches too. _Since 0.1.153_ it also clears the `@atscript/db-client` meta stores (the shared default one, and any custom `metaStore` your factory gave a cached client) and runs every `onMetaCacheReset` listener (the presets cache registers one). Components already mounted keep the entry they hold; remount them (e.g. navigate) to pick up the new `/meta`. Clients you use outside the cache (`client.meta()`, `client.action()` on a client you keep yourself) need their own `invalidateMeta()` call.
+- **Server rendering never caches** (_since 0.1.151_). Without a browser `window`, every `getMetaEntry` call builds a fresh entry, so one viewer's render never sees another's `/meta`, and _since 0.1.153_ the factory is asked for `metaStore: false` so no `/meta` body lands in a process-wide store. Your server-side `ClientFactory` must not hand one `Client` to several requests either — a `Client` memoizes its `/meta`. Never mutate the `meta` object an entry resolves to: in-process consumers may share it by reference.
+
+### Parametric mounts (`metaKey`)
+
+_Since 0.1.153, with `@atscript/db-client` ≥ 0.1.153._ A controller mounted under a route parameter (`/api/db/ticket-issue/:key`) serves byte-identical `/meta` for every key, but each key is its own URL — so each new key used to download the full `/meta`. Pass the route template as `metaKey` and every key shares one entry in the db-client meta store: the first visit to a new key sends the stored `ETag` as `If-None-Match` and costs a `304`.
+
+```typescript
+getMetaEntry(`/api/db/ticket-issue/${key}`, undefined, { metaKey: "/api/db/ticket-issue/:key" });
+```
+
+In Vue, pass it on the table: `<AsTableRoot :url="`/api/db/ticket-issue/${key}`" meta-key="/api/db/ticket-issue/:key">` (or `useTable(url, { metaKey })`).
+
+- `metaKey` is honoured on the first `getMetaEntry` call per URL, like `factory`. A custom `ClientFactory` must spread its second argument into the `Client` options, or the key never reaches the client.
+- Entries whose `/meta` resolved to the same `ETag` (`Client.metaEtag()`) share the deserialized `type` and the `TableDef` — a new key with an unchanged `/meta` deserializes nothing. This holds with or without `metaKey`.
+- Cross-origin APIs must expose the header (`Access-Control-Expose-Headers: ETag`) and allow `If-None-Match` in CORS preflights; otherwise the client falls back to plain downloads.
+- Use it only when `/meta` really does not depend on the route parameter. An app-side meta overlay that reads the parameter makes the bodies (and ETags) differ — still correct, but no `304`s.
 
 ## Cross-links
 

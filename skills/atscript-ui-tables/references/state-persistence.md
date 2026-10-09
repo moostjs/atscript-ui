@@ -271,7 +271,7 @@ Returns:
 | `capabilities`                         | `Ref<PresetCapabilities \| null>`            | `{ canPublish, presetLimit, userId }`.                                   |
 | `systemPresets`                        | `ComputedRef<SystemPreset[]>`                | Resolved order (Standard first).                                         |
 | `available`                            | `ComputedRef<boolean>`                       | False on 401/403/404 (404 = controller not mounted) — UI hides itself.   |
-| `loading`                              | `Ref<boolean>`                               |                                                                          |
+| `loading`                              | `Ref<boolean>`                               | Preset rows only (caps never hold it, 0.1.153); false on a cache hit.    |
 | `error`                                | `Ref<unknown>`                               | Last non-auth error; mutator failures set it too (0.1.133) and rethrow.  |
 | `currentUser`                          | `ComputedRef<string \| null>`                | From capabilities or row scan.                                           |
 | `activePresetId`                       | `Ref<string \| null>`                        | Owned by the table state, not auto-resolved here.                        |
@@ -289,6 +289,21 @@ Returns:
 | `setFavorites(ids)`                    | —                                            | Replace full list (one round-trip).                                      |
 
 Mutators trigger a follow-up reload — `batch(fn)` collapses N round-trips when the manage dialog flushes several edits at once.
+
+### Presets session cache (since 0.1.153)
+
+Active only in the browser AND after the app called `setMetaCacheIdentity()` (from `@atscript/ui`). Keyed by `(presets url, app, tableKey)`.
+
+| #   | Rule                                                                                                                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Capabilities never hold the first data query (cache or not) — only preset rows + tableDef do. `capabilities` may be `null` briefly after the gate opens; `loading` = rows only.         |
+| 2   | Re-mount applies cached rows synchronously; no request inside the max age (default 30 s), background refresh after it. A refresh updates the list, never re-applies the default preset. |
+| 3   | Capabilities: one request per key per session. One shared db `Client` per presets URL (one `_presets/meta` for all writes).                                                             |
+| 4   | A write (any mutator) refreshes the shared entry → other mounted tables on the same key update; other tabs of the same identity refresh via `BroadcastChannel("as-presets")`.           |
+| 5   | Dropped on `resetMetaCache()` / identity change, and when rows' owner ≠ `capabilities.userId` (session changed without `setMetaCacheIdentity`). Failures/denied never cached.           |
+| 6   | Knobs (`@atscript/ui-table`): `setPresetsCacheMaxAge(ms)` (`0` = always revalidate, `< 0` = off), `invalidatePresetsCache()` after out-of-band preset changes.                          |
+
+DON'T rely on the cache without binding identity on login, logout AND every current-user reload — that is what keeps user A's private presets from user B after an in-tab sign-in.
 
 ## useAppPrefs composable
 

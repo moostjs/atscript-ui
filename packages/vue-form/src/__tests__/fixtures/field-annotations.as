@@ -58,3 +58,21 @@ export interface PlainObjectField {
 
     visible: string
 }
+
+// ── Emptied inputs (atscript >= 0.1.103) ─────────────────────
+// An emptied optional field commits `undefined`, never `null` — `null` on an
+// optional `@meta.required` field is a validation error since 0.1.103.
+export interface EmptiedInputs {
+    @meta.label 'Due'
+    @meta.required
+    @ui.form.type 'date'
+    due?: string
+
+    @meta.label 'Start'
+    @ui.form.type 'date'
+    start: string
+
+    @meta.label 'Qty'
+    @ui.form.suffix 'pcs'
+    qty?: number
+}

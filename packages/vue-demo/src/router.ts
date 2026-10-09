@@ -176,6 +176,11 @@ const routes = [
     component: () => import("./client/pages/forms-demo/dynamic-form.vue"),
   },
   {
+    path: "/preset-twins",
+    name: "preset-twins",
+    component: () => import("./client/pages/preset-twins.vue"),
+  },
+  {
     path: "/:table",
     name: "table",
     component: () => import("./client/pages/table-page-route.vue"),

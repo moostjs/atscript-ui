@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { Client } from "@atscript/db-client";
+import { Client, MetaStore } from "@atscript/db-client";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -8,7 +8,14 @@ import {
   type ClientFactory,
 } from "../client-factory";
 import { resolveValueHelp } from "../value-help/resolve";
-import { getMetaEntry, resetMetaCache, setMetaCacheIdentity } from "./meta-cache";
+import {
+  getMetaCacheIdentity,
+  getMetaEntry,
+  getMetaTableDef,
+  onMetaCacheReset,
+  resetMetaCache,
+  setMetaCacheIdentity,
+} from "./meta-cache";
 
 async function buildSerialized() {
   const { Author } = await import("../__tests__/fixtures/value-help-target.as");
@@ -241,5 +248,115 @@ describe("meta-cache", () => {
     expect(view).toEqual(["id"]);
     expect(adminAgain).toEqual(["id", "name"]);
     expect(fetchMeta).toHaveBeenCalledTimes(3);
+  });
+
+  describe("parametric mounts (metaKey + ETag)", () => {
+    /**
+     * A server serving byte-identical `/meta` under every `/tickets/:key`
+     * with a weak ETag, answering a matching `If-None-Match` with a `304`.
+     */
+    async function fakeServer() {
+      const body = JSON.stringify(buildMetaResponse(await buildSerialized()));
+      const etag = 'W/"meta-v1"';
+      const calls: { url: string; ifNoneMatch?: string; status: number }[] = [];
+      const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = input instanceof Request ? input.url : input.toString();
+        const headers = (init?.headers ?? {}) as Record<string, string>;
+        const ifNoneMatch = headers["If-None-Match"];
+        if (ifNoneMatch?.split(/\s*,\s*/).includes(etag)) {
+          calls.push({ url, ifNoneMatch, status: 304 });
+          return new Response(null, { status: 304, headers: { ETag: etag } });
+        }
+        calls.push({ url, ifNoneMatch, status: 200 });
+        return new Response(body, {
+          headers: { "content-type": "application/json", ETag: etag },
+        });
+      });
+      return { fetch, calls };
+    }
+
+    it("a new key of the same template costs a 304 and reuses the deserialized type + TableDef", async () => {
+      const { fetch, calls } = await fakeServer();
+      const factory: ClientFactory = (url, opts) => new Client(url, { ...opts, fetch });
+      const metaKey = "/tickets/:key";
+
+      const a = getMetaEntry("/tickets/A", factory, { metaKey });
+      const defA = await getMetaTableDef(a);
+      const b = getMetaEntry("/tickets/B", factory, { metaKey });
+      const defB = await getMetaTableDef(b);
+
+      expect(b).not.toBe(a);
+      expect(calls.map((c) => c.status)).toEqual([200, 304]);
+      expect(calls[1]).toMatchObject({ url: "/tickets/B/meta", ifNoneMatch: 'W/"meta-v1"' });
+      expect(await b.type).toBe(await a.type);
+      expect(defB).toBe(defA);
+      expect(getMetaTableDef(b)).toBe(getMetaTableDef(b));
+    });
+
+    it("without metaKey every URL downloads its own /meta (default per URL)", async () => {
+      const { fetch, calls } = await fakeServer();
+      const factory: ClientFactory = (url, opts) => new Client(url, { ...opts, fetch });
+
+      await getMetaEntry("/tickets/A", factory).meta;
+      await getMetaEntry("/tickets/B", factory).meta;
+      expect(calls.map((c) => c.status)).toEqual([200, 200]);
+    });
+
+    it("an identity change clears the db-client meta stores (default and custom)", async () => {
+      const { fetch, calls } = await fakeServer();
+      const custom = new MetaStore();
+      const viaDefault: ClientFactory = (url, opts) => new Client(url, { ...opts, fetch });
+      const viaCustom: ClientFactory = (url, opts) =>
+        new Client(url, { ...opts, fetch, metaStore: custom });
+      setMetaCacheIdentity("1:admin");
+
+      await getMetaEntry("/tickets/A", viaDefault, { metaKey: "/tickets/:key" }).meta;
+      await getMetaEntry("/orders/A", viaCustom, { metaKey: "/orders/:key" }).meta;
+      expect(custom.size).toBe(1);
+
+      setMetaCacheIdentity("2:viewer");
+      expect(custom.size).toBe(0);
+      await getMetaEntry("/tickets/B", viaDefault, { metaKey: "/tickets/:key" }).meta;
+      await getMetaEntry("/orders/B", viaCustom, { metaKey: "/orders/:key" }).meta;
+      // No validator survived the switch: both downloaded unconditionally.
+      expect(calls.map((c) => [c.status, c.ifNoneMatch])).toEqual([
+        [200, undefined],
+        [200, undefined],
+        [200, undefined],
+        [200, undefined],
+      ]);
+    });
+
+    it("server rendering asks the factory for no meta store and shares nothing", async () => {
+      vi.unstubAllGlobals();
+      const { fetch, calls } = await fakeServer();
+      const seen: unknown[] = [];
+      const factory: ClientFactory = (url, opts) => {
+        seen.push(opts);
+        return new Client(url, { ...opts, fetch });
+      };
+
+      const a = getMetaEntry("/tickets/A", factory, { metaKey: "/tickets/:key" });
+      const b = getMetaEntry("/tickets/B", factory, { metaKey: "/tickets/:key" });
+      await Promise.all([a.meta, b.meta]);
+      expect(seen).toEqual([{ metaStore: false }, { metaStore: false }]);
+      expect(calls.map((c) => [c.status, c.ifNoneMatch])).toEqual([
+        [200, undefined],
+        [200, undefined],
+      ]);
+      expect(await b.type).not.toBe(await a.type);
+    });
+  });
+
+  it("onMetaCacheReset listeners run on every reset; getMetaCacheIdentity reports the binding", () => {
+    const listener = vi.fn();
+    const off = onMetaCacheReset(listener);
+    resetMetaCache();
+    setMetaCacheIdentity("9:test");
+    expect(getMetaCacheIdentity()).toBe("9:test");
+    expect(listener).toHaveBeenCalledTimes(2);
+    off();
+    resetMetaCache();
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });

@@ -28,11 +28,13 @@ export function setRouterNavigate(fn: (url: string) => void | Promise<void>) {
  * called. External URLs (`http(s)://`) bypass the router and fall through
  * to a full-page navigation — vue-router rejects non-route paths.
  */
-export const clientFactory: ClientFactory = (url) => {
+export const clientFactory: ClientFactory = (url, options) => {
   const key = url.replace(/^\/+|\/+$/g, "");
   let c = cache.get(key);
   if (!c) {
     c = new Client(url, {
+      // Library-requested options (`metaKey`, `metaStore`) go in first.
+      ...options,
       fetch: sharedFetch,
       navigate: async (target) => {
         if (routerNavigate && !/^https?:\/\//i.test(target)) {

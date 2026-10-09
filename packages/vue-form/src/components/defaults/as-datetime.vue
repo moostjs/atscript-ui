@@ -5,6 +5,7 @@ import AsFieldShell from "./as-field-shell.vue";
 import AsAdornmentShell from "../internal/as-adornment-shell.vue";
 import AsDateControl from "../internal/as-date-control.vue";
 import { useAsDate } from "../../composables/use-as-date";
+import { committedValue } from "../../composables/_shape";
 
 const props = defineProps<TAsComponentProps<number | string | null | undefined>>();
 
@@ -12,7 +13,7 @@ const { inputType, displayValue, setFromInput } = useAsDate({
   modelValue: () => props.model.value,
   kind: "datetime",
   onCommit: (v) => {
-    props.model.value = v;
+    props.model.value = committedValue(v, props.optional);
   },
 });
 
