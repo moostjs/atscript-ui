@@ -2,6 +2,7 @@ import {
   ValueHelpClient,
   getMetaEntry,
   resolveValueHelp,
+  retainMetaEntry,
   type ClientFactory,
   type ResolvedValueHelp,
   type ValueHelpInfo,
@@ -12,7 +13,9 @@ import {
   type Ref,
   type ShallowRef,
   computed,
+  getCurrentScope,
   inject,
+  onScopeDispose,
   onMounted,
   onUnmounted,
   ref,
@@ -53,6 +56,8 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
   // meta cache reuses an existing Client if one was already created.
   const injectedFactory = inject(CLIENT_FACTORY_KEY, null) ?? undefined;
   const entry = getMetaEntry(info.url, injectedFactory);
+  // Held while mounted, so `kickoff`'s `resolveValueHelp` finds this entry (and its client).
+  if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
   const vhClient = new ValueHelpClient(entry.client);
 
   const resolved = shallowRef<ResolvedValueHelp | null>(null);

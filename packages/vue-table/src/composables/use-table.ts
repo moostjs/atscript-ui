@@ -2,12 +2,21 @@ import {
   getMetaEntry,
   getMetaTableDef,
   resetMetaCache,
+  retainMetaEntry,
   type ClientFactory,
   type SortControl,
 } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import type { Client } from "@atscript/db-client";
-import { getCurrentInstance, toValue, type Component, type MaybeRefOrGetter, type Ref } from "vue";
+import {
+  getCurrentInstance,
+  getCurrentScope,
+  onScopeDispose,
+  toValue,
+  type Component,
+  type MaybeRefOrGetter,
+  type Ref,
+} from "vue";
 import type { FilterExpr } from "@uniqu/core";
 import type {
   ColumnWidthsMap,
@@ -261,6 +270,8 @@ export function finalizeTableState(
  */
 export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
   const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey });
+  // Mounted tables (and their filters' pickers) keep their entry in the cache.
+  if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
   const { client } = entry;
   const defPromise = getMetaTableDef(entry);
 

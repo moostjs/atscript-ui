@@ -300,8 +300,10 @@ stale entry — for instance after a schema reload during development.
 
 `/meta` is projected per user, so the cache is per viewer: call
 `setMetaCacheIdentity(key)` from `@atscript/ui` after login, logout and
-every reload of the current user, and server rendering never caches. See
-the [meta cache reference](/api/ui#meta-cache).
+every reload of the current user, and server rendering never caches. The
+cache keeps the 100 most recently used URLs (`setMetaCacheMaxEntries`,
+since 0.1.154); a mounted table's entry is never dropped. See the
+[meta cache reference](/api/ui#meta-cache).
 
 ## Next steps
 

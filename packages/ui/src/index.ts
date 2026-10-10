@@ -280,6 +280,8 @@ export {
 export {
   getMetaEntry,
   getMetaTableDef,
+  retainMetaEntry,
+  setMetaCacheMaxEntries,
   resetMetaCache,
   setMetaCacheIdentity,
   getMetaCacheIdentity,

@@ -1091,6 +1091,8 @@ function getMetaEntry(
   options?: MetaEntryOptions,
 ): MetaCacheEntry;
 function getMetaTableDef(entry: MetaCacheEntry): Promise<TableDef>; // since 0.1.153
+function retainMetaEntry(entry: MetaCacheEntry): () => void; // since 0.1.154
+function setMetaCacheMaxEntries(max?: number): void; // since 0.1.154 — default 100
 function resetMetaCache(): void;
 function setMetaCacheIdentity(key: string | null | undefined): void; // since 0.1.151
 function getMetaCacheIdentity(): string | null | undefined; // since 0.1.153
@@ -1114,6 +1116,25 @@ interface MetaCacheEntry {
 - **Bind it to the viewer** (_since 0.1.151_). Call `setMetaCacheIdentity(key)` with a key naming the user and role (e.g. `` `${userId}:${role}` ``, `null` when signed out) after login, after logout and whenever you reload the current user. A different key resets the cache; the same key keeps it. Without it, an SPA that logs out and signs in as another user without a page reload keeps rendering the previous user's columns and actions. Binding an identity also turns on the [table-presets cache](/tables/presets#session-cache) (_since 0.1.153_).
 - **`resetMetaCache()`** drops every entry, the value-help searches shared under them and — _since 0.1.151_, with `@atscript/db-client` ≥ 0.1.151 — the `/meta` each cached `Client` memoizes (`Client.invalidateMeta()`), so a `ClientFactory` that reuses `Client` instances refetches too. _Since 0.1.153_ it also clears the `@atscript/db-client` meta stores (the shared default one, and any custom `metaStore` your factory gave a cached client) and runs every `onMetaCacheReset` listener (the presets cache registers one). Components already mounted keep the entry they hold; remount them (e.g. navigate) to pick up the new `/meta`. Clients you use outside the cache (`client.meta()`, `client.action()` on a client you keep yourself) need their own `invalidateMeta()` call.
 - **Server rendering never caches** (_since 0.1.151_). Without a browser `window`, every `getMetaEntry` call builds a fresh entry, so one viewer's render never sees another's `/meta`, and _since 0.1.153_ the factory is asked for `metaStore: false` so no `/meta` body lands in a process-wide store. Your server-side `ClientFactory` must not hand one `Client` to several requests either — a `Client` memoizes its `/meta`. Never mutate the `meta` object an entry resolves to: in-process consumers may share it by reference.
+
+### Size limit
+
+_Since 0.1.154._ The cache keeps the 100 most recently used URLs; a hit makes a URL the most recent, and older entries beyond the limit are dropped (their `type` / `TableDef`, shared per `ETag`, go with the last entry using them). An app that opens many parametric URLs (`/api/db/ticket-issue/${key}`) no longer grows the cache for the life of the tab. 100 covers a page's tables plus the dictionaries its filters and forms pick from, and the recent navigation history; revisiting a dropped URL costs one `/meta` request — a `304` when the db-client meta store still holds its body.
+
+```typescript
+setMetaCacheMaxEntries(300); // keep more; `Infinity` = no limit, no argument = back to 100
+```
+
+Entries in use are never dropped: `useTable` (so every mounted `<AsTableRoot>` and its filter pickers) and the form value-help hold their entry until their component unmounts, and may push the cache past the limit while they do. Hold an entry you keep using outside those yourself:
+
+```typescript
+const entry = getMetaEntry(url);
+const release = retainMetaEntry(entry);
+// … later, when done (idempotent):
+release();
+```
+
+An entry dropped while you still use it keeps working, but the next `getMetaEntry(url)` builds a new entry and `Client` (with the factory passed then), and a dropped entry's `Client` forgets its memoized `/meta`. `resetMetaCache()` and a new `setMetaCacheIdentity()` key still drop every entry, held or not.
 
 ### Parametric mounts (`metaKey`)
 

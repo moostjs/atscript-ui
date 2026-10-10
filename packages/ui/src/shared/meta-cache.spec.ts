@@ -14,7 +14,9 @@ import {
   getMetaTableDef,
   onMetaCacheReset,
   resetMetaCache,
+  retainMetaEntry,
   setMetaCacheIdentity,
+  setMetaCacheMaxEntries,
 } from "./meta-cache";
 
 async function buildSerialized() {
@@ -82,6 +84,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  setMetaCacheMaxEntries();
   resetMetaCache();
   resetDefaultClientFactory();
   vi.unstubAllGlobals();
@@ -327,6 +330,49 @@ describe("meta-cache", () => {
       ]);
     });
 
+    it("the shared type + TableDef live while a cached URL uses their ETag", async () => {
+      const { fetch } = await fakeServer();
+      const factory: ClientFactory = (url, opts) => new Client(url, { ...opts, fetch });
+      const metaKey = "/tickets/:key";
+      setMetaCacheMaxEntries(2);
+
+      const a = getMetaEntry("/tickets/A", factory, { metaKey });
+      const defA = await getMetaTableDef(a);
+      const b = getMetaEntry("/tickets/B", factory, { metaKey });
+      expect(await getMetaTableDef(b)).toBe(defA);
+
+      // A goes; B still uses the ETag, so C shares it.
+      const c = getMetaEntry("/tickets/C", factory, { metaKey });
+      expect(await getMetaTableDef(c)).toBe(defA);
+
+      // D + E push out B and C: nothing cached references the ETag any more.
+      const d = getMetaEntry("/tickets/D", factory, { metaKey });
+      const defD = await getMetaTableDef(d);
+      expect(defD).toBe(defA); // C was still cached when D loaded
+      getMetaEntry("/orders/A", factory);
+      getMetaEntry("/orders/B", factory);
+      const e = getMetaEntry("/tickets/E", factory, { metaKey });
+      const defE = await getMetaTableDef(e);
+      expect(defE).not.toBe(defA);
+      expect(await e.type).not.toBe(await a.type);
+      // Entries handed out earlier keep what they had.
+      expect(await getMetaTableDef(a)).toBe(defA);
+    });
+
+    it("a custom meta store is cleared once no cached client uses it", async () => {
+      const { fetch } = await fakeServer();
+      const custom = new MetaStore();
+      const viaCustom: ClientFactory = (url, opts) =>
+        new Client(url, { ...opts, fetch, metaStore: custom });
+      const viaDefault: ClientFactory = (url, opts) => new Client(url, { ...opts, fetch });
+      setMetaCacheMaxEntries(1);
+
+      await getMetaEntry("/orders/A", viaCustom).meta;
+      expect(custom.size).toBe(1);
+      await getMetaEntry("/tickets/A", viaDefault).meta;
+      expect(custom.size).toBe(0);
+    });
+
     it("server rendering asks the factory for no meta store and shares nothing", async () => {
       vi.unstubAllGlobals();
       const { fetch, calls } = await fakeServer();
@@ -345,6 +391,147 @@ describe("meta-cache", () => {
         [200, undefined],
       ]);
       expect(await b.type).not.toBe(await a.type);
+    });
+  });
+
+  describe("size limit", () => {
+    function urlFactory() {
+      const clients = new Map<
+        string,
+        { meta: ReturnType<typeof vi.fn>; invalidateMeta: ReturnType<typeof vi.fn> }
+      >();
+      const factory: ClientFactory = (url) => {
+        const client = { meta: vi.fn(() => new Promise(() => {})), invalidateMeta: vi.fn() };
+        clients.set(url, client);
+        return client as unknown as Client;
+      };
+      return { factory, clients };
+    }
+
+    it("evicts the least recently used URL; a hit makes a URL most recent", () => {
+      const { factory } = urlFactory();
+      setMetaCacheMaxEntries(2);
+
+      const a = getMetaEntry("/a", factory);
+      const b = getMetaEntry("/b", factory);
+      expect(getMetaEntry("/a", factory)).toBe(a); // hit: /b is now the oldest
+      getMetaEntry("/c", factory);
+
+      expect(getMetaEntry("/a", factory)).toBe(a);
+      expect(getMetaEntry("/b", factory)).not.toBe(b);
+    });
+
+    it("drops the memoized /meta of an evicted client", () => {
+      const { factory, clients } = urlFactory();
+      setMetaCacheMaxEntries(1);
+
+      getMetaEntry("/a", factory);
+      const first = clients.get("/a")!;
+      expect(first.invalidateMeta).not.toHaveBeenCalled();
+      getMetaEntry("/b", factory);
+      expect(first.invalidateMeta).toHaveBeenCalledTimes(1);
+      expect(clients.get("/b")!.invalidateMeta).not.toHaveBeenCalled();
+    });
+
+    it("never evicts a retained entry; releasing makes it most recent", () => {
+      const { factory } = urlFactory();
+      setMetaCacheMaxEntries(2);
+
+      const a = getMetaEntry("/a", factory);
+      const release = retainMetaEntry(a);
+      const b = getMetaEntry("/b", factory);
+      getMetaEntry("/c", factory); // /a is the oldest but held: /b goes
+      getMetaEntry("/d", factory);
+      expect(getMetaEntry("/a", factory)).toBe(a);
+      expect(getMetaEntry("/b", factory)).not.toBe(b);
+
+      release();
+      release(); // idempotent
+      const e = getMetaEntry("/e", factory); // /a was released last: older ones go first
+      expect(getMetaEntry("/a", factory)).toBe(a);
+      expect(getMetaEntry("/e", factory)).toBe(e);
+      getMetaEntry("/f", factory);
+      getMetaEntry("/g", factory);
+      expect(getMetaEntry("/a", factory)).not.toBe(a);
+    });
+
+    it("held entries may exceed the limit; the newest entry always stays", () => {
+      const { factory } = urlFactory();
+      setMetaCacheMaxEntries(1);
+
+      const a = getMetaEntry("/a", factory);
+      const releaseA = retainMetaEntry(a);
+      const b = getMetaEntry("/b", factory);
+      const releaseB = retainMetaEntry(b);
+      expect(getMetaEntry("/a", factory)).toBe(a);
+      expect(getMetaEntry("/b", factory)).toBe(b);
+
+      releaseA();
+      // Releasing trims back to the limit — /a is the most recent, /b is held.
+      expect(getMetaEntry("/b", factory)).toBe(b);
+      releaseB();
+      expect(getMetaEntry("/b", factory)).toBe(b);
+      expect(getMetaEntry("/a", factory)).not.toBe(a);
+    });
+
+    it("defaults to 100 URLs; setMetaCacheMaxEntries trims at once, Infinity lifts the limit", () => {
+      const { factory } = urlFactory();
+      const entries = Array.from({ length: 100 }, (_, i) => getMetaEntry(`/${i}`, factory));
+      expect(getMetaEntry("/0", factory)).toBe(entries[0]); // 100 fit; /0 is now the most recent
+      getMetaEntry("/100", factory); // pushes out /1
+      expect(getMetaEntry("/0", factory)).toBe(entries[0]);
+      expect(getMetaEntry("/1", factory)).not.toBe(entries[1]);
+
+      setMetaCacheMaxEntries(Infinity);
+      const kept = getMetaEntry("/kept", factory);
+      for (let i = 0; i < 300; i++) getMetaEntry(`/x${i}`, factory);
+      expect(getMetaEntry("/kept", factory)).toBe(kept);
+
+      const x299 = getMetaEntry("/x299", factory);
+      setMetaCacheMaxEntries(2); // keeps /x299 and /kept, the two most recent
+      expect(getMetaEntry("/x299", factory)).toBe(x299);
+      expect(getMetaEntry("/kept", factory)).toBe(kept);
+      expect(getMetaEntry("/x298", factory)).not.toBe(x299);
+      expect(getMetaEntry("/x299", factory)).not.toBe(x299); // /x298 + /kept pushed it out
+
+      setMetaCacheMaxEntries(0); // clamped to 1
+      const only = getMetaEntry("/only", factory);
+      expect(getMetaEntry("/only", factory)).toBe(only);
+    });
+
+    it("an identity change still drops retained entries; releasing a dropped one is harmless", () => {
+      const { factory, clients } = urlFactory();
+      setMetaCacheMaxEntries(1);
+      setMetaCacheIdentity("1:admin");
+
+      const a = getMetaEntry("/a", factory);
+      const release = retainMetaEntry(a);
+      const oldClient = clients.get("/a")!;
+      setMetaCacheIdentity("2:viewer");
+      expect(oldClient.invalidateMeta).toHaveBeenCalledTimes(1);
+
+      const fresh = getMetaEntry("/a", factory);
+      expect(fresh).not.toBe(a);
+      release();
+      expect(getMetaEntry("/a", factory)).toBe(fresh);
+      getMetaEntry("/b", factory);
+      expect(getMetaEntry("/a", factory)).not.toBe(fresh);
+    });
+
+    it("a rejected /meta still frees its slot", async () => {
+      const { factory, metaSpy } = makeFactory(async () => {
+        throw new Error("network");
+      });
+      setMetaCacheMaxEntries(1);
+
+      const a = getMetaEntry("/a", factory);
+      a.type.catch(() => {});
+      await expect(a.meta).rejects.toThrow("network");
+      const b = getMetaEntry("/b", factory);
+      b.type.catch(() => {});
+      expect(getMetaEntry("/b", factory)).toBe(b);
+      await expect(b.meta).rejects.toThrow("network");
+      expect(metaSpy).toHaveBeenCalledTimes(2);
     });
   });
 

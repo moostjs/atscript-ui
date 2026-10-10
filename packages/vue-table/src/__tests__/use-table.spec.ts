@@ -2,12 +2,14 @@ import { describe, it, expect, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import type { Client } from "@atscript/db-client";
+import { getMetaEntry, setMetaCacheMaxEntries } from "@atscript/ui";
 import { useTable, clearTableCache } from "../composables/use-table";
 import { useTableContext } from "../composables/use-table-state";
 import type { ReactiveTableState } from "../types";
 import { createMockMeta, createMockClient } from "./helpers";
 
 afterEach(() => {
+  setMetaCacheMaxEntries();
   clearTableCache();
 });
 
@@ -142,5 +144,30 @@ describe("useTable", () => {
     );
 
     expect(state.pagination.value.itemsPerPage).toBe(10);
+  });
+
+  it("a mounted table's meta entry outlives the cache size limit until unmount", async () => {
+    setMetaCacheMaxEntries(1);
+    const { client } = createMockClient({ meta: createMockMeta(["name"]) });
+    const wrapper = mount(
+      defineComponent({
+        setup() {
+          useTable("/held", { queryOnMount: false, ...withClientFactory(client) });
+          return () => h("div");
+        },
+      }),
+    );
+    await flushPromises();
+    const held = getMetaEntry("/held");
+
+    const other = createMockClient({ meta: createMockMeta(["name"]) }).client;
+    getMetaEntry("/other-1", () => other);
+    getMetaEntry("/other-2", () => other);
+    expect(getMetaEntry("/held")).toBe(held);
+    expect(held.client).toBe(client);
+
+    wrapper.unmount();
+    getMetaEntry("/other-3", () => other);
+    expect(getMetaEntry("/held", () => other)).not.toBe(held);
   });
 });

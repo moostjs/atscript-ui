@@ -1,8 +1,14 @@
-import { resetDefaultClientFactory, resetMetaCache, setDefaultClientFactory } from "@atscript/ui";
+import {
+  getMetaEntry,
+  resetDefaultClientFactory,
+  resetMetaCache,
+  setDefaultClientFactory,
+  setMetaCacheMaxEntries,
+} from "@atscript/ui";
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, ref } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useAsValueHelp } from "../composables/use-as-value-help";
+import { CLIENT_FACTORY_KEY, useAsValueHelp } from "../composables/use-as-value-help";
 
 const str = { kind: "", designType: "string", tags: [] };
 const DICT_META = {
@@ -26,6 +32,7 @@ const DICT_META = {
 };
 
 afterEach(() => {
+  setMetaCacheMaxEntries();
   resetMetaCache();
   resetDefaultClientFactory();
 });
@@ -71,5 +78,41 @@ describe("useAsValueHelp — @ui.valueHelp scope", () => {
 
     vh.selectItem({ attribute: "color", value: "blue", label: "Blue" });
     expect(model.value).toBe("blue");
+  });
+
+  it("keeps the picker's meta entry (and injected client) cached while mounted", async () => {
+    setMetaCacheMaxEntries(1);
+    const query = vi.fn().mockResolvedValue([]);
+    const injected = vi.fn(
+      () => ({ meta: () => Promise.resolve(DICT_META), query, invalidateMeta: () => {} }) as never,
+    );
+    const other = () =>
+      ({ meta: () => Promise.resolve(DICT_META), query, invalidateMeta: () => {} }) as never;
+    setDefaultClientFactory(other);
+
+    let vh!: ReturnType<typeof useAsValueHelp>;
+    const C = defineComponent({
+      setup() {
+        vh = useAsValueHelp({
+          info: { url: "/dict", targetField: "value" },
+          model: { value: undefined },
+          onBlur: () => {},
+        });
+        return () => h("span");
+      },
+    });
+    const wrapper = mount(C, { global: { provide: { [CLIENT_FACTORY_KEY as symbol]: injected } } });
+    const held = getMetaEntry("/dict");
+    getMetaEntry("/a");
+    getMetaEntry("/b");
+    // `kickoff` resolves through the cache: still the entry built by the injected factory.
+    await vh.kickoff();
+    expect(vh.status.value).toBe("ready");
+    expect(getMetaEntry("/dict")).toBe(held);
+    expect(injected).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+    getMetaEntry("/c");
+    expect(getMetaEntry("/dict")).not.toBe(held);
   });
 });

@@ -18,6 +18,9 @@ import { invalidateValueHelpCache } from "../value-help/value-help-client";
  * under different route params) also share the deserialized type and the
  * `TableDef` across URLs.
  *
+ * The cache keeps the {@link setMetaCacheMaxEntries} most recently used
+ * URLs; an entry held with {@link retainMetaEntry} is never evicted.
+ *
  * `/meta` is projected per viewer, so the cache belongs to one identity
  * (`setMetaCacheIdentity`) and exists only in the browser: during server
  * rendering one process serves many viewers, so every call builds a fresh,
@@ -55,14 +58,34 @@ interface ClearableStore {
   clear: () => void;
 }
 
+/** Bookkeeping behind each handed-out entry (kept off the public shape). */
+interface Slot {
+  url: string;
+  derived: Promise<Derived>;
+  /** Open {@link retainMetaEntry} holds. */
+  holds: number;
+  /** The `ETag` whose shared `Derived` this entry counts in `derivedByEtag`. */
+  etag?: string;
+  /** The custom `/meta` store this entry counts in `customStores`. */
+  store?: ClearableStore;
+}
+
+/**
+ * Enough for every URL a page touches — a table, the dictionaries its
+ * filters and forms pick from — plus the recent navigation history, so going
+ * back is instant; small enough to cap a long session at a few MB of parsed
+ * `/meta`. Twice the `@atscript/db-client` `MetaStore` body limit, since
+ * parametric URLs share bodies.
+ */
+const DEFAULT_MAX_ENTRIES = 100;
+let maxEntries = DEFAULT_MAX_ENTRIES;
+/** Per-URL entries, least recently used first. Browser only. */
 const cache = new Map<string, MetaCacheEntry>();
-/** Derived shapes per `ETag`, least recently used first. Browser only. */
-const derivedByEtag = new Map<string, Derived>();
-const MAX_DERIVED = 50;
-/** The `Derived` promise behind each handed-out entry (kept off the public shape). */
-const derivedOf = new WeakMap<MetaCacheEntry, Promise<Derived>>();
-/** Custom `/meta` stores of clients this cache created in the browser. */
-const customStores = new Set<ClearableStore>();
+const slots = new WeakMap<MetaCacheEntry, Slot>();
+/** Derived shapes per `ETag`, counted by the cached entries that use them. Browser only. */
+const derivedByEtag = new Map<string, { derived: Derived; refs: number }>();
+/** Custom `/meta` stores of cached clients, counted by the entries that use them. */
+const customStores = new Map<ClearableStore, number>();
 /** `undefined` until the first `setMetaCacheIdentity` call; `null` = anonymous. */
 let identity: string | null | undefined;
 const resetListeners = new Set<() => void>();
@@ -70,9 +93,10 @@ const resetListeners = new Set<() => void>();
 /**
  * Get or create the cache entry for `url`. First caller's `factory` (and
  * `options.metaKey`) seeds the `Client`; subsequent callers reuse it. On
- * `meta` rejection, the entry is evicted so the next call retries. Without a
- * browser `window` nothing is cached and the client is asked for
- * `metaStore: false`.
+ * `meta` rejection, the entry is evicted so the next call retries. A hit
+ * marks the URL most recently used; hold an entry you keep using with
+ * {@link retainMetaEntry}. Without a browser `window` nothing is cached and
+ * the client is asked for `metaStore: false`.
  */
 export function getMetaEntry(
   url: string,
@@ -81,29 +105,117 @@ export function getMetaEntry(
 ): MetaCacheEntry {
   const browser = typeof window !== "undefined";
   const existing = browser ? cache.get(url) : undefined;
-  if (existing) return existing;
+  if (existing) {
+    touch(url, existing);
+    return existing;
+  }
 
   const f = factory ?? getDefaultClientFactory();
   let client: Client;
   if (!browser) client = f(url, { metaStore: false });
   else if (options?.metaKey) client = f(url, { metaKey: options.metaKey });
   else client = f(url);
-  if (browser) rememberStore(client);
 
   const meta = (client.meta() as Promise<MetaResponse>).catch((err) => {
     // A reset may have replaced the entry while this request was in flight.
-    if (cache.get(url) === entry) cache.delete(url);
+    if (cache.get(url) === entry) evict(url, entry);
     throw err;
   });
-  const derived = meta.then((m) => derive(client, m, browser));
+  const derived = meta.then((m) => derive(entry, client, m));
   const type = derived.then((d) => d.type);
   // `meta` carries the failure to callers; don't also report the derived chain as unhandled.
   type.catch(() => {});
 
   const entry: MetaCacheEntry = { client, meta, type };
-  derivedOf.set(entry, derived);
-  if (browser) cache.set(url, entry);
+  const slot: Slot = { url, derived, holds: 0 };
+  slots.set(entry, slot);
+  if (browser) {
+    slot.store = customStoreOf(client);
+    if (slot.store) customStores.set(slot.store, (customStores.get(slot.store) ?? 0) + 1);
+    cache.set(url, entry);
+    trim(entry);
+  }
   return entry;
+}
+
+/**
+ * Keep `entry` in the cache while it is in use: a held entry is never
+ * evicted by the size limit ({@link setMetaCacheMaxEntries}), so later
+ * `getMetaEntry` / `resolveValueHelp` calls for its URL keep returning it.
+ * Call the returned function (idempotent) once done — `useTable` and the
+ * form value-help do this for their component's lifetime. A reset still
+ * drops held entries. Since 0.1.154.
+ */
+export function retainMetaEntry(entry: MetaCacheEntry): () => void {
+  const slot = slots.get(entry);
+  if (!slot) return () => {};
+  slot.holds++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    slot.holds--;
+    // In use until now: most recently used.
+    if (slot.holds === 0 && cache.get(slot.url) === entry) {
+      touch(slot.url, entry);
+      trim();
+    }
+  };
+}
+
+/**
+ * How many URLs the meta cache keeps (default `100`). Least recently used
+ * entries beyond it are dropped — entries held with {@link retainMetaEntry}
+ * (every mounted table and form value-help) never are, and may exceed it.
+ * At least `1`; `Infinity` turns the limit off; no argument restores the
+ * default. Since 0.1.154.
+ */
+export function setMetaCacheMaxEntries(max?: number): void {
+  maxEntries = max === undefined ? DEFAULT_MAX_ENTRIES : max >= 1 ? max : 1;
+  trim();
+}
+
+function touch(url: string, entry: MetaCacheEntry): void {
+  cache.delete(url);
+  cache.set(url, entry);
+}
+
+/**
+ * Drop least recently used entries nothing holds until the cache fits.
+ * `spare` — the entry just handed out, about to be retained by its caller.
+ */
+function trim(spare?: MetaCacheEntry): void {
+  if (cache.size <= maxEntries) return;
+  for (const [url, entry] of cache) {
+    if (entry !== spare && slots.get(entry)!.holds === 0) evict(url, entry);
+    if (cache.size <= maxEntries) return;
+  }
+}
+
+/**
+ * Remove `entry` and release what only it kept: its shared `Derived` and
+ * custom store. A reset no longer reaches its client, so the client's memoized
+ * `/meta` goes now — a factory that reuses clients per URL would otherwise
+ * hand it to the next viewer.
+ */
+function evict(url: string, entry: MetaCacheEntry): void {
+  cache.delete(url);
+  // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
+  entry.client.invalidateMeta?.();
+  // Only a cached entry gets here, and a reset clears the counts with the cache.
+  const slot = slots.get(entry)!;
+  if (slot.etag !== undefined && --derivedByEtag.get(slot.etag)!.refs === 0) {
+    derivedByEtag.delete(slot.etag);
+  }
+  if (slot.store) {
+    const refs = customStores.get(slot.store)!;
+    if (refs > 1) customStores.set(slot.store, refs - 1);
+    else {
+      // No cached client uses it any more: nothing would clear it on a reset.
+      slot.store.clear();
+      customStores.delete(slot.store);
+    }
+  }
 }
 
 /**
@@ -112,7 +224,7 @@ export function getMetaEntry(
  */
 export function getMetaTableDef(entry: MetaCacheEntry): Promise<TableDef> {
   if (!entry.tableDef) {
-    const derived = derivedOf.get(entry);
+    const derived = slots.get(entry)?.derived;
     entry.tableDef = derived
       ? Promise.all([entry.meta, derived]).then(
           ([meta, d]) => (d.tableDef ??= createTableDef(meta, d.type)),
@@ -122,33 +234,34 @@ export function getMetaTableDef(entry: MetaCacheEntry): Promise<TableDef> {
   return entry.tableDef;
 }
 
-function derive(client: Client, meta: MetaResponse, browser: boolean): Derived {
+/**
+ * Shares the `Derived` of one `ETag` among the cached entries that loaded it;
+ * an entry no longer cached (evicted, reset, server render) keeps its own.
+ */
+function derive(entry: MetaCacheEntry, client: Client, meta: MetaResponse): Derived {
+  const slot = slots.get(entry)!;
   // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
-  const etag = browser ? client.metaEtag?.() : undefined;
+  const etag = cache.get(slot.url) === entry ? client.metaEtag?.() : undefined;
   if (etag === undefined) return { type: deserializeAnnotatedType(meta.type) };
-  const hit = derivedByEtag.get(etag);
-  if (hit) {
-    derivedByEtag.delete(etag);
-    derivedByEtag.set(etag, hit);
-    return hit;
+  let shared = derivedByEtag.get(etag);
+  if (shared) shared.refs++;
+  else {
+    shared = { derived: { type: deserializeAnnotatedType(meta.type) }, refs: 1 };
+    derivedByEtag.set(etag, shared);
   }
-  const fresh: Derived = { type: deserializeAnnotatedType(meta.type) };
-  derivedByEtag.set(etag, fresh);
-  if (derivedByEtag.size > MAX_DERIVED) {
-    derivedByEtag.delete(derivedByEtag.keys().next().value!);
-  }
-  return fresh;
+  slot.etag = etag;
+  return shared.derived;
 }
 
 /**
- * Remember a custom `/meta` store a factory gave `client`, so a reset can
- * clear it. The store is a private field of `Client`, read defensively: the
+ * The custom `/meta` store a factory gave `client`, so a reset can clear
+ * it. The store is a private field of `Client`, read defensively: the
  * default store is cleared through `clearMetaStore()`, and a store-less
  * client or a test double is skipped.
  */
-function rememberStore(client: Client): void {
+function customStoreOf(client: Client): ClearableStore | undefined {
   const store = (client as unknown as { _metaStore?: Partial<ClearableStore> })._metaStore;
-  if (typeof store?.clear === "function") customStores.add(store as ClearableStore);
+  return typeof store?.clear === "function" ? (store as ClearableStore) : undefined;
 }
 
 /**
@@ -166,7 +279,7 @@ export function resetMetaCache(): void {
   // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
   for (const entry of entries) entry.client.invalidateMeta?.();
   clearMetaStore();
-  for (const store of customStores) store.clear();
+  for (const store of customStores.keys()) store.clear();
   customStores.clear();
   // Shared value-help search results belong to the same session.
   invalidateValueHelpCache();
