@@ -23,6 +23,9 @@ import type { PresetsListResult } from "./presets-client";
 // active only in the browser and only after the app has bound the viewer
 // with `setMetaCacheIdentity()` — the identity change (or `resetMetaCache()`)
 // drops it. Failures are never cached.
+//
+// The cache keeps the `MAX_ENTRIES` most recently used scopes; a scope a
+// mounted table is subscribed to is never dropped.
 
 /** Preset rows for one `(url, app, tableKey)`. */
 export interface PresetRows {
@@ -58,10 +61,15 @@ interface Entry {
 
 const DEFAULT_MAX_AGE = 30_000;
 let maxAge = DEFAULT_MAX_AGE;
+/**
+ * Scopes kept, as many as the meta cache keeps URLs: one per table a session
+ * visits, so only parametric `tableKey`s reach it. An entry is a few rows
+ * and is refetched in one request, so this is not worth a public setting.
+ */
+const MAX_ENTRIES = 100;
+/** Least recently used first. */
 let entries = new Map<string, Entry>();
 let clients = new Map<ClientFactory, Map<string, Client>>();
-/** Bumped on every drop, so a fetch started before it never commits after it. */
-let epoch = 0;
 const listeners = new Map<string, Set<PresetsCacheListener>>();
 let wired = false;
 let lastMismatch: string | undefined;
@@ -104,7 +112,6 @@ export function presetsCacheKey(url: string, app: string, tableKey: string): str
  * tables keep what they show until they next load. Since 0.1.153.
  */
 export function invalidatePresetsCache(): void {
-  epoch++;
   entries = new Map();
   // A factory that reuses `Client`s per URL would hand the next viewer the
   // `_presets/meta` this one loaded. Optional call: test doubles stub little.
@@ -145,12 +152,41 @@ function wire(): void {
 
 function entryFor(key: string): Entry {
   wire();
-  let entry = entries.get(key);
+  let entry = lookup(key);
   if (!entry) {
     entry = { rowsAt: 0, started: 0, committed: 0 };
     entries.set(key, entry);
+    trim();
   }
   return entry;
+}
+
+/** The entry for `key`, marked most recently used. */
+function lookup(key: string): Entry | undefined {
+  const entry = entries.get(key);
+  if (entry) {
+    entries.delete(key);
+    entries.set(key, entry);
+  }
+  return entry;
+}
+
+/**
+ * Whether `entry` is still the cached one for `key`. A fetch that settles
+ * after its entry was dropped (reset, identity change, size limit) answers
+ * its caller only: it never commits, nor reaches the scope's listeners.
+ */
+function isCurrent(key: string, entry: Entry): boolean {
+  return entries.get(key) === entry;
+}
+
+/** Drop least recently used scopes no mounted table is subscribed to. */
+function trim(): void {
+  if (entries.size <= MAX_ENTRIES) return;
+  for (const key of entries.keys()) {
+    if (!listeners.has(key)) entries.delete(key);
+    if (entries.size <= MAX_ENTRIES) return;
+  }
 }
 
 /**
@@ -177,14 +213,14 @@ export function sharedPresetsClient(url: string, factory?: ClientFactory): Clien
  * Since 0.1.153.
  */
 export function cachedPresetRows(key: string): { rows: PresetRows; fresh: boolean } | undefined {
-  const entry = entries.get(key);
+  const entry = lookup(key);
   if (!entry?.rows) return undefined;
   return { rows: entry.rows, fresh: Date.now() - entry.rowsAt < maxAge };
 }
 
 /** Cached capabilities for `key`. Since 0.1.153. */
 export function cachedPresetCapabilities(key: string): PresetCapabilities | undefined {
-  return entries.get(key)?.caps;
+  return lookup(key)?.caps;
 }
 
 /**
@@ -204,11 +240,10 @@ export function loadPresetRows(
   const entry = entryFor(key);
   if (!opts.force && entry.rowsInflight) return entry.rowsInflight;
   const token = ++entry.started;
-  const startedAt = epoch;
   const p = fetchRows().then(
     (result) => {
       if (entry.rowsInflight === p) entry.rowsInflight = undefined;
-      if (startedAt !== epoch) return result;
+      if (!isCurrent(key, entry)) return result;
       // A newer fetch already committed: hand the caller its rows, not this
       // older answer, so a late revalidation never rolls a consumer back.
       if (token <= entry.committed)
@@ -248,11 +283,10 @@ export function loadPresetCapabilities(
   const entry = entryFor(key);
   if (entry.caps) return Promise.resolve(entry.caps);
   if (entry.capsInflight) return entry.capsInflight;
-  const startedAt = epoch;
   const p = fetchCaps().then(
     (caps) => {
       if (entry.capsInflight === p) entry.capsInflight = undefined;
-      if (startedAt !== epoch) return caps;
+      if (!isCurrent(key, entry)) return caps;
       entry.caps = caps;
       if (!checkSession(entry)) {
         for (const l of listenersOf(key)) if (l !== origin) l.onCapabilities(caps);
@@ -300,7 +334,12 @@ export function subscribePresetsCache(key: string, listener: PresetsCacheListene
   set.add(listener);
   return () => {
     set.delete(listener);
-    if (set.size === 0 && listeners.get(key) === set) listeners.delete(key);
+    if (set.size === 0 && listeners.get(key) === set) {
+      listeners.delete(key);
+      // In use until now: most recently used, and evictable again.
+      lookup(key);
+      trim();
+    }
   };
 }
 

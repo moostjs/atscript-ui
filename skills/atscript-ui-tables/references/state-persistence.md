@@ -302,6 +302,7 @@ Active only in the browser AND after the app called `setMetaCacheIdentity()` (fr
 | 4   | A write (any mutator) refreshes the shared entry → other mounted tables on the same key update; other tabs of the same identity refresh via `BroadcastChannel("as-presets")`.           |
 | 5   | Dropped on `resetMetaCache()` / identity change, and when rows' owner ≠ `capabilities.userId` (session changed without `setMetaCacheIdentity`). Failures/denied never cached.           |
 | 6   | Knobs (`@atscript/ui-table`): `setPresetsCacheMaxAge(ms)` (`0` = always revalidate, `< 0` = off), `invalidatePresetsCache()` after out-of-band preset changes.                          |
+| 7   | Since 0.1.154: LRU of 100 scopes (fixed, no setting); a scope a mounted table is subscribed to is never dropped; a dropped scope just reloads on the next mount.                        |
 
 DON'T rely on the cache without binding identity on login, logout AND every current-user reload — that is what keeps user A's private presets from user B after an in-tab sign-in.
 

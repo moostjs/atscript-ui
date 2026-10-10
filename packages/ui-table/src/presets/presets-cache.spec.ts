@@ -166,6 +166,50 @@ describe("presets cache — rows", () => {
   });
 });
 
+describe("presets cache — size limit", () => {
+  const scope = (i: number) => presetsCacheKey("/db/_presets", "demo", `t${i}`);
+  const fill = async (from: number, to: number) => {
+    for (let i = from; i < to; i++) await loadPresetRows(scope(i), async () => list([]));
+  };
+
+  it("keeps the 100 most recently used scopes; a hit makes a scope most recent", async () => {
+    await fill(0, 100);
+    expect(cachedPresetRows(scope(0))).toBeDefined(); // hit: t1 is now the oldest
+    await fill(100, 101);
+    expect(cachedPresetRows(scope(0))).toBeDefined();
+    expect(cachedPresetRows(scope(1))).toBeUndefined();
+    expect(cachedPresetRows(scope(2))).toBeDefined();
+  });
+
+  it("never drops a scope a mounted table is subscribed to; unsubscribing makes it most recent", async () => {
+    await loadPresetCapabilities(scope(0), async () => caps("alice"));
+    const off = subscribePresetsCache(scope(0), listener());
+    await fill(1, 250);
+    expect(cachedPresetCapabilities(scope(0))).toMatchObject({ userId: "alice" });
+
+    off();
+    await fill(250, 260); // t0 was released last: older scopes go first
+    expect(cachedPresetCapabilities(scope(0))).toBeDefined();
+    await fill(260, 400);
+    expect(cachedPresetCapabilities(scope(0))).toBeUndefined();
+  });
+
+  it("a fetch that settles after its scope was dropped never reaches the scope's new entry", async () => {
+    const stale = deferred<PresetsListResult>();
+    const staleLoad = loadPresetRows(scope(0), () => stale.promise);
+    await fill(1, 101); // drops t0 while its fetch is in flight
+
+    const l = listener();
+    subscribePresetsCache(scope(0), l);
+    await loadPresetRows(scope(0), async () => list([row("fresh", "alice")]));
+    stale.resolve(list([row("stale", "alice")]));
+
+    expect((await staleLoad).presets[0]?.id).toBe("stale"); // its caller still gets it
+    expect(l.onRows.mock.calls.map(([r]) => r.presets[0]?.id)).toEqual(["fresh"]);
+    expect(cachedPresetRows(scope(0))?.rows.presets[0]?.id).toBe("fresh");
+  });
+});
+
 describe("presets cache — capabilities", () => {
   it("loads once for the session and never caches a failure", async () => {
     const fail = vi.fn(async (): Promise<PresetCapabilities> => {

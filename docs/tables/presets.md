@@ -322,6 +322,9 @@ through a browser session cache keyed by `(presets url, app, tableKey)`:
   first write validates against one `_presets/meta`, not one per mount.
 - **Failures are never cached** — a failed or denied load is retried
   on the next mount.
+- **Bounded** (_since 0.1.154_). The cache keeps the 100 most recently
+  used scopes; a scope a mounted table uses is never dropped. A table
+  whose scope was dropped loads its presets again on its next mount.
 
 Identity scoping:
 
