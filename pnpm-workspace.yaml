@@ -3,8 +3,8 @@ packages:
   - docs
 
 catalog:
-  "@aooth/arbac": ^0.1.81
-  "@aooth/arbac-moost": ^0.1.81
+  "@aooth/arbac": ^0.1.82
+  "@aooth/arbac-moost": ^0.1.82
   "@atscript/core": ^0.1.107
   "@atscript/db": ^0.1.159
   "@atscript/db-client": ^0.1.159
