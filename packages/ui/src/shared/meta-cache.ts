@@ -1,4 +1,4 @@
-import { clearMetaStore, type Client } from "@atscript/db-client";
+import { clearMetaStore, defaultMetaStore, type Client, type MetaStore } from "@atscript/db-client";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 import { getDefaultClientFactory, type ClientFactory } from "../client-factory";
@@ -54,10 +54,6 @@ interface Derived {
   tableDef?: TableDef;
 }
 
-interface ClearableStore {
-  clear: () => void;
-}
-
 /** Bookkeeping behind each handed-out entry (kept off the public shape). */
 interface Slot {
   url: string;
@@ -67,7 +63,7 @@ interface Slot {
   /** The `ETag` whose shared `Derived` this entry counts in `derivedByEtag`. */
   etag?: string;
   /** The custom `/meta` store this entry counts in `customStores`. */
-  store?: ClearableStore;
+  store?: MetaStore;
 }
 
 /**
@@ -85,7 +81,7 @@ const slots = new WeakMap<MetaCacheEntry, Slot>();
 /** Derived shapes per `ETag`, counted by the cached entries that use them. Browser only. */
 const derivedByEtag = new Map<string, { derived: Derived; refs: number }>();
 /** Custom `/meta` stores of cached clients, counted by the entries that use them. */
-const customStores = new Map<ClearableStore, number>();
+const customStores = new Map<MetaStore, number>();
 /** `undefined` until the first `setMetaCacheIdentity` call; `null` = anonymous. */
 let identity: string | null | undefined;
 const resetListeners = new Set<() => void>();
@@ -254,14 +250,16 @@ function derive(entry: MetaCacheEntry, client: Client, meta: MetaResponse): Deri
 }
 
 /**
- * The custom `/meta` store a factory gave `client`, so a reset can clear
- * it. The store is a private field of `Client`, read defensively: the
- * default store is cleared through `clearMetaStore()`, and a store-less
- * client or a test double is skipped.
+ * The custom `/meta` store a factory gave `client`, so a reset (and the
+ * eviction of its last cached client) can clear it. The shared
+ * `defaultMetaStore` is skipped: a reset clears it through
+ * `clearMetaStore()`, and an eviction must not drop the ETags of every
+ * other URL. A store-less client (`metaStore: false`) is skipped too.
  */
-function customStoreOf(client: Client): ClearableStore | undefined {
-  const store = (client as unknown as { _metaStore?: Partial<ClearableStore> })._metaStore;
-  return typeof store?.clear === "function" ? (store as ClearableStore) : undefined;
+function customStoreOf(client: Client): MetaStore | undefined {
+  // Optional by nature: custom `ClientFactory` doubles often stub only `meta()`.
+  const store = client.metaStore;
+  return store && store !== defaultMetaStore ? store : undefined;
 }
 
 /**

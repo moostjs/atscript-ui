@@ -1119,7 +1119,7 @@ interface MetaCacheEntry {
 
 ### Size limit
 
-_Since 0.1.154._ The cache keeps the 100 most recently used URLs; a hit makes a URL the most recent, and older entries beyond the limit are dropped (their `type` / `TableDef`, shared per `ETag`, go with the last entry using them). An app that opens many parametric URLs (`/api/db/ticket-issue/${key}`) no longer grows the cache for the life of the tab. 100 covers a page's tables plus the dictionaries its filters and forms pick from, and the recent navigation history; revisiting a dropped URL costs one `/meta` request — a `304` when the db-client meta store still holds its body.
+_Since 0.1.154._ The cache keeps the 100 most recently used URLs; a hit makes a URL the most recent, and older entries beyond the limit are dropped (their `type` / `TableDef`, shared per `ETag`, go with the last entry using them). An app that opens many parametric URLs (`/api/db/ticket-issue/${key}`) no longer grows the cache for the life of the tab. 100 covers a page's tables plus the dictionaries its filters and forms pick from, and the recent navigation history; revisiting a dropped URL costs one `/meta` request — a `304` when the db-client meta store still holds its body. Dropping entries never clears the shared default meta store; a custom `metaStore` your factory supplied is cleared once no cached entry uses it any more, since a reset would no longer reach it.
 
 ```typescript
 setMetaCacheMaxEntries(300); // keep more; `Infinity` = no limit, no argument = back to 100

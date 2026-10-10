@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { Client, MetaStore } from "@atscript/db-client";
+import { Client, MetaStore, defaultMetaStore } from "@atscript/db-client";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -359,18 +359,28 @@ describe("meta-cache", () => {
       expect(await getMetaTableDef(a)).toBe(defA);
     });
 
-    it("a custom meta store is cleared once no cached client uses it", async () => {
-      const { fetch } = await fakeServer();
+    it("a custom meta store is cleared once no cached client uses it, the default one never", async () => {
+      const { fetch, calls } = await fakeServer();
       const custom = new MetaStore();
       const viaCustom: ClientFactory = (url, opts) =>
         new Client(url, { ...opts, fetch, metaStore: custom });
       const viaDefault: ClientFactory = (url, opts) => new Client(url, { ...opts, fetch });
       setMetaCacheMaxEntries(1);
 
-      await getMetaEntry("/orders/A", viaCustom).meta;
-      expect(custom.size).toBe(1);
       await getMetaEntry("/tickets/A", viaDefault).meta;
+      expect(defaultMetaStore.size).toBe(1);
+      // Evicts the last cached client on the default store: it keeps its ETags.
+      await getMetaEntry("/orders/A", viaCustom).meta;
+      expect(defaultMetaStore.size).toBe(1);
+      expect(custom.size).toBe(1);
+      // Evicts the last cached client on the custom store: nothing would clear it on a reset.
+      await getMetaEntry("/tickets/B", viaDefault).meta;
       expect(custom.size).toBe(0);
+      expect(defaultMetaStore.size).toBe(1);
+
+      // Revisiting the dropped URL revalidates against the default store.
+      await getMetaEntry("/tickets/A", viaDefault).meta;
+      expect(calls.at(-1)?.status).toBe(304);
     });
 
     it("server rendering asks the factory for no meta store and shares nothing", async () => {
