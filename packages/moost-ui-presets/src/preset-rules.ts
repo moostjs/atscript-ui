@@ -239,6 +239,8 @@ async function processCreateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
   // Wire `user` / `userLabel` are sourced from session to prevent spoofed attribution.
   next.user = user;
   const userLabelPromise = hooks.getUserLabel?.(user);
+  // An insert stores a sent `updatedAt` as is — overwrite it; every update is
+  // stamped by the db (`number.timestamp.updated`).
   const now = Date.now();
   next.updatedAt = now;
   if (typeof next.createdAt !== "number") next.createdAt = now;
@@ -350,8 +352,6 @@ async function processUpdateRow(ctx: WriteCtx, row: PresetRowLike): Promise<Pres
       });
     }
   }
-  next.updatedAt = Date.now();
-
   // Shallow merge so a partial patch doesn't wipe unmodified `data` fields.
   const mergedData =
     next.data === undefined ? (existing.data ?? null) : { ...existing.data, ...next.data };

@@ -26,20 +26,25 @@ describe("identity-and-stamp", () => {
       app: "demo",
       tableKey: "products",
       data: { label: "P" },
+      updatedAt: 1, // a sent value is overwritten on insert
     })) as { updatedAt: number; createdAt: number; id: string };
 
     expect(inserted.createdAt).toBeGreaterThanOrEqual(t0);
-    expect(inserted.updatedAt).toBeGreaterThanOrEqual(t0);
+    expect(inserted.updatedAt).toBe(inserted.createdAt);
 
-    // Persist + then update — updatedAt should advance.
+    // Persist + then update — the db (`number.timestamp.updated`) sets
+    // updatedAt, ignoring a sent value.
     await table.insertOne(inserted as never);
-
-    const updated = (await ctrl.callOnWrite("update", {
+    await new Promise((r) => setTimeout(r, 2));
+    const patch = await ctrl.callOnWrite("update", {
       id: inserted.id,
       data: { label: "P (renamed)" },
-    })) as { updatedAt: number };
+      updatedAt: 1,
+    });
+    await table.updateOne(patch as never);
 
-    expect(updated.updatedAt).toBeGreaterThanOrEqual(inserted.updatedAt);
+    const stored = (await table.findOne({ filter: { id: inserted.id } })) as { updatedAt: number };
+    expect(stored.updatedAt).toBeGreaterThan(inserted.updatedAt);
   });
 
   it("auto-generates an id for type='preset' insert when client omits it", async () => {

@@ -68,7 +68,7 @@ export interface AsPresetEntry {
     data: PresetContent | UserConfContent | AppConfContent
 
     @db.default.now createdAt: number
-    @db.default.now updatedAt: number
+    updatedAt: number.timestamp.updated
 }
 ```
 
@@ -212,7 +212,11 @@ The controller transparently stamps:
   else `NULL`.
 - `aspects[]` derived from `data.content` keys on every preset
   write.
-- `createdAt` / `updatedAt` from `@db.default.now`.
+- `createdAt` / `updatedAt` with the insert time.
+- `updatedAt` with the update time on every update — set by the db
+  (`number.timestamp.updated`, since 0.1.154 with `@atscript/db`
+  ≥ 0.1.156), so writes your own code makes through the table set it
+  too. The column keeps its type and default; no schema change.
 
 The client doesn't need to know any of this — it sends a clean
 `PresetSnapshotWire`, the controller fills the rest.

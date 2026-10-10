@@ -137,9 +137,11 @@ export interface AsPresetEntry {
   data: PresetData | UserConfData | AppConfData
 
   @db.default.now createdAt: number
-  @db.default.now updatedAt: number
+  updatedAt: number.timestamp.updated
 }
 ```
+
+`updatedAt` is `number.timestamp.updated` since 0.1.154 (requires `@atscript/db` ≥ 0.1.156): the controller stamps it on insert, and the db sets it on every update — including writes your own code makes through the table (`updateOne`, `replaceOne`, …), which earlier left it unchanged. A sent value is ignored. The column keeps its type and default on every adapter (it already had `@db.default.now`), so the first schema sync changes nothing for this field.
 
 ### Polymorphic `data` shape
 

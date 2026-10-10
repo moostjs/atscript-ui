@@ -461,7 +461,7 @@ export class MyPresetsController extends AsPresetsController {
 | `canPublishPresets(a, t, u)`    | returns `true`      | Restrict public-preset creation (tiered / role / per-table). |
 | `getMaxPresetsPerUser(a, t, u)` | returns `10`        | Override cap per user / app / table.                         |
 
-The `AsPresetEntry` row schema and its indexes ship inside `@atscript/moost-ui-presets`. When you extend `AsPresetsController`, you inherit the type and the database table — see the package source if you need the exact column list. Cross-link: atscript skill for `.as` syntax; atscript-db skill for `@db.*` semantics.
+The `AsPresetEntry` row schema and its indexes ship inside `@atscript/moost-ui-presets`. When you extend `AsPresetsController`, you inherit the type and the database table — see the package source if you need the exact column list. `updatedAt` is `number.timestamp.updated` (since 0.1.154, needs `@atscript/db` ≥ 0.1.156): the controller stamps it on insert, the db on every update — also updates your own code makes through the table; same column type and default as before, no schema change. Cross-link: atscript skill for `.as` syntax; atscript-db skill for `@db.*` semantics.
 
 ## REST endpoints
 

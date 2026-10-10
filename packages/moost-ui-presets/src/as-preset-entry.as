@@ -148,6 +148,6 @@ export interface AsPresetEntry {
     @db.default.now
     createdAt: number
 
-    @db.default.now
-    updatedAt: number
+    // Filled on insert, set by the db on every update.
+    updatedAt: number.timestamp.updated
 }
