@@ -121,10 +121,6 @@ describe("createAsHttpOutlet", () => {
   it("identifies as a valid http outlet with caller-bound token delivery", () => {
     const outlet = createAsHttpOutlet();
     expect(outlet.name).toBe("http");
-    // `tokenDelivery` was added in @prostojs/wf@0.2 but is not in the typed
-    // `WfOutlet` shape we depend on. Read it dynamically to keep the smoke
-    // test honest without leaking the cast type-side.
-    const meta = outlet as unknown as { tokenDelivery?: string };
-    expect(meta.tokenDelivery).toBe("caller");
+    expect(outlet.tokenDelivery).toBe("caller");
   });
 });

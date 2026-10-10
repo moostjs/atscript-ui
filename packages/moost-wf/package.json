@@ -69,7 +69,7 @@
     "@atscript/typescript": "catalog:",
     "@atscript/ui": "workspace:^",
     "@moostjs/event-wf": "catalog:",
-    "@prostojs/wf": "^0.1.1",
+    "@prostojs/wf": "^0.2.1",
     "@uniqu/core": "catalog:",
     "@wooksjs/event-core": "catalog:",
     "@wooksjs/event-http": "catalog:",
