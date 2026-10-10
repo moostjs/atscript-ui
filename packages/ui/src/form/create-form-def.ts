@@ -14,11 +14,12 @@ import type {
   FormUnionFieldDef,
   FormUnionVariant,
 } from "./types";
-import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
+import { getFieldMeta, hasComputedAnnotations, hasFieldMeta } from "../shared/field-resolver";
 import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
   DB_COLUMN_DERIVED,
+  DB_ON_UPDATE_NOW,
   DB_UNIT,
   DB_UNIT_REF,
   META_DESCRIPTION,
@@ -60,7 +61,21 @@ export interface CreateFormDefOptions {
    * propagated into nested recursive calls. Since 0.1.147.
    */
   metaFields?: Record<string, { computed?: boolean }>;
+  /**
+   * What the form is for. `"edit"` — the form edits a stored row and is sent
+   * as an update: an `@db.onUpdate.now` field (`number.timestamp.updated`),
+   * which the server sets on every update and whose sent value it ignores, is
+   * then marked `derived` — read-only, never validated, never sent. Applies at
+   * every depth (embedded objects, objects in arrays), except for a reference
+   * to another field, an element of an array of numbers, and below a tuple or
+   * a union of several types, where the server does not set the field.
+   * `"create"` (default) — the field stays editable: the server only fills it
+   * when it has `@db.default.now` and the value is left out. Since 0.1.154.
+   */
+  mode?: "create" | "edit";
 }
+
+const EDIT: CreateFormDefOptions = { mode: "edit" };
 
 /**
  * Converts an ATScript annotated type into a FormDef.
@@ -70,12 +85,14 @@ export interface CreateFormDefOptions {
  *   with `path: ''`.
  *
  * A `@db.column.derived` field is marked `derived` straight from its metadata;
- * a computed view column, from `opts.metaFields`.
+ * a computed view column, from `opts.metaFields`; an `@db.onUpdate.now` field,
+ * when `opts.mode` is `"edit"`.
  */
 export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef {
+  const edit = opts?.mode === "edit";
   // Non-object types: single leaf field (never pushed down)
   if (type.type.kind !== "object") {
-    const rootField = createFieldDef("", type);
+    const rootField = createFieldDef("", type, edit);
     const fields = [rootField];
     return { type, rootField, fields, mainFields: fields, pushDownFields: [], flatMap: new Map() };
   }
@@ -110,7 +127,7 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
       structuredPrefixes.add(path + ".");
     }
 
-    const field = createFieldDef(path, originalProp);
+    const field = createFieldDef(path, originalProp, edit);
     if (opts?.metaFields?.[path]?.computed) field.derived = true;
     fields.push(field);
   }
@@ -147,8 +164,11 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
 
 // ── Unified field def creation ───────────────────────────────
 
-/** Creates a FormFieldDef from any ATScript annotated type. */
-function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDef {
+/**
+ * Creates a FormFieldDef from any ATScript annotated type. `edit`: the form
+ * edits a stored row (`CreateFormDefOptions.mode`).
+ */
+function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit = false): FormFieldDef {
   const kind = prop.type.kind;
   const name = path.slice(path.lastIndexOf(".") + 1);
   const allStatic = !hasComputedAnnotations(prop);
@@ -162,8 +182,13 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
   // targetField — so the renderer now reads `field.valueHelpInfo` instead.
   const valueHelpInfo = extractValueHelp(prop);
   // `@db.column.derived` is valid only on a top-level `@db.table` field, so
-  // the annotation alone marks the field — no path bookkeeping.
-  const derived = getFieldMeta(prop, DB_COLUMN_DERIVED) !== undefined;
+  // the annotation alone marks the field — no path bookkeeping. An edit form's
+  // update stamp is just as server-owned — on a property only (`path`): the
+  // server stamps no array element / union member (`T | null`'s is the
+  // property's own, read by `isUpdateStamped`).
+  const derived =
+    getFieldMeta(prop, DB_COLUMN_DERIVED) !== undefined ||
+    (edit && path !== "" && isUpdateStamped(prop));
   const base = {
     path,
     prop,
@@ -204,7 +229,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
       type: "array",
       customType: isMultiselect ? "multiselect" : customType,
       itemType: arrayType.of,
-      itemField: createFieldDef("", arrayType.of),
+      itemField: createFieldDef("", arrayType.of, edit),
     } as FormArrayFieldDef;
   }
 
@@ -214,7 +239,10 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
       ...base,
       type: "object",
       customType,
-      objectDef: createFormDef(prop as TAtscriptAnnotatedType<TAtscriptTypeObject>),
+      objectDef: createFormDef(
+        prop as TAtscriptAnnotatedType<TAtscriptTypeObject>,
+        edit ? EDIT : undefined,
+      ),
     } as FormObjectFieldDef;
   }
 
@@ -224,12 +252,23 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType): FormFieldDe
       return { ...base, type: uiType ?? "select" };
     }
 
-    const unionVariants = buildUnionVariants(prop);
+    // The server sets an update stamp below `T | null`, not below a union of
+    // several value types.
+    const unionVariants = createUnionVariants(prop, edit && soleValueMember(prop) !== undefined);
     if (unionVariants.length > 1) {
       return { ...base, type: "union", customType, unionVariants } as FormUnionFieldDef;
     }
     const v = unionVariants[0];
-    if (v?.itemField) return { ...v.itemField, path, name, allStatic, pushDown };
+    if (v?.itemField) {
+      return {
+        ...v.itemField,
+        path,
+        name,
+        allStatic,
+        pushDown,
+        ...(derived && { derived: true as const }),
+      };
+    }
     if (v?.def) {
       return {
         ...base,
@@ -393,12 +432,16 @@ function isChildOfStructured(path: string, prefixes: Set<string>): boolean {
  * Iterates top-level items directly — one variant per item.
  */
 export function buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVariant[] {
+  return createUnionVariants(typeDef, false);
+}
+
+function createUnionVariants(typeDef: TAtscriptAnnotatedType, edit: boolean): FormUnionVariant[] {
   const complex = typeDef.type as TAtscriptTypeComplex;
   const items = complex.items ?? [typeDef];
   const variants: FormUnionVariant[] = [];
 
   for (const item of items) {
-    const v = createVariant(item);
+    const v = createVariant(item, edit);
     if (items.length > 1) {
       v.label = `${String(variants.length + 1)}. ${v.label}`;
     }
@@ -409,7 +452,7 @@ export function buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVa
 }
 
 /** Creates a single union variant from an annotated type item. */
-function createVariant(def: TAtscriptAnnotatedType): FormUnionVariant {
+function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVariant {
   const kind = def.type.kind;
 
   if (kind === "object") {
@@ -418,8 +461,11 @@ function createVariant(def: TAtscriptAnnotatedType): FormUnionVariant {
     return {
       label,
       type: def,
-      def: createFormDef(def as TAtscriptAnnotatedType<TAtscriptTypeObject>),
-      itemField: hasComponent ? createFieldDef("", def) : undefined,
+      def: createFormDef(
+        def as TAtscriptAnnotatedType<TAtscriptTypeObject>,
+        edit ? EDIT : undefined,
+      ),
+      itemField: hasComponent ? createFieldDef("", def, edit) : undefined,
     };
   }
 
@@ -429,7 +475,7 @@ function createVariant(def: TAtscriptAnnotatedType): FormUnionVariant {
     return {
       label: capitalize(dt === "phantom" ? "item" : dt),
       type: def,
-      itemField: createFieldDef("", def),
+      itemField: createFieldDef("", def, edit),
       designType: dt,
     };
   }
@@ -438,8 +484,37 @@ function createVariant(def: TAtscriptAnnotatedType): FormUnionVariant {
   return {
     label: capitalize(kind),
     type: def,
-    itemField: createFieldDef("", def),
+    itemField: createFieldDef("", def, edit),
   };
+}
+
+/**
+ * `@db.onUpdate.now` (`number.timestamp.updated`): the server sets the field
+ * on every update. Read off the prop, or — as `@atscript/db` does — off the one
+ * value member of `T | null`, unless the prop references another field.
+ */
+function isUpdateStamped(prop: TAtscriptAnnotatedType): boolean {
+  if (hasFieldMeta(prop, DB_ON_UPDATE_NOW)) return true;
+  const member = prop.ref?.field ? undefined : soleValueMember(prop);
+  return member !== undefined && hasFieldMeta(member, DB_ON_UPDATE_NOW);
+}
+
+/** The one non-`null` / `undefined` member of a (nested) union, if there is exactly one. */
+function soleValueMember(prop: TAtscriptAnnotatedType): TAtscriptAnnotatedType | undefined {
+  if (prop.type.kind !== "union") return undefined;
+  const members = new Set<TAtscriptAnnotatedType>();
+  const visit = (t: TAtscriptAnnotatedType): void => {
+    if (t.type.kind === "union") {
+      for (const item of (t.type as TAtscriptTypeComplex).items) visit(item);
+    } else if (
+      t.type.kind !== "" ||
+      (t.type.designType !== "null" && t.type.designType !== "undefined")
+    ) {
+      members.add(t);
+    }
+  };
+  visit(prop);
+  return members.size === 1 ? members.values().next().value : undefined;
 }
 
 function capitalize(s: string): string {

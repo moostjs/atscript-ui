@@ -11,6 +11,8 @@ import { buildUnionVariants, createFormDef } from "./create-form-def";
 import { isArrayField, isObjectField, isTupleField, isUnionField } from "./types";
 import type {
   FormArrayFieldDef,
+  FormDef,
+  FormFieldDef,
   FormObjectFieldDef,
   FormTupleFieldDef,
   FormUnionFieldDef,
@@ -65,6 +67,7 @@ import {
   UnionWithFormType,
   VersionedObject,
 } from "../__tests__/fixtures/create-form-def.as";
+import { StampedRow } from "../__tests__/fixtures/update-stamps.as";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -76,6 +79,11 @@ function prop(
   const p = iface.type.props.get(name);
   if (!p) throw new Error(`prop ${name} not found on fixture`);
   return p;
+}
+
+/** A top-level field of a def by path. */
+function field(def: FormDef, path: string): FormFieldDef {
+  return def.fields.find((f) => f.path === path)!;
 }
 
 // ── Tests ────────────────────────────────────────────────────
@@ -176,6 +184,59 @@ describe("createFormDef", () => {
       metaFields: { name: { computed: true }, id: { computed: false } },
     });
     expect(def.fields.filter((f) => f.derived).map((f) => f.path)).toEqual(["name", "customerId"]);
+  });
+
+  describe("@db.onUpdate.now (mode)", () => {
+    it("an edit form marks every update stamp derived, with or without a default", () => {
+      const def = createFormDef(StampedRow, { mode: "edit" });
+      expect(def.fields.filter((f) => f.derived).map((f) => f.path)).toEqual([
+        "updatedAt",
+        "editedAt",
+        "trace.updatedAt",
+        "touchedAt",
+      ]);
+      // An embedded object and an array item are set by the server too.
+      const audit = field(def, "audit") as FormObjectFieldDef;
+      expect(audit.objectDef.fields.map((f) => [f.path, f.derived])).toEqual([["updatedAt", true]]);
+      const lines = field(def, "lines") as FormArrayFieldDef;
+      const item = (lines.itemField as FormObjectFieldDef).objectDef.fields;
+      expect(item.map((f) => [f.path, f.derived])).toEqual([
+        ["qty", undefined],
+        ["updatedAt", true],
+      ]);
+      // `T | null` is marked as a whole (above); a shared interface too.
+      const stamped = field(def, "stampedAudit") as FormObjectFieldDef;
+      expect(stamped.objectDef.fields[0]!.derived).toBe(true);
+    });
+
+    it("leaves a stamp below a tuple or a union of several types editable", () => {
+      const def = createFormDef(StampedRow, { mode: "edit" });
+      const pair = field(def, "pair") as FormTupleFieldDef;
+      expect(pair.derived).toBeUndefined();
+      expect(pair.itemFields[0]!.derived).toBeUndefined();
+      const either = field(def, "either") as FormUnionFieldDef;
+      expect(either.unionVariants[0]!.def!.fields[0]!.derived).toBeUndefined();
+    });
+
+    it("leaves an array element and a field reference editable — no property of their own", () => {
+      const def = createFormDef(StampedRow, { mode: "edit" });
+      const stamps = field(def, "stamps") as FormArrayFieldDef;
+      expect(stamps.itemField.derived).toBeUndefined();
+      const ref = field(def, "refTouched") as FormUnionFieldDef;
+      expect(ref.derived).toBeUndefined();
+      expect(ref.unionVariants.map((v) => v.itemField?.derived)).toEqual([undefined, undefined]);
+    });
+
+    it("a create form (the default) leaves update stamps editable", () => {
+      for (const def of [
+        createFormDef(StampedRow),
+        createFormDef(StampedRow, { mode: "create" }),
+      ]) {
+        expect(def.fields.filter((f) => f.derived)).toEqual([]);
+        const audit = field(def, "audit") as FormObjectFieldDef;
+        expect(audit.objectDef.fields[0]!.derived).toBeUndefined();
+      }
+    });
   });
 
   describe("nested objects", () => {

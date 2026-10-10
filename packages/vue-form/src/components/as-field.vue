@@ -396,8 +396,8 @@ let classesBase: Record<string, boolean> | ComputedRef<Record<string, boolean>>;
 let phantomValue: unknown;
 let hasCustomValidators: boolean;
 
-// Static — shared by both paths. A `@db.column.derived` field is
-// server-computed: always read-only, never marked required.
+// Static — shared by both paths. A `derived` field is server-owned: always
+// read-only, never marked required, never validated.
 const isDerived = props.field.derived === true;
 const staticReadonly = isDerived || getFieldMeta(prop, META_READONLY) !== undefined;
 const hasMetaRequired = !isDerived && getFieldMeta(prop, META_REQUIRED) !== undefined;
@@ -671,7 +671,7 @@ const {
 } = useAsField({
   getValue: getModel,
   setValue: setModel,
-  rules: [formRule],
+  rules: isDerived ? [] : [formRule],
   path: () => absolutePath.value,
   ...(props.field.prop.optional
     ? { resetValue: undefined }

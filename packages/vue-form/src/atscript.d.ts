@@ -83,12 +83,18 @@ declare global {
     "ui.table.fn.attr": ({ name: string, fn: string })[]
     "ui.table.fn.classes": string
     "ui.table.fn.styles": string
+    "ui.valueHelp": { target: import("@atscript/typescript/utils").AtscriptRef, field: string, filter?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "ui.valueHelp.distinct": boolean
+    "ui.literalLabel": ({ value: string, label: string })[]
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
     "ui.dict.filterable": boolean
     "ui.dict.sortable": boolean
     "ui.dict.searchable": boolean
+    "ui.nav.group": string
+    "ui.nav.order": number
+    "ui.nav.hidden": boolean
     "ui.array.add.label": string
     "ui.array.remove.label": string
     "db.column.version": boolean

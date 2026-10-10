@@ -145,6 +145,9 @@ that both forms and other surfaces read. For the dynamic counterpart
 use `@ui.form.fn.readonly`.
 A `@db.column.derived` field is read-only without any `@ui.*`
 annotation — see [`createFormDef`](/api/ui#createformdef-type-opts). Since 0.1.144.
+So is an `@db.onUpdate.now` field (`number.timestamp.updated`) in a form
+built with `createFormDef(type, { mode: "edit" })`: the server sets it on
+every update. Since 0.1.154.
 
 ### Layout
 

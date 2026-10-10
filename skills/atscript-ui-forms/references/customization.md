@@ -194,6 +194,8 @@ const form = useAsForm<Contact>({
 
 Computed view columns (`@db.compute`) reach the client without their annotation — pass `createFormDef(type, { metaFields: meta.fields })` and a field `/meta` marks `computed` gets the same `derived` treatment. Only matters for a form built from a view's type (views are read-only). Since 0.1.147.
 
+Edit forms: pass `createFormDef(type, { mode: "edit" })`. An `@db.onUpdate.now` field (`number.timestamp.updated`) — set by the server on every update/replace, a sent value ignored — then gets the same `derived` treatment, at any depth (embedded objects, array items, `T | null`) — not a field reference (`x: Other.updatedAt`), a `number[]` element, or below a tuple / a union of several types (server stores those as sent). Default `mode: "create"` keeps it editable: optional when it also has `@db.default.now`, required for a bare `@db.onUpdate.now`. `getFormValidator` and `<AsField>` skip every `derived` field (incl. computed view columns); standalone `createFieldValidator(prop)` only sees annotations. `/meta` carries the annotation from `@atscript/db` 0.1.156. Since 0.1.154.
+
 ## AsForm slot-props bag
 
 `useAsForm` returns a `slotProps` bag (a `ComputedRef`) that `<AsForm>` spreads onto **every** slot. Reach for it when overriding a form slot (custom header, error banner, submit button) or when building a fully custom root with `useAsForm` — read keys off the bag instead of re-deriving form state.

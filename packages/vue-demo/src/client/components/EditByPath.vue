@@ -46,6 +46,7 @@ async function load() {
   try {
     const meta = await client.value.meta();
     formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+      mode: "edit",
       versionColumn: meta.versionColumn,
       metaFields: meta.fields,
     });

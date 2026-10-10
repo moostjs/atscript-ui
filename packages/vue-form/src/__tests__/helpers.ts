@@ -1,6 +1,6 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { defineAnnotatedType } from "@atscript/typescript/utils";
-import { createFormDef, createFormData } from "@atscript/ui";
+import { createFormDef, createFormData, type CreateFormDefOptions } from "@atscript/ui";
 import { mount } from "@vue/test-utils";
 import { reactive, type VNode } from "vue";
 import AsForm from "../components/as-form.vue";
@@ -16,6 +16,12 @@ function annotate(h: ReturnType<typeof defineAnnotatedType>, meta?: Record<strin
 
 export function stringProp(meta?: Record<string, unknown>) {
   const h = defineAnnotatedType().designType("string");
+  annotate(h, meta);
+  return h.$type;
+}
+
+export function numberProp(meta?: Record<string, unknown>) {
+  const h = defineAnnotatedType().designType("number");
   annotate(h, meta);
   return h.$type;
 }
@@ -53,11 +59,13 @@ export function mountForm(
     errors?: Record<string, string>;
     initialValue?: unknown;
     trackChanges?: boolean;
+    /** Options for `createFormDef` (e.g. `mode: "edit"`). */
+    defOptions?: CreateFormDefOptions;
     /** Render probe content into the `form.before` slot (inside AsForm providers). */
     slot?: () => VNode | VNode[];
   },
 ) {
-  const def = createFormDef(type);
+  const def = createFormDef(type, opts?.defOptions);
   const formData = reactive(
     opts?.initialValue !== undefined ? { value: opts.initialValue } : createFormData(type),
   ) as { value: Record<string, any> };

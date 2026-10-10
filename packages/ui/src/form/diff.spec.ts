@@ -19,6 +19,7 @@ import {
   UniqueArrayForm,
   VersionedForm,
 } from "../__tests__/fixtures/form-diff.as";
+import { StampedRow } from "../__tests__/fixtures/update-stamps.as";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -655,6 +656,28 @@ describe("buildFormDiff — renamed version + derived fields", () => {
     );
     expect(withEdit.changes.map((c) => c.path)).toEqual(["name"]);
     expect(withEdit.patch).toEqual({ name: "Grace", $cas: { rev: 3 } });
+  });
+});
+
+// ── Update stamps (@db.onUpdate.now) ─────────────────────────
+
+describe("buildFormDiff — @db.onUpdate.now fields", () => {
+  const before = { name: "Ada", updatedAt: 1, editedAt: 1, trace: { updatedAt: 1 } };
+  const after = { name: "Ada", updatedAt: 2, editedAt: 2, trace: { updatedAt: 2 } };
+
+  it("an edit form never sends a stamp — the server sets it on every update", () => {
+    const def = createFormDef(StampedRow, { mode: "edit" });
+    const r = buildFormDiff(def, wrap(before), wrap(after));
+    expect(r.isDirty).toBe(false);
+    expect(r.patch).toEqual({});
+
+    const withEdit = buildFormDiff(def, wrap(before), wrap({ ...after, name: "Grace" }));
+    expect(withEdit.patch).toEqual({ name: "Grace" });
+  });
+
+  it("a create-mode def diffs it like any field", () => {
+    const r = buildFormDiff(createFormDef(StampedRow), wrap(before), wrap(after));
+    expect(r.changes.map((c) => c.path)).toEqual(["updatedAt", "editedAt", "trace.updatedAt"]);
   });
 });
 

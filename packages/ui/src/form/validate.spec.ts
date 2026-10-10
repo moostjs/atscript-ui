@@ -7,6 +7,7 @@ import {
 } from "@atscript/typescript/utils";
 import { DerivedRow } from "../__tests__/fixtures/create-form-def.as";
 import { BookForm } from "../__tests__/fixtures/value-help-fk.as";
+import { StampedRow } from "../__tests__/fixtures/update-stamps.as";
 import { createFormDef } from "./create-form-def";
 import {
   createFieldValidator,
@@ -52,6 +53,69 @@ describe("server-managed db fields", () => {
   it("an empty required FK still fails (the form fills it, not the server)", () => {
     const validate = getFormValidator(createFormDef(BookForm));
     expect(Object.keys(validate({ data: { title: "Dune" } }))).toEqual(["authorId"]);
+  });
+
+  it("a /meta `computed` field is never validated", () => {
+    const def = createFormDef(DerivedRow, { metaFields: { name: { computed: true } } });
+    const { name: _, ...rest } = created;
+    expect(getFormValidator(def)({ data: rest })).toEqual({});
+  });
+});
+
+describe("@db.onUpdate.now fields", () => {
+  // Every update stamp left out; the tuple and the union hold one too.
+  const row = {
+    name: "Ada",
+    trace: {},
+    audit: {},
+    lines: [{ qty: "1" }],
+    pair: [1, "a"],
+    either: { note: "n" },
+  };
+
+  it("a create form may leave out a stamp with a default, not a bare one", () => {
+    const validate = getFormValidator(createFormDef(StampedRow));
+    expect(Object.keys(validate({ data: row }))).toEqual(["editedAt"]);
+    expect(validate({ data: { ...row, editedAt: 1 } })).toEqual({});
+    // A value the user enters is still checked.
+    expect(Object.keys(validate({ data: { ...row, editedAt: 1, updatedAt: "x" } }))).toEqual([
+      "updatedAt",
+    ]);
+  });
+
+  it("an edit form never validates a stamp the server sets", () => {
+    const validate = getFormValidator(createFormDef(StampedRow, { mode: "edit" }));
+    expect(validate({ data: row })).toEqual({});
+    const bad = {
+      ...row,
+      updatedAt: "x",
+      editedAt: "x",
+      trace: { updatedAt: "x" },
+      audit: { updatedAt: "x" },
+      lines: [{ qty: "1", updatedAt: "x" }],
+      touchedAt: "x",
+    };
+    expect(validate({ data: bad })).toEqual({});
+    // Ordinary fields, and a stamp below a tuple (stored as sent), still are.
+    const { name: _, ...noName } = bad;
+    expect(Object.keys(validate({ data: { ...noName, pair: ["x", "a"] } }))).toEqual([
+      "name",
+      "pair.0",
+    ]);
+  });
+
+  it("an edit form validates a stamp the server does not set", () => {
+    const validate = getFormValidator(createFormDef(StampedRow, { mode: "edit" }));
+    // An array element and a field reference: stored as sent.
+    expect(Object.keys(validate({ data: { ...row, stamps: ["x"], refTouched: "x" } }))).toEqual([
+      "stamps.0",
+      "refTouched",
+    ]);
+    // `StampedVariant.updatedAt` is set in `stampedAudit` but not below
+    // `either`, which shares the prop — so it is still checked.
+    expect(Object.keys(validate({ data: { ...row, stampedAudit: { updatedAt: "x" } } }))).toEqual([
+      "stampedAudit.updatedAt",
+    ]);
   });
 });
 

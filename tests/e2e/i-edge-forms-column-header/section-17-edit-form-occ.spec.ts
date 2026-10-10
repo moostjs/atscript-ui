@@ -29,6 +29,11 @@
 //   `EditByPath.vue`'s catch branch surfaces this as
 //   "Row changed since you opened the form (current version: N). …".
 //
+// Test 17.3 — `number.timestamp.updated` is read-only in the edit form.
+//   `ProductsTable.updatedAt` carries `@db.onUpdate.now`, which `/meta`
+//   keeps; `EditByPath.vue` builds the form with `mode: "edit"`, so the field
+//   renders read-only. Saving bumps it server-side (the sent value is ignored).
+//
 // Mutating spec → `mode: serial` + `resetSeed()` in `beforeAll` per the
 // batch I conventions established by section-15.
 
@@ -151,5 +156,42 @@ test.describe("Section 17 — Edit form OCC (version hidden + 409 version_mismat
       timeout: 5_000,
     });
     await expect(errorPara).toContainText(`current version: ${initialRow.version + 1}`);
+  });
+
+  test("17.3 — updatedAt (@db.onUpdate.now) is read-only and set by the server", async ({
+    page,
+    baseURL,
+  }) => {
+    await gotoTable(page, "products");
+    const oneUrl = `${baseURL}/api/db/tables/products/one?sku=SKU-00003`;
+    const before = (await (await page.request.get(oneUrl)).json()) as {
+      name: string;
+      updatedAt: number;
+    };
+    expect(typeof before.updatedAt).toBe("number");
+
+    await page.goto(`${baseURL}/products/SKU-00003/edit`);
+    await expect(page.getByText("Loading…", { exact: true })).toHaveCount(0, {
+      timeout: 10_000,
+    });
+
+    const updated = page.getByLabel("Updated", { exact: true });
+    await expect(updated).toBeVisible();
+    await expect(updated).toHaveAttribute("readonly", "");
+    // An ordinary field stays editable.
+    await expect(page.getByLabel("Name", { exact: true })).not.toHaveAttribute("readonly");
+
+    await page.getByLabel("Name", { exact: true }).fill(`${before.name} (stamped)`);
+    const patched = page.waitForResponse(
+      (r) =>
+        r.request().method() === "PATCH" &&
+        /\/api\/db\/tables\/products\/?$/u.test(r.url().split("?")[0]),
+      { timeout: 10_000 },
+    );
+    await page.locator(".as-submit-btn").click();
+    expect((await patched).ok()).toBe(true);
+
+    const after = (await (await page.request.get(oneUrl)).json()) as { updatedAt: number };
+    expect(after.updatedAt).toBeGreaterThan(before.updatedAt);
   });
 });

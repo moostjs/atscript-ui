@@ -13,8 +13,8 @@ instead of a silent data loss.
 The whole flow is three pieces:
 
 1. Your `.as` schema opts the table into OCC.
-2. Your form passes `meta.versionColumn` to `createFormDef` so the version
-   field doesn't render as an editable input.
+2. Your form passes `mode: "edit"` and `meta.versionColumn` to `createFormDef`
+   so server-managed fields don't render as editable inputs.
 3. Your submit handler catches `VersionMismatchError` from
    `@atscript/db-client` and shows the user a friendly "row changed,
    reload" message.
@@ -64,7 +64,7 @@ with `@db.column` needs nothing extra — see
 
 ## 2. Hide the version field from the form
 
-Pass `meta.versionColumn` to `createFormDef`:
+Pass `meta.versionColumn` to `createFormDef`, with `mode: "edit"`:
 
 ```ts
 import { createFormDef } from "@atscript/ui";
@@ -72,12 +72,16 @@ import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 
 const meta = await client.meta();
 const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
+  mode: "edit",
   versionColumn: meta.versionColumn,
 });
 ```
 
-A `@db.column.derived` field needs no option — it renders read-only and is
-never sent; see [`createFormDef`](/api/ui#createformdef-type-opts).
+`mode: "edit"` makes a `number.timestamp.updated` (`@db.onUpdate.now`)
+field read-only and keeps it out of the update: the server sets it on every
+write and ignores a sent value. A `@db.column.derived` field needs no
+option — it renders read-only and is never sent; see
+[`createFormDef`](/api/ui#createformdef-type-opts).
 
 `AsForm` iterates `def.fields[]` and the version prop is no longer there,
 so no input is painted. But the version value still lives on the loaded
@@ -144,6 +148,7 @@ const error = ref<string | null>(null);
 async function load() {
   const meta = await client.meta();
   formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+    mode: "edit",
     versionColumn: meta.versionColumn,
   });
   record.value = (await client.one(props.id as never)) as Record<string, unknown>;

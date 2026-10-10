@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { mountForm, objectType, stringProp } from "./helpers";
+import { nextTick } from "vue";
+import { mountForm, numberProp, objectType, stringProp } from "./helpers";
 
 describe("AsField", () => {
   it("resolves label from @meta.label", async () => {
@@ -56,6 +57,39 @@ describe("AsField", () => {
     expect(derived.attributes("aria-required")).toBeUndefined();
     expect(plain.attributes("readonly")).toBeUndefined();
     expect(plain.attributes("aria-required")).toBe("true");
+  });
+
+  describe("@db.onUpdate.now field", () => {
+    // `editedAt`: a bare stamp — no default, so required on insert.
+    const type = objectType({
+      name: stringProp(),
+      editedAt: numberProp({ "meta.required": true, "db.onUpdate.now": true }),
+    });
+
+    it("is read-only, with no required marker and no error, in an edit form", async () => {
+      const { wrapper } = mountForm(type, {
+        initialValue: { name: "Ada" },
+        defOptions: { mode: "edit" },
+      });
+      const input = wrapper.find('input[name="editedAt"]');
+      expect(input.attributes("readonly")).toBeDefined();
+      expect(input.attributes("aria-required")).toBeUndefined();
+      await wrapper.find("form").trigger("submit");
+      await nextTick();
+      expect(wrapper.emitted("error")).toBeUndefined();
+      expect(wrapper.emitted("submit")).toHaveLength(1);
+    });
+
+    it("stays editable and required in a create form", async () => {
+      const { wrapper } = mountForm(type, { initialValue: { name: "Ada" } });
+      const input = wrapper.find('input[name="editedAt"]');
+      expect(input.attributes("readonly")).toBeUndefined();
+      expect(input.attributes("aria-required")).toBe("true");
+      await wrapper.find("form").trigger("submit");
+      await nextTick();
+      const errors = wrapper.emitted("error")![0]![0] as { path: string }[];
+      expect(errors.map((e) => e.path)).toEqual(["editedAt"]);
+    });
   });
 
   it("applies @ui.form.disabled (input has disabled attribute)", async () => {

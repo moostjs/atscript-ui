@@ -6,7 +6,8 @@ import type {
 import { Validator } from "@atscript/typescript/utils";
 import { createDbValidatorPlugin, type DbValidationContext } from "@atscript/db/validator";
 import { DB_COLUMN_DERIVED, DB_REL_FK } from "../shared/annotation-keys";
-import type { FormDef } from "./types";
+import type { FormDef, FormFieldDef } from "./types";
+import { isArrayField, isObjectField, isTupleField, isUnionField } from "./types";
 
 /** Per-call options for the form validator function. */
 export interface TFormValidatorCallOptions {
@@ -39,6 +40,39 @@ const serverManagedPlugin: TValidatorPlugin = (ctx, def, value) => {
   return dbPlugin(Object.create(ctx, { context: { value: INSERT_CONTEXT } }), def, value);
 };
 
+/**
+ * The props of the fields `createFormDef` marked `derived`, at any depth — a
+ * computed view column (`metaFields`) or an edit form's `@db.onUpdate.now`
+ * field carries no annotation the plugin above could read. The validator
+ * matches by prop, so a prop that is also used where it is not derived (an
+ * interface's stamp below a union of several types, too) stays validated.
+ */
+function collectDerivedProps(def: FormDef): Set<TAtscriptAnnotatedType> {
+  const derived = new Set<TAtscriptAnnotatedType>();
+  const kept = new Set<TAtscriptAnnotatedType>();
+  const walk = (fields: FormFieldDef[]): void => {
+    for (const field of fields) {
+      if (field.derived) {
+        derived.add(field.prop);
+        continue;
+      }
+      kept.add(field.prop);
+      if (isObjectField(field)) walk(field.objectDef.fields);
+      else if (isArrayField(field)) walk([field.itemField]);
+      else if (isTupleField(field)) walk(field.itemFields);
+      else if (isUnionField(field)) {
+        for (const v of field.unionVariants) {
+          if (v.def) walk(v.def.fields);
+          if (v.itemField) walk([v.itemField]);
+        }
+      }
+    }
+  };
+  walk(def.fields);
+  for (const prop of kept) derived.delete(prop);
+  return derived;
+}
+
 // ── Default validator plugin registry ────────────────────────
 //
 // Lets ui-fns (or any consumer) install validator plugins globally so
@@ -61,17 +95,24 @@ export function getDefaultValidatorPlugins(): TValidatorPlugin[] {
  *
  * Validator is created once and reused on every call.
  * ATScript's @expect.* validation runs automatically; server-managed db
- * fields (`@db.column.derived`, absent `@db.default*` / version) pass.
+ * fields (every `derived` field, absent `@db.default*` / version) pass.
  * For custom `ui.fn.*` validators, install ui-fns and pass its plugin via `opts.plugins`.
  */
 export function getFormValidator(
   def: FormDef,
   opts?: Partial<TValidatorOptions>,
 ): (callOpts: TFormValidatorCallOptions) => Record<string, string> {
+  const derived = collectDerivedProps(def);
+  const derivedPlugin: TValidatorPlugin = (_ctx, prop) => (derived.has(prop) ? true : undefined);
   const validator = new Validator(def.type, {
     unknownProps: "ignore",
     ...opts,
-    plugins: [serverManagedPlugin, ...defaultValidatorPlugins, ...(opts?.plugins ?? [])],
+    plugins: [
+      ...(derived.size > 0 ? [derivedPlugin] : []),
+      serverManagedPlugin,
+      ...defaultValidatorPlugins,
+      ...(opts?.plugins ?? []),
+    ],
   });
 
   return (callOpts: TFormValidatorCallOptions) => {

@@ -28,6 +28,9 @@ export interface AsWfStateRecord {
     @db.index.plain 'expires_idx'
     expiresAt?: number.timestamp
 
+    // Stamped by AsWfStore from its clock on every set() — not
+    // `number.timestamp.updated`, which would override that clock on replace
+    // and also bump it when heal() patches shadow columns.
     @db.default.now
     @db.index.plain 'updated_idx'
     updatedAt: number.timestamp

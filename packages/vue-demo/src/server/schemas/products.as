@@ -73,6 +73,10 @@ export interface ProductsTable {
     @db.default.now
     createdAt: number.timestamp
 
+    // Set by the server on every update — read-only in the edit form.
+    @meta.label 'Updated'
+    updatedAt: number.timestamp.updated
+
     @meta.label 'Version'
     @db.column.version
     version: number.int

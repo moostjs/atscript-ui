@@ -53,10 +53,12 @@ declare global {
     "db.column.sortable": boolean
     "db.column.searchable": boolean
     "db.column.version": boolean
+    "db.column.version.exempt": boolean
     "db.default": string
     "db.default.increment": number | true
     "db.default.uuid": boolean
     "db.default.now": boolean
+    "db.onUpdate.now": boolean
     "db.json": boolean
     "db.ignore": boolean
     "db.encrypted": boolean
@@ -90,6 +92,7 @@ declare global {
     "db.search.vector": { dimensions: number, similarity?: string, indexName?: string }
     "db.search.vector.threshold": number
     "db.search.filter": (string)[]
+    "db.sort.nulls": string
     "db.amount.currency": string
     "db.amount.currency.ref": string
     "db.unit": string
