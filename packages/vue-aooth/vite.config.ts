@@ -11,7 +11,7 @@ export default defineConfig({
   },
   pack: {
     entry: getEntries(),
-    dts: { vue: true },
+    dts: { vue: true, eager: true },
     format: ["esm", "cjs"],
     plugins: [vue() as never],
     deps: {
