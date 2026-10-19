@@ -148,7 +148,7 @@ setByPath(formData, "contacts.0.email", "new@example.com");
 | `password`  | `AsInput`     | `<input type="password">` — set via `@ui.form.type 'password'`              |
 | `number`    | `AsNumber`    | Integer / non-decimal numbers                                               |
 | `decimal`   | `AsDecimal`   | Decimal numbers (`@db.amount.currency`, `@db.column.precision`, `@db.unit`) |
-| `select`    | `AsSelect`    | `@expect.values [...]` or explicit `@ui.form.type 'select'`                 |
+| `select`    | `AsSelect`    | Literal union (`'a' \| 'b'`) or explicit `@ui.form.type 'select'`           |
 | `radio`     | `AsRadio`     | `@ui.form.type 'radio'`                                                     |
 | `checkbox`  | `AsCheckbox`  | `boolean` (tri-state via `useAsTriStateCheckbox`)                           |
 | `paragraph` | `AsParagraph` | Read-only display (`@ui.form.type 'paragraph'`)                             |
@@ -202,6 +202,28 @@ message: string
 
 The `errorLimit` for the form-level validator is set to `MAX_SAFE_INTEGER` so descendant-count badges on collapsed objects reflect every nested error.
 
+### Form-level rule (`@ui.form.validate` on the interface)
+
+Since 0.1.158. Put `@ui.form.validate` on the interface itself (one annotation per line, above `export interface`). `value` (`v`) is the whole object.
+
+```atscript
+@ui.form.validate '(v) => v.password === v.confirm || "Passwords must match"'
+export interface SignupForm {
+    password: string
+    confirm: string
+}
+```
+
+| #   | Rule                                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | On the form's root interface: runs on submit, blocks `@submit`, shows in the form-level banner above submit (`formError` slot prop, same banner as an external `__form` error).               |
+| 2   | `@error` and `getFormValidator()` report it under the key `__form` (not `""`).                                                                                                                |
+| 3   | Field rules still run: their errors stay on their fields, in the same `@error` payload, never in the banner. A failing container rule never hides child errors.                               |
+| 4   | Re-checked live after the first submit, so the banner clears as soon as the data passes. The banner dismiss hides it until the next submit. While failing, it wins over an external `__form`. |
+| 5   | Same interface used as a nested object prop (`signup: SignupForm`): the rule reports at that prop's path (`signup`) on the section (`.as-collapsible-error` + badge), NOT as `__form`.        |
+| 6   | Read the object's fields from `v`, not `data`: `data` is always the whole form's data, so `data.password` is `undefined` once the interface is nested.                                        |
+| 7   | The same applies to `@ui.form.validate` on an object `type`, array or tuple: error at the container's path, children still validated.                                                         |
+
 ## firstValidation strategies
 
 Field-level live validation is gated until one of these conditions matches. Once the first submit happens, every field is "active" regardless.
@@ -246,6 +268,7 @@ Pass server-supplied errors keyed by absolute dotted path:
 - A leaf error is **dismissed locally** when the user edits that field (model watcher in AsField). The dismissal is in-component state — it resets when a fresh `:errors` object reference arrives.
 - Dismissals do NOT reset on in-place mutation of the same errors object — only on identity change. Treat `errors` as immutable per server response.
 - To prune paths from a host-maintained `:errors` map, use `omitPaths(errors, paths)` from `@atscript/ui` — identity-preserving (returns the SAME object when no key matched), so a no-op prune doesn't create a fresh reference and spuriously reset the dismissals above.
+- To build `:errors` from your own atscript `Validator` (e.g. a server check), use `validatorErrorsToMap(validator.errors)` from `@atscript/ui` (0.1.158+) — the same map `getFormValidator` returns: a root-level error goes under `__form` (`FORM_ERROR_KEY`), first error per path wins.
 
 Imperative dismissal from inside a custom component:
 

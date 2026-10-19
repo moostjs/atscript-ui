@@ -151,7 +151,8 @@ import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {
-    @meta.id @db.default.uuid
+    @meta.id
+    @db.default.uuid
     id: string
 
     @meta.label 'Invite Email'

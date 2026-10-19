@@ -101,8 +101,8 @@ confirmPassword: string
 ```
 
 For a constraint that depends on multiple fields at once, prefer a
-[form-level validator](#form-level-errors) — it runs once at submit
-and reports through `__form`.
+[form-level validator](#form-level-errors) — it reports in the
+form-level banner instead of under one of the fields.
 
 ## A complete example
 
@@ -251,18 +251,68 @@ dismissed by editing.
 
 ## Form-level errors
 
-A custom `@ui.form.validate` on the type itself becomes a form-level
-rule (validated at submit and surfaced through `__form`):
+Put `@ui.form.validate` on the interface itself to get a form-level
+rule (_since 0.1.158_). The function receives the same `(value, data, context, entry)`
+arguments as a field rule, with `value` set to the whole object. On the
+form's root interface `value` and `data` are the same object.
 
 ```atscript
-@ui.form.validate '(_, data) => data.password === data.confirm || "Passwords must match"'
-export interface SignupForm { ... }
+@ui.form.validate '(v) => v.password === v.confirm || "Passwords must match"'
+export interface SignupForm {
+    @meta.label 'Password'
+    @meta.required 'Password is required'
+    password: string
+
+    @meta.label 'Confirm password'
+    confirm: string
+}
 ```
 
-Or push it from your submit handler:
+When the form's root interface carries the rule:
+
+- it runs on submit. A failing rule blocks `@submit`, and the message
+  shows in the form-level banner above the submit button (the same
+  banner and `formError` slot prop as an external `__form` error);
+- `@error` reports it with the path `__form`;
+- field rules still run. Their errors show on their fields, in the same
+  `@error` payload, and never in the banner;
+- after the first submit the rule is re-checked as the data changes, so
+  the banner clears as soon as the data passes;
+- the banner's dismiss button hides it until the next submit;
+- while it fails, it is shown instead of an external `__form` error.
+
+### The same interface as a nested object
+
+When another form uses the interface as a nested object prop, its rule
+belongs to that prop. It does not become a form-level error there:
+
+```atscript
+export interface AccountForm {
+    @meta.label 'Title'
+    title: string
+
+    @meta.label 'Sign-up'
+    signup: SignupForm
+}
+```
+
+Here a mismatch is reported at the path `signup`. It shows on the
+`signup` section and counts in that section's error badge.
+
+::: tip Use `value`, not `data`, in a container rule
+`data` is always the whole form's data. `data.password` works while
+`SignupForm` is the form root, but is `undefined` when `SignupForm` is
+nested under `signup`. Read the object's own fields from `value` (`v`)
+so the rule works in both places.
+:::
+
+### Form-level errors from the server
+
+To show a server error in the same banner, set `__form` from your
+submit handler:
 
 ```ts
-function onSubmit(data: SignupForm) {
+async function onSubmit(data: SignupForm) {
   try {
     await api.signup(data);
   } catch (e) {

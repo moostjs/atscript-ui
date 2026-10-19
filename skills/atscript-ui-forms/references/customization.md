@@ -262,7 +262,7 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps { 
 | `field`            | `FormFieldDef`                      | Full field def — escape hatch when you need metadata that isn't pre-resolved.                                                                                                                                                         |
 | `formAction`       | `TFormAction`                       | `{ id, label }` for phantom action buttons. Set via `@ui.form.action 'id', 'label'`.                                                                                                                                                  |
 | `name`             | `string`                            | Last path segment.                                                                                                                                                                                                                    |
-| `options`          | `TFormEntryOptions[]`               | For select/radio/checkbox. Resolved from `@expect.values` / `@ui.form.options` / `@ui.form.fn.options`.                                                                                                                               |
+| `options`          | `TFormEntryOptions[]`               | For select/radio/checkbox. Resolved from `@ui.form.fn.options` / `@ui.form.options` / literal-union type, in that order.                                                                                                              |
 | `class`            | `Record<string, boolean> \| string` | **Declared prop, not a fall-through attr.** Carries the grid footprint (`@ui.form.grid.colSpan`/`.rowSpan`) + `@ui.form.classes`. A bare root must bind `:class="props.class"` or the spans are silently dropped — see callout below. |
 | `style`            | `Record<string, string> \| string`  | From `@ui.form.styles` / `@ui.form.fn.styles`. Like `class`, a bare root must bind `:style="props.style"` (AsFieldShell does it for you).                                                                                             |
 | `path`             | `string`                            | Absolute dotted path. Empty string at root.                                                                                                                                                                                           |
@@ -574,15 +574,14 @@ The signature accepts a getter so reactive sources don't need wrapping in comput
 ### Currency
 
 ```atscript
-amount: number     // backed by @db.column.precision 10, 2 in many setups
-
+// Literal — one fixed currency (currency annotations require `decimal`):
 @db.amount.currency 'EUR'
-amount: number
+amount: decimal
 
 // Sibling-driven:
 currencyCode: string
 @db.amount.currency.ref 'currencyCode'
-amount: number
+lineTotal: decimal
 ```
 
 AsField resolves the chain at setup: literal wins, else sibling-ref. AsDecimal then renders the locale-narrow currency symbol as the prefix.
@@ -593,9 +592,10 @@ AsField resolves the chain at setup: literal wins, else sibling-ref. AsDecimal t
 @db.unit 'kg'
 weight: number
 
+// Sibling-driven:
 unitCode: string
 @db.unit.ref 'unitCode'
-weight: number
+netWeight: number
 ```
 
 Resolved by the same chain; rendered as the suffix.

@@ -180,6 +180,41 @@ test.describe("Section 25 — Dynamic fn-driven props", () => {
     ).toBeVisible();
   });
 
+  // ── 12b. form-level @ui.form.validate on the interface → banner ──
+  test("form-level @ui.form.validate shows in the form banner, not on a field", async ({
+    page,
+  }) => {
+    const form = section(page);
+    await form.getByLabel("First Name").fill("Eve");
+    await form.getByLabel("Email", { exact: true }).fill("eve@example.com");
+    await form.getByLabel("Bringing a plus-one?").check();
+    const plusOne = form.getByLabel("Plus-one's name");
+    await plusOne.fill("Eve");
+
+    const banner = form.locator('[role="alert"].as-form-error');
+    await expect(banner).toHaveCount(0);
+    await form.locator(".as-submit-btn").click();
+    await expect(banner.locator(".as-form-error-message")).toHaveText(
+      "Your plus-one must be someone else",
+    );
+    // Form-level only: no field shows the message.
+    await expect(
+      form.locator(".as-error-slot", { hasText: "Your plus-one must be someone else" }),
+    ).toHaveCount(0);
+
+    // Re-evaluated live after the submit: fixing the data clears the banner.
+    await plusOne.fill("Mallory");
+    await expect(banner).toHaveCount(0);
+    await plusOne.fill("Eve");
+    await expect(banner).toBeVisible();
+
+    // The banner's dismiss button hides it until the next submit.
+    await banner.locator(".as-form-error-dismiss").click();
+    await expect(banner).toHaveCount(0);
+    await form.locator(".as-submit-btn").click();
+    await expect(banner).toBeVisible();
+  });
+
   // ── 13. notes classes (@ui.form.fn.classes) react above 400 chars ──
   test("notes (@ui.form.fn.classes) gains 'as-notes-warn' over 400 chars", async ({ page }) => {
     const form = section(page);

@@ -120,6 +120,8 @@ unit code as a **suffix adornment**:
 @db.column.precision 6, 2
 weight: decimal
 
+speedUnit: string
+
 @meta.label 'Speed'
 @db.unit.ref 'speedUnit'
 speed: decimal
@@ -180,7 +182,10 @@ export interface LineItem {
     description: string
 
     @meta.label 'Currency'
-    @ui.form.options 'USD', 'EUR', 'GBP', 'JPY'
+    @ui.form.options 'USD'
+    @ui.form.options 'EUR'
+    @ui.form.options 'GBP'
+    @ui.form.options 'JPY'
     @ui.form.grid.colSpan 'third'
     currencyCode: ui.select
 

@@ -4,7 +4,21 @@ import {
   iteratePathAncestors,
   mergeErrorMaps,
   omitPaths,
+  validatorErrorsToMap,
 } from "./error-utils";
+
+describe("validatorErrorsToMap", () => {
+  it("keys a root error as __form and keeps the first error per path", () => {
+    expect(
+      validatorErrorsToMap([
+        { path: "", message: "root" },
+        { path: "a", message: "first" },
+        { path: "a", message: "second" },
+        { path: "", message: "root again" },
+      ]),
+    ).toEqual({ __form: "root", a: "first" });
+  });
+});
 
 describe("mergeErrorMaps", () => {
   it("merges multiple sources, dropping falsy values", () => {

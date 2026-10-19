@@ -122,6 +122,12 @@ import {
   createFieldValidator,
   setDefaultValidatorPlugins,
   getDefaultValidatorPlugins,
+  isContainerKind, // object / array / tuple kind (0.1.158+)
+  // error maps
+  validatorErrorsToMap, // validator errors → Record<path, message>; root error → "__form", first per path wins (0.1.158+)
+  FORM_ERROR_KEY, // "__form" (0.1.158+)
+  mergeErrorMaps,
+  omitPaths,
   // value-help
   extractValueHelp,
   extractLiteralOptions,

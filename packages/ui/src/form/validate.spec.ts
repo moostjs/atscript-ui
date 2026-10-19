@@ -62,6 +62,38 @@ describe("server-managed db fields", () => {
   });
 });
 
+/** A failing root rule that, like ui-fns, still walks the children. */
+const rootRule: TValidatorPlugin = (ctx, prop, value) => {
+  if (ctx.path !== "") return undefined;
+  ctx.error("form says no");
+  ctx.validateAnnotatedType(prop, value);
+  return false;
+};
+
+/** Two errors at the root path, like a container rule plus a shape check. */
+const twice: TValidatorPlugin = (ctx) => {
+  if (ctx.path !== "") return undefined;
+  ctx.error("rule message");
+  ctx.error("shape message");
+  return false;
+};
+
+describe("getFormValidator — form-level errors", () => {
+  it("keys a root-level error `__form`, beside the field errors", () => {
+    const def = createFormDef(DerivedRow);
+    const { name: _, ...rest } = created;
+    const errors = getFormValidator(def, { plugins: [rootRule] })({ data: rest });
+    expect(errors).toEqual({ __form: "form says no", name: expect.any(String) });
+  });
+
+  it("keeps the first error reported at a path", () => {
+    const def = createFormDef(DerivedRow);
+    expect(getFormValidator(def, { plugins: [twice] })({ data: created })).toEqual({
+      __form: "rule message",
+    });
+  });
+});
+
 describe("@db.onUpdate.now fields", () => {
   // Every update stamp left out; the tuple and the union hold one too.
   const row = {

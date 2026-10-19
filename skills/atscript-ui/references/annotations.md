@@ -124,6 +124,8 @@ email: string
 
 Signature: `(value, data, context, entry) => true | string`. Validator plugin: `uiFnsValidatorPlugin()` from `@atscript/ui-fns`.
 
+`nodeType: ["prop", "interface", "type"]` (interface since 0.1.158). On an interface / object type / array / tuple it is a container rule: `value` is the whole container, the error is reported at the container's path and its children are still validated. On the form's root interface the error is form-level (`__form` banner); on a nested object prop it is at that prop's path.
+
 ## @ui.table.\* (static)
 
 All `nodeType: ["prop", "type"]` unless noted.
@@ -227,9 +229,11 @@ Registered by `wfPlugin()` from `@atscript/moost-wf/plugin`. All require the wor
 @wf.context.pass 'tenant'
 @wf.context.pass 'role'
 interface ApprovalFlow {
-  @meta.id id: string
+  @meta.id
+  id: string
 
-  approver?: string  @wf.store.fromContext 'approval.approver'
+  @wf.store.fromContext 'approval.approver'
+  approver?: string
 
   @wf.action.withData 'saveDraft'
   saveDraft: action

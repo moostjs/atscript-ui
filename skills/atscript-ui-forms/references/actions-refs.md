@@ -269,8 +269,8 @@ export interface Product {
     name: string
 
     @meta.label 'Category'
-    @db.rel.FK 'Category'
-    categoryId: number
+    @db.rel.FK
+    categoryId: Category.id
 }
 ```
 
@@ -464,8 +464,8 @@ export interface Customer {
     name: string
 
     @meta.label 'Country'
-    @db.rel.FK 'Country'
-    countryCode: string
+    @db.rel.FK
+    countryCode: Country.code
 }
 ```
 

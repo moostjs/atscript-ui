@@ -94,26 +94,27 @@ So form-level fns receive `(data, context)` and field-level fns receive `(v, dat
 
 ## `@ui.form.fn.*` exhaustive table
 
-| Annotation                       | Signature                                                        | Replaces / defaults from | Purpose                                                                                                                         |
-| -------------------------------- | ---------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| `@ui.form.fn.label`              | `(v, data, context, entry) => string`                            | `@meta.label`            | Computed field label.                                                                                                           |
-| `@ui.form.fn.placeholder`        | `(v, data, context, entry) => string`                            | `@ui.form.placeholder`   | Computed placeholder.                                                                                                           |
-| `@ui.form.fn.description`        | `(v, data, context, entry) => string`                            | `@meta.description`      | Computed inline description (on a field).                                                                                       |
-| `@ui.form.fn.hint`               | `(v, data, context, entry) => string`                            | `@ui.form.hint`          | Computed hint (renders under description).                                                                                      |
-| `@ui.form.fn.hidden`             | `(v, data, context, entry) => boolean`                           | `@ui.form.hidden`        | Hide the field. Hidden fields still validate.                                                                                   |
-| `@ui.form.fn.disabled`           | `(v, data, context, entry) => boolean`                           | `@ui.form.disabled`      | Disable input.                                                                                                                  |
-| `@ui.form.fn.readonly`           | `(v, data, context, entry) => boolean`                           | `@meta.readonly`         | Read-only mode. When `readonly === true` AND `@ui.form.fn.value` is set, AsField writes the computed value back into the model. |
-| `@ui.form.fn.options`            | `(v, data, context, entry) => TFormEntryOptions[]`               | `@ui.form.options`       | Computed select/radio options.                                                                                                  |
-| `@ui.form.fn.value`              | `(v, data, context, entry) => unknown`                           | `@meta.default`          | For phantom paragraphs/actions — display value. For data fields — also writes back when readonly.                               |
-| `@ui.form.fn.attr`               | array `[{ name, fn }]`                                           | `@ui.form.attr`          | Computed attribute key-values forwarded to the input element.                                                                   |
-| `@ui.form.fn.classes`            | `(v, data, context, entry) => string \| Record<string, boolean>` | `@ui.form.classes`       | Computed extra CSS classes on the field wrapper.                                                                                |
-| `@ui.form.fn.styles`             | `(v, data, context, entry) => Record<string, string>`            | `@ui.form.styles`        | Computed inline styles on the field wrapper.                                                                                    |
-| `@ui.form.fn.title`              | `(v, data, context, entry) => string`                            | `@meta.label`            | On a nested object/array/union field — computed title in the collapsible header.                                                |
-| `@ui.form.fn.title` (root)       | `(data, context) => string`                                      | `@meta.label`            | Form-level: computed form title.                                                                                                |
-| `@ui.form.fn.description` (root) | `(data, context) => string`                                      | `@meta.description`      | Form-level: computed form description.                                                                                          |
-| `@ui.form.fn.submit.text`        | `(data, context) => string`                                      | `@ui.form.submit.text`   | Form-level: computed submit-button text.                                                                                        |
-| `@ui.form.fn.submit.disabled`    | `(data, context) => boolean`                                     | n/a                      | Form-level: computed submit-button disabled state.                                                                              |
-| `@ui.form.validate`              | `(v, data, context, entry) => true \| string`                    | n/a                      | Custom validator. Returns `true` for valid; any string is the error message.                                                    |
+| Annotation                       | Signature                                                         | Replaces / defaults from | Purpose                                                                                                                         |
+| -------------------------------- | ----------------------------------------------------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `@ui.form.fn.label`              | `(v, data, context, entry) => string`                             | `@meta.label`            | Computed field label.                                                                                                           |
+| `@ui.form.fn.placeholder`        | `(v, data, context, entry) => string`                             | `@ui.form.placeholder`   | Computed placeholder.                                                                                                           |
+| `@ui.form.fn.description`        | `(v, data, context, entry) => string`                             | `@meta.description`      | Computed inline description (on a field).                                                                                       |
+| `@ui.form.fn.hint`               | `(v, data, context, entry) => string`                             | `@ui.form.hint`          | Computed hint (renders under description).                                                                                      |
+| `@ui.form.fn.hidden`             | `(v, data, context, entry) => boolean`                            | `@ui.form.hidden`        | Hide the field. Hidden fields still validate.                                                                                   |
+| `@ui.form.fn.disabled`           | `(v, data, context, entry) => boolean`                            | `@ui.form.disabled`      | Disable input.                                                                                                                  |
+| `@ui.form.fn.readonly`           | `(v, data, context, entry) => boolean`                            | `@meta.readonly`         | Read-only mode. When `readonly === true` AND `@ui.form.fn.value` is set, AsField writes the computed value back into the model. |
+| `@ui.form.fn.options`            | `(v, data, context, entry) => TFormEntryOptions[]`                | `@ui.form.options`       | Computed select/radio options.                                                                                                  |
+| `@ui.form.fn.value`              | `(v, data, context, entry) => unknown`                            | `@meta.default`          | For phantom paragraphs/actions — display value. For data fields — also writes back when readonly.                               |
+| `@ui.form.fn.attr`               | array `[{ name, fn }]`                                            | `@ui.form.attr`          | Computed attribute key-values forwarded to the input element.                                                                   |
+| `@ui.form.fn.classes`            | `(v, data, context, entry) => string \| Record<string, boolean>`  | `@ui.form.classes`       | Computed extra CSS classes on the field wrapper.                                                                                |
+| `@ui.form.fn.styles`             | `(v, data, context, entry) => Record<string, string>`             | `@ui.form.styles`        | Computed inline styles on the field wrapper.                                                                                    |
+| `@ui.form.fn.title`              | `(v, data, context, entry) => string`                             | `@meta.label`            | On a nested object/array/union field — computed title in the collapsible header.                                                |
+| `@ui.form.fn.title` (root)       | `(data, context) => string`                                       | `@meta.label`            | Form-level: computed form title.                                                                                                |
+| `@ui.form.fn.description` (root) | `(data, context) => string`                                       | `@meta.description`      | Form-level: computed form description.                                                                                          |
+| `@ui.form.fn.submit.text`        | `(data, context) => string`                                       | `@ui.form.submit.text`   | Form-level: computed submit-button text.                                                                                        |
+| `@ui.form.fn.submit.disabled`    | `(data, context) => boolean`                                      | n/a                      | Form-level: computed submit-button disabled state.                                                                              |
+| `@ui.form.validate`              | `(v, data, context, entry) => true \| string`                     | n/a                      | Custom validator. Returns `true` for valid; any string is the error message.                                                    |
+| `@ui.form.validate` (root)       | `(v, data, context, entry) => true \| string`, `v` = whole object | n/a                      | Form-level rule shown in the form banner — see `forms.md` → "Form-level rule".                                                  |
 
 The static counterpart (e.g. `@ui.form.label`) is read when the `.fn.` variant is absent. When both are present, the `.fn.` value wins.
 
@@ -142,13 +143,9 @@ phone: string
 ### Options list driven by data
 
 ```atscript
-@expect.values ['US', 'CA', 'UK']
-country: string
+country: 'US' | 'CA' | 'UK'      // literal union → select with these options
 
-@ui.form.fn.options '(_, data) => {
-  const map = { US: ["NY","CA"], CA: ["ON","QC"], UK: ["LDN","SCT"] };
-  return (map[data.country] || []).map(v => ({ value: v, label: v }));
-}'
+@ui.form.fn.options '(_, data) => { const map = { US: ["NY","CA"], CA: ["ON","QC"], UK: ["LDN","SCT"] }; return (map[data.country] || []).map(v => ({ value: v, label: v })); }'
 @ui.form.fn.disabled '(_, data) => !data.country'
 region?: string
 ```
@@ -169,6 +166,8 @@ password: string
 passwordConfirm: string
 ```
 
+Form-level rule on the interface (banner, not a field error) — see `forms.md` → "Form-level rule".
+
 ### Conditional submit text + disabled
 
 ```atscript
@@ -186,9 +185,7 @@ export interface User {
 ```atscript
 @meta.label 'Summary'
 @ui.form.type 'paragraph'
-@ui.form.fn.value '(_, data) =>
-  data.items.length + " items, total " + data.items.reduce((s,i)=>s+i.price,0).toFixed(2)
-'
+@ui.form.fn.value '(_, data) => data.items.length + " items, total " + data.items.reduce((s,i)=>s+i.price,0).toFixed(2)'
 summary?: string
 ```
 

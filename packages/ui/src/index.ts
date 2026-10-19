@@ -156,6 +156,7 @@ export {
   createFieldValidator,
   setDefaultValidatorPlugins,
   getDefaultValidatorPlugins,
+  isContainerKind,
 } from "./form/validate";
 export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/validate";
 
@@ -174,6 +175,8 @@ export { unionVariantChanged } from "./form/union-detect";
 
 // ── Error-map utilities (framework-agnostic) ────────────────
 export {
+  FORM_ERROR_KEY,
+  validatorErrorsToMap,
   mergeErrorMaps,
   omitPaths,
   iteratePathAncestors,

@@ -110,7 +110,7 @@ function compileValidatorFn(fnStr: string): (scope: TFnScope) => boolean | strin
 
 ### `uiFnsValidatorPlugin()`
 
-Returns a [`TValidatorPlugin`](/api/ui#validators) that walks `@ui.form.validate` annotations on a field, compiles each, and reports the first non-`true` result as the field's validation error.
+Returns a [`TValidatorPlugin`](/api/ui#validators) that walks `@ui.form.validate` annotations on a field, compiles each, and reports the first non-`true` result as the field's validation error. On an object, array or tuple (including an interface-level rule), the error is reported at the container's path and the container's children are still validated. See [Form-level errors](/forms/validation#form-level-errors).
 
 ```typescript
 function uiFnsValidatorPlugin(): TValidatorPlugin;

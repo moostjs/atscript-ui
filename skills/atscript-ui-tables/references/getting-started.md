@@ -19,7 +19,8 @@ Schema (`.as`) declares the row shape with `@db.table`, `@meta.id`, and `@ui.tab
 @db.table 'products'
 @db.depth.limit 0
 export interface Product {
-    @meta.id @db.default.increment
+    @meta.id
+    @db.default.increment
     id: number
 
     @meta.label 'SKU'
@@ -31,9 +32,9 @@ export interface Product {
     name: string
 
     @meta.label 'Price'
-    @db.column.precision 2
+    @db.column.precision 10, 2
     @db.amount.currency 'USD'
-    price: number
+    price: decimal
 
     inStock: boolean
 }

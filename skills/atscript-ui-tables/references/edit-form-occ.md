@@ -13,7 +13,8 @@ Three pieces:
 ```atscript
 @db.table 'products'
 export interface ProductsTable {
-    @meta.id @db.default.increment
+    @meta.id
+    @db.default.increment
     id: number
 
     @meta.label 'Name'

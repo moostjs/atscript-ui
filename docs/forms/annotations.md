@@ -45,9 +45,12 @@ Example:
 
 ```atscript
 @meta.label 'Age'
-@meta.required 'Age is required'
 @meta.default '18'
 age: number
+
+@meta.label 'Nickname'
+@meta.required 'Nickname is required'
+nickname: string
 ```
 
 See [atscript.dev — Annotations](https://atscript.dev) for the full
@@ -99,7 +102,9 @@ FormDef-build time; for structured fields (`object`, `array`, `union`,
 password: string
 
 @ui.type 'select'
-@ui.form.options 'admin' | 'user' | 'guest'
+@ui.form.options 'admin'
+@ui.form.options 'user'
+@ui.form.options 'guest'
 role: string
 
 @ui.type 'textarea'
@@ -223,8 +228,10 @@ for the dispatch rules.
 | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
 | `@ui.form.validate '(v) => !!v \|\| "required"'` | custom validator expression (requires `@atscript/ui-fns`). Returns `true` on pass or a string error. |
 
-The validator receives `(value, data, context)`. See
-[Validation](/forms/validation).
+The validator receives `(value, data, context)`. It is allowed on a
+field, a type and an interface; on the form's root interface it is a
+form-level rule. See [Validation](/forms/validation) and
+[Form-level errors](/forms/validation#form-level-errors).
 
 ### Component swap
 
@@ -315,19 +322,19 @@ up. Full coverage at [db.atscript.dev](https://db.atscript.dev).
 
 ### Currency & units
 
-| Annotation                                  | Effect on form                                                                            |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `@db.amount.currency 'USD'`                 | hard-code the currency — drives `AsDecimal`'s prefix glyph + `Intl.NumberFormat` decimals |
-| `@db.amount.currency.ref 'cur'`             | resolve currency from a sibling field at runtime                                          |
-| `@db.unit 'kg'`                             | hard-code a measurement unit — drives suffix                                              |
-| `@db.unit.ref 'unit'`                       | resolve unit from a sibling                                                               |
-| `@db.column.precision { precision, scale }` | numeric precision/scale; `scale` caps the displayed decimals                              |
+| Annotation                      | Effect on form                                                                            |
+| ------------------------------- | ----------------------------------------------------------------------------------------- |
+| `@db.amount.currency 'USD'`     | hard-code the currency — drives `AsDecimal`'s prefix glyph + `Intl.NumberFormat` decimals |
+| `@db.amount.currency.ref 'cur'` | resolve currency from a sibling field at runtime                                          |
+| `@db.unit 'kg'`                 | hard-code a measurement unit — drives suffix                                              |
+| `@db.unit.ref 'unit'`           | resolve unit from a sibling                                                               |
+| `@db.column.precision 10, 2`    | numeric precision, scale; `scale` caps the displayed decimals                             |
 
 ### Foreign keys (AsRef value-help)
 
 | Annotation                       | Effect                                     |
 | -------------------------------- | ------------------------------------------ |
-| `@db.rel.FK 'OtherTable'`        | declares a foreign-key relation            |
+| `@db.rel.FK` + `field: Other.id` | declares a foreign-key relation            |
 | `@db.http.path '/api/customers'` | URL the `AsRef` picker queries for options |
 
 When both are present the field renders an `AsRef` picker by default

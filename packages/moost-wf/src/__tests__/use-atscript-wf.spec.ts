@@ -94,6 +94,17 @@ describe("useAtscriptWf().resolveInput() — pure, no action awareness", () => {
     expect(typeof errors.username).toBe("string");
   });
 
+  it("maps a root-level validation error to __form", async () => {
+    const { LoginForm } = await import("./fixtures/wf-forms.as");
+    const err = capture(() =>
+      runInWfContext({ input: 42 }, () => useAtscriptWf(LoginForm).resolveInput()),
+    );
+    const errors = expectIR(err).context.errors as Record<string, string>;
+    // Why: the client renders only `__form` in the form banner; an empty-path key is never shown.
+    expect(typeof errors.__form).toBe("string");
+    expect(errors[""]).toBeUndefined();
+  });
+
   it("returns the typed input when validation passes", async () => {
     const { LoginForm } = await import("./fixtures/wf-forms.as");
     const result = runInWfContext({ input: { username: "alice", password: "secret" } }, () =>

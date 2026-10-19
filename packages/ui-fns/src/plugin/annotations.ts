@@ -152,8 +152,12 @@ export const uiFnsAnnotations: TAnnotationsTree = {
     form: {
       validate: new AnnotationSpec({
         description:
-          "Custom JS validator function string. Returns true for pass, or an error message string.",
-        nodeType: ["prop", "type"],
+          "Custom JS validator function string. Returns true for pass, or an error message string. " +
+          "On a field it validates that field. On an interface or object type it is a container-level " +
+          "rule: `value` is the whole object. On the form's root interface the error is form-level " +
+          "(the `__form` banner); on a nested object prop it is reported at that prop's path. " +
+          "Container rules do not stop field-level validation.",
+        nodeType: ["prop", "interface", "type"],
         multiple: true,
         mergeStrategy: "append",
         argument: {

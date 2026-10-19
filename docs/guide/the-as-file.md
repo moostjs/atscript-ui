@@ -136,7 +136,7 @@ export interface ProductsTable {
     @meta.required 'SKU is required'
     @db.index.unique 'products_sku_idx'
     @ui.form.grid.colSpan 'half'
-    @expect.pattern '/^[A-Z0-9-]+$/', 'Uppercase letters, digits and dashes only'
+    @expect.pattern '^[A-Z0-9-]+$', 'u', 'Uppercase letters, digits and dashes only'
     sku: string
 
     @meta.label 'Description'
@@ -149,7 +149,6 @@ export interface ProductsTable {
     @db.column.precision 10, 2
     @db.index.plain 'products_price_idx'
     @ui.form.grid.colSpan 'half'
-    @expect.min 0, 'Price must be non-negative'
     price: decimal
 
     @meta.label 'Tags'

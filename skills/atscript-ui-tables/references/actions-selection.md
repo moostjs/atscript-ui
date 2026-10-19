@@ -2,7 +2,7 @@ Row / table / rows actions, selection model, recipes.
 
 ## Contents
 
-- [Action declaration on .as](#action-declaration-on-as)
+- [Action declaration (server)](#action-declaration-server)
 - [Action levels](#action-levels)
 - [AsRowActions](#asrowactions)
 - [AsTableActions](#astableactions)
@@ -17,33 +17,67 @@ Row / table / rows actions, selection model, recipes.
 
 Query selection ("Select all N matching", run on every row of a query): [select-all-matching.md](select-all-matching.md).
 
-## Action declaration on .as
+## Action declaration (server)
 
-Cross-link the atscript-db skill for the full `@DbAction*` and `@InputForm` annotation surface plus the `{ ids?, input? }` envelope shape. atscript-ui-tables reads the resolved `TDbActionInfo[]` from `tableDef.actions` (via the `/meta` endpoint) and renders chrome on top.
+Actions are declared on the server with `@atscript/moost-db` decorators on the table's controller — there are no action annotations in `.as`. Cross-link the atscript-db skill for the full `@DbAction*` / `@InputForm` surface plus the `{ ids?, input? }` envelope shape. atscript-ui-tables reads the resolved `TDbActionInfo[]` from `tableDef.actions` (via the `/meta` endpoint) and renders chrome on top.
 
 Minimal example:
 
-```atscript
-@db.table 'orders'
-@db.action.default.row 'view'
-@db.action.row 'view' @ui.action.icon 'i-as-eye'           @ui.action.label 'View'
-@db.action.row 'cancel' @ui.action.icon 'i-as-x' @ui.action.intent 'negative' @ui.action.confirm 'Cancel order $1?'
-@db.action.rows 'export' @ui.action.label 'Export selected'
-@db.action.table 'create' @ui.action.icon 'i-as-plus' @ui.action.label 'New order'
-export interface Order { ... }
+```ts
+import {
+  AsDbController,
+  TableController,
+  DbAction,
+  DbActionDefault,
+  DbActionID,
+  DbActionIDs,
+  DbRowActions,
+} from "@atscript/moost-db";
+import { Post } from "@moostjs/event-http";
+import { Order } from "./schema/order.as";
+import { ordersTable } from "./db";
+
+@TableController(ordersTable)
+@DbRowActions({
+  view: {
+    label: "View",
+    icon: "i-as-eye",
+    processor: "navigate",
+    value: "/orders/$1",
+    default: true,
+  },
+})
+export class OrdersController extends AsDbController<typeof Order> {
+  @Post("actions/cancel")
+  @DbAction("cancel", {
+    label: "Cancel",
+    icon: "i-as-x",
+    intent: "negative",
+    promptText: "Cancel order $1?",
+  })
+  async cancel(@DbActionID() id: { id: string }) {} // one identifier → level 'row'
+
+  @Post("actions/export")
+  @DbAction("export", { label: "Export selected" })
+  async exportOrders(@DbActionIDs() ids: { id: string }[]) {} // identifier array → level 'rows'
+
+  @Post("actions/create")
+  @DbAction("create", { label: "New order", icon: "i-as-plus" })
+  @DbActionDefault()
+  async create() {} // no id param → level 'table'
+}
 ```
 
-| Annotation                             | Effect                                                                                                               |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `@db.action.row 'name'`                | Per-row action.                                                                                                      |
-| `@db.action.rows 'name'`               | Multi-row (selection-driven).                                                                                        |
-| `@db.action.table 'name'`              | Table-level (no rows, "create" style).                                                                               |
-| `@db.action.default.<level> 'name'`    | The action that fires on default trigger at that level.                                                              |
-| `@ui.action.label`                     | Display label.                                                                                                       |
-| `@ui.action.icon`                      | UnoCSS icon class.                                                                                                   |
-| `@ui.action.intent`                    | `'positive' \| 'negative' \| 'warning' \| 'primary' \| 'secondary'` — drives confirm-dialog scope and button colour. |
-| `@ui.action.confirm`                   | Prompt text. `string` (always) or `[singular, plural]` tuple. `$1` → primary key, `$N` → row count.                  |
-| `@db.action.input.<name>` `@InputForm` | Structured input — opens `<AsActionFormDialog>` rendering the input type with vue-form.                              |
+| Declaration                                                      | Effect                                                                                                               |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `@DbAction(name, opts)` on a handler                             | Backend action. Level inferred from params: `@DbActionID()` → `row`, `@DbActionIDs()` → `rows`, neither → `table`.   |
+| `@DbRowActions` / `@DbRowsActions` / `@DbTableActions({ … })`    | Class-level dict for `navigate` / `custom` / external `backend` actions (`processor` + `value` per entry).           |
+| `default: true` / `@DbActionDefault()`                           | The action that fires on the default trigger at its level (one per controller × level).                              |
+| `label`                                                          | Display label.                                                                                                       |
+| `icon`                                                           | UnoCSS icon class.                                                                                                   |
+| `intent`                                                         | `'positive' \| 'negative' \| 'warning' \| 'primary' \| 'secondary'` — drives confirm-dialog scope and button colour. |
+| `promptText`                                                     | Confirm prompt. `string` (always) or `[singular, plural]` tuple. `$1` → primary key, `$N` → row count.               |
+| `@InputForm(Type)` param (or `inputForm` on a class-level entry) | Structured input — opens `<AsActionFormDialog>` rendering the input type with vue-form.                              |
 
 ## Action levels
 
@@ -413,8 +447,16 @@ A view controller with `@DbActionsFrom(() => SourceController)` (moost-db) lists
 
 ### Bulk action — "Delete selected"
 
-```atscript
-@db.action.rows 'delete' @ui.action.label 'Delete selected' @ui.action.intent 'negative' @ui.action.confirm ['Delete $N item?', 'Delete $N items?']
+```ts
+@Post("actions/delete")
+@DbAction("delete", {
+  label: "Delete selected",
+  intent: "negative",
+  promptText: ["Delete $N item?", "Delete $N items?"],
+})
+async deleteSelected(@DbActionIDs() ids: { id: string }[]) {
+  // delete the rows
+}
 ```
 
 ```vue
@@ -442,8 +484,12 @@ Reuses the table's live query, visible column order and cell-value resolution, a
 
 Still the right shape when the file must be produced by the backend (signed URL, heavy report job).
 
-```atscript
-@db.action.rows 'exportCsv' @ui.action.label 'Export CSV' @ui.action.processor 'custom'
+```ts
+@TableController(ordersTable)
+@DbRowsActions({
+  exportCsv: { label: "Export CSV", processor: "custom" }, // value auto-filled with "exportCsv"
+})
+export class OrdersController extends AsDbController<typeof Order> {}
 ```
 
 `processor: 'custom'` means the client owns the side effect. Listen on `<AsTableRoot @action>`:

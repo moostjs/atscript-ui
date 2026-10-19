@@ -624,7 +624,7 @@ function getFormValidator(
 }) => Record<string, string>;
 ```
 
-Returns an errors record keyed by dot-separated field path (empty when valid).
+Returns an errors record keyed by dot-separated field path (empty when valid). An error on the root type itself (a failing interface-level `@ui.form.validate`) is keyed `__form` (_since 0.1.158_; earlier it was keyed `""`).
 
 ### `createFieldValidator(prop, opts?)`
 
@@ -636,6 +636,14 @@ function createFieldValidator(
   opts?: { rootOnly?: boolean },
 ): (value: unknown, externalCtx?: { data: unknown; context: unknown }) => true | string;
 ```
+
+### `isContainerKind(kind)`
+
+```typescript
+function isContainerKind(kind: string): boolean;
+```
+
+`true` for the container kinds `object`, `array` and `tuple` (a prop's `type.kind`). With `rootOnly`, `createFieldValidator` validates a container prop at its root only. Union and intersection kinds are not containers. Since 0.1.158.
 
 ### Default validator plugins
 
@@ -1025,6 +1033,14 @@ function getColumn(def: TableDef, path: string): ColumnDef | undefined;
 ## Error map utilities
 
 ```typescript
+/** Error-map key of the form-level error: `"__form"`. */
+const FORM_ERROR_KEY: "__form";
+
+/** Turn a validator's error list (`validator.errors`, or a thrown `ValidatorError`'s `errors`) into an error map. A root-level error (empty path) is keyed `__form`; the first error per path wins. */
+function validatorErrorsToMap(
+  errors: ReadonlyArray<{ path: string; message: string }>,
+): Record<string, string>;
+
 /** Merge any number of partial error maps; falsy values are dropped, later maps win when both have a string. */
 function mergeErrorMaps(
   ...maps: Array<Record<string, string | undefined> | undefined>
@@ -1046,6 +1062,8 @@ function buildDescendantErrorCounts(
 ```
 
 `buildDescendantErrorCounts` powers the count badges on `AsObject` headers.
+
+`validatorErrorsToMap` builds the same map `getFormValidator` returns, so errors from your own `Validator` (e.g. a server-side check) feed `:errors` with the keys the form expects. `FORM_ERROR_KEY` and `validatorErrorsToMap` are exported since 0.1.158.
 
 ## Type guards
 

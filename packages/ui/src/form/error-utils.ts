@@ -10,7 +10,25 @@
  *     merge.
  */
 
-const FORM_ERROR_KEY = "__form";
+/** Error-map key of the form-level error. */
+export const FORM_ERROR_KEY = "__form";
+
+/**
+ * Turn a validator's error list into an error map keyed by path. A
+ * root-level error (empty path) becomes the form-level error
+ * ({@link FORM_ERROR_KEY}). The first error per path wins: a failing
+ * container rule is reported before the container's own shape / length
+ * checks at the same path.
+ */
+export function validatorErrorsToMap(
+  errors: ReadonlyArray<{ path: string; message: string }>,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const err of errors) {
+    out[err.path || FORM_ERROR_KEY] ??= err.message;
+  }
+  return out;
+}
 
 /**
  * Merge any number of partial error maps into a single dense

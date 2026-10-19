@@ -358,7 +358,7 @@ class CustomersController extends AsDbController<typeof Customer> {}
 An action becomes an anchor when **all** hold:
 
 - `processor === 'navigate'`;
-- it has no confirm prompt (`@ui.action.confirm` / `promptText`);
+- it has no confirm prompt (`promptText`);
 - it has no `@InputForm`;
 - a href is computable.
 

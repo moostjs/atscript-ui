@@ -5,9 +5,8 @@ outline: deep
 # Tuples
 
 Fixed-length positional arrays in `.as` types — `[A, B, C]` — render
-through the `AsTuple` default. Each position has a fixed type;
-positions can be individually labelled; the tuple auto-pads to its
-declared length on mount.
+through the `AsTuple` default. Each position has a fixed type; the
+tuple auto-pads to its declared length on mount.
 
 ## Declaring a tuple
 
@@ -17,26 +16,16 @@ declared length on mount.
 logoRgb: [number, number, number]
 ```
 
-A tuple position can carry its own annotations:
-
-```atscript
-coords: [
-    @meta.label 'Latitude'
-    @expect.min -90, 'Latitude must be ≥ -90'
-    @expect.max 90, 'Latitude must be ≤ 90'
-    number,
-
-    @meta.label 'Longitude'
-    @expect.min -180, 'Longitude must be ≥ -180'
-    @expect.max 180, 'Longitude must be ≤ 180'
-    number
-]
-```
+Annotations go on the tuple prop as a whole — tuple positions do not
+take annotations of their own. The prop's `@meta.label` /
+`@meta.description` label the whole group.
 
 The default `AsTuple` renderer iterates positions, dispatching each to
-`<AsField>` with `array-index` set so the position labels read as
-`Latitude #1`, `Longitude #2` (or just the position label when one is
-set with `@meta.label`).
+`<AsField>` with `array-index` set, so each position is labelled with
+its type name plus a 1-based index suffix: `Number #1`, `Number #2`,
+`Number #3`. When the positions need meaningful names (latitude /
+longitude, R / G / B), use an object instead, or a
+[custom tuple renderer](#custom-tuple-renderer).
 
 ## Auto-padding
 
@@ -158,7 +147,7 @@ const components = { "rgb-picker": RgbPicker };
 ```ts
 const {
   itemFields, // FormFieldDef[] — one per position, with index path
-  positionLabeled, // boolean[] — whether each position carries @meta.label
+  positionLabeled, // boolean[] — whether each position's type resolves a @meta.label
   isOptional, // boolean — from prop.optional
   isEmpty, // ComputedRef<boolean> — value is missing / empty array
   clear, // () => void — optional tuples only; resets to undefined
@@ -166,30 +155,23 @@ const {
 } = useAsTuple(field as FormTupleFieldDef);
 ```
 
-`positionLabeled[i] === true` means the position carries
-`@meta.label`. The default `AsTuple` uses this to decide whether to
-render a `#N` index suffix — if every position is labelled, the
-suffix is suppressed.
+The default `AsTuple` passes `array-index` only for positions whose
+`positionLabeled[i]` is `false` — for a plain `[number, number]` that is
+every position, so each renders as `<Type> #N`.
 
 ## Validation
 
-Tuples participate in the regular validation pipeline. Per-position
-`@expect.*` annotations validate the corresponding array slot at
-submit time; the error path uses the index (`logoRgb.0`,
-`logoRgb.1`, …).
+Tuples participate in the regular validation pipeline: each slot is
+checked against its position type at submit time, and errors use the
+index path (`logoRgb.0`, `logoRgb.1`, …).
 
-```atscript
-@meta.label 'Hue'
-@expect.min 0, 'Hue must be ≥ 0'
-@expect.max 359, 'Hue must be ≤ 359'
-hsl: [number, number, number]
-```
-
-For multi-position constraints (e.g. "saturation + lightness must sum
-to at most 100"), use a tuple-level `@ui.form.validate`:
+Value constraints go on the tuple prop as a whole. Use a tuple-level
+`@ui.form.validate` for range checks or rules spanning several
+positions (e.g. "hue in 0-359, saturation + lightness at most 100"):
 
 ```atscript
 @meta.label 'HSL'
+@ui.form.validate '(v) => (v[0] >= 0 && v[0] <= 359) || "Hue must be 0-359"'
 @ui.form.validate '(v) => v[1] + v[2] <= 100 || "S + L must be ≤ 100"'
 hsl: [number, number, number]
 ```

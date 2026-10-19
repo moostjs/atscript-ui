@@ -111,8 +111,7 @@ export interface NestedForm {
         lastName?: string
 
         @meta.label 'Contact Email'
-        @ui.form.fn.description
-            '(v, data) => data.contact?.firstName ? "Email for " + data.contact.firstName : "Contact email address"'
+        @ui.form.fn.description '(v, data) => data.contact?.firstName ? "Email for " + data.contact.firstName : "Contact email address"'
         email?: string.email
 
         @meta.label 'Department'

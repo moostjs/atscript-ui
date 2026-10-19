@@ -67,7 +67,9 @@ export interface AsPresetEntry {
     @db.json
     data: PresetContent | UserConfContent | AppConfContent
 
-    @db.default.now createdAt: number
+    @db.default.now
+    createdAt: number
+
     updatedAt: number.timestamp.updated
 }
 ```

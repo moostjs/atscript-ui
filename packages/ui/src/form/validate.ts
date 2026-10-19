@@ -6,6 +6,7 @@ import type {
 import { Validator } from "@atscript/typescript/utils";
 import { createDbValidatorPlugin, type DbValidationContext } from "@atscript/db/validator";
 import { DB_COLUMN_DERIVED, DB_REL_FK } from "../shared/annotation-keys";
+import { validatorErrorsToMap } from "./error-utils";
 import type { FormDef, FormFieldDef } from "./types";
 import { isArrayField, isObjectField, isTupleField, isUnionField } from "./types";
 
@@ -97,6 +98,9 @@ export function getDefaultValidatorPlugins(): TValidatorPlugin[] {
  * ATScript's @expect.* validation runs automatically; server-managed db
  * fields (every `derived` field, absent `@db.default*` / version) pass.
  * For custom `ui.fn.*` validators, install ui-fns and pass its plugin via `opts.plugins`.
+ *
+ * Errors are keyed by dotted path. A root-level error (a failing
+ * `@ui.form.validate` on the form's interface) is keyed `__form`.
  */
 export function getFormValidator(
   def: FormDef,
@@ -122,11 +126,7 @@ export function getFormValidator(
     });
     if (isValid) return {};
 
-    const errors: Record<string, string> = {};
-    for (const err of validator.errors) {
-      errors[err.path] = err.message;
-    }
-    return errors;
+    return validatorErrorsToMap(validator.errors);
   };
 }
 
@@ -148,8 +148,12 @@ export interface TFieldValidatorOptions {
  */
 const skipDescendantsPlugin: TValidatorPlugin = (ctx) => (ctx.path === "" ? undefined : true);
 
-function skipsDescendants(prop: TAtscriptAnnotatedType): boolean {
-  const kind = prop.type.kind;
+/**
+ * Whether a type kind is a container that carries its own children:
+ * `object`, `array` or `tuple`. Union / intersection kinds are not
+ * containers — they evaluate their branches at their own path.
+ */
+export function isContainerKind(kind: string): boolean {
   return kind === "object" || kind === "array" || kind === "tuple";
 }
 
@@ -170,7 +174,7 @@ export function createFieldValidator(
   return (value: unknown, externalCtx?: { data: unknown; context: unknown }): true | string => {
     cached ??= new Validator(prop, {
       plugins:
-        opts?.rootOnly && skipsDescendants(prop)
+        opts?.rootOnly && isContainerKind(prop.type.kind)
           ? [skipDescendantsPlugin, serverManagedPlugin, ...defaultValidatorPlugins]
           : [serverManagedPlugin, ...defaultValidatorPlugins],
     });

@@ -77,8 +77,10 @@ ids above**. Use it to switch a primitive between built-in renderers:
 password: string             // would default to 'text'; rendered as password
 
 @ui.form.type 'select'
-@ui.form.options 'admin' | 'user' | 'guest'
-role: string                 // string union extracted to options
+@ui.form.options 'admin'
+@ui.form.options 'user'
+@ui.form.options 'guest'
+role: string                 // static options
 
 @ui.form.type 'textarea'
 bio?: string                 // multi-line input
@@ -102,12 +104,16 @@ dynamic +/- `array` renderer unless you tag them with
 ```atscript
 colors: ('red' | 'green' | 'blue')[]       // auto → multiselect
 
-@ui.form.options 'a' | 'b' | 'c'
+@ui.form.options 'a'
+@ui.form.options 'b'
+@ui.form.options 'c'
 tags: string[]                              // auto → multiselect (via options)
 
 @ui.form.type 'multiselect'
-@ui.form.options [1, 2, 3, 4]
-sizes: number[]                             // forced
+@ui.form.options 'Small', 'S'
+@ui.form.options 'Medium', 'M'
+@ui.form.options 'Large', 'L'
+sizes: string[]                             // explicit tag (same renderer)
 ```
 
 Value model is the array itself (`T[]`) — no wrapping, no positional

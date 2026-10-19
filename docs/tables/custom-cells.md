@@ -105,7 +105,8 @@ default.
 ```atscript
 @db.table 'products'
 export interface Product {
-    @meta.id id: string
+    @meta.id
+    id: string
 
     @meta.label 'Status'
     @ui.table.component 'statusBadge'
@@ -216,7 +217,8 @@ Wire it on the `.as`:
 ```atscript
 @db.table 'orders'
 export interface Order {
-    @meta.id id: string
+    @meta.id
+    id: string
 
     @meta.label 'Status'
     @ui.table.component 'statusBadge'
@@ -264,7 +266,8 @@ dialog.
 ```atscript
 @db.table 'users'
 export interface UsersTable {
-    @meta.id id: string
+    @meta.id
+    id: string
 
     @meta.label 'User'
     @ui.table.component 'identity'

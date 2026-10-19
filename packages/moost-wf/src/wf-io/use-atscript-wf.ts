@@ -3,6 +3,7 @@ import type {
   TAtscriptAnnotatedType,
   TAtscriptTypeDef,
 } from "@atscript/typescript/utils";
+import { FORM_ERROR_KEY, validatorErrorsToMap } from "@atscript/ui";
 import { useWfState } from "@moostjs/event-wf";
 import { StepRetriableError } from "@wooksjs/event-wf";
 import { extractPassContext, getFormActions } from "./context";
@@ -12,16 +13,6 @@ import { getCachedValidator } from "./validator-cache";
 interface RequireInputOpts {
   errors?: Record<string, string>;
   formMessage?: string;
-}
-
-function flattenValidatorErrors(err: {
-  errors: Array<{ path: string; message: string }>;
-}): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const e of err.errors) {
-    out[e.path] = e.message;
-  }
-  return out;
 }
 
 function isValidatorError(err: unknown): err is {
@@ -82,7 +73,7 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotat
         ? {}
         : undefined;
     if (formMessage && mergedErrors) {
-      mergedErrors.__form = formMessage;
+      mergedErrors[FORM_ERROR_KEY] = formMessage;
     }
     const context: Record<string, unknown> = mergedErrors
       ? { ...passContext, errors: mergedErrors }
@@ -103,7 +94,8 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotat
       validator.validate(input);
     } catch (err) {
       if (isValidatorError(err)) {
-        throw requireInput({ errors: flattenValidatorErrors(err) });
+        // Same error map as the client-side validator (root error → `__form`).
+        throw requireInput({ errors: validatorErrorsToMap(err.errors) });
       }
       throw err;
     }

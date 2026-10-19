@@ -326,7 +326,8 @@ Identity-cell example — `username` renders an avatar + `First Last`; the parts
 @db.table 'users'
 @db.http.path '/db/users'
 export interface User {
-    @meta.id @db.default.increment
+    @meta.id
+    @db.default.increment
     id: number
 
     @meta.label 'User'
@@ -339,8 +340,11 @@ export interface User {
     @ui.table.exclude
     avatar: string
 
-    @ui.table.exclude firstName: string
-    @ui.table.exclude lastName: string
+    @ui.table.exclude
+    firstName: string
+
+    @ui.table.exclude
+    lastName: string
 }
 ```
 

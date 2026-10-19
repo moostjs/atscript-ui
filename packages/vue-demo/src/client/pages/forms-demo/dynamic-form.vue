@@ -10,7 +10,9 @@ import DarkToggle from "./_dark-toggle.vue";
 // hidden/disabled/readonly/options/value/classes/styles all re-evaluate
 // reactively as `formData` mutates. A custom `@ui.form.validate` string
 // caps `notes` at 500 chars and triggers the same submit-time error
-// pipeline as built-in `@expect.*` rules.
+// pipeline as built-in `@expect.*` rules. A second `@ui.form.validate` on
+// the interface itself is a form-level rule: its error shows in the form
+// banner above the submit button.
 const { def, formData } = createAsFormDef(EventRegistration);
 const types = createDefaultTypes();
 
@@ -38,7 +40,8 @@ function onSubmit(data: unknown) {
           their labels, hints, options, visibility, and chrome (form title + submit button
           text/disabled) react in real time. The <code>notes</code> field exercises
           <code>@ui.form.validate</code>
-          for a custom 500-char ceiling.
+          for a custom 500-char ceiling, and a form-level
+          <code>@ui.form.validate</code> on the interface rejects a plus-one with your own name.
         </p>
         <RouterLink
           to="/forms-demo"

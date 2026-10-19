@@ -135,7 +135,11 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   data: ComputedRef<TFormData>;
   /** Effective external errors (post-dismissal), excluding `__form`. */
   errors: ComputedRef<Record<string, string | undefined> | undefined>;
-  /** Form-level error message (post banner-dismissal). */
+  /**
+   * Form-level error message (post banner-dismissal): the root interface's
+   * `@ui.form.validate` error (live after the first submit), else the
+   * external `__form` error.
+   */
   formError: ComputedRef<string | undefined>;
   /** Errors discovered by the local validator on the most-recent submit. */
   internalErrors: Ref<Record<string, string>>;
@@ -310,9 +314,10 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // model + awaiting nextTick), so the post-reset state becomes the new clean
   // baseline (no-op when tracking is off). Also drops the submit-time error
   // map — a reset form displays no errors, so the badges must count none
-  // (`internalErrors` is declared below; `reset` only runs post-setup).
+  // (`internalErrors` / `rootErrorDismissed` are declared below; `reset` only runs post-setup).
   const reset = async () => {
     internalErrors.value = {};
+    rootErrorDismissed.value = false;
     await resetState();
     patch?.rebase();
   };
@@ -367,7 +372,27 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // would keep counting errors no field displays anymore.
   function clearErrors() {
     internalErrors.value = {};
+    rootErrorDismissed.value = false;
     clearFieldErrors();
+  }
+
+  // ── Form-level error (banner) ──────────────────────────────
+  // A failing `@ui.form.validate` on the root interface reports at the root
+  // field's path `""`. The root field validates live once the form has been
+  // submitted, so its displayed error is the up-to-date form-level rule
+  // verdict; it wins over a (possibly stale) external `__form` error. The
+  // banner's dismiss hides both until the next submit — or until
+  // `reset` / `clearErrors` re-arm it: a later whole-value replacement
+  // re-touches the root field, so its error can go live without a submit.
+  // `internalErrors.__form` is intentionally not read here (the banner shows
+  // the root field's live error); `__form` is kept for the emitted `error`.
+  const rootErrorDismissed = ref(false);
+  const formError = computed<string | undefined>(
+    () => (rootErrorDismissed.value ? undefined : liveErrors.value[""]) ?? ext.formError.value,
+  );
+  function dismissFormError() {
+    rootErrorDismissed.value = true;
+    ext.dismissForm();
   }
 
   const descendantErrorCounts = computed(() => buildDescendantErrorCounts(allErrors.value));
@@ -446,7 +471,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     description: description.value,
     data: data.value,
     errors: ext.effective.value,
-    formError: ext.formError.value,
+    formError: formError.value,
     disabled: submitDisabled.value,
     loading: options.loading?.() === true,
     submitText: submitText.value,
@@ -455,7 +480,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     clearErrors,
     setErrors,
     dismissError: ext.dismissAt,
-    dismissFormError: ext.dismissForm,
+    dismissFormError,
     formContext: formContext.value,
     // Change-tracking surface. When tracking is OFF the form is never dirty,
     // there are no changes, and the patch builders return empty — so a Save
@@ -503,6 +528,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
 
   // ── Submit ────────────────────────────────────────────────
   function onSubmit() {
+    rootErrorDismissed.value = false;
     const result = submit();
     if (result === true) {
       internalErrors.value = {};
@@ -518,7 +544,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   return {
     data,
     errors: ext.effective,
-    formError: ext.formError,
+    formError,
     internalErrors,
     reset,
     clearErrors,
@@ -531,7 +557,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     slotProps,
     invokeAction,
     dismissError: ext.dismissAt,
-    dismissFormError: ext.dismissForm,
+    dismissFormError,
     formContext,
     handleChange,
     patch,

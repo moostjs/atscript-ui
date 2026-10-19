@@ -1,3 +1,4 @@
+import { FORM_ERROR_KEY } from "@atscript/ui";
 import { computed, ref, watch, type ComputedRef } from "vue";
 
 /**
@@ -67,10 +68,10 @@ export function useAsExternalErrors(
     const dismissed = dismissedPaths.value;
     // Fast path: no dismissals AND no `__form` to strip — return the
     // source as-is so identity-equal consumers don't re-render.
-    if (dismissed.size === 0 && errs.__form === undefined) return errs;
+    if (dismissed.size === 0 && errs[FORM_ERROR_KEY] === undefined) return errs;
     const out: Record<string, string | undefined> = {};
     for (const k in errs) {
-      if (k === "__form") continue;
+      if (k === FORM_ERROR_KEY) continue;
       if (dismissed.has(k)) continue;
       out[k] = errs[k];
     }
@@ -79,7 +80,7 @@ export function useAsExternalErrors(
 
   const formError = computed<string | undefined>(() => {
     if (formDismissed.value) return undefined;
-    return options.source()?.__form;
+    return options.source()?.[FORM_ERROR_KEY];
   });
 
   const isFormDismissed = computed(() => formDismissed.value);

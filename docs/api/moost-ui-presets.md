@@ -136,7 +136,9 @@ export interface AsPresetEntry {
   @db.json
   data: PresetData | UserConfData | AppConfData
 
-  @db.default.now createdAt: number
+  @db.default.now
+  createdAt: number
+
   updatedAt: number.timestamp.updated
 }
 ```

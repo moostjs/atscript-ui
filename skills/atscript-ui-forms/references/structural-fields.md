@@ -267,7 +267,7 @@ import { useAsTuple } from "@atscript/vue-form";
 
 const t = useAsTuple(props.field as FormTupleFieldDef);
 // t.itemFields        FormFieldDef[]    (one per position; .path = String(i))
-// t.positionLabeled   boolean[]         (whether the position carries @meta.label)
+// t.positionLabeled   boolean[]         (whether the position's type resolves @meta.label)
 // t.isOptional        boolean
 // t.isEmpty           ComputedRef<boolean>
 // t.clear()           clear an optional tuple (set undefined)
@@ -276,14 +276,11 @@ const t = useAsTuple(props.field as FormTupleFieldDef);
 
 `fillMissing()` runs `onMounted` automatically when the tuple is not optional. Skip it for optional tuples — the user clicks "Add" to populate.
 
-For each position:
-
-- If `@meta.label` is set on the position, the label renders as the bold field title and `positionLabeled[i] === true`.
-- Otherwise, the type name (`number` → `Number` after capitalization) renders as the base label, with `#N` suffix.
+Tuple positions take no annotations of their own — annotate the tuple prop as a whole (`@meta.label`, `@meta.description`, `@ui.form.validate` for range / cross-position rules). Each position renders with its type name as the base label (`number` → `Number` after capitalization) plus a 1-based `#N` suffix: `Number #1`, `Number #2`. Need named slots (latitude / longitude)? Use an object, or a custom renderer via `@ui.form.component`.
 
 ```atscript
-type Coordinate = [
-    @meta.label 'Latitude' number,
-    @meta.label 'Longitude' number,
-]
+@meta.label 'Coordinates'
+@ui.form.validate '(v) => (v[0] >= -90 && v[0] <= 90) || "Latitude must be within ±90"'
+@ui.form.validate '(v) => (v[1] >= -180 && v[1] <= 180) || "Longitude must be within ±180"'
+coords: [number, number]
 ```

@@ -4,6 +4,7 @@
 @ui.form.fn.title '(data) => data.firstName ? "Registration for " + data.firstName : "Event Registration"'
 @ui.form.fn.submit.text '(data) => data.hasPlusOne ? "Register 2 attendees" : "Register"'
 @ui.form.fn.submit.disabled '(data) => !data.firstName || !data.email'
+@ui.form.validate '(v) => !v.hasPlusOne || !v.plusOneName || v.plusOneName !== v.firstName || "Your plus-one must be someone else"'
 export interface EventRegistration {
     @meta.label 'First Name'
     @ui.form.grid.colSpan '6'

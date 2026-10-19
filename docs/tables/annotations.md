@@ -265,7 +265,7 @@ export interface InvoicesTable {
     @ui.table.order 4
     @db.column.precision 12, 2
     @db.amount.currency.ref 'currency'
-    amount: number
+    amount: decimal
 
     currency: 'USD' | 'EUR' | 'GBP'
 
