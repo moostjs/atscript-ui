@@ -5,6 +5,7 @@ import type {
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
 import { flattenAnnotatedType } from "@atscript/typescript/utils";
+import { isServerStampedOnUpdate } from "@atscript/db/validator";
 import type {
   FormArrayFieldDef,
   FormDef,
@@ -14,12 +15,11 @@ import type {
   FormUnionFieldDef,
   FormUnionVariant,
 } from "./types";
-import { getFieldMeta, hasComputedAnnotations, hasFieldMeta } from "../shared/field-resolver";
+import { getFieldMeta, hasComputedAnnotations } from "../shared/field-resolver";
 import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
   DB_COLUMN_DERIVED,
-  DB_ON_UPDATE_NOW,
   DB_UNIT,
   DB_UNIT_REF,
   META_DESCRIPTION,
@@ -63,14 +63,17 @@ export interface CreateFormDefOptions {
   metaFields?: Record<string, { computed?: boolean }>;
   /**
    * What the form is for. `"edit"` — the form edits a stored row and is sent
-   * as an update: an `@db.onUpdate.now` field (`number.timestamp.updated`),
-   * which the server sets on every update and whose sent value it ignores, is
-   * then marked `derived` — read-only, never validated, never sent. Applies at
-   * every depth (embedded objects, objects in arrays), except for a reference
-   * to another field, an element of an array of numbers, and below a tuple or
-   * a union of several types, where the server does not set the field.
-   * `"create"` (default) — the field stays editable: the server only fills it
-   * when it has `@db.default.now` and the value is left out. Since 0.1.154.
+   * as an update: an `@db.onUpdate.now` field (`number.timestamp.updated`) or
+   * an `@db.onUpdate.inc` change counter, which the server sets on every
+   * update and whose sent value it ignores, is then marked `derived` —
+   * read-only, never validated, never sent. Applies at every depth (embedded
+   * objects, objects in arrays), except for a reference to another field, an
+   * element of an array of numbers, and below a tuple or a union of several
+   * types, where the server does not set the field (`@db.onUpdate.inc` is
+   * top-level only). `"create"` (default) — the field stays editable: the
+   * server only fills it when the value is left out and it has
+   * `@db.default.now`, or is an `@db.onUpdate.inc` counter (`0`). Since
+   * 0.1.154; `@db.onUpdate.inc` since 0.1.159.
    */
   mode?: "create" | "edit";
 }
@@ -85,8 +88,8 @@ const EDIT: CreateFormDefOptions = { mode: "edit" };
  *   with `path: ''`.
  *
  * A `@db.column.derived` field is marked `derived` straight from its metadata;
- * a computed view column, from `opts.metaFields`; an `@db.onUpdate.now` field,
- * when `opts.mode` is `"edit"`.
+ * a computed view column, from `opts.metaFields`; an update-stamped field
+ * (see `CreateFormDefOptions.mode`), when `opts.mode` is `"edit"`.
  */
 export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef {
   const edit = opts?.mode === "edit";
@@ -489,14 +492,14 @@ function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVar
 }
 
 /**
- * `@db.onUpdate.now` (`number.timestamp.updated`): the server sets the field
- * on every update. Read off the prop, or — as `@atscript/db` does — off the one
- * value member of `T | null`, unless the prop references another field.
+ * An update-stamped field (see `CreateFormDefOptions.mode`). Read off the prop,
+ * or — as `@atscript/db` does — off the one value member of `T | null`, unless
+ * the prop references another field.
  */
 function isUpdateStamped(prop: TAtscriptAnnotatedType): boolean {
-  if (hasFieldMeta(prop, DB_ON_UPDATE_NOW)) return true;
+  if (isServerStampedOnUpdate(prop.metadata)) return true;
   const member = prop.ref?.field ? undefined : soleValueMember(prop);
-  return member !== undefined && hasFieldMeta(member, DB_ON_UPDATE_NOW);
+  return member !== undefined && isServerStampedOnUpdate(member.metadata);
 }
 
 /** The one non-`null` / `undefined` member of a (nested) union, if there is exactly one. */

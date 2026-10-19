@@ -5,7 +5,7 @@ Edit forms with optimistic concurrency control (OCC): wire a row-edit `<AsForm>`
 Three pieces:
 
 1. `.as` schema opts the table into OCC (`@db.column.version` on one `number.int` field).
-2. `createFormDef(type, { mode: "edit", versionColumn })` hides the version field and makes `@db.onUpdate.now` fields read-only.
+2. `createFormDef(type, { mode: "edit", versionColumn })` hides the version field and makes `@db.onUpdate.now` / `.inc` fields read-only.
 3. Submit handler discriminates `VersionMismatchError` from `@atscript/db-client`.
 
 ## Quick start
@@ -80,7 +80,7 @@ async function onSubmit(data: unknown) {
 | 2   | `createFormDef(type, { versionColumn })` excludes the field from `fields[]` (nothing renders) but keeps it in `flatMap` and the form data — the PATCH body still carries the loaded version, which the server lifts into `$cas`.                               |
 | 3   | The opt is a root-table concept — it is not propagated into nested recursive defs.                                                                                                                                                                             |
 | 3a  | `versionColumn` is the LOGICAL field name ([`MetaResponse`](https://ui.atscript.dev/api/ui#metaresponse)). A `@db.column.derived` field needs no option — see `atscript-ui-forms` `references/customization.md`.                                               |
-| 3b  | `mode: "edit"` marks `@db.onUpdate.now` fields (`number.timestamp.updated`) `derived`: read-only, never validated, never in the patch — the server sets them on every update and ignores a sent value. Omit it (`"create"`) for an insert form. Since 0.1.154. |
+| 3b  | `mode: "edit"` marks `@db.onUpdate.now` / `.inc` fields (e.g. `number.timestamp.updated`) `derived`: read-only, never validated, never in the patch — the server sets them on every update and ignores sent values. Omit it for an insert form. Since 0.1.154. |
 | 4   | `createTableDef` applies the same skip on the table side: the version column never appears as a column or in column-picker / filter / sort dialogs, and `TableDef.versionColumn` carries the name.                                                             |
 | 5   | `VersionMismatchError` (subclass of `ClientError`) is thrown by the client when the server response body has `kind: 'version_mismatch'`; its `currentVersion` getter exposes the row's current server-side version. Always rethrow non-matches.                |
 | 6   | Simplest conflict UX wins: tell the user the row changed and ask them to reload. Auto-merge / retry-with-reapplied-edits flows are easy to get wrong — only build them with a specific reason.                                                                 |

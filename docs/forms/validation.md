@@ -35,7 +35,8 @@ the result.
 username: string
 ```
 
-`@expect.min` / `@expect.max` work for numbers and dates;
+`@expect.min` / `@expect.max` work for numbers and dates
+(`@expect.exclusiveMin` / `@expect.exclusiveMax` reject the bound itself);
 `@expect.minLength` / `@expect.maxLength` for strings and arrays;
 `@expect.pattern` for regex.
 

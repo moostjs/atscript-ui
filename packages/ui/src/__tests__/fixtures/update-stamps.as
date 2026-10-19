@@ -62,3 +62,15 @@ export interface StampedRow {
 
     stampedAudit?: StampedVariant
 }
+
+// ── Change counters (@db.onUpdate.inc) ───────────────────────
+
+/// A row with a change counter: `0` on insert, `+1` on every update.
+@db.table 'counted_rows'
+export interface CountedRow {
+    @meta.required
+    name: string
+
+    @db.onUpdate.inc
+    revision: number.int
+}

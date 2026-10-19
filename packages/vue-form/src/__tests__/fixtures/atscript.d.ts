@@ -25,6 +25,8 @@ declare global {
     "expect.maxLength": { length: number, message?: string }
     "expect.min": { minValue: number, message?: string }
     "expect.max": { maxValue: number, message?: string }
+    "expect.exclusiveMin": { exclusiveMinValue: number, message?: string }
+    "expect.exclusiveMax": { exclusiveMaxValue: number, message?: string }
     "expect.int": boolean
     "expect.pattern": ({ pattern: string, flags?: string, message?: string })[]
     "expect.array.uniqueItems": { message?: string }

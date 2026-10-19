@@ -88,9 +88,9 @@ interface FormFieldDef {
   valueHelpInfo?: ValueHelpInfo;
   /**
    * Set for a field the server owns: `@db.column.derived`, a computed view
-   * column (`opts.metaFields`), or an `@db.onUpdate.now` field in an edit form
-   * (`opts.mode: "edit"`). `<AsField>` renders it read-only; validators and
-   * `buildFormDiff` skip it. Since 0.1.144.
+   * column (`opts.metaFields`), or an `@db.onUpdate.now` / `.inc` field in an
+   * edit form (`opts.mode: "edit"`). `<AsField>` renders it read-only;
+   * validators and `buildFormDiff` skip it. Since 0.1.144.
    */
   derived?: true;
 }
@@ -166,7 +166,7 @@ interface CreateFormDefOptions {
   versionColumn?: string;
   /** `meta.fields` — a field marked `computed` is marked `derived`. Since 0.1.147. */
   metaFields?: Record<string, { computed?: boolean }>;
-  /** `"edit"` — an `@db.onUpdate.now` field is marked `derived`. Default `"create"`. Since 0.1.154. */
+  /** `"edit"` — `@db.onUpdate.now` / `.inc` fields are marked `derived`. Default `"create"`. Since 0.1.154. */
   mode?: "create" | "edit";
 }
 ```
@@ -178,6 +178,8 @@ A `@db.column.derived` field (a top-level column the server computes from a `@db
 A computed view column (`@db.compute`) carries no annotation on the client — the server keeps it out of the serialized type — so pass `opts.metaFields: meta.fields`: a field `/meta` marks `computed` gets the same `derived` treatment. Views are read-only, so this matters only for a form you build from a view's type (a read-only detail form, say). Since 0.1.147.
 
 Pass `opts.mode: "edit"` for a form that edits a stored row. An `@db.onUpdate.now` field — `number.timestamp.updated`, which also carries `@db.default.now` — is set by the server on every update and replace, and a value the client sends is ignored, so an edit form marks it `derived` too: read-only, never validated, never sent. This applies at any depth (embedded objects, array items, `T | null`) — but not to a field that references another one (`updatedAt: Order.updatedAt`), an element of an array of numbers, or a field below a tuple or a union of several types: the server stores those as sent, so they stay editable and validated. In a create form (the default) the field stays editable: with `@db.default.now` it may be left empty (the server fills it, like `number.timestamp.created`); a bare `@db.onUpdate.now` without a default is required on insert. `/meta` keeps the annotation since `@atscript/db` 0.1.156. Since 0.1.154.
+
+An `@db.onUpdate.inc` change counter (`@atscript/db` 0.1.162+) — a top-level integer the server starts at `0` and increments on every update and replace, ignoring a sent value — gets the same treatment: `derived` in an edit form; editable in a create form, where it may be left empty (the server starts it at `0`). Since `@atscript/ui` 0.1.159.
 
 ```ts
 // An edit form
@@ -606,9 +608,9 @@ Every supported annotation has a stringly-typed constant exported from `@atscrip
 
 ## Validators
 
-Both validators let server-managed db fields through, so a create form built from a `/meta` type isn't blocked on values the server fills in: a `@db.column.derived` field is never validated, and an absent `@db.default*` or `@db.column.version` value passes. A `@db.rel.FK` field stays required — the form, not the server, supplies it. Since 0.1.144.
+Both validators let server-managed db fields through, so a create form built from a `/meta` type isn't blocked on values the server fills in: a `@db.column.derived` field is never validated, and an absent `@db.default*`, `@db.column.version` or `@db.onUpdate.inc` value passes. A `@db.rel.FK` field stays required — the form, not the server, supplies it. Since 0.1.144.
 
-`getFormValidator` also never validates any other field its def marks [`derived`](#formfielddef) — a computed view column, an edit form's `@db.onUpdate.now` field — and neither does `<AsField>`. `createFieldValidator` sees only the prop's annotations. Since 0.1.154.
+`getFormValidator` also never validates any other field its def marks [`derived`](#formfielddef) — a computed view column, an edit form's `@db.onUpdate.now` / `.inc` field — and neither does `<AsField>`. `createFieldValidator` sees only the prop's annotations. Since 0.1.154.
 
 ### `getFormValidator(def, opts?)`
 

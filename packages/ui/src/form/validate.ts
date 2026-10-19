@@ -26,8 +26,9 @@ const INSERT_CONTEXT: DbValidationContext = { mode: "insert" };
  * blocked on them:
  * - `@db.column.derived` — read-only and server-computed: never validated
  *   (not even a loaded value, which the user could not fix).
- * - an absent `@db.default*` / `@db.column.version` value — delegated to
- *   `@atscript/db`'s own insert-mode rule, so the key list has one owner.
+ * - an absent `@db.default*` / `@db.column.version` / `@db.onUpdate.inc` value
+ *   — delegated to `@atscript/db`'s own insert-mode rule, so the key list has
+ *   one owner.
  *   `db.rel.FK` is kept out: a form fills the FK itself (no nested nav
  *   object), so an empty required FK must still fail.
  *
@@ -43,10 +44,11 @@ const serverManagedPlugin: TValidatorPlugin = (ctx, def, value) => {
 
 /**
  * The props of the fields `createFormDef` marked `derived`, at any depth — a
- * computed view column (`metaFields`) or an edit form's `@db.onUpdate.now`
- * field carries no annotation the plugin above could read. The validator
- * matches by prop, so a prop that is also used where it is not derived (an
- * interface's stamp below a union of several types, too) stays validated.
+ * computed view column (`metaFields`) or an edit form's update-stamped field
+ * (see `CreateFormDefOptions.mode`) carries no annotation the plugin above
+ * could read. The validator matches by prop, so a prop that is also used where
+ * it is not derived (an interface's stamp below a union of several types, too)
+ * stays validated.
  */
 function collectDerivedProps(def: FormDef): Set<TAtscriptAnnotatedType> {
   const derived = new Set<TAtscriptAnnotatedType>();

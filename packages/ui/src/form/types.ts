@@ -61,7 +61,7 @@ export interface FormFieldDef {
   /**
    * Server-owned field: a `@db.column.derived` one (read from the type
    * metadata), a computed view column (`CreateFormDefOptions.metaFields`) or,
-   * in an edit form (`CreateFormDefOptions.mode`), an `@db.onUpdate.now` one.
+   * in an edit form, an update-stamped one (see `CreateFormDefOptions.mode`).
    * Rendered read-only, exempt from form validation and never sent by
    * `buildFormDiff` (the server drops or overwrites a written value anyway).
    * Since 0.1.144.

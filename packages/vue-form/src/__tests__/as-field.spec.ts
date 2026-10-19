@@ -92,6 +92,26 @@ describe("AsField", () => {
     });
   });
 
+  describe("@db.onUpdate.inc field", () => {
+    const type = objectType({
+      name: stringProp(),
+      revision: numberProp({ "db.onUpdate.inc": true }),
+    });
+
+    it("is read-only and never validated in an edit form", async () => {
+      const { wrapper } = mountForm(type, {
+        initialValue: { name: "Ada", revision: 3 },
+        defOptions: { mode: "edit" },
+      });
+      const input = wrapper.find('input[name="revision"]');
+      expect(input.attributes("readonly")).toBeDefined();
+      await wrapper.find("form").trigger("submit");
+      await nextTick();
+      expect(wrapper.emitted("error")).toBeUndefined();
+      expect(wrapper.emitted("submit")).toHaveLength(1);
+    });
+  });
+
   it("applies @ui.form.disabled (input has disabled attribute)", async () => {
     const { DisabledField } = await import("./fixtures/field-annotations.as");
     const { wrapper } = mountForm(DisabledField);

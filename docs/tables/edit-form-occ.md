@@ -77,11 +77,11 @@ const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
 });
 ```
 
-`mode: "edit"` makes a `number.timestamp.updated` (`@db.onUpdate.now`)
-field read-only and keeps it out of the update: the server sets it on every
-write and ignores a sent value. A `@db.column.derived` field needs no
-option — it renders read-only and is never sent; see
-[`createFormDef`](/api/ui#createformdef-type-opts).
+`mode: "edit"` makes `@db.onUpdate.now` / `.inc` fields (e.g.
+`number.timestamp.updated`) read-only and keeps them out of the update: the
+server sets them on every update and ignores a sent value. A
+`@db.column.derived` field needs no option — it renders read-only and is
+never sent; see [`createFormDef`](/api/ui#createformdef-type-opts).
 
 `AsForm` iterates `def.fields[]` and the version prop is no longer there,
 so no input is painted. But the version value still lives on the loaded

@@ -58,6 +58,8 @@ Validation rules. Run by the `Validator` in `@atscript/ui` and reused server-sid
 | `@expect.maxLength n, 'msg'`    | Maximum string / array length. |
 | `@expect.min n, 'msg'`          | Minimum numeric value.         |
 | `@expect.max n, 'msg'`          | Maximum numeric value.         |
+| `@expect.exclusiveMin n, 'msg'` | Numeric value greater than n.  |
+| `@expect.exclusiveMax n, 'msg'` | Numeric value less than n.     |
 | `@expect.pattern '/re/', 'msg'` | Regex pattern.                 |
 | `@expect.email 'msg'`           | Email format.                  |
 | `@expect.url 'msg'`             | URL format.                    |

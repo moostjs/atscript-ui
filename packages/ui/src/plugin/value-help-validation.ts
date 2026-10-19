@@ -338,7 +338,9 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
       range: token.range,
     });
   }
-  errors.push(...validateExclusiveWith(token, "@ui.valueHelp", [{ key: "ui.valueHelp.distinct" }]));
+  errors.push(
+    ...validateExclusiveWith(token, "@ui.valueHelp", [{ key: "ui.valueHelp.distinct" }], doc),
+  );
 
   if (!targetArg) return errors;
 

@@ -67,7 +67,7 @@ import {
   UnionWithFormType,
   VersionedObject,
 } from "../__tests__/fixtures/create-form-def.as";
-import { StampedRow } from "../__tests__/fixtures/update-stamps.as";
+import { CountedRow, StampedRow } from "../__tests__/fixtures/update-stamps.as";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -236,6 +236,17 @@ describe("createFormDef", () => {
         const audit = field(def, "audit") as FormObjectFieldDef;
         expect(audit.objectDef.fields[0]!.derived).toBeUndefined();
       }
+    });
+  });
+
+  describe("@db.onUpdate.inc (mode)", () => {
+    it("an edit form marks a change counter derived", () => {
+      const def = createFormDef(CountedRow, { mode: "edit" });
+      expect(def.fields.filter((f) => f.derived).map((f) => f.path)).toEqual(["revision"]);
+    });
+
+    it("a create form (the default) leaves it editable", () => {
+      expect(createFormDef(CountedRow).fields.filter((f) => f.derived)).toEqual([]);
     });
   });
 

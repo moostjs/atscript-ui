@@ -7,7 +7,7 @@ import {
 } from "@atscript/typescript/utils";
 import { DerivedRow } from "../__tests__/fixtures/create-form-def.as";
 import { BookForm } from "../__tests__/fixtures/value-help-fk.as";
-import { StampedRow } from "../__tests__/fixtures/update-stamps.as";
+import { CountedRow, StampedRow } from "../__tests__/fixtures/update-stamps.as";
 import { createFormDef } from "./create-form-def";
 import {
   createFieldValidator,
@@ -148,6 +148,18 @@ describe("@db.onUpdate.now fields", () => {
     expect(Object.keys(validate({ data: { ...row, stampedAudit: { updatedAt: "x" } } }))).toEqual([
       "stampedAudit.updatedAt",
     ]);
+  });
+});
+
+describe("@db.onUpdate.inc fields", () => {
+  it("a create form may leave a change counter out — the server starts it at 0", () => {
+    const validate = getFormValidator(createFormDef(CountedRow));
+    expect(validate({ data: { name: "Ada" } })).toEqual({});
+  });
+
+  it("an edit form never validates it — the server sets it on every update", () => {
+    const validate = getFormValidator(createFormDef(CountedRow, { mode: "edit" }));
+    expect(validate({ data: { name: "Ada", revision: "x" } })).toEqual({});
   });
 });
 

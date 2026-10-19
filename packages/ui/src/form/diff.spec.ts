@@ -19,7 +19,7 @@ import {
   UniqueArrayForm,
   VersionedForm,
 } from "../__tests__/fixtures/form-diff.as";
-import { StampedRow } from "../__tests__/fixtures/update-stamps.as";
+import { CountedRow, StampedRow } from "../__tests__/fixtures/update-stamps.as";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -678,6 +678,18 @@ describe("buildFormDiff — @db.onUpdate.now fields", () => {
   it("a create-mode def diffs it like any field", () => {
     const r = buildFormDiff(createFormDef(StampedRow), wrap(before), wrap(after));
     expect(r.changes.map((c) => c.path)).toEqual(["updatedAt", "editedAt", "trace.updatedAt"]);
+  });
+});
+
+describe("buildFormDiff — @db.onUpdate.inc fields", () => {
+  it("an edit form never sends a change counter", () => {
+    const def = createFormDef(CountedRow, { mode: "edit" });
+    const r = buildFormDiff(
+      def,
+      wrap({ name: "Ada", revision: 3 }),
+      wrap({ name: "Grace", revision: 4 }),
+    );
+    expect(r.patch).toEqual({ name: "Grace" });
   });
 });
 
