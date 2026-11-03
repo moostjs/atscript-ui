@@ -204,7 +204,7 @@ useWfFinished().set({
   cookies: {
     session: {
       value: token,
-      options: { httpOnly: true, sameSite: "Lax", path: "/", maxAge: 86_400_000 },
+      options: { httpOnly: true, sameSite: "Lax", path: "/", maxAge: 86_400 }, // seconds
     },
   },
 });
@@ -212,6 +212,8 @@ useWfFinished().set({
 
 The helpers don't expose the `cookies` field — when you need it, build
 the envelope yourself and hand the whole thing to `useWfFinished`.
+A numeric cookie `maxAge` is in **seconds** with wooks 0.8 / moost 0.7
+(it was milliseconds before) — drop any `* 1000`.
 The HTTP outlet forwards the cookies (see the eventContext caveat in
 app wiring below).
 :::
@@ -267,6 +269,8 @@ export class WorkflowsController {
           input: opts?.input,
           eventContext: opts?.eventContext as never,
         }),
+      resolveSchemaId: (wfid, opts) =>
+        wfApp.resolveSchemaId(wfid, { eventContext: opts?.eventContext as never }),
     };
     return handleAsOutletRequest(
       {
@@ -291,6 +295,14 @@ A few things to know:
 - **`allow`** — the whitelist of workflow IDs the endpoint accepts.
   Without this, anyone with the URL could trigger any registered
   workflow.
+  It fails closed (wooks 0.8 / moost 0.7): an entry must equal the
+  registered flow id (the pattern for a parametric flow), `allow: []`
+  admits nothing, and the list is checked on resume too. A refused
+  start or resume answers `403` (`WF_FORBIDDEN`) and leaves the token
+  usable. Keep `resolveSchemaId` in `deps` (as above): it lets the
+  list judge the flow a request actually runs (including parametric
+  flows). Without it the trigger logs a warning once and compares the
+  id as sent.
 - **`state`** — the state strategy. Pass a single `WfStateStrategy`
   instance (auto-registered as name `'default'`), or a named registry
   `{ strategies, default }` to mix strategies per flow. Two built-ins:

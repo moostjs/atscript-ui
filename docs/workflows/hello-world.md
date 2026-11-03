@@ -122,6 +122,7 @@ class WfController {
     const deps: WfOutletTriggerDeps = {
       start: (schemaId, ctx, opts) => wfApp.start(schemaId, ctx as never, { input: opts?.input }),
       resume: (state, opts) => wfApp.resume(state as never, { input: opts?.input }),
+      resolveSchemaId: (wfid) => wfApp.resolveSchemaId(wfid), // lets `allow` judge the real flow
     };
     return handleAsOutletRequest(
       {

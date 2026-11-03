@@ -240,6 +240,8 @@ export class WorkflowsController {
           input: opts?.input,
           eventContext: opts?.eventContext as never,
         }),
+      resolveSchemaId: (wfid, opts) =>
+        wfApp.resolveSchemaId(wfid, { eventContext: opts?.eventContext as never }),
     };
     return handleAsOutletRequest(
       {

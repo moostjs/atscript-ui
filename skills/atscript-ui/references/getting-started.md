@@ -25,6 +25,8 @@ Pick the row that matches your goal — the additional packages on the right are
 
 The atscript compiler (`asc`) and unplugin are required at build time — see the `atscript` skill for installing those.
 
+Peer lines since 0.1.161: `@atscript/core` / `@atscript/typescript` / `unplugin-atscript` `^0.2.1`; `@atscript/db*` latest 0.1.x (`^0.1.166` in 0.1.162); server packages `moost` / `@moostjs/*` `^0.7.0`, `@wooksjs/*` `^0.8.0`. Upgrading from ≤ 0.1.160: rebuild packages shipping generated `.as` code (atscript ≤ 0.1.110 output doesn't load on 0.2); numeric cookie `maxAge` is seconds (drop `* 1000`); workflow `allow` fails closed + applies on resume (see the `atscript-ui-wf` skill, `references/server.md`).
+
 ## atscript.config.ts
 
 The compiler must know about every annotation namespace you use. Register `uiPlugin()` to unlock `@ui.*`. Add `uiFnsPlugin()` only when consuming dynamic `@ui.fn.*` or `@ui.form.validate`. Add `wfPlugin()` on the server side when authoring workflow models that use `@wf.*`.

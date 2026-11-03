@@ -133,6 +133,11 @@ Both produce the same wire response — `{ inputRequired: { payload,
 transport, context: { errors: {...} } } }` — and the client renders
 the same form with the new errors.
 
+Type-level errors are keyed by dotted field path, one message per
+path (the first). A root-level error — for example, input that is not
+an object — is keyed `__form`, so it shows in the form-level banner
+(since 0.1.158). See [`useAtscriptWf`](/api/moost-wf#useatscriptwf-type).
+
 ### Mid-handler validation: "email already taken"
 
 A classic case the `.as` type can't express:

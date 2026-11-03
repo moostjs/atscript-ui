@@ -125,6 +125,8 @@ function useAtscriptWf<T extends TAtscriptTypeDef>(
 
 Validator instances are cached per `(type, opts)` pair.
 
+Validation errors are keyed by dotted field path, the same map the client-side form validator builds: the first error per path wins, and a root-level error (empty path, e.g. the input is not an object) is keyed `__form` so it shows in the form banner (since 0.1.158; earlier it was keyed `""` and never displayed). Build the same map from your own `Validator` with [`validatorErrorsToMap`](/api/ui#error-map-utilities) from `@atscript/ui`.
+
 ```typescript
 import { useAtscriptWf } from "@atscript/moost-wf";
 import { LoginForm } from "./LoginForm.as";
@@ -196,11 +198,11 @@ import { createAsHttpOutlet, handleAsOutletRequest } from "@atscript/moost-wf";
 
 @Post("wf")
 async handle() {
-  // ... build deps ...
+  // ... build deps (start, resume, resolveSchemaId) — see Server Authoring ...
   return handleAsOutletRequest(
     {
       allow: ["auth/login"],
-      state: () => new EncapsulatedStateStrategy({ secret: WF_SECRET }),
+      state: new EncapsulatedStateStrategy({ secret: WF_SECRET }),
       outlets: [createAsHttpOutlet()],
       token: { read: ["body"], write: "body", name: "wfs" },
     },

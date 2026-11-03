@@ -62,6 +62,8 @@ flow() {}
 
 `new Moost({ globalPrefix: "api" })` prepends the prefix to every `@Workflow("auth/login")` registration → the live wfid becomes `api/auth/login`. The `allow:` whitelist in `handleAsOutletRequest({ allow })` and the client's `name` prop on `<AsWfForm>` must match the prefixed id.
 
+`allow` fails closed (wooks 0.8 / moost 0.7): an entry must equal the registered flow id (pattern for a parametric flow; leading slashes ignored), `allow: []` admits nothing, and it is checked on resume too. Refusal → thrown `HttpError` `403` `WF_FORBIDDEN`, token not consumed. Put `resolveSchemaId: (wfid, opts) => wfApp.resolveSchemaId(wfid, { eventContext: opts?.eventContext as never })` in the hand-built `deps` — without it the trigger warns once and compares the id as sent.
+
 ### Branching semantics
 
 - `condition` is called with the current context.
@@ -171,7 +173,7 @@ action-vs-input policy matrix before the handler body runs.
 
 ### What happens on each request
 
-`@WfInput()` reads the param's atscript type and the incoming action, then validates: plain submits run the full validator; actions declared via `@wf.action.withData` get deep-partial validation; actions declared via `@ui.form.action` skip the input entirely (the parameter resolves to `undefined` when `pass: true`); unknown actions throw a re-pause with a `__form` error. On any validation fail, the engine catches the thrown `StepRetriableError` and re-renders the form with `errors`.
+`@WfInput()` reads the param's atscript type and the incoming action, then validates: plain submits run the full validator; actions declared via `@wf.action.withData` get deep-partial validation; actions declared via `@ui.form.action` skip the input entirely (the parameter resolves to `undefined` when `pass: true`); unknown actions throw a re-pause with a `__form` error. On any validation fail, the engine catches the thrown `StepRetriableError` and re-renders the form with `errors`. Validator errors map exactly like the client's `getFormValidator`: keyed by dotted path, first error per path wins, a root-level (empty-path) error → `__form` (0.1.158+; before, it was keyed `""` and never shown). Build the same map from your own `Validator` with `validatorErrorsToMap` (`@atscript/ui`).
 
 ### Decorator usage
 

@@ -254,7 +254,7 @@ function onSubmit(data: unknown) {
 When a request returns a non-2xx response, `error.value` is set to `{ message, status }`. The message is resolved from the response body in this priority order:
 
 1. `body.message` — the human-readable application intent. This is what `HttpError(status, message)` ships as `body.message` across the Wooks/Moost stack.
-2. `body.error` — fallback when `message` is absent. The workflow-trigger engine emits `{ error: "Invalid or expired workflow state" }` (and similar) when state tokens are consumed or expired — this clause picks those up.
+2. `body.error` — fallback when `message` is absent. Servers before wooks 0.8 / moost 0.7 sent workflow-trigger refusals as `{ error: "Invalid or expired workflow state" }`; since then they are `HttpError` bodies with the text in `message` and a `code` (`WF_EXPIRED`, `WF_FORBIDDEN`, …), so clause 1 picks them up.
 3. A friendly message keyed off the HTTP status code — used when the body is missing, empty, or has neither field. Examples:
    - `401` → "You need to sign in to continue."
    - `403` → "You don't have permission to do that."

@@ -223,7 +223,7 @@ Options mirror `<AsWfForm>` props (minus rendering-related `types`, `firstValida
 On a non-2xx response the composable sets `error.value` to `{ message, status }`. The message is resolved from the JSON body in this order:
 
 1. `body.message` — application intent. Wooksjs `HttpError(status, message)` puts the user-facing copy here.
-2. `body.error` — fallback. The wf-trigger engine emits `{ error: "Invalid or expired workflow state" }` for expired/consumed state tokens.
+2. `body.error` — fallback for servers before wooks 0.8 / moost 0.7, which sent trigger refusals as `{ error: "Invalid or expired workflow state" }`. Since then refusals are `HttpError` bodies: text in `message`, plus `code` (`WF_EXPIRED` 410, `WF_FORBIDDEN` 403, …) — clause 1.
 3. Friendly status-keyed default (e.g. `410` → "This session has expired. Please start over.", `403` → "You don't have permission to do that."). Unmapped 4xx fall through to a generic 4xx string; any 5xx collapses to a generic "try again" string.
 
 `message` wins over `error` because in a wooksjs `HttpError` envelope `error` carries the HTTP reason phrase (`"Forbidden"`, `"Conflict"`) while `message` carries the backend's user-facing copy.
