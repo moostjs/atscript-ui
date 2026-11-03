@@ -362,7 +362,12 @@ A few patterns you'll see again and again:
   the displayed value.
 - **Order resolution** — `@ui.form.order` is numeric; ties fall through
   in declaration order. Mixing some-ordered + some-unordered fields
-  works.
+  works. Unordered fields come after ordered ones.
+- **Order with `extends`** — an interface's declaration order puts the
+  inherited fields first, then its own. To show an own field earlier
+  (`SignupForm extends NamedForm { username }` with `username` on top),
+  give it a `@ui.form.order` lower than the fields it should precede — or
+  order every field you care about.
 
 ## Next steps
 

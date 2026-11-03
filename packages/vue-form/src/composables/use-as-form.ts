@@ -15,6 +15,7 @@ import {
   iteratePathAncestors,
   mergeErrorMaps,
   omitPaths,
+  omitSkippedNavFields,
   resolveFormProp,
   META_DESCRIPTION,
   META_LABEL,
@@ -532,7 +533,9 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     const result = submit();
     if (result === true) {
       internalErrors.value = {};
-      options.emits?.submit?.(domainData());
+      // Related rows of navigation fields the form leaves out (loaded with
+      // `$with`, never rendered or validated) are not submitted.
+      options.emits?.submit?.(omitSkippedNavFields(options.def(), domainData()));
     } else {
       const errs: Record<string, string> = {};
       for (const e of result) errs[e.path] = e.message;

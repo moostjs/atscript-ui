@@ -11,8 +11,8 @@ The shape comes from `.as` schemas (see
 [atscript-db relations](https://db.atscript.dev/relations)).
 
 ```atscript
-import { CustomersTable } from './Customer.as'
-import { ProductsTable } from './Product.as'
+import { CustomersTable } from './Customer'
+import { ProductsTable } from './Product'
 
 @db.table 'orders'
 export interface OrdersTable {

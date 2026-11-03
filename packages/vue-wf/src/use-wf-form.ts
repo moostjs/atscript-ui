@@ -38,7 +38,12 @@ export interface UseWfFormOptions {
   path: string;
   /** Workflow ID to start (e.g., 'auth/login') */
   name: string;
-  /** Initial input to send with the start request */
+  /**
+   * Initial form data for the start request. Sent as the first request's
+   * `input.formData` (the workflow protocol envelope), so the start step
+   * reads it with `useWfState().input().formData` — or validated, with
+   * unknown keys stripped, via `useAtscriptWf(Form).resolveInput()`.
+   */
   input?: Record<string, unknown>;
   /**
    * How to transport the workflow state token.
@@ -69,6 +74,43 @@ export interface UseWfFormOptions {
    * Takes precedence over `tokenTransport: "query"` auto-detection.
    */
   initialToken?: string;
+}
+
+/** A failed round-trip, as `error` holds it (and `AsWfForm` emits it). */
+export interface WfFormError {
+  /** Text to show: the answer's `message` (or `error`), else a friendly text for the status. */
+  message: string;
+  /** HTTP status of a refused request (absent for a network error). */
+  status?: number;
+  /** The answer's machine-readable `code`, when it has one (e.g. a step's own refusal code). */
+  code?: string;
+  /** The parsed JSON body of a refused request (`code`, `params`, …), when it has one. */
+  body?: unknown;
+}
+
+/**
+ * A `{ error }` answer as a `WfFormError`: a string is the message; an
+ * object keeps its `message` / `status` / `code` and is the `body`.
+ */
+function bodyError(raw: unknown): WfFormError {
+  if (typeof raw === "string") return { message: raw };
+  const body =
+    typeof raw === "object" && raw !== null
+      ? (raw as { message?: unknown; status?: unknown; code?: unknown })
+      : undefined;
+  const status = typeof body?.status === "number" ? body.status : undefined;
+  const failed: WfFormError = {
+    message:
+      typeof body?.message === "string"
+        ? body.message
+        : status !== undefined
+          ? friendlyMessageForStatus(status)
+          : "Something went wrong with that request. Please try again.",
+  };
+  if (status !== undefined) failed.status = status;
+  if (typeof body?.code === "string") failed.code = body.code;
+  if (body) failed.body = body;
+  return failed;
 }
 
 export interface UseWfFormReturn {
@@ -190,7 +232,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     }
 
     if (data.error) {
-      error.value = data.error;
+      error.value = bodyError(data.error);
       return;
     }
 
@@ -251,9 +293,12 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
       }
 
       if (!res.ok) {
-        const errData = data as { error?: string; message?: string } | null;
+        const errData = data as { error?: string; message?: string; code?: unknown } | null;
         const msg = errData?.message ?? errData?.error ?? friendlyMessageForStatus(res.status);
-        error.value = { message: msg, status: res.status };
+        const failed: WfFormError = { message: msg, status: res.status };
+        if (typeof errData?.code === "string") failed.code = errData.code;
+        if (data !== null) failed.body = data;
+        error.value = failed;
         return;
       }
 

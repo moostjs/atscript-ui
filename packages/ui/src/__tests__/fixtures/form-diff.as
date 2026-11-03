@@ -223,3 +223,50 @@ export interface RenamedVersionForm {
     @db.column.derived
     customerId?: RenamedVersionForm.payload.customerId
 }
+
+// ── @db.json arrays ───────────────────────────────────────────
+
+@meta.label 'Settings'
+type JsonSettings = {
+    flags: string[]
+    mode?: string
+}
+
+/// `@db.json` stores a field as one JSON value: the db applies no array
+/// operations inside it, so the patch must carry whole values. `synonyms` /
+/// `lines` are `@db.json` arrays (unique primitives / keyed objects), `doc` an
+/// inlined `@db.json` object holding an array, `settings` a structured one.
+/// `meta` is a plain merge object whose array keeps its operations.
+@db.table 'json_array_form'
+export interface JsonArrayForm {
+    name: string
+
+    @db.json
+    @expect.array.uniqueItems
+    synonyms?: string[]
+
+    @db.json
+    lines?: CartLine[]
+
+    @db.json
+    doc?: {
+        tags: string[]
+        note?: string
+    }
+
+    @db.json
+    @db.patch.strategy 'merge'
+    settings?: JsonSettings
+
+    @db.patch.strategy 'merge'
+    meta?: {
+        @expect.array.uniqueItems
+        labels: string[]
+        note?: string
+    }
+
+    plain?: {
+        items: string[]
+        note?: string
+    }
+}

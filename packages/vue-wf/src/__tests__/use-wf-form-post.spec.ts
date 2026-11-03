@@ -354,6 +354,85 @@ describe("useWfForm — error response handling", () => {
     });
   });
 
+  // A step can refuse with a machine-readable `code` (and params): the error
+  // value carries the parsed body so the UI can branch on it.
+  it("keeps the error code and the parsed body", async () => {
+    const body = {
+      statusCode: 409,
+      message: "No invitations left",
+      error: "Conflict",
+      code: "invite_limit",
+      params: { max: 3 },
+    };
+    const fetchMock = makeFetchMock(body, 409, "Conflict");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toEqual({
+      message: "No invitations left",
+      status: 409,
+      code: "invite_limit",
+      body,
+    });
+  });
+
+  it("leaves code and body out when the answer has no JSON body", async () => {
+    const fetchMock = makeFetchMock(null, 500, "Server Error");
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(Object.keys(result.error.value as object).toSorted()).toEqual(["message", "status"]);
+  });
+
+  it.each([
+    ["a string", "Not allowed", { message: "Not allowed" }],
+    [
+      "an object",
+      { message: "Gone", status: 410, code: "WF_EXPIRED" },
+      {
+        message: "Gone",
+        status: 410,
+        code: "WF_EXPIRED",
+        body: { message: "Gone", status: 410, code: "WF_EXPIRED" },
+      },
+    ],
+    [
+      "an object without a message",
+      { status: 403 },
+      { message: "You don't have permission to do that.", status: 403, body: { status: 403 } },
+    ],
+  ])("a 200 answer with `{ error }` as %s becomes a WfFormError", async (_, raw, expected) => {
+    const fetchMock = vi.fn(
+      async () =>
+        ({ ok: true, status: 200, json: async () => ({ error: raw }) }) as unknown as Response,
+    );
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      autoStart: false,
+      fetch: fetchMock as unknown as typeof fetch,
+    });
+
+    await result.start();
+    await flushPromises();
+
+    expect(result.error.value).toEqual(expected);
+  });
+
   // WHY: primary fallback regression — the HTTP reason phrase ("Gone") must
   // never reach the user-facing error slot. A friendly mapped message is the
   // baseline UX when the server didn't supply a body.

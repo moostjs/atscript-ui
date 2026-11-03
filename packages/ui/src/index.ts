@@ -162,6 +162,7 @@ export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/v
 
 // ── Form diff engine (framework-agnostic) ───────────────────
 export { buildFormDiff, deepEqual } from "./form/diff";
+export { omitSkippedNavFields } from "./form/skipped-nav";
 export type { FormDiffResult, FormDiffOptions, FormFieldChange } from "./form/diff";
 
 // ── Per-field dirty predicate (framework-agnostic) ──────────

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, toRaw, watch, type Component } from "vue";
 import { useWfForm } from "../use-wf-form";
-import type { UseWfFormOptions } from "../use-wf-form";
+import type { UseWfFormOptions, WfFormError } from "../use-wf-form";
 import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
 import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getDeclaredFormActions } from "@atscript/ui";
@@ -39,7 +39,7 @@ const props = withDefaults(defineProps<AsWfFormProps>(), {
 
 const emit = defineEmits<{
   (e: "finished", response: unknown): void;
-  (e: "error", error: { message: string; status?: number }): void;
+  (e: "error", error: WfFormError): void;
   (e: "form", def: FormDef, context?: Record<string, unknown>): void;
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
@@ -64,7 +64,7 @@ watch(
 watch(
   () => wf.error.value,
   (v) => {
-    if (v) emit("error", v as { message: string; status?: number });
+    if (v) emit("error", v as WfFormError);
   },
 );
 watch([() => wf.formDef.value, () => wf.formContext.value], ([def, ctx]) => {

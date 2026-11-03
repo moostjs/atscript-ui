@@ -21,6 +21,11 @@ describe("AsForm", () => {
     expect(button.text()).toBe("Submit");
   });
 
+  it("the default submit button is an explicit type=submit button", () => {
+    const { wrapper } = mountForm(objectType({ name: stringProp() }));
+    expect(wrapper.find("form > button.as-submit-btn").attributes("type")).toBe("submit");
+  });
+
   it("renders input fields for string props", async () => {
     const { LabeledForm } = await import("./fixtures/form-features.as");
     const { wrapper } = mountForm(LabeledForm);

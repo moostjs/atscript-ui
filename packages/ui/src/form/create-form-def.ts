@@ -5,7 +5,7 @@ import type {
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
 import { flattenAnnotatedType } from "@atscript/typescript/utils";
-import { isServerStampedOnUpdate } from "@atscript/db/validator";
+import { isNavRelation, isServerStampedOnUpdate } from "@atscript/db/validator";
 import type {
   FormArrayFieldDef,
   FormDef,
@@ -20,12 +20,14 @@ import {
   DB_AMOUNT_CURRENCY,
   DB_AMOUNT_CURRENCY_REF,
   DB_COLUMN_DERIVED,
+  DB_COLUMN_VERSION,
   DB_UNIT,
   DB_UNIT_REF,
   META_DESCRIPTION,
   META_LABEL,
   UI_FORM_COMPONENT,
   UI_FORM_FN_OPTIONS,
+  UI_FORM_NS,
   UI_FORM_OPTIONS,
   UI_FORM_ORDER,
   UI_FORM_PREFIX,
@@ -40,6 +42,7 @@ import {
 } from "../shared/annotation-keys";
 import { isPureLiteralUnion } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
+import { isSkippedNavField } from "./skipped-nav";
 
 /** Known atscript primitive extension tags that map directly to field types. */
 const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
@@ -50,7 +53,8 @@ export interface CreateFormDefOptions {
    * `meta.versionColumn` — the server-managed OCC version field (its LOGICAL
    * name; a `@db.column` rename changes only the storage column). Excluded
    * from `fields[]`; it stays in `flatMap` so the wire payload is unchanged.
-   * Root-table concept; not propagated into nested recursive calls.
+   * Root-table concept; not propagated into nested recursive calls. With
+   * `mode: "edit"` it defaults to the top-level `@db.column.version` field.
    */
   versionColumn?: string;
   /**
@@ -78,7 +82,36 @@ export interface CreateFormDefOptions {
   mode?: "create" | "edit";
 }
 
-const EDIT: CreateFormDefOptions = { mode: "edit" };
+/**
+ * The object defs, and the array / union / tuple field defs, under
+ * construction (innermost last). A recursive type reached again inside its own
+ * build reuses the def being built, so the def graph gets a cycle instead of
+ * an endless expansion: a tree's `children` items are the same def at every
+ * depth, built once. A field def is reused only at the same path relative to
+ * its object def, so a reused field always sits where it was built. Both are
+ * per mode (`edit`), which shapes the defs.
+ */
+const defsInProgress: { type: TAtscriptAnnotatedType; edit: boolean; def: FormDef }[] = [];
+const fieldsInProgress: {
+  prop: TAtscriptAnnotatedType;
+  path: string;
+  edit: boolean;
+  field: FormFieldDef;
+  /** Unnamed copies of `field` (see `unnamed`), filled once it is built. */
+  copies: FormFieldDef[];
+}[] = [];
+
+/**
+ * `field` without its name (a tuple item). A field def still under
+ * construction (a recursion back to it) gets a copy filled when it is built.
+ */
+function unnamed(field: FormFieldDef): FormFieldDef {
+  const building = fieldsInProgress.find((e) => e.field === field);
+  if (!building) return { ...field, name: "" };
+  const copy = { name: "" } as FormFieldDef;
+  building.copies.push(copy);
+  return copy;
+}
 
 /**
  * Converts an ATScript annotated type into a FormDef.
@@ -90,9 +123,28 @@ const EDIT: CreateFormDefOptions = { mode: "edit" };
  * A `@db.column.derived` field is marked `derived` straight from its metadata;
  * a computed view column, from `opts.metaFields`; an update-stamped field
  * (see `CreateFormDefOptions.mode`), when `opts.mode` is `"edit"`.
+ *
+ * A navigation field (`@db.rel.from` / `.to` / `.via`) is left out unless it
+ * carries a `@ui.form.*` annotation of its own (see {@link isSkippedNavField}).
+ *
+ * Recursive types are safe at any depth: a type reached again inside its own
+ * build reuses the def being built (the def graph is cyclic, not infinite).
+ * A recursive object that would otherwise render inline (no `@ui.form.*`)
+ * becomes a nested object field, since inlining it would never end.
  */
 export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef {
-  const edit = opts?.mode === "edit";
+  return buildFormDef(type, opts?.mode === "edit", opts ?? {});
+}
+
+/**
+ * The def of an object (or a leaf) type. `root`: the caller's options, for the
+ * form's own type only — nested objects get none of the root-table ones.
+ */
+function buildFormDef(
+  type: TAtscriptAnnotatedType,
+  edit: boolean,
+  root?: CreateFormDefOptions,
+): FormDef {
   // Non-object types: single leaf field (never pushed down)
   if (type.type.kind !== "object") {
     const rootField = createFieldDef("", type, edit);
@@ -100,11 +152,76 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
     return { type, rootField, fields, mainFields: fields, pushDownFields: [], flatMap: new Map() };
   }
 
+  // A nested def reached again inside its own build is the one being built.
+  // The root's is never reused (root options shape it alone).
+  if (!root) {
+    const reached = defsInProgress.find((e) => e.type === type && e.edit === edit);
+    if (reached) return reached.def;
+  }
+
   // Object types: flatten and iterate props
   const objectType = type as TAtscriptAnnotatedType<TAtscriptTypeObject>;
   const flatMap = flattenAnnotatedType(objectType, { excludePhantomTypes: false });
+  const opts: CreateFormDefOptions | undefined = root && {
+    ...root,
+    versionColumn: root.versionColumn ?? (edit ? findVersionColumn(flatMap) : undefined),
+  };
 
   const fields: FormFieldDef[] = [];
+  const rootField = {
+    path: "",
+    prop: type,
+    type: "object",
+    phantom: false,
+    name: "",
+    allStatic: false,
+    pushDown: false,
+  } as FormObjectFieldDef;
+  const def: FormDef = { type, rootField, fields, mainFields: fields, pushDownFields: [], flatMap };
+  rootField.objectDef = def;
+
+  let collected: CollectedField[];
+  if (!root) defsInProgress.push({ type, edit, def });
+  try {
+    collected = collectFields(objectType, flatMap, edit, opts);
+  } finally {
+    if (!root) defsInProgress.pop();
+  }
+
+  // Sort by `@ui.form.order` (stable: flatMap order among equals).
+  collected.sort((a, b) => a.order - b.order);
+  for (const c of collected) fields.push(c.field);
+
+  // Partition by `@ui.form.pushDown` once. Common case (nothing pushed down):
+  // reuse `fields` as `mainFields` to avoid a copy; only split when needed.
+  if (collected.some((c) => c.pushDown)) {
+    def.mainFields = [];
+    for (const c of collected) (c.pushDown ? def.pushDownFields : def.mainFields).push(c.field);
+  }
+
+  return def;
+}
+
+/**
+ * A top-level field of an object def, with its own prop's placement read up
+ * front: a recursive field def may still be under construction here.
+ */
+interface CollectedField {
+  field: FormFieldDef;
+  order: number;
+  pushDown: boolean;
+}
+
+/** Builds the top-level fields of an object def from its flattened props, unsorted. */
+function collectFields(
+  objectType: TAtscriptAnnotatedType<TAtscriptTypeObject>,
+  flatMap: Map<string, TAtscriptAnnotatedType>,
+  edit: boolean,
+  opts: CreateFormDefOptions | undefined,
+): CollectedField[] {
+  const fields: CollectedField[] = [];
+  // Paths whose children are not fields of this def: a structured field owns
+  // them, or a skipped navigation field drops them. Pre-suffixed with ".".
   const structuredPrefixes = new Set<string>();
 
   for (const [path, prop] of flatMap.entries()) {
@@ -115,8 +232,23 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
     const originalProp = resolveOriginalProp(objectType, path) ?? prop;
     const kind = originalProp.type.kind;
 
-    // Namespace objects: skip, children render inline
-    if (kind === "object" && !isStructuredObject(originalProp)) continue;
+    if (isSkippedNavField(originalProp)) {
+      structuredPrefixes.add(path + ".");
+      continue;
+    }
+
+    // Namespace objects: skip, children render inline. A recursive object
+    // reached again is listed without children (`flattenAnnotatedType` does
+    // not expand it), and an opted-in navigation object is another table's
+    // row, so both render as a nested object field instead.
+    if (
+      kind === "object" &&
+      !isStructuredObject(originalProp) &&
+      !isNavRelation(originalProp) &&
+      !isUnexpandedObject(path, originalProp, flatMap)
+    ) {
+      continue;
+    }
 
     // Nested arrays without component: unsupported
     if (kind === "array") {
@@ -131,38 +263,14 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
     }
 
     const field = createFieldDef(path, originalProp, edit);
-    if (opts?.metaFields?.[path]?.computed) field.derived = true;
-    fields.push(field);
+    fields.push({
+      // A copy: a recursive type's field defs may be shared with nested defs.
+      field: opts?.metaFields?.[path]?.computed ? { ...field, derived: true } : field,
+      order: (getFieldMeta(originalProp, UI_FORM_ORDER) as number | undefined) ?? Infinity,
+      pushDown: getFieldMeta(originalProp, UI_FORM_PUSH_DOWN) !== undefined,
+    });
   }
-
-  // Sort by ui.form.order (cache order values to avoid repeated metadata lookups during sort)
-  const orderMap = new Map(
-    fields.map((f) => [f, (getFieldMeta(f.prop, UI_FORM_ORDER) as number | undefined) ?? Infinity]),
-  );
-  fields.sort((a, b) => orderMap.get(a)! - orderMap.get(b)!);
-
-  const rootField = {
-    path: "",
-    prop: type,
-    type: "object",
-    phantom: false,
-    name: "",
-    allStatic: false,
-    pushDown: false,
-  } as FormObjectFieldDef;
-
-  // Partition by `@ui.form.pushDown` once. Common case (nothing pushed down):
-  // reuse `fields` as `mainFields` to avoid a copy; only split when needed.
-  let mainFields = fields;
-  const pushDownFields: FormFieldDef[] = [];
-  if (fields.some((f) => f.pushDown)) {
-    mainFields = [];
-    for (const f of fields) (f.pushDown ? pushDownFields : mainFields).push(f);
-  }
-
-  const def: FormDef = { type, rootField, fields, mainFields, pushDownFields, flatMap };
-  rootField.objectDef = def;
-  return def;
+  return fields;
 }
 
 // ── Unified field def creation ───────────────────────────────
@@ -170,14 +278,39 @@ export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDef
 /**
  * Creates a FormFieldDef from any ATScript annotated type. `edit`: the form
  * edits a stored row (`CreateFormDefOptions.mode`).
+ *
+ * An array, union or tuple reached again at the same path inside its own
+ * build (an array item, a union variant or a tuple item of a recursive alias)
+ * gets the field def under construction. Every other recursion passes an
+ * object def, which `defsInProgress` catches, so the build always ends.
  */
-function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit = false): FormFieldDef {
+function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit: boolean): FormFieldDef {
+  const kind = prop.type.kind;
+  if (kind === "" || kind === "object") return buildFieldDef(path, prop, edit);
+  const reached = fieldsInProgress.find(
+    (e) => e.prop === prop && e.path === path && e.edit === edit,
+  );
+  if (reached) return reached.field;
+  const building = { prop, path, edit, field: {} as FormFieldDef, copies: [] as FormFieldDef[] };
+  fieldsInProgress.push(building);
+  try {
+    const field = Object.assign(building.field, buildFieldDef(path, prop, edit));
+    for (const copy of building.copies) Object.assign(copy, field, { name: "" });
+    return field;
+  } finally {
+    fieldsInProgress.pop();
+  }
+}
+
+function buildFieldDef(path: string, prop: TAtscriptAnnotatedType, edit: boolean): FormFieldDef {
   const kind = prop.type.kind;
   const name = path.slice(path.lastIndexOf(".") + 1);
   const allStatic = !hasComputedAnnotations(prop);
-  const uiType =
+  const declaredType =
     (getFieldMeta(prop, UI_FORM_TYPE) as string | undefined) ??
     (getFieldMeta(prop, UI_TYPE) as string | undefined);
+  // `tags` edits an array; elsewhere it would mount with a scalar.
+  const uiType = declaredType === "tags" && kind !== "array" ? undefined : declaredType;
   const pushDown = getFieldMeta(prop, UI_FORM_PUSH_DOWN) !== undefined;
   // Resolved ONCE per field and carried on the def (mirrors `ColumnDef` on the
   // table side). The `ref` chain walk used to run twice — here as a boolean
@@ -221,16 +354,18 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit = false
     // and validator/path logic stay honest; route the renderer via
     // customType. Eligibility: explicit @ui.form.type multiselect, OR
     // array carries @ui.form.options / @ui.form.fn.options, OR item is a
-    // pure literal union.
-    const isMultiselect =
-      customType === "multiselect" ||
+    // pure literal union. Free entry (`tags`): explicit @ui.form.type tags,
+    // OR an explicit multiselect with nothing to pick from.
+    const hasOptions =
       getFieldMeta(prop, UI_FORM_OPTIONS) !== undefined ||
       getFieldMeta(prop, UI_FORM_FN_OPTIONS) !== undefined ||
       isPureLiteralUnion(arrayType.of);
+    const isTags = customType === "tags" || (customType === "multiselect" && !hasOptions);
+    const isMultiselect = customType === "multiselect" || hasOptions;
     return {
       ...base,
       type: "array",
-      customType: isMultiselect ? "multiselect" : customType,
+      customType: isTags ? "tags" : isMultiselect ? "multiselect" : customType,
       itemType: arrayType.of,
       itemField: createFieldDef("", arrayType.of, edit),
     } as FormArrayFieldDef;
@@ -242,10 +377,7 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit = false
       ...base,
       type: "object",
       customType,
-      objectDef: createFormDef(
-        prop as TAtscriptAnnotatedType<TAtscriptTypeObject>,
-        edit ? EDIT : undefined,
-      ),
+      objectDef: buildFormDef(prop, edit),
     } as FormObjectFieldDef;
   }
 
@@ -289,11 +421,8 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit = false
       ...base,
       type: "tuple",
       customType,
-      itemFields: tupleType.items.map((item, i) => {
-        const field = createFieldDef(String(i), item);
-        field.name = "";
-        return field;
-      }),
+      // Not `edit`: the server stamps no field below a tuple.
+      itemFields: tupleType.items.map((item, i) => unnamed(createFieldDef(String(i), item, false))),
     } as FormTupleFieldDef;
   }
 
@@ -368,7 +497,6 @@ function createFieldDef(path: string, prop: TAtscriptAnnotatedType, edit = false
 
 /** Non-`ui.form.*` keys that still address the object itself. */
 const OBJECT_IDENTITY_KEYS = new Set<string>([META_LABEL, META_DESCRIPTION, UI_TYPE]);
-const UI_FORM_NS = "ui.form.";
 /** `ui.form.*` keys that place a field rather than give it an identity. */
 const UI_FORM_PLACEMENT_NS = "ui.form.grid.";
 
@@ -405,6 +533,29 @@ function isStructuredObject(prop: TAtscriptAnnotatedType): boolean {
     return true;
   }
   return false;
+}
+
+/** The top-level `@db.column.version` field of a flattened type, if any. */
+export function findVersionColumn(
+  flatMap: Map<string, TAtscriptAnnotatedType>,
+): string | undefined {
+  for (const [path, prop] of flatMap) {
+    if (path && !path.includes(".") && prop.metadata.has(DB_COLUMN_VERSION)) return path;
+  }
+  return undefined;
+}
+
+/**
+ * An object prop that `flattenAnnotatedType` listed without expanding it: a
+ * recursive type reached again. Its children are absent from the flat map.
+ */
+function isUnexpandedObject(
+  path: string,
+  prop: TAtscriptAnnotatedType,
+  flatMap: Map<string, TAtscriptAnnotatedType>,
+): boolean {
+  const first = (prop.type as TAtscriptTypeObject).props.keys().next();
+  return !first.done && !flatMap.has(`${path}.${first.value}`);
 }
 
 /** Resolves the original annotated type from the type hierarchy by path. */
@@ -464,10 +615,7 @@ function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVar
     return {
       label,
       type: def,
-      def: createFormDef(
-        def as TAtscriptAnnotatedType<TAtscriptTypeObject>,
-        edit ? EDIT : undefined,
-      ),
+      def: buildFormDef(def, edit),
       itemField: hasComponent ? createFieldDef("", def, edit) : undefined,
     };
   }

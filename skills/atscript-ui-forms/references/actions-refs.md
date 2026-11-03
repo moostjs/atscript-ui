@@ -257,7 +257,7 @@ export interface Category {
 }
 
 // src/product.as
-import { Category } from './category.as'
+import { Category } from './category'
 
 @meta.label 'Product'
 @db.table 'products'
@@ -452,7 +452,7 @@ export interface Country {
 }
 
 // src/customer.as
-import { Country } from './country.as'
+import { Country } from './country'
 
 @meta.label 'Customer'
 @db.table 'customers'

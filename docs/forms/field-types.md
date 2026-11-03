@@ -28,6 +28,7 @@ component:
 | `radio`       | `AsRadio`         | radio-button group                                              |
 | `checkbox`    | `AsCheckbox`      | single boolean checkbox / tri-state for optional booleans       |
 | `multiselect` | `AsMultiSelect`   | combobox popup with chip-style selections, bound to `T[]`       |
+| `tags`        | `AsMultiSelect`   | free entry: typed values become chips, bound to `T[]`           |
 | `date`        | `AsDate`          | date picker (`YYYY-MM-DD`)                                      |
 | `datetime`    | `AsDatetime`      | date + time picker                                              |
 | `time`        | `AsTime`          | time picker (`HH:MM` / `HH:MM:SS`)                              |
@@ -41,6 +42,34 @@ component:
 
 All Tier-2 defaults are exported from `@atscript/vue-form` and can be
 imported by name when you want to reuse one inside a custom renderer.
+
+### A narrow type map
+
+`createDefaultTypes()` imports every default component, and the
+`@atscript/ui-styles` extractor then keeps every default's CSS. An app whose
+forms use a few field kinds can list just those: import each default by
+name (or from its `@atscript/vue-form/as-*` subpath) and build the map
+yourself. Only the imported components reach the bundle, and the extractor
+keeps only their CSS.
+
+```ts
+import { AsInput, AsNumber, AsObject, AsSelect } from "@atscript/vue-form";
+import type { TAsTypeComponents } from "@atscript/vue-form";
+
+export const types: TAsTypeComponents = {
+  object: AsObject, // always: renders the form's root
+  text: AsInput,
+  textarea: AsInput,
+  number: AsNumber,
+  select: AsSelect,
+};
+```
+
+Every key of `TAsTypeComponents` is optional. A field whose type has no
+entry renders a "No component for type" notice — add the entry, or use
+`createDefaultTypes()` while the forms are still changing. Don't call
+`createDefaultTypes()` anywhere in the app if you want the narrow CSS: the
+extractor treats the call as "all defaults".
 
 ## Atscript primitive → field type
 
@@ -123,6 +152,32 @@ under the `multiselect` key.
 For **custom** renderers — anything outside the built-in id list — use
 `@ui.form.component` instead, with the name registered in the
 `:components` prop map. The `:types` map is reserved for built-ins.
+
+## Free-entry arrays (tags)
+
+`@ui.form.type 'tags'` on a `string[]` (or `number[]`) lets the user type
+the values — synonyms, keywords, e-mail lists. A `multiselect` with no
+options to pick from (no `@ui.form.options`, no `@ui.form.fn.options`, no
+literal-union items) gets the same renderer. Since 0.1.164.
+
+```atscript
+@ui.form.type 'tags'
+@expect.array.uniqueItems
+synonyms: string[]
+```
+
+| Input                        | Effect                                                    |
+| ---------------------------- | --------------------------------------------------------- |
+| Enter or `,`                 | adds the typed value (trimmed; an empty value is ignored) |
+| Paste                        | splits the text on `,` and adds each part                 |
+| Leaving the input            | adds a value still in the input                           |
+| Backspace in the empty input | selects the last chip; a second Backspace removes it      |
+
+Duplicates are refused when the array is `@expect.array.uniqueItems`;
+otherwise they are kept, as the type allows them. `number[]` items are
+stored as numbers. The `tags` key falls back to the `array` renderer in a
+`:types` map that has no `tags` entry. `'tags'` on a field that is not an
+array is a compile error (and ignored at runtime).
 
 ## Component resolution
 

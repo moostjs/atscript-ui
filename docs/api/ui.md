@@ -171,7 +171,19 @@ interface CreateFormDefOptions {
 }
 ```
 
-When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly — it is the logical field name (see [`MetaResponse`](#metaresponse)).
+When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly — it is the logical field name (see [`MetaResponse`](#metaresponse)). With `mode: "edit"` it defaults to the top-level `@db.column.version` field, so an edit form built straight from the type hides it too. Since 0.1.164.
+
+Navigation fields (`@db.rel.from` / `@db.rel.to` / `@db.rel.via`) are left out of the form: they hold related rows, not data the row's own form edits. Annotate one with any `@ui.form.*` (e.g. `@ui.form.order`) to include it — an included navigation object renders as a section, and its changes are nested writes to the related table. A skipped navigation field is also skipped by the [form validator](#validators), and its loaded rows are never sent: not by `buildFormDiff` (at any depth), not in `AsForm`'s `submit` data. Since 0.1.164.
+
+### `omitSkippedNavFields(def, data)`
+
+A deep copy of form data (the unwrapped domain value) without the navigation fields `def` leaves out, at any depth. Returns `data` itself when there are none. Use it when you send form data yourself instead of through `AsForm`'s `submit` event or `buildFormDiff`, which apply it already. Since 0.1.164.
+
+```typescript
+function omitSkippedNavFields<T>(def: FormDef, data: T): T;
+```
+
+Recursive types (a tree's `children: Node[]`, mutual references, a union containing the type itself) are supported at any depth: the nested defs repeat instead of expanding forever, and an object reached again inside itself renders as a nested object field rather than inline. Since 0.1.164.
 
 A `@db.column.derived` field (a top-level column the server computes from a `@db.json` leaf) needs no option: `createFormDef` reads the annotation from the type — `/meta` keeps it in the serialized type since `@atscript/db` 0.1.142 — and sets [`FormFieldDef.derived`](#formfielddef). `<AsField>` renders the field read-only with no required marker, the [validators](#validators) never fail it (a required derived field left empty on a create form passes), and `buildFormDiff` never sends it. Since 0.1.144.
 

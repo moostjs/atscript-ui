@@ -56,7 +56,7 @@ interface AsWfFormProps {
   initialToken?: string;
 
   // ── HTTP options ───────────────────────────────────────────
-  /** Initial input sent with the first request. */
+  /** Initial form data, sent as the first request's `input.formData`. */
   input?: Record<string, unknown>;
   /** Custom fetch options (headers, credentials, AbortSignal). */
   fetchOptions?: RequestInit;
@@ -101,7 +101,7 @@ Defaults set at the component:
 ```ts
 defineEmits<{
   (e: "finished", response: unknown): void;
-  (e: "error", error: { message: string; status?: number }): void;
+  (e: "error", error: WfFormError): void; // { message, status?, code?, body? }
   (e: "form", def: FormDef, context?: Record<string, unknown>): void;
   (e: "submit", data: unknown): void;
   (e: "loading", isLoading: boolean): void;
@@ -116,7 +116,10 @@ defineEmits<{
   paused via outlet (`{ sent: true }`). Fires with the full
   response.
 - **`@error`** — HTTP failure (`!res.ok`), network error, or
-  `{ error }` body. Treat as recoverable.
+  `{ error }` body. Treat as recoverable. A refused request carries the
+  answer's `code` and parsed `body` too, so the UI can branch on a step's
+  own refusal (`if (e.code === "invite_limit") …`) — see
+  [Error resolution](/api/vue-wf#error-resolution).
 - **`@form`** — fires whenever a new `FormDef` arrives (initial
   step, or schema change between steps). Useful for analytics /
   step transitions.

@@ -179,6 +179,18 @@ describe("as-field-status is visually hidden", () => {
   });
 });
 
+describe("as-field-input-row lets a custom control fill the row", () => {
+  // The row is a flex ROW: without these a custom control's root shrinks to
+  // its content width.
+  it("a lone child grows and may shrink below its content width", async () => {
+    const lone = (await rules("as-field-input-row")).filter(([sel]) => sel.includes(":only-child"));
+    expect(Object.assign({}, ...lone.map(([, d]) => d))).toMatchObject({
+      flex: "1 1 0%",
+      "min-width": "0",
+    });
+  });
+});
+
 /** `[selector, declarations]` for every rule a token produced. */
 async function rules(token: string): Promise<[string, Record<string, string>][]> {
   return (await parse(token)).map((u) => [String(u[1] ?? ""), parseBody(u[2] || "")]);

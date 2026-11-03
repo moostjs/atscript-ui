@@ -144,7 +144,11 @@ describe("useWfForm", () => {
     const { result } = mountComposable({ path: "/api/wf", name: "bad" });
     await flushPromises();
 
-    expect(result.error.value).toEqual({ message: "Workflow not found", status: 404 });
+    expect(result.error.value).toEqual({
+      message: "Workflow not found",
+      status: 404,
+      body: { message: "Workflow not found", status: 404 },
+    });
     expect(result.formDef.value).toBeNull();
   });
 
@@ -154,7 +158,11 @@ describe("useWfForm", () => {
     const { result } = mountComposable({ path: "/api/wf", name: "test" });
     await flushPromises();
 
-    expect(result.error.value).toEqual({ message: "Internal Server Error", status: 500 });
+    expect(result.error.value).toEqual({
+      message: "Internal Server Error",
+      status: 500,
+      body: { message: "Internal Server Error" },
+    });
   });
 
   it("handles network errors", async () => {

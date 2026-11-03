@@ -189,6 +189,19 @@ export interface ArrayWithFormType {
     tags: string[]
 }
 
+/// Free-entry arrays: `@ui.form.type 'tags'`, or a multiselect with nothing
+/// to pick from (`plainMulti`); `pickMulti` has options and stays a picker.
+export interface TagsArrays {
+    @ui.form.type 'tags'
+    tags: string[]
+
+    @ui.form.type 'multiselect'
+    plainMulti: string[]
+
+    @ui.form.type 'multiselect'
+    pickMulti: ('a' | 'b')[]
+}
+
 /// Object used as the source for a root-level array prop —
 /// `RootArrayContainer.type.props.get('items')` is the array itself.
 export interface RootArrayContainer {

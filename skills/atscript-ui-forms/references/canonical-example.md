@@ -63,7 +63,7 @@ const props = defineProps<{ id: number; client: Client<typeof ServiceTicket> }>(
 // One custom control; everything else keeps its default renderer.
 const types = { ...createDefaultTypes(), priority: TicketPriority };
 // `formData` is the WRAPPED container `{ value: domainData }`.
-const { def, formData } = createAsFormDef(ServiceTicket);
+const { def, formData } = createAsFormDef(ServiceTicket, undefined, { mode: "edit" });
 
 // `AsForm` is generic — a structural handle types the ref more cleanly than
 // `InstanceType<typeof AsForm>`.

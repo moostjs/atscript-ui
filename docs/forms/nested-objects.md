@@ -59,6 +59,52 @@ its siblings, and a namespace object has no position of its own — its
 children carry their own order. Give the object a label if you want to
 place it as a unit.
 
+## Recursive types and navigation fields
+
+A type may contain itself — a tree node with `children: Node[]`, two
+interfaces that point at each other, a union holding the type. Forms build
+for any such type: the nested definitions repeat instead of expanding
+forever, and the form renders as deep as the data goes. A recursive object
+without an identity annotation still becomes a **section** where it closes
+the loop (it can't render inline — that would never end).
+
+```atscript
+export interface Category {
+    name: string
+    parent?: Category      // a section — the type reached again
+    children?: Category[]  // an array of the same type
+}
+```
+
+Navigation fields of a db table — `@db.rel.from`, `@db.rel.to`,
+`@db.rel.via` — are **not** form fields by default: they hold related rows
+(loaded with `$with`), not data the row's own form edits, and a two-way pair
+points straight back at the form's type. The form leaves them out, its
+validator ignores loaded related rows, and neither the submitted data nor
+the patch carries them — at any depth, so a create or "duplicate" form
+seeded from a row loaded with `$with` does not write the related rows back.
+Edit the foreign key instead (see [References (FK)](/forms/references)).
+Building a payload yourself? `omitSkippedNavFields(def, data)` from
+`@atscript/ui` returns a copy without them.
+
+To edit related rows inside the form anyway, annotate the navigation field
+with any `@ui.form.*` — even just its position:
+
+```atscript
+@db.rel.from
+@ui.form.order 5
+lines?: OrderLine[]   // rendered; `OrderLine.order` (the way back) stays out
+```
+
+An opted-in navigation object (`@db.rel.to`) always renders as its own
+section, never inlined into the parent's fields. Opting in means the form
+**writes the related rows**: a changed one goes into the submitted data and
+the patch, and the db performs a nested write to the related table — make
+sure that is what the form is for, and that the server allows it.
+
+Since 0.1.164 — earlier versions crashed with "Maximum call stack size
+exceeded" on recursive types and rendered every navigation field.
+
 ## The canonical example
 
 A `NestedForm.as` schema that builds a two-level company profile.

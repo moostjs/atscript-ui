@@ -35,7 +35,12 @@ interface AsWfFormProps {
   path: string;
   /** Workflow id to start (e.g. "auth/login"). */
   name: string;
-  /** Initial input sent with the first POST. */
+  /**
+   * Initial form data for the start request, sent as `input.formData` (the
+   * workflow protocol envelope). The start step reads it with
+   * `useWfState().input().formData`, or validated via
+   * `useAtscriptWf(Form).resolveInput()` (unknown keys stripped).
+   */
   input?: Record<string, unknown>;
   /**
    * Token transport.
@@ -85,7 +90,7 @@ interface AsWfFormProps {
 ```typescript
 {
   finished: (response: unknown) => void;
-  error:    (error: { message: string; status?: number }) => void;
+  error:    (error: WfFormError) => void;
   form:     (def: FormDef, context?: Record<string, unknown>) => void;
   submit:   (data: unknown) => void;
   loading:  (isLoading: boolean) => void;
@@ -251,7 +256,18 @@ function onSubmit(data: unknown) {
 
 ## Error resolution
 
-When a request returns a non-2xx response, `error.value` is set to `{ message, status }`. The message is resolved from the response body in this priority order:
+When a request returns a non-2xx response, `error.value` (and the `error` event) is a `WfFormError`:
+
+```ts
+interface WfFormError {
+  message: string; // resolved as below
+  status?: number; // HTTP status; absent for a network error
+  code?: string; // the body's `code`, when it is a string (since 0.1.164)
+  body?: unknown; // the parsed JSON body, when there is one (since 0.1.164)
+}
+```
+
+Branch on `code` (and read `body.params`) for a step's own refusals instead of matching the message text. A `200` answer carrying `{ error }` becomes the same shape: a string is the `message`; an object keeps its `message` / `status` / `code` and is the `body`. The message is resolved from the response body in this priority order:
 
 1. `body.message` — the human-readable application intent. This is what `HttpError(status, message)` ships as `body.message` across the Wooks/Moost stack.
 2. `body.error` — fallback when `message` is absent. Servers before wooks 0.8 / moost 0.7 sent workflow-trigger refusals as `{ error: "Invalid or expired workflow state" }`; since then they are `HttpError` bodies with the text in `message` and a `code` (`WF_EXPIRED`, `WF_FORBIDDEN`, …), so clause 1 picks them up.
@@ -269,7 +285,7 @@ When a request returns a non-2xx response, `error.value` is set to `{ message, s
 
 ## Types
 
-`UseWfFormOptions` and `UseWfFormReturn` are exported from the package root. Re-export `FormDef` / `TAsTypeComponents` / `ClientFactory` from their owning packages — `@atscript/vue-wf` only re-exports its own surface.
+`UseWfFormOptions`, `UseWfFormReturn` and `WfFormError` are exported from the package root. Re-export `FormDef` / `TAsTypeComponents` / `ClientFactory` from their owning packages — `@atscript/vue-wf` only re-exports its own surface.
 
 ## Cross-links
 

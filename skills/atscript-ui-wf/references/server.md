@@ -397,7 +397,7 @@ the result.
 | Step throws `useAtscriptWf().requireInput({...})` | engine catches `StepRetriableError` → same-form re-render with errors                 |
 | `@WfInput()` validator rejects                    | decorator throws `StepRetriableError` with field errors → handler body never runs     |
 | Unknown action                                    | `@WfInput` / `resolveAction()` throws → `{ __form: 'Action "..." is not supported' }` |
-| HTTP failure (non-2xx)                            | client `useWfForm` sets `error = { message, status }` → `@error`                      |
+| HTTP failure (non-2xx)                            | client `useWfForm` sets `error = { message, status, code?, body? }` → `@error`        |
 
 ### Auth
 

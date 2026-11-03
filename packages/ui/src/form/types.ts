@@ -151,3 +151,21 @@ export function isUnionField(field: FormFieldDef): field is FormUnionFieldDef {
 export function isTupleField(field: FormFieldDef): field is FormTupleFieldDef {
   return field.type === "tuple";
 }
+
+/**
+ * The field defs directly below `field`: an object's fields, an array's item,
+ * a tuple's items, each union variant's fields and item. A recursive type's
+ * def graph is cyclic: a walk over it tracks the fields it has seen.
+ */
+export function childFields(field: FormFieldDef): FormFieldDef[] {
+  if (isObjectField(field)) return field.objectDef.fields;
+  if (isArrayField(field)) return [field.itemField];
+  if (isTupleField(field)) return field.itemFields;
+  if (!isUnionField(field)) return [];
+  const children: FormFieldDef[] = [];
+  for (const v of field.unionVariants) {
+    if (v.def) children.push(...v.def.fields);
+    if (v.itemField) children.push(v.itemField);
+  }
+  return children;
+}

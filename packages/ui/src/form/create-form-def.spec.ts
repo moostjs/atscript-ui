@@ -58,6 +58,7 @@ import {
   SimpleObject,
   StaticObject,
   StringDateObject,
+  TagsArrays,
   TextareaObject,
   TimestampObject,
   TupleRgbPicker,
@@ -68,6 +69,7 @@ import {
   VersionedObject,
 } from "../__tests__/fixtures/create-form-def.as";
 import { CountedRow, StampedRow } from "../__tests__/fixtures/update-stamps.as";
+import { RenamedVersionForm } from "../__tests__/fixtures/form-diff.as";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -169,6 +171,20 @@ describe("createFormDef", () => {
       // skip is opt-in and non-versioned tables stay unaffected.
       const defNoOpt = createFormDef(VersionedObject);
       expect(defNoOpt.fields.map((f) => f.path)).toContain("version");
+    });
+
+    it("an edit form skips the @db.column.version field without opts.versionColumn", () => {
+      expect(createFormDef(RenamedVersionForm, { mode: "edit" }).fields.map((f) => f.path)).toEqual(
+        ["name", "payload.customerId", "customerId"],
+      );
+      // A create form keeps it (an insert may set the first version).
+      expect(createFormDef(RenamedVersionForm).fields.map((f) => f.path)).toContain("rev");
+      // An explicit option still wins.
+      expect(
+        createFormDef(RenamedVersionForm, { mode: "edit", versionColumn: "name" }).fields.map(
+          (f) => f.path,
+        ),
+      ).toContain("rev");
     });
   });
 
@@ -380,6 +396,33 @@ describe("createFormDef", () => {
       expect(isArrayField(field!)).toBe(true);
       // Override surfaces on `customType` for the renderer's types-map lookup.
       expect(field!.customType).toBe("tag-input");
+    });
+
+    it("`tags` outside an array is ignored (the field keeps its own renderer)", () => {
+      const type = defineAnnotatedType("object")
+        .prop(
+          "name",
+          defineAnnotatedType().designType("string").annotate(UI_FORM_TYPE, "tags").$type,
+        )
+        .prop(
+          "pair",
+          defineAnnotatedType("tuple")
+            .item(defineAnnotatedType().designType("string").$type)
+            .annotate(UI_FORM_TYPE, "tags").$type,
+        ).$type;
+      const def = createFormDef(type);
+      expect(def.fields.map((f) => [f.path, f.type, f.customType])).toEqual([
+        ["name", "text", undefined],
+        ["pair", "tuple", undefined],
+      ]);
+    });
+
+    it("free-entry arrays dispatch to `tags`: explicit, or a multiselect with no options", () => {
+      const def = createFormDef(TagsArrays);
+      const custom = (path: string) => def.fields.find((f) => f.path === path)!.customType;
+      expect(custom("tags")).toBe("tags");
+      expect(custom("plainMulti")).toBe("tags");
+      expect(custom("pickMulti")).toBe("multiselect");
     });
   });
 

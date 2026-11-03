@@ -36,6 +36,7 @@ export function createDefaultTypes(): TAsTypeComponents {
     decimal: AsDecimal,
     select: AsSelect,
     multiselect: AsMultiSelect,
+    tags: AsMultiSelect,
     radio: AsRadio,
     checkbox: AsCheckbox,
     paragraph: AsParagraph,

@@ -162,26 +162,26 @@ import AsInput from "@atscript/vue-form/as-input";
 
 Every component implements `TAsComponentProps`. The columns below list the `@ui.type` value that maps to each component in `createDefaultTypes()`.
 
-| Component       | Default `type` keys            | Notes                                                                                                    |
-| --------------- | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `AsFieldShell`  | (all)                          | Chrome wrapper — title, description, error, hint, prefix/suffix. Used internally by every other default. |
-| `AsInput`       | `text`, `textarea`, `password` | Plain string input.                                                                                      |
-| `AsNumber`      | `number`                       | Integer input with prefix/suffix, currency-aware.                                                        |
-| `AsDecimal`     | `decimal`                      | Decimal-string input with `precisionScale` enforcement.                                                  |
-| `AsSelect`      | `select`                       | `<select>` element fed by `options` / value-help.                                                        |
-| `AsRadio`       | `radio`                        | Radio group.                                                                                             |
-| `AsCheckbox`    | `checkbox`                     | Boolean checkbox or tri-state.                                                                           |
-| `AsMultiSelect` | `multiselect`                  | Multi-select combobox with chip-style selections, bound to `T[]`.                                        |
-| `AsDate`        | `date`                         | Date-only input.                                                                                         |
-| `AsDatetime`    | `datetime`                     | Date-time input.                                                                                         |
-| `AsTime`        | `time`                         | Time-of-day input.                                                                                       |
-| `AsParagraph`   | `paragraph`                    | Phantom read-only field; renders `value` as text.                                                        |
-| `AsAction`      | `action`                       | Phantom button — emits `action`.                                                                         |
-| `AsObject`      | `object`                       | Iterates over a nested object's fields.                                                                  |
-| `AsArray`       | `array`                        | Renders array items with add/remove affordances.                                                         |
-| `AsUnion`       | `union`                        | Variant picker + nested fields for the active branch.                                                    |
-| `AsTuple`       | `tuple`                        | Positional fields, fixed length.                                                                         |
-| `AsRef`         | `ref`                          | FK input with value-help dropdown.                                                                       |
+| Component       | Default `type` keys            | Notes                                                                                                             |
+| --------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `AsFieldShell`  | (all)                          | Chrome wrapper — title, description, error, hint, prefix/suffix. Used internally by every other default.          |
+| `AsInput`       | `text`, `textarea`, `password` | Plain string input.                                                                                               |
+| `AsNumber`      | `number`                       | Integer input with prefix/suffix, currency-aware.                                                                 |
+| `AsDecimal`     | `decimal`                      | Decimal-string input with `precisionScale` enforcement.                                                           |
+| `AsSelect`      | `select`                       | `<select>` element fed by `options` / value-help.                                                                 |
+| `AsRadio`       | `radio`                        | Radio group.                                                                                                      |
+| `AsCheckbox`    | `checkbox`                     | Boolean checkbox or tri-state.                                                                                    |
+| `AsMultiSelect` | `multiselect`, `tags`          | Multi-select combobox with chip-style selections, bound to `T[]`. `tags`: free entry — typed values become chips. |
+| `AsDate`        | `date`                         | Date-only input.                                                                                                  |
+| `AsDatetime`    | `datetime`                     | Date-time input.                                                                                                  |
+| `AsTime`        | `time`                         | Time-of-day input.                                                                                                |
+| `AsParagraph`   | `paragraph`                    | Phantom read-only field; renders `value` as text.                                                                 |
+| `AsAction`      | `action`                       | Phantom button — emits `action`.                                                                                  |
+| `AsObject`      | `object`                       | Iterates over a nested object's fields.                                                                           |
+| `AsArray`       | `array`                        | Renders array items with add/remove affordances.                                                                  |
+| `AsUnion`       | `union`                        | Variant picker + nested fields for the active branch.                                                             |
+| `AsTuple`       | `tuple`                        | Positional fields, fixed length.                                                                                  |
+| `AsRef`         | `ref`                          | FK input with value-help dropdown.                                                                                |
 
 All defaults accept the full `TAsComponentProps` contract — see [Component prop & emit types](#component-prop-emit-types).
 
@@ -193,7 +193,7 @@ status layout while replacing one part of it.
 
 | Slot          | Slot props                                                | Renders                                                               |
 | ------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| default       | `{ inputId, errorId, descId }`                            | The control itself, inside the input row.                             |
+| default       | `{ inputId, errorId, descId }`                            | The control itself, inside the input row (a lone root fills the row). |
 | `header`      | `{ inputId, descId, optionalEnabled, isDirty, statusId }` | Replaces the default `<label>` in the header row.                     |
 | `after-input` | `{ descId }`                                              | Extra content directly below the input row (e.g. a description node). |
 | `status`      | `{ isDirty, error, hint, statusId, inputId }`             | The whole footer error / hint / status area.                          |
@@ -223,18 +223,23 @@ const types = createDefaultTypes();
 types.text = MyCustomTextInput; // swap one entry
 ```
 
-### `createAsFormDef(type, context?)`
+### `createAsFormDef(type, context?, opts?)`
 
-Builds a `FormDef` from an `.as` annotated type and a fresh reactive `formData` container with `@meta.default` values applied. When `context` is provided and `@atscript/ui-fns` is installed, `@ui.form.fn.value` annotations evaluate against it during default-value resolution.
+Builds a `FormDef` from an `.as` annotated type and a fresh reactive `formData` container with `@meta.default` values applied. When `context` is provided and `@atscript/ui-fns` is installed, `@ui.form.fn.value` annotations evaluate against it during default-value resolution. `opts` is passed to [`createFormDef`](/api/ui#createformdef-type-opts) (`mode`, `versionColumn`, `metaFields`; since 0.1.164).
 
 ```typescript
 function createAsFormDef<T extends TAtscriptAnnotatedType>(
   type: T,
   context?: Record<string, unknown>,
+  opts?: CreateFormDefOptions,
 ): { def: FormDef; formData: { value: unknown } };
 ```
 
-For tables that opt into optimistic concurrency, call the lower-level `createFormDef(type, { versionColumn })` from `@atscript/ui` directly so the version field is excluded from `def.fields[]` (it stays in `flatMap` and form data so the wire payload still carries it). See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide.
+For a form that edits a stored row pass `{ mode: "edit" }`: server-stamped update fields become read-only, and the `@db.column.version` field is left out of `def.fields[]` (it stays in `flatMap` and form data, so the wire payload still carries it for `$cas`). See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide.
+
+```ts
+const { def, formData } = createAsFormDef(ServiceTicket, undefined, { mode: "edit" });
+```
 
 ### `formatIndexedLabelParts(label, arrayIndex)`
 
@@ -762,7 +767,7 @@ function useAsLocale(): UseAsLocaleReturn;
 
 ### `useAsPath()` / `useAsTypeMap()` / `useAsData()`
 
-Read-only context wrappers. Useful in deeply nested custom components that need the current field path, the form's `:types` map, or reactive read access to form data.
+Context wrappers. Useful in deeply nested custom components that need the current field path, the form's `:types` map, or reactive access to form data — including writing other fields (`setSibling` / `setValueAt`, since 0.1.164).
 
 ```typescript
 function useAsPath(): UseAsPathReturn; // { path: ComputedRef<string> }
@@ -775,10 +780,16 @@ interface UseAsDataReturn {
   getValueAt: (path: string) => ComputedRef<unknown>;
   /** Read a sibling field relative to the current `useAsPath()` prefix. */
   siblingValue: <T = unknown>(name: string) => ComputedRef<T | undefined>;
+  /** Write the value at an absolute dotted path (missing parents are created). */
+  setValueAt: (path: string, value: unknown) => void;
+  /** Write a sibling field relative to the current `useAsPath()` prefix. */
+  setSibling: (name: string, value: unknown) => void;
 }
 
 function useAsData(): UseAsDataReturn;
 ```
+
+A write is a committed edit: change tracking records it, the written field re-validates like one the user changed, and `AsForm` emits `change` with type `"update"`. Missing containers are created — an array where the next path segment is an index, else an object (an empty form root too). Outside a form the readers return `undefined` and the writers do nothing. See [Writing other fields](/forms/custom-components#useasdata).
 
 ### `useAsErrorDismiss()`
 
@@ -905,26 +916,30 @@ type TAsChangeType = "update" | "array-add" | "array-remove" | "union-switch";
 
 ### `TAsTypeComponents`
 
-Required keys for built-in types plus an open index signature.
+The built-in type keys (all optional) plus an open index signature. A map needs entries only for the types its forms use — see [a narrow type map](/forms/field-types#a-narrow-type-map). Keys optional since 0.1.164.
 
 ```typescript
 type TAsTypeComponents = {
-  text: Component;
-  select: Component;
-  radio: Component;
-  checkbox: Component;
-  paragraph: Component;
-  action: Component;
-  object: Component;
-  array: Component;
-  union: Component;
-  tuple: Component;
-  ref: Component;
-  decimal: Component;
-  number: Component;
-  date: Component;
-  datetime: Component;
-  time: Component;
+  text?: Component;
+  textarea?: Component;
+  password?: Component;
+  select?: Component;
+  multiselect?: Component;
+  tags?: Component;
+  radio?: Component;
+  checkbox?: Component;
+  paragraph?: Component;
+  action?: Component;
+  object?: Component;
+  array?: Component;
+  union?: Component;
+  tuple?: Component;
+  ref?: Component;
+  decimal?: Component;
+  number?: Component;
+  date?: Component;
+  datetime?: Component;
+  time?: Component;
 } & Record<string, Component>;
 ```
 

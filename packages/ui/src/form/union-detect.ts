@@ -53,10 +53,17 @@ function walkUnionFields(
       continue;
     }
 
-    if (isObjectField(field)) {
+    // Only into objects present on a side: absent ones hold no union to
+    // compare, and a recursive type's def graph is cyclic.
+    if (isObjectField(field) && (isObject(before, fullPath) || isObject(after, fullPath))) {
       const objectDef = (field as FormObjectFieldDef).objectDef;
       if (walkUnionFields(objectDef.fields, fullPath, before, after)) return true;
     }
   }
   return false;
+}
+
+function isObject(data: Record<string, unknown>, path: string): boolean {
+  const v = getByPath(data, path);
+  return typeof v === "object" && v !== null;
 }

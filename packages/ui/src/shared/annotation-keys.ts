@@ -2,6 +2,8 @@
 export const UI_TYPE = "ui.type" as const;
 
 // ── Form static (registered by @atscript/ui plugin) ──────────
+/** The `@ui.form.*` namespace prefix. */
+export const UI_FORM_NS = "ui.form." as const;
 export const UI_FORM_PLACEHOLDER = "ui.form.placeholder" as const;
 export const UI_FORM_HINT = "ui.form.hint" as const;
 export const UI_FORM_CLASSES = "ui.form.classes" as const;

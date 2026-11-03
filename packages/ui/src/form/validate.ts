@@ -6,9 +6,10 @@ import type {
 import { Validator } from "@atscript/typescript/utils";
 import { createDbValidatorPlugin, type DbValidationContext } from "@atscript/db/validator";
 import { DB_COLUMN_DERIVED, DB_REL_FK } from "../shared/annotation-keys";
+import { isSkippedNavField } from "./skipped-nav";
 import { validatorErrorsToMap } from "./error-utils";
 import type { FormDef, FormFieldDef } from "./types";
-import { isArrayField, isObjectField, isTupleField, isUnionField } from "./types";
+import { childFields } from "./types";
 
 /** Per-call options for the form validator function. */
 export interface TFormValidatorCallOptions {
@@ -26,6 +27,8 @@ const INSERT_CONTEXT: DbValidationContext = { mode: "insert" };
  * blocked on them:
  * - `@db.column.derived` — read-only and server-computed: never validated
  *   (not even a loaded value, which the user could not fix).
+ * - a navigation field the form leaves out (`isSkippedNavField`): loaded
+ *   related rows the form neither renders nor sends.
  * - an absent `@db.default*` / `@db.column.version` / `@db.onUpdate.inc` value
  *   — delegated to `@atscript/db`'s own insert-mode rule, so the key list has
  *   one owner.
@@ -37,7 +40,7 @@ const INSERT_CONTEXT: DbValidationContext = { mode: "insert" };
  * insert context instead.
  */
 const serverManagedPlugin: TValidatorPlugin = (ctx, def, value) => {
-  if (def.metadata.has(DB_COLUMN_DERIVED)) return true;
+  if (def.metadata.has(DB_COLUMN_DERIVED) || isSkippedNavField(def)) return true;
   if (value !== undefined || def.metadata.has(DB_REL_FK)) return undefined;
   return dbPlugin(Object.create(ctx, { context: { value: INSERT_CONTEXT } }), def, value);
 };
@@ -48,27 +51,23 @@ const serverManagedPlugin: TValidatorPlugin = (ctx, def, value) => {
  * (see `CreateFormDefOptions.mode`) carries no annotation the plugin above
  * could read. The validator matches by prop, so a prop that is also used where
  * it is not derived (an interface's stamp below a union of several types, too)
- * stays validated.
+ * stays validated. A recursive type's def graph is cyclic: each field def is
+ * visited once.
  */
 function collectDerivedProps(def: FormDef): Set<TAtscriptAnnotatedType> {
   const derived = new Set<TAtscriptAnnotatedType>();
   const kept = new Set<TAtscriptAnnotatedType>();
+  const seen = new Set<FormFieldDef>();
   const walk = (fields: FormFieldDef[]): void => {
     for (const field of fields) {
+      if (seen.has(field)) continue;
+      seen.add(field);
       if (field.derived) {
         derived.add(field.prop);
         continue;
       }
       kept.add(field.prop);
-      if (isObjectField(field)) walk(field.objectDef.fields);
-      else if (isArrayField(field)) walk([field.itemField]);
-      else if (isTupleField(field)) walk(field.itemFields);
-      else if (isUnionField(field)) {
-        for (const v of field.unionVariants) {
-          if (v.def) walk(v.def.fields);
-          if (v.itemField) walk([v.itemField]);
-        }
-      }
+      walk(childFields(field));
     }
   };
   walk(def.fields);

@@ -38,3 +38,16 @@ export interface OptionalMultiselect {
     @ui.form.options 'Editor', 'editor'
     roles?: string[]
 }
+
+/// Free entry: typed values become chips.
+export interface TagsForm {
+    @ui.form.type 'tags'
+    @expect.array.uniqueItems
+    synonyms: string[]
+
+    @ui.form.type 'multiselect'
+    labels?: string[]
+
+    @ui.form.type 'tags'
+    sizes?: number[]
+}

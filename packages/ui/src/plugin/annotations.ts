@@ -4,6 +4,7 @@ import {
   isValueHelpTarget,
   validateDistinct,
   literalLabelValues,
+  validateFormType,
   validateLiteralLabel,
   validateValueHelp,
   valueHelpScopes,
@@ -16,6 +17,7 @@ const BUILTIN_TYPES = [
   "decimal",
   "select",
   "multiselect",
+  "tags",
   "textarea",
   "checkbox",
   "radio",
@@ -231,6 +233,7 @@ export const uiAnnotations: TAnnotationsTree = {
           type: "string",
           description: "The input type used by `<as-field>` for this prop.",
         },
+        validate: validateFormType,
       }),
 
       component: new AnnotationSpec({

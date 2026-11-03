@@ -180,7 +180,7 @@ If you also use `@atscript/db` (for `AsWfStore`), add `dbPlugin()` too — see `
 
 ## Vite config note (server)
 
-`@atscript/moost-wf/store` ships ESM only. Triggered by any import of `@atscript/moost-wf/store` or `@atscript/moost-wf/store.as`. Fix: set `"type": "module"` in the server's `package.json` and bundle ESM (CJS consumers must drop `AsWfStore` and use the in-memory store from `@moostjs/event-wf`). See SKILL.md invariant 9.
+`@atscript/moost-wf/store` ships ESM only. Triggered by any import of `@atscript/moost-wf/store` (from `.ts`, or the model from a `.as` file). Fix: set `"type": "module"` in the server's `package.json` and bundle ESM (CJS consumers must drop `AsWfStore` and use the in-memory store from `@moostjs/event-wf`). See SKILL.md invariant 9.
 
 For ESM Moost servers the standard `unplugin-atscript/vite` config from the atscript skill applies — no extra wiring needed for `moost-wf` itself.
 

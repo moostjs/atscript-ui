@@ -8,6 +8,7 @@ import {
   DeepNestedForm,
   InlineMergeForm,
   InlineNestedForm,
+  JsonArrayForm,
   KeyedArrayForm,
   MergeNestedForm,
   OptionalMergeForm,
@@ -496,6 +497,62 @@ describe("buildFormDiff — primitive arrays", () => {
     const r = buildFormDiff(def, wrap({ tags: ["a", "b"] }), wrap({ tags: ["a", "b"] }));
     expect(r.isDirty).toBe(false);
     expect(r.patch).toEqual({});
+  });
+});
+
+// ── @db.json arrays ──────────────────────────────────────────
+
+describe("buildFormDiff — @db.json arrays (whole values, no array operations)", () => {
+  const base = {
+    name: "n",
+    synonyms: ["a", "b"],
+    lines: [{ sku: "x", qty: 1 }],
+    doc: { tags: ["t1"], note: "keep" },
+    settings: { flags: ["f1"], mode: "m" },
+    meta: { labels: ["l1"], note: "keep" },
+    plain: { items: ["i1"], note: "keep" },
+  };
+  const diff = (current: Partial<typeof base>) =>
+    buildFormDiff(createFormDef(JsonArrayForm), wrap(base), wrap({ ...base, ...current })).patch;
+
+  it("a @db.json uniqueItems array sends the whole array", () => {
+    expect(diff({ synonyms: ["a", "c"] })).toEqual({ synonyms: ["a", "c"] });
+  });
+
+  it("a @db.json keyed array sends the whole array", () => {
+    const lines = [
+      { sku: "x", qty: 2 },
+      { sku: "y", qty: 1 },
+    ];
+    expect(diff({ lines })).toEqual({ lines });
+  });
+
+  it("a cleared @db.json array sends null", () => {
+    expect(diff({ synonyms: undefined })).toEqual({ synonyms: null });
+  });
+
+  it("an array inside an inlined @db.json object sends the whole object", () => {
+    expect(diff({ doc: { tags: ["t1", "t2"], note: "keep" } })).toEqual({
+      doc: { tags: ["t1", "t2"], note: "keep" },
+    });
+  });
+
+  it("an array inside a structured @db.json object sends the whole object (merge inside ignored)", () => {
+    expect(diff({ settings: { flags: ["f2"], mode: "m" } })).toEqual({
+      settings: { flags: ["f2"], mode: "m" },
+    });
+  });
+
+  it("an array inside a plain merge object keeps its operations", () => {
+    expect(diff({ meta: { labels: ["l1", "l2"], note: "keep" } })).toEqual({
+      meta: { labels: { $insert: ["l2"] } },
+    });
+  });
+
+  it("an array inside an inlined replace object sends the whole object", () => {
+    expect(diff({ plain: { items: ["i2"], note: "keep" } })).toEqual({
+      plain: { items: ["i2"], note: "keep" },
+    });
   });
 });
 

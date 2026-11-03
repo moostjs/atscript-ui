@@ -87,7 +87,9 @@ const types = { ...createDefaultTypes(), priority: TicketPriority };
 
 // `def` describes WHAT to render; `formData` is the wrapped container
 // `{ value: domainData }` with every `@meta.default` already applied.
-const { def, formData } = createAsFormDef(ServiceTicket);
+// `mode: "edit"` — the form edits a stored row (server-stamped fields stay
+// read-only and unsent).
+const { def, formData } = createAsFormDef(ServiceTicket, undefined, { mode: "edit" });
 
 // The slice of `<AsForm>`'s `defineExpose` surface this page drives. `AsForm`
 // is a generic component, so a structural handle types the template ref more

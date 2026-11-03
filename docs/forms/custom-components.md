@@ -119,6 +119,12 @@ Notes:
 - The shell exposes the resolved `inputId` via the default slot scope — put it
   on your innermost control so the shell's `<label :for>` works.
 - `onBlur` is a prop (not an emit). Call it from your control's blur handler.
+- The default slot sits in a flex **row**. A single root element there fills
+  the row and may shrink below its content width (`flex: 1; min-width: 0`), so
+  a custom control is as wide as a built-in input. Render several roots side
+  by side (e.g. a control plus an icon button) and you size them yourself:
+  give the control `flex-1 min-w-0` and the extras `shrink-0`. Before 0.1.164
+  a lone root shrank to its content width.
 
 ## Bare root — skipping `AsFieldShell`
 
@@ -183,13 +189,12 @@ shape.
 
 ### `useAsData`
 
-Reactive read-only access to the same data, including a relative-sibling
-helper:
+Reactive access to the same data, including relative-sibling helpers:
 
 ```typescript
 import { useAsData } from "@atscript/vue-form";
 
-const { rootData, getValueAt, siblingValue } = useAsData();
+const { rootData, getValueAt, siblingValue, setSibling, setValueAt } = useAsData();
 
 const country = siblingValue<string>("country");
 // Inside an array item, this resolves to the sibling on the same item.
@@ -197,6 +202,29 @@ const country = siblingValue<string>("country");
 
 `siblingValue<T>(name)` reads relative to the current `useAsPath()` prefix —
 i.e. it walks up to the nearest parent object and reads `name` on it.
+
+**Writing other fields.** `setSibling(name, value)` writes a sibling the same
+way (relative to the prefix); `setValueAt(path, value)` writes an absolute
+dotted path, creating missing parent objects. A typical use: a picker that
+fills the fields next to it.
+
+```typescript
+const { setSibling } = useAsData();
+
+function onPick(customer: { id: string; name: string; vatId: string }) {
+  model.value = customer.id;
+  setSibling("customerName", customer.name);
+  setSibling("vatId", customer.vatId);
+}
+```
+
+A write is a committed edit: [change tracking](/forms/change-tracking)
+records it, the written field clears its error and re-validates like one the
+user changed, and `AsForm` emits `change` (`"update"`, path, value). Missing
+containers on the path are created (`setValueAt("lines.0.sku", …)` creates an
+array). Write only fields of the form's own type — a path the type
+doesn't have is neither rendered nor validated. Outside a form the writers
+do nothing.
 
 ### `useAsLocale`
 

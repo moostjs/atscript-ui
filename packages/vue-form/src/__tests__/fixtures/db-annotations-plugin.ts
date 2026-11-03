@@ -26,6 +26,16 @@ export function dbAnnotationsPlugin(): TAtscriptPlugin {
                 nodeType: ["prop"],
               }),
             },
+            rel: {
+              from: new AnnotationSpec({
+                description: "Navigation field: rows of another table pointing here.",
+                nodeType: ["prop"],
+              }),
+              to: new AnnotationSpec({
+                description: "Navigation field: the row this one points to.",
+                nodeType: ["prop"],
+              }),
+            },
             patch: {
               strategy: new AnnotationSpec({
                 description: "Nested-object patch strategy ('merge' | 'replace').",

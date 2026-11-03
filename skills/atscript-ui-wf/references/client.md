@@ -24,7 +24,7 @@
 | ----------------- | ---------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `path`            | `string`                                 | (required)         | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                                                                                                                    |
 | `name`            | `string`                                 | (required)         | Workflow id (`wfid`) to start (e.g. `'auth/login'`)                                                                                                                                                |
-| `input`           | `Record<string, unknown>`                | `undefined`        | Initial input sent with the `start` request                                                                                                                                                        |
+| `input`           | `Record<string, unknown>`                | `undefined`        | Initial form data — sent as the start request's `input.formData` (protocol envelope); server reads `useWfState().input().formData` or `useAtscriptWf(Form).resolveInput()`. Never unwrapped.       |
 | `tokenTransport`  | `'body' \| 'cookie' \| 'query'`          | `'body'`           | Where to read / write the state token                                                                                                                                                              |
 | `tokenName`       | `string`                                 | `'wfs'`            | Token field name in JSON body / URL query                                                                                                                                                          |
 | `wfidName`        | `string`                                 | `'wfid'`           | Workflow-id field name in the JSON body                                                                                                                                                            |
@@ -44,13 +44,13 @@
 
 ## Emits
 
-| Event      | Signature                                                   | Fires when                                                                                                                |
-| ---------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `finished` | `(response: unknown) => void`                               | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`)                       |
-| `error`    | `(error: { message: string; status?: number }) => void`     | network failure, non-2xx response, or `{ error: {...} }` body (see [Error message resolution](#error-message-resolution)) |
-| `form`     | `(def: FormDef, context?: Record<string, unknown>) => void` | each time the rendered form / context changes (initial render, schema swap, re-validation)                                |
-| `submit`   | `(data: unknown) => void`                                   | user submitted the form (fires **before** the HTTP request is sent)                                                       |
-| `loading`  | `(isLoading: boolean) => void`                              | request lifecycle — `true` on send, `false` on response/error                                                             |
+| Event      | Signature                                                             | Fires when                                                                                                                                                            |
+| ---------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `finished` | `(response: unknown) => void`                                         | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`)                                                                   |
+| `error`    | `(error: WfFormError) => void` — `{ message, status?, code?, body? }` | network failure, non-2xx response, or `{ error: {...} }` body (see [Error message resolution](#error-message-resolution)); branch on `code` for a step's own refusals |
+| `form`     | `(def: FormDef, context?: Record<string, unknown>) => void`           | each time the rendered form / context changes (initial render, schema swap, re-validation)                                                                            |
+| `submit`   | `(data: unknown) => void`                                             | user submitted the form (fires **before** the HTTP request is sent)                                                                                                   |
+| `loading`  | `(isLoading: boolean) => void`                                        | request lifecycle — `true` on send, `false` on response/error                                                                                                         |
 
 Side-effects are wired internally via watchers that translate composable refs to emits.
 
@@ -220,7 +220,7 @@ Options mirror `<AsWfForm>` props (minus rendering-related `types`, `firstValida
 
 ## Error message resolution
 
-On a non-2xx response the composable sets `error.value` to `{ message, status }`. The message is resolved from the JSON body in this order:
+On a non-2xx response the composable sets `error.value` to `{ message, status, code?, body? }` (`code` = the body's string `code`, `body` = the parsed JSON; both since 0.1.164). A 200 answer with `{ error }` is normalized the same way (string → `message`; object → `message`/`status`/`code` + `body`). The message is resolved from the JSON body in this order:
 
 1. `body.message` — application intent. Wooksjs `HttpError(status, message)` puts the user-facing copy here.
 2. `body.error` — fallback for servers before wooks 0.8 / moost 0.7, which sent trigger refusals as `{ error: "Invalid or expired workflow state" }`. Since then refusals are `HttpError` bodies: text in `message`, plus `code` (`WF_EXPIRED` 410, `WF_FORBIDDEN` 403, …) — clause 1.

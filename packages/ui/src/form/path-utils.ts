@@ -37,11 +37,20 @@ export function getByPath(obj: Record<string, unknown>, path: string): unknown {
   return current;
 }
 
+/** A non-null, non-array object. */
+export function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** An array index path segment. */
+const INDEX_RE = /^\d+$/;
+
 /**
  * Sets a nested value by dot-separated path.
  * Always dereferences `obj.value` first (form data is wrapped in `{ value: domainData }`).
  * When `path` is empty, sets the root domain data (`obj.value = value`).
- * Creates intermediate objects if they do not exist.
+ * Creates missing containers on the way, the root included: an array where
+ * the next segment is an index (`items.0.name`), else an object.
  */
 export function setByPath(obj: Record<string, unknown>, path: string, value: unknown): void {
   if (!path) {
@@ -51,10 +60,15 @@ export function setByPath(obj: Record<string, unknown>, path: string, value: unk
   const keys = path.split(".");
   const last = keys.pop();
   if (last === undefined) return;
-  let current: Record<string, unknown> = obj.value as Record<string, unknown>;
-  for (const key of keys) {
+  const containerFor = (next: string) => (INDEX_RE.test(next) ? [] : {});
+  if (obj.value === null || typeof obj.value !== "object") {
+    obj.value = containerFor(keys[0] ?? last);
+  }
+  let current = obj.value as Record<string, unknown>;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i]!;
     if (current[key] === null || current[key] === undefined || typeof current[key] !== "object") {
-      current[key] = {};
+      current[key] = containerFor(keys[i + 1] ?? last);
     }
     current = current[key] as Record<string, unknown>;
   }

@@ -607,3 +607,20 @@ export function validateLiteralLabel(token: Token, args: Token[], doc: AtscriptD
   }
   return errors;
 }
+
+/**
+ * `@ui.form.type` / `@ui.type`: the free-entry `tags` renderer edits an array —
+ * on any other field it would mount with a scalar value.
+ */
+export function validateFormType(token: Token, args: Token[], doc: AtscriptDoc): TMessages {
+  if (args[0]?.text !== "tags") return [];
+  const design = hostDesign(token, doc);
+  if (design === undefined || design === "array") return [];
+  return [
+    {
+      message: `'tags' requires an array field (e.g. string[]), got ${design}`,
+      severity: ERROR,
+      range: args[0].range,
+    },
+  ];
+}

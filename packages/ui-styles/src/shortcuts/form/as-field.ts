@@ -88,8 +88,10 @@ export const asFieldShortcuts = defineShortcuts({
   "as-field-header-row": "flex items-center gap-$xs min-h-[1.5em]",
   "as-field-header-content": "flex flex-wrap items-center gap-x-$xs gap-y-[0.15em] flex-1 min-w-0",
   "as-field-header-actions": "flex items-center gap-$xs flex-shrink-0",
+  // A lone child (a custom control's root) fills the row and may shrink below
+  // its content width; adornments next to an input keep their size.
   "as-field-input-row":
-    "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1",
+    "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1 [&>*:only-child]:flex-1 [&>*:only-child]:min-w-0",
   "as-error-slot": "leading-[1] text-callout text-current/60",
 
   // Screen-reader-only counterpart of the `data-dirty` left rail: the rail is

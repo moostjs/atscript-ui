@@ -153,13 +153,15 @@ For descendants of `<AsForm>`, use the public read-only wrappers:
 import { useAsPath, useAsData } from "@atscript/vue-form";
 
 const { path } = useAsPath(); // ComputedRef<string>
-const { rootData, getValueAt, siblingValue } = useAsData();
+const { rootData, getValueAt, siblingValue, setSibling, setValueAt } = useAsData();
 
 const country = siblingValue<string>("country"); // sibling on the same parent
 const street = getValueAt("address.street"); // absolute path
 ```
 
 `useAsPath()` returns the current dotted prefix. `useAsData()` reads any value in the form by absolute path (`getValueAt`) or relative to the current prefix (`siblingValue`). Inside an array item, `siblingValue` walks up to the same item — the natural shape for "this field depends on its row's sibling".
+
+Writes (0.1.164+): `setSibling(name, v)` (relative to the prefix) and `setValueAt(path, v)` (absolute; creates missing parents) — e.g. a picker filling the fields next to it. A write is a committed edit: change tracking records it, the written field clears its error and re-validates, and `AsForm` emits `change("update", path, value)`. Missing containers are created (index segment → array). Never write via provide/inject or by mutating `rootData` yourself; outside a form the writers are no-ops.
 
 ## provideAsNestedSectionsStore / useAsNestedSectionsStore
 

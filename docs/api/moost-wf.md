@@ -258,9 +258,9 @@ function isWfFinished(value: unknown): value is WfFinished;
 The base atscript interface defining the columns the store reads/writes. Consumers extend it with their own `@meta.id`-bearing primary-key column.
 
 ```atscript
-// .as files import the model from `/store.as` (raw atscript source).
-// .ts files import the runtime class from `/store` (compiled module).
-import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
+// In a .as file the import path has no `.as` extension: `/store` resolves to
+// the package's raw atscript model. In .ts the same `/store` is the runtime class.
+import { AsWfStateRecord } from '@atscript/moost-wf/store'
 
 @db.table 'wf_state'
 interface WfStateRow extends AsWfStateRecord {

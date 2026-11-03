@@ -10,6 +10,15 @@ import { mountForm } from "./helpers";
 // `props.options`, so the component receives it independently of whether
 // the popup is "open" in DOM.
 
+/** Chip labels of the `i`-th multiselect / tags anchor. */
+const chips = (
+  w: { findAll: (s: string) => { findAll: (s: string) => { text(): string }[] }[] },
+  i: number,
+) => {
+  const anchor = w.findAll(".as-multi-select-anchor")[i]!;
+  return anchor.findAll(".as-multi-select-chip-label").map((c) => c.text());
+};
+
 describe("AsMultiSelect", () => {
   it("dispatches to multiselect for array of literal-union items", async () => {
     const { LiteralUnionMultiselect } = await import("./fixtures/multiselect-forms.as");
@@ -325,6 +334,66 @@ describe("AsMultiSelect", () => {
 
       const [, clearBtn] = footerButtons();
       expect(clearBtn!.disabled).toBe(true);
+    });
+  });
+
+  describe("free entry (tags)", () => {
+    async function mountTags(initialValue: Record<string, unknown>) {
+      const { TagsForm } = await import("./fixtures/multiselect-forms.as");
+      return mountForm(TagsForm, { initialValue });
+    }
+    async function type(
+      input: ReturnType<Awaited<ReturnType<typeof mountTags>>["wrapper"]["find"]>,
+      text: string,
+      key = "Enter",
+    ) {
+      await input.setValue(text);
+      await input.trigger("keydown", { key });
+      await nextTick();
+      await nextTick();
+    }
+
+    it("renders typed values as chips, for `tags` and a multiselect without options", async () => {
+      const { wrapper } = await mountTags({ synonyms: ["a"], labels: ["x", "y"] });
+      expect(wrapper.find(".as-multi-select-root").exists()).toBe(false);
+      expect(chips(wrapper, 0)).toEqual(["a"]);
+      expect(chips(wrapper, 1)).toEqual(["x", "y"]);
+    });
+
+    it("Enter adds the trimmed value; a uniqueItems array refuses a duplicate", async () => {
+      const { wrapper, formData } = await mountTags({ synonyms: ["a"] });
+      const input = wrapper.find(".as-multi-select-input");
+      await type(input, "  b ");
+      expect(formData.value.synonyms).toEqual(["a", "b"]);
+      await type(input, "a");
+      expect(formData.value.synonyms).toEqual(["a", "b"]);
+      await type(input, "   ");
+      expect(formData.value.synonyms).toEqual(["a", "b"]);
+    });
+
+    it("a value left in the input is added on blur", async () => {
+      const { wrapper, formData } = await mountTags({ synonyms: [] });
+      const input = wrapper.find(".as-multi-select-input");
+      await input.setValue("kept");
+      await input.trigger("blur");
+      await nextTick();
+      expect(formData.value.synonyms).toEqual(["kept"]);
+    });
+
+    it("Backspace in an empty input selects, then removes the last chip", async () => {
+      const { wrapper, formData } = await mountTags({ synonyms: ["a", "b"] });
+      const input = wrapper.find(".as-multi-select-input");
+      await input.trigger("keydown", { key: "Backspace" });
+      await input.trigger("keydown", { key: "Backspace" });
+      await nextTick();
+      expect(formData.value.synonyms).toEqual(["a"]);
+    });
+
+    it("number items are stored as numbers", async () => {
+      const { wrapper, formData } = await mountTags({ synonyms: [], sizes: [] });
+      const input = wrapper.findAll(".as-multi-select-input")[1]!;
+      await type(input, "42");
+      expect(formData.value.sizes).toEqual([42]);
     });
   });
 });

@@ -68,6 +68,26 @@ describe("AsWfForm", () => {
     expect(emitted![0]![0]).toMatchObject({ message: "Not found" });
   });
 
+  it("emits the error code and body of a refused request", async () => {
+    const body = { statusCode: 409, message: "Limit reached", code: "limit" };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () => ({ ok: false, status: 409, json: async () => body }) as unknown as Response,
+      ),
+    );
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+
+    expect(wrapper.emitted("error")?.[0]?.[0]).toEqual({
+      message: "Limit reached",
+      status: 409,
+      code: "limit",
+      body,
+    });
+  });
+
   it("emits form event when form schema received", async () => {
     const { LoginForm } = await import("./fixtures/login-form.as");
     mockFetch([mockInputRequired(LoginForm, { context: { hint: "test" } })]);

@@ -15,8 +15,8 @@ export interface Props<TF, TC> {
   components?: Record<string, Component<TAsComponentProps>>;
   /**
    * Type-to-component map for field rendering. Maps field types to Vue components.
-   * Must include entries for all built-in field types. Use `createDefaultTypes()`
-   * for a pre-filled map, or supply your own.
+   * Use `createDefaultTypes()` for a pre-filled map, or supply your own — it
+   * needs entries only for the types its forms use.
    */
   types: TAsTypeComponents;
   errors?: Record<string, string | undefined>;
@@ -163,7 +163,7 @@ defineExpose({
       v-bind="form.slotProps.value"
       :text="form.submitText.value"
     >
-      <button class="as-submit-btn" :disabled="form.submitDisabled.value">
+      <button type="submit" class="as-submit-btn" :disabled="form.submitDisabled.value">
         {{ form.submitText.value }}
       </button>
     </slot>

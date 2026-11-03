@@ -3,6 +3,8 @@ import { isReactive } from "vue";
 import { createAsFormDef } from "../composables/create-as-form-def";
 import { objectType, stringProp } from "./helpers";
 
+const paths = (def: { fields: { path: string }[] }) => def.fields.map((f) => f.path);
+
 describe("createAsFormDef", () => {
   it("returns def with correct fields for a simple object type", async () => {
     const { MultiFieldForm } = await import("./fixtures/defaults-form.as");
@@ -45,5 +47,17 @@ describe("createAsFormDef", () => {
 
     expect(data.name).toBe("");
     expect(data.age).toBe(0);
+  });
+
+  it("forwards createFormDef options (mode, versionColumn) as the third argument", async () => {
+    const { PatchVersionedForm } = await import("./fixtures/patch-forms.as");
+    expect(paths(createAsFormDef(PatchVersionedForm).def)).toContain("version");
+    // Edit mode: the @db.column.version field is the version column by default.
+    const edit = createAsFormDef(PatchVersionedForm, undefined, { mode: "edit" });
+    expect(paths(edit.def)).not.toContain("version");
+    const explicit = createAsFormDef(PatchVersionedForm, {}, { versionColumn: "version" });
+    expect(paths(explicit.def)).not.toContain("version");
+    // The data keeps the column either way (it travels in `$cas`).
+    expect(edit.formData.value).toHaveProperty("version");
   });
 });

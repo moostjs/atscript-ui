@@ -1,6 +1,6 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { createFormData, detectUnionVariant, joinPath } from "./path-utils";
+import { createFormData, detectUnionVariant, joinPath, setByPath } from "./path-utils";
 import type { FormUnionVariant } from "./types";
 
 describe("joinPath", () => {
@@ -40,6 +40,24 @@ function numberProp() {
 function variant(label: string, type: ReturnType<typeof stringProp>): FormUnionVariant {
   return { label, type };
 }
+
+describe("setByPath", () => {
+  it("creates missing objects, and arrays where the next segment is an index", () => {
+    const data: Record<string, unknown> = { value: { a: 1 } };
+    setByPath(data, "b.c", 2);
+    setByPath(data, "items.0.name", "x");
+    expect(data.value).toEqual({ a: 1, b: { c: 2 }, items: [{ name: "x" }] });
+  });
+
+  it("creates a missing root instead of throwing", () => {
+    const obj: Record<string, unknown> = { value: undefined };
+    setByPath(obj, "a.b", 1);
+    expect(obj.value).toEqual({ a: { b: 1 } });
+    const list: Record<string, unknown> = { value: null };
+    setByPath(list, "0", "first");
+    expect(list.value).toEqual(["first"]);
+  });
+});
 
 describe("detectUnionVariant", () => {
   it("returns 0 immediately when there is a single variant", () => {

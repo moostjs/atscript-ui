@@ -75,9 +75,9 @@ See `atscript-db` skill for the `@db.*` annotation surface used here.
 ```atscript
 // src/wf/wf-state.as
 //
-// Subpath duality: `.as` files import the model from `/store.as` (raw atscript
-// source); `.ts` files import the runtime class from `/store` (compiled module).
-import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
+// `.as` imports omit the `.as` extension: in a `.as` file `/store` resolves to
+// the raw atscript model (`/store.as` export); in `.ts` it is the runtime class.
+import { AsWfStateRecord } from '@atscript/moost-wf/store'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {
@@ -109,9 +109,17 @@ const wfStore = new AsWfStore({
   table: wfStatesTable,
   actor: () => useSession().userId,
 });
+
+// Nothing deletes expired rows unless you schedule cleanup():
+app.addInitHook(() => {
+  const sweep = () => wfStore.cleanup({ retention: 86_400_000 }).catch(console.error);
+  const timer = setInterval(sweep, 5 * 60_000);
+  timer.unref();
+  app.addDisposeHook(() => clearInterval(timer)); // moost 0.7+
+});
 ```
 
-The `/store.as` subpath ships the raw `.as` file for re-export from your own schema module.
+The package's `/store.as` export ships the raw `.as` model; a `.as` file reaches it as `'@atscript/moost-wf/store'` (never spell `.as` in a `.as` import — `'…/store.as'` resolves `store.as.as` and fails).
 
 ## Shadow columns — @wf.store.fromContext
 
@@ -289,7 +297,7 @@ export interface InviteForm {
 
 ```atscript
 // src/wf/wf-state.as
-import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
+import { AsWfStateRecord } from '@atscript/moost-wf/store'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {

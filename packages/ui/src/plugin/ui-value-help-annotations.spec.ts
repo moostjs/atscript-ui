@@ -828,3 +828,34 @@ export interface Host {
     expect(doc.resolveAnnotation("ui.literalLabel")!.config.description).not.toMatch(/replac/i);
   });
 });
+
+describe("@ui.form.type 'tags' diagnostics", () => {
+  it("is accepted on arrays (also through a type alias)", async () => {
+    const m = await msgs(`
+export type Words = string[]
+export interface TagsOk {
+    @ui.form.type 'tags'
+    a: string[]
+
+    @ui.form.type 'tags'
+    b?: Words
+
+    @ui.form.type 'textarea'
+    c: string
+}`);
+    expect(m.filter((x) => x.includes("tags"))).toEqual([]);
+  });
+
+  it("is rejected on a non-array field", async () => {
+    const m = await msgs(`
+export interface TagsBad {
+    @ui.form.type 'tags'
+    a: string
+
+    @ui.form.type 'tags'
+    b: { x: string }
+}`);
+    expect(m).toContain("E: 'tags' requires an array field (e.g. string[]), got string");
+    expect(m).toContain("E: 'tags' requires an array field (e.g. string[]), got object");
+  });
+});

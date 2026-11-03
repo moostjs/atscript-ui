@@ -231,29 +231,34 @@ export interface TAsComponentEmits<_V = unknown> {
 export type TAsChangeType = "update" | "array-add" | "array-remove" | "union-switch";
 
 /**
- * Type-to-component map for `AsForm`. Lists all built-in field types as
- * required keys and accepts additional custom types via index signature.
+ * Type-to-component map for `AsForm`. Lists the built-in field types and
+ * accepts additional custom types via index signature. Every key is optional:
+ * a map may name only the types its forms use (a field whose type has no
+ * entry renders a "No component" notice).
  *
  * Use {@link createDefaultTypes} to get a pre-built map with all defaults.
  */
 export type TAsTypeComponents = {
-  text: Component;
-  select: Component;
-  multiselect: Component;
-  radio: Component;
-  checkbox: Component;
-  paragraph: Component;
-  action: Component;
-  object: Component;
-  array: Component;
-  union: Component;
-  tuple: Component;
-  ref: Component;
-  decimal: Component;
-  number: Component;
-  date: Component;
-  datetime: Component;
-  time: Component;
+  text?: Component;
+  textarea?: Component;
+  password?: Component;
+  select?: Component;
+  multiselect?: Component;
+  tags?: Component;
+  radio?: Component;
+  checkbox?: Component;
+  paragraph?: Component;
+  action?: Component;
+  object?: Component;
+  array?: Component;
+  union?: Component;
+  tuple?: Component;
+  ref?: Component;
+  decimal?: Component;
+  number?: Component;
+  date?: Component;
+  datetime?: Component;
+  time?: Component;
 } & Record<string, Component>;
 
 /**

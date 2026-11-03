@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends string | number">
-import { optKey, optLabel } from "@atscript/ui";
+import { hasFieldMeta, optKey, optLabel } from "@atscript/ui";
 import {
   ComboboxAnchor,
   ComboboxContent,
@@ -9,6 +9,11 @@ import {
   ComboboxPortal,
   ComboboxRoot,
   ComboboxViewport,
+  TagsInputInput,
+  TagsInputItem,
+  TagsInputItemDelete,
+  TagsInputItemText,
+  TagsInputRoot,
 } from "reka-ui";
 import { computed, ref } from "vue";
 import type { TAsComponentProps } from "../types";
@@ -42,6 +47,32 @@ function clearAll() {
 function selectAll() {
   props.model.value = (props.options ?? []).map((o) => optKey(o)) as T[];
 }
+
+// ── Free entry (`tags`) ──────────────────────────────────────
+// `@ui.form.type 'tags'` (or a multiselect with nothing to pick from): the
+// user types the values. Enter or "," adds, pasted text is split on ",",
+// a value left in the input is added on blur, Backspace selects then removes
+// the last chip. Duplicates are refused when the array is
+// `@expect.array.uniqueItems`.
+const tags = computed(() => props.field?.customType === "tags");
+const uniqueItems = computed(
+  () => !!props.field && hasFieldMeta(props.field.prop, "expect.array.uniqueItems"),
+);
+const numericItems = computed(() => {
+  const item = props.field?.prop.type;
+  return item?.kind === "array" && item.of.type.kind === "" && item.of.type.designType === "number";
+});
+
+function toItem(text: string): T {
+  const trimmed = text.trim();
+  return (numericItems.value && trimmed !== "" ? Number(trimmed) : trimmed) as T;
+}
+
+function onTags(values: T[]) {
+  props.model.value = values.filter(
+    (v) => v !== "" && !(typeof v === "number" && Number.isNaN(v)),
+  ) as T[];
+}
 </script>
 
 <template>
@@ -50,7 +81,42 @@ function selectAll() {
       <span :id="inputId" class="as-field-label">{{ label }}</span>
     </template>
     <template #default="{ inputId }">
+      <TagsInputRoot
+        v-if="tags"
+        :model-value="model.value ?? []"
+        :disabled="disabled || readonly"
+        :duplicate="!uniqueItems"
+        :convert-value="toItem"
+        add-on-blur
+        add-on-paste
+        class="as-multi-select-anchor"
+        @update:model-value="onTags($event as T[])"
+      >
+        <TagsInputItem
+          v-for="(item, i) in model.value ?? []"
+          :key="i"
+          :value="item"
+          class="as-multi-select-chip"
+        >
+          <TagsInputItemText class="as-multi-select-chip-label" />
+          <TagsInputItemDelete class="as-multi-select-chip-remove" :aria-label="`Remove ${item}`">
+            <span class="i-as-close" aria-hidden="true" />
+          </TagsInputItemDelete>
+        </TagsInputItem>
+        <TagsInputInput
+          :id="inputId"
+          :placeholder="model.value?.length ? '' : placeholder"
+          :readonly="readonly"
+          :aria-required="required || undefined"
+          :aria-invalid="!!error || undefined"
+          :aria-describedby="ariaDescribedBy"
+          :aria-label="!label ? name : undefined"
+          class="as-multi-select-input"
+          @blur="onBlur"
+        />
+      </TagsInputRoot>
       <ComboboxRoot
+        v-else
         v-model="model.value"
         v-model:open="open"
         :multiple="true"

@@ -507,6 +507,13 @@ pure reorder, duplicate keys, or keyless items. Unkeyed / primitive
 arrays always `$replace` (a `uniqueItems` primitive array may use
 by-value `$insert`/`$remove` instead).
 
+A `@db.json` field is stored as one JSON value, which takes no array
+operations, so a changed `@db.json` array is sent **whole** as a plain array
+(`null` when cleared) — and an array inside a `@db.json` object is sent with
+the whole object. An array inside an inlined object without `merge` is sent
+with its whole sub-object, like any other leaf there. Since 0.1.164 (earlier
+versions sent operations the db rejected).
+
 ### `$cas` needs a populated integer version
 
 `$cas` only lifts when the baseline version is an integer. A row loaded

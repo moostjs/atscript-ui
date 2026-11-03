@@ -102,9 +102,10 @@ Create a `.as` file that extends the base record with your
 below):
 
 ```atscript
-// `.as` files import the model from `/store.as` (raw atscript source);
-// `.ts` files import the runtime class from `/store`.
-import { AsWfStateRecord } from '@atscript/moost-wf/store.as'
+// In a `.as` file the import path has no `.as` extension: `/store` resolves
+// to the package's raw atscript model. In `.ts` the same `/store` is the
+// runtime class.
+import { AsWfStateRecord } from '@atscript/moost-wf/store'
 
 @db.table 'wf_states'
 export interface WfStateRow extends AsWfStateRecord {
@@ -164,6 +165,9 @@ export const wfStore = new AsWfStore({
   actor: () => useSession()?.username,
 });
 ```
+
+Expired rows are not deleted on their own: schedule
+[`cleanup()`](#cleanup) next to the store.
 
 Three options:
 
@@ -283,16 +287,24 @@ Options:
 - `Number.POSITIVE_INFINITY` — no-op (returns 0); useful as an
   "off" switch.
 
-Wire it on a timer at startup:
+Nothing calls it for you — schedule it when you construct the store:
 
 ```ts
 const RETENTION_MS = 86_400_000; // 1 day grace
-setInterval(() => {
-  wfStore.cleanup({ retention: RETENTION_MS }).catch((err) => {
-    console.error("[wf-store] cleanup failed:", err);
-  });
-}, 5 * 60_000).unref();
+
+app.addInitHook(() => {
+  const timer = setInterval(() => {
+    wfStore.cleanup({ retention: RETENTION_MS }).catch((err) => {
+      console.error("[wf-store] cleanup failed:", err);
+    });
+  }, 5 * 60_000);
+  timer.unref();
+  app.addDisposeHook(() => clearInterval(timer));
+});
 ```
+
+`app` is your `Moost` instance; `addDisposeHook` (moost 0.7+) stops the
+timer on `app.dispose()`, so tests and graceful shutdowns don't leak it.
 
 ## Race-safe consume: `getAndDelete`
 
