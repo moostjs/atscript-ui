@@ -119,7 +119,7 @@ app.addInitHook(() => {
 });
 ```
 
-The package's `/store.as` export ships the raw `.as` model; a `.as` file reaches it as `'@atscript/moost-wf/store'` (never spell `.as` in a `.as` import — `'…/store.as'` resolves `store.as.as` and fails).
+The package's `/store.as` export ships the raw `.as` model; a `.as` file reaches it as `'@atscript/moost-wf/store'` (with atscript 0.2.4+ the `'…/store.as'` spelling resolves to the same module; older atscript resolves it to `store.as.as` and fails).
 
 ## Shadow columns — @wf.store.fromContext
 

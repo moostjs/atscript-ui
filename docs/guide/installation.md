@@ -27,14 +27,14 @@ pnpm add -D unocss unplugin-atscript unplugin-vue-components @atscript/typescrip
 
 ### Ecosystem versions
 
-Since 0.1.161 the packages need the current major lines of their peers:
+The packages peer on the ecosystem release they were built against. The ranges published by 0.1.164:
 
-| Peer                                                                  | Range                                  |
-| --------------------------------------------------------------------- | -------------------------------------- |
-| `@atscript/core`, `@atscript/typescript` (and `unplugin-atscript`)    | `^0.2.1`                               |
-| `@atscript/db`, `@atscript/db-client`, `@atscript/moost-db`           | latest `0.1.x` (`^0.1.166` in 0.1.162) |
-| `moost`, `@moostjs/event-http`, `@moostjs/event-wf` (server packages) | `^0.7.0`                               |
-| `@wooksjs/event-core`, `@wooksjs/event-wf` (`@atscript/moost-wf`)     | `^0.8.0`                               |
+| Peer                                                                  | Range      |
+| --------------------------------------------------------------------- | ---------- |
+| `@atscript/core`, `@atscript/typescript` (and `unplugin-atscript`)    | `^0.2.4`   |
+| `@atscript/db`, `@atscript/db-client`, `@atscript/moost-db`           | `^0.1.168` |
+| `moost`, `@moostjs/event-http`, `@moostjs/event-wf` (server packages) | `^0.7.2`   |
+| `@wooksjs/event-core`, `@wooksjs/event-wf` (`@atscript/moost-wf`)     | `^0.8.0`   |
 
 Since 0.1.164 the packages' internal helpers are ordinary dependencies,
 installed and upgraded with the package that needs them: `@atscript/ui-fns`
