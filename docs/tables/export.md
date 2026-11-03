@@ -179,6 +179,24 @@ usable without Vue: `toCsv` / `csvCell` (RFC 4180 writer),
 `resolveExportValue` (the value resolver). See the
 [`@atscript/ui-table` API](/api/ui-table#export).
 
+## Writing CSV on the server
+
+The CSV writer is also published on its own as `@atscript/ui-table/csv`
+(since 0.1.164). It imports nothing, so a server that writes a CSV file
+loads only the writer, not the table engine and its dependencies. It applies
+the same quoting and [formula escaping](#formula-escaping) as the browser
+export:
+
+```ts
+import { toCsv } from "@atscript/ui-table/csv";
+
+const csv = toCsv(
+  ["Name", "Total"],
+  orders.map((o) => [o.name, o.total]),
+  { bom: true },
+);
+```
+
 ## Custom actions still work
 
 An export that must run **server-side** (a big report, a signed URL) is

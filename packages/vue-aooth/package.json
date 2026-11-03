@@ -73,12 +73,12 @@
   },
   "dependencies": {
     "@atscript/ui": "workspace:^",
-    "@atscript/vue-form": "workspace:^"
+    "@atscript/ui-fns": "workspace:^"
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/typescript": "catalog:",
-    "@atscript/ui-fns": "workspace:^",
+    "@atscript/vue-form": "workspace:^",
     "@tsdown/css": "catalog:",
     "@types/qrcode": "^1.5.5",
     "@vitejs/plugin-vue": "catalog:",
@@ -92,7 +92,6 @@
     "vunor": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/ui-fns": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "qrcode": "^1.5.4",
     "vue": "catalog:"

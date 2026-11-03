@@ -11,16 +11,9 @@ export default defineConfig({
     format: ["esm"],
     plugins: [atscript()],
     deps: {
-      neverBundle: [
-        "@atscript/core",
-        "@atscript/db",
-        "@atscript/moost-db",
-        "@atscript/typescript",
-        "@moostjs/event-http",
-        "@uniqu/core",
-        "@wooksjs/event-http",
-        "moost",
-      ],
+      // Nothing from node_modules is inlined, code or declarations: an import of
+      // a package missing from dependencies/peerDependencies fails the build.
+      onlyBundle: [],
     },
   },
 });

@@ -214,12 +214,28 @@ interface IconsLoaderOptions {
   iconifyApiUrl?: string;
   /** Cache fetched icons under `iconsDir`. Default `true`. */
   enableCache?: boolean;
-  /** Post-process a local SVG — the default recolours hard-coded fills to `currentColor` unless the file starts with `<!-- colored -->`. */
+  /**
+   * Post-process a local SVG. The default drops a `width` / `height` pinned on the
+   * root `<svg>` (the icon then sizes from its `viewBox` and the class, `1em`), and
+   * recolours hard-coded fills to `currentColor` unless the file starts with
+   * `<!-- colored -->`.
+   */
   processLocalSvg?: (svg: string) => string;
+  /**
+   * Where to report. Default: failures only (an icon the API doesn't have, a failed
+   * request) on the console. `console` also reports every icon load; `false` is silent.
+   */
+  logger?: IconsLoaderLogger | false;
 }
+
+type IconsLoaderLogger = Pick<Console, "info" | "warn" | "error">;
 
 function createIconsLoader(options?: IconsLoaderOptions): CustomIconLoader;
 ```
+
+Since 0.1.164 the loader is quiet unless an icon fails to load (it used to
+print every icon it loaded), and the default `processLocalSvg` drops a pinned
+root `width` / `height`.
 
 Pair it with `asPresetVunor({ icons: false })` so only one `presetIcons()`
 instance owns the `i-` prefix:

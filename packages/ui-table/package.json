@@ -36,6 +36,11 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.cjs"
     },
+    "./csv": {
+      "types": "./dist/csv.d.mts",
+      "import": "./dist/csv.mjs",
+      "require": "./dist/csv.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -48,17 +53,15 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@atscript/ui": "workspace:*"
+    "@atscript/ui": "workspace:*",
+    "@uniqu/core": "catalog:",
+    "@uniqu/url": "catalog:"
   },
   "devDependencies": {
     "@atscript/db-client": "catalog:",
-    "@uniqu/core": "catalog:",
-    "@uniqu/url": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@atscript/db-client": "catalog:",
-    "@uniqu/core": "catalog:",
-    "@uniqu/url": "catalog:"
+    "@atscript/db-client": "catalog:"
   }
 }

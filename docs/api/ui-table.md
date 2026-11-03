@@ -1115,6 +1115,8 @@ function mergeDisplayColumns(base: ColumnDef[], display: readonly DisplayColumnD
 
 Framework-agnostic halves of [`useTableExport`](/api/vue-table#usetableexport-ctx) — usable without Vue. Since 0.1.134; full guide: [Export](/tables/export).
 
+The CSV writer (`toCsv`, `csvCell`, `CsvOptions`, `ExportScalar`) is also exported from `@atscript/ui-table/csv` (since 0.1.164), which imports nothing — for a server that writes CSV without loading the table engine. See [Writing CSV on the server](/tables/export#writing-csv-on-the-server).
+
 ```typescript
 type ExportScalar = string | number | boolean | null;
 

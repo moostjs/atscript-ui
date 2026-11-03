@@ -1,6 +1,8 @@
 import type { AtscriptDbTable } from "@atscript/db";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import type { WfState, WfStateStore } from "@prostojs/wf/outlets";
+// Through the `@moostjs/event-wf` peer (it re-exports `@prostojs/wf/outlets`),
+// so the published declarations import these types instead of inlining them.
+import type { WfState, WfStateStore } from "@moostjs/event-wf";
 
 /** Internal row shape — only the columns the store reads back from the table. */
 export type StoredRow = {
@@ -26,7 +28,7 @@ export interface ShadowFieldSpec {
 /**
  * Options for {@link AsWfStore}.
  *
- * The store implements `WfStateStore` from `@prostojs/wf/outlets` against a
+ * The store implements the engine's `WfStateStore` (via `@moostjs/event-wf`) against a
  * consumer-provided `AtscriptDbTable` whose row shape extends
  * `AsWfStateRecord` with their own `@meta.id`-bearing primary key column.
  */

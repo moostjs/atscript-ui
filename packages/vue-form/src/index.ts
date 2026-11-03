@@ -50,7 +50,7 @@ export type { UseAsFieldOptions, UseAsFieldReturn } from "./composables/use-as-f
 export { useAsState } from "./composables/use-as-state";
 export type { UseAsStateReturn, TFormSubmitValidator } from "./composables/use-as-state";
 export { useAsForm } from "./composables/use-as-form";
-export type { UseAsFormOptions, UseAsFormReturn } from "./composables/use-as-form";
+export type { TAsFormValue, UseAsFormOptions, UseAsFormReturn } from "./composables/use-as-form";
 export { useAsFormPatch } from "./composables/use-as-form-patch";
 export type { AsFormPatchHandle, RebaseOntoResult } from "./composables/use-as-form-patch";
 export { useAsExternalErrors } from "./composables/use-as-external-errors";
@@ -141,6 +141,7 @@ export {
   getDefaultClientFactory,
   resetDefaultClientFactory,
   type ClientFactory,
+  type TypedClientFactory,
 } from "@atscript/ui";
 // Framework-agnostic helpers used alongside the container-renderer
 // composables — re-exported so consumers don't reach into the transitive

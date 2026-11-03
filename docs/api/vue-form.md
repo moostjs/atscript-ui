@@ -56,6 +56,8 @@ interface AsFormProps {
 - `unsupportedAction(name, data)` — action name not declared on the form's type.
 - `change(type, path, value, data)` — granular per-field change; `type` is `TAsChangeType`.
 
+`data` is the model value itself, not the `{ value }` container passed as `formData`, and is typed that way (`TAsFormValue<typeof formData>`; typed correctly since 0.1.164). With `createAsFormDef(Product)`, a `save(product: Product)` handler binds directly: `@submit="save"`. Slots get the container as `data` (`data.value` is the model). Navigation fields the form leaves out (`@db.rel.*` without any `@ui.form.*`) are absent from the `submit` payload.
+
 **Slots**: `form.header`, `form.before`, `form.after`, `form.error`, `form.submit`, `form.footer`, `form.loading`. Every slot receives the unified `slotProps` bag (see [`useAsForm` return](#useasform-options)); `form.error` also gets `message` / `dismiss`, `form.submit` also gets `text`. See [Forms — Slots & the slotProps bag](/forms/customization#slots-the-slotprops-bag).
 
 ### `AsField`
@@ -280,13 +282,25 @@ interface UseAsFormOptions<TFormData, TFormContext> {
   /** Busy flag — locks the form and disables submit while a round-trip is in flight (used by `AsWfForm`). */
   loading?: () => boolean | undefined;
   emits?: {
-    submit?: (data: TFormData) => void;
+    submit?: (data: TAsFormValue<TFormData>) => void;
     error?: (errors: { path: string; message: string }[]) => void;
-    action?: (name: string, data: TFormData) => void;
-    unsupportedAction?: (name: string, data: TFormData) => void;
-    change?: (type: TAsChangeType, path: string, value: unknown, formData: TFormData) => void;
+    action?: (name: string, data: TAsFormValue<TFormData>) => void;
+    unsupportedAction?: (name: string, data: TAsFormValue<TFormData>) => void;
+    change?: (
+      type: TAsChangeType,
+      path: string,
+      value: unknown,
+      formData: TAsFormValue<TFormData>,
+    ) => void;
   };
 }
+
+/** The value inside a `{ value }` container (`value` may be optional) — what the emit callbacks receive. `any` for an `any` container. */
+type TAsFormValue<TFormData> = 0 extends 1 & TFormData
+  ? any
+  : TFormData extends { value?: infer V }
+    ? V
+    : unknown;
 ```
 
 Returns:
@@ -993,7 +1007,7 @@ Return type of [`useAsFormPatch()`](#useasformpatch) — the change-tracking sur
 
 ### Re-exports from `@atscript/ui`
 
-`setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory` — see [@atscript/ui — Client factory](/api/ui#client-factory).
+`setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory`, `TypedClientFactory` — see [@atscript/ui — Client factory](/api/ui#client-factory).
 
 `FormFieldChange`, `FormDiffOptions`, `FormRebaseOptions` — change-tracking value shapes, re-exported so `useAsFormPatch()` consumers can type holding variables, `getPatch` options, and `rebaseOnto` options without reaching into the transitive `@atscript/ui` dep. See [@atscript/ui — Form diff engine](/api/ui#form-diff-engine).
 

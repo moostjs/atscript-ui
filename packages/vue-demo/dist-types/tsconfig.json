@@ -1,0 +1,21 @@
+{
+  // An app's view of the published packages: no `paths` into the sources, so
+  // every `@atscript/*` import resolves through `node_modules` to the built
+  // `dist/` declarations. Type-checked by `src/__tests__/dist-types.spec.ts`.
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": ["es2023", "dom"],
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "experimentalDecorators": true,
+    "jsx": "preserve",
+    "types": [],
+    "paths": {}
+  },
+  "include": ["*.ts", "*.vue"]
+}

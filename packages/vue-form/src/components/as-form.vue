@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="TFormData = any, TFormContext = any">
-import { useAsForm } from "../composables/use-as-form";
+import { useAsForm, type TAsFormValue } from "../composables/use-as-form";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import AsIterator from "./as-iterator.vue";
@@ -63,12 +63,19 @@ export interface Props<TF, TC> {
 
 const props = defineProps<Props<TFormData, TFormContext>>();
 
+// `formData` is the `{ value }` container; the events carry the value itself.
 const emit = defineEmits<{
-  (e: "submit", data: TFormData): void;
+  (e: "submit", data: TAsFormValue<TFormData>): void;
   (e: "error", errors: { path: string; message: string }[]): void;
-  (e: "action", name: string, data: TFormData): void;
-  (e: "unsupported-action", name: string, data: TFormData): void;
-  (e: "change", type: TAsChangeType, path: string, value: unknown, formData: TFormData): void;
+  (e: "action", name: string, data: TAsFormValue<TFormData>): void;
+  (e: "unsupported-action", name: string, data: TAsFormValue<TFormData>): void;
+  (
+    e: "change",
+    type: TAsChangeType,
+    path: string,
+    value: unknown,
+    formData: TAsFormValue<TFormData>,
+  ): void;
 }>();
 
 const form = useAsForm<TFormData, TFormContext>({

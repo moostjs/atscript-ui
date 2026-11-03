@@ -15,7 +15,9 @@ export default defineConfig({
     dts: true,
     format: ["esm", "cjs"],
     deps: {
-      neverBundle: ["@atscript/core", "@atscript/typescript"],
+      // Nothing from node_modules is inlined, code or declarations: an import of
+      // a package missing from dependencies/peerDependencies fails the build.
+      onlyBundle: [],
     },
   },
 });

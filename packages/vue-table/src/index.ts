@@ -39,6 +39,7 @@ export {
   getDefaultClientFactory,
   resetDefaultClientFactory,
   type ClientFactory,
+  type TypedClientFactory,
 } from "@atscript/ui";
 export {
   provideTableContext,

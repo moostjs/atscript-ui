@@ -277,6 +277,7 @@ export {
   getDefaultClientFactory,
   resetDefaultClientFactory,
   type ClientFactory,
+  type TypedClientFactory,
   type ClientFactoryOptions,
 } from "./client-factory";
 

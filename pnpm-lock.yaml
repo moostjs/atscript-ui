@@ -369,16 +369,16 @@ importers:
       '@atscript/ui':
         specifier: workspace:*
         version: link:../ui
-    devDependencies:
-      '@atscript/db-client':
-        specifier: 'catalog:'
-        version: 0.1.167(@atscript/db@0.1.167)(@atscript/typescript@0.2.3)
       '@uniqu/core':
         specifier: 'catalog:'
         version: 0.1.15
       '@uniqu/url':
         specifier: 'catalog:'
         version: 0.1.15
+    devDependencies:
+      '@atscript/db-client':
+        specifier: 'catalog:'
+        version: 0.1.167(@atscript/db@0.1.167)(@atscript/typescript@0.2.3)
       vitest:
         specifier: npm:@voidzero-dev/vite-plus-test@0.1.14
         version: '@voidzero-dev/vite-plus-test@0.1.14(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(happy-dom@18.0.1)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)(vite@8.0.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0))'
@@ -388,9 +388,9 @@ importers:
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
-      '@atscript/vue-form':
+      '@atscript/ui-fns':
         specifier: workspace:^
-        version: link:../vue-form
+        version: link:../ui-fns
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
@@ -398,9 +398,9 @@ importers:
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.2.3(@atscript/core@0.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.167)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(wooks@0.8.0)
-      '@atscript/ui-fns':
+      '@atscript/vue-form':
         specifier: workspace:^
-        version: link:../ui-fns
+        version: link:../vue-form
       '@tsdown/css':
         specifier: 'catalog:'
         version: 0.21.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(jiti@2.6.1)(postcss@8.5.10)(tsdown@0.21.4)(tsx@4.21.0)
@@ -576,12 +576,18 @@ importers:
       vite:
         specifier: npm:@voidzero-dev/vite-plus-core@0.1.14
         version: '@voidzero-dev/vite-plus-core@0.1.14(@tsdown/css@0.21.4)(@types/node@24.12.0)(esbuild@0.27.7)(jiti@2.6.1)(tsx@4.21.0)(typescript@5.9.3)'
+      vue-tsc:
+        specifier: 'catalog:'
+        version: 3.2.9(typescript@5.9.3)
 
   packages/vue-form:
     dependencies:
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
+      '@atscript/ui-fns':
+        specifier: workspace:^
+        version: link:../ui-fns
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
@@ -592,9 +598,6 @@ importers:
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.2.3(@atscript/core@0.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.167)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(wooks@0.8.0)
-      '@atscript/ui-fns':
-        specifier: workspace:^
-        version: link:../ui-fns
       '@tsdown/css':
         specifier: 'catalog:'
         version: 0.21.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)(jiti@2.6.1)(postcss@8.5.10)(tsdown@0.21.4)(tsx@4.21.0)
@@ -634,9 +637,9 @@ importers:
       '@atscript/ui-table':
         specifier: workspace:^
         version: link:../ui-table
-      '@atscript/vue-form':
-        specifier: workspace:^
-        version: link:../vue-form
+      '@uniqu/core':
+        specifier: 'catalog:'
+        version: 0.1.15
     devDependencies:
       '@atscript/core':
         specifier: 'catalog:'
@@ -647,12 +650,12 @@ importers:
       '@atscript/typescript':
         specifier: 'catalog:'
         version: 0.2.3(@atscript/core@0.2.3(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.167)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.0)(wooks@0.8.0)
+      '@atscript/vue-form':
+        specifier: workspace:^
+        version: link:../vue-form
       '@tanstack/vue-virtual':
         specifier: 'catalog:'
         version: 3.13.26(vue@3.5.30(typescript@5.9.3))
-      '@uniqu/core':
-        specifier: 'catalog:'
-        version: 0.1.15
       '@uniqu/url':
         specifier: 'catalog:'
         version: 0.1.15

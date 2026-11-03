@@ -59,6 +59,7 @@
     "typescript": "catalog:",
     "unplugin-atscript": "catalog:",
     "unplugin-swc": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vue-tsc": "catalog:"
   }
 }

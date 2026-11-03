@@ -32,7 +32,7 @@ pnpm add -D @atscript/core @atscript/typescript unplugin-atscript
 pnpm add @atscript/db @atscript/db-sqlite better-sqlite3
 ```
 
-`@atscript/moost-wf` peers: `@atscript/core`, `@atscript/typescript`, `@moostjs/event-wf`, `moost`.
+`@atscript/moost-wf` peers: `@atscript/core`, `@atscript/typescript`, `@moostjs/event-wf`, `moost`; `@atscript/db` (optional) for `@atscript/moost-wf/store`.
 
 ## Two-step hello flow end-to-end
 

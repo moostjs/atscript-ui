@@ -71,6 +71,7 @@
     "@atscript/typescript": "catalog:",
     "@atscript/ui-table": "workspace:^",
     "@moostjs/event-http": "catalog:",
+    "@uniqu/core": "catalog:",
     "moost": "catalog:"
   }
 }

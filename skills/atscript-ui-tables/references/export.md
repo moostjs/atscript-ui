@@ -102,6 +102,17 @@ The signal is checked before and after every request, so a cancel lands between 
 
 Usable without Vue: `toCsv` / `csvCell` (RFC 4180 writer, `\r\n` rows, optional BOM), `collectExportRows` / `withStableOrder` / `ExportAbortError` (the pager — pass `mapRow` to project each row as it arrives instead of collecting raw rows), `resolveExportValue` (value resolver), `DEFAULT_EXPORT_PAGE_SIZE`.
 
+Server-side CSV: import the writer from `@atscript/ui-table/csv` (0.1.164+) — `toCsv`, `csvCell`, `CsvOptions`, `ExportScalar`, nothing else. It has no imports, so a Node server writing CSV doesn't load the table engine; formula escaping is on by default, as in the browser export.
+
+```ts
+import { toCsv } from "@atscript/ui-table/csv";
+const body = toCsv(
+  ["Name", "Total"],
+  rows.map((r) => [r.name, r.total]),
+  { bom: true },
+);
+```
+
 ## Invariants
 
 | #   | Rule                                                                                                                                                                                          |

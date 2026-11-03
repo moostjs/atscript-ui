@@ -175,14 +175,14 @@
   "dependencies": {
     "@atscript/ui": "workspace:^",
     "@atscript/ui-table": "workspace:^",
-    "@atscript/vue-form": "workspace:^"
+    "@uniqu/core": "catalog:"
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
+    "@atscript/vue-form": "workspace:^",
     "@tanstack/vue-virtual": "catalog:",
-    "@uniqu/core": "catalog:",
     "@uniqu/url": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
@@ -197,8 +197,8 @@
   },
   "peerDependencies": {
     "@atscript/db-client": "catalog:",
+    "@atscript/vue-form": "workspace:^",
     "@tanstack/vue-virtual": "catalog:",
-    "@uniqu/url": "catalog:",
     "@vueuse/core": "catalog:",
     "reka-ui": "catalog:",
     "vue": "catalog:"

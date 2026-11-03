@@ -20,15 +20,9 @@ export default defineConfig({
     format: ["esm"],
     plugins: [atscript()],
     deps: {
-      neverBundle: [
-        "@atscript/core",
-        "@atscript/db",
-        "@atscript/typescript",
-        "moost",
-        "@moostjs/event-wf",
-        "@wooksjs/event-core",
-        "@wooksjs/event-wf",
-      ],
+      // Nothing from node_modules is inlined, code or declarations: an import of
+      // a package missing from dependencies/peerDependencies fails the build.
+      onlyBundle: [],
     },
   },
 });

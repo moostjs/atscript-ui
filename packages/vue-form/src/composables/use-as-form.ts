@@ -123,13 +123,30 @@ export interface UseAsFormOptions<TFormData = unknown, TFormContext = unknown> {
    * `defineEmits`; advanced uses can pass plain functions.
    */
   emits?: {
-    submit?: (data: TFormData) => void;
+    submit?: (data: TAsFormValue<TFormData>) => void;
     error?: (errors: { path: string; message: string }[]) => void;
-    action?: (name: string, data: TFormData) => void;
-    unsupportedAction?: (name: string, data: TFormData) => void;
-    change?: (type: TAsChangeType, path: string, value: unknown, formData: TFormData) => void;
+    action?: (name: string, data: TAsFormValue<TFormData>) => void;
+    unsupportedAction?: (name: string, data: TAsFormValue<TFormData>) => void;
+    change?: (
+      type: TAsChangeType,
+      path: string,
+      value: unknown,
+      formData: TAsFormValue<TFormData>,
+    ) => void;
   };
 }
+
+/**
+ * The value inside a `{ value }` form-data container (`value` may be
+ * optional): what the `submit`, `action`, `unsupportedAction` and `change`
+ * callbacks (and `<AsForm>`'s events) receive. `any` for an `any` container,
+ * `unknown` when the container has no `value`.
+ */
+export type TAsFormValue<TFormData> = 0 extends 1 & TFormData
+  ? any
+  : TFormData extends { value?: infer V }
+    ? V
+    : unknown;
 
 export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   /** Reactive form-data container `{ value: domainData }`. */
@@ -254,7 +271,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   function getDomainData(): Record<string, unknown> {
     return (data.value as Record<string, unknown>).value as Record<string, unknown>;
   }
-  const domainData = () => toRaw(getDomainData()) as TFormData;
+  const domainData = () => toRaw(getDomainData()) as TAsFormValue<TFormData>;
 
   const formContext = computed<TFormContext | undefined>(() => options.formContext?.());
 

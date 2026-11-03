@@ -1112,9 +1112,24 @@ function str(value: unknown): string;
 type ClientFactory = (url: string, options?: ClientFactoryOptions) => Client; // `Client` from `@atscript/db-client`
 type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore">; // since 0.1.153
 
+/** What `getDefaultClientFactory()` returns: generic like `Client` (since 0.1.164). */
+type TypedClientFactory = <T extends AtscriptClientShape = AtscriptClientShape>(
+  url: string,
+  options?: ClientFactoryOptions,
+) => Client<T>;
+
 function setDefaultClientFactory(factory: ClientFactory): void;
-function getDefaultClientFactory(): ClientFactory; // never `undefined` — falls back to `(url, options) => new Client(url, options)`
+function getDefaultClientFactory(): TypedClientFactory; // never `undefined` — falls back to `(url, options) => new Client(url, options)`
 function resetDefaultClientFactory(): void;
+```
+
+The factory you install is any function returning a `Client`, including one that hands back a cached client. The default factory you read back is generic: pass a model to get a typed client, or nothing for the untyped one. The type argument only types the client; nothing is checked at runtime.
+
+```typescript
+import { Product } from "./models/product.as";
+
+const products = getDefaultClientFactory()<typeof Product>("/api/db/tables/products");
+await products.insert({ name: "Lamp", price: 12 }); // typed against Product
 ```
 
 Spread the optional second argument into the `Client` options you build (_since 0.1.153_): the library passes `metaKey` for a table given [`metaKey`](#meta-cache), and `metaStore: false` during server rendering. A factory that ignores it still works, but loses those two behaviors.

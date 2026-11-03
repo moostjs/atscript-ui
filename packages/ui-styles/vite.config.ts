@@ -5,7 +5,9 @@ export default defineConfig({
     entry: { index: "src/index.ts", vite: "src/vite.ts" },
     format: ["esm", "cjs"],
     deps: {
-      neverBundle: ["unocss", "vunor", "@iconify/utils", "unplugin-vue-components"],
+      // Nothing from node_modules is inlined, code or declarations: an import of
+      // a package missing from dependencies/peerDependencies fails the build.
+      onlyBundle: [],
     },
   },
   test: {

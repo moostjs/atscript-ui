@@ -1237,7 +1237,7 @@ type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
 
 ### Re-exports from `@atscript/ui`
 
-`setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory`.
+`setDefaultClientFactory`, `getDefaultClientFactory`, `resetDefaultClientFactory`, `ClientFactory`, `TypedClientFactory`.
 
 ## Utilities
 

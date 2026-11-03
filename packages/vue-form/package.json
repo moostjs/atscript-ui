@@ -166,13 +166,13 @@
     "check": "vp check"
   },
   "dependencies": {
-    "@atscript/ui": "workspace:^"
+    "@atscript/ui": "workspace:^",
+    "@atscript/ui-fns": "workspace:^"
   },
   "devDependencies": {
     "@atscript/core": "catalog:",
     "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
-    "@atscript/ui-fns": "workspace:^",
     "@tsdown/css": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vue/test-utils": "catalog:",
@@ -186,7 +186,7 @@
   },
   "peerDependencies": {
     "@atscript/db-client": "catalog:",
-    "@atscript/ui-fns": "workspace:^",
+    "@atscript/typescript": "catalog:",
     "reka-ui": "catalog:",
     "vue": "catalog:"
   }
