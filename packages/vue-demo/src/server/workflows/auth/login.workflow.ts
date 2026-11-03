@@ -149,8 +149,7 @@ export class LoginWorkflow {
             httpOnly: true,
             sameSite: "Lax",
             path: "/",
-            // wooks treats numeric maxAge as milliseconds; multiply by 1000 so Max-Age in seconds per RFC 6265.
-            maxAge: SESSION_MAX_AGE_SEC * 1000,
+            maxAge: SESSION_MAX_AGE_SEC, // seconds (wooks >= 0.8)
           },
         },
       },

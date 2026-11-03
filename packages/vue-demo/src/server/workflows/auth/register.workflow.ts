@@ -127,7 +127,7 @@ export class RegisterWorkflow {
             httpOnly: true,
             sameSite: "Lax",
             path: "/",
-            maxAge: SESSION_MAX_AGE_SEC * 1000,
+            maxAge: SESSION_MAX_AGE_SEC, // seconds (wooks >= 0.8)
           },
         },
       },
