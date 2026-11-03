@@ -16,6 +16,8 @@ pnpm add @atscript/vue-form @atscript/vue-table @atscript/vue-wf
 
 `vunor` is a peer dependency of `@atscript/ui-styles`. Installing it explicitly keeps your lockfile aligned with the version atscript-ui was tested against.
 
+Since 0.1.163 the peer is `vunor ^0.4.0`. vunor 0.4 lists `vue`, `unocss` and `reka-ui` as its own peers instead of bundling them, so your app's copies are the ones it uses — an atscript-ui app already has all three.
+
 ## `vite.config.ts`
 
 Register UnoCSS and `unplugin-vue-components` with `AsResolver()` from `@atscript/ui-styles/vite`.
