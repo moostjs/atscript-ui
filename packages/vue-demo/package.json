@@ -53,7 +53,7 @@
     "@wooksjs/event-core": "catalog:",
     "@wooksjs/event-http": "catalog:",
     "@wooksjs/http-body": "catalog:",
-    "better-sqlite3": "^11",
+    "better-sqlite3": "^12.6.2",
     "happy-dom": "catalog:",
     "moost": "catalog:",
     "typescript": "catalog:",
