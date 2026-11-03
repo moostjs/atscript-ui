@@ -32,6 +32,7 @@ declare global {
     "expect.array.uniqueItems": { message?: string }
     "expect.array.key": { message?: string }
     "emit.jsonSchema": boolean
+    "emit.compiledValidator": boolean
     "ui.type": string
     "ui.form.placeholder": string
     "ui.form.hint": string

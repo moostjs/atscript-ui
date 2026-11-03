@@ -32,6 +32,7 @@ declare global {
     "expect.array.uniqueItems": { message?: string }
     "expect.array.key": { message?: string }
     "emit.jsonSchema": boolean
+    "emit.compiledValidator": boolean
     "db.patch.strategy": string
     "db.table": string | true
     "db.table.filterable": string | true

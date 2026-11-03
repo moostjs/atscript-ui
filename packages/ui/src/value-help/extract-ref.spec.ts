@@ -96,21 +96,16 @@ describe("extractValueHelp — reference chains", () => {
 
   it("gives up on a cyclic chain instead of looping", () => {
     // Two interfaces referencing each other's field — impossible to express in
-    // a single `.as` file, so the nodes are built with the runtime builder.
+    // `.as` (and `ref()` resolves its target eagerly), so the `.ref` links the
+    // walk follows are set on builder-made nodes directly.
     const left = defineAnnotatedType("object");
     const right = defineAnnotatedType("object");
-    left.prop(
-      "f",
-      defineAnnotatedType()
-        .designType("string")
-        .refTo(() => right.$type, ["f"]).$type,
-    );
-    right.prop(
-      "f",
-      defineAnnotatedType()
-        .designType("string")
-        .refTo(() => left.$type, ["f"]).$type,
-    );
+    const leftF = defineAnnotatedType().designType("string").$type;
+    const rightF = defineAnnotatedType().designType("string").$type;
+    left.prop("f", leftF);
+    right.prop("f", rightF);
+    leftF.ref = { type: () => right.$type, field: "f" };
+    rightF.ref = { type: () => left.$type, field: "f" };
 
     expect(extractValueHelp(getProp(left.$type, "f"))).toBeUndefined();
   });

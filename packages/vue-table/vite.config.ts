@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [vue() as never],
   test: {
     environment: "happy-dom",
+    // Node >= 25 ships its own `localStorage` global (undefined without
+    // `--localstorage-file`), which shadows happy-dom's — turn it off.
+    execArgv: ["--no-experimental-webstorage"],
   },
   pack: {
     entry: getEntries(),
