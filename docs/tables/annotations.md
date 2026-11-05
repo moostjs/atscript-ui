@@ -59,17 +59,21 @@ username: string
 ## `@ui.table.fn.*` — dynamic column annotations
 
 These require `@atscript/ui-fns` (installed alongside `@atscript/ui`).
-The argument is a JavaScript expression evaluated per-row with the row
-data in scope — use sparingly, this opts into `new Function()`.
+The argument is a JavaScript function, called for every rendered cell as
+`(row, ctx, t)`: `row` is the row's data, `ctx` the table state
+(`searchTerm`, `filters`, `sorters`, `rowIndex`), `t(text, params?)` a text in
+the app's language (see [Texts in the user's language](/forms/dynamic-fields#texts-in-the-users-language)).
+Use sparingly — this opts into `new Function()`.
 
-| Annotation                         | Arg(s)              | Controls                                                                        |
-| ---------------------------------- | ------------------- | ------------------------------------------------------------------------------- |
-| `@ui.table.fn.attr "name", "expr"` | name, JS expression | Per-row attribute/prop on the `<td>`. Repeatable; each evaluated for every row. |
-| `@ui.table.fn.classes "expr"`      | JS expression       | Per-row class list on the `<td>`. Repeatable.                                   |
-| `@ui.table.fn.styles "expr"`       | JS expression       | Per-row inline style on the `<td>`. Repeatable.                                 |
+| Annotation                       | Arg(s)            | Controls                                                                        |
+| -------------------------------- | ----------------- | ------------------------------------------------------------------------------- |
+| `@ui.table.fn.attr "name", "fn"` | name, JS function | Per-row attribute/prop on the `<td>`. Repeatable; each evaluated for every row. |
+| `@ui.table.fn.classes "fn"`      | JS function       | Per-row class list on the `<td>`.                                               |
+| `@ui.table.fn.styles "fn"`       | JS function       | Per-row inline style on the `<td>`.                                             |
 
 ```atscript
-@ui.table.fn.classes "inStock ? 'text-success' : 'text-error'"
+@ui.table.fn.classes "(row) => row.inStock ? 'text-success' : 'text-error'"
+@ui.table.fn.attr 'title', "(row, ctx, t) => row.inStock ? t('In stock') : t('Sold out')"
 inStock: boolean
 ```
 
@@ -259,7 +263,7 @@ export interface InvoicesTable {
 
     @meta.label 'Status'
     @ui.table.order 3
-    @ui.table.fn.classes "status === 'paid' ? 'text-success' : ''"
+    @ui.table.fn.classes "(row) => row.status === 'paid' ? 'text-success' : ''"
     status: 'draft' | 'sent' | 'paid' | 'overdue'
 
     @meta.label 'Amount'

@@ -103,6 +103,7 @@ export const uiAnnotations: TAnnotationsTree = {
           name: "text",
           type: "string",
           description: "The placeholder text to display in UI input fields.",
+          userText: true,
         },
       }),
 
@@ -119,6 +120,7 @@ export const uiAnnotations: TAnnotationsTree = {
           name: "text",
           type: "string",
           description: "Help text or tooltip content.",
+          userText: true,
         },
       }),
 
@@ -197,6 +199,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "label",
             type: "string",
             description: "Display label for the option",
+            userText: true,
           },
           {
             name: "value",
@@ -205,6 +208,12 @@ export const uiAnnotations: TAnnotationsTree = {
             description: "Value/key for the option (defaults to label if omitted)",
           },
         ],
+        // The label is translated when served: an option without a value gets
+        // its label (the source text) as the value here, so the value a form
+        // submits never depends on the language.
+        modify(_token, args) {
+          if (args.length === 1) args.push(args[0]!.clone({}));
+        },
       }),
 
       order: new AnnotationSpec({
@@ -339,6 +348,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "text",
             type: "string",
             description: "Submit button label",
+            userText: true,
           },
         }),
       },
@@ -360,6 +370,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "singular",
             type: "string",
             description: 'Singular label, e.g. "phone number" for a `phones` field.',
+            userText: true,
           },
         }),
       },
@@ -396,6 +407,7 @@ export const uiAnnotations: TAnnotationsTree = {
             type: "string",
             optional: true,
             description: "Display label for the action (falls back to @meta.label)",
+            userText: true,
           },
         ],
       }),
@@ -418,6 +430,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "value",
             type: "string",
             description: "Literal text to display before the input value.",
+            userText: true,
           },
         }),
         ref: new AnnotationSpec({
@@ -478,6 +491,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "value",
             type: "string",
             description: "Literal text to display after the input value.",
+            userText: true,
           },
         }),
         ref: new AnnotationSpec({
@@ -768,7 +782,7 @@ export const uiAnnotations: TAnnotationsTree = {
             "The literal as text (`'2'` for the number literal `2`; `'true'` / `'false'` on a boolean).",
           valueScope: literalLabelValues,
         },
-        { name: "label", type: "string", description: "Display label." },
+        { name: "label", type: "string", description: "Display label.", userText: true },
       ],
       validate: validateLiteralLabel,
     }),
@@ -850,6 +864,7 @@ export const uiAnnotations: TAnnotationsTree = {
           name: "group",
           type: "string",
           description: "Nav section name shared by related models.",
+          userText: true,
         },
       }),
 
@@ -899,6 +914,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "label",
             type: "string",
             description: "Button label text",
+            userText: true,
           },
         }),
       },
@@ -910,6 +926,7 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "label",
             type: "string",
             description: "Button label text",
+            userText: true,
           },
         }),
       },

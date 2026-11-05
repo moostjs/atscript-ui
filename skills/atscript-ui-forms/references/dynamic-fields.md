@@ -87,10 +87,12 @@ export interface TFieldEvaluated {
 Form-level functions — root-interface `@ui.form.fn.title`, `@ui.form.fn.description`, `@ui.form.fn.submit.text`, `@ui.form.fn.submit.disabled` — compile via `compileTopFn`:
 
 ```typescript
-const code = `return (${fnStr})(data, context)`;
+const code = `return (${fnStr})(data, context, t)`;
 ```
 
-So form-level fns receive `(data, context)` and field-level fns receive `(v, data, context, entry)`. The same `fn.title` / `fn.description` keys on a nested object field (its section header) are field-level.
+So form-level fns receive `(data, context, t)` and field-level fns receive `(v, data, context, entry, t)`. The same `fn.title` / `fn.description` keys on a nested object field (its section header) are field-level.
+
+**`t` and translated results (since 0.1.165).** `t(text, params?)` = the text in the app's language (server-served `$i18n` by exact match, else `text`; `{name}` filled from `params`). A string result of `fn.label/description/hint/placeholder/title/submit.text`, a computed option `label` (never `key`) and a `@ui.form.validate` message are shown translated when they exactly match a served text. Write whole literals (`t("Hello {name}", { name })`), never concatenations. Data-derived results are matched too (`(v, data) => data.name` → a user named "Admin" shows a served "Admin" translation; the app's `translate` is called with it): return literals, inject data via `t` params, wrap data in `t` only deliberately. `fn.classes/styles/value/attr` results are never translated. Rules: atscript-ui skill `references/i18n.md` (S5).
 
 ## `@ui.form.fn.*` exhaustive table
 

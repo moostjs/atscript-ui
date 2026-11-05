@@ -1,4 +1,6 @@
 import { useWfFinished as wooksUseWfFinished } from "@wooksjs/event-wf";
+import type { TTranslation } from "moost";
+import { currentTranslation } from "./wf-io/i18n";
 
 // ── Types ───────────────────────────────────────────────────────
 
@@ -66,12 +68,45 @@ export interface FinishWfOpts<T = unknown> {
 // (countdown / manual choice / immediate). The server always returns the
 // envelope as plain JSON; there is no server-side 3xx translation.
 function setEnvelope(envelope: WfFinished): void {
-  wooksUseWfFinished().set({ type: "data", value: envelope });
+  const translation = currentTranslation();
+  wooksUseWfFinished().set({
+    type: "data",
+    value: translation ? translateEnvelope(envelope, translation.t) : envelope,
+  });
+}
+
+type TextT = TTranslation["t"];
+
+/**
+ * The envelope's user-facing texts in the request's language (each text is
+ * its own id): `message.text`, button labels and `skipButton.label`. The
+ * abort `reason` is a machine value (analytics) and stays as it is. A new
+ * envelope — the caller's objects (and `data`) stay as they are.
+ */
+function translateEnvelope(envelope: WfFinished, t: TextT): WfFinished {
+  const out: WfFinished = { ...envelope };
+  if (out.message) out.message = { ...out.message, text: t(out.message.text) };
+  const next = out.next;
+  if (next?.trigger === "auto" && next.skipButton) {
+    out.next = { ...next, skipButton: { ...next.skipButton, label: t(next.skipButton.label) } };
+  } else if (next?.trigger === "manual") {
+    const manual = { ...next };
+    if (manual.primary) manual.primary = translateButton(manual.primary, t);
+    if (manual.options) manual.options = manual.options.map((b) => translateButton(b, t));
+    out.next = manual;
+  }
+  return out;
+}
+
+function translateButton(button: WfButton, t: TextT): WfButton {
+  return { ...button, label: t(button.label) };
 }
 
 /**
  * Build a `WfFinished` envelope and hand it to wooks. All envelope
- * properties are optional; pass `data`, `message`, and/or `next`:
+ * properties are optional; pass `data`, `message`, and/or `next`.
+ * With moost's translator (`setTranslator`) the message text and button
+ * labels are sent in the request's language (each text is its own id):
  *
  *   finishWf({ data: { id: 42 } });
  *   finishWf({ message: { level: "success", text: "Saved." } });

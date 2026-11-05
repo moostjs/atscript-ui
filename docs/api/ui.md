@@ -647,6 +647,7 @@ function getFormValidator(
 ): (callOpts: {
   data: Record<string, unknown>;
   context?: Record<string, unknown>;
+  t?: UiT; // since 0.1.165: the `t` of `@ui.form.validate` rules (ui-fns)
 }) => Record<string, string>;
 ```
 
@@ -660,8 +661,13 @@ Field-level validator with internal `Validator` caching. Returns `true` on succe
 function createFieldValidator(
   prop: TAtscriptAnnotatedType,
   opts?: { rootOnly?: boolean; t?: UiT }, // `t` since 0.1.165: words the fallback error
-): (value: unknown, externalCtx?: { data: unknown; context: unknown }) => true | string;
+): (value: unknown, externalCtx?: { data: unknown; context: unknown; t?: UiT }) => true | string;
 ```
+
+`externalCtx.t` / `callOpts.t` (since 0.1.165) is the app's texts for
+`@ui.form.validate` rules: their `t` argument, and the language their messages
+are reported in ([Texts in the user's language](/forms/dynamic-fields#texts-in-the-users-language)).
+`<AsForm>` passes its app's.
 
 ### `isContainerKind(kind)`
 
@@ -993,7 +999,7 @@ function resolveOptions(
 ): TFormEntryOptions[] | undefined;
 ```
 
-`resolveOptions` checks `@ui.form.options`, then `@ui.form.fn.options` via the active resolver, then literal-union (and, since 0.1.165, boolean) extraction. Pass `field.labelsFrom` as `labelsFrom` so an array item or a union variant also takes the enclosing prop's `@ui.literalLabel` labels. The built-in `AsSelect`, `AsRadio` and `AsMultiSelect` bind `optionValue(opt)`, so a select over a boolean or a number union writes `true` / `3`, not `"true"` / `"3"` (since 0.1.165); a custom picker should do the same.
+`resolveOptions` checks `@ui.form.fn.options` via the active resolver (with `@atscript/ui-fns` installed), then `@ui.form.options`, then literal-union (and, since 0.1.165, boolean) extraction. Pass `field.labelsFrom` as `labelsFrom` so an array item or a union variant also takes the enclosing prop's `@ui.literalLabel` labels. The built-in `AsSelect`, `AsRadio` and `AsMultiSelect` bind `optionValue(opt)`, so a select over a boolean or a number union writes `true` / `3`, not `"true"` / `"3"` (since 0.1.165); a custom picker should do the same.
 
 ## Grid layout
 

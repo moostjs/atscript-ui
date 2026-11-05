@@ -63,7 +63,7 @@ Keys ending in `attr` (`UI_FORM_FN_ATTR`, `UI_TABLE_FN_ATTR`) store `[{ name, fn
 
 ## Compilers
 
-All three functions return a callable bound to a [`TFnScope`](#types). Compiled functions are cached in an internal `FNPool` keyed by the source string.
+The functions return a callable bound to a [`TFnScope`](#types) ([`TTableFnScope`](#ttablefnscope) for table fns). Compiled functions are cached in an internal `FNPool` keyed by the source string.
 
 ### `compileFieldFn(fnStr)`
 
@@ -74,8 +74,10 @@ function compileFieldFn<R = unknown>(fnStr: string): (scope: TFnScope) => R;
 The string is wrapped as:
 
 ```javascript
-return (<fnStr>)(v, data, context, entry)
+return (<fnStr>)(v, data, context, entry, t)
 ```
+
+`t` is the scope's `t`, else the active UI texts (see [`TFnScope`](#tfnscope)).
 
 So a field-level dynamic annotation reads like:
 
@@ -92,11 +94,23 @@ function compileTopFn<R = unknown>(fnStr: string): (scope: TFnScope) => R;
 Form-level wrapping — no leaf value or entry:
 
 ```javascript
-return (<fnStr>)(data, context)
+return (<fnStr>)(data, context, t)
 ```
 
 Used for root-interface `@ui.form.fn.title`, `@ui.form.fn.description`,
 `@ui.form.fn.submit.text`, `@ui.form.fn.submit.disabled`.
+
+### `compileTableFn(fnStr)`
+
+```typescript
+function compileTableFn<R = unknown>(fnStr: string): (scope: TTableFnScope) => R;
+```
+
+Per-cell wrapping for `@ui.table.fn.*` (since 0.1.165):
+
+```javascript
+return (<fnStr>)(row, ctx, t)
+```
 
 ### `compileValidatorFn(fnStr)`
 
@@ -172,6 +186,25 @@ interface TFnScope<V = unknown, D = Record<string, unknown>, C = Record<string, 
   entry?: TFieldEvaluated;
   /** Action name when the fn is evaluated during action dispatch. */
   action?: string;
+  /** `t(text, params?)` — the text in the app's language (since 0.1.165). */
+  t?: UiT;
+}
+```
+
+Without a `t` in scope, the active UI texts are used (`provideAsLocale` in the
+browser, else `setUiLocale`). What `t` returns and which results the resolver
+shows through it: [Texts in the user's language](/forms/dynamic-fields#texts-in-the-users-language).
+
+### `TTableFnScope`
+
+The scope of a `@ui.table.fn.*` function, called as `(row, ctx, t)`. `<AsTable>` passes the row, the table state and its app's `t`.
+
+```typescript
+interface TTableFnScope<R = Record<string, unknown>> {
+  row: R;
+  /** searchTerm, filters, sorters, rowIndex */
+  ctx: Record<string, unknown>;
+  t?: UiT;
 }
 ```
 
@@ -209,6 +242,8 @@ Per-call context passed via `validator.validate(value, safe, context)` and unpac
 interface TValidatorContext {
   data: Record<string, unknown>;
   context: Record<string, unknown>;
+  /** The rules' `t`; a string result is reported through it. Default: the active UI texts. */
+  t?: UiT;
 }
 ```
 

@@ -28,13 +28,13 @@ whole thing finishes in one sitting.
 
 ### `HandleStateStrategy` (DB-backed; `AsWfStore`)
 
-The token is a UUID handle; the state lives in a database row. Each
+The token is a random handle; the state lives in a database row. Each
 step reads/writes the row.
 
 - Survives process restarts.
 - Survives the client dropping the token (you can hand the same
-  UUID to another channel — see [Outlets & Resume](/workflows/outlets-resume)).
-- Smaller tokens (just the UUID).
+  handle to another channel — see [Outlets & Resume](/workflows/outlets-resume)).
+- Smaller tokens (just the handle).
 - Indexable: shadow columns expose context values as real DB
   columns, so an admin UI can `SELECT FROM wf_states WHERE
 inviteEmail = 'a@b.com'`.
@@ -52,7 +52,7 @@ registry** when you want to mix strategies across flows:
 
 ```ts
 const encapsulatedStrategy = new EncapsulatedStateStrategy({ secret: WF_SECRET });
-const handleStrategy = new HandleStateStrategy({ store: wfStore });
+const handleStrategy = new HandleStateStrategy({ store: wfStore, hashHandles: true });
 
 const HANDLE_STATE_WFIDS = new Set<string>(["users/invite", "approvals/multi-step"]);
 
@@ -186,11 +186,51 @@ Three options:
 ```ts
 import { HandleStateStrategy } from "@moostjs/event-wf";
 
-const handleStrategy = new HandleStateStrategy({ store: wfStore });
+const handleStrategy = new HandleStateStrategy({ store: wfStore, hashHandles: true });
 ```
 
 Plug it into your workflow controller as shown at the top of this
-page.
+page. `hashHandles` keeps the handles out of the table — see the next
+section.
+
+## Handles hashed at rest
+
+A handle is a bearer credential: whoever holds it resumes the workflow (an
+invite link, a password reset). With `hashHandles` the strategy stores a hash
+of each handle, never the handle itself, so a database backup, replica or
+leaked row is not a usable link. `AsWfStore` needs no change: the `handle`
+column holds the hash: `wfh1_` + 43 characters (SHA-256), or `wfk1_` + 43
+with a secret (HMAC).
+
+```ts
+// Plain SHA-256: enough for the default random handles.
+new HandleStateStrategy({ store: wfStore, hashHandles: true });
+
+// HMAC with a server secret: for a custom `generateHandle` whose handles can be guessed.
+new HandleStateStrategy({ store: wfStore, hashHandles: { secret: process.env.WF_HANDLE_SECRET! } });
+```
+
+- **Off by default.** Turn it on for every `HandleStateStrategy` backed by
+  `AsWfStore` (`@prostojs/wf` 0.3+).
+- **Upgrading.** Rows written before you turned it on keep their raw handle;
+  with the default handle generator those handles still resume (once —
+  resuming moves them to a hashed key or consumes them). With a custom
+  `generateHandle` the fallback is off unless you pass
+  `hashHandles: { legacyHandle: (token) => /* exactly the shape you issued */ }`
+  (`rawFallback: true` without `legacyHandle` throws). The fallback exists in
+  `@prostojs/wf` 0.3.x only: a raw-key handle that never expires stops resuming
+  with 0.4, so give flows a TTL.
+- **Finding a row by its handle** (to revoke a link): the key is
+  `hashWfHandle(handle, secret?)` from `@prostojs/wf/outlets` —
+  `await wfStore.delete(hashWfHandle(handle))`. Shadow columns
+  (`@wf.store.fromContext`) remain the way to query rows.
+- **Changing or removing the secret** invalidates every open handle.
+- **New handles** are 22 URL-safe characters instead of a UUID; don't parse
+  their shape.
+
+An expired, already-used or unknown handle is refused with HTTP `410` and
+`code: "WF_EXPIRED"` (a malformed token: `410`, `WF_INVALID_TOKEN`) — branch on
+the code, not the message.
 
 ## Shadow columns: `@wf.store.fromContext`
 

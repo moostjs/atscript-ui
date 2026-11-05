@@ -1,6 +1,9 @@
 import { defineConfig } from "vite-plus";
 
 export default defineConfig({
+  test: {
+    globalSetup: "src/__tests__/global-setup.ts",
+  },
   pack: {
     entry: ["src/index.ts", "src/plugin.ts"],
     dts: true,

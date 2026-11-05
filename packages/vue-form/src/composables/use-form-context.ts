@@ -14,6 +14,7 @@ import {
   UNION_CONTEXT_KEY,
 } from "./internal-keys";
 import type { TAsUnionContext } from "../components/types";
+import { useAsTexts } from "./use-as-locale";
 
 const EMPTY_PREFIX = computed(() => "");
 
@@ -69,9 +70,11 @@ export function useFormContext<TFormData = any, TFormContext = any>(componentNam
   }
 
   // ── Scope builder ───────────────────────────────────────────
+  // `t`: the app's texts (fns translate with it; their text results too).
+  const { t } = useAsTexts();
   function buildScope(v?: unknown, entry?: TFieldEvaluated): TFnScope {
     const rd = rootFormData();
-    return { v, data: rd.value as Record<string, unknown>, context: formContext.value, entry };
+    return { v, data: rd.value as Record<string, unknown>, context: formContext.value, entry, t };
   }
 
   return {

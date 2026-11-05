@@ -1,14 +1,21 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import type { FieldResolver, TResolveOptions } from "@atscript/ui";
+import type { FieldResolver, TFormEntryOptions, TResolveOptions, UiT } from "@atscript/ui";
 import {
   META_READONLY,
   UI_FORM_COMPONENT,
   UI_FORM_DISABLED,
   UI_FORM_FN_ATTR,
+  UI_FORM_FN_DESCRIPTION,
   UI_FORM_FN_DISABLED,
   UI_FORM_FN_HIDDEN,
+  UI_FORM_FN_HINT,
+  UI_FORM_FN_LABEL,
+  UI_FORM_FN_OPTIONS,
+  UI_FORM_FN_PLACEHOLDER,
   UI_FORM_FN_PREFIX,
   UI_FORM_FN_READONLY,
+  UI_FORM_FN_SUBMIT_TEXT,
+  UI_FORM_FN_TITLE,
   UI_FORM_HIDDEN,
   UI_FORM_TYPE,
   UI_TABLE_FN_ATTR,
@@ -20,11 +27,57 @@ import {
   resolveOptions,
   resolveStatic,
 } from "@atscript/ui";
-import { compileFieldFn, compileTopFn } from "./fn-compiler";
+import { compileFieldFn, compileTableFn, compileTopFn, scopeT } from "./fn-compiler";
 import type { TFieldEvaluated, TFnScope } from "./types";
 
 /** Fn keys that store `[{ name, fn }]` arrays rather than a single fn string. */
 const ATTR_FN_KEYS = new Set<string>([UI_FORM_FN_ATTR, UI_TABLE_FN_ATTR]);
+
+/**
+ * Fn keys whose result is a text shown to users: a string result that is a
+ * text the server translated (an exact match) is shown translated.
+ */
+const TEXT_FN_KEYS = new Set<string>([
+  UI_FORM_FN_TITLE,
+  UI_FORM_FN_SUBMIT_TEXT,
+  UI_FORM_FN_LABEL,
+  UI_FORM_FN_DESCRIPTION,
+  UI_FORM_FN_HINT,
+  UI_FORM_FN_PLACEHOLDER,
+]);
+
+/**
+ * Option labels through `t` — new option objects only for labels that change
+ * (the fn may return objects it shares, e.g. from `context`); the list itself
+ * when none does.
+ */
+function translateOptionLabels(options: TFormEntryOptions[], t: UiT): TFormEntryOptions[] {
+  let out: TFormEntryOptions[] | undefined;
+  for (let i = 0; i < options.length; i++) {
+    const option = options[i]!;
+    if (typeof option !== "object" || option === null || typeof option.label !== "string") continue;
+    const label = t(option.label);
+    if (label === option.label) continue;
+    out ??= options.slice();
+    out[i] = { ...option, label };
+  }
+  return out ?? options;
+}
+
+/**
+ * A fn result in the app's language: a text result translated by exact
+ * match, the labels of computed options too (never their keys: a string
+ * option is its own key).
+ */
+function translateResult(fnKey: string, result: unknown, scope: TFnScope): unknown {
+  if (TEXT_FN_KEYS.has(fnKey)) {
+    return typeof result === "string" ? scopeT(scope)(result) : result;
+  }
+  if (fnKey === UI_FORM_FN_OPTIONS && Array.isArray(result)) {
+    return translateOptionLabels(result as TFormEntryOptions[], scopeT(scope));
+  }
+  return result;
+}
 
 /** Options for buildFieldEntry — allows pre-resolved overrides. */
 export type TBuildFieldEntryOpts = Partial<
@@ -56,7 +109,7 @@ export class DynamicFieldResolver implements FieldResolver {
       fnKey,
       staticKey,
       scope as unknown as TFnScope,
-      compileFieldFn as CompileFn<T>,
+      compilerOf(fnKey) as CompileFn<T>,
       opts,
     );
   }
@@ -96,11 +149,12 @@ export class DynamicFieldResolver implements FieldResolver {
 
     const result: Record<string, unknown> = {};
     let hasAttrs = false;
+    const compile = compilerOf(fnKey);
 
     for (const item of asArray(fnAttrs)) {
       if (typeof item === "object" && item !== null && "name" in item && "fn" in item) {
         const { name, fn } = item as { name: string; fn: string };
-        result[name] = compileFieldFn(fn)(scope);
+        result[name] = compile(fn)(scope);
         hasAttrs = true;
       }
     }
@@ -113,6 +167,13 @@ export class DynamicFieldResolver implements FieldResolver {
 
 type CompileFn<T> = (fnStr: string) => (scope: TFnScope) => T;
 
+/** The compiler of a field-level fn key: per-cell `(row, ctx, t)` for `ui.table.fn.*`. */
+function compilerOf(fnKey: string): CompileFn<unknown> {
+  return (
+    fnKey.startsWith(UI_TABLE_FN_PREFIX) ? compileTableFn : compileFieldFn
+  ) as CompileFn<unknown>;
+}
+
 function resolveAnnotatedProp<T>(
   metadata: TAtscriptAnnotatedType["metadata"],
   fnKey: string,
@@ -123,7 +184,7 @@ function resolveAnnotatedProp<T>(
 ): T | undefined {
   const fnStr = metadata.get(fnKey as keyof AtscriptMetadata);
   if (typeof fnStr === "string") {
-    return compileFn(fnStr)(scope);
+    return translateResult(fnKey, compileFn(fnStr)(scope), scope) as T;
   }
 
   // Reuse @atscript/ui's static resolution for the fallback path

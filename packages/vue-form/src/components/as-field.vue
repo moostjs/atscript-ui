@@ -659,6 +659,7 @@ function formRule(v: unknown) {
   return formValidate(v, {
     data: (rootFormData() as { value: Record<string, unknown> }).value ?? {},
     context: formContext.value,
+    t,
   });
 }
 

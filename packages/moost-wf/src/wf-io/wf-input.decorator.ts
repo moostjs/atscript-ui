@@ -3,7 +3,7 @@ import { isAnnotatedType } from "@atscript/typescript/utils";
 import { useWfState } from "@moostjs/event-wf";
 import { Optional, Resolve } from "moost";
 import { getFormActions } from "./context";
-import { useAtscriptWf } from "./use-atscript-wf";
+import { actionRefused, useAtscriptWf, type UseAtscriptWfOpts } from "./use-atscript-wf";
 
 /**
  * Parameter decorator that resolves to the validated typed input for the
@@ -17,6 +17,8 @@ import { useAtscriptWf } from "./use-atscript-wf";
  *   `pass: true` opts the step into ignoring the no-data action.
  * - Unknown action → `StepRetriableError` (propagated from `resolveAction`).
  *
+ * `translate`: see {@link UseAtscriptWfOpts}.
+ *
  * @example
  * ```ts
  * @Step('login')
@@ -25,7 +27,7 @@ import { useAtscriptWf } from "./use-atscript-wf";
  * }
  * ```
  */
-export function WfInput(opts?: { pass?: boolean }): ParameterDecorator {
+export function WfInput(opts?: UseAtscriptWfOpts & { pass?: boolean }): ParameterDecorator {
   return (target, key, index) => {
     if (typeof index !== "number") return;
     Resolve((metas) => {
@@ -38,7 +40,10 @@ export function WfInput(opts?: { pass?: boolean }): ParameterDecorator {
       }
       // Cast at the boundary — the parameter's runtime type is the atscript
       // type; the call-site annotation provides the TS-side inference.
-      const wf = useAtscriptWf(type as TAtscriptAnnotatedType);
+      const form = type as TAtscriptAnnotatedType;
+      const wf = useAtscriptWf(form, opts);
+      const refuse = (template: string, action: string) =>
+        actionRefused(form, opts, template, action);
       const pass = opts?.pass === true;
 
       // resolveAction throws on unknown — same behavior we want here.
@@ -47,33 +52,31 @@ export function WfInput(opts?: { pass?: boolean }): ParameterDecorator {
       if (action) {
         const envelope = useWfState().input<{ action?: string; formData?: unknown }>();
         const wfInput = envelope?.formData;
-        const { actions, actionsWithData } = getFormActions(type as TAtscriptAnnotatedType);
+        const { actions, actionsWithData } = getFormActions(form);
         const isNoData = actions.includes(action);
         const isWithData = actionsWithData.includes(action);
 
         if (isNoData) {
           if (!pass) {
-            throw wf.requireInput({
-              formMessage:
-                wfInput === undefined
-                  ? `Action "${action}" requires no data but this step expects input`
-                  : `Action "${action}" requires no data; input not allowed here`,
-            });
+            throw refuse(
+              wfInput === undefined
+                ? 'Action "{action}" requires no data but this step expects input'
+                : 'Action "{action}" requires no data; input not allowed here',
+              action,
+            );
           }
           if (wfInput !== undefined) {
             // pass:true permits the step to *ignore* the no-data action, not
             // to smuggle data through it. Reject the input — it's not part
             // of the action contract.
-            throw wf.requireInput({
-              formMessage: `Action "${action}" requires no data; input not allowed here`,
-            });
+            throw refuse('Action "{action}" requires no data; input not allowed here', action);
           }
           return undefined;
         }
 
         if (isWithData) {
           if (wfInput === undefined) {
-            throw wf.requireInput({ formMessage: `Action "${action}" expects input` });
+            throw refuse('Action "{action}" expects input', action);
           }
           return wf.resolveInput({ partial: "deep" });
         }

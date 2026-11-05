@@ -144,7 +144,7 @@ All `nodeType: ["prop", "type"]` unless noted.
 
 ## @ui.table.fn.\* (dynamic)
 
-Per-row computed annotations evaluated against `{ row, ctx }` — `row` is the current row's data object, `ctx` carries table-level context with at minimum `searchTerm`, `filters`, `sorters`, `rowIndex`. Per-row+cell scope only; no `hidden`/`width`/`type`/`component`/`order` (those are column-level decisions).
+Per-row functions called as `(row, ctx, t)` (write `(row) => …`, never a bare expression or `({ row })`) — `row` is the current row's data object, `ctx` carries table-level context with at minimum `searchTerm`, `filters`, `sorters`, `rowIndex`, `t(text, params?)` translates a text. Needs `installDynamicResolver()`; before 0.1.165 every `@ui.table.fn.*` threw `ReferenceError`. Per-row+cell scope only; no `hidden`/`width`/`type`/`component`/`order` (those are column-level decisions).
 
 | Annotation                       | Constant              | Return                                 |
 | -------------------------------- | --------------------- | -------------------------------------- |
@@ -153,7 +153,7 @@ Per-row computed annotations evaluated against `{ row, ctx }` — `row` is the c
 | `@ui.table.fn.styles "fn"`       | `UI_TABLE_FN_STYLES`  | `string \| Record<string, string>`     |
 
 ```atscript
-@ui.table.fn.classes "({ row }) => row.amount < 0 ? 'text-error' : ''"
+@ui.table.fn.classes "(row) => row.amount < 0 ? 'text-error' : ''"
 amount: number
 ```
 

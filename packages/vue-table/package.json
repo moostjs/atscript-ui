@@ -181,6 +181,7 @@
     "@atscript/core": "catalog:",
     "@atscript/db-client": "catalog:",
     "@atscript/typescript": "catalog:",
+    "@atscript/ui-fns": "workspace:^",
     "@atscript/vue-form": "workspace:^",
     "@tanstack/vue-virtual": "catalog:",
     "@uniqu/url": "catalog:",

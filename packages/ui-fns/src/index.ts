@@ -3,10 +3,15 @@ import { DynamicFieldResolver } from "./runtime/dynamic-resolver";
 import { uiFnsValidatorPlugin } from "./runtime/validator-plugin";
 
 // ── Types ────────────────────────────────────────────────────
-export type { TFnScope, TComputed, TFieldEvaluated } from "./runtime/types";
+export type { TFnScope, TTableFnScope, TComputed, TFieldEvaluated } from "./runtime/types";
 
 // ── Fn compiler ──────────────────────────────────────────────
-export { compileFieldFn, compileTopFn, compileValidatorFn } from "./runtime/fn-compiler";
+export {
+  compileFieldFn,
+  compileTableFn,
+  compileTopFn,
+  compileValidatorFn,
+} from "./runtime/fn-compiler";
 
 // ── Dynamic resolver ─────────────────────────────────────────
 export { DynamicFieldResolver } from "./runtime/dynamic-resolver";

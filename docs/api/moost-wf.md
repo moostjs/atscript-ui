@@ -39,8 +39,10 @@ Annotations registered:
 Parameter decorator that resolves to the validated, typed input for the current step. Built on top of `useAtscriptWf()` with the action-aware policy matrix baked in.
 
 ```typescript
-function WfInput(opts?: { pass?: boolean }): ParameterDecorator;
+function WfInput(opts?: { pass?: boolean; translate?: boolean }): ParameterDecorator;
 ```
+
+`translate: false` serves the form schema with its source texts (see [`serializeFormSchema`](#serializeformschema-type-opts)).
 
 ```typescript
 import { WfInput } from "@atscript/moost-wf";
@@ -79,7 +81,10 @@ Use `?:` syntax (`input?: Form`), not a union (`input: Form | undefined`) — TS
 Parameter decorator that resolves to the current workflow action name (or `undefined` for plain submits). The form type argument is **required** — the decorator validates the incoming action against the form's `@ui.form.action` / `@wf.action.withData` whitelist and throws `StepRetriableError` for unknown actions before the step body runs.
 
 ```typescript
-function WfAction<T extends TAtscriptTypeDef>(type: TAtscriptAnnotatedType<T>): ParameterDecorator;
+function WfAction<T extends TAtscriptTypeDef>(
+  type: TAtscriptAnnotatedType<T>,
+  opts?: { translate?: boolean },
+): ParameterDecorator;
 ```
 
 ```typescript
@@ -100,13 +105,14 @@ The form-argument whitelist is a security guard: step bodies never see an action
 
 ## Composables
 
-### `useAtscriptWf(type)`
+### `useAtscriptWf(type, opts?)`
 
 Schema-driven workflow I/O primitives. Returns three pure, independent helpers — composable consumers can interleave their own logic between checking the action and validating the input.
 
 ```typescript
 function useAtscriptWf<T extends TAtscriptTypeDef>(
   type: TAtscriptAnnotatedType<T>,
+  opts?: UseAtscriptWfOpts, // { translate?: boolean } — see serializeFormSchema
 ): {
   resolveInput(opts?: { partial?: "deep" }): InferDataType<T>;
   resolveAction(): string | undefined;
@@ -124,6 +130,11 @@ function useAtscriptWf<T extends TAtscriptTypeDef>(
 | `requireInput(opts?)` | Builder for `StepRetriableError`. `errors` is field-keyed; `formMessage` becomes the top-level `__form` error. Use it to bail out from custom branches.       |
 
 Validator instances are cached per `(type, opts)` pair.
+
+With moost's translator (since 0.1.165) everything it serves is in the
+request's language: the form schema, validation errors (by their code,
+before the error map is built) and the `errors` / `formMessage` you pass to
+`requireInput` (by their text). See [Translations on the server](/guide/i18n-server).
 
 Validation errors are keyed by dotted field path, the same map the client-side form validator builds: the first error per path wins, and a root-level error (empty path, e.g. the input is not an object) is keyed `__form` so it shows in the form banner (since 0.1.158; earlier it was keyed `""` and never displayed). Build the same map from your own `Validator` with [`validatorErrorsToMap`](/api/ui#error-map-utilities) from `@atscript/ui`.
 
@@ -149,13 +160,24 @@ async login() {
 
 ## Helpers
 
-### `serializeFormSchema(type)`
+### `serializeFormSchema(type, opts?)`
 
 Cached per-type serializer for `inputRequired.payload`. Drops `@wf.context.pass` from the output (server-only) and ships FK fields with shallow refs (`refDepth: 0.5`) so clients can resolve value-help without dragging full target trees onto the wire.
 
 ```typescript
-function serializeFormSchema(type: TAtscriptAnnotatedType): unknown;
+function serializeFormSchema(type: TAtscriptAnnotatedType, opts?: SerializeFormSchemaOpts): unknown;
+
+interface SerializeFormSchemaOpts {
+  /** Serve the request's language (default `true`); `false` serves the source texts. */
+  translate?: boolean;
+}
 ```
+
+With a translator registered (moost's `setTranslator`) and a locale picked for
+the request, the schema's texts are translated and it carries `$i18n` (since
+0.1.165): one object per type and locale, so it is the same object for every
+request in that language. Without a translator the output is the untranslated
+schema, unchanged. See [Translations on the server](/guide/i18n-server).
 
 ### `extractPassContext(type, wfContext)`
 
@@ -237,6 +259,11 @@ Same shape as `finishWf`, additionally sets `aborted: true` and the abort `reaso
 function abortWf(reason: string, opts?: FinishWfOpts): void;
 ```
 
+With moost's translator both send `message.text`, button labels and
+`skipButton.label` in the request's language (each text is its own id; since
+0.1.165). The abort `reason` (a machine value), `data` and the workflow state
+are never translated.
+
 ### `isWfFinished(value)`
 
 Type guard for `WfFinished` envelopes — useful in custom transports or outlet wrappers.
@@ -301,6 +328,12 @@ interface AsWfStoreOptions {
   actor?: () => string | undefined;
 }
 ```
+
+The `handle` argument is the store key the strategy passes in: with
+`new HandleStateStrategy({ store, hashHandles: true })` it is the hash of the
+handle (`wfh1_…`), never the handle the client holds. Expired rows are never
+deleted on their own — schedule `cleanup()`. See
+[State Persistence](/workflows/state-persistence#handles-hashed-at-rest).
 
 ### Shadow-column mechanism
 

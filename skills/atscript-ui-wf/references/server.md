@@ -383,7 +383,9 @@ the result.
 
 ## serializeFormSchema(type)
 
-`serializeFormSchema(type)` produces the wire-safe form payload `<AsWfForm>` decodes — `@wf.context.pass` is stripped, FK targets ship as shallow refs. Cached per type identity. Used internally by `requireInput()`; expose only if you build a custom outlet.
+`serializeFormSchema(type, opts?)` produces the wire-safe form payload `<AsWfForm>` decodes — `@wf.context.pass` is stripped, FK targets ship as shallow refs. Cached per type identity. Used internally by `requireInput()`; expose only if you build a custom outlet.
+
+**Translation (since 0.1.165).** With moost's `setTranslator` and a request locale, the schema is served translated with `$i18n`, one cached object per (type, locale); without a translator, unchanged. Validation errors (by code), `requireInput` `errors`/`formMessage`, and `finishWf`/`abortWf` texts (`message.text`, button labels, `skipButton.label`; never the abort `reason`, a machine slug) are translated too — pass source texts. Opt out of schema translation per form with `{ translate: false }` on `serializeFormSchema` / `useAtscriptWf` / `@WfInput` / `@WfAction`. Importing `@atscript/moost-wf` registers `VALIDATOR_MESSAGES` + `AS_UI_MESSAGES` (public: served in every `$i18n`). Full rules: atscript-ui skill, `references/i18n.md` (server side).
 
 ## getFormActions(type)
 

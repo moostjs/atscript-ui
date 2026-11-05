@@ -1,7 +1,7 @@
-import { EventContext, run } from "@wooksjs/event-core";
+import { EventContext, run, useLocale } from "@wooksjs/event-core";
 import { StepRetriableError, resumeKey, wfKind } from "@wooksjs/event-wf";
-import { getMoostMate } from "moost";
-import { describe, expect, it, vi } from "vite-plus/test";
+import { getMoostMate, setTranslator } from "moost";
+import { afterEach, describe, expect, it, vi } from "vite-plus/test";
 
 import { WfAction } from "../wf-io/wf-action.decorator";
 import { WfInput } from "../wf-io/wf-input.decorator";
@@ -427,5 +427,35 @@ describe("@WfAction", () => {
     // — the step body must never see an unknown action.
     const cb = captureResolve(WfAction(ActionForm), ActionForm);
     expect(() => runInWfContext({ action: "bogus" }, () => cb({}))).toThrow(StepRetriableError);
+  });
+});
+
+describe("@WfInput — built-in messages are translated once", () => {
+  afterEach(() => setTranslator(undefined));
+
+  it("serves the translated template as is (never translates the translation again)", async () => {
+    const { WithDataForm } = await import("./fixtures/wf-forms.as");
+    const seen: string[] = [];
+    setTranslator(
+      (id, params) => {
+        seen.push(id);
+        if (id === 'Action "{action}" expects input')
+          return `Aktion ${String(params?.action)}: Eingabe fehlt`;
+        if (id.startsWith("Aktion")) return "TWICE";
+        return undefined;
+      },
+      { locales: ["de"] },
+    );
+    const cb = captureResolve(WfInput(), WithDataForm);
+    const err = capture(() =>
+      runInWfContext({ action: "saveDraft", input: undefined }, () => {
+        useLocale().set("de");
+        return cb({});
+      }),
+    );
+    expect((expectIR(err).context.errors as Record<string, string>).__form).toBe(
+      "Aktion saveDraft: Eingabe fehlt",
+    );
+    expect(seen.filter((id) => id.startsWith("Aktion"))).toEqual([]);
   });
 });

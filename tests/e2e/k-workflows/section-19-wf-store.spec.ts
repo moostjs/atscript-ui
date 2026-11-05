@@ -17,6 +17,8 @@
 //   - GET  `/api/_test/wf-store/handles`    lists `(handle, schemaId,
 //                                            expiresAt)` for assertion.
 
+import { createHash } from "node:crypto";
+
 import { expect, test, type APIRequestContext } from "../fixtures";
 
 import {
@@ -190,10 +192,17 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         wfs = extractWfsFromLink(entry.link);
         // Sanity: the wooks 0.7.16+ named-registry token format is
         // `<name>.<raw>`. Our controller registers HandleStateStrategy under
-        // the name `handle`, and it mints UUIDs (8-4-4-4-12 hex) — the prefix
-        // proves the registry routed `api/users/invite` to the handle store.
-        expect(wfs).toMatch(
-          /^handle\.[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
+        // the name `handle` with `hashHandles` on, which mints 22 base64url
+        // characters — the prefix proves the registry routed
+        // `api/users/invite` to the handle store.
+        expect(wfs).toMatch(/^handle\.[A-Za-z0-9_-]{22}$/);
+        // Hashed at rest: the row's key is `wfh1_` + base64url(SHA-256(handle)),
+        // never the handle itself.
+        const handle = wfs.slice("handle.".length);
+        const stored = (await listHandles(adminCtx)).map((h) => h.handle);
+        expect(stored).not.toContain(handle);
+        expect(stored).toContain(
+          `wfh1_${createHash("sha256").update(handle, "utf8").digest("base64url")}`,
         );
       } finally {
         await adminCtx.dispose();

@@ -228,7 +228,7 @@ const wfStore = new AsWfStore({
   actor: () => useSession()?.userId,
 });
 
-const handleStrategy = new HandleStateStrategy({ store: wfStore });
+const handleStrategy = new HandleStateStrategy({ store: wfStore, hashHandles: true });
 
 @Controller()
 export class WorkflowsController {
@@ -277,6 +277,16 @@ state: {
 ```
 
 The active strategy name is embedded in the issued token as `<name>.<raw>`, so resume always re-selects the strategy that persisted the state — each can keep its own storage. Names must match `/^[A-Za-z0-9_-]+$/`. A step can also escalate at runtime via `swapStrategy('name')`. Full registry reference: the `moostjs` skill (`event-wf.md` · State strategies). `AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`; `HandleStateStrategy` accepts any `WfStateStore` implementation. Adapter bootstrap stays vanilla: `app.adapter(new MoostWf())` with no options.
+
+### Handles hashed at rest (`hashHandles`)
+
+| #   | Rule                                                                                                                                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Always pass `hashHandles: true` (or `{ secret }` for a guessable custom `generateHandle`) with `AsWfStore`: the `handle` column then holds `wfh1_…` (`wfk1_…` with a secret), never the client's token. Off by default (`@prostojs/wf` 0.3+).                            |
+| 2   | No `AsWfStore` change needed — hashing lives in the strategy. Find/revoke a row by token: `wfStore.delete(hashWfHandle(handle, secret?))` (`@prostojs/wf/outlets`).                                                                                                      |
+| 3   | Upgrade: rows stored with a raw default (UUID) handle still resume once (0.3.x-only fallback; gone in 0.4 — give flows a TTL). Custom `generateHandle` → fallback off unless `hashHandles: { legacyHandle: (token) => boolean }`; `rawFallback: true` without it throws. |
+| 4   | New handles are 22 base64url chars, not UUIDs — never parse token shape. Changing the secret invalidates all open handles.                                                                                                                                               |
+| 5   | Expired / used / unknown handle → `410` `code: "WF_EXPIRED"`; malformed token → `410` `WF_INVALID_TOKEN`. Branch on `code`.                                                                                                                                              |
 
 ## Recipe — invite + register flow with shadow column lookup
 

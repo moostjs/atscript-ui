@@ -89,3 +89,15 @@ export interface InviteStartFormFixture {
     @ui.form.placeholder 'Pick a role'
     roleId: RolesTableFixture.id
 }
+
+@meta.label 'Profile'
+@wf.context.pass 'note'
+export interface I18nForm {
+    @meta.label 'Name'
+    @ui.form.placeholder 'Your name'
+    @expect.minLength 3
+    name: string
+
+    @ui.form.action 'skip', 'Skip'
+    skipAction: ui.action
+}

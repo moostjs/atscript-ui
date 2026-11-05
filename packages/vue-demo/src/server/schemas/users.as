@@ -28,6 +28,7 @@ export interface UsersTable {
     @db.index.plain 'users_status_idx'
     @db.default 'pending'
     @ui.table.type 'status'
+    @ui.table.fn.attr 'data-status', '(row) => row.status'
     @ui.form.grid.colSpan 'half'
     status: 'active' | 'suspended' | 'pending' | 'invited'
 

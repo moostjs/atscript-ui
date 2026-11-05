@@ -302,6 +302,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
       formValidator.value({
         data: domainData() as Record<string, unknown>,
         context: (formContext.value ?? {}) as Record<string, unknown>,
+        t,
       }),
   });
 
@@ -447,6 +448,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         data: getDomainData(),
         context: (formContext.value ?? {}) as Record<string, unknown>,
         entry: undefined,
+        t,
       }) satisfies TFnScope as unknown as Record<string, unknown>,
   );
 

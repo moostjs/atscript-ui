@@ -36,6 +36,8 @@ export const AS_UI_MESSAGES = Object.freeze({
   UI_ERROR: "Error",
   UI_MORE: "+{count} more",
   UI_INVALID_VALUE: "Invalid value",
+  /** A `@ui.form.validate` rule returned `false` (no message of its own). */
+  UI_VALIDATION_FAILED: "Validation failed",
 
   // ── Forms ─────────────────────────────────────────────────
   UI_FORM_SUBMIT: "Submit",

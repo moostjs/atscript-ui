@@ -87,6 +87,9 @@ test.describe("Section 2 — Cell rendering by type", () => {
     const statusBadge = statusCell.locator(".as-status-badge");
     await expect(statusBadge).toHaveText("active");
     await expect(statusBadge).toHaveClass(/scope-good/);
+    // `@ui.table.fn.attr 'data-status', '(row) => row.status'` — a per-row
+    // function of the row, bound on the cell.
+    await expect(statusCell).toHaveAttribute("data-status", "active");
 
     // MFA — boolean label (`@ui.literalLabel 'false', 'Disabled'`); admin seeded `mfaEnabled: false`.
     const mfaCell = await cellLocatorByPath(table, adminRow, "mfaEnabled");

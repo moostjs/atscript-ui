@@ -11,8 +11,10 @@ import {
   UI_TABLE_STYLES,
   type ColumnDef,
   type TableDef,
+  type UiT,
 } from "@atscript/ui";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { computed, type ComputedRef } from "vue";
 import type { ReactiveTableState } from "../types";
 import { useTableContextOptional } from "./use-table-state";
@@ -125,6 +127,8 @@ export interface UseCellResolverResult {
 export function useCellResolver(getTableDef: () => TableDef | null): UseCellResolverResult {
   const ctx = useTableContextOptional();
   const state = ctx?.state;
+  // The app's texts: `@ui.table.fn.*` functions get them as `t`.
+  const { t } = useAsTexts();
 
   const hasAnyCellBindings = computed(() => {
     const def = getTableDef();
@@ -141,7 +145,7 @@ export function useCellResolver(getTableDef: () => TableDef | null): UseCellReso
       return (colMeta.staticBindings ??= buildStaticBindings(colMeta));
     }
 
-    const scope = buildScope(state, row, rowIndex);
+    const scope = buildScope(state, row, rowIndex, t);
     const cls = colMeta.hasClasses
       ? resolveFieldProp(colMeta.prop, UI_TABLE_FN_CLASSES, UI_TABLE_CLASSES, scope)
       : undefined;
@@ -180,8 +184,10 @@ function buildScope(
   state: ReactiveTableState | undefined,
   row: Record<string, unknown>,
   rowIndex: number,
+  t: UiT,
 ): Record<string, unknown> {
   return {
+    t,
     row,
     ctx: {
       searchTerm: state?.searchTerm.value ?? "",

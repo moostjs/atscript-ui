@@ -34,9 +34,12 @@ declare global {
     "expect.pattern": ({ pattern: string, flags?: string, message?: string })[]
     "expect.array.uniqueItems": { message?: string } | true
     "expect.array.key": { message?: string } | true
+    "normalize.trim": boolean
+    "normalize.lowercase": boolean
+    "normalize.uppercase": boolean
     "emit.jsonSchema": boolean
     "emit.compiledValidator": boolean
   }
-  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "unknown" | "phantom"
+  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "trimmed" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "unknown" | "phantom"
 }
 // prettier-ignore-end

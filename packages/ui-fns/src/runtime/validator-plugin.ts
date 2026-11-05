@@ -1,5 +1,12 @@
 import type { TValidatorPlugin } from "@atscript/typescript/utils";
-import { UI_FORM_VALIDATE, asArray, getFieldMeta, isContainerKind } from "@atscript/ui";
+import {
+  UI_FORM_VALIDATE,
+  asArray,
+  getFieldMeta,
+  getUiTexts,
+  isContainerKind,
+  type UiT,
+} from "@atscript/ui";
 import { buildFieldEntry } from "./dynamic-resolver";
 import { compileValidatorFn } from "./fn-compiler";
 
@@ -7,6 +14,8 @@ import { compileValidatorFn } from "./fn-compiler";
 export interface TValidatorContext {
   data: Record<string, unknown>;
   context: Record<string, unknown>;
+  /** The rules' `t` and the language of their messages; the active UI texts when omitted. */
+  t?: UiT;
 }
 
 /**
@@ -55,8 +64,9 @@ export function uiFnsValidatorPlugin(): TValidatorPlugin {
     const data = fnsCtx?.data ?? {};
     const context = fnsCtx?.context ?? {};
 
-    // Build entry + full scope via dual-scope utility
-    const baseScope = { v: value, data, context, entry: undefined };
+    // Build entry + full scope via dual-scope utility (`t` resolved once for every rule)
+    const t = fnsCtx?.t ?? getUiTexts().t;
+    const baseScope = { v: value, data, context, entry: undefined, t };
     const scope = buildFieldEntry(def, baseScope, ctx.path);
 
     // Run custom validators with full scope
@@ -70,7 +80,7 @@ export function uiFnsValidatorPlugin(): TValidatorPlugin {
       const result = fn(scope);
 
       if (result !== true) {
-        ctx.error(typeof result === "string" ? result : "Validation failed");
+        ctx.error(t(typeof result === "string" ? result : "UI_VALIDATION_FAILED"));
         // Still walk a container's children so their own errors are reported.
         if (container) ctx.validateAnnotatedType(def, value);
         return false;

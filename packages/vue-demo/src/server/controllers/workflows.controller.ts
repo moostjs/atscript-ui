@@ -68,7 +68,10 @@ setInterval(() => {
 }, 5 * 60_000).unref();
 
 const encapsulatedStrategy = new EncapsulatedStateStrategy({ secret: WF_SECRET });
-const handleStrategy = new HandleStateStrategy({ store: wfStore });
+// `hashHandles`: the store keeps a hash of each handle, never the handle
+// itself — a leaked `wf_states` row is not a usable magic link. Handles stored
+// raw before hashing was on still resume once.
+const handleStrategy = new HandleStateStrategy({ store: wfStore, hashHandles: true });
 
 // Named strategy registry (since `@wooksjs/event-wf` 0.7.16). Tokens are
 // prefixed `<name>.<raw>` so resume auto-dispatches via the registry — no

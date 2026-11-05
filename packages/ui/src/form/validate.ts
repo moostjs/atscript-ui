@@ -16,6 +16,8 @@ import { getUiTexts, type UiT } from "../i18n/ui-texts";
 export interface TFormValidatorCallOptions {
   data: Record<string, unknown>;
   context?: Record<string, unknown>;
+  /** The app's texts: the `t` of `@ui.form.validate` rules and the language of their messages. */
+  t?: UiT;
 }
 
 // ── Server-managed fields ────────────────────────────────────
@@ -125,6 +127,7 @@ export function getFormValidator(
     const isValid = validator.validate(callOpts.data, true, {
       data: callOpts.data,
       context: callOpts.context ?? {},
+      t: callOpts.t,
     });
     if (isValid) return {};
 
@@ -172,10 +175,10 @@ export function isContainerKind(kind: string): boolean {
 export function createFieldValidator(
   prop: TAtscriptAnnotatedType,
   opts?: TFieldValidatorOptions,
-): (value: unknown, externalCtx?: { data: unknown; context: unknown }) => true | string {
+): (value: unknown, externalCtx?: { data: unknown; context: unknown; t?: UiT }) => true | string {
   let cached: InstanceType<typeof Validator> | undefined;
 
-  return (value: unknown, externalCtx?: { data: unknown; context: unknown }): true | string => {
+  return (value, externalCtx) => {
     cached ??= new Validator(prop, {
       plugins:
         opts?.rootOnly && isContainerKind(prop.type.kind)

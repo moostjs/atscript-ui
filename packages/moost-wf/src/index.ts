@@ -1,6 +1,8 @@
 export { serializeFormSchema } from "./wf-io/serialize";
+export type { SerializeFormSchemaOpts } from "./wf-io/serialize";
 export { extractPassContext, getFormActions } from "./wf-io/context";
 export { useAtscriptWf } from "./wf-io/use-atscript-wf";
+export type { UseAtscriptWfOpts } from "./wf-io/use-atscript-wf";
 export { WfInput } from "./wf-io/wf-input.decorator";
 export { WfAction } from "./wf-io/wf-action.decorator";
 export { createAsHttpOutlet } from "./outlet";

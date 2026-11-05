@@ -2,12 +2,15 @@ import type {
   InferDataType,
   TAtscriptAnnotatedType,
   TAtscriptTypeDef,
+  TError,
 } from "@atscript/typescript/utils";
+import { localizeErrors } from "@atscript/typescript/utils";
 import { FORM_ERROR_KEY, validatorErrorsToMap } from "@atscript/ui";
 import { useWfState } from "@moostjs/event-wf";
 import { StepRetriableError } from "@wooksjs/event-wf";
 import { extractPassContext, getFormActions } from "./context";
-import { serializeFormSchema } from "./serialize";
+import { currentTranslation, translateText } from "./i18n";
+import { serializeFormSchema, type SerializeFormSchemaOpts } from "./serialize";
 import { getCachedValidator } from "./validator-cache";
 
 interface RequireInputOpts {
@@ -15,9 +18,10 @@ interface RequireInputOpts {
   formMessage?: string;
 }
 
-function isValidatorError(err: unknown): err is {
-  errors: Array<{ path: string; message: string }>;
-} {
+/** Options of {@link useAtscriptWf}. */
+export type UseAtscriptWfOpts = SerializeFormSchemaOpts;
+
+function isValidatorError(err: unknown): err is { errors: TError[] } {
   return (
     err !== null &&
     typeof err === "object" &&
@@ -42,9 +46,15 @@ function isValidatorError(err: unknown): err is {
  *   `@WfInput` decorator) can throw their own custom failures.
  *
  * Validator instances are cached per `(type, opts)` pair.
+ *
+ * Served in the request's language (moost's `setTranslator`): the form
+ * schema (see {@link SerializeFormSchemaOpts.translate}), validation errors
+ * (by their code) and `formMessage` / `errors` given to `requireInput` (by
+ * their text). The workflow's state is never translated.
  */
 export function useAtscriptWf<T extends TAtscriptTypeDef>(
   type: TAtscriptAnnotatedType<T>,
+  opts?: UseAtscriptWfOpts,
 ): {
   resolveInput(opts?: { partial?: "deep" }): InferDataType<T>;
   resolveAction(): string | undefined;
@@ -57,45 +67,49 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(
     context: Record<string, unknown>;
   }>;
 };
-export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotatedType<T>) {
+export function useAtscriptWf<T extends TAtscriptTypeDef>(
+  type: TAtscriptAnnotatedType<T>,
+  opts?: UseAtscriptWfOpts,
+) {
   const wfState = useWfState();
 
-  function requireInput({ errors, formMessage }: RequireInputOpts = {}): StepRetriableError<{
+  function requireInput(input: RequireInputOpts = {}): StepRetriableError<{
     outlet: "http";
     payload: unknown;
     context: Record<string, unknown>;
   }> {
-    const wfContext = wfState.ctx<Record<string, unknown>>() ?? {};
-    const passContext = extractPassContext(type, wfContext);
-    const mergedErrors: Record<string, string> | undefined = errors
-      ? { ...errors }
-      : formMessage
-        ? {}
-        : undefined;
-    if (formMessage && mergedErrors) {
-      mergedErrors[FORM_ERROR_KEY] = formMessage;
+    // The caller's texts in the request's language (their text is the id).
+    const translation = currentTranslation();
+    let { errors, formMessage } = input;
+    if (translation) {
+      if (formMessage !== undefined) formMessage = translation.t(formMessage);
+      if (errors) {
+        errors = Object.fromEntries(
+          Object.entries(errors).map(([path, message]) => [path, translation.t(message)]),
+        );
+      }
     }
-    const context: Record<string, unknown> = mergedErrors
-      ? { ...passContext, errors: mergedErrors }
-      : { ...passContext };
-    return new StepRetriableError(new Error(formMessage ?? "Input required"), undefined, {
-      outlet: "http",
-      payload: serializeFormSchema(type),
-      context,
-    });
+    return inputRequired(type, opts, errors, formMessage);
   }
 
   function validateOrThrow(
     input: unknown,
-    opts: Parameters<TAtscriptAnnotatedType["validator"]>[0],
+    validatorOpts: Parameters<TAtscriptAnnotatedType["validator"]>[0],
   ): void {
-    const validator = getCachedValidator(type, opts);
+    const validator = getCachedValidator(type, validatorOpts);
     try {
       validator.validate(input);
     } catch (err) {
       if (isValidatorError(err)) {
-        // Same error map as the client-side validator (root error → `__form`).
-        throw requireInput({ errors: validatorErrorsToMap(err.errors) });
+        // Localized by code (params filled) before the map is built: the
+        // same error map as the client-side validator (root error → `__form`).
+        const translation = currentTranslation();
+        const errors = translation
+          ? localizeErrors(err.errors, (id, params, error) =>
+              translation.t(id, params, error.message),
+            )
+          : err.errors;
+        throw inputRequired(type, opts, validatorErrorsToMap(errors));
       }
       throw err;
     }
@@ -120,10 +134,55 @@ export function useAtscriptWf<T extends TAtscriptTypeDef>(type: TAtscriptAnnotat
     if (action === undefined) return undefined;
     const { actions, actionsWithData } = getFormActions(type);
     if (!actions.includes(action) && !actionsWithData.includes(action)) {
-      throw requireInput({ formMessage: `Action "${action}" is not supported` });
+      throw actionRefused(type, opts, 'Action "{action}" is not supported', action);
     }
     return action;
   }
 
   return { resolveInput, resolveAction, requireInput };
+}
+
+/**
+ * The `StepRetriableError` refusing `action` with a built-in message: the
+ * `template` translated once here with its `{action}` param, then served as is.
+ *
+ * @internal Shared with `@WfInput`.
+ */
+export function actionRefused(
+  type: TAtscriptAnnotatedType,
+  opts: UseAtscriptWfOpts | undefined,
+  template: string,
+  action: string,
+): StepRetriableError<{ outlet: "http"; payload: unknown; context: Record<string, unknown> }> {
+  return inputRequired(type, opts, undefined, translateText(template, { action }));
+}
+
+/**
+ * The `StepRetriableError` asking for `type`'s form, with `errors` /
+ * `formMessage` as they are (already in the request's language).
+ */
+function inputRequired(
+  type: TAtscriptAnnotatedType,
+  opts: UseAtscriptWfOpts | undefined,
+  errors: Record<string, string> | undefined,
+  formMessage?: string,
+): StepRetriableError<{ outlet: "http"; payload: unknown; context: Record<string, unknown> }> {
+  const wfContext = useWfState().ctx<Record<string, unknown>>() ?? {};
+  const passContext = extractPassContext(type, wfContext);
+  const mergedErrors: Record<string, string> | undefined = errors
+    ? { ...errors }
+    : formMessage
+      ? {}
+      : undefined;
+  if (formMessage && mergedErrors) {
+    mergedErrors[FORM_ERROR_KEY] = formMessage;
+  }
+  const context: Record<string, unknown> = mergedErrors
+    ? { ...passContext, errors: mergedErrors }
+    : { ...passContext };
+  return new StepRetriableError(new Error(formMessage ?? "Input required"), undefined, {
+    outlet: "http",
+    payload: serializeFormSchema(type, opts),
+    context,
+  });
 }

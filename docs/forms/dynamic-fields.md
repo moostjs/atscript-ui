@@ -30,32 +30,60 @@ compile.
 
 Every compiled function body sees these variables in scope:
 
-| Variable  | What it is                                                                 |
-| --------- | -------------------------------------------------------------------------- |
-| `v`       | Current value of the annotated field                                       |
-| `data`    | Unwrapped domain data (`formData.value`)                                   |
-| `context` | The `:form-context` prop passed to `<AsForm>`, or `{}`                     |
-| `entry`   | Per-field evaluated snapshot (name, type, disabled, options, …)            |
-| `action`  | Dispatched action id when the evaluation was kicked off by an action click |
+| Variable  | What it is                                                                                |
+| --------- | ----------------------------------------------------------------------------------------- |
+| `v`       | Current value of the annotated field                                                      |
+| `data`    | Unwrapped domain data (`formData.value`)                                                  |
+| `context` | The `:form-context` prop passed to `<AsForm>`, or `{}`                                    |
+| `entry`   | Per-field evaluated snapshot (name, type, disabled, options, …)                           |
+| `action`  | Dispatched action id when the evaluation was kicked off by an action click                |
+| `t`       | `t(text, params?)` — `text` in the app's language ([below](#texts-in-the-users-language)) |
 
-The full type is `TFnScope` from `@atscript/ui-fns/runtime/types.ts`.
-
-```typescript
-interface TFnScope<V = unknown> {
-  v?: V;
-  data: Record<string, unknown>;
-  context: Record<string, unknown>;
-  entry?: TFieldEvaluated;
-  action?: string;
-}
-```
+The full type is `TFnScope` ([@atscript/ui-fns reference](/api/ui-fns)).
+Functions are called as `(v, data, context, entry, t)`.
 
 Form-level functions — `@ui.form.fn.title`, `@ui.form.fn.description`,
 `@ui.form.fn.submit.text`, and `@ui.form.fn.submit.disabled` on the root
-`interface` — receive only `(data, context)`; there is no `v`, `entry`, or
+`interface` — receive only `(data, context, t)`; there is no `v`, `entry`, or
 `action` at the form-level scope. The same `fn.title` / `fn.description`
 keys on a **nested object field** (its section header) are field-level and
-use the full `(v, data, context, entry)` signature.
+use the full `(v, data, context, entry, t)` signature.
+
+## Texts in the user's language
+
+A server that translates (moost's `setTranslator`, see
+[Translations on the server](/guide/i18n-server)) collects the string literals
+of every text-producing function — `fn.label`, `fn.description`, `fn.hint`,
+`fn.placeholder`, `fn.title`, `fn.submit.text`, `fn.options`, `fn.attr`,
+`@ui.form.validate` — and serves their translations with the form. On the
+client:
+
+- a **result** that is exactly one of those texts is shown translated — labels,
+  descriptions, hints, placeholders, titles, submit texts, option labels (never
+  option keys) and validation messages;
+- **`t(text, params?)`** translates a text yourself, with `{name}`
+  placeholders filled from `params` (the text itself when there is no
+  translation):
+
+```atscript
+@ui.form.fn.hint '(v, data, ctx, entry, t) => t("{count} of 500 characters", { count: v ? v.length : 0 })'
+notes?: string
+
+@ui.form.fn.label '(v) => v ? "Name (set)" : "Name"'
+name: string
+```
+
+Write texts as whole literals: `"Hello " + name` cannot match a translation,
+`t("Hello {name}", { name })` can.
+
+**Data in results.** The exact match does not know where a string came from:
+`(v, data) => data.name` shows "Administrator" for a user named "Admin" when
+the server translates "Admin". Return literals from text functions, put data
+in with `t("… {name}", { name: data.name })`, and wrap data itself in `t` only
+when you mean to translate it. Your own `translate` (`provideAsLocale`) is
+called with these results too. `fn.classes`, `fn.styles`, `fn.value` and
+the boolean functions are never translated. `t` uses the texts of
+`provideAsLocale` ([Language & Translations](/guide/i18n)).
 
 ## Every static prop has a dynamic counterpart
 

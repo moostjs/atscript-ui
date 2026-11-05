@@ -1,9 +1,9 @@
-import type { TFormEntryOptions } from "@atscript/ui";
+import type { TFormEntryOptions, UiT } from "@atscript/ui";
 
 /**
  * Scope object passed to compiled functions.
  * Properties become variables inside compiled function strings:
- *   v, data, context, entry
+ *   v, data, context, entry, t
  */
 export interface TFnScope<V = unknown, D = Record<string, unknown>, C = Record<string, unknown>> {
   v?: V;
@@ -11,6 +11,25 @@ export interface TFnScope<V = unknown, D = Record<string, unknown>, C = Record<s
   context: C;
   entry?: TFieldEvaluated;
   action?: string;
+  /**
+   * `t(text, params?)` — a text in the app's language: the translation the
+   * server served for it (exact match), else `text` itself, `{name}`
+   * placeholders filled from `params`. The trailing argument of every fn.
+   * Default: the active UI texts (`provideAsLocale` / `setUiLocale`).
+   */
+  t?: UiT;
+}
+
+/**
+ * Scope of a `@ui.table.fn.*` function, called as `(row, ctx, t)`.
+ */
+export interface TTableFnScope<R = Record<string, unknown>> {
+  /** The row's data. */
+  row: R;
+  /** Table state: `searchTerm`, `filters`, `sorters`, `rowIndex`. */
+  ctx: Record<string, unknown>;
+  /** As {@link TFnScope.t}. */
+  t?: UiT;
 }
 
 /**

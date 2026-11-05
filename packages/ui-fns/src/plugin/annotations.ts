@@ -11,7 +11,14 @@ function validateFnString(
 ): TMessages | undefined {
   try {
     // eslint-disable-next-line no-new-func
-    new Function("v", "data", "context", "entry", `return (${fnStr})(v, data, context, entry)`);
+    new Function(
+      "v",
+      "data",
+      "context",
+      "entry",
+      "t",
+      `return (${fnStr})(v, data, context, entry, t)`,
+    );
   } catch (error) {
     return [
       {
@@ -27,21 +34,29 @@ function validateFnString(
 const FN_MODES = {
   field: {
     nodeType: ["prop", "type"],
-    argDoc: "(value, data, context, entry) => result",
+    argDoc: "(value, data, context, entry, t) => result",
   },
   top: {
     nodeType: ["interface", "type"],
-    argDoc: "(data, context) => result",
+    argDoc: "(data, context, t) => result",
   },
   both: {
     nodeType: ["prop", "interface", "type"],
     argDoc:
-      "(value, data, context, entry) => result on fields; " +
-      "(data, context) => result on the root interface",
+      "(value, data, context, entry, t) => result on fields; " +
+      "(data, context, t) => result on the root interface",
   },
 } as const;
 
-function makeFnAnnotation(description: string, mode: keyof typeof FN_MODES): AnnotationSpec {
+/**
+ * `text`: the fn's result is shown to users (a label, a message) — its string
+ * literals are user-facing text a server translates and serves next to the type.
+ */
+function makeFnAnnotation(
+  description: string,
+  mode: keyof typeof FN_MODES,
+  text?: boolean,
+): AnnotationSpec {
   return new AnnotationSpec({
     description,
     nodeType: [...FN_MODES[mode].nodeType],
@@ -49,6 +64,7 @@ function makeFnAnnotation(description: string, mode: keyof typeof FN_MODES): Ann
       name: "fn",
       type: "string",
       description: `JS function string: ${FN_MODES[mode].argDoc}`,
+      ...(text ? { userText: "expression" as const } : {}),
     },
     validate: validateFirstArg,
   });
@@ -65,13 +81,17 @@ function validateFirstArg(
   return undefined;
 }
 
-const fnAnnotation = (description: string) => makeFnAnnotation(description, "field");
-const fnTopAnnotation = (description: string) => makeFnAnnotation(description, "top");
-const fnBothAnnotation = (description: string) => makeFnAnnotation(description, "both");
+const fnAnnotation = (description: string, text?: boolean) =>
+  makeFnAnnotation(description, "field", text);
+const fnTopAnnotation = (description: string, text?: boolean) =>
+  makeFnAnnotation(description, "top", text);
+const fnBothAnnotation = (description: string, text?: boolean) =>
+  makeFnAnnotation(description, "both", text);
 
 const TABLE_ROW_SCOPE_DOC =
-  "Receives `{ row, ctx }` where `row` is the current row's data object and `ctx` carries " +
-  "table-level context (minimum keys: `searchTerm`, `filters`, `sorters`, `rowIndex`). " +
+  "Called as `(row, ctx, t)`: `row` is the current row's data object, `ctx` carries " +
+  "table-level context (minimum keys: `searchTerm`, `filters`, `sorters`, `rowIndex`), `t(text, params?)` " +
+  "translates a text. " +
   "Per-row+cell scope only — every expression must be meaningful when applied to a single cell.";
 
 function tableFnAnnotation(description: string): AnnotationSpec {
@@ -81,7 +101,7 @@ function tableFnAnnotation(description: string): AnnotationSpec {
     argument: {
       name: "fn",
       type: "string",
-      description: "JS function string evaluated against the per-row scope `{ row, ctx }`.",
+      description: "JS function string: (row, ctx, t) => result",
     },
     validate: validateFirstArg,
   });
@@ -102,7 +122,8 @@ const fnAttrSpec = new AnnotationSpec({
     {
       name: "fn",
       type: "string",
-      description: "JS function string: (value, data, context, entry) => any",
+      description: "JS function string: (value, data, context, entry, t) => any",
+      userText: "expression",
     },
   ],
   validate(_token, args) {
@@ -129,7 +150,8 @@ const tableFnAttrSpec = new AnnotationSpec({
     {
       name: "fn",
       type: "string",
-      description: "JS function string evaluated against the per-row scope `{ row, ctx }`.",
+      description: "JS function string: (row, ctx, t) => result",
+      userText: "expression",
     },
   ],
   validate(_token, args) {
@@ -163,29 +185,34 @@ export const uiFnsAnnotations: TAnnotationsTree = {
         argument: {
           name: "fn",
           type: "string",
-          description: "JS function string: (value, data, context, entry) => boolean | string",
+          description: "JS function string: (value, data, context, entry, t) => boolean | string",
+          userText: "expression",
         },
         validate: validateFirstArg,
       }),
 
       fn: {
         // Form-level computed
-        title: fnTopAnnotation("Computed form title: (data, context) => string"),
+        title: fnTopAnnotation("Computed form title: (data, context) => string", true),
         submit: {
-          text: fnTopAnnotation("Computed submit button text: (data, context) => string"),
+          text: fnTopAnnotation("Computed submit button text: (data, context) => string", true),
           disabled: fnTopAnnotation("Computed submit disabled state: (data, context) => boolean"),
         },
 
         // Field-level computed (description also allowed on the root
         // interface, where it is a FORM-level fn `(data, context)` — same
         // contract as `ui.form.fn.title`)
-        label: fnAnnotation("Computed label: (value, data, context, entry) => string"),
+        label: fnAnnotation("Computed label: (value, data, context, entry) => string", true),
         description: fnBothAnnotation(
           "Computed description: (value, data, context, entry) => string on fields; " +
             "(data, context) => string on the root interface",
+          true,
         ),
-        hint: fnAnnotation("Computed hint: (value, data, context, entry) => string"),
-        placeholder: fnAnnotation("Computed placeholder: (value, data, context, entry) => string"),
+        hint: fnAnnotation("Computed hint: (value, data, context, entry) => string", true),
+        placeholder: fnAnnotation(
+          "Computed placeholder: (value, data, context, entry) => string",
+          true,
+        ),
         disabled: fnAnnotation("Computed disabled state: (value, data, context, entry) => boolean"),
         hidden: fnAnnotation("Computed hidden state: (value, data, context, entry) => boolean"),
         readonly: fnAnnotation("Computed readonly state: (value, data, context, entry) => boolean"),
@@ -198,6 +225,7 @@ export const uiFnsAnnotations: TAnnotationsTree = {
         ),
         options: fnAnnotation(
           "Computed select/radio options: (value, data, context, entry) => Array",
+          true,
         ),
         attr: fnAttrSpec,
       },
