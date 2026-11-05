@@ -808,12 +808,12 @@ test.describe("Section 19 — workflows", () => {
       const anonReq = await newAnonRequestContext();
       try {
         const resume = await postWf(anonReq, { wfs });
-        // `WorkflowsController` maps the engine's expired-state body
-        // (`{ error: 'Invalid or expired workflow state' }`) to HTTP 410
-        // Gone. Body retains `error` for diagnostics.
+        // The engine refuses an expired state with HTTP 410 Gone and a
+        // `{ message, code: 'WF_EXPIRED' }` body (`error` is the status text).
         expect(resume.status).toBe(410);
-        const bodyError = (resume.json as { error?: string }).error;
-        expect(bodyError).toMatch(/expired|invalid/i);
+        const body = resume.json as { message?: string; code?: string };
+        expect(body.message).toMatch(/expired|invalid/i);
+        expect(body.code).toBe("WF_EXPIRED");
       } finally {
         await anonReq.dispose();
       }

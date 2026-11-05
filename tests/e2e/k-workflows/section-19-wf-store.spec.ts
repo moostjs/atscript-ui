@@ -343,10 +343,12 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         expect(fakeUuid.status).toBe(410);
 
         for (const r of [garbage, zeroUuid, fakeUuid]) {
-          const errMsg = typeof r.json.error === "string" ? r.json.error : "";
+          // The refusal body is `{ message, code }` (`error` is the status text, "Gone").
+          const errMsg = typeof r.json.message === "string" ? r.json.message : "";
           // Generic error text — must NOT leak token-shape diagnostics, sql
           // strings, stack traces, or internal field names.
           expect(errMsg).toMatch(/expired|invalid/i);
+          expect(["WF_EXPIRED", "WF_INVALID_TOKEN"]).toContain(r.json.code);
           // No internal-info leak: response body shouldn't surface filenames,
           // DB column names, or store-internals like `getAndDelete`.
           const allText = JSON.stringify(r.json);
