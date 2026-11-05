@@ -421,7 +421,7 @@ Available from `@atscript/vue-form`:
 | `useAsPath()`                 | `{ path: ComputedRef<string> }`                                                                                            | Read absolute path prefix without other context.                                                                                          |
 | `useAsTypeMap()`              | `{ types: ComputedRef<Record<string, Component>> }`                                                                        | Read the form's `:types` map (for components that compose).                                                                               |
 | `useAsData()`                 | `{ rootData, getValueAt, siblingValue, setSibling, setValueAt }`                                                           | Reactive read of any value in the form, by path or sibling name; `setSibling` / `setValueAt` write other fields (tracked + re-validated). |
-| `useAsLocale()`               | `{ locale: ComputedRef<string \| undefined> }`                                                                             | Read provided locale for formatting.                                                                                                      |
+| `useAsLocale()`               | `{ locale: ComputedRef<string \| undefined>, t }`                                                                          | Read provided locale for formatting; `t(code, params?)` = built-in UI text in the app's language (atscript-ui skill `i18n.md`).           |
 | `useAsErrorDismiss()`         | `(path: string) => void`                                                                                                   | Dismiss a server error from a custom commit path.                                                                                         |
 | `useAsValueHelp(opts)`        | FK picker state (resolved, status, searchText, results, kickoff, selectItem, clear)                                        | Build a custom FK picker.                                                                                                                 |
 | `useAsDropdown(containerRef)` | `{ isOpen, toggle, close, select }`                                                                                        | Click-outside-aware dropdown state.                                                                                                       |
@@ -571,7 +571,7 @@ provideAsLocale(() => userPrefs.value?.language); // BCP-47, e.g. "en-GB", "de-D
 
 The signature accepts a getter so reactive sources don't need wrapping in computeds.
 
-`useAsLocale()` inside any component returns `{ locale: ComputedRef<string | undefined> }`. AsDecimal / AsNumber use it for `Intl.NumberFormat`-driven separators.
+`useAsLocale()` inside any component returns `{ locale: ComputedRef<string | undefined>, t }` (`t` = built-in UI texts; `provideAsLocale(getter, translate?)` — see the atscript-ui skill's `i18n.md`). AsDecimal / AsNumber use it for `Intl.NumberFormat`-driven separators.
 
 ### Currency
 

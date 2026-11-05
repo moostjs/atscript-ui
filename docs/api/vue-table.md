@@ -1244,7 +1244,8 @@ type TVueTableActionInfo = Omit<TDbActionInfo, "processor"> & {
 ```typescript
 function getColumnWidth(column: ColumnDef, widths: ColumnWidthsMap): string;
 function getCellValue(row: Record<string, unknown>, path: string): unknown;
-function formatCellValue(value: unknown, column: ColumnDef, opts?: { locale?: CellLocale }): string;
+/** Booleans read `UI_YES` / `UI_NO` through `t` (the active UI texts by default). */
+function formatCellValue(value: unknown, type: string, t?: UiT): string;
 function extractIdentifier(
   source: unknown, // a row, or a scalar rowValueFn value
   fields: readonly string[],
@@ -1255,8 +1256,8 @@ function actionIdentifiers(
   ids: Record<string, unknown>[],
   preferredId: readonly string[],
 ): Record<string, unknown>[]; // since 0.1.147
-function queryTargetGate(count: number): (a: TVueTableActionInfo) => boolean | string; // since 0.1.147
-const QUERY_TARGET_UNSUPPORTED_REASON: string; // since 0.1.147
+function queryTargetGate(count: number, t?: UiT): (a: TVueTableActionInfo) => boolean | string; // since 0.1.147
+const QUERY_TARGET_UNSUPPORTED_REASON: string; // since 0.1.147 — the English text of UI_ACTION_QUERY_UNSUPPORTED
 function resolveRowActions(
   state: ReactiveTableState,
   row: Record<string, unknown> | undefined,
@@ -1273,7 +1274,7 @@ interface ResolvedRowActions {
 
 `extractIdentifier` builds the identifier object sent with action invocations and URL `$1` substitution. Per `@atscript/db-client` invariant #11 the server rejects bare scalars — even single-field PK tables send `{ id: '...' }`. Since 0.1.147 the built-in surfaces extract `identifierFieldsOf(tableDef)` — `preferredId` plus the columns a delegated action's `idMap` reads (dot paths keep their dotted key) — and `actionIdentifiers` narrows them per action: a delegated action keeps exactly its `idMap` paths (the client maps them to the owner's id), any other action exactly `preferredId`. See [Row actions on a view](/tables/actions#row-actions-on-a-view).
 
-`queryTargetGate(count)` is the toolbar's gate in a query selection: an action is enabled iff its `queryTarget.maxRows` covers `count`, else kept disabled with "At most N rows" or `QUERY_TARGET_UNSUPPORTED_REASON`. Use it in a custom toolbar. See [Select All Matching Rows](/tables/select-all-matching#running-actions-on-it).
+`queryTargetGate(count)` is the toolbar's gate in a query selection: an action is enabled iff its `queryTarget.maxRows` covers `count`, else kept disabled with "At most N rows" (`UI_ACTION_AT_MOST`) or the `UI_ACTION_QUERY_UNSUPPORTED` text — `QUERY_TARGET_UNSUPPORTED_REASON` in English; pass `useAsLocale().t` to word them in the app's locale. Use it in a custom toolbar. See [Select All Matching Rows](/tables/select-all-matching#running-actions-on-it).
 
 `resolveRowActions` is the per-row pipeline every built-in surface uses (the row-actions cell, the `level="row"` toolbar, the main-action fallback), exported for a custom row-actions cell: the row's `$actions` / `$disabledReasons` gate and the `:row-actions` policy in one pass, plus the policy's `extra` actions. Hidden and excluded actions drop out; ones disabled with a reason come back as copies carrying `disabledReason` (render them disabled; `state.actions.invoke` does not check it). Untouched arrays keep their source reference. Since 0.1.144. See [Disabled with a reason](/tables/actions#disabled-with-a-reason).
 

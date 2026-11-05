@@ -7,6 +7,7 @@ import {
   type SortControl,
 } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import type { Client } from "@atscript/db-client";
 import {
   getCurrentInstance,
@@ -273,7 +274,8 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   // Mounted tables (and their filters' pickers) keep their entry in the cache.
   if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
   const { client } = entry;
-  const defPromise = getMetaTableDef(entry);
+  // Its labels in the app's UI locale (one TableDef per locale).
+  const defPromise = getMetaTableDef(entry, useAsTexts());
 
   // The zone the filters read dates in is the zone the cells render them in.
   const cellLocale = getCurrentInstance() ? useCellLocale() : undefined;

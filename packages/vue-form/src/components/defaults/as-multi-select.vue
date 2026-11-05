@@ -18,6 +18,7 @@ import {
 import { computed, ref } from "vue";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps<T[] | undefined>>();
 
@@ -73,6 +74,7 @@ function onTags(values: T[]) {
     (v) => v !== "" && !(typeof v === "number" && Number.isNaN(v)),
   ) as T[];
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -99,7 +101,10 @@ function onTags(values: T[]) {
           class="as-multi-select-chip"
         >
           <TagsInputItemText class="as-multi-select-chip-label" />
-          <TagsInputItemDelete class="as-multi-select-chip-remove" :aria-label="`Remove ${item}`">
+          <TagsInputItemDelete
+            class="as-multi-select-chip-remove"
+            :aria-label="t('UI_FORM_REMOVE_VALUE', { value: item })"
+          >
             <span class="i-as-close" aria-hidden="true" />
           </TagsInputItemDelete>
         </TagsInputItem>
@@ -131,7 +136,7 @@ function onTags(values: T[]) {
               type="button"
               class="as-multi-select-chip-remove"
               :disabled="disabled || readonly"
-              :aria-label="`Remove ${optLabel(opt)}`"
+              :aria-label="t('UI_FORM_REMOVE_VALUE', { value: optLabel(opt) })"
               @click.stop="deselect(optKey(opt))"
             >
               <span class="i-as-close" aria-hidden="true" />
@@ -139,7 +144,7 @@ function onTags(values: T[]) {
           </span>
           <ComboboxInput
             :id="inputId"
-            :placeholder="selectedOptions.length ? '' : (placeholder ?? 'Select...')"
+            :placeholder="selectedOptions.length ? '' : (placeholder ?? t('UI_SELECT_PLACEHOLDER'))"
             :disabled="disabled"
             :readonly="readonly"
             :aria-required="required || undefined"
@@ -154,7 +159,7 @@ function onTags(values: T[]) {
             v-if="selectedOptions.length > 0 && !disabled && !readonly"
             type="button"
             class="as-multi-select-clear"
-            aria-label="Clear selection"
+            :aria-label="t('UI_CLEAR_SELECTION')"
             @click.stop.prevent="clearAll"
           >
             <span class="i-as-close" aria-hidden="true" />
@@ -177,7 +182,9 @@ function onTags(values: T[]) {
               >
                 <span class="as-multi-select-item-label">{{ optLabel(opt) }}</span>
               </ComboboxItem>
-              <ComboboxEmpty class="as-multi-select-empty">No matches</ComboboxEmpty>
+              <ComboboxEmpty class="as-multi-select-empty">{{
+                t("UI_FORM_NO_MATCHES")
+              }}</ComboboxEmpty>
             </ComboboxViewport>
             <div v-if="(options?.length ?? 0) > 2" class="as-multi-select-footer">
               <button
@@ -186,7 +193,7 @@ function onTags(values: T[]) {
                 :disabled="selectedOptions.length === (options?.length ?? 0)"
                 @click.stop.prevent="selectAll"
               >
-                Select all
+                {{ t("UI_SELECT_ALL") }}
               </button>
               <button
                 type="button"
@@ -194,7 +201,7 @@ function onTags(values: T[]) {
                 :disabled="selectedOptions.length === 0"
                 @click.stop.prevent="clearAll"
               >
-                Clear
+                {{ t("UI_CLEAR") }}
               </button>
             </div>
           </ComboboxContent>

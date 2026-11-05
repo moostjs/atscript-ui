@@ -19,11 +19,13 @@ import {
   type FormDef,
 } from "@atscript/ui";
 import { AsForm, createDefaultTypes } from "@atscript/vue-form";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { formatIdentifier } from "@atscript/db-client";
 import { useTableContext } from "../../composables/use-table-state";
 import { intentToScope, rowsLabel } from "../../composables/state/intent-scope";
 
 const { state, client, formTypes, formComponents } = useTableContext();
+const { t } = useAsTexts();
 
 const req = state.actionFormRequest;
 const open = computed({
@@ -74,7 +76,7 @@ watch(
     error.value = null;
     loading.value = false;
     if (!next.action.inputForm) {
-      error.value = "Action does not declare an input form.";
+      error.value = t("UI_ACTION_NO_FORM");
       return;
     }
     loading.value = true;
@@ -122,10 +124,10 @@ const view = computed(() => {
     (d ? getFieldMeta(d.type, META_LABEL) : undefined) ?? r.action.label ?? r.action.name;
   return {
     // A query-targeted run has no ids to list: the title carries its count.
-    title: r.count === undefined ? title : `${title} · ${rowsLabel(r.count)}`,
+    title: r.count === undefined ? title : `${title} · ${rowsLabel(r.count, t)}`,
     // Default verb avoids collisions with "Cancel" on negative-intent actions
     // ("Cancel" vs "Cancel orders"); intent colour carries the semantic.
-    submitText: (d && getFieldMeta(d.type, UI_FORM_SUBMIT_TEXT)) || "Proceed",
+    submitText: (d && getFieldMeta(d.type, UI_FORM_SUBMIT_TEXT)) || t("UI_ACTION_PROCEED"),
     submitClass: scope ? `as-action-form-submit-${scope}` : undefined,
     description: r.action.description ?? "",
     allIds,
@@ -192,9 +194,9 @@ function onSubmit(payload: unknown) {
                 class="as-action-form-id"
                 >{{ id }}</span
               >
-              <span v-if="view.idTotal - visibleIdsCount > 0" class="as-action-form-id-more"
-                >{{ view.idTotal - visibleIdsCount }} more…</span
-              >
+              <span v-if="view.idTotal - visibleIdsCount > 0" class="as-action-form-id-more">{{
+                t("UI_ACTION_MORE_IDS", { count: view.idTotal - visibleIdsCount })
+              }}</span>
             </div>
             <div
               v-if="view.needsMeasure"
@@ -209,9 +211,11 @@ function onSubmit(payload: unknown) {
                 class="as-action-form-id"
                 >{{ id }}</span
               >
-              <span data-id-more class="as-action-form-id-more">{{ view.idTotal }} more…</span>
+              <span data-id-more class="as-action-form-id-more">{{
+                t("UI_ACTION_MORE_IDS", { count: view.idTotal })
+              }}</span>
             </div>
-            <DialogClose type="button" class="as-action-form-close" aria-label="Close">
+            <DialogClose type="button" class="as-action-form-close" :aria-label="t('UI_CLOSE')">
               <span class="i-as-close" aria-hidden="true" />
             </DialogClose>
           </header>
@@ -222,9 +226,11 @@ function onSubmit(payload: unknown) {
                  screen-reader-only. -->
             <DialogDescription
               :class="view.description ? 'as-action-form-description' : 'sr-only'"
-              >{{ view.description || `Provide the input for ${view.title}.` }}</DialogDescription
+              >{{
+                view.description || t("UI_ACTION_PROVIDE_INPUT", { action: view.title })
+              }}</DialogDescription
             >
-            <p v-if="loading" class="as-action-form-status">Loading form…</p>
+            <p v-if="loading" class="as-action-form-status">{{ t("UI_ACTION_LOADING_FORM") }}</p>
             <p v-else-if="error" class="as-action-form-error">{{ error }}</p>
             <AsForm
               v-else-if="def && formData"
@@ -240,7 +246,7 @@ function onSubmit(payload: unknown) {
           </div>
           <footer v-if="def" class="as-action-form-footer">
             <button type="button" class="as-action-form-cancel" @click="state.dismissActionForm()">
-              Cancel
+              {{ t("UI_CANCEL") }}
             </button>
             <button
               type="submit"

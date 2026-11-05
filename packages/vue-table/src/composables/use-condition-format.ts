@@ -7,6 +7,7 @@ import {
   type FilterCondition,
 } from "@atscript/ui-table";
 import type { ReactiveTableState } from "../types";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { useCellLocale } from "./use-cell-locale";
 
 /**
@@ -15,11 +16,12 @@ import { useCellLocale } from "./use-cell-locale";
  * columns, the operator symbols elsewhere. Reads reactive sources, so call the
  * returned functions inside `computed` / templates.
  *
- * Call in `setup` (it injects the cell locale).
+ * Call in `setup` (it injects the cell locale and the UI texts).
  */
 export function useConditionFormat(state: ReactiveTableState) {
   const { locale } = useCellLocale();
-  const opts = () => ({ locale: locale.value, timeZone: state.timeZone.value });
+  const { t } = useAsTexts();
+  const opts = () => ({ locale: locale.value, timeZone: state.timeZone.value, t });
   const columns = computed(() => new Map(state.allColumns.value.map((c) => [c.path, c])));
 
   return {

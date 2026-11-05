@@ -26,7 +26,7 @@ Custom props are fed via `@ui.form.fn.attr`, typically reading from `formContext
 - `AsConsentArray` → `pendingConsents: { id, text, required? }[]` (empty/missing ⇒ whole field hidden).
 - `AsPasswordRules` → `policies: { rule, description?, errorMessage? }[]` + `password` (live sibling value). `rule` strings compile through `@atscript/ui-fns`' `compileFieldFn` (shared FNPool); first arg is the password.
 - `AsQrCode` → `size?` (default 192), `errorCorrection?` (`L|M|Q|H`, default `M`), `manualSecret?` (default true).
-- `AsCopy` → `copyLabel?` ("Copy"), `copiedLabel?` ("Copied").
+- `AsCopy` → `copyLabel?` / `copiedLabel?` (default: UI texts `UI_AOOTH_COPY` / `UI_AOOTH_COPIED`, "Copy" / "Copied" in English).
 - `AsSsoProviders` → `providers: { id, text, icon?, secondary? }[]`. `text` verbatim (no prefix); `icon` applied as-is (safelist it); default→main stack, `secondary:true`→chip below the divider; empty/missing ⇒ field hidden.
 
 Wire the picker with a field-level action so a click submits the chosen provider:

@@ -11,6 +11,7 @@ import {
 import { computed, nextTick, ref, watch } from "vue";
 import { type PresetAspect, isSystemPresetId, setsEqual } from "@atscript/ui-table";
 import { errorMessage } from "../../utils/error-message";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { useTableContext } from "../../composables/use-table-state";
 import {
   ASPECT_ICONS,
@@ -27,6 +28,7 @@ import { useSeedOnOpen } from "../../composables/use-seed-on-open";
  * editing; delete is already gated by `state.prompt()`).
  */
 const { state } = useTableContext();
+const { t } = useAsTexts();
 
 const isOpen = computed({
   get: () => state.preset.dialogOpen.value,
@@ -162,7 +164,7 @@ const allRows = computed<DialogRow[]>(() => {
       label: liveLabel,
       kind: isOwned ? "owned" : "public",
       isPublic: pendingPublicIds.value.has(row.id),
-      ownerLabel: isOwned ? "you" : ownerNameOf(row, "—"),
+      ownerLabel: isOwned ? t("UI_PRESET_OWNER_YOU") : ownerNameOf(row, "—"),
       aspects: state.preset.ownedAspects(row.id),
       pendingLabel: pending !== undefined && pending !== original,
     });
@@ -192,9 +194,9 @@ const sections = computed<DialogSection[]>(() => {
     else shared.push(r);
   }
   const out: DialogSection[] = [];
-  if (sys.length > 0) out.push({ kind: "system", label: "System", rows: sys });
-  if (own.length > 0) out.push({ kind: "owned", label: "My presets", rows: own });
-  if (shared.length > 0) out.push({ kind: "public", label: "Shared by others", rows: shared });
+  if (sys.length > 0) out.push({ kind: "system", label: t("UI_PRESET_SYSTEM"), rows: sys });
+  if (own.length > 0) out.push({ kind: "owned", label: t("UI_PRESET_MINE"), rows: own });
+  if (shared.length > 0) out.push({ kind: "public", label: t("UI_PRESET_SHARED"), rows: shared });
   return out;
 });
 
@@ -332,7 +334,7 @@ async function save() {
         try {
           await state.preset.setFavorites(cleaned);
         } catch (err) {
-          failures.push(errorMessage(err, "The change could not be saved."));
+          failures.push(errorMessage(err, t("UI_PRESET_CHANGE_FAILED")));
         }
       }
       if (pendingDefaultId.value !== serverDefaultId.value) {
@@ -344,7 +346,7 @@ async function save() {
           try {
             await state.preset.setDefault(next);
           } catch (err) {
-            failures.push(errorMessage(err, "The change could not be saved."));
+            failures.push(errorMessage(err, t("UI_PRESET_CHANGE_FAILED")));
           }
         }
       }
@@ -356,7 +358,7 @@ async function save() {
           } catch (err) {
             // 409 / forbidden — keep the batch going; the edit stays staged.
             failedLabels.set(id, label);
-            failures.push(errorMessage(err, "The change could not be saved."));
+            failures.push(errorMessage(err, t("UI_PRESET_CHANGE_FAILED")));
           }
         }
       }
@@ -375,7 +377,7 @@ async function save() {
             await state.preset.togglePublic(id);
           } catch (err) {
             failedPublicIds.add(id);
-            failures.push(errorMessage(err, "The change could not be saved."));
+            failures.push(errorMessage(err, t("UI_PRESET_CHANGE_FAILED")));
           }
         }
       }
@@ -385,7 +387,7 @@ async function save() {
             await state.preset.remove(id);
           } catch (err) {
             failedDeleteIds.add(id);
-            failures.push(errorMessage(err, "The change could not be saved."));
+            failures.push(errorMessage(err, t("UI_PRESET_CHANGE_FAILED")));
           }
         }
       }
@@ -412,7 +414,9 @@ async function save() {
         pendingDeleteIds.value = new Set([...pendingDeleteIds.value, ...failedDeleteIds]);
       }
       errorText.value =
-        failures.length === 1 ? failures[0] : `${failures.length} changes could not be saved.`;
+        failures.length === 1
+          ? failures[0]
+          : t("UI_PRESET_CHANGES_FAILED", { count: failures.length });
       return;
     }
     // Apply the picked preset last so its post-rename label / post-flip
@@ -440,21 +444,19 @@ function discardOrClose() {
 
 function rowFavTitle(row: DialogRow): string {
   if (row.kind !== "public") return "";
-  return pendingFavIds.value.has(row.id)
-    ? "Favorited — click to remove"
-    : "Click to add to favorites";
+  return t(pendingFavIds.value.has(row.id) ? "UI_PRESET_FAVORITED" : "UI_PRESET_CLICK_TO_FAVORITE");
 }
 
 function rowDefaultTitle(row: DialogRow): string {
-  return row.id === pendingDefaultId.value ? "Default — click to unpin" : "Click to pin as default";
+  return t(row.id === pendingDefaultId.value ? "UI_PRESET_DEFAULT" : "UI_PRESET_CLICK_TO_PIN");
 }
 
 function rowPublicTitle(row: DialogRow): string {
   if (row.kind === "system") return "";
   if (row.kind === "owned") {
-    return row.isPublic ? "Public — click to make private" : "Private — click to make public";
+    return t(row.isPublic ? "UI_PRESET_PUBLIC" : "UI_PRESET_PRIVATE");
   }
-  return "Public preset shared with everyone";
+  return t("UI_PRESET_SHARED_PUBLIC");
 }
 
 function canToggleRowPublic(row: DialogRow): boolean {
@@ -485,14 +487,16 @@ function canToggleRowPublic(row: DialogRow): boolean {
         "
       >
         <header class="as-preset-dialog-header">
-          <DialogTitle class="as-preset-dialog-title">Presets</DialogTitle>
+          <DialogTitle class="as-preset-dialog-title">{{
+            t("UI_PRESET_DIALOG_TITLE")
+          }}</DialogTitle>
           <DialogDescription class="sr-only">
-            Rename, share, favorite, pin as default or delete your saved table views.
+            {{ t("UI_PRESET_DIALOG_DESCRIPTION") }}
           </DialogDescription>
           <span class="as-preset-dialog-counter">{{ counterText }}</span>
           <DialogClose
             class="as-preset-dialog-close"
-            aria-label="Close"
+            :aria-label="t('UI_CLOSE')"
             @click.prevent="discardOrClose"
           >
             <span class="i-as-close" aria-hidden="true" />
@@ -507,32 +511,32 @@ function canToggleRowPublic(row: DialogRow): boolean {
               v-model="searchQuery"
               type="search"
               class="as-preset-dialog-search-input"
-              placeholder="Search by name or owner…"
+              :placeholder="t('UI_PRESET_SEARCH')"
             />
           </div>
           <div class="as-preset-dialog-legend">
             <span class="as-preset-dialog-legend-item">
               <span class="i-as-pin as-preset-dialog-legend-icon" aria-hidden="true" />
-              <span>default</span>
+              <span>{{ t("UI_PRESET_LEGEND_DEFAULT") }}</span>
             </span>
             <span class="as-preset-dialog-legend-item">
               <span class="i-as-star as-preset-dialog-legend-icon" aria-hidden="true" />
-              <span>favorite</span>
+              <span>{{ t("UI_PRESET_LEGEND_FAVORITE") }}</span>
             </span>
             <span class="as-preset-dialog-legend-item">
               <span class="i-as-eye-off as-preset-dialog-legend-icon" aria-hidden="true" />
-              <span>public</span>
+              <span>{{ t("UI_PRESET_LEGEND_PUBLIC") }}</span>
             </span>
             <span class="as-preset-dialog-legend-item">
               <span class="i-as-trash as-preset-dialog-legend-icon" aria-hidden="true" />
-              <span>delete</span>
+              <span>{{ t("UI_PRESET_LEGEND_DELETE") }}</span>
             </span>
           </div>
         </div>
 
         <div class="as-preset-dialog-body">
           <p v-if="totalFiltered === 0" class="as-preset-dialog-empty">
-            No presets match "{{ searchQuery }}".
+            {{ t("UI_PRESET_NO_MATCH", { query: searchQuery }) }}
           </p>
           <template v-for="section in sections" v-else :key="section.kind">
             <div class="as-preset-dialog-section-header">{{ section.label }}</div>
@@ -554,9 +558,11 @@ function canToggleRowPublic(row: DialogRow): boolean {
                 :checked="row.id === pendingActiveId"
                 @change="setActivePending(row.id)"
                 :title="
-                  row.id === pendingActiveId
-                    ? 'This preset will be applied'
-                    : 'Click to apply this preset on Save'
+                  t(
+                    row.id === pendingActiveId
+                      ? 'UI_PRESET_WILL_APPLY'
+                      : 'UI_PRESET_CLICK_TO_APPLY',
+                  )
                 "
               />
               <button
@@ -611,7 +617,9 @@ function canToggleRowPublic(row: DialogRow): boolean {
                   v-else-if="row.kind === 'owned' && !pendingDeleteIds.has(row.id)"
                   class="as-preset-dialog-row-label-text cursor-pointer"
                   :data-pending="row.pendingLabel ? '' : undefined"
-                  :title="row.pendingLabel ? 'Modified — click to keep editing' : 'Click to rename'"
+                  :title="
+                    t(row.pendingLabel ? 'UI_PRESET_RENAME_PENDING' : 'UI_PRESET_CLICK_TO_RENAME')
+                  "
                   @mousedown.prevent.stop="startRename(row)"
                 >
                   {{ row.label }}
@@ -624,7 +632,9 @@ function canToggleRowPublic(row: DialogRow): boolean {
                 >
               </div>
               <span class="as-preset-dialog-row-owner">
-                <span v-if="row.kind === 'owned'" class="as-preset-dialog-row-owner-self">you</span>
+                <span v-if="row.kind === 'owned'" class="as-preset-dialog-row-owner-self">{{
+                  t("UI_PRESET_OWNER_YOU")
+                }}</span>
                 <template v-else>{{ row.ownerLabel }}</template>
               </span>
               <div class="as-preset-dialog-aspect-strip">
@@ -633,7 +643,7 @@ function canToggleRowPublic(row: DialogRow): boolean {
                   :key="a"
                   class="as-preset-dialog-aspect-chip"
                   :data-on="row.aspects.includes(a) ? '' : undefined"
-                  :title="ASPECT_LABELS[a]"
+                  :title="t(ASPECT_LABELS[a])"
                 >
                   <span :class="ASPECT_ICONS[a]" aria-hidden="true" />
                 </span>
@@ -664,9 +674,11 @@ function canToggleRowPublic(row: DialogRow): boolean {
                 :data-on="pendingDeleteIds.has(row.id) ? '' : undefined"
                 :aria-pressed="pendingDeleteIds.has(row.id)"
                 :title="
-                  pendingDeleteIds.has(row.id)
-                    ? 'Marked for deletion — click to undo'
-                    : 'Mark for deletion (applied on Save)'
+                  t(
+                    pendingDeleteIds.has(row.id)
+                      ? 'UI_PRESET_MARKED_DELETE'
+                      : 'UI_PRESET_MARK_DELETE',
+                  )
                 "
                 @click="toggleDeletePending(row.id)"
               >
@@ -684,12 +696,12 @@ function canToggleRowPublic(row: DialogRow): boolean {
             }}</span>
             <span v-else-if="isDirty" class="as-preset-dialog-footer-unsaved">
               <span class="as-preset-dialog-footer-unsaved-dot" aria-hidden="true" />
-              unsaved changes
+              {{ t("UI_PRESET_UNSAVED") }}
             </span>
           </div>
           <div class="as-preset-dialog-footer-actions">
             <button type="button" class="as-preset-dialog-footer-close" @click="discardOrClose">
-              Cancel
+              {{ t("UI_CANCEL") }}
             </button>
             <button
               type="button"
@@ -697,7 +709,7 @@ function canToggleRowPublic(row: DialogRow): boolean {
               :disabled="!isDirty || saving"
               @click="save"
             >
-              {{ saving ? "Saving…" : "Save" }}
+              {{ t(saving ? "UI_PRESET_SAVING" : "UI_SAVE") }}
             </button>
           </div>
         </footer>

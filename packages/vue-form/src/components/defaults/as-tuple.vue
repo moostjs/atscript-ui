@@ -9,6 +9,7 @@ import AsField from "../as-field.vue";
 import AsCollapsible from "../as-collapsible.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -43,6 +44,7 @@ function handleEnableOptional() {
     2,
   );
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -82,7 +84,7 @@ function handleEnableOptional() {
       <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
         <button type="button" class="as-object-empty-add" @click="handleEnableOptional">
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-          Add {{ title }}
+          {{ t("UI_FORM_ADD", { item: title }) }}
         </button>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>

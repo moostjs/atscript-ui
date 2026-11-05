@@ -42,9 +42,13 @@ provideCellLocale(
 Two providers because forms and tables intentionally don't depend on each
 other — both read from the same source on the host side.
 
-`useAsLocale()` returns `{ locale: ComputedRef<string | undefined> }`. When no
+`useAsLocale()` returns `{ locale: ComputedRef<string | undefined>, t }`. When no
 provider is present (`undefined`), built-in components fall back to the
 browser's runtime locale via `new Intl.NumberFormat(undefined, ...)`.
+
+The same provider sets the language of the built-in texts ("Add item",
+"Clear filters", …) — `provideAsLocale(getter, translate?)`; `t` reads them.
+See [Language & Translations](/guide/i18n).
 
 ## Inside a custom field
 

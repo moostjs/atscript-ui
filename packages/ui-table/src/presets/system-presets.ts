@@ -1,3 +1,4 @@
+import { getUiTexts, type UiT } from "@atscript/ui";
 import type { PresetSnapshot } from "./preset-types";
 import { STANDARD_PRESET_ID, normaliseSystemPresetId } from "./preset-id";
 
@@ -25,15 +26,16 @@ export interface SystemPresetInput {
   content?: PresetSnapshot;
 }
 
-const DEFAULT_STANDARD_LABEL = "Standard";
-
 /**
  * Resolve the consumer's `:system-presets` prop into the canonical render
  * order: Standard at index 0 (consumer override or default empty fallback),
  * named system presets in array order. Duplicate ids are dropped with a
  * console.warn (first wins).
  */
-export function resolveSystemPresets(input?: SystemPresetInput[]): SystemPreset[] {
+export function resolveSystemPresets(
+  input?: SystemPresetInput[],
+  t: UiT = getUiTexts().t,
+): SystemPreset[] {
   const seen = new Set<string>();
   let standardOverride: SystemPreset | null = null;
   const named: SystemPreset[] = [];
@@ -62,7 +64,7 @@ export function resolveSystemPresets(input?: SystemPresetInput[]): SystemPreset[
 
   const standard: SystemPreset = standardOverride ?? {
     id: STANDARD_PRESET_ID,
-    label: DEFAULT_STANDARD_LABEL,
+    label: t("UI_PRESET_STANDARD"),
     content: {},
   };
   return [standard, ...named];

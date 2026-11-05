@@ -76,19 +76,22 @@ function isFilled(cond: FilterCondition): boolean;
 function hasSecondValue(type: FilterConditionType): boolean; // `true` only for `"bw"`
 function isSimpleEq(cond: FilterCondition): boolean;
 /** `kind` (since 0.1.148): on `"date"` / `"datetime"` the comparisons read on / not on / before / on or before / after / on or after / between. */
-function conditionLabel(type: FilterConditionType, kind?: ColumnFilterType): string;
+function conditionLabel(type: FilterConditionType, kind?: ColumnFilterType, t?: UiT): string;
 function filledFilterCount(filters: FieldFilters): number;
 function compactFieldFilters(filters: FieldFilters): FieldFilters; // since 0.1.142
 function filterTokenLabel(
   path: string,
   conditions: FilterCondition[],
   columnLabel?: string,
+  t?: UiT,
 ): string;
 
 const NULL_OPS: ReadonlySet<FilterConditionType>; // { "null", "notNull" }
 ```
 
 `isFilled` returns true when the condition has at least one operand bound (or uses a `NULL_OPS` operator). `filledFilterCount` is used by toolbar badges. `compactFieldFilters` drops the fields with no filled condition — the shape table state holds (`state.setFieldFilter` and preset apply both write it) — returning the input itself when nothing goes. `filterTokenLabel` summarises a field's filled conditions into a chip-friendly token.
+
+Every function here that words something for people (`conditionLabel`, `filterTokenLabel`, `formatFilterExpr`, `formatColumnCondition` / `formatColumnValue` via `opts.t`, `temporalShortcuts`, `resolveSystemPresets`) reads UI texts (`UI_FILTER_*`, `UI_DATE_*` in `AS_UI_MESSAGES`) through an optional `t` (`UiT` from `@atscript/ui`) — the active UI locale's when omitted. The Vue components pass the app's own (`useAsLocale().t`). See [Language & Translations](/guide/i18n).
 
 ### Conditions per type
 
@@ -274,6 +277,8 @@ function formatFilterExpr(
   labelOf?: (path: string) => string | undefined,
   /** Wording for a value on a field (e.g. an epoch number on a timestamp column as a date); `undefined` keeps the plain rendering. Since 0.1.148. */
   formatValue?: (path: string, value: unknown) => string | undefined,
+  /** Reads the wording's UI texts; the active UI locale's by default. */
+  t?: UiT,
 ): string;
 ```
 
@@ -329,13 +334,13 @@ interface TemporalShortcut {
   conditions: FilterCondition[]; // relative tokens
 }
 /** Today, Yesterday, Last 7 days (`bw today-6…today`), Last 30 days, This week, Last week, This month, Last month, This year. */
-function temporalShortcuts(): TemporalShortcut[];
+function temporalShortcuts(t?: UiT): TemporalShortcut[];
 ```
 
 ## Date shortcuts
 
 ::: warning Deprecated
-`dateShortcuts()` produces **absolute** dates, which go stale in a saved filter and ignore the table's time zone. Use [`temporalShortcuts()`](#date-and-time-filters), whose conditions carry relative tokens. It stays exported and unchanged, and will be removed in a future breaking release.
+`dateShortcuts()` produces **absolute** dates, which go stale in a saved filter and ignore the table's time zone. Use [`temporalShortcuts()`](#date-and-time-filters), whose conditions carry relative tokens. Its labels follow the active UI texts. It stays exported and will be removed in a future breaking release.
 :::
 
 Pre-built absolute date-range presets. Each shortcut produces an ISO date pair (`YYYY-MM-DD`) intended for a `bw` (between) condition.
@@ -512,7 +517,7 @@ interface SystemPresetInput {
 
 function resolveSystemPresets(
   inputs?: SystemPresetInput[],
-  defaults?: { columnNames?: string[] },
+  t?: UiT, // since 0.1.165 — words the default "Standard" label (UI_PRESET_STANDARD)
 ): SystemPreset[];
 ```
 

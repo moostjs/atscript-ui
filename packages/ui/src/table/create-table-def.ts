@@ -28,6 +28,7 @@ import {
   type LiteralOption,
 } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
+import type { UiT } from "../i18n/ui-texts";
 import type { ValueHelpInfo } from "../value-help/types";
 import type {
   ColumnDef,
@@ -45,10 +46,14 @@ import type {
  * 2. Flattens to discover all field paths
  * 3. Builds ColumnDef per field using annotations + meta.fields capabilities
  * 4. Sorts by @ui.table.order
+ *
+ * `t` words the default boolean option labels (`UI_YES` / `UI_NO`); the
+ * active UI texts when omitted.
  */
 export function createTableDef(
   meta: MetaResponse,
   preDeserializedType?: TAtscriptAnnotatedType,
+  t?: UiT,
 ): TableDef {
   const type = preDeserializedType ?? deserializeAnnotatedType(meta.type);
 
@@ -79,7 +84,7 @@ export function createTableDef(
     // `fetchableFields` below so they remain valid `@ui.table.selectWith` targets.
     if (getFieldMeta(prop, UI_TABLE_EXCLUDE) !== undefined) continue;
 
-    const options = extractFieldLiteralOptions(prop);
+    const options = extractFieldLiteralOptions(prop, t);
     const valueHelpInfo = extractValueHelp(prop);
     let distinct: ColumnDef["distinct"];
     if (!valueHelpInfo && !options && fieldMeta.groupable && fieldMeta.filterable) {
@@ -106,7 +111,7 @@ export function createTableDef(
         if (getFieldMeta(prop, UI_TABLE_EXCLUDE) !== undefined) continue;
         flatMap.set(path, prop);
         columns.push(
-          buildColumn(path, prop, fieldMeta, { options: extractFieldLiteralOptions(prop) }),
+          buildColumn(path, prop, fieldMeta, { options: extractFieldLiteralOptions(prop, t) }),
         );
       }
     }

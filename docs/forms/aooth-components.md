@@ -166,8 +166,8 @@ Source: `packages/vue-aooth/src/components/as-copy.vue`.
 
 ```ts
 interface AsCopyProps extends TAsComponentProps<string | undefined> {
-  copyLabel?: string; // default "Copy"
-  copiedLabel?: string; // default "Copied"
+  copyLabel?: string; // default: the UI text UI_AOOTH_COPY ("Copy")
+  copiedLabel?: string; // default: the UI text UI_AOOTH_COPIED ("Copied")
 }
 ```
 

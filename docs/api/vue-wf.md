@@ -54,7 +54,7 @@ interface AsWfFormProps {
   /** Workflow id parameter name. Default `"wfid"`. */
   wfidName?: string;
   /** Additional `RequestInit` merged into every POST. */
-  fetchOptions?: RequestInit;
+  fetchOptions?: RequestInit; // Accept-Language from provideAsLocale is added unless these headers set one
   /** Custom fetch (e.g. for status-code bus hooks). Default `globalThis.fetch`. */
   fetch?: typeof fetch;
   /** Auto-start on mount. Default `true`. */
@@ -177,7 +177,7 @@ interface UseWfFormOptions {
   tokenTransport?: "body" | "cookie" | "query";
   tokenName?: string;
   wfidName?: string;
-  fetchOptions?: RequestInit;
+  fetchOptions?: RequestInit; // Accept-Language from provideAsLocale is added unless these headers set one
   fetch?: typeof fetch;
   autoStart?: boolean;
   initialToken?: string;

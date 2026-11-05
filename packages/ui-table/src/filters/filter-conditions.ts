@@ -1,3 +1,4 @@
+import { getUiTexts, type UiT } from "@atscript/ui";
 import type { ColumnFilterType } from "./filter-conditions-map";
 import type { FieldFilters, FilterCondition, FilterConditionType } from "./filter-types";
 
@@ -35,43 +36,48 @@ export function isSimpleEq(condition: FilterCondition): boolean {
   return condition.type === "eq" && isFilled(condition);
 }
 
+/** The UI text code of each condition's name. */
 const CONDITION_LABELS: Record<FilterConditionType, string> = {
-  eq: "equals",
-  ne: "not equals",
-  gt: "greater than",
-  gte: "greater or equal",
-  lt: "less than",
-  lte: "less or equal",
-  contains: "contains",
-  starts: "starts with",
-  ends: "ends with",
-  bw: "between",
-  null: "is empty",
-  notNull: "is not empty",
-  regex: "matches pattern",
+  eq: "UI_FILTER_COND_EQ",
+  ne: "UI_FILTER_COND_NE",
+  gt: "UI_FILTER_COND_GT",
+  gte: "UI_FILTER_COND_GTE",
+  lt: "UI_FILTER_COND_LT",
+  lte: "UI_FILTER_COND_LTE",
+  contains: "UI_FILTER_COND_CONTAINS",
+  starts: "UI_FILTER_COND_STARTS",
+  ends: "UI_FILTER_COND_ENDS",
+  bw: "UI_FILTER_COND_BW",
+  null: "UI_FILTER_COND_NULL",
+  notNull: "UI_FILTER_COND_NOT_NULL",
+  regex: "UI_FILTER_COND_REGEX",
 };
 
 /** Wording of the comparisons on a date / date-time column. */
 const TEMPORAL_CONDITION_LABELS: Partial<Record<FilterConditionType, string>> = {
-  eq: "on",
-  ne: "not on",
-  lt: "before",
-  lte: "on or before",
-  gt: "after",
-  gte: "on or after",
-  bw: "between",
+  eq: "UI_FILTER_DATE_EQ",
+  ne: "UI_FILTER_DATE_NE",
+  lt: "UI_FILTER_DATE_LT",
+  lte: "UI_FILTER_DATE_LTE",
+  gt: "UI_FILTER_DATE_GT",
+  gte: "UI_FILTER_DATE_GTE",
+  bw: "UI_FILTER_COND_BW",
 };
 
 /**
  * Human-readable label for a condition type. Pass the column's filter kind for
  * wording that fits it (`on` / `before` / `after` on `date` and `datetime`).
+ * The words are UI texts read with `t` — the active UI locale's by default.
  */
-export function conditionLabel(type: FilterConditionType, kind?: ColumnFilterType): string {
-  if (kind === "date" || kind === "datetime") {
-    const temporal = TEMPORAL_CONDITION_LABELS[type];
-    if (temporal) return temporal;
-  }
-  return CONDITION_LABELS[type] ?? type;
+export function conditionLabel(
+  type: FilterConditionType,
+  kind?: ColumnFilterType,
+  t: UiT = getUiTexts().t,
+): string {
+  const code =
+    ((kind === "date" || kind === "datetime") && TEMPORAL_CONDITION_LABELS[type]) ||
+    CONDITION_LABELS[type];
+  return code ? t(code) : type;
 }
 
 /** Count of fields that have at least one filled condition. */
@@ -99,21 +105,28 @@ export function compactFieldFilters(filters: FieldFilters): FieldFilters {
   return out;
 }
 
-/** Summarize a field's conditions into a human-readable token label. */
+/**
+ * Summarize a field's conditions into a human-readable token label. The
+ * wording is UI texts read with `t` — the active UI locale's by default.
+ */
 export function filterTokenLabel(
   path: string,
   conditions: FilterCondition[],
   columnLabel?: string,
+  t: UiT = getUiTexts().t,
 ): string {
   const filled = conditions.filter(isFilled);
   if (filled.length === 0) return "";
-  const label = columnLabel ?? path;
+  const field = columnLabel ?? path;
   if (filled.length === 1) {
     const c = filled[0];
-    if (c.type === "null") return `${label}: empty`;
-    if (c.type === "notNull") return `${label}: not empty`;
-    if (c.type === "bw") return `${label}: ${c.value[0]} – ${c.value[1]}`;
-    return `${label} ${conditionLabel(c.type)} ${c.value[0]}`;
+    if (c.type === "null") return t("UI_FILTER_CHIP_EMPTY", { field });
+    if (c.type === "notNull") return t("UI_FILTER_CHIP_NOT_EMPTY", { field });
+    if (c.type === "bw") {
+      return t("UI_FILTER_CHIP_BETWEEN", { field, from: c.value[0], to: c.value[1] });
+    }
+    const condition = conditionLabel(c.type, undefined, t);
+    return t("UI_FILTER_CHIP", { field, condition, value: c.value[0] });
   }
-  return `${label}: ${filled.length} conditions`;
+  return t("UI_FILTER_CHIP_COUNT", { field, count: filled.length });
 }

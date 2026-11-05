@@ -4,6 +4,7 @@ import type { ColumnDef } from "@atscript/ui";
 import { formatColumnValue, temporalInputValue, temporalKind } from "@atscript/ui-table";
 import { useCellLocale } from "../../composables/use-cell-locale";
 import { useTableContext } from "../../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 /**
  * One date / date-time value of a filter condition. A value a native input can
@@ -40,11 +41,13 @@ const editable = computed(() => {
   return kind === "day" || (kind === "minute" && props.inputType === "datetime-local");
 });
 
+const { t } = useAsTexts();
 const label = computed(
   () =>
     formatColumnValue(props.column, props.value, {
       locale: locale.value,
       timeZone: state.timeZone.value,
+      t,
     }) ?? text.value,
 );
 
@@ -74,7 +77,7 @@ function edit() {
     <button
       type="button"
       class="as-filter-input-token-remove"
-      aria-label="Clear value"
+      :aria-label="t('UI_FILTER_CLEAR_VALUE')"
       @click="emit('update:value', '')"
     >
       <span class="i-as-close" aria-hidden="true" />

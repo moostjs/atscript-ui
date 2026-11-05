@@ -766,18 +766,22 @@ function useAsDualInput(options: UseAsDualInputOptions): UseAsDualInputReturn;
 
 ### `useAsLocale()` / `provideAsLocale(getter)`
 
-Provide / inject the BCP-47 locale used by date and decimal composables. The getter shape lets reactive sources flow through without an extra `computed()` at the call site.
+Provide / inject the app's BCP-47 locale: it drives the date and decimal composables and the language of the built-in texts of every `@atscript/vue-*` component. The getter shape lets reactive sources flow through without an extra `computed()` at the call site. `translate` (optional) words the built-in texts first — lookup order in [Language & Translations](/guide/i18n#provideaslocale-getter-translate). One per app — SSR-safe.
 
 ```typescript
-function provideAsLocale(getter: () => string | undefined): void;
+function provideAsLocale(getter: () => string | undefined, translate?: UiTranslate): void;
 
 interface UseAsLocaleReturn {
   /** Resolved locale; `undefined` when no provider is mounted. */
   locale: ComputedRef<string | undefined>;
+  /** A built-in UI text in the app's locale: `t("UI_CANCEL")`, `t("UI_FORM_ADD", { item })`. Since 0.1.165. */
+  t: UiT;
 }
 
 function useAsLocale(): UseAsLocaleReturn;
 ```
+
+Both are also exported from `@atscript/vue-form/locale`, a subpath that does not reach the form components.
 
 ### `useAsPath()` / `useAsTypeMap()` / `useAsData()`
 

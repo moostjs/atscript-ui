@@ -18,8 +18,10 @@ import {
   AlertDialogDescription,
 } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const { state } = useTableContext();
+const { t } = useAsTexts();
 
 // Controlled open: `confirmRequest !== null` ↔ dialog open. Setter handles
 // only the dismiss path (Esc / overlay click). Confirm/Cancel buttons call
@@ -48,14 +50,16 @@ const req = state.confirmDisplay;
       <AlertDialogOverlay class="as-confirm-dialog-overlay" />
       <AlertDialogContent class="as-confirm-dialog-content" @after-leave="state.releaseConfirm()">
         <div class="as-confirm-dialog-body-wrap">
-          <AlertDialogTitle class="as-confirm-dialog-title">Confirmation</AlertDialogTitle>
+          <AlertDialogTitle class="as-confirm-dialog-title">{{
+            t("UI_CONFIRMATION")
+          }}</AlertDialogTitle>
           <AlertDialogDescription class="as-confirm-dialog-body">{{
             req?.message
           }}</AlertDialogDescription>
         </div>
         <div class="as-confirm-dialog-footer">
           <button type="button" class="as-confirm-dialog-cancel" @click="state.dismissPrompt()">
-            {{ req?.cancelButton ?? "Cancel" }}
+            {{ req?.cancelButton ?? t("UI_CANCEL") }}
           </button>
           <button
             type="button"
@@ -63,7 +67,7 @@ const req = state.confirmDisplay;
             :class="req?.scope ? `as-confirm-dialog-confirm-${req.scope}` : undefined"
             @click="state.acceptPrompt()"
           >
-            {{ req?.confirmButton ?? "Confirm" }}
+            {{ req?.confirmButton ?? t("UI_CONFIRM") }}
           </button>
         </div>
       </AlertDialogContent>

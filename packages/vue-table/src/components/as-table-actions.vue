@@ -16,6 +16,7 @@
 import { computed, ref, watch } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import {
   applyGate,
   applyRowsGate,
@@ -55,6 +56,7 @@ const props = withDefaults(
 );
 
 const { state } = useTableContext();
+const { t } = useAsTexts();
 
 interface Resolved {
   defaultAction: TVueTableActionInfo | undefined;
@@ -128,7 +130,7 @@ function resolveBuckets(): Resolved {
     // cannot speak for the rest — the server gates every row at run time).
     const gated = applyGate(
       { default: state.actions.default.rows, others: state.actions.others.rows, rows: [] },
-      queryTargetGate(selectedCount),
+      queryTargetGate(selectedCount, t),
     );
     return collapseSingle({
       defaultAction: gated.default,
@@ -340,8 +342,8 @@ watch(running, (next, prev) => {
           <button
             type="button"
             class="as-table-actions-more"
-            :aria-label="menuBusy ? 'More actions, running' : 'More actions'"
-            title="More actions"
+            :aria-label="t(menuBusy ? 'UI_TABLE_MORE_ACTIONS_RUNNING' : 'UI_TABLE_MORE_ACTIONS')"
+            :title="t('UI_TABLE_MORE_ACTIONS')"
             :aria-busy="menuBusy ? 'true' : undefined"
           >
             <span class="i-as-menu" aria-hidden="true" />

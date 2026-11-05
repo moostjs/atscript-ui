@@ -197,7 +197,7 @@ Skip it entirely — don't install the package, don't call the function — if y
 
 ## Locale providers (optional)
 
-The default field components ship with English labels for built-in affordances (placeholder hints, "Required", "Add row", "Show filters", error formatting). Override them at the root of your app:
+The components ship with English texts for their built-in affordances ("Add item", "Clear filters", "Yes" / "No", workflow error messages). Provide the user's locale at the root of your app:
 
 ```vue
 <!-- App.vue -->
@@ -205,19 +205,14 @@ The default field components ship with English labels for built-in affordances (
 import { provideAsLocale } from "@atscript/vue-form";
 import { provideCellLocale } from "@atscript/vue-table";
 
-provideAsLocale({
-  required: "Обязательно",
-  addRow: "Добавить",
-});
-
-provideCellLocale({
-  noData: "Нет данных",
-  rowsPerPage: "Строк на странице",
-});
+// Built-in texts + form number/date formatting
+provideAsLocale(() => prefs.value.language);
+// Table cells: language + time zone
+provideCellLocale(() => ({ language: prefs.value.language, timezone: prefs.value.timezone }));
 </script>
 ```
 
-Both providers are shallow — pass only the keys you want to override. The forms locale ships from `@atscript/vue-form`, the cell/table locale from `@atscript/vue-table`. Their full key lists are at [Forms: Locale](/forms/locale).
+Translating the texts: [Language & Translations](/guide/i18n). Number, currency and date formatting are covered in [Forms: Locale](/forms/locale).
 
 ## Pre-built CSS without UnoCSS
 

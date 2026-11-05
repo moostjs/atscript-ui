@@ -1,21 +1,20 @@
 ---
 name: atscript-ui
 description: >-
-  General awareness skill for the atscript-ui ecosystem — UI rendered from `.as`
-  annotated types. Use when working with `@atscript/ui`, `@atscript/ui-fns`, or
-  `@atscript/ui-table` framework-agnostic primitives (FormDef, TableDef,
-  FieldResolver, FilterCondition, PresetSnapshot, buildTableQuery,
-  ValueHelpClient, buildModelRoutes — app nav/routes from DB models); when
-  looking up the full `@ui.*` / `@ui.form.*` / `@ui.table.*` / `@ui.dict.*` /
-  `@ui.nav.*` / `@ui.valueHelp*` / `@ui.literalLabel` / `@ui.type` / `@wf.*`
-  annotation reference;
-  when wiring `installDynamicResolver()` from `@atscript/ui-fns`; when porting
-  the engine to a non-Vue framework (React, Svelte); or when deciding which
-  specialized atscript-ui skill to load (forms / tables / wf / styles). Scope
-  is cross-cutting and framework-agnostic. Out of scope: `.as` syntax,
-  `@meta.*`, `@expect.*`, `asc`, `unplugin-atscript`, VSCode LSP (use the
-  `atscript` skill); `@db.*`, DbSpace, adapters, `moost-db`, browser `Client`
-  (use the `atscript-db` skill); Vue components (use the per-domain skill).
+  General awareness skill for atscript-ui — UI rendered from `.as` annotated
+  types. Use for `@atscript/ui`, `@atscript/ui-fns`, `@atscript/ui-table`
+  primitives (FormDef, TableDef, FieldResolver, FilterCondition,
+  PresetSnapshot, buildTableQuery, ValueHelpClient, buildModelRoutes); the
+  full `@ui.*` / `@ui.form.*` / `@ui.table.*` / `@ui.dict.*` / `@ui.nav.*` /
+  `@ui.valueHelp*` / `@ui.literalLabel` / `@ui.type` / `@wf.*` annotation
+  reference; `installDynamicResolver()`; i18n of built-in texts
+  (`AS_UI_MESSAGES`, `@atscript/ui/messages`, `setUiLocale`,
+  `provideAsLocale` translate, `useAsLocale().t`, `registerMessages`,
+  Accept-Language, `$i18n`); porting to React/Svelte; choosing the
+  forms / tables / wf / styles skill. Out of scope: `.as` syntax,
+  `@meta.*`, `@expect.*`, `asc`, `unplugin-atscript`, VSCode LSP (use
+  `atscript`); `@db.*`, DbSpace, adapters, `moost-db`, browser `Client` (use
+  `atscript-db`); Vue components (use the per-domain skill).
 ---
 
 # atscript-ui
@@ -242,6 +241,7 @@ import {
 | First contact       | [getting-started.md](references/getting-started.md)         | Install matrix per use-case, root `atscript.config.ts` (UI plugins), root `vite.config.ts` (unplugin-atscript), `installDynamicResolver()` placement, locale providers, dev-server hooks                                                                                                                                                         |
 | Ecosystem map       | [ecosystem.md](references/ecosystem.md)                     | Which package solves which problem, dep graph, decision table, glossary, sibling-skill routing                                                                                                                                                                                                                                                   |
 | `@ui.*` annotations | [annotations.md](references/annotations.md)                 | Full exhaustive reference of every `@ui.*` / `@ui.form.*` / `@ui.form.fn.*` / `@ui.table.*` / `@ui.table.fn.*` / `@ui.dict.*` / `@ui.nav.*` / `@ui.type` / `@wf.*` key — argument shape, what reads it, precedence. Also `buildModelRoutes` (model manifest → nav/route registry). The fastest grep target for "which annotation does X" queries |
+| i18n                | [i18n.md](references/i18n.md)                               | Translating built-in component texts: `AS_UI_MESSAGES` catalog, `provideAsLocale(getter, translate?)`, `useAsLocale().t`, `setUiLocale`, locale switch by remount, workflow `Accept-Language` / `$i18n`, optional `t` on ui-table text helpers                                                                                                   |
 | Bundle optimization | [bundle-optimization.md](references/bundle-optimization.md) | When trimming JS or CSS bundle size: subpath/`AsResolver` delivery, `<AsTableRoot>` lazy dialogs + `controls.X` eager flip, `AsActionFormDialog`/vue-form boundary, extractor match channels, `componentCompanions` + `excludeComponents`, pre-built CSS granularity                                                                             |
 
 ## Customization

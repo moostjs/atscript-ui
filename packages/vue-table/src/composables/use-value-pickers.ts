@@ -1,7 +1,7 @@
 import { ref, shallowReactive, shallowRef } from "vue";
 import type { ShallowRef } from "vue";
 import type { FilterExpr } from "@uniqu/core";
-import type { ColumnDef, TableDef, ValueHelpInfo } from "@atscript/ui";
+import type { ColumnDef, TableDef, UiT, ValueHelpInfo } from "@atscript/ui";
 import { stableValueKey } from "@atscript/ui-table";
 import {
   NUMERIC_VALUE_KINDS,
@@ -34,10 +34,10 @@ export interface DistinctPage {
 }
 
 /** The single "Value" column of an enum or distinct-values picker table (rows carry `__value` / `__label`). */
-export function valueColumn(sortable: boolean): ColumnDef {
+export function valueColumn(sortable: boolean, t: UiT): ColumnDef {
   return {
     path: "__label",
-    label: "Value",
+    label: t("UI_TABLE_VALUE"),
     type: "text",
     sortable,
     filterable: false,

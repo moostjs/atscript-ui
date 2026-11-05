@@ -3,6 +3,7 @@ import type { TFormEntryOptions } from "./types";
 import { UI_FORM_FN_OPTIONS, UI_FORM_OPTIONS } from "../shared/annotation-keys";
 import { resolveFieldProp, asArray } from "../shared/field-resolver";
 import { extractFieldLiteralOptions, extractLiteralOptions } from "./extract-literals";
+import type { UiT } from "../i18n/ui-texts";
 
 /** Extracts the key from an option entry. */
 export function optKey(opt: TFormEntryOptions): string {
@@ -61,11 +62,15 @@ export function parseStaticOptions(raw: unknown): TFormEntryOptions[] {
  * 3. Literal union / boolean extraction (auto-derived from type); `labelsFrom`
  *    (`FormFieldDef.labelsFrom`, since 0.1.165) adds an enclosing prop's labels
  * 4. Future: dictionary / value-help lookup
+ *
+ * `t` words the default boolean labels (`UI_YES` / `UI_NO`); the active UI
+ * texts when omitted — a component passes its app's (`useAsLocale().t`).
  */
 export function resolveOptions(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
   labelsFrom?: TAtscriptAnnotatedType,
+  t?: UiT,
 ): TFormEntryOptions[] | undefined {
   const resolved = resolveFieldProp<TFormEntryOptions[]>(
     prop,
@@ -75,5 +80,7 @@ export function resolveOptions(
     { transform: parseStaticOptions },
   );
   if (resolved !== undefined) return resolved;
-  return labelsFrom ? extractLiteralOptions(prop, labelsFrom) : extractFieldLiteralOptions(prop);
+  return labelsFrom
+    ? extractLiteralOptions(prop, labelsFrom, t)
+    : extractFieldLiteralOptions(prop, t);
 }

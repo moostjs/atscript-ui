@@ -8,6 +8,7 @@ import AsIterator from "../as-iterator.vue";
 import AsCollapsible from "../as-collapsible.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps>();
 // Declared so Vue doesn't warn about the framework-bound `@action` listener
@@ -42,6 +43,7 @@ function handleAddData(): void {
     2,
   );
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -81,8 +83,8 @@ function handleAddData(): void {
         type="button"
         class="as-field-remove-btn"
         :disabled="!canRemove"
-        aria-label="Remove"
-        title="Remove"
+        :aria-label="t('UI_REMOVE')"
+        :title="t('UI_REMOVE')"
         @click.stop.prevent="onRemove"
       >
         <span class="as-field-remove-btn-icon" aria-hidden="true" />
@@ -102,7 +104,7 @@ function handleAddData(): void {
       <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
         <button type="button" class="as-object-empty-add" @click="handleAddData">
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-          Add {{ title }}
+          {{ t("UI_FORM_ADD", { item: title }) }}
         </button>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>

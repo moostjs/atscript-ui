@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "reka-ui";
 import type { ColumnMenuConfig } from "../../types";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = defineProps<{
   column: ColumnDef;
@@ -21,6 +22,7 @@ const props = defineProps<{
   widthEntry?: ColumnWidthEntry;
 }>();
 
+const { t } = useAsTexts();
 const open = ref(false);
 
 const emit = defineEmits<{
@@ -94,14 +96,14 @@ onBeforeUnmount(() => {
     <DropdownMenuPortal>
       <DropdownMenuContent class="as-column-menu-content" :side-offset="4" align="start">
         <template v-if="showSort">
-          <div class="as-column-menu-label">Sort</div>
+          <div class="as-column-menu-label">{{ t("UI_TABLE_SORT") }}</div>
           <DropdownMenuItem
             class="as-column-menu-item"
             :class="{ 'as-column-menu-item-active': order === 'asc' }"
             @select="emitSort('asc')"
           >
             <span class="as-column-menu-item-icon i-as-arrow-up" aria-hidden="true" />
-            <span class="as-column-menu-item-label">Ascending</span>
+            <span class="as-column-menu-item-label">{{ t("UI_TABLE_ASCENDING") }}</span>
             <span class="as-column-menu-item-hint">A</span>
           </DropdownMenuItem>
           <DropdownMenuItem
@@ -110,7 +112,7 @@ onBeforeUnmount(() => {
             @select="emitSort('desc')"
           >
             <span class="as-column-menu-item-icon i-as-arrow-down" aria-hidden="true" />
-            <span class="as-column-menu-item-label">Descending</span>
+            <span class="as-column-menu-item-label">{{ t("UI_TABLE_DESCENDING") }}</span>
             <span class="as-column-menu-item-hint">D</span>
           </DropdownMenuItem>
         </template>
@@ -125,7 +127,7 @@ onBeforeUnmount(() => {
           @select="emit('filter')"
         >
           <span class="as-column-menu-item-icon i-as-filter" aria-hidden="true" />
-          <span class="as-column-menu-item-label">Filter...</span>
+          <span class="as-column-menu-item-label">{{ t("UI_TABLE_FILTER_MENU") }}</span>
           <span v-if="filledCount" class="as-column-menu-item-badge">{{ filledCount }}</span>
           <span class="as-column-menu-item-hint">F</span>
         </DropdownMenuItem>
@@ -135,7 +137,7 @@ onBeforeUnmount(() => {
           @select="emit('filters-off')"
         >
           <span class="as-column-menu-item-icon i-as-close" aria-hidden="true" />
-          <span class="as-column-menu-item-label">Clear filters</span>
+          <span class="as-column-menu-item-label">{{ t("UI_TABLE_CLEAR_FILTERS") }}</span>
           <span class="as-column-menu-item-hint">C</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator
@@ -148,7 +150,7 @@ onBeforeUnmount(() => {
           @select="emit('reset-width')"
         >
           <span class="as-column-menu-item-icon i-as-refresh" aria-hidden="true" />
-          <span class="as-column-menu-item-label">Reset width</span>
+          <span class="as-column-menu-item-label">{{ t("UI_TABLE_RESET_WIDTH") }}</span>
           <span class="as-column-menu-item-hint">W</span>
         </DropdownMenuItem>
         <DropdownMenuSeparator v-if="showResetWidth && showHide" class="as-column-menu-separator" />
@@ -158,7 +160,7 @@ onBeforeUnmount(() => {
           @select="emit('hide')"
         >
           <span class="as-column-menu-item-icon i-as-eye-slash" aria-hidden="true" />
-          <span class="as-column-menu-item-label">Hide column</span>
+          <span class="as-column-menu-item-label">{{ t("UI_TABLE_HIDE_COLUMN") }}</span>
           <span class="as-column-menu-item-hint">H</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

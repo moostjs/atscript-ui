@@ -1,6 +1,7 @@
 import { formatIdentifier, type TDbActionInfo } from "@atscript/db-client";
 import { getCellValue } from "../../utils/get-cell-value";
-import { navigateHrefFor, setByPath, type TableDef } from "@atscript/ui";
+import { navigateHrefFor, setByPath, getUiTexts, type TableDef, type UiT } from "@atscript/ui";
+import { AS_UI_MESSAGES } from "@atscript/ui/messages";
 import type { SelectionQuery } from "@atscript/ui-table";
 import {
   REMOVE_PROCESSOR,
@@ -164,7 +165,7 @@ function joinReasons(reasons: ReadonlySet<string>): string {
   const list = [...reasons];
   if (list.length <= MAX_BULK_REASONS) return list.join("; ");
   const rest = list.length - MAX_BULK_REASONS;
-  return `${list.slice(0, MAX_BULK_REASONS).join("; ")}; +${rest} more`;
+  return `${list.slice(0, MAX_BULK_REASONS).join("; ")}; ${getUiTexts().t("UI_MORE", { count: rest })}`;
 }
 
 /**
@@ -219,9 +220,12 @@ export function rowsActionGate(rows: readonly unknown[]): ActionGate | null {
   });
 }
 
-/** Disabled reason of a non-query-target action in a query selection. Since 0.1.147. */
-export const QUERY_TARGET_UNSUPPORTED_REASON =
-  "Not available for all matching rows — select rows individually";
+/**
+ * Disabled reason of a non-query-target action in a query selection, in
+ * English: `queryTargetGate` returns it as the UI text
+ * `UI_ACTION_QUERY_UNSUPPORTED`, in the UI locale. Since 0.1.147.
+ */
+export const QUERY_TARGET_UNSUPPORTED_REASON = AS_UI_MESSAGES.UI_ACTION_QUERY_UNSUPPORTED;
 
 /**
  * The gate a query selection ("every row matching the query") puts on the
@@ -232,11 +236,11 @@ export const QUERY_TARGET_UNSUPPORTED_REASON =
  * the matching rows cannot speak for the rest; the server gates every row
  * when the action runs. Since 0.1.147.
  */
-export function queryTargetGate(count: number): ActionGate {
+export function queryTargetGate(count: number, t: UiT = getUiTexts().t): ActionGate {
   return (a) => {
-    if (!a.queryTarget) return QUERY_TARGET_UNSUPPORTED_REASON;
+    if (!a.queryTarget) return t("UI_ACTION_QUERY_UNSUPPORTED");
     const max = a.queryTarget.maxRows;
-    return count > max ? `At most ${rowsLabel(max)}` : true;
+    return count > max ? t("UI_ACTION_AT_MOST", { rows: rowsLabel(max, t) }) : true;
   };
 }
 
@@ -662,13 +666,16 @@ export function substitute(template: string, ctx: PromptCtx): string {
 }
 
 /** `N row(s)`. */
-export function rowsLabel(count: number): string {
-  return `${count} ${count === 1 ? "row" : "rows"}`;
+export function rowsLabel(count: number, t: UiT = getUiTexts().t): string {
+  return t(count === 1 ? "UI_TABLE_ROWS_ONE" : "UI_TABLE_ROWS", { count });
 }
 
 /** Default confirmation of a query-targeted run without a `promptText`. */
 function targetPrompt(action: TVueTableActionInfo, count: number): string {
-  return `Run “${action.label || action.name}” on ${rowsLabel(count)}?`;
+  return getUiTexts().t("UI_ACTION_RUN_ON", {
+    action: action.label || action.name,
+    rows: rowsLabel(count),
+  });
 }
 
 /**
@@ -740,9 +747,12 @@ async function triggerTargetAction(
     target,
     expectCount: matched,
     confirmTargetChange: (now) =>
-      state.prompt(`The rows matching the query changed. ${targetPrompt(action, now)}`, {
-        scope: intentToScope(action.intent),
-      }),
+      state.prompt(
+        getUiTexts().t("UI_ACTION_TARGET_CHANGED", { question: targetPrompt(action, now) }),
+        {
+          scope: intentToScope(action.intent),
+        },
+      ),
   });
 }
 

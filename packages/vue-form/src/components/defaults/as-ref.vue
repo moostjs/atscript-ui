@@ -13,6 +13,7 @@ import { ref } from "vue";
 import { useAsValueHelp } from "../../composables/use-as-value-help";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -36,6 +37,7 @@ const open = ref(false);
 function onSearchInput(e: Event) {
   if (vh) vh.searchText.value = (e.target as HTMLInputElement).value;
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -118,7 +120,7 @@ function onSearchInput(e: Event) {
                   </span>
                 </span>
               </ComboboxItem>
-              <ComboboxEmpty class="as-ref-status">No results</ComboboxEmpty>
+              <ComboboxEmpty class="as-ref-status">{{ t("UI_FORM_NO_RESULTS") }}</ComboboxEmpty>
             </template>
           </ComboboxViewport>
         </ComboboxContent>

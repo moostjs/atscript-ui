@@ -6,6 +6,7 @@ import { createTableDef } from "../table/create-table-def";
 import type { MetaResponse, TableDef } from "../table/types";
 import type { ResolvedValueHelp } from "../value-help/resolve";
 import { invalidateValueHelpCache } from "../value-help/value-help-client";
+import { getUiTexts, type UiTexts } from "../i18n/ui-texts";
 
 /**
  * Shared per-URL cache. A single entry holds the `Client` instance, the raw
@@ -31,7 +32,6 @@ export interface MetaCacheEntry {
   meta: Promise<MetaResponse>;
   type: Promise<TAtscriptAnnotatedType>;
   resolved?: Promise<ResolvedValueHelp>;
-  tableDef?: Promise<TableDef>;
 }
 
 /** Options for {@link getMetaEntry}. */
@@ -51,7 +51,8 @@ export interface MetaEntryOptions {
 /** What a `/meta` body deserializes to — shared by every URL serving the same bytes. */
 interface Derived {
   type: TAtscriptAnnotatedType;
-  tableDef?: TableDef;
+  /** `TableDef` per UI locale (its labels are worded in it); `""` = no locale. */
+  tableDefs?: Map<string, TableDef>;
 }
 
 /** Bookkeeping behind each handed-out entry (kept off the public shape). */
@@ -64,6 +65,8 @@ interface Slot {
   etag?: string;
   /** The custom `/meta` store this entry counts in `customStores`. */
   store?: MetaStore;
+  /** {@link getMetaTableDef} per UI locale. */
+  tableDefs: Map<string, Promise<TableDef>>;
 }
 
 /**
@@ -123,7 +126,7 @@ export function getMetaEntry(
   type.catch(() => {});
 
   const entry: MetaCacheEntry = { client, meta, type };
-  const slot: Slot = { url, derived, holds: 0 };
+  const slot: Slot = { url, derived, holds: 0, tableDefs: new Map() };
   slots.set(entry, slot);
   if (browser) {
     slot.store = customStoreOf(client);
@@ -215,19 +218,34 @@ function evict(url: string, entry: MetaCacheEntry): void {
 }
 
 /**
- * The `TableDef` for a cache entry, built once per entry — and once per
- * `/meta` `ETag` across entries. Since 0.1.153.
+ * The `TableDef` for a cache entry in a UI locale, built once per entry and
+ * locale — and once per `/meta` `ETag` and locale across entries. Its labels
+ * (boolean `Yes` / `No`) are worded with `texts`: the active UI texts by
+ * default; a component passes its app's, so a server render and a remount
+ * in another locale get their own. Since 0.1.153; per locale since 0.1.165.
  */
-export function getMetaTableDef(entry: MetaCacheEntry): Promise<TableDef> {
-  if (!entry.tableDef) {
-    const derived = slots.get(entry)?.derived;
-    entry.tableDef = derived
-      ? Promise.all([entry.meta, derived]).then(
-          ([meta, d]) => (d.tableDef ??= createTableDef(meta, d.type)),
-        )
-      : Promise.all([entry.meta, entry.type]).then(([meta, type]) => createTableDef(meta, type));
+export function getMetaTableDef(
+  entry: MetaCacheEntry,
+  texts: Pick<UiTexts, "locale" | "t"> = getUiTexts(),
+): Promise<TableDef> {
+  const slot = slots.get(entry);
+  const key = texts.locale() ?? "";
+  let def = slot?.tableDefs.get(key);
+  if (!def) {
+    def = Promise.all([entry.meta, slot?.derived ?? entry.type.then((type) => ({ type }))]).then(
+      ([meta, d]: [MetaResponse, Derived]) => {
+        const defs = (d.tableDefs ??= new Map());
+        let tableDef = defs.get(key);
+        if (!tableDef) {
+          tableDef = createTableDef(meta, d.type, texts.t);
+          defs.set(key, tableDef);
+        }
+        return tableDef;
+      },
+    );
+    slot?.tableDefs.set(key, def);
   }
-  return entry.tableDef;
+  return def;
 }
 
 /**

@@ -1,5 +1,6 @@
 <script setup lang="ts" generic="T extends Record<string, unknown>">
 import { ref, computed, watch, type UnwrapRef } from "vue";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import {
   ListboxRoot,
   ListboxFilter,
@@ -18,6 +19,14 @@ const props = defineProps<{
 }>();
 
 const modelValue = defineModel<string[]>({ default: () => [] });
+const { t } = useAsTexts();
+/** The per-item move buttons' titles, worded once per list (it re-renders on every dragover). */
+const moveTitles = computed(() => ({
+  top: t("UI_TABLE_MOVE_TOP"),
+  up: t("UI_TABLE_MOVE_UP"),
+  down: t("UI_TABLE_MOVE_DOWN"),
+  bottom: t("UI_TABLE_MOVE_BOTTOM"),
+}));
 
 const itemsMap = computed(() => {
   const m = new Map<string, Omit<TModelItem, "index">>();
@@ -185,15 +194,15 @@ function deselectAll() {
             v-model="searchTerm"
             type="text"
             class="as-orderable-list-search"
-            placeholder="Search..."
+            :placeholder="t('UI_SEARCH_PLACEHOLDER')"
           />
         </div>
         <div class="as-orderable-list-toolbar-actions">
           <button type="button" class="as-orderable-list-toolbar-btn" @click="selectAll">
-            Select all
+            {{ t("UI_SELECT_ALL") }}
           </button>
           <button type="button" class="as-orderable-list-toolbar-btn" @click="deselectAll">
-            None
+            {{ t("UI_TABLE_NONE") }}
           </button>
         </div>
       </div>
@@ -245,18 +254,26 @@ function deselectAll() {
             />
 
             <div class="as-orderable-list-item-actions">
-              <button type="button" title="Move to top" @click.stop="moveExact(item.index, 0)">
+              <button type="button" :title="moveTitles.top" @click.stop="moveExact(item.index, 0)">
                 <span class="i-as-chevron-double-up" aria-hidden="true" />
               </button>
-              <button type="button" title="Move up" @click.stop="moveOneStep(item.index, -1)">
+              <button
+                type="button"
+                :title="moveTitles.up"
+                @click.stop="moveOneStep(item.index, -1)"
+              >
                 <span class="i-as-chevron-up" aria-hidden="true" />
               </button>
-              <button type="button" title="Move down" @click.stop="moveOneStep(item.index, 1)">
+              <button
+                type="button"
+                :title="moveTitles.down"
+                @click.stop="moveOneStep(item.index, 1)"
+              >
                 <span class="i-as-chevron-down" aria-hidden="true" />
               </button>
               <button
                 type="button"
-                title="Move to bottom"
+                :title="moveTitles.bottom"
                 @click.stop="moveExact(item.index, orderedItems.length)"
               >
                 <span class="i-as-chevron-double-down" aria-hidden="true" />

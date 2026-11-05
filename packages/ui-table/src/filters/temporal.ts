@@ -1,3 +1,4 @@
+import { getUiTexts, type UiT } from "@atscript/ui";
 import { getZoneFormat } from "../utils/intl-cache";
 import type { FilterCondition } from "./filter-types";
 
@@ -325,22 +326,38 @@ const eq = (v: string): FilterCondition => ({ type: "eq", value: [v] });
 const bw = (a: string, b: string): FilterCondition => ({ type: "bw", value: [a, b] });
 
 /**
+ * The shortcuts by id, each with its label's UI text code.
+ *
+ * @internal Shared with `temporal-format`.
+ */
+export const TEMPORAL_SHORTCUTS: readonly {
+  id: string;
+  code: string;
+  condition: FilterCondition;
+}[] = [
+  { id: "today", code: "UI_DATE_TODAY", condition: eq("today") },
+  { id: "yesterday", code: "UI_DATE_YESTERDAY", condition: eq("today-1") },
+  { id: "last-7-days", code: "UI_DATE_LAST_7_DAYS", condition: bw("today-6", "today") },
+  { id: "last-30-days", code: "UI_DATE_LAST_30_DAYS", condition: bw("today-29", "today") },
+  { id: "this-week", code: "UI_DATE_THIS_WEEK", condition: eq("week") },
+  { id: "last-week", code: "UI_DATE_LAST_WEEK", condition: eq("week-1") },
+  { id: "this-month", code: "UI_DATE_THIS_MONTH", condition: eq("month") },
+  { id: "last-month", code: "UI_DATE_LAST_MONTH", condition: eq("month-1") },
+  { id: "this-year", code: "UI_DATE_THIS_YEAR", condition: eq("year") },
+];
+
+/**
  * Quick temporal filters for a date or date-time filter (both offer the same). They carry relative
  * tokens (`today-6`…`today`), so "Last 7 days" means the last 7 days whenever
- * the filter is applied — in a preset or a shared link too.
+ * the filter is applied — in a preset or a shared link too. Labels are UI
+ * texts (`UI_DATE_*`) read with `t` — the active UI locale's by default.
  *
  * Replaces the absolute {@link dateShortcuts}. Since 0.1.148.
  */
-export function temporalShortcuts(): TemporalShortcut[] {
-  return [
-    { id: "today", label: "Today", conditions: [eq("today")] },
-    { id: "yesterday", label: "Yesterday", conditions: [eq("today-1")] },
-    { id: "last-7-days", label: "Last 7 days", conditions: [bw("today-6", "today")] },
-    { id: "last-30-days", label: "Last 30 days", conditions: [bw("today-29", "today")] },
-    { id: "this-week", label: "This week", conditions: [eq("week")] },
-    { id: "last-week", label: "Last week", conditions: [eq("week-1")] },
-    { id: "this-month", label: "This month", conditions: [eq("month")] },
-    { id: "last-month", label: "Last month", conditions: [eq("month-1")] },
-    { id: "this-year", label: "This year", conditions: [eq("year")] },
-  ];
+export function temporalShortcuts(t: UiT = getUiTexts().t): TemporalShortcut[] {
+  return TEMPORAL_SHORTCUTS.map(({ id, code, condition }) => ({
+    id,
+    label: t(code),
+    conditions: [{ type: condition.type, value: [...condition.value] }],
+  }));
 }

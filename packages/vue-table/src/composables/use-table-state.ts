@@ -61,6 +61,7 @@ import {
 } from "@atscript/ui-table";
 import type { Client, PageResult } from "@atscript/db-client";
 import type { TAsTypeComponents } from "@atscript/vue-form";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
 import type {
   ActionFormRequest,
@@ -459,6 +460,9 @@ export function createTableState(opts: CreateTableStateOptions): {
   internals: TableStateInternals;
 } {
   const client = opts.client;
+  // The app's UI texts (the active ones outside a component): built-in labels
+  // this state makes (remove action, default preset) are worded with them.
+  const { t } = useAsTexts();
   const modelOpts = opts.model;
   const selectionOpts = opts.selection;
   const windowOpts = opts.window;
@@ -594,6 +598,7 @@ export function createTableState(opts: CreateTableStateOptions): {
     systemAspects: opts.preset?.systemAspects,
     persistDrafts: opts.preset?.persistDrafts,
     fallbackSystemPresets: opts.preset?.fallbackSystemPresets,
+    t,
     knownFields,
     onFieldsDropped: reportFieldsDropped,
   });
@@ -1029,6 +1034,7 @@ export function createTableState(opts: CreateTableStateOptions): {
   // `scheduleQuery` directly when the per-call + root-prop gates allow it.
   const actionsNs = createActions({
     tableDef,
+    t,
     client,
     rowDelete: () => rowDelete.value,
     scheduleQuery,

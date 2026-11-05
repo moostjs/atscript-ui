@@ -1,4 +1,4 @@
-import type { ColumnDef, PaginationControl, SortControl } from "@atscript/ui";
+import type { ColumnDef, PaginationControl, SortControl, UiT } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
 import {
   type AspectMask,
@@ -90,6 +90,8 @@ export interface CreatePresetStateOptions {
 
   /** Static fallback for system presets when `presetsHandle` is null. */
   fallbackSystemPresets?: SystemPreset[];
+  /** The table's UI texts (the default "Standard" preset's label). */
+  t?: UiT;
 
   /** Whether localStorage drafts should be hydrated + persisted on bootstrap. */
   persistDrafts?: boolean;
@@ -249,7 +251,7 @@ export function createPresetState(opts: CreatePresetStateOptions): {
   // Inert handle when the feature isn't wired keeps the slice reading from
   // one source — no `?? fallback` aliasing for every state field.
   const handle: UsePresetsReturn =
-    opts.presetsHandle ?? createInertHandle(opts.fallbackSystemPresets);
+    opts.presetsHandle ?? createInertHandle(opts.fallbackSystemPresets, opts.t);
   const {
     presets,
     presetsById,
@@ -755,8 +757,8 @@ function inertMutator(): never {
 // Inert UsePresetsReturn used when the preset feature isn't configured.
 // Every reactive field still reads through `handle.*` — no fallback
 // aliasing in the consumer.
-function createInertHandle(fallbackSystemPresets?: SystemPreset[]): UsePresetsReturn {
-  const systemList = fallbackSystemPresets ?? resolveSystemPresets();
+function createInertHandle(fallbackSystemPresets?: SystemPreset[], t?: UiT): UsePresetsReturn {
+  const systemList = fallbackSystemPresets ?? resolveSystemPresets(undefined, t);
   const systemPresets = computed(() => systemList);
   const systemPresetsById = computed(() => {
     const map = new Map<string, SystemPreset>();

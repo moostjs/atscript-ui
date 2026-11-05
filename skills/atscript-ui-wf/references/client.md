@@ -259,6 +259,8 @@ Use cases for `fetch` override beyond auth:
 
 For static header sets (no per-request logic), `fetchOptions: { headers: {...}, credentials: 'include' }` is simpler.
 
+**Language.** Every request carries `Accept-Language` = the `provideAsLocale` locale (none without a provider; an `Accept-Language` in `fetchOptions.headers`, any case, wins). A form schema's `$i18n` (`inputRequired.payload.$i18n`) merges into the app's texts for the locale the request was sent in; refused-request status texts read them, else English. A locale switch applies on the next round-trip — no re-request. No `locale` option on `useWfForm`. See the atscript-ui skill's `i18n.md`.
+
 ## Same-form re-validation behavior
 
 Client compares `JSON.stringify(ir.payload)` between successive responses. Three outcomes:

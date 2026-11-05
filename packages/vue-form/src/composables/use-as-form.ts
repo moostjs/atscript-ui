@@ -51,6 +51,7 @@ import {
 import { CLIENT_FACTORY_KEY } from "./use-as-value-help";
 import { useAsExternalErrors } from "./use-as-external-errors";
 import { useAsState } from "./use-as-state";
+import { useAsTexts } from "./use-as-locale";
 import type { TFormState } from "./types";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "../components/types";
 
@@ -256,6 +257,7 @@ const EMPTY_IS_DIRTY_PATH = (): boolean => false;
 export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   options: UseAsFormOptions<TFormData, TFormContext>,
 ): UseAsFormReturn<TFormData, TFormContext> {
+  const { t } = useAsTexts();
   // ── Data container ───────────────────────────────────────────
   const _data = ref<TFormData>({} as TFormData);
   const data = computed<TFormData>(() => {
@@ -455,7 +457,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         UI_FORM_FN_SUBMIT_TEXT,
         UI_FORM_SUBMIT_TEXT,
         ctx.value,
-      ) ?? "Submit",
+      ) ?? t("UI_FORM_SUBMIT"),
   );
   const submitDisabled = computed(
     () =>

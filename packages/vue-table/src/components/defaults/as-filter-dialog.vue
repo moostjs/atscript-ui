@@ -22,6 +22,8 @@ import {
   TabsContent,
 } from "reka-ui";
 import { useConditionFormat } from "../../composables/use-condition-format";
+import { textAround } from "../../utils/text-around";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { hasValuePicker } from "../../composables/use-value-pickers";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTableComponent } from "../../composables/use-table-component";
@@ -32,6 +34,7 @@ import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
 const { state } = useTableContext();
 const { formatCondition } = useConditionFormat(state);
+const { t } = useAsTexts();
 // Static skin-slot resolution — `controls.filterValueHelp` replaces the
 // internal default without it ever being a public export.
 const FilterValueHelp = useTableComponent("filterValueHelp", AsFilterValueHelp);
@@ -112,6 +115,11 @@ const chips = computed<ChipItem[]>(() => {
 });
 
 const visibleChips = computed(() => chips.value.slice(0, CHIP_PREVIEW_LIMIT));
+const appliedText = computed(() =>
+  textAround(t, chips.value.length === 1 ? "UI_FILTER_APPLIED_ONE" : "UI_FILTER_APPLIED", "count", {
+    count: chips.value.length,
+  }),
+);
 const hiddenChipCount = computed(() => Math.max(0, chips.value.length - CHIP_PREVIEW_LIMIT));
 const filledFreeCount = computed(() => {
   let n = 0;
@@ -200,7 +208,7 @@ function onOpenAutoFocus(event: Event) {
       >
         <div class="as-filter-dialog-header">
           <DialogTitle class="as-filter-dialog-title">
-            <span class="as-filter-dialog-title-label">Filter</span>
+            <span class="as-filter-dialog-title-label">{{ t("UI_FILTER_TITLE") }}</span>
             <span class="as-filter-dialog-title-value">{{ column?.label }}</span>
           </DialogTitle>
           <!-- Reka requires a description on every DialogContent — without it
@@ -208,9 +216,9 @@ function onOpenAutoFocus(event: Event) {
                the surface. The column name is already in the title, so the
                copy is screen-reader-only. -->
           <DialogDescription class="sr-only">
-            Build the filter conditions applied to this column.
+            {{ t("UI_FILTER_DESCRIPTION") }}
           </DialogDescription>
-          <DialogClose class="as-filter-dialog-close" aria-label="Close">
+          <DialogClose class="as-filter-dialog-close" :aria-label="t('UI_CLOSE')">
             <span class="i-as-close" aria-hidden="true" />
           </DialogClose>
         </div>
@@ -218,7 +226,7 @@ function onOpenAutoFocus(event: Event) {
         <TabsRoot v-if="column && hasValueHelp" v-model="activeTab" class="as-filter-dialog-tabs">
           <TabsList class="as-config-tabs-list">
             <TabsTrigger value="value-help" class="as-config-tab-trigger">
-              Values
+              {{ t("UI_FILTER_VALUES") }}
               <span
                 v-if="valueHelpConditions.length > 0"
                 class="as-config-tab-count"
@@ -228,7 +236,7 @@ function onOpenAutoFocus(event: Event) {
               </span>
             </TabsTrigger>
             <TabsTrigger value="conditions" class="as-config-tab-trigger">
-              Conditions
+              {{ t("UI_FILTER_CONDITIONS") }}
               <span
                 v-if="filledFreeCount > 0"
                 class="as-config-tab-count"
@@ -258,11 +266,14 @@ function onOpenAutoFocus(event: Event) {
         <div v-if="chips.length > 0" class="as-filter-dialog-chips-bar">
           <div class="as-filter-dialog-chips-header">
             <span>
-              <span class="as-filter-dialog-chips-count">{{ chips.length }}</span>
-              {{ chips.length === 1 ? "condition" : "conditions" }} applied
+              {{ appliedText[0]
+              }}<span v-if="appliedText[1]" class="as-filter-dialog-chips-count">{{
+                appliedText[1]
+              }}</span
+              >{{ appliedText[2] }}
             </span>
             <button type="button" class="as-filter-dialog-clear-all" @click="clearAll">
-              Clear all
+              {{ t("UI_CLEAR_ALL") }}
             </button>
           </div>
           <div class="as-filter-dialog-chips">
@@ -271,22 +282,26 @@ function onOpenAutoFocus(event: Event) {
               <button
                 type="button"
                 class="as-filter-dialog-chip-remove"
-                aria-label="Remove"
+                :aria-label="t('UI_REMOVE')"
                 @click="removeChip(chip)"
               >
                 <span class="i-as-close" aria-hidden="true" />
               </button>
             </span>
             <span v-if="hiddenChipCount > 0" class="as-filter-dialog-chips-more">
-              +{{ hiddenChipCount }} more
+              {{ t("UI_MORE", { count: hiddenChipCount }) }}
             </span>
           </div>
         </div>
 
         <div class="as-filter-dialog-footer">
           <div class="as-filter-dialog-footer-right">
-            <button type="button" class="as-filter-btn" @click="onCancel">Cancel</button>
-            <button type="button" class="as-filter-btn-apply" @click="onApply">Apply</button>
+            <button type="button" class="as-filter-btn" @click="onCancel">
+              {{ t("UI_CANCEL") }}
+            </button>
+            <button type="button" class="as-filter-btn-apply" @click="onApply">
+              {{ t("UI_APPLY") }}
+            </button>
           </div>
         </div>
       </DialogContent>

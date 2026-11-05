@@ -4,6 +4,7 @@ import type { ColumnDef } from "@atscript/ui";
 import type { RowClassHook, RowSelectableVerdict, SelectOn } from "../../types";
 import type { CellResolver } from "../../composables/use-cell-resolver";
 import { getCellValue } from "../../utils/get-cell-value";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { displayCellValue } from "../../utils/display-cell-value";
 import AsTableCellValue from "../defaults/as-table-cell-value.vue";
 import AsSelectCell from "./as-select-cell.vue";
@@ -51,6 +52,7 @@ const props = defineProps<{
   onRowClick: (row: Record<string, unknown>, event: MouseEvent, index: number) => void;
   onRowDblClick: (row: Record<string, unknown>, event: MouseEvent, index: number) => void;
 }>();
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -103,7 +105,7 @@ const props = defineProps<{
             role="gridcell"
             v-bind="bindings"
           >
-            {{ displayCellValue(row, col) }}
+            {{ displayCellValue(row, col, t) }}
           </td>
           <component
             v-else
@@ -130,7 +132,7 @@ const props = defineProps<{
           :class="{ 'as-cell-number': col.type === 'number' }"
           role="gridcell"
         >
-          {{ displayCellValue(row, col) }}
+          {{ displayCellValue(row, col, t) }}
         </td>
         <component v-else :is="cellComponents[col.path]" :row="row" :column="col" role="gridcell" />
       </template>

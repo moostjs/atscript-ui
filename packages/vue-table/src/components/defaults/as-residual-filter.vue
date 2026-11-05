@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { FilterExpr } from "@uniqu/core";
 import { formatFilterExpr } from "@atscript/ui-table";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { useConditionFormat } from "../../composables/use-condition-format";
 import { useTableContext } from "../../composables/use-table-state";
 
@@ -21,18 +22,19 @@ const props = defineProps<{
 
 const { state } = useTableContext();
 const { formatValue, labelOf } = useConditionFormat(state);
+const { t } = useAsTexts();
 
-const text = computed(() => formatFilterExpr(props.expr, labelOf, formatValue));
+const text = computed(() => formatFilterExpr(props.expr, labelOf, formatValue, t));
 </script>
 
 <template>
   <div class="as-residual-filter" :title="text">
-    <span class="as-residual-filter-label">Custom filter</span>
+    <span class="as-residual-filter-label">{{ t("UI_FILTER_CUSTOM") }}</span>
     <span class="as-residual-filter-text">{{ text }}</span>
     <button
       type="button"
       class="as-residual-filter-remove"
-      aria-label="Remove custom filter"
+      :aria-label="t('UI_FILTER_REMOVE_CUSTOM')"
       @click="state.removeResidualFilter(props.index)"
     >
       <span class="i-as-close" aria-hidden="true" />

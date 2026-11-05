@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from "vue";
 import { useTableContext } from "../../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 /**
  * The "select every row matching the query" strip (Gmail pattern), rendered
@@ -22,6 +23,7 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+const { t } = useAsTexts();
 
 const kind = computed<"offer" | "query" | null>(() => {
   if (state.selectMode.value !== "multi") return null;
@@ -34,14 +36,17 @@ const kind = computed<"offer" | "query" | null>(() => {
 const loadedCount = computed(() => state.loadedEligiblePks.value.length);
 
 const offerText = computed(() => {
-  const n = loadedCount.value;
-  const where = props.scope === "page" ? "on this page" : "loaded";
-  return n === 1 ? `The 1 row ${where} is selected.` : `All ${n} rows ${where} are selected.`;
+  const count = loadedCount.value;
+  const page = props.scope === "page";
+  if (count === 1) return t(page ? "UI_TABLE_SELECTED_PAGE_ONE" : "UI_TABLE_SELECTED_LOADED_ONE");
+  return t(page ? "UI_TABLE_SELECTED_PAGE" : "UI_TABLE_SELECTED_LOADED", { count });
 });
 
 const queryText = computed(() => {
-  const n = state.selectedCount.value;
-  return n === 1 ? "1 matching row is selected." : `All ${n} matching rows are selected.`;
+  const count = state.selectedCount.value;
+  return count === 1
+    ? t("UI_TABLE_SELECTED_MATCHING_ONE")
+    : t("UI_TABLE_SELECTED_MATCHING", { count });
 });
 
 const rootRef = ref<HTMLElement | null>(null);
@@ -106,7 +111,7 @@ const clearSelection = keepingFocus(() => state.clearSelection());
             data-select-all-matching
             @click="selectAllMatching"
           >
-            Select all {{ state.totalCount.value }} matching
+            {{ t("UI_TABLE_SELECT_ALL_MATCHING", { count: state.totalCount.value }) }}
           </button>
         </template>
         <template v-else>
@@ -118,7 +123,7 @@ const clearSelection = keepingFocus(() => state.clearSelection());
             data-clear-selection
             @click="clearSelection"
           >
-            Clear selection
+            {{ t("UI_CLEAR_SELECTION") }}
           </button>
         </template>
       </slot>

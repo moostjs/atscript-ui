@@ -187,6 +187,7 @@ const guideSidebar = [
       { text: "Installation", link: "/guide/installation" },
       { text: "The .as File", link: "/guide/the-as-file" },
       { text: "Ecosystem Map", link: "/guide/ecosystem" },
+      { text: "Language & Translations", link: "/guide/i18n" },
       { text: "Bundle Optimization", link: "/guide/bundle-optimization" },
     ],
   },

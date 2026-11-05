@@ -1,5 +1,6 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { ValueHelpInfo } from "../value-help/types";
+import type { AsUiMessageCode } from "../messages";
 
 export type { TFormEntryOptions } from "../value-help/types";
 
@@ -103,6 +104,12 @@ export interface FormDef {
 export interface FormUnionVariant {
   /** Display label — from @meta.label or auto-generated (e.g. "1. String") */
   label: string;
+  /**
+   * The UI text code of an auto-generated label's type name
+   * (`UI_FORM_TYPE_STRING`); `label` ends with its English text. Render the
+   * name in the UI locale with it. Since 0.1.165.
+   */
+  labelCode?: AsUiMessageCode;
   /** The annotated type for this variant */
   type: TAtscriptAnnotatedType;
   /** Pre-built FormDef for object variants (undefined for primitives) */

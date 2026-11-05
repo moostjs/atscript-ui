@@ -9,6 +9,7 @@ import {
 } from "vue";
 import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_PATCH_KEY, FORM_STATE_KEY } from "./internal-keys";
 import type { TFormRule } from "./types";
+import { useAsTexts } from "./use-as-locale";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface UseAsFieldOptions<TValue = any, TFormData = any, TContext = any> {
@@ -51,6 +52,7 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
   // `useAsFormPatch()` here (it THROWS when tracking is disabled); a plain
   // `inject(..., undefined)` keeps OFF a silent, zero-cost "never dirty".
   const patch = inject(FORM_PATCH_KEY, undefined);
+  const { t } = useAsTexts();
 
   const id = Symbol("form-field");
   const submitError = ref<string>();
@@ -109,7 +111,7 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
           formContext?.value as TContext,
         );
         if (result !== true) {
-          return (result as string) || "Wrong value";
+          return (result as string) || t("UI_FORM_WRONG_VALUE");
         }
       }
     }

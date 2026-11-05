@@ -27,10 +27,12 @@ import AsWindowTable from "../as-window-table.vue";
 import AsFilterDialog from "../defaults/as-filter-dialog.vue";
 import AsConfigDialog from "../defaults/as-config-dialog.vue";
 import AsFilters from "../as-filters.vue";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = defineProps<{
   column: ColumnDef;
 }>();
+const { t } = useAsTexts();
 
 const model = defineModel<FilterCondition[]>({ default: () => [] });
 
@@ -94,7 +96,7 @@ if (info) {
   const fetchPage = createDistinctPager(outer?.state, props.column);
   const { state } = createStaticTableState({
     rows: [],
-    columns: [valueColumn(false)],
+    columns: [valueColumn(false, t)],
     searchPaths: ["__label"],
     // one page = one window block (100), so a follow-up block is the next page
     limit: 100,
@@ -112,7 +114,7 @@ if (info) {
     __value: optionValue(o),
     __label: o.label,
   }));
-  const enumColumns: ColumnDef[] = [valueColumn(true)];
+  const enumColumns: ColumnDef[] = [valueColumn(true, t)];
   const { state } = createStaticTableState({
     rows: enumRows,
     columns: enumColumns,
@@ -229,7 +231,7 @@ function clearAllFilters() {
           :value="innerState?.searchTerm.value ?? ''"
           type="text"
           class="as-filter-value-help-search"
-          placeholder="Search..."
+          :placeholder="t('UI_SEARCH_PLACEHOLDER')"
           autocomplete="off"
           @input="
             (e: Event) => {
@@ -245,12 +247,12 @@ function clearAllFilters() {
           type="button"
           class="as-filter-value-help-filters-toggle"
           :class="{ 'as-filter-value-help-filters-toggle-active': showFilters }"
-          :title="showFilters ? 'Hide filters' : 'Show filters'"
+          :title="t(showFilters ? 'UI_FILTER_HIDE_FILTERS' : 'UI_FILTER_SHOW_FILTERS')"
           @click="showFilters = !showFilters"
         >
           <span class="i-as-filter" aria-hidden="true" />
         </button>
-        {{ totalCount }} records
+        {{ t("UI_TABLE_RECORDS", { count: totalCount }) }}
       </span>
     </div>
     <div v-if="info && showFilters" class="as-filter-value-help-filters">
@@ -262,7 +264,7 @@ function clearAllFilters() {
         class="as-filter-dialog-clear-all"
         @click="clearAllFilters"
       >
-        Clear all
+        {{ t("UI_CLEAR_ALL") }}
       </button>
     </div>
     <!-- Same window-table chrome for both branches. The enum branch's

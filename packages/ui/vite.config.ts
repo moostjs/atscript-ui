@@ -7,7 +7,9 @@ export default defineConfig({
     globalSetup: "src/__tests__/global-setup.ts",
   },
   pack: {
-    entry: ["src/index.ts", "src/plugin.ts"],
+    // `messages` is its own entry: the text catalog imports nothing, so a
+    // server registers it (`@atscript/ui/messages`) without the UI runtime.
+    entry: ["src/index.ts", "src/plugin.ts", "src/messages.ts"],
     // One output module per source module: an app's bundler then pulls only
     // the modules an import reaches (and splits them across chunks), instead
     // of the whole runtime with the first import.

@@ -3,6 +3,7 @@ import { useAsForm, type TAsFormValue } from "../composables/use-as-form";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import AsIterator from "./as-iterator.vue";
+import { useAsTexts } from "../composables/use-as-locale";
 import type { ClientFactory, FormDef, FormFieldChange } from "@atscript/ui";
 import type { Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
@@ -138,6 +139,7 @@ defineExpose({
     ? form.patch.rebaseOnto
     : () => ({ conflicts: [] as string[], reapplied: [] as FormFieldChange[] }),
 });
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -159,7 +161,7 @@ defineExpose({
       <div role="alert" class="as-form-error">
         <span class="as-form-error-message">{{ form.formError.value }}</span>
         <button type="button" class="as-form-error-dismiss" @click="form.dismissFormError">
-          Dismiss
+          {{ t("UI_FORM_DISMISS") }}
         </button>
       </div>
     </slot>

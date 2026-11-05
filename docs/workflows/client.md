@@ -375,6 +375,23 @@ A wrapper-friendly status bus typically wraps the global `fetch`
 once at app boot. The same wrapper passed here keeps the workflow
 client in sync with the rest of the app's HTTP behavior.
 
+## Language
+
+`useWfForm` reads the locale `provideAsLocale` gives (`@atscript/vue-form`)
+and sends it as `Accept-Language` on every start, submit, action and resume —
+unless `fetchOptions.headers` already sets an `Accept-Language` (any case;
+then the answer's `$i18n` texts are not merged — they are in the app's
+language, not the provided one). Without a provided locale no header is sent.
+
+When the server answers with a form whose schema carries `$i18n` texts, they
+join the app's texts for the locale the request was sent in — a late answer
+for a previous locale never lands in the current one. Status messages for
+refused requests ("This session has expired…") come from those texts, else
+English.
+
+A locale switch applies on the next round-trip: an open step is not
+re-requested. See [Language & Translations](/guide/i18n).
+
 ## Aborting
 
 Every `start` / `submit` / `action` aborts the previous in-flight

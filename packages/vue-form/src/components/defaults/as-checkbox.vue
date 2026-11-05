@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { DEFAULT_BOOLEAN_LABELS, optKey, optLabel } from "@atscript/ui";
+import { optKey, optLabel } from "@atscript/ui";
 import type { TAsComponentProps } from "../types";
 import { useAsTriStateCheckbox } from "../../composables/use-as-tri-state-checkbox";
 import AsFieldShell from "./as-field-shell.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps<boolean | undefined>>();
 
@@ -15,6 +16,8 @@ const { checked, indeterminate, inputRef, onChange } = useAsTriStateCheckbox({
   },
 });
 
+const { t } = useAsTexts();
+
 // Read-only: the value reads as its label (`@ui.literalLabel`, Yes / No by default) —
 // a native checkbox ignores `readonly` and would still toggle.
 const valueLabel = computed(() => {
@@ -22,7 +25,7 @@ const valueLabel = computed(() => {
   if (typeof value !== "boolean") return "";
   const key = value ? "true" : "false";
   const option = props.options?.find((o) => optKey(o) === key);
-  return option === undefined ? DEFAULT_BOOLEAN_LABELS[key] : optLabel(option);
+  return option === undefined ? t(value ? "UI_YES" : "UI_NO") : optLabel(option);
 });
 </script>
 

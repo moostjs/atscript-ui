@@ -10,7 +10,9 @@ export default defineConfig({
     globalSetup: "src/__tests__/global-setup.ts",
   },
   pack: {
-    entry: getEntries(),
+    // `locale` is its own entry: other packages read the app's UI texts
+    // without reaching the form components.
+    entry: { ...getEntries(), locale: "src/locale.ts" },
     dts: { vue: true, eager: true },
     format: ["esm", "cjs"],
     plugins: [vue() as never],

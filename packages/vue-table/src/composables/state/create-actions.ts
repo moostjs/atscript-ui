@@ -1,6 +1,6 @@
 import { computed, shallowRef, watch, type ComputedRef, type ShallowRef } from "vue";
 import type { Client, TDbActionTargetSummary } from "@atscript/db-client";
-import { invalidateValueHelpCache, type TableDef } from "@atscript/ui";
+import { invalidateValueHelpCache, type TableDef, type UiT } from "@atscript/ui";
 import {
   REMOVE_PROCESSOR,
   type ActionQueryTarget,
@@ -16,15 +16,15 @@ import { localActionOf } from "./row-actions-config";
 const REMOVE_NAME = REMOVE_PROCESSOR;
 
 const REMOVE_DEFAULTS = {
-  label: "Delete",
   icon: "i-as-trash",
   intent: "negative" as const,
-  promptText: ["Delete item $1?", "Delete $N items?"] as [string, string],
 };
 
 interface CreateActionsOpts {
   /** Source table definition (server-declared actions live here). */
   tableDef: ShallowRef<TableDef | null>;
+  /** The table's UI texts (the built-in remove action's label and prompts). */
+  t: UiT;
   /** Data-layer client used by `'backend'` / `'navigate'` / `'__remove'`. */
   client: Client;
   /** Row-delete opt-in: `false` (off, default), `true` (on with defaults), or an options object. */
@@ -117,7 +117,7 @@ export function createActions(opts: CreateActionsOpts): CreateActionsResult {
   const invoking = shallowRef<Set<string>>(new Set());
   const lastResult = shallowRef<Map<string, ActionResult>>(new Map());
 
-  const groups = computed(() => buildGroups(opts.tableDef.value, opts.rowDelete()));
+  const groups = computed(() => buildGroups(opts.tableDef.value, opts.rowDelete(), opts.t));
 
   // Reset on tableDef swap so long sessions with rotating action sets don't
   // accumulate entries for actions no longer present.
@@ -304,7 +304,7 @@ const EMPTY_GROUPS: GroupsValue = Object.freeze({
   cellRow: [],
 }) as GroupsValue;
 
-function buildGroups(def: TableDef | null, rowDelete: boolean | RowDeleteOpt): GroupsValue {
+function buildGroups(def: TableDef | null, rowDelete: boolean | RowDeleteOpt, t: UiT): GroupsValue {
   if (def === null) return EMPTY_GROUPS;
 
   const srcActions = def.actions ?? { table: [], row: [], rows: [], default: {} };
@@ -313,7 +313,7 @@ function buildGroups(def: TableDef | null, rowDelete: boolean | RowDeleteOpt): G
   const rows = srcActions.rows as TVueTableActionInfo[];
 
   if (rowDelete && def.canRemove) {
-    row.push(buildRemoveAction(rowDelete === true ? {} : rowDelete));
+    row.push(buildRemoveAction(rowDelete === true ? {} : rowDelete, t));
   }
 
   const defTable = srcActions.default.table as TVueTableActionInfo | undefined;
@@ -342,15 +342,15 @@ function buildGroups(def: TableDef | null, rowDelete: boolean | RowDeleteOpt): G
   };
 }
 
-function buildRemoveAction(opts: RowDeleteOpt): TVueTableActionInfo {
+function buildRemoveAction(opts: RowDeleteOpt, t: UiT): TVueTableActionInfo {
   return {
     name: REMOVE_NAME,
-    label: opts.label ?? REMOVE_DEFAULTS.label,
+    label: opts.label ?? t("UI_ACTION_DELETE"),
     level: "row",
     processor: REMOVE_PROCESSOR,
     value: "",
     icon: opts.icon ?? REMOVE_DEFAULTS.icon,
     intent: opts.intent ?? REMOVE_DEFAULTS.intent,
-    promptText: opts.confirm ?? REMOVE_DEFAULTS.promptText,
+    promptText: opts.confirm ?? [t("UI_ACTION_DELETE_ONE"), t("UI_ACTION_DELETE_MANY")],
   };
 }

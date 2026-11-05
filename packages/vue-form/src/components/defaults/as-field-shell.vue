@@ -6,6 +6,7 @@ import { useAsFocusFirstAfter } from "../../composables/focus-after-toggle";
 import AsNoData from "../internal/as-no-data.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 // AsFieldShell is a Tier-2 default — public, importable by consumers,
 // but not auto-resolved. It is always mounted as a child of an AsField
@@ -48,6 +49,7 @@ const showEmptyPlaceholder = computed(
   () =>
     !!props.optional && !optionalEnabled.value && !props.chromeless && !props.hideEmptyPlaceholder,
 );
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -101,8 +103,8 @@ const showEmptyPlaceholder = computed(
           type="button"
           class="as-field-remove-btn"
           :disabled="!canRemove"
-          aria-label="Remove"
-          title="Remove"
+          :aria-label="t('UI_REMOVE')"
+          :title="t('UI_REMOVE')"
           @click="onRemove"
         >
           <span class="as-field-remove-btn-icon" aria-hidden="true" />
@@ -152,7 +154,9 @@ const showEmptyPlaceholder = computed(
                through `aria-describedby` instead, which AsField appends on
                exactly this `isDirty` condition, so a clean field never points
                at a missing node. -->
-          <span v-if="isDirty" :id="statusId" class="as-field-status">Modified</span>
+          <span v-if="isDirty" :id="statusId" class="as-field-status">{{
+            t("UI_FORM_MODIFIED")
+          }}</span>
         </slot>
         <button
           v-if="formAction"

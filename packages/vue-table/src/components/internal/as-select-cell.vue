@@ -2,6 +2,7 @@
 import type { SelectionMode } from "@atscript/ui-table";
 import type { RowSelectableVerdict, SelectOn } from "../../types";
 import { useTableContextOptional } from "../../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { onSelectControlKeydown, toggleRowAt } from "../../composables/state/create-nav-controller";
 
 /**
@@ -20,6 +21,7 @@ const props = defineProps<{
 }>();
 
 const ctx = useTableContextOptional();
+const { t } = useAsTexts();
 
 function toggle() {
   if (ctx) toggleRowAt(props.index, props.select, ctx.state);
@@ -46,10 +48,10 @@ function onKeydown(event: KeyboardEvent) {
 
 /** Accessible name for the control, carrying the disabled reason. */
 function label(): string {
-  if (props.verdict.ok) return "Select row";
+  if (props.verdict.ok) return t("UI_TABLE_SELECT_ROW");
   return props.verdict.reason
-    ? `Select row, ${props.verdict.reason}`
-    : "Select row, not selectable";
+    ? t("UI_TABLE_SELECT_ROW_REASON", { reason: props.verdict.reason })
+    : t("UI_TABLE_SELECT_ROW_DISABLED");
 }
 </script>
 

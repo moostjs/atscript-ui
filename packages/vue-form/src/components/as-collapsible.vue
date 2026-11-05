@@ -12,6 +12,7 @@ import {
 } from "../composables/use-as-nested-sections-store";
 import { useAsFocusFirstAfter } from "../composables/focus-after-toggle";
 import { formatIndexedLabelParts } from "../composables/use-form-context";
+import { useAsTexts } from "../composables/use-as-locale";
 import type { TAsCollapsibleProps, TAsCollapsibleSlots } from "./types";
 
 const props = withDefaults(defineProps<TAsCollapsibleProps>(), {
@@ -84,6 +85,7 @@ const descendantErrorCount = computed(() =>
 const { rootRef, runAndFocus, runAndFocusNew } = useAsFocusFirstAfter();
 
 defineExpose({ runAndFocus, runAndFocusNew });
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -117,7 +119,11 @@ defineExpose({ runAndFocus, runAndFocusNew });
       <span
         v-if="!isOpen && descendantErrorCount > 0"
         class="as-collapsible-error-badge"
-        :aria-label="`${descendantErrorCount} error${descendantErrorCount === 1 ? '' : 's'} inside`"
+        :aria-label="
+          t(descendantErrorCount === 1 ? 'UI_FORM_ERRORS_INSIDE_ONE' : 'UI_FORM_ERRORS_INSIDE', {
+            count: descendantErrorCount,
+          })
+        "
       >
         {{ descendantErrorCount }}
       </span>

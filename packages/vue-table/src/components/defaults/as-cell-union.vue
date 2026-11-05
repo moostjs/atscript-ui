@@ -4,6 +4,7 @@ import type { ColumnDef } from "@atscript/ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import { formatCellValue } from "../../utils/format-cell";
 import AsCellJsonPopover from "../internal/as-cell-json-popover.vue";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 type View =
   | { kind: "array-chips"; items: unknown[] }
@@ -34,6 +35,7 @@ const view = computed<View>(() => {
   if (v && typeof v === "object") return { kind: "object", value: v as object };
   return { kind: "primitive", value: v };
 });
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -46,7 +48,7 @@ const view = computed<View>(() => {
         <button
           type="button"
           class="as-cell-json-trigger"
-          :aria-label="`View ${view.items.length} items`"
+          :aria-label="t('UI_TABLE_VIEW_ITEMS', { count: view.items.length })"
         >
           <span class="as-cell-json-trigger-glyph">{}</span>
           <span class="as-cell-json-trigger-count">[{{ view.items.length }}]</span>
@@ -55,13 +57,13 @@ const view = computed<View>(() => {
     </AsCellJsonPopover>
     <AsCellJsonPopover v-else-if="view.kind === 'object'" :value="view.value">
       <template #trigger>
-        <button type="button" class="as-cell-json-trigger" aria-label="View object">
+        <button type="button" class="as-cell-json-trigger" :aria-label="t('UI_TABLE_VIEW_OBJECT')">
           <span class="as-cell-json-trigger-glyph">{}</span>
         </button>
       </template>
     </AsCellJsonPopover>
     <template v-else-if="view.kind === 'primitive'">
-      {{ formatCellValue(view.value, props.column.type) }}
+      {{ formatCellValue(view.value, props.column.type, t) }}
     </template>
   </td>
 </template>

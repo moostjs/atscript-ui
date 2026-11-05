@@ -1,3 +1,5 @@
+import { getUiTexts } from "@atscript/ui";
+
 /** @deprecated See `dateShortcuts`. A date shortcut produces a label and a [start, end] ISO date range. */
 export interface DateShortcut {
   label: string;
@@ -12,17 +14,18 @@ export interface DateShortcut {
  * time zone. Use `temporalShortcuts()`, whose conditions carry relative tokens.
  */
 export function dateShortcuts(now?: Date): DateShortcut[] {
+  const { t } = getUiTexts();
   const today = now ?? new Date();
   const todayISO = toISO(today);
 
   return [
-    { label: "Last 7 Days", dates: [toISO(daysAgo(today, 7)), todayISO] },
-    { label: "Last 30 Days", dates: [toISO(daysAgo(today, 30)), todayISO] },
-    { label: "Month to Date", dates: [toISO(monthStart(today)), todayISO] },
-    { label: "Last 90 Days", dates: [toISO(daysAgo(today, 90)), todayISO] },
-    { label: "Last 6 Months", dates: [toISO(monthsAgo(today, 6)), todayISO] },
-    { label: "Last 12 Months", dates: [toISO(monthsAgo(today, 12)), todayISO] },
-    { label: "Year to Date", dates: [toISO(yearStart(today)), todayISO] },
+    { label: t("UI_DATES_LAST_7_DAYS"), dates: [toISO(daysAgo(today, 7)), todayISO] },
+    { label: t("UI_DATES_LAST_30_DAYS"), dates: [toISO(daysAgo(today, 30)), todayISO] },
+    { label: t("UI_DATES_MONTH_TO_DATE"), dates: [toISO(monthStart(today)), todayISO] },
+    { label: t("UI_DATES_LAST_90_DAYS"), dates: [toISO(daysAgo(today, 90)), todayISO] },
+    { label: t("UI_DATES_LAST_6_MONTHS"), dates: [toISO(monthsAgo(today, 6)), todayISO] },
+    { label: t("UI_DATES_LAST_12_MONTHS"), dates: [toISO(monthsAgo(today, 12)), todayISO] },
+    { label: t("UI_DATES_YEAR_TO_DATE"), dates: [toISO(yearStart(today)), todayISO] },
   ];
 }
 

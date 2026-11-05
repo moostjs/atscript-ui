@@ -1,36 +1,29 @@
-import type { FormDef } from "@atscript/ui";
+import type { FormDef, UiT } from "@atscript/ui";
 import { createFormDef, createFormData } from "@atscript/ui";
+import { AS_UI_MESSAGES } from "@atscript/ui/messages";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import type { WfFinished } from "@atscript/moost-wf";
 import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 import { onMounted, onUnmounted, reactive, ref, shallowRef, type Ref, type ShallowRef } from "vue";
 
-const FRIENDLY_STATUS_MESSAGES: Readonly<Record<number, string>> = {
-  // Client errors that map to specific user actions
-  400: "The request was invalid. Please check your input and try again.",
-  401: "You need to sign in to continue.",
-  403: "You don't have permission to do that.",
-  404: "We couldn't find what you're looking for.",
-  408: "The request took too long. Please try again.",
-  409: "There's a conflict with the current state. Please refresh and try again.",
-  410: "This session has expired. Please start over.",
-  422: "Some of the information you provided couldn't be processed.",
-  423: "This account is temporarily locked. Please try again later.",
-  429: "Too many requests. Please wait a moment and try again.",
+/**
+ * A status with its own friendly text (`UI_WF_STATUS_<status>`: client errors
+ * that map to specific user actions, server errors generic but human), else a
+ * generic one.
+ */
+function friendlyMessageForStatus(status: number, t: UiT): string {
+  const code = `UI_WF_STATUS_${status}`;
+  if (Object.hasOwn(AS_UI_MESSAGES, code)) return t(code);
+  if (status >= 500) return t("UI_WF_STATUS_500");
+  if (status >= 400) return t("UI_WF_REQUEST_FAILED");
+  return t("UI_WF_UNEXPECTED_RESPONSE");
+}
 
-  // Server errors — generic but human
-  500: "Something went wrong on our end. Please try again in a moment.",
-  502: "We're having trouble reaching the server. Please try again shortly.",
-  503: "The service is temporarily unavailable. Please try again in a few minutes.",
-  504: "The server took too long to respond. Please try again.",
-};
-
-function friendlyMessageForStatus(status: number): string {
-  const mapped = FRIENDLY_STATUS_MESSAGES[status];
-  if (mapped) return mapped;
-  if (status >= 500) return FRIENDLY_STATUS_MESSAGES[500];
-  if (status >= 400) return "Something went wrong with that request. Please try again.";
-  return "Unexpected response from the server.";
+/** The `$i18n` texts a form schema in an answer carries (`inputRequired.payload.$i18n`). */
+function servedTexts(data: unknown): unknown {
+  const ir = (data as { inputRequired?: { payload?: { $i18n?: unknown } } } | null)?.inputRequired;
+  return ir?.payload?.$i18n;
 }
 
 export interface UseWfFormOptions {
@@ -56,7 +49,11 @@ export interface UseWfFormOptions {
   tokenName?: string;
   /** Workflow ID parameter name (default: 'wfid') */
   wfidName?: string;
-  /** Custom fetch options (headers, credentials, etc.) */
+  /**
+   * Custom fetch options (headers, credentials, etc.). Requests carry an
+   * `Accept-Language` of the locale `provideAsLocale` gives, unless these
+   * headers set one.
+   */
   fetchOptions?: RequestInit;
   /**
    * Override the global `fetch` — lets the host wire its own status-code
@@ -92,7 +89,7 @@ export interface WfFormError {
  * A `{ error }` answer as a `WfFormError`: a string is the message; an
  * object keeps its `message` / `status` / `code` and is the `body`.
  */
-function bodyError(raw: unknown): WfFormError {
+function bodyError(raw: unknown, t: UiT): WfFormError {
   if (typeof raw === "string") return { message: raw };
   const body =
     typeof raw === "object" && raw !== null
@@ -104,8 +101,8 @@ function bodyError(raw: unknown): WfFormError {
       typeof body?.message === "string"
         ? body.message
         : status !== undefined
-          ? friendlyMessageForStatus(status)
-          : "Something went wrong with that request. Please try again.",
+          ? friendlyMessageForStatus(status, t)
+          : t("UI_WF_REQUEST_FAILED"),
   };
   if (status !== undefined) failed.status = status;
   if (typeof body?.code === "string") failed.code = body.code;
@@ -137,6 +134,10 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   const tokenName = options.tokenName ?? "wfs";
   const wfidName = options.wfidName ?? "wfid";
   const transport = options.tokenTransport ?? "body";
+  // The app's locale and UI texts: requests say which language they want, and
+  // the texts the server serves for it join the app's dict for that locale.
+  const texts = useAsTexts();
+  const { t } = texts;
 
   // ── Reactive state (replaced wholesale each round-trip) ────
   const formDef = shallowRef<FormDef | null>(null);
@@ -168,6 +169,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
         ? Object.fromEntries(extraHeaders)
         : (extraHeaders as Record<string, string> | undefined)),
   };
+  // The app's own `Accept-Language` wins over the provided locale.
+  const sendsLanguage = new Headers(mergedHeaders).has("accept-language");
   const baseFetchOpts: RequestInit = {
     method: "POST",
     headers: mergedHeaders,
@@ -232,7 +235,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     }
 
     if (data.error) {
-      error.value = bodyError(data.error);
+      error.value = bodyError(data.error, t);
       return;
     }
 
@@ -241,7 +244,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
       | undefined;
 
     if (!ir) {
-      error.value = { message: "Unexpected response format" };
+      error.value = { message: t("UI_WF_UNEXPECTED_FORMAT") };
       return;
     }
 
@@ -274,16 +277,24 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     loading.value = true;
     error.value = null;
     lastRequestBody = body;
+    // The locale this request is made in: its served texts belong to it, even
+    // when the app has switched locale by the time it answers.
+    const locale = texts.locale();
+    const headers =
+      locale && !sendsLanguage ? { ...mergedHeaders, "Accept-Language": locale } : mergedHeaders;
 
     try {
       const doFetch = options.fetch ?? fetch;
       const res = await doFetch(options.path, {
         ...baseFetchOpts,
+        headers,
         signal,
         body: JSON.stringify(buildBody(body)),
       });
 
       const data = await res.json().catch(() => null);
+      // Served for the locale this request asked for — not when the app sent its own.
+      if (!sendsLanguage) texts.merge(locale, servedTexts(data));
 
       // Always extract token first: a 4xx may carry a fresh wfs handle
       // (HandleStateStrategy single-use handles). Discarding it leaves the
@@ -294,7 +305,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
 
       if (!res.ok) {
         const errData = data as { error?: string; message?: string; code?: unknown } | null;
-        const msg = errData?.message ?? errData?.error ?? friendlyMessageForStatus(res.status);
+        const msg = errData?.message ?? errData?.error ?? friendlyMessageForStatus(res.status, t);
         const failed: WfFormError = { message: msg, status: res.status };
         if (typeof errData?.code === "string") failed.code = errData.code;
         if (data !== null) failed.body = data;
@@ -303,14 +314,14 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
       }
 
       if (!data) {
-        error.value = { message: "Unexpected response format" };
+        error.value = { message: t("UI_WF_UNEXPECTED_FORMAT") };
         return;
       }
 
       processResponse(data as Record<string, unknown>);
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      error.value = { message: err instanceof Error ? err.message : "Network error" };
+      error.value = { message: err instanceof Error ? err.message : t("UI_WF_NETWORK_ERROR") };
     } finally {
       loading.value = false;
     }

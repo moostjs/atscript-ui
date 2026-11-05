@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from "vue";
 import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
-const props = withDefaults(
-  defineProps<
-    TAsComponentProps<string | undefined> & {
-      copiedLabel?: string;
-      copyLabel?: string;
-    }
-  >(),
-  {
-    copiedLabel: "Copied",
-    copyLabel: "Copy",
-  },
+const props = defineProps<
+  TAsComponentProps<string | undefined> & {
+    /** Default: the UI text `UI_AOOTH_COPIED` ("Copied"). */
+    copiedLabel?: string;
+    /** Default: the UI text `UI_AOOTH_COPY` ("Copy"). */
+    copyLabel?: string;
+  }
+>();
+const { t } = useAsTexts();
+const buttonLabel = computed(() =>
+  copied.value
+    ? (props.copiedLabel ?? t("UI_AOOTH_COPIED"))
+    : (props.copyLabel ?? t("UI_AOOTH_COPY")),
 );
 
 // Phantom fields (ui.paragraph + @ui.form.fn.value) deliver the resolved value
@@ -28,7 +31,7 @@ let revertTimer: ReturnType<typeof setTimeout> | undefined;
 async function onCopy() {
   if (!navigator.clipboard?.writeText) {
     copied.value = false;
-    error.value = "Copy failed — select and copy manually";
+    error.value = t("UI_AOOTH_COPY_FAILED");
     return;
   }
   try {
@@ -46,7 +49,7 @@ async function onCopy() {
     copied.value = false;
     clearTimeout(revertTimer);
     revertTimer = undefined;
-    error.value = "Copy failed — select and copy manually";
+    error.value = t("UI_AOOTH_COPY_FAILED");
   }
 }
 
@@ -75,7 +78,7 @@ onUnmounted(() => clearTimeout(revertTimer));
         class="as-copy-btn"
         :class="{ copied }"
         :disabled="!text"
-        :aria-label="copied ? copiedLabel : copyLabel"
+        :aria-label="buttonLabel"
         @click="onCopy"
       >
         <span
@@ -83,7 +86,7 @@ onUnmounted(() => clearTimeout(revertTimer));
           :class="copied ? 'i-as-check-circle' : 'i-as-copy'"
           aria-hidden="true"
         />
-        <span class="as-copy-label" aria-live="polite">{{ copied ? copiedLabel : copyLabel }}</span>
+        <span class="as-copy-label" aria-live="polite">{{ buttonLabel }}</span>
       </button>
     </div>
   </AsFieldShell>

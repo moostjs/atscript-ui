@@ -307,3 +307,12 @@ export { navigateHrefFor } from "./table/navigate-href";
 // ── Model nav routes (metadata-driven app navigation) ───────
 export { buildModelRoutes } from "./nav/model-routes";
 export type { TModelRoute } from "./nav/model-routes";
+
+// ── UI texts (i18n) ─────────────────────────────────────────
+// The catalog itself is `AS_UI_MESSAGES` from `@atscript/ui/messages`.
+export { setUiLocale } from "./i18n/ui-texts";
+export type { UiTranslate, UiT, UiTextParams } from "./i18n/ui-texts";
+/** @internal Shared with `@atscript/ui-table` and the `@atscript/vue-*` packages. */
+export { createUiTexts, getUiTexts, activateUiTexts } from "./i18n/ui-texts";
+/** @internal */
+export type { UiTexts } from "./i18n/ui-texts";

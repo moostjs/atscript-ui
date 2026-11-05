@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import type { WfActionRequest, WfButton, WfFinished } from "@atscript/moost-wf";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = defineProps<{
   payload: WfFinished | null;
@@ -56,6 +57,7 @@ function runAction(action: WfActionRequest): void {
 }
 
 // ── Derived state ──────────────────────────────────────────
+const { t } = useAsTexts();
 const next = computed(() => props.payload?.next ?? null);
 const message = computed(() => props.payload?.message ?? null);
 
@@ -177,7 +179,9 @@ const skipScope = computed(() => {
 </script>
 
 <template>
-  <span v-if="next?.trigger === 'immediate'" class="sr-only" aria-live="polite">Redirecting…</span>
+  <span v-if="next?.trigger === 'immediate'" class="sr-only" aria-live="polite">{{
+    t("UI_WF_REDIRECTING")
+  }}</span>
 
   <div v-else class="as-wf-finish" @keydown="onKeydown">
     <slot v-if="message" name="message" :message="message">
@@ -208,7 +212,7 @@ const skipScope = computed(() => {
         :cancel="cancelAuto"
       >
         <div class="as-wf-finish-countdown" aria-live="polite">
-          Continuing in {{ secondsRemaining }}…
+          {{ t("UI_WF_CONTINUING_IN", { seconds: secondsRemaining }) }}
         </div>
       </slot>
     </template>

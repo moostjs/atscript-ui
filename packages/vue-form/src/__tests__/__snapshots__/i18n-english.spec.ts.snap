@@ -1,0 +1,386 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`built-in English texts are unchanged > arrays: add / remove / clear 1`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><details class="as-collapsible-section as-grid-item as-grid-item" data-object-level="1" open=""><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h3 class="as-collapsible-title">Items
+              <!--v-if--></h3></div>
+          <!--v-if--></div><span class="as-array-items-chip">1 items</span>
+        <!-- Hide Clear only when required+empty: optional arrays keep it
+           so the user can collapse back to undefined. --><button type="button" class="as-optional-clear" aria-label="Clear items">Clear</button>
+        <!--v-if--><span class="as-collapsible-chevron" aria-hidden="true"></span></summary>
+      <div class="as-collapsible-body"><!--v-if-->
+        <details class="as-collapsible-island as-collapsible-island-even as-grid-item as-grid-item" data-object-level="2" open=""><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h4 class="as-collapsible-title-nested">Item<span class="as-collapsible-title-index">&nbsp;#1</span></h4></div>
+              <!--v-if--></div><button type="button" class="as-field-remove-btn" disabled="" aria-label="Remove" title="Remove"><span class="as-field-remove-btn-icon" aria-hidden="true"></span></button>
+            <!--v-if--><span class="as-collapsible-chevron" aria-hidden="true"></span></summary>
+          <div class="as-collapsible-body"><!--v-if-->
+            <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+              <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-3" class="as-field-label">Label
+                    <!--v-if--></label><!-- Union variant picker — inline next to label -->
+                  <!--v-if--></div>
+                <!--v-if--></div>
+              <!--v-if-->
+              <div class="as-field-input-row"><input id="as-field-v-3" name="label" type="text"></div>
+              <!--v-if--></div>
+            <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+              <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-4" class="as-field-label">Number
+                    <!--v-if--></label><!-- Union variant picker — inline next to label -->
+                  <!--v-if--></div>
+                <!--v-if--></div>
+              <!--v-if-->
+              <div class="as-field-input-row"><input id="as-field-v-4" name="number" type="text"></div>
+              <!--v-if--></div></div></details>
+        <div class="as-array-add-row"><button type="button" class="as-array-add-btn">Add item</button></div></div></details></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > arrays: add / remove / clear 2`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-object-empty as-grid-item as-grid-item"><button type="button" class="as-object-empty-add"><span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true"></span> Add Tags</button>
+      <!--v-if--></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > arrays: add / remove / clear 3`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><details class="as-collapsible-section as-grid-item as-grid-item" data-object-level="1" open=""><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h3 class="as-collapsible-title">Items
+              <!--v-if--></h3></div>
+          <!--v-if--></div><span class="as-array-items-chip">0 items</span>
+        <!--v-if--><span class="as-collapsible-chevron" aria-hidden="true"></span></summary>
+      <div class="as-collapsible-body"><!--v-if-->
+        <div class="as-array-add-row"><button type="button" class="as-array-add-btn">Add item</button></div></div></details></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > arrays: add / remove / clear 4`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><details class="as-collapsible-section as-grid-item as-grid-item" data-object-level="1" open=""><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h3 class="as-collapsible-title">Items
+              <!--v-if--></h3></div>
+          <!--v-if--></div><span class="as-array-items-chip">2 items</span>
+        <!-- Hide Clear only when required+empty: optional arrays keep it
+           so the user can collapse back to undefined. --><button type="button" class="as-optional-clear" aria-label="Clear items">Clear</button>
+        <!--v-if--><span class="as-collapsible-chevron" aria-hidden="true"></span></summary>
+      <div class="as-collapsible-body"><!--v-if-->
+        <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+          <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-2" class="as-field-label">Item<span class="as-field-label-index">&nbsp;#1</span></label><!-- Union variant picker — inline next to label -->
+              <!--v-if--></div>
+            <div class="as-field-header-actions"><button type="button" class="as-field-remove-btn" aria-label="Remove" title="Remove"><span class="as-field-remove-btn-icon" aria-hidden="true"></span></button></div></div>
+          <!--v-if-->
+          <div class="as-field-input-row"><input id="as-field-v-2" name="item" type="text"></div>
+          <!--v-if--></div>
+        <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+          <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-3" class="as-field-label">Item<span class="as-field-label-index">&nbsp;#2</span></label><!-- Union variant picker — inline next to label -->
+              <!--v-if--></div>
+            <div class="as-field-header-actions"><button type="button" class="as-field-remove-btn" aria-label="Remove" title="Remove"><span class="as-field-remove-btn-icon" aria-hidden="true"></span></button></div></div>
+          <!--v-if-->
+          <div class="as-field-input-row"><input id="as-field-v-3" name="item" type="text"></div>
+          <!--v-if--></div>
+        <div class="as-array-add-row"><button type="button" class="as-array-add-btn">Add item</button></div></div></details></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > multiselect, optional fields, read-only booleans, the form banner 1`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-default-field as-multi-select-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><span id="as-field-v-1" class="as-field-label">tags</span><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-field-input-row"><div dir="ltr" class="as-multi-select-root"><div class="as-multi-select-anchor"><input aria-disabled="false" type="text" aria-expanded="false" aria-controls="" aria-autocomplete="list" role="combobox" autocomplete="off" id="as-field-v-1" placeholder="Select..." class="as-multi-select-input" value=""><!--v-if--><span class="as-multi-select-caret i-as-chevron-down" aria-hidden="true"></span></div>
+          <!--v-if-->
+          <!-- We render single input if it's required --></div></div>
+      <!--v-if--></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > multiselect, optional fields, read-only booleans, the form banner 2`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-default-field as-multi-select-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><span id="as-field-v-1" class="as-field-label">Preferred frameworks</span><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-no-data" role="button" tabindex="0"><span class="as-no-data-icon" aria-hidden="true"><span class="i-as-field-empty"></span></span><span class="as-no-data-text">Not set</span></div></div>
+    <div class="as-default-field as-multi-select-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><span id="as-field-v-2" class="as-field-label">Roles</span><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-no-data" role="button" tabindex="0"><span class="as-no-data-icon" aria-hidden="true"><span class="i-as-field-empty"></span></span><span class="as-no-data-text">Not set</span></div></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > multiselect, optional fields, read-only booleans, the form banner 3`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-default-field as-multi-select-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><span id="as-field-v-1" class="as-field-label">synonyms</span><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-field-input-row"><div class="as-multi-select-anchor" dir="ltr"><input id="as-field-v-1" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" class="as-multi-select-input"><!--v-if--></div></div>
+      <!--v-if--></div>
+    <div class="as-default-field as-multi-select-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><span id="as-field-v-2" class="as-field-label">labels</span><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-no-data" role="button" tabindex="0"><span class="as-no-data-icon" aria-hidden="true"><span class="i-as-field-empty"></span></span><span class="as-no-data-text">Not set</span></div></div>
+    <div class="as-default-field as-multi-select-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><span id="as-field-v-3" class="as-field-label">sizes</span><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-no-data" role="button" tabindex="0"><span class="as-no-data-icon" aria-hidden="true"><span class="i-as-field-empty"></span></span><span class="as-no-data-text">Not set</span></div></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > multiselect, optional fields, read-only booleans, the form banner 4`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-1" class="as-field-label">Note
+            <!--v-if--></label><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-no-data" role="button" tabindex="0"><span class="as-no-data-icon" aria-hidden="true"><span class="i-as-field-empty"></span></span><span class="as-no-data-text">Not set</span></div></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > multiselect, optional fields, read-only booleans, the form banner 5`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-default-field as-checkbox-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <!--v-if-->
+      <!--v-if-->
+      <div class="as-field-input-row"><div class="as-checkbox-row"><span id="as-field-v-1-label" class="as-field-label">yes</span><span id="as-field-v-1" class="as-checkbox-value" role="group" aria-labelledby="as-field-v-1-label">Yes</span><!-- Treat both undefined and null as 'unset' — DB-roundtripped null otherwise renders as "set". -->
+          <!--v-if--></div></div>
+      <!--v-if--></div>
+    <div class="as-default-field as-checkbox-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <!--v-if-->
+      <!--v-if-->
+      <div class="as-field-input-row"><div class="as-checkbox-row"><span id="as-field-v-2-label" class="as-field-label">no</span><span id="as-field-v-2" class="as-checkbox-value" role="group" aria-labelledby="as-field-v-2-label">No</span><!-- Treat both undefined and null as 'unset' — DB-roundtripped null otherwise renders as "set". -->
+          <!--v-if--></div></div>
+      <!--v-if--></div></div>
+  <div role="alert" class="as-form-error"><span class="as-form-error-message">Account is suspended</span><button type="button" class="as-form-error-dismiss">Dismiss</button></div><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > the dirty status 1`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-default-field as-grid-item" data-dirty=""><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-1" class="as-field-label">Name
+            <!--v-if--></label><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-field-input-row"><input id="as-field-v-1" name="name" type="text" aria-describedby="as-field-v-1-status"></div>
+      <div class="as-field-footer-row"><!-- \`status\` owns the whole error/hint/announcement area: overriding it
+             replaces the default markup wholesale (keep \`statusId\` on your own
+             node so \`aria-describedby\` still resolves). --><span class="as-error-slot" aria-hidden="true"></span>
+        <!-- Visually hidden: the \`data-dirty\` rail is the sighted cue, this
+               is its AT counterpart. \`role="status"\` would make it a live
+               region and re-announce on every keystroke — it is referenced
+               through \`aria-describedby\` instead, which AsField appends on
+               exactly this \`isDirty\` condition, so a clean field never points
+               at a missing node. --><span id="as-field-v-1-status" class="as-field-status">Modified</span>
+        <!--v-if--></div></div>
+    <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-2" class="as-field-label">Age
+            <!--v-if--></label><!-- Union variant picker — inline next to label -->
+          <!--v-if--></div>
+        <div class="as-field-header-actions"><button type="button" class="as-field-remove-btn" aria-label="Unset value" title="Unset"><span class="as-field-remove-btn-icon" aria-hidden="true"></span></button></div></div>
+      <!--v-if-->
+      <div class="as-field-input-row"><!-- Adornment path: bordered shell with prefix / suffix pills. The
+           shell paints whenever AsField saw an adornment-driving
+           annotation on the field — even when the resolved prefix/suffix
+           is currently empty (sibling-ref source not selected yet),
+           keeping the layout stable. -->
+        <!-- Plain-number fallback: defer to AsInputControl (visually unchanged
+           from the pre-Phase-6 single <input type="number">rendering). --><input id="as-field-v-2" name="age" type="number"></div>
+      <!--v-if--></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > unions and tuples: variant picker, add, unset 1`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><!-- Active: dispatch to variant's component, forwarding the field's @meta.label
+       as title so the variant's chrome shows it (innerField.type overrides "union"). -->
+    <details class="as-collapsible-section as-grid-item as-grid-item" data-object-level="1"><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h3 class="as-collapsible-title">Primary contact
+              <!--v-if--></h3>
+            <div class="as-dropdown"><button type="button" class="as-variant-trigger" title="Switch type — current: Email contact">Email contact</button>
+              <!--v-if--></div></div>
+          <p class="as-collapsible-description">Required object union of three variants.</p></div>
+        <!--v-if--><span class="as-collapsible-chevron as-collapsible-chevron-collapsed" aria-hidden="true"></span></summary>
+      <div class="as-collapsible-body"><!--v-if-->
+        <div class="as-default-field as-grid-item required"><!-- Header row: label/header on left, action buttons on right -->
+          <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-2" class="as-field-label">Email
+                <!--v-if--></label><!-- Union variant picker — inline next to label -->
+              <!--v-if--></div>
+            <!--v-if--></div>
+          <!--v-if-->
+          <div class="as-field-input-row"><input id="as-field-v-2" name="email" type="text" aria-required="true"></div>
+          <!--v-if--></div>
+        <div class="as-default-field as-checkbox-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+          <!--v-if-->
+          <!--v-if-->
+          <div class="as-field-input-row"><div class="as-checkbox-row"><label for="as-field-v-3" class="as-field-label as-checkbox-indeterminate"><input id="as-field-v-3" type="checkbox" name="newsletter">newsletter</label><!-- Treat both undefined and null as 'unset' — DB-roundtripped null otherwise renders as "set". -->
+              <!--v-if--></div></div>
+          <!--v-if--></div></div></details></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > unions and tuples: variant picker, add, unset 2`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-object-empty as-grid-item as-grid-item"><div class="as-dropdown"><button type="button" class="as-object-empty-add"><span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true"></span> Add Backup contact</button>
+        <!--v-if--></div>
+      <!--v-if--></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > unions and tuples: variant picker, add, unset 3`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><!-- Active: dispatch to variant's component, forwarding the field's @meta.label
+       as title so the variant's chrome shows it (innerField.type overrides "union"). -->
+    <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+      <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-1" class="as-field-label">Quantity or label
+            <!--v-if--></label><!-- Union variant picker — inline next to label -->
+          <div class="as-dropdown"><button type="button" class="as-variant-trigger" title="Switch type — current: String">String</button>
+            <!--v-if--></div></div>
+        <!--v-if--></div>
+      <!--v-if-->
+      <div class="as-field-input-row"><input id="as-field-v-1" name="qty" type="text"></div>
+      <!--v-if--></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > unions and tuples: variant picker, add, unset 4`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><details class="as-collapsible-section as-grid-item as-grid-item" data-object-level="1"><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h3 class="as-collapsible-title">Audit log
+              <!--v-if--></h3></div>
+          <!--v-if--></div><span class="as-array-items-chip">0 items</span>
+        <!--v-if--><span class="as-collapsible-chevron as-collapsible-chevron-collapsed" aria-hidden="true"></span></summary>
+      <div class="as-collapsible-body"><!--v-if-->
+        <div class="as-array-add-row"><div class="as-dropdown"><button type="button" class="as-array-add-btn">Add entry</button>
+            <!--v-if--></div></div></div></details></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > unions and tuples: variant picker, add, unset 5`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><details class="as-collapsible-section as-grid-item as-grid-item" data-object-level="1"><summary class="as-collapsible-summary"><div class="as-collapsible-header"><div class="as-collapsible-title-row"><h3 class="as-collapsible-title">Coords
+              <!--v-if--></h3></div>
+          <!--v-if--></div>
+        <!--v-if--><span class="as-collapsible-chevron as-collapsible-chevron-collapsed" aria-hidden="true"></span></summary>
+      <div class="as-collapsible-body"><!--v-if-->
+        <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+          <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-2" class="as-field-label">Number<span class="as-field-label-index">&nbsp;#1</span></label><!-- Union variant picker — inline next to label -->
+              <!--v-if--></div>
+            <!--v-if--></div>
+          <!--v-if-->
+          <div class="as-field-input-row"><!-- Adornment path: bordered shell with prefix / suffix pills. The
+           shell paints whenever AsField saw an adornment-driving
+           annotation on the field — even when the resolved prefix/suffix
+           is currently empty (sibling-ref source not selected yet),
+           keeping the layout stable. -->
+            <!-- Plain-number fallback: defer to AsInputControl (visually unchanged
+           from the pre-Phase-6 single <input type="number">rendering). --><input id="as-field-v-2" name="number" type="number"></div>
+          <!--v-if--></div>
+        <div class="as-default-field as-grid-item"><!-- Header row: label/header on left, action buttons on right -->
+          <div class="as-field-header-row"><div class="as-field-header-content"><label for="as-field-v-3" class="as-field-label">Number<span class="as-field-label-index">&nbsp;#2</span></label><!-- Union variant picker — inline next to label -->
+              <!--v-if--></div>
+            <!--v-if--></div>
+          <!--v-if-->
+          <div class="as-field-input-row"><!-- Adornment path: bordered shell with prefix / suffix pills. The
+           shell paints whenever AsField saw an adornment-driving
+           annotation on the field — even when the resolved prefix/suffix
+           is currently empty (sibling-ref source not selected yet),
+           keeping the layout stable. -->
+            <!-- Plain-number fallback: defer to AsInputControl (visually unchanged
+           from the pre-Phase-6 single <input type="number">rendering). --><input id="as-field-v-3" name="number" type="number"></div>
+          <!--v-if--></div></div></details></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;
+
+exports[`built-in English texts are unchanged > unions and tuples: variant picker, add, unset 6`] = `
+"<form class="as-form"><!--v-if-->
+  <!--v-if-->
+  <!-- Root grid renders the above-submit partition; \`@ui.form.pushDown\`
+         fields go to AsForm's below-submit grid via \`def.pushDownFields\`. -->
+  <div class="as-form-grid as-grid-item"><div class="as-object-empty as-grid-item as-grid-item"><button type="button" class="as-object-empty-add"><span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true"></span> Add Coordinates</button>
+      <!--v-if--></div></div>
+  <!--v-if--><button type="submit" class="as-submit-btn">Submit</button><!-- \`@ui.form.pushDown\` fields render in their own grid below submit. -->
+  <!--v-if-->
+  <!--v-if--></form>"
+`;

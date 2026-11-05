@@ -25,6 +25,7 @@ Framework-agnostic core for type-driven UIs. Reads compiled Atscript metadata, b
 - [Misc utilities](#misc-utilities)
 - [Client factory](#client-factory)
 - [Meta cache](#meta-cache)
+- [UI texts](#ui-texts)
 
 ## Plugin
 
@@ -133,6 +134,8 @@ One branch of a union.
 ```typescript
 interface FormUnionVariant {
   label: string;
+  /** Since 0.1.165: the UI text code of a generated type name ("1. String" → `UI_FORM_TYPE_STRING`); render it in the UI locale. */
+  labelCode?: AsUiMessageCode;
   type: TAtscriptAnnotatedType;
   /** Pre-built FormDef for object variants. */
   def?: FormDef;
@@ -438,7 +441,8 @@ interface TableQueryState {
 Builds a `TableDef` from a `MetaResponse` plus the deserialized atscript type.
 
 ```typescript
-function createTableDef(meta: MetaResponse, type: TAtscriptAnnotatedType): TableDef;
+/** `t` (since 0.1.165) words the default boolean labels; the active UI texts by default. */
+function createTableDef(meta: MetaResponse, type: TAtscriptAnnotatedType, t?: UiT): TableDef;
 ```
 
 See [Annotations Reference](/tables/annotations) for how `@ui.table.*` and `@db.*` annotations populate `ColumnDef`.
@@ -655,7 +659,7 @@ Field-level validator with internal `Validator` caching. Returns `true` on succe
 ```typescript
 function createFieldValidator(
   prop: TAtscriptAnnotatedType,
-  opts?: { rootOnly?: boolean },
+  opts?: { rootOnly?: boolean; t?: UiT }, // `t` since 0.1.165: words the fallback error
 ): (value: unknown, externalCtx?: { data: unknown; context: unknown }) => true | string;
 ```
 
@@ -871,10 +875,12 @@ interface ValueHelpInfo {
 function extractValueHelp(prop: TAtscriptAnnotatedType): ValueHelpInfo | undefined;
 function extractLiteralOptions(
   prop: TAtscriptAnnotatedType,
+  outer?: TAtscriptAnnotatedType,
+  t?: UiT, // since 0.1.165 — words the default boolean labels; the active UI texts by default
 ): { key: string; label: string; value: string | number | boolean }[] | undefined; // `value` since 0.1.148
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
 /** The labels of an unlabelled boolean's two values. Since 0.1.165. */
-const DEFAULT_BOOLEAN_LABELS: Readonly<{ true: string; false: string }>; // { true: "Yes", false: "No" }
+const DEFAULT_BOOLEAN_LABELS: Readonly<{ true: string; false: string }>; // { true: "Yes", false: "No" } — English; shown as UI_YES / UI_NO in the UI locale
 ```
 
 Since 0.1.165 `extractLiteralOptions` also answers a `boolean`: the options
@@ -983,6 +989,7 @@ function resolveOptions(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
   labelsFrom?: TAtscriptAnnotatedType, // since 0.1.165
+  t?: UiT, // since 0.1.165 — words the default boolean labels (pass `useAsLocale().t` from a component)
 ): TFormEntryOptions[] | undefined;
 ```
 
@@ -1117,7 +1124,8 @@ function isTupleField(field: FormFieldDef): field is FormTupleFieldDef;
 function asArray<T>(x: T | T[]): T[];
 
 /** `@ui.form.label.singular` for array fields; falls back to `"item"`. */
-function resolveSingularLabel(prop: TAtscriptAnnotatedType | undefined): string;
+/** `@ui.form.label.singular`, else `t("UI_ITEM")` ("item"); `t` defaults to the active UI texts. */
+function resolveSingularLabel(prop: TAtscriptAnnotatedType | undefined, t?: UiT): string;
 
 /** Always returns a `MeasurementInfo` — individual fields are `undefined` when their annotation is absent. */
 function extractMeasurement(prop: TAtscriptAnnotatedType): MeasurementInfo;
@@ -1171,7 +1179,11 @@ function getMetaEntry(
   factory?: ClientFactory,
   options?: MetaEntryOptions,
 ): MetaCacheEntry;
-function getMetaTableDef(entry: MetaCacheEntry): Promise<TableDef>; // since 0.1.153
+/** One per UI locale (since 0.1.165): `texts` defaults to the active UI texts; `useTable` passes the app's. */
+function getMetaTableDef(
+  entry: MetaCacheEntry,
+  texts?: { locale(): string | undefined; t: UiT },
+): Promise<TableDef>; // since 0.1.153
 function retainMetaEntry(entry: MetaCacheEntry): () => void; // since 0.1.154
 function setMetaCacheMaxEntries(max?: number): void; // since 0.1.154 — default 100
 function resetMetaCache(): void;
@@ -1188,7 +1200,6 @@ interface MetaCacheEntry {
   meta: Promise<MetaResponse>;
   type: Promise<TAtscriptAnnotatedType>; // pre-deserialized
   resolved?: Promise<ResolvedValueHelp>; // populated lazily by `resolveValueHelp`
-  tableDef?: Promise<TableDef>; // populated lazily by `getMetaTableDef` (Vue `useTable`)
 }
 ```
 
@@ -1240,3 +1251,41 @@ In Vue, pass it on the table: `<AsTableRoot :url="`/api/db/ticket-issue/${key}`"
 - [Tables — Annotations Reference](/tables/annotations)
 - [@atscript/ui-fns](/api/ui-fns) — dynamic resolver
 - atscript.dev — `.as` syntax and `Validator`
+
+## UI texts
+
+The built-in texts of the components, by code. Narrative: [Language & Translations](/guide/i18n).
+
+### `AS_UI_MESSAGES` — `@atscript/ui/messages`
+
+```typescript
+import { AS_UI_MESSAGES } from "@atscript/ui/messages";
+
+const AS_UI_MESSAGES: Readonly<Record<AsUiMessageCode, string>>; // { UI_CANCEL: "Cancel", UI_FORM_ADD: "Add {item}", … }
+type AsUiMessageCode = keyof typeof AS_UI_MESSAGES;
+```
+
+Every code → its English template with `{name}` placeholders. The subpath
+imports nothing (no Vue, no DOM): register it on the server with moost's
+`registerMessages(AS_UI_MESSAGES)`.
+
+### `setUiLocale(locale, translate?)`
+
+```typescript
+type UiTextParams = Record<string, unknown>;
+type UiTranslate = (
+  id: string,
+  params: UiTextParams | undefined,
+  locale: string | undefined,
+) => string | undefined;
+type UiT = (id: string, params?: UiTextParams) => string;
+
+function setUiLocale(locale: string | undefined, translate?: UiTranslate): void;
+```
+
+Browser-global locale (and optional translator) of the built-in texts, for an
+app without the Vue provider (`provideAsLocale` in `@atscript/vue-form`). Code
+that produces text outside components — `createTableDef` boolean labels,
+`@atscript/ui-table` chip wording — reads it unless given a `t`.
+`translate` works as in [`provideAsLocale`](/guide/i18n#provideaslocale-getter-translate).
+Never call it on a server rendering for many users.

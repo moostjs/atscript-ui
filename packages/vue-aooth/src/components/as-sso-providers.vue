@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 import type { AsSsoProvider } from "../types";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = defineProps<
   TAsComponentProps<string | undefined> & {
@@ -47,6 +48,7 @@ function select(provider: AsSsoProvider) {
   // nothing to fire — guard so we never emit an undefined action name.
   if (props.formAction) emit("action", props.formAction.id);
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -110,7 +112,7 @@ function select(provider: AsSsoProvider) {
 
       <!-- "or" divider — only between two populated groups. -->
       <div v-if="hasBoth" class="as-sso-providers-divider">
-        <span>or</span>
+        <span>{{ t("UI_AOOTH_OR") }}</span>
       </div>
 
       <!-- Secondary group: compact chips for `secondary: true` providers. -->

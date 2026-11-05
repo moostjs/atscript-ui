@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { DEFAULT_BOOLEAN_LABELS, optionLabel, type ColumnDef } from "@atscript/ui";
+import { optionLabel, type ColumnDef } from "@atscript/ui";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import type { FilterCondition, ColumnFilterType } from "@atscript/ui-table";
 import {
   columnFilter,
@@ -75,11 +76,13 @@ function updateValue(index: number, raw: string) {
   );
 }
 
+const { t } = useAsTexts();
+
 // The two values of a boolean, worded by the column (`@ui.literalLabel`, Yes / No by default).
 const boolOptions = computed(() =>
   (["true", "false"] as const).map((key) => ({
     key,
-    label: optionLabel(props.column, key) ?? DEFAULT_BOOLEAN_LABELS[key],
+    label: optionLabel(props.column, key) ?? t(key === "true" ? "UI_YES" : "UI_NO"),
   })),
 );
 
@@ -110,7 +113,7 @@ const inputAttrs = computed(() => {
     :value="String(condition.value[0] ?? '')"
     @change="onBoolSelect(($event.target as HTMLSelectElement).value)"
   >
-    <option value="" disabled>Select...</option>
+    <option value="" disabled>{{ t("UI_SELECT_PLACEHOLDER") }}</option>
     <option v-for="opt in boolOptions" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
   </select>
 
@@ -144,8 +147,8 @@ const inputAttrs = computed(() => {
       class="as-filter-input-time-toggle"
       :class="{ 'as-filter-input-time-toggle-on': timeOn }"
       :aria-pressed="timeOn"
-      aria-label="Pick a time"
-      title="Pick a time"
+      :aria-label="t('UI_FILTER_PICK_TIME')"
+      :title="t('UI_FILTER_PICK_TIME')"
       @click="toggleTime"
     >
       <span class="i-as-clock" aria-hidden="true" />
@@ -158,7 +161,7 @@ const inputAttrs = computed(() => {
       class="as-filter-input"
       v-bind="inputAttrs"
       :value="condition.value[0] ?? ''"
-      placeholder="From"
+      :placeholder="t('UI_FILTER_FROM')"
       @input="updateValue(0, ($event.target as HTMLInputElement).value)"
     />
     <span class="as-filter-input-range-sep">&ndash;</span>
@@ -166,7 +169,7 @@ const inputAttrs = computed(() => {
       class="as-filter-input"
       v-bind="inputAttrs"
       :value="condition.value[1] ?? ''"
-      placeholder="To"
+      :placeholder="t('UI_FILTER_TO')"
       @input="updateValue(1, ($event.target as HTMLInputElement).value)"
     />
   </div>
@@ -177,7 +180,7 @@ const inputAttrs = computed(() => {
     class="as-filter-input"
     v-bind="inputAttrs"
     :value="condition.value[0] ?? ''"
-    placeholder="Value..."
+    :placeholder="t('UI_FILTER_VALUE_PLACEHOLDER')"
     @input="updateValue(0, ($event.target as HTMLInputElement).value)"
   />
 </template>

@@ -11,6 +11,7 @@ import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from "reka
 import type { ColumnDef } from "@atscript/ui";
 import { filterExprKey } from "@atscript/ui-table";
 import { useTableContext } from "../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { useTableComponent } from "../composables/use-table-component";
 import AsFilterField from "./defaults/as-filter-field.vue";
 import AsResidualFilter from "./defaults/as-residual-filter.vue";
@@ -113,6 +114,7 @@ function closeOverflow(): void {
 }
 
 const { state } = useTableContext();
+const { t } = useAsTexts();
 // Static skin-slot resolution — `controls.filterField ?? AsFilterField`.
 const FilterField = useTableComponent("filterField", AsFilterField);
 const ResidualFilter = useTableComponent("residualFilter", AsResidualFilter);
@@ -197,7 +199,11 @@ const activeOverflowCount = computed(() => {
   <PopoverRoot v-if="hasOverflowPopover" v-model:open="overflowOpen">
     <PopoverTrigger as-child>
       <slot name="overflow-trigger" :active-count="activeOverflowCount" :open="overflowOpen">
-        <button type="button" class="as-filters-overflow-trigger" aria-label="More filters">
+        <button
+          type="button"
+          class="as-filters-overflow-trigger"
+          :aria-label="t('UI_TABLE_MORE_FILTERS')"
+        >
           <span class="i-as-filter as-filters-overflow-trigger-icon" aria-hidden="true" />
           <span v-if="activeOverflowCount > 0" class="as-filters-overflow-badge">
             {{ activeOverflowCount }}

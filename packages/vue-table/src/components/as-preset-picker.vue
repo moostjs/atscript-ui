@@ -17,6 +17,7 @@ import {
 } from "@atscript/ui-table";
 import { useTableContext } from "../composables/use-table-state";
 import { errorMessage } from "../utils/error-message";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import {
   ASPECT_ICONS,
   ASPECT_LABELS,
@@ -30,6 +31,7 @@ import {
  * `<AsPresetPicker />` unconditionally in their toolbar.
  */
 const { state } = useTableContext();
+const { t } = useAsTexts();
 
 const open = ref(false);
 const saveAsOpen = ref(false);
@@ -92,7 +94,7 @@ function clearError() {
 const errorText = computed(() => {
   const err = state.preset.lastError.value;
   if (!err || err === dismissed.value) return "";
-  return errorMessage(err, "Could not save the preset.");
+  return errorMessage(err, t("UI_PRESET_SAVE_FAILED"));
 });
 
 /**
@@ -109,7 +111,7 @@ function resetSaveAsForm() {
   // "Copy of …" prefill makes branching from an existing preset legible;
   // Standard / no-active starts blank.
   const base = activePresetLabel.value;
-  saveAsLabel.value = base ? `Copy of ${base}` : "";
+  saveAsLabel.value = base ? t("UI_PRESET_COPY_OF", { name: base }) : "";
   saveAsPublic.value = false;
   const claimed = activePresetClaimedAspects.value;
   const initial: AspectMask = {};
@@ -220,22 +222,22 @@ const sections = computed<PickerSection[]>(() => {
   return [
     {
       kind: "system",
-      label: "System",
+      label: t("UI_PRESET_SYSTEM"),
       // Hide the header when there's only the Standard preset — it
       // renders without a "System" caption like a default row.
       showHeader: sys.length > 1,
       items: sys.map((p) => systemItem(p)),
     },
-    { kind: "mine", label: "My presets", showHeader: true, items: mine },
-    { kind: "fav", label: "Favorites", showHeader: true, items: fav },
+    { kind: "mine", label: t("UI_PRESET_MINE"), showHeader: true, items: mine },
+    { kind: "fav", label: t("UI_PRESET_FAVORITES"), showHeader: true, items: fav },
   ];
 });
 
 const activePresetLabel = computed(() => {
   const id = state.preset.activeId.value;
-  if (!id) return "Standard";
+  if (!id) return t("UI_PRESET_STANDARD");
   if (isSystemPresetId(id)) {
-    return state.preset.systemPresetsById.value.get(id)?.label ?? "Standard";
+    return state.preset.systemPresetsById.value.get(id)?.label ?? t("UI_PRESET_STANDARD");
   }
   const row = state.preset.presetsById.value.get(id);
   return row ? readPresetLabel(row) : "—";
@@ -341,7 +343,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
                   :key="a"
                   class="as-preset-picker-item-aspect-chip"
                   :data-on="item.aspects.includes(a) ? '' : undefined"
-                  :title="ASPECT_LABELS[a]"
+                  :title="t(ASPECT_LABELS[a])"
                 >
                   <span :class="ASPECT_ICONS[a]" aria-hidden="true" />
                 </span>
@@ -353,7 +355,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
         <!-- Action row -->
         <DropdownMenuSeparator class="as-preset-picker-separator" />
         <p v-if="state.preset.droppedFields.value" class="as-preset-picker-note" role="note">
-          Some fields in this preset aren't available to you.
+          {{ t("UI_PRESET_FIELDS_UNAVAILABLE") }}
         </p>
         <ErrorNote />
         <DropdownMenuItem
@@ -362,7 +364,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
           @select="saveActive"
         >
           <span class="as-preset-picker-action-icon i-as-check" aria-hidden="true" />
-          <span class="as-preset-picker-action-label">Save</span>
+          <span class="as-preset-picker-action-label">{{ t("UI_SAVE") }}</span>
           <kbd class="as-kbd">S</kbd>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -375,7 +377,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
           "
         >
           <span class="as-preset-picker-action-icon i-as-plus" aria-hidden="true" />
-          <span class="as-preset-picker-action-label">Save as…</span>
+          <span class="as-preset-picker-action-label">{{ t("UI_PRESET_SAVE_AS") }}</span>
           <kbd class="as-kbd">A</kbd>
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -384,13 +386,13 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
           @select="resetActive"
         >
           <span class="as-preset-picker-action-icon i-as-refresh" aria-hidden="true" />
-          <span class="as-preset-picker-action-label">Reset changes</span>
+          <span class="as-preset-picker-action-label">{{ t("UI_PRESET_RESET") }}</span>
           <kbd class="as-kbd">R</kbd>
         </DropdownMenuItem>
         <DropdownMenuSeparator class="as-preset-picker-separator" />
         <DropdownMenuItem class="as-preset-picker-action" @select="openManageDialog">
           <span class="as-preset-picker-action-icon i-as-settings" aria-hidden="true" />
-          <span class="as-preset-picker-action-label">Manage presets…</span>
+          <span class="as-preset-picker-action-label">{{ t("UI_PRESET_MANAGE") }}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
 
@@ -409,16 +411,16 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
              intercept, RovingFocusGroup would pin focus on the first menu
              item. Escape/Enter still bubble so `@escape-key-down` fires. -->
         <div class="as-preset-picker-popover-inner" @keydown.tab.stop>
-          <h3 class="as-preset-picker-popover-title">Save as new preset</h3>
+          <h3 class="as-preset-picker-popover-title">{{ t("UI_PRESET_SAVE_AS_TITLE") }}</h3>
           <!-- Only the form body scrolls. The title, the error note and the
                Cancel/Save footer stay pinned, so a short viewport (or a long
                aspect list) can never put the buttons — or the reason a save
                just failed — out of reach behind a scroll. -->
           <div class="as-preset-picker-popover-body">
             <div class="as-preset-picker-popover-field">
-              <label class="as-preset-picker-popover-label" for="as-preset-picker-label"
-                >Name</label
-              >
+              <label class="as-preset-picker-popover-label" for="as-preset-picker-label">{{
+                t("UI_PRESET_NAME")
+              }}</label>
               <input
                 id="as-preset-picker-label"
                 ref="saveAsInputRef"
@@ -429,7 +431,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
               />
             </div>
             <div class="as-preset-picker-popover-aspects">
-              <span class="as-preset-picker-popover-label">Save:</span>
+              <span class="as-preset-picker-popover-label">{{ t("UI_PRESET_SAVE_ASPECTS") }}</span>
               <label v-for="a in aspects" :key="a" class="as-preset-picker-popover-aspect">
                 <input
                   type="checkbox"
@@ -440,11 +442,11 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
                   :class="[ASPECT_ICONS[a], 'as-preset-picker-popover-aspect-icon']"
                   aria-hidden="true"
                 />
-                {{ ASPECT_LABELS[a] }}
+                {{ t(ASPECT_LABELS[a]) }}
               </label>
             </div>
             <p v-if="state.residualFilters.value.length > 0" class="as-preset-picker-popover-note">
-              Custom filter conditions are not saved with presets.
+              {{ t("UI_PRESET_RESIDUAL_NOT_SAVED") }}
             </p>
             <template
               v-if="
@@ -459,14 +461,14 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
                   class="i-as-eye-off as-preset-picker-popover-aspect-icon"
                   aria-hidden="true"
                 />
-                Make public
+                {{ t("UI_PRESET_MAKE_PUBLIC") }}
               </label>
             </template>
           </div>
           <ErrorNote />
           <div class="as-preset-picker-popover-footer">
             <button type="button" class="as-preset-picker-popover-cancel" @click="cancelSaveAs">
-              Cancel
+              {{ t("UI_CANCEL") }}
             </button>
             <button
               type="button"
@@ -474,7 +476,7 @@ onScopeDispose(() => window.removeEventListener("keydown", onMenuKeydown));
               :disabled="!saveAsLabel.trim()"
               @click="commitSaveAs"
             >
-              Save
+              {{ t("UI_SAVE") }}
             </button>
           </div>
         </div>

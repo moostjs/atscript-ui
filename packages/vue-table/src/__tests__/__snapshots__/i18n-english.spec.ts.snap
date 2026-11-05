@@ -1,0 +1,174 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`built-in English texts are unchanged > filter bar chips: residual filter, temporal and boolean conditions 1`] = `
+"<!-- Multi-root fragment on purpose: the fields (and the overflow trigger)
+       are direct children of whatever toolbar row the host wraps this in,
+       so this component adds no box and no layout of its own. -->
+<div class="as-filter-field"><label for="v-0" class="as-filter-field-label">Created</label>
+  <div class="as-filter-field-body"><!-- Plain input (no dropdown) -->
+    <div class="as-filter-field-input"><div class="as-filter-field-chips"><span class="as-filter-field-chip">Last 7 days <span class="as-filter-field-chip-remove" role="button" tabindex="-1">×</span></span><span class="as-filter-field-chip">before 2 months ago <span class="as-filter-field-chip-remove" role="button" tabindex="-1">×</span></span></div><input id="v-0" class="as-filter-field-search" placeholder="YYYY-MM-DD" value=""></div>
+    <!-- \`tabindex="-1"\`: don't compete with the field's own input for tab
+           order — Tab moves cleanly between filter fields, F4 on the input
+           opens this dialog. Button stays click-target for mouse users. --><button type="button" class="as-filter-field-f4" tabindex="-1" aria-label="Open filter dialog (F4)" title="Open filter dialog (F4)"><span class="i-as-value-help" aria-hidden="true"></span></button></div></div>
+<div class="as-filter-field"><label for="v-1" class="as-filter-field-label">Flag</label>
+  <div class="as-filter-field-body"><div dir="ltr" class="as-filter-field-input"><div class="as-filter-field-chips"><span class="as-filter-field-chip">Yes <span class="as-filter-field-chip-remove" role="button" tabindex="-1"><span class="i-as-close" aria-hidden="true"></span></span></span></div><input aria-disabled="false" type="text" aria-expanded="false" aria-controls="reka-combobox-content-v-2" aria-autocomplete="list" role="combobox" autocomplete="off" id="v-1" class="as-filter-field-search" value=""></div>
+    <!---->
+    <!--v-if-->
+    <!-- \`tabindex="-1"\`: don't compete with the field's own input for tab
+           order — Tab moves cleanly between filter fields, F4 on the input
+           opens this dialog. Button stays click-target for mouse users. --><button type="button" class="as-filter-field-f4" tabindex="-1" aria-label="Open filter dialog (F4)" title="Open filter dialog (F4)"><span class="i-as-value-help" aria-hidden="true"></span></button></div></div>
+<div class="as-filter-field"><label for="v-3" class="as-filter-field-label">Name</label>
+  <div class="as-filter-field-body"><!-- Plain input (no dropdown) -->
+    <div class="as-filter-field-input"><div class="as-filter-field-chips"></div><input id="v-3" class="as-filter-field-search" value=""></div>
+    <!-- \`tabindex="-1"\`: don't compete with the field's own input for tab
+           order — Tab moves cleanly between filter fields, F4 on the input
+           opens this dialog. Button stays click-target for mouse users. --><button type="button" class="as-filter-field-f4" tabindex="-1" aria-label="Open filter dialog (F4)" title="Open filter dialog (F4)"><span class="i-as-value-help" aria-hidden="true"></span></button></div></div>
+<div class="as-residual-filter" title="Name: empty"><span class="as-residual-filter-label">Custom filter</span><span class="as-residual-filter-text">Name: empty</span><button type="button" class="as-residual-filter-remove" aria-label="Remove custom filter"><span class="i-as-close" aria-hidden="true"></span></button></div>
+<div class="as-residual-filter" title="Name equals a or Name is one of b, c"><span class="as-residual-filter-label">Custom filter</span><span class="as-residual-filter-text">Name equals a or Name is one of b, c</span><button type="button" class="as-residual-filter-remove" aria-label="Remove custom filter"><span class="i-as-close" aria-hidden="true"></span></button></div>
+<!--v-if-->"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 1`] = `
+"<div class="as-filter-condition-row"><select class="as-filter-condition-select" value="eq"><option value="eq">on</option>
+    <option value="ne">not on</option>
+    <option value="gt">after</option>
+    <option value="gte">on or after</option>
+    <option value="lt">before</option>
+    <option value="lte">on or before</option>
+    <option value="bw">between</option></select><!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+  <!-- Date / date-time: native inputs, a pill for a relative or epoch value -->
+  <div class="as-filter-input-temporal"><input class="as-filter-input" type="date" value=""><!--v-if--></div><button type="button" class="as-filter-condition-remove" disabled="" style="visibility: hidden;" aria-label="Remove condition"><span class="i-as-close" aria-hidden="true"></span></button></div>
+<button type="button" class="as-filter-add-condition">+ Add condition</button>
+<div class="as-filter-shortcuts"><span class="as-filter-shortcuts-label">Quick:</span><button type="button" class="as-filter-shortcut-btn">Today</button><button type="button" class="as-filter-shortcut-btn">Yesterday</button><button type="button" class="as-filter-shortcut-btn">Last 7 days</button><button type="button" class="as-filter-shortcut-btn">Last 30 days</button><button type="button" class="as-filter-shortcut-btn">This week</button><button type="button" class="as-filter-shortcut-btn">Last week</button><button type="button" class="as-filter-shortcut-btn">This month</button><button type="button" class="as-filter-shortcut-btn">Last month</button><button type="button" class="as-filter-shortcut-btn">This year</button></div>"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 2`] = `
+"<div class="as-filter-condition-row"><select class="as-filter-condition-select" value="eq"><option value="eq">equals</option>
+    <option value="ne">not equals</option>
+    <option value="contains">contains</option>
+    <option value="starts">starts with</option>
+    <option value="ends">ends with</option>
+    <option value="bw">between</option>
+    <option value="regex">matches pattern</option></select><!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+  <!-- Default: single input --><input class="as-filter-input" type="text" placeholder="Value..." value=""><button type="button" class="as-filter-condition-remove" disabled="" style="visibility: hidden;" aria-label="Remove condition"><span class="i-as-close" aria-hidden="true"></span></button></div>
+<button type="button" class="as-filter-add-condition">+ Add condition</button>
+<!--v-if-->"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 3`] = `
+"<div class="as-filter-condition-row"><select class="as-filter-condition-select" value="eq"><option value="eq">equals</option>
+    <option value="ne">not equals</option></select><!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+  <!-- Boolean select --><select class="as-filter-input as-filter-select" value=""><option disabled="" value="">Select...</option>
+    <option value="true">Yes</option>
+    <option value="false">No</option></select><button type="button" class="as-filter-condition-remove" disabled="" style="visibility: hidden;" aria-label="Remove condition"><span class="i-as-close" aria-hidden="true"></span></button></div>
+<button type="button" class="as-filter-add-condition">+ Add condition</button>
+<!--v-if-->"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 4`] = `
+"<div class="as-filter-condition-row"><select class="as-filter-condition-select" value="eq"><option value="eq">on</option>
+    <option value="ne">not on</option>
+    <option value="gt">after</option>
+    <option value="gte">on or after</option>
+    <option value="lt">before</option>
+    <option value="lte">on or before</option>
+    <option value="bw">between</option></select><!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+  <!-- Date / date-time: native inputs, a pill for a relative or epoch value -->
+  <div class="as-filter-input-temporal"><input class="as-filter-input" type="date" value=""><button type="button" class="as-filter-input-time-toggle" aria-pressed="false" aria-label="Pick a time" title="Pick a time"><span class="i-as-clock" aria-hidden="true"></span></button></div><button type="button" class="as-filter-condition-remove" disabled="" style="visibility: hidden;" aria-label="Remove condition"><span class="i-as-close" aria-hidden="true"></span></button></div>
+<button type="button" class="as-filter-add-condition">+ Add condition</button>
+<div class="as-filter-shortcuts"><span class="as-filter-shortcuts-label">Quick:</span><button type="button" class="as-filter-shortcut-btn">Today</button><button type="button" class="as-filter-shortcut-btn">Yesterday</button><button type="button" class="as-filter-shortcut-btn">Last 7 days</button><button type="button" class="as-filter-shortcut-btn">Last 30 days</button><button type="button" class="as-filter-shortcut-btn">This week</button><button type="button" class="as-filter-shortcut-btn">Last week</button><button type="button" class="as-filter-shortcut-btn">This month</button><button type="button" class="as-filter-shortcut-btn">Last month</button><button type="button" class="as-filter-shortcut-btn">This year</button></div>"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 5`] = `
+"<!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+<!-- Boolean select -->
+<select class="as-filter-input as-filter-select" value=""><option disabled="" value="">Select...</option>
+  <option value="true">Yes</option>
+  <option value="false">No</option></select>"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 6`] = `
+"<!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+<!-- Default: single input -->
+<input class="as-filter-input" type="text" placeholder="Value..." value="">"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 7`] = `
+"<!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+<!-- Date / date-time: native inputs, a pill for a relative or epoch value -->
+<div class="as-filter-input-temporal"><div class="as-filter-input-range"><input class="as-filter-input" type="date" value=""><span class="as-filter-input-range-sep">–</span><input class="as-filter-input" type="date" value=""></div>
+  <!--v-if--></div>"
+`;
+
+exports[`built-in English texts are unchanged > filter conditions and inputs 8`] = `
+"<!-- Null/notNull: render a plain layer-1 box the size of a filter input, no text. -->
+<!-- Date / date-time: native inputs, a pill for a relative or epoch value -->
+<div class="as-filter-input-temporal"><input class="as-filter-input" type="date" value=""><button type="button" class="as-filter-input-time-toggle" aria-pressed="false" aria-label="Pick a time" title="Pick a time"><span class="i-as-clock" aria-hidden="true"></span></button></div>"
+`;
+
+exports[`built-in English texts are unchanged > sorters, orderable list, select cell 1`] = `
+"<div dir="ltr" class="as-orderable-list-box"><div aria-disabled="false" type="text" class="as-orderable-list-toolbar" value=""><div class="as-orderable-list-search-wrap"><span class="as-orderable-list-search-icon i-as-search" aria-hidden="true"></span><input type="text" class="as-orderable-list-search" placeholder="Search..."></div>
+    <div class="as-orderable-list-toolbar-actions"><button type="button" class="as-orderable-list-toolbar-btn">Select all</button><button type="button" class="as-orderable-list-toolbar-btn">None</button></div></div>
+  <div class="as-orderable-list-items" role="listbox" tabindex="0" aria-orientation="vertical" aria-multiselectable="true" data-orientation="vertical"><div class="as-orderable-list-item group" data-reka-collection-item="" id="reka-listbox-item-v-0" role="option" tabindex="-1" aria-selected="true" disabled="" data-disabled="" data-state="checked"><!-- drop indicator -->
+      <!--v-if-->
+      <div class="as-orderable-list-item-content"><span class="as-orderable-list-grip i-as-grip as-orderable-list-grip-disabled" draggable="false" aria-hidden="true"></span>
+        <div class="as-orderable-list-checkbox as-orderable-list-checkbox-disabled"><span aria-hidden="true" class="as-orderable-list-check-icon"></span></div>
+        <div class="as-orderable-list-item-body"><div class="as-sorter-label"><span class="as-sorter-index" title="Sort priority 1">1</span><span class="as-orderable-list-item-label" title="Name">Name</span><span class="as-sorter-segment as-sorter-direction-disabled" role="group" aria-label="Sort direction"><button type="button" class="as-sorter-segment-btn as-sorter-segment-btn-active" disabled="" title="Ascending">↑ Asc</button><button type="button" class="as-sorter-segment-btn" disabled="" title="Descending">↓ Desc</button></span></div><span class="as-sorter-lock" title="Locked">🔒</span>
+          <div class="as-orderable-list-item-actions"><button type="button" title="Move to top"><span class="i-as-chevron-double-up" aria-hidden="true"></span></button><button type="button" title="Move up"><span class="i-as-chevron-up" aria-hidden="true"></span></button><button type="button" title="Move down"><span class="i-as-chevron-down" aria-hidden="true"></span></button><button type="button" title="Move to bottom"><span class="i-as-chevron-double-down" aria-hidden="true"></span></button></div></div></div></div>
+    <div class="as-orderable-list-item group" data-reka-collection-item="" id="reka-listbox-item-v-1" role="option" tabindex="-1" aria-selected="true" data-state="checked"><!-- drop indicator -->
+      <!--v-if-->
+      <div class="as-orderable-list-item-content"><span class="as-orderable-list-grip i-as-grip" draggable="true" aria-hidden="true"></span>
+        <div class="as-orderable-list-checkbox"><span aria-hidden="true" class="as-orderable-list-check-icon"></span></div>
+        <div class="as-orderable-list-item-body"><div class="as-sorter-label"><span class="as-sorter-index" title="Sort priority 2">2</span><span class="as-orderable-list-item-label" title="Created">Created</span><span class="as-sorter-segment" role="group" aria-label="Sort direction"><button type="button" class="as-sorter-segment-btn" title="Ascending">↑ Asc</button><button type="button" class="as-sorter-segment-btn as-sorter-segment-btn-active" title="Descending">↓ Desc</button></span></div>
+          <div class="as-orderable-list-item-actions"><button type="button" title="Move to top"><span class="i-as-chevron-double-up" aria-hidden="true"></span></button><button type="button" title="Move up"><span class="i-as-chevron-up" aria-hidden="true"></span></button><button type="button" title="Move down"><span class="i-as-chevron-down" aria-hidden="true"></span></button><button type="button" title="Move to bottom"><span class="i-as-chevron-double-down" aria-hidden="true"></span></button></div></div></div></div></div>
+  <!--v-if--></div>"
+`;
+
+exports[`built-in English texts are unchanged > sorters, orderable list, select cell 2`] = `
+"<div dir="ltr" class="as-orderable-list-box"><div aria-disabled="false" type="text" class="as-orderable-list-toolbar" value=""><div class="as-orderable-list-search-wrap"><span class="as-orderable-list-search-icon i-as-search" aria-hidden="true"></span><input type="text" class="as-orderable-list-search" placeholder="Search..."></div>
+    <div class="as-orderable-list-toolbar-actions"><button type="button" class="as-orderable-list-toolbar-btn">Select all</button><button type="button" class="as-orderable-list-toolbar-btn">None</button></div></div>
+  <div class="as-orderable-list-items" role="listbox" tabindex="0" aria-orientation="vertical" aria-multiselectable="true" data-orientation="vertical"><div class="as-orderable-list-item group" data-reka-collection-item="" id="reka-listbox-item-v-0" role="option" tabindex="-1" aria-selected="true" data-state="checked"><!-- drop indicator -->
+      <!--v-if-->
+      <div class="as-orderable-list-item-content"><span class="as-orderable-list-grip i-as-grip" draggable="true" aria-hidden="true"></span>
+        <div class="as-orderable-list-checkbox"><span aria-hidden="true" class="as-orderable-list-check-icon"></span></div>
+        <div class="as-orderable-list-item-body"><span class="as-orderable-list-item-label">a</span>
+          <div class="as-orderable-list-item-actions"><button type="button" title="Move to top"><span class="i-as-chevron-double-up" aria-hidden="true"></span></button><button type="button" title="Move up"><span class="i-as-chevron-up" aria-hidden="true"></span></button><button type="button" title="Move down"><span class="i-as-chevron-down" aria-hidden="true"></span></button><button type="button" title="Move to bottom"><span class="i-as-chevron-double-down" aria-hidden="true"></span></button></div></div></div></div>
+    <div class="as-orderable-list-item group" data-reka-collection-item="" id="reka-listbox-item-v-1" role="option" tabindex="-1" aria-selected="false" data-state="unchecked"><!-- drop indicator -->
+      <!--v-if-->
+      <div class="as-orderable-list-item-content"><span class="as-orderable-list-grip i-as-grip" draggable="true" aria-hidden="true"></span>
+        <div class="as-orderable-list-checkbox"><!--v-if--></div>
+        <div class="as-orderable-list-item-body"><span class="as-orderable-list-item-label">b</span>
+          <div class="as-orderable-list-item-actions"><button type="button" title="Move to top"><span class="i-as-chevron-double-up" aria-hidden="true"></span></button><button type="button" title="Move up"><span class="i-as-chevron-up" aria-hidden="true"></span></button><button type="button" title="Move down"><span class="i-as-chevron-down" aria-hidden="true"></span></button><button type="button" title="Move to bottom"><span class="i-as-chevron-double-down" aria-hidden="true"></span></button></div></div></div></div></div>
+  <!--v-if--></div>"
+`;
+
+exports[`built-in English texts are unchanged > sorters, orderable list, select cell 3`] = `"<td class="as-td-select" role="gridcell"><span class="as-table-checkbox" role="checkbox" tabindex="0" aria-checked="false" aria-label="Select row"><!--v-if--></span></td>"`;
+
+exports[`built-in English texts are unchanged > sorters, orderable list, select cell 4`] = `"<td class="as-td-select" role="gridcell"><span class="as-table-checkbox as-table-checkbox-disabled" role="checkbox" aria-checked="false" aria-disabled="true" aria-label="Select row, locked" title="locked"><!--v-if--></span></td>"`;
+
+exports[`built-in English texts are unchanged > sorters, orderable list, select cell 5`] = `"<td class="as-td-select" role="gridcell"><span class="as-table-checkbox as-table-checkbox-disabled" role="checkbox" aria-checked="false" aria-disabled="true" aria-label="Select row, not selectable"><!--v-if--></span></td>"`;
+
+exports[`built-in English texts are unchanged > table status: error, empty, no match 1`] = `
+"<div class="as-table-error"><div class="as-vh-empty"><span class="as-vh-error-icon i-as-warning" aria-hidden="true"></span>
+    <p class="as-vh-empty-title">Failed to load values</p>
+    <p class="as-vh-empty-body">boom</p><button type="button" class="as-vh-empty-clear"><span class="i-as-refresh" aria-hidden="true"></span> Retry</button></div></div>"
+`;
+
+exports[`built-in English texts are unchanged > table status: error, empty, no match 2`] = `
+"<div class="as-table-empty"><div class="as-vh-empty"><span class="as-vh-empty-icon i-as-search" aria-hidden="true"></span>
+    <p class="as-vh-empty-title">No matching values</p>
+    <p class="as-vh-empty-body">No entries available</p>
+    <!--v-if--></div></div>"
+`;
+
+exports[`built-in English texts are unchanged > table status: error, empty, no match 3`] = `
+"<div class="as-table-empty"><div class="as-vh-empty"><span class="as-vh-empty-icon i-as-search" aria-hidden="true"></span>
+    <p class="as-vh-empty-title">No matching values</p>
+    <p class="as-vh-empty-body">No entries match <span class="as-vh-empty-code">"zz"</span>. Try a different search.</p><button type="button" class="as-vh-empty-clear"><span class="i-as-refresh" aria-hidden="true"></span> Clear filters</button></div></div>"
+`;
+
+exports[`built-in English texts are unchanged > table status: error, empty, no match 4`] = `
+"<div class="as-table-empty"><div class="as-vh-empty"><span class="as-vh-empty-icon i-as-search" aria-hidden="true"></span>
+    <p class="as-vh-empty-title">No matching values</p>
+    <p class="as-vh-empty-body">No entries match the current filters.</p><button type="button" class="as-vh-empty-clear"><span class="i-as-refresh" aria-hidden="true"></span> Clear filters</button></div></div>"
+`;

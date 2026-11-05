@@ -120,6 +120,8 @@ provideCellLocale(() => ({
 </script>
 ```
 
+The same `provideAsLocale` sets the language of the built-in texts (optional 2nd arg = your translator; English fallback) — see [i18n.md](i18n.md).
+
 Currency comes from `@db.amount.currency` (literal) or `@db.amount.currency.ref` (sibling-field reference) on the prop. Units come from `@db.unit` / `@db.unit.ref`. See [annotations.md](annotations.md) and the `atscript-db` skill for `@db.amount.*` semantics.
 
 ## Reading list

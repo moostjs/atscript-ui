@@ -3,6 +3,7 @@ import { computed } from "vue";
 import { optionLabel, type ColumnDef } from "@atscript/ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import AsCellJsonPopover from "../internal/as-cell-json-popover.vue";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = defineProps<{
   row: Record<string, unknown>;
@@ -22,6 +23,7 @@ const view = computed<{ items: unknown[]; primitive: boolean } | undefined>(() =
   }
   return { items: v, primitive };
 });
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -36,7 +38,7 @@ const view = computed<{ items: unknown[]; primitive: boolean } | undefined>(() =
         <button
           type="button"
           class="as-cell-json-trigger"
-          :aria-label="`View ${view.items.length} items`"
+          :aria-label="t('UI_TABLE_VIEW_ITEMS', { count: view.items.length })"
         >
           <span class="as-cell-json-trigger-glyph">{}</span>
           <span class="as-cell-json-trigger-count">[{{ view.items.length }}]</span>

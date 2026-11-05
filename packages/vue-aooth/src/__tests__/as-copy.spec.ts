@@ -115,3 +115,37 @@ describe("AsCopy", () => {
     expect(writeText).toHaveBeenCalledWith("phantom-magic-link");
   });
 });
+
+describe("AsCopy — UI texts", () => {
+  it("labels and the error come from the app's texts; explicit props win", async () => {
+    const { defineComponent, h } = await import("vue");
+    const { provideAsLocale } = await import("@atscript/vue-form");
+    const de: Record<string, string> = {
+      UI_AOOTH_COPY: "Kopieren",
+      UI_AOOTH_COPY_FAILED: "Fehler",
+    };
+    const under = (props: Record<string, unknown>) =>
+      mount(
+        defineComponent({
+          setup() {
+            provideAsLocale(
+              () => "de",
+              (id) => de[id],
+            );
+            return () => h(AsCopy, props);
+          },
+        }),
+      );
+    const base = baseProps();
+    expect(under(base).find(".as-copy-label").text()).toBe("Kopieren");
+    expect(
+      under({ ...base, copyLabel: "Take" })
+        .find(".as-copy-label")
+        .text(),
+    ).toBe("Take");
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    const failing = under(base);
+    await failing.find("button.as-copy-btn").trigger("click");
+    expect(failing.text()).toContain("Fehler");
+  });
+});

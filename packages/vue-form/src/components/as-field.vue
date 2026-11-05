@@ -13,6 +13,7 @@ import {
   resolveAttrs,
   resolveSingularLabel,
   getFieldMeta,
+  UI_FORM_LABEL_SINGULAR,
   hasFieldMeta,
   isFieldHidden,
   createFieldValidator,
@@ -66,7 +67,7 @@ import {
   type TFormAction,
 } from "@atscript/ui";
 import { useAsData } from "../composables/use-as-data";
-import { useAsLocale } from "../composables/use-as-locale";
+import { useAsLocale, useAsTexts } from "../composables/use-as-locale";
 import { buildFieldEntry, type TFnScope } from "@atscript/ui-fns";
 import {
   computed,
@@ -108,6 +109,9 @@ const hideRootTitle = inject(HIDE_ROOT_TITLE_KEY, false);
 const handleAction = inject(ACTION_HANDLER_KEY, () => {});
 const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 const dismissExternalAt = inject(DISMISS_EXTERNAL_AT_KEY, () => {});
+// The app's UI texts: everything this field words (boolean labels, fallbacks)
+// is worded with them, so a server render matches the client's.
+const { t } = useAsTexts();
 
 // ── Form context ────────────────────────────────────────────
 const { rootFormData, formContext, joinPath, buildPath, getByPath, setByPath, buildScope } =
@@ -309,13 +313,12 @@ if (hasAdornment) {
   });
 }
 // `@ui.form.label.singular` lives on the array prop; fall back to the
-// item prop, then to "item". The fallback chain matches AsArray's prior
-// behaviour — default lookup yields "item" only when both lookups miss.
+// item prop, then to "item" (`UI_ITEM`).
 let singularLabel: string | undefined;
 if (isArrayField(props.field)) {
-  const fromArray = resolveSingularLabel(prop);
   singularLabel =
-    fromArray !== "item" ? fromArray : resolveSingularLabel(props.field.itemField.prop);
+    (getFieldMeta(prop, UI_FORM_LABEL_SINGULAR) as string | undefined) ||
+    resolveSingularLabel(props.field.itemField.prop, t);
 }
 
 // ── Stable a11y ids (one trio per AsField mount, shared with defaults) ──
@@ -346,10 +349,7 @@ const gridClasses = buildGridClasses(
 );
 
 // ── Cached validator (created once per field) ────────────────
-const formValidate = createFieldValidator(
-  prop,
-  isStructured || isUnion ? { rootOnly: true } : undefined,
-);
+const formValidate = createFieldValidator(prop, { rootOnly: isStructured || isUnion, t });
 
 // ── Helpers for v-model with absolute path support ──────────
 function getModel() {
@@ -423,9 +423,9 @@ if (props.field.allStatic) {
   // empty, so default a set-only affordance unless a placeholder is declared.
   placeholder =
     getFieldMeta(prop, UI_FORM_PLACEHOLDER) ??
-    (prop.metadata.has("db.writeOnly") ? "(hidden — enter a value to replace)" : undefined);
+    (prop.metadata.has("db.writeOnly") ? t("UI_FORM_HIDDEN_PLACEHOLDER") : undefined);
   styles = getFieldMeta(prop, UI_FORM_STYLES);
-  options = resolveOptions(prop, emptyScope, props.field.labelsFrom);
+  options = resolveOptions(prop, emptyScope, props.field.labelsFrom, t);
   attrs =
     getFieldMeta(prop, UI_FORM_ATTR) !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
 
@@ -567,8 +567,8 @@ if (props.field.allStatic) {
 
   options = maybeComputed(
     hasFn.has("options"),
-    () => resolveOptions(prop, fs.value, props.field.labelsFrom),
-    resolveOptions(prop, emptyScope, props.field.labelsFrom),
+    () => resolveOptions(prop, fs.value, props.field.labelsFrom, t),
+    resolveOptions(prop, emptyScope, props.field.labelsFrom, t),
   );
 
   const hasFnAttr = hasFn.has("attr");

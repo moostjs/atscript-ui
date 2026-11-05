@@ -111,7 +111,7 @@ export type {
   UseAsTriStateCheckboxReturn,
 } from "./composables/use-as-tri-state-checkbox";
 
-// Composables — locale (drives decimal/currency formatting)
+// Composables — locale (drives decimal/currency formatting and the built-in texts)
 export { provideAsLocale, useAsLocale } from "./composables/use-as-locale";
 export type { UseAsLocaleReturn } from "./composables/use-as-locale";
 

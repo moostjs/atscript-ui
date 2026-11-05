@@ -1,11 +1,11 @@
-import { optionLabel, type ColumnDef } from "@atscript/ui";
+import { optionLabel, getUiTexts, type ColumnDef, type UiT } from "@atscript/ui";
 import { columnFilterKind } from "./column-filter";
 import { isTemporalKind } from "./filter-conditions-map";
 import { formatFilterCondition } from "./filter-input-format";
 import type { FilterCondition } from "./filter-types";
 import {
   parseTemporal,
-  temporalShortcuts,
+  TEMPORAL_SHORTCUTS,
   type ParsedTemporal,
   type RelativeUnit,
   type TemporalOptions,
@@ -16,24 +16,21 @@ import { getDateTimeFormat } from "../utils/intl-cache";
 export type FormatColumnConditionOptions = TemporalOptions & {
   /** BCP 47 locale for dates; the runtime default when omitted. */
   locale?: string;
+  /** Reads the wording's UI texts; the active UI locale's when omitted. */
+  t?: UiT;
 };
 
-const UNIT_NOUN: Record<RelativeUnit, string> = {
-  today: "days",
-  week: "weeks",
-  month: "months",
-  year: "years",
+/** UI text codes of a relative token, by unit: `n = 0`, `n = 1`, `n > 1`. */
+const RELATIVE: Record<RelativeUnit, [string, string, string]> = {
+  today: ["UI_FILTER_TODAY", "UI_FILTER_YESTERDAY", "UI_FILTER_DAYS_AGO"],
+  week: ["UI_FILTER_THIS_WEEK", "UI_FILTER_LAST_WEEK", "UI_FILTER_WEEKS_AGO"],
+  month: ["UI_FILTER_THIS_MONTH", "UI_FILTER_LAST_MONTH", "UI_FILTER_MONTHS_AGO"],
+  year: ["UI_FILTER_THIS_YEAR", "UI_FILTER_LAST_YEAR", "UI_FILTER_YEARS_AGO"],
 };
 
 /** A relative token in words: `today`, `yesterday`, `3 days ago`, `this week`, `last month`. */
-function formatRelative(unit: RelativeUnit, n: number): string {
-  if (unit === "today") {
-    if (n === 0) return "today";
-    return n === 1 ? "yesterday" : `${n} days ago`;
-  }
-  if (n === 0) return `this ${unit}`;
-  if (n === 1) return `last ${unit}`;
-  return `${n} ${UNIT_NOUN[unit]} ago`;
+function formatRelative(unit: RelativeUnit, n: number, t: UiT): string {
+  return t(RELATIVE[unit][Math.min(n, 2)], { count: n });
 }
 
 /** A wall-clock reading formatted as it reads, without any zone shift. */
@@ -78,7 +75,7 @@ function formatTemporal(p: ParsedTemporal, opts: FormatColumnConditionOptions): 
         year: "numeric",
       }).format(new Date(Date.UTC(p.y, p.m - 1, 1)));
     case "relative":
-      return formatRelative(p.unit, p.n);
+      return formatRelative(p.unit, p.n, opts.t ?? getUiTexts().t);
     case "instant":
     case "epoch":
       return formatInstant(p.ms, opts);
@@ -104,17 +101,23 @@ function formatBetween(a: unknown, b: unknown, opts: FormatColumnConditionOption
 }
 
 /** The shortcut a condition is exactly, if any (compared by value — they are single conditions). */
-const SHORTCUTS = temporalShortcuts();
-
-function shortcutLabel(cond: FilterCondition): string | undefined {
-  for (const { conditions, label } of SHORTCUTS) {
-    const [c] = conditions;
+function shortcutCode(cond: FilterCondition): string | undefined {
+  for (const { condition: c, code } of TEMPORAL_SHORTCUTS) {
     if (c.type === cond.type && c.value.length === cond.value.length) {
-      if (c.value.every((v, i) => v === cond.value[i])) return label;
+      if (c.value.every((v, i) => v === cond.value[i])) return code;
     }
   }
   return undefined;
 }
+
+/** UI text codes of the comparisons on a date column, with the date as `{date}`. */
+const DATE_COMPARISONS: Partial<Record<FilterCondition["type"], string>> = {
+  ne: "UI_FILTER_NOT_ON_DATE",
+  lt: "UI_FILTER_BEFORE_DATE",
+  lte: "UI_FILTER_ON_OR_BEFORE_DATE",
+  gt: "UI_FILTER_AFTER_DATE",
+  gte: "UI_FILTER_ON_OR_AFTER_DATE",
+};
 
 /** `eq` / `ne` conditions on a union column show the option labels, not the raw literals. */
 function withOptionLabels(
@@ -143,35 +146,28 @@ export function formatColumnCondition(
     return formatFilterCondition(withOptionLabels(column, cond));
   }
 
-  const shortcut = shortcutLabel(cond);
-  if (shortcut) return shortcut;
+  const t = opts.t ?? getUiTexts().t;
+  const shortcut = shortcutCode(cond);
+  if (shortcut) return t(shortcut);
 
   const [a, b] = cond.value;
   switch (cond.type) {
     case "null":
-      return "empty";
+      return t("UI_FILTER_EMPTY");
     case "notNull":
-      return "not empty";
+      return t("UI_FILTER_NOT_EMPTY");
     case "bw":
       return formatBetween(a, b, opts);
     case "eq": {
       const p = parseTemporal(a);
       if (p?.kind === "relative") return formatTemporal(p, opts); // already reads as a period
-      if (p?.kind === "month") return `in ${formatTemporal(p, opts)}`;
-      return `on ${p ? formatTemporal(p, opts) : String(a)}`;
+      if (p?.kind === "month") return t("UI_FILTER_IN_MONTH", { date: formatTemporal(p, opts) });
+      return t("UI_FILTER_ON_DATE", { date: p ? formatTemporal(p, opts) : String(a) });
     }
-    case "ne":
-      return `not on ${formatValue(a, opts)}`;
-    case "lt":
-      return `before ${formatValue(a, opts)}`;
-    case "lte":
-      return `on or before ${formatValue(a, opts)}`;
-    case "gt":
-      return `after ${formatValue(a, opts)}`;
-    case "gte":
-      return `on or after ${formatValue(a, opts)}`;
-    default:
-      return formatFilterCondition(cond);
+    default: {
+      const code = DATE_COMPARISONS[cond.type];
+      return code ? t(code, { date: formatValue(a, opts) }) : formatFilterCondition(cond);
+    }
   }
 }
 

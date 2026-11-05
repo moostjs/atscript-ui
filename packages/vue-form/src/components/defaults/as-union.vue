@@ -6,6 +6,8 @@ import { useAsDropdown } from "../../composables/use-as-dropdown";
 import { useAsTypeMap } from "../../composables/use-as-type-map";
 import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import { UNION_CONTEXT_KEY } from "../../composables/internal-keys";
+import { useAsTexts } from "../../composables/use-as-locale";
+import { variantLabel } from "../../composables/variant-label";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -73,6 +75,7 @@ function handleEmptyClick() {
 function handleVariantPick(vi: number) {
   selectPicker(() => pickAndFocus(vi));
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -86,7 +89,7 @@ function handleVariantPick(vi: number) {
     <div v-if="hasMultipleVariants" ref="pickerDropdownRef" class="as-dropdown">
       <button type="button" class="as-object-empty-add" @click="handleEmptyClick">
         <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-        Add {{ fieldLabel }}
+        {{ t("UI_FORM_ADD", { item: fieldLabel }) }}
       </button>
       <div v-if="pickerOpen" class="as-dropdown-menu">
         <button
@@ -96,13 +99,13 @@ function handleVariantPick(vi: number) {
           class="as-dropdown-item"
           @click="handleVariantPick(vi)"
         >
-          {{ v.label }}
+          {{ variantLabel(v, t) }}
         </button>
       </div>
     </div>
     <button v-else type="button" class="as-object-empty-add" @click="handleEmptyClick">
       <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-      Add {{ fieldLabel }}
+      {{ t("UI_FORM_ADD", { item: fieldLabel }) }}
     </button>
     <p v-if="description" class="as-collapsible-description">{{ description }}</p>
   </div>

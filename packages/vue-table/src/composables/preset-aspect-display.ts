@@ -1,11 +1,12 @@
 import { type AsPresetEntryRow, type PresetAspect, derivePresetAspects } from "@atscript/ui-table";
 
+/** UI text code of each aspect's name. */
 export const ASPECT_LABELS: Record<PresetAspect, string> = {
-  columns: "Displayed Columns",
-  filters: "Displayed Filters",
-  filterOps: "Filter conditions",
-  sorters: "Sorters",
-  itemsPerPage: "Page size",
+  columns: "UI_PRESET_ASPECT_COLUMNS",
+  filters: "UI_PRESET_ASPECT_FILTERS",
+  filterOps: "UI_PRESET_ASPECT_FILTER_OPS",
+  sorters: "UI_PRESET_ASPECT_SORTERS",
+  itemsPerPage: "UI_PRESET_ASPECT_PAGE_SIZE",
 };
 
 export const ASPECT_ICONS: Record<PresetAspect, string> = {

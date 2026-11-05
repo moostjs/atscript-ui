@@ -35,6 +35,7 @@ import {
 } from "vue";
 
 import { injectPresetsApp } from "./as-presets-app";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 export interface UsePresetsOptions {
   /** App namespace; defaults to `inject(AS_PRESETS_APP)`. */
@@ -175,7 +176,8 @@ export function usePresets(opts: UsePresetsOptions): UsePresetsReturn {
     clientFactory: opts.clientFactory,
   });
 
-  const systemPresetsResolved = computed(() => resolveSystemPresets(opts.systemPresets));
+  const { t } = useAsTexts();
+  const systemPresetsResolved = computed(() => resolveSystemPresets(opts.systemPresets, t));
 
   const presets = shallowRef<AsPresetEntryRow[]>([]);
   const userConf = shallowRef<AsPresetEntryRow | null>(null);

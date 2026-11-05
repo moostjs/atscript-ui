@@ -1,16 +1,19 @@
-import { DEFAULT_BOOLEAN_LABELS, str } from "@atscript/ui";
+import { str, getUiTexts, type UiT } from "@atscript/ui";
 
 // Fallback formatter has no column metadata (currency/unit), so it must not
 // group — grouping is reserved for measured values rendered by <AsCellNumber>.
 const numberFmt = new Intl.NumberFormat(undefined, { useGrouping: false });
 const dateFmt = new Intl.DateTimeFormat();
 
-/** Format a cell value based on column type. */
-export function formatCellValue(value: unknown, type: string): string {
+/**
+ * Format a cell value based on column type. Booleans read as the UI texts
+ * `UI_YES` / `UI_NO`, through `t` — the active UI locale's by default.
+ */
+export function formatCellValue(value: unknown, type: string, t: UiT = getUiTexts().t): string {
   if (value === null || value === undefined) return "";
   switch (type) {
     case "boolean":
-      return value ? DEFAULT_BOOLEAN_LABELS.true : DEFAULT_BOOLEAN_LABELS.false;
+      return t(value ? "UI_YES" : "UI_NO");
     case "number": {
       // `decimal` fields arrive as strings on the wire (e.g. "19.99"); coerce
       // so the default cell doesn't regress to an unformatted string when no

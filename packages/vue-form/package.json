@@ -154,6 +154,11 @@
       "types": "./styles.d.ts",
       "default": "./dist/style.css"
     },
+    "./locale": {
+      "types": "./dist/locale.d.mts",
+      "import": "./dist/locale.mjs",
+      "require": "./dist/locale.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {

@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { ColumnDef } from "@atscript/ui";
+import { useAsTexts } from "@atscript/vue-form/locale";
+import { textAround } from "../../utils/text-around";
 
-defineProps<{
+const props = defineProps<{
   queryError: Error | null | undefined;
   isEmpty: boolean;
   querying: boolean;
@@ -11,6 +14,11 @@ defineProps<{
   onClearFilters?: () => void;
   onRetry?: () => void;
 }>();
+
+const { t } = useAsTexts();
+const noMatchText = computed(() =>
+  textAround(t, "UI_TABLE_NO_MATCH_SEARCH", "term", { term: props.searchTerm ?? "" }),
+);
 </script>
 
 <template>
@@ -18,11 +26,11 @@ defineProps<{
     <slot name="error" :error="queryError" :retry="onRetry">
       <div class="as-vh-empty">
         <span class="as-vh-error-icon i-as-warning" aria-hidden="true" />
-        <p class="as-vh-empty-title">Failed to load values</p>
+        <p class="as-vh-empty-title">{{ t("UI_TABLE_LOAD_FAILED") }}</p>
         <p class="as-vh-empty-body">{{ queryError.message }}</p>
         <button v-if="onRetry" type="button" class="as-vh-empty-clear" @click="onRetry">
           <span class="i-as-refresh" aria-hidden="true" />
-          Retry
+          {{ t("UI_RETRY") }}
         </button>
       </div>
     </slot>
@@ -36,15 +44,16 @@ defineProps<{
     >
       <div class="as-vh-empty">
         <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-        <p class="as-vh-empty-title">No matching values</p>
+        <p class="as-vh-empty-title">{{ t("UI_TABLE_NO_MATCHING") }}</p>
         <p v-if="searchTerm" class="as-vh-empty-body">
-          No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a different
-          search.
+          {{ noMatchText[0]
+          }}<span v-if="noMatchText[1]" class="as-vh-empty-code">"{{ noMatchText[1] }}"</span
+          >{{ noMatchText[2] }}
         </p>
         <p v-else-if="hasActiveFilters" class="as-vh-empty-body">
-          No entries match the current filters.
+          {{ t("UI_TABLE_NO_MATCH_FILTERS") }}
         </p>
-        <p v-else class="as-vh-empty-body">No entries available</p>
+        <p v-else class="as-vh-empty-body">{{ t("UI_TABLE_NO_ENTRIES") }}</p>
         <button
           v-if="(searchTerm || hasActiveFilters) && onClearFilters"
           type="button"
@@ -52,7 +61,7 @@ defineProps<{
           @click="onClearFilters"
         >
           <span class="i-as-refresh" aria-hidden="true" />
-          Clear filters
+          {{ t("UI_TABLE_CLEAR_FILTERS") }}
         </button>
       </div>
     </slot>

@@ -6,6 +6,7 @@ import { ROW_ACTIONS_PATH, type ColumnMenuConfig, type SelectAllState } from "..
 import { useColumnHeaderDragResize } from "../../composables/use-column-header-drag-resize";
 import { useTableComponent } from "../../composables/use-table-component";
 import { useTableContextOptional } from "../../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import AsTableHeaderCell from "../defaults/as-table-header-cell.vue";
 
 // Static skin-slot resolution — `controls.headerCell ?? AsTableHeaderCell`.
@@ -167,6 +168,7 @@ function onSelectAllKeydown(event: KeyboardEvent) {
 function toggleSelectAll() {
   if (props.selectAllState) emit("toggle-all");
 }
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -191,7 +193,7 @@ function toggleSelectAll() {
             }"
             role="checkbox"
             tabindex="0"
-            aria-label="Select all rows"
+            :aria-label="t('UI_TABLE_SELECT_ALL_ROWS')"
             :aria-checked="
               selectAllState === 'none' ? 'false' : selectAllState === 'all' ? 'true' : 'mixed'
             "
@@ -214,7 +216,7 @@ function toggleSelectAll() {
         :draggable="(reorderable && !col.fixed) || undefined"
         :class="[thClasses(col.path), col.fixed ? 'as-th-fixed' : undefined]"
         :style="widthStyle(col)"
-        :aria-label="col.fixed && col.path === ROW_ACTIONS_PATH ? 'Actions' : undefined"
+        :aria-label="col.fixed && col.path === ROW_ACTIONS_PATH ? t('UI_TABLE_ACTIONS') : undefined"
         @dragstart="col.fixed ? undefined : onHeaderDragStart($event)"
         @dragover="col.fixed ? undefined : onHeaderDragOver($event)"
         @drop="col.fixed ? undefined : onHeaderDrop($event)"

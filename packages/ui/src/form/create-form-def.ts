@@ -44,6 +44,7 @@ import {
 import { isEmptyMember, isPureLiteralUnion } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
 import { isSkippedNavField } from "./skipped-nav";
+import { AS_UI_MESSAGES, type AsUiMessageCode } from "../messages";
 
 /** Known atscript primitive extension tags that map directly to field types. */
 const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
@@ -624,10 +625,10 @@ function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVar
   const kind = def.type.kind;
 
   if (kind === "object") {
-    const label = (getFieldMeta(def, META_LABEL) as string | undefined) ?? "Object";
+    const label = getFieldMeta(def, META_LABEL) as string | undefined;
     const hasComponent = getFieldMeta(def, UI_FORM_COMPONENT) !== undefined;
     return {
-      label,
+      ...(label === undefined ? typeLabel("object") : { label }),
       type: def,
       def: buildFormDef(def, edit),
       itemField: hasComponent ? createFieldDef("", def, edit) : undefined,
@@ -638,7 +639,7 @@ function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVar
   if (kind === "") {
     const dt = def.type.designType as string;
     return {
-      label: capitalize(dt === "phantom" ? "item" : dt),
+      ...typeLabel(dt === "phantom" ? "item" : dt),
       type: def,
       itemField: createFieldDef("", def, edit),
       designType: dt,
@@ -647,7 +648,7 @@ function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVar
 
   // Complex types (array, tuple, intersection) — delegate to createFieldDef
   return {
-    label: capitalize(kind),
+    ...typeLabel(kind),
     type: def,
     itemField: createFieldDef("", def, edit),
   };
@@ -681,4 +682,16 @@ function soleValueMember(prop: TAtscriptAnnotatedType): TAtscriptAnnotatedType |
 
 function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * A union variant's name for its type when it has no `@meta.label`: the
+ * English text of `UI_FORM_TYPE_*` with that code, worded at render time in
+ * the UI locale (a definition is built once, for every locale).
+ */
+function typeLabel(kind: string): Pick<FormUnionVariant, "label" | "labelCode"> {
+  const code = `UI_FORM_TYPE_${kind.toUpperCase()}` as AsUiMessageCode;
+  return Object.hasOwn(AS_UI_MESSAGES, code)
+    ? { label: AS_UI_MESSAGES[code], labelCode: code }
+    : { label: capitalize(kind) };
 }

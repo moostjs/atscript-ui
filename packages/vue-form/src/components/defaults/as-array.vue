@@ -11,6 +11,8 @@ import AsCollapsible from "../as-collapsible.vue";
 import AsItemsChip from "../internal/as-items-chip.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
+import { variantLabel } from "../../composables/variant-label";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -40,9 +42,11 @@ const {
 
 const level = computed(() => props.level ?? 0);
 
+const { t } = useAsTexts();
+
 // `singularLabel` is pre-resolved upstream by AsField; fall back to "item"
 // when the prop is missing (custom mounts that bypass AsField).
-const singular = props.singularLabel ?? "item";
+const singular = props.singularLabel ?? t("UI_ITEM");
 
 const defaultOpen = !isOptional;
 
@@ -140,11 +144,11 @@ function handleEnableOptional() {
           :disabled="!canAdd"
           @click="handleAdd(0)"
         >
-          Add {{ singular }}
+          {{ t("UI_FORM_ADD", { item: singular }) }}
         </button>
         <div v-else ref="addDropdownRef" class="as-dropdown">
           <button type="button" class="as-array-add-btn" :disabled="!canAdd" @click="toggleAdd">
-            Add {{ singular }}
+            {{ t("UI_FORM_ADD", { item: singular }) }}
           </button>
           <div v-if="addOpen" class="as-dropdown-menu">
             <button
@@ -154,7 +158,7 @@ function handleEnableOptional() {
               class="as-dropdown-item"
               @click="selectAdd(() => handleAdd(vi))"
             >
-              {{ v.label }}
+              {{ variantLabel(v, t) }}
             </button>
           </div>
         </div>
@@ -165,7 +169,7 @@ function handleEnableOptional() {
       <div class="as-object-empty as-grid-item" :class="$props.class" v-show="!hidden">
         <button type="button" class="as-object-empty-add" @click="handleEnableOptional">
           <span class="i-as-field-fill as-object-empty-add-icon" aria-hidden="true" />
-          Add {{ title }}
+          {{ t("UI_FORM_ADD", { item: title }) }}
         </button>
         <p v-if="description" class="as-collapsible-description">{{ description }}</p>
       </div>

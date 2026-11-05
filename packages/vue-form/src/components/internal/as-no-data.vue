@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = withDefaults(
   defineProps<{
@@ -10,6 +11,7 @@ const props = withDefaults(
   { kind: "input" },
 );
 
+const { t } = useAsTexts();
 const hovered = ref(false);
 const rootClass = computed(() =>
   props.kind === "textarea" ? "as-no-data-textarea" : "as-no-data",
@@ -30,6 +32,8 @@ const rootClass = computed(() =>
     <span class="as-no-data-icon" aria-hidden="true">
       <span :class="hovered ? 'i-as-field-fill' : 'i-as-field-empty'" />
     </span>
-    <span class="as-no-data-text">{{ hovered ? "Click to edit" : "Not set" }}</span>
+    <span class="as-no-data-text">{{
+      t(hovered ? "UI_FORM_CLICK_TO_EDIT" : "UI_FORM_NOT_SET")
+    }}</span>
   </div>
 </template>

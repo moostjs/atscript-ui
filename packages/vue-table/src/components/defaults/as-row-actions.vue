@@ -17,6 +17,7 @@
 import { computed } from "vue";
 import { DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from "reka-ui";
 import { useTableContext } from "../../composables/use-table-state";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import {
   createNavigateGestures,
   extractIdentifier,
@@ -42,6 +43,7 @@ const props = defineProps<{
 }>();
 
 const { state } = useTableContext();
+const { t } = useAsTexts();
 
 /**
  * The row's identifier — the `pk` prop when given, else extracted from the
@@ -145,8 +147,8 @@ const { onTriggerClick, onTriggerAuxClick, openNewTab } = createNavigateGestures
         <button
           type="button"
           class="as-row-actions-btn as-row-actions-more"
-          aria-label="Row actions"
-          title="Row actions"
+          :aria-label="t('UI_TABLE_ROW_ACTIONS')"
+          :title="t('UI_TABLE_ROW_ACTIONS')"
           @click.stop
         >
           <span class="as-row-actions-btn-icon i-as-menu" aria-hidden="true" />

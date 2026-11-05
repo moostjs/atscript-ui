@@ -11,6 +11,7 @@ import {
   type FilterConditionType,
 } from "@atscript/ui-table";
 import { useTableComponent } from "../../composables/use-table-component";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import AsFilterInput from "../defaults/as-filter-input.vue";
 
 const props = defineProps<{
@@ -26,8 +27,9 @@ const spec = computed(() => columnFilter(props.column));
 const filterType = computed(() => spec.value.kind);
 const availableConditions = computed(() => spec.value.conditions);
 const defCondition = computed(() => spec.value.defaultCondition);
+const { t } = useAsTexts();
 // Relative conditions (`today-6`…`today`): a saved or shared filter keeps its meaning.
-const allShortcuts = temporalShortcuts();
+const allShortcuts = temporalShortcuts(t);
 const shortcuts = computed(() => (isTemporalKind(filterType.value) ? allShortcuts : []));
 
 function updateCondition(index: number, update: Partial<FilterCondition>) {
@@ -61,7 +63,7 @@ function applyShortcut(sc: TemporalShortcut) {
       "
     >
       <option v-for="ct in availableConditions" :key="ct" :value="ct">
-        {{ conditionLabel(ct, filterType) }}
+        {{ conditionLabel(ct, filterType, t) }}
       </option>
     </select>
 
@@ -78,7 +80,7 @@ function applyShortcut(sc: TemporalShortcut) {
       class="as-filter-condition-remove"
       :disabled="model.length <= 1"
       :style="model.length <= 1 ? 'visibility:hidden' : ''"
-      aria-label="Remove condition"
+      :aria-label="t('UI_FILTER_REMOVE_CONDITION')"
       @click="removeCondition(index)"
     >
       <span class="i-as-close" aria-hidden="true" />
@@ -86,11 +88,11 @@ function applyShortcut(sc: TemporalShortcut) {
   </div>
 
   <button type="button" class="as-filter-add-condition" @click="addCondition">
-    + Add condition
+    {{ t("UI_FILTER_ADD_CONDITION") }}
   </button>
 
   <div v-if="shortcuts.length > 0" class="as-filter-shortcuts">
-    <span class="as-filter-shortcuts-label">Quick:</span>
+    <span class="as-filter-shortcuts-label">{{ t("UI_FILTER_QUICK") }}</span>
     <button
       v-for="sc in shortcuts"
       :key="sc.id"

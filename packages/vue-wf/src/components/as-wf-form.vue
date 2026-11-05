@@ -3,6 +3,7 @@ import { computed, toRaw, watch, type Component } from "vue";
 import { useWfForm } from "../use-wf-form";
 import type { UseWfFormOptions, WfFormError } from "../use-wf-form";
 import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import type { FormDef, ClientFactory } from "@atscript/ui";
 import { getDeclaredFormActions } from "@atscript/ui";
 import type { TFormState } from "@atscript/vue-form";
@@ -49,6 +50,7 @@ const emit = defineEmits<{
 
 // ── Composable ──────────────────────────────────────────────
 const wf = useWfForm(props);
+const { t } = useAsTexts();
 
 // ── Emit side-effects ───────────────────────────────────────
 watch(
@@ -140,7 +142,7 @@ defineExpose({ action: onAction, supportsAction });
 
     <div v-else-if="wf.error.value && !wf.formDef.value">
       <slot name="wf.error" :error="wf.error.value" :retry="wf.retry">
-        <div>{{ (wf.error.value as any)?.message ?? "Error" }}</div>
+        <div>{{ (wf.error.value as any)?.message ?? t("UI_ERROR") }}</div>
       </slot>
     </div>
 
@@ -180,7 +182,7 @@ defineExpose({ action: onAction, supportsAction });
     <div v-else-if="wf.formDef.value && wf.formData.value">
       <slot v-if="wf.error.value" name="wf.error" :error="wf.error.value" :retry="wf.retry">
         <div role="alert" class="as-wf-form-error">
-          {{ (wf.error.value as { message?: string })?.message ?? "Error" }}
+          {{ (wf.error.value as { message?: string })?.message ?? t("UI_ERROR") }}
         </div>
       </slot>
       <AsForm

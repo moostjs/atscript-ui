@@ -22,8 +22,11 @@ import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard"
 import { useSeedOnOpen } from "../../composables/use-seed-on-open";
 import AsFieldsSelector from "../internal/as-fields-selector.vue";
 import AsSortersConfig from "../internal/as-sorters-config.vue";
+import { useAsTexts } from "@atscript/vue-form/locale";
+import { textAround } from "../../utils/text-around";
 
 const { state } = useTableContext();
+const { t } = useAsTexts();
 // Static skin-slot resolution — `controls.fieldsSelector` / `controls.sortersConfig`
 // replace the internal defaults without them ever being public exports.
 const FieldsSelector = useTableComponent("fieldsSelector", AsFieldsSelector);
@@ -61,6 +64,39 @@ const sortableColumns = computed(() => {
   const localOk = state.localSortAvailable.value;
   return state.allColumns.value.filter((c) => c.sortable && (localOk || !c.local));
 });
+
+// The summary under the tabs: "3 of 10 columns visible" (the count in a badge) and a hint.
+const tabSummary = computed(() => {
+  switch (activeTab.value) {
+    case "columns":
+      return {
+        count: columnsModel.value.length,
+        total: state.allColumns.value.length,
+        text: "UI_TABLE_COLUMNS_VISIBLE",
+        hint: "UI_TABLE_COLUMNS_HINT",
+      };
+    case "filters":
+      return {
+        count: filtersModel.value.length,
+        total: filterableColumns.value.length,
+        text: "UI_TABLE_FILTERS_SHOWN",
+        hint: "UI_TABLE_FILTERS_HINT",
+      };
+    default:
+      return {
+        count: sortersModel.value.length,
+        total: sortableColumns.value.length,
+        text: "UI_TABLE_SORTERS_ACTIVE",
+        hint: "UI_TABLE_SORTERS_HINT",
+      };
+  }
+});
+const summaryText = computed(() =>
+  textAround(t, tabSummary.value.text, "count", {
+    count: tabSummary.value.count,
+    total: tabSummary.value.total,
+  }),
+);
 
 function filterCount(path: string): number {
   return state.filters.value[path]?.length ?? 0;
@@ -115,16 +151,15 @@ function onOpenAutoFocus(event: Event) {
         @keydown="onDialogKeydown"
       >
         <div class="as-config-dialog-header">
-          <DialogTitle class="as-config-dialog-title">Table Settings</DialogTitle>
+          <DialogTitle class="as-config-dialog-title">{{ t("UI_TABLE_SETTINGS") }}</DialogTitle>
           <!-- Reka requires a description on every DialogContent — without it
                it logs a warning and leaves `aria-describedby="undefined"` on
                the surface. The dialog has no visible sub-heading, so the copy
                is screen-reader-only. -->
           <DialogDescription class="sr-only">
-            Choose which columns are visible, which fields appear in the filter bar, and the sort
-            order of the table.
+            {{ t("UI_TABLE_SETTINGS_DESCRIPTION") }}
           </DialogDescription>
-          <DialogClose class="as-config-dialog-close" aria-label="Close">
+          <DialogClose class="as-config-dialog-close" :aria-label="t('UI_CLOSE')">
             <span class="i-as-close" aria-hidden="true" />
           </DialogClose>
         </div>
@@ -132,7 +167,7 @@ function onOpenAutoFocus(event: Event) {
           <TabsList class="as-config-tabs-list">
             <TabsTrigger value="columns" class="as-config-tab-trigger">
               <span class="as-config-tab-icon i-as-columns" aria-hidden="true" />
-              Columns
+              {{ t("UI_TABLE_COLUMNS") }}
               <span
                 class="as-config-tab-count"
                 :class="{ 'as-config-tab-count-active': activeTab === 'columns' }"
@@ -142,7 +177,7 @@ function onOpenAutoFocus(event: Event) {
             </TabsTrigger>
             <TabsTrigger value="filters" class="as-config-tab-trigger">
               <span class="as-config-tab-icon i-as-filter" aria-hidden="true" />
-              Filters
+              {{ t("UI_TABLE_FILTERS") }}
               <span
                 class="as-config-tab-count"
                 :class="{ 'as-config-tab-count-active': activeTab === 'filters' }"
@@ -152,7 +187,7 @@ function onOpenAutoFocus(event: Event) {
             </TabsTrigger>
             <TabsTrigger value="sorters" class="as-config-tab-trigger">
               <span class="as-config-tab-icon i-as-sorters" aria-hidden="true" />
-              Sorters
+              {{ t("UI_TABLE_SORTERS") }}
               <span
                 class="as-config-tab-count"
                 :class="{ 'as-config-tab-count-active': activeTab === 'sorters' }"
@@ -174,8 +209,10 @@ function onOpenAutoFocus(event: Event) {
                   <!-- Client-owned (`:display-columns`) columns are rendered by
                        the app, not fetched — say so, so nobody hunts for a
                        missing field on the server. -->
-                  <span v-if="state.localColumnPaths.value.has(value)" class="as-config-field-hint"
-                    >client</span
+                  <span
+                    v-if="state.localColumnPaths.value.has(value)"
+                    class="as-config-field-hint"
+                    >{{ t("UI_TABLE_CLIENT_SORTER") }}</span
                   >
                 </span>
               </template>
@@ -207,33 +244,14 @@ function onOpenAutoFocus(event: Event) {
 
         <div class="as-config-tab-summary">
           <span class="as-config-tab-summary-count">
-            <template v-if="activeTab === 'columns'">
-              <span class="as-config-tab-summary-count-num">
-                {{ columnsModel.length }}
-              </span>
-              of {{ state.allColumns.value.length }} columns visible
-            </template>
-            <template v-else-if="activeTab === 'filters'">
-              <span class="as-config-tab-summary-count-num">
-                {{ filtersModel.length }}
-              </span>
-              of {{ filterableColumns.length }} filterable columns shown as filter pills
-            </template>
-            <template v-else>
-              <span class="as-config-tab-summary-count-num">
-                {{ sortersModel.length }}
-              </span>
-              of {{ sortableColumns.length }} sortable columns in effect
-            </template>
+            {{ summaryText[0]
+            }}<span v-if="summaryText[1]" class="as-config-tab-summary-count-num">{{
+              summaryText[1]
+            }}</span
+            >{{ summaryText[2] }}
           </span>
           <span class="as-config-tab-summary-hint">
-            <template v-if="activeTab === 'columns'">
-              Checked columns are rendered in the table. Drag rows to reorder.
-            </template>
-            <template v-else-if="activeTab === 'filters'">
-              Checked columns appear in the filter bar for quick filtering.
-            </template>
-            <template v-else> Rows are ordered by these fields, top-to-bottom. </template>
+            {{ t(tabSummary.hint) }}
           </span>
         </div>
 
@@ -244,11 +262,15 @@ function onOpenAutoFocus(event: Event) {
             class="as-filter-btn-ghost"
             @click="sortersModel = []"
           >
-            Clear all
+            {{ t("UI_CLEAR_ALL") }}
           </button>
           <div class="as-filter-dialog-footer-right">
-            <button type="button" class="as-filter-btn" @click="onCancel">Cancel</button>
-            <button type="button" class="as-filter-btn-apply" @click="onApply">Apply</button>
+            <button type="button" class="as-filter-btn" @click="onCancel">
+              {{ t("UI_CANCEL") }}
+            </button>
+            <button type="button" class="as-filter-btn-apply" @click="onApply">
+              {{ t("UI_APPLY") }}
+            </button>
           </div>
         </div>
       </DialogContent>

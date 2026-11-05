@@ -41,6 +41,11 @@
       "import": "./dist/plugin.mjs",
       "require": "./dist/plugin.cjs"
     },
+    "./messages": {
+      "types": "./dist/messages.d.mts",
+      "import": "./dist/messages.mjs",
+      "require": "./dist/messages.cjs"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {

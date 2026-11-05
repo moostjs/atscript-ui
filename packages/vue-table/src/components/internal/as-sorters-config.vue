@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, reactive } from "vue";
 import type { ColumnDef, SortControl } from "@atscript/ui";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import AsOrderableList from "./as-orderable-list.vue";
 
 const props = defineProps<{
@@ -9,6 +10,7 @@ const props = defineProps<{
 }>();
 
 const externalModel = defineModel<SortControl[]>({ default: () => [] });
+const { t } = useAsTexts();
 
 const forceSortersList = computed(() => props.forceSorters?.map((s) => s.field) ?? undefined);
 
@@ -77,7 +79,7 @@ const sorterIndex = (value: string): number | null => {
         <span
           v-if="sorterIndex(value) !== null"
           class="as-sorter-index"
-          :title="`Sort priority ${sorterIndex(value)}`"
+          :title="t('UI_TABLE_SORT_PRIORITY', { n: sorterIndex(value) })"
         >
           {{ sorterIndex(value) }}
         </span>
@@ -87,7 +89,7 @@ const sorterIndex = (value: string): number | null => {
           class="as-sorter-segment"
           :class="{ 'as-sorter-direction-disabled': forceMap.has(value) }"
           role="group"
-          aria-label="Sort direction"
+          :aria-label="t('UI_TABLE_SORT_DIRECTION')"
         >
           <button
             type="button"
@@ -96,10 +98,10 @@ const sorterIndex = (value: string): number | null => {
               'as-sorter-segment-btn-active': (directionMap.get(value) ?? 'asc') === 'asc',
             }"
             :disabled="forceMap.has(value)"
-            title="Ascending"
+            :title="t('UI_TABLE_ASCENDING')"
             @click.stop="setDirection(value, 'asc')"
           >
-            &#x2191; Asc
+            {{ t("UI_TABLE_ASC") }}
           </button>
           <button
             type="button"
@@ -108,16 +110,18 @@ const sorterIndex = (value: string): number | null => {
               'as-sorter-segment-btn-active': (directionMap.get(value) ?? 'asc') === 'desc',
             }"
             :disabled="forceMap.has(value)"
-            title="Descending"
+            :title="t('UI_TABLE_DESCENDING')"
             @click.stop="setDirection(value, 'desc')"
           >
-            &#x2193; Desc
+            {{ t("UI_TABLE_DESC") }}
           </button>
         </span>
       </div>
     </template>
     <template #item-extra="{ value }">
-      <span v-if="forceMap.has(value)" class="as-sorter-lock" title="Locked">&#x1F512;</span>
+      <span v-if="forceMap.has(value)" class="as-sorter-lock" :title="t('UI_TABLE_LOCKED')"
+        >&#x1F512;</span
+      >
     </template>
   </AsOrderableList>
 </template>

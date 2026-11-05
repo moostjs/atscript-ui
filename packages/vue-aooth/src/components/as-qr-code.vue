@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
+import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = withDefaults(
   defineProps<
@@ -84,11 +85,12 @@ watch(
       svg.value = undefined;
       secret.value = undefined;
       console.error("[AsQrCode] failed to render QR code", err);
-      error.value = "Failed to render QR code.";
+      error.value = t("UI_AOOTH_QR_FAILED");
     }
   },
   { immediate: true },
 );
+const { t } = useAsTexts();
 </script>
 
 <template>

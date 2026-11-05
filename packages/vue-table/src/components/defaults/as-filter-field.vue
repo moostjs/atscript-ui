@@ -28,6 +28,8 @@ import {
   ComboboxViewport,
 } from "reka-ui";
 import { useConditionFormat } from "../../composables/use-condition-format";
+import { textAround } from "../../utils/text-around";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTable } from "../../composables/use-table";
 import {
@@ -46,6 +48,10 @@ const props = defineProps<{
 
 const { state } = useTableContext();
 const { formatCondition } = useConditionFormat(state);
+const { t } = useAsTexts();
+const noMatchText = computed(() =>
+  textAround(t, "UI_TABLE_NO_MATCH_SEARCH", "term", { term: searchTerm.value }),
+);
 const isTemporal = computed(() => isTemporalKind(columnFilterKind(props.column)));
 
 const chipsScrollEl = ref<HTMLElement | null>(null);
@@ -123,7 +129,7 @@ const enumRows = hasOptions
   : undefined;
 
 const enumColumns: ColumnDef[] | undefined =
-  hasOptions || distinct ? [valueColumn(false)] : undefined;
+  hasOptions || distinct ? [valueColumn(false, t)] : undefined;
 
 // ── Dropdown rows & columns (unified) ──────────────────────
 const dropdownRows = computed(() => {
@@ -514,19 +520,22 @@ function onF4(event: KeyboardEvent) {
             </div>
             <div v-if="noEnumMatches" class="as-vh-empty">
               <span class="as-vh-empty-icon i-as-search" aria-hidden="true" />
-              <p class="as-vh-empty-title">No matching values</p>
+              <p class="as-vh-empty-title">{{ t("UI_TABLE_NO_MATCHING") }}</p>
               <p v-if="searchTerm" class="as-vh-empty-body">
-                No entries match <span class="as-vh-empty-code">"{{ searchTerm }}"</span>. Try a
-                different search.
+                {{ noMatchText[0]
+                }}<span v-if="noMatchText[1]" class="as-vh-empty-code">"{{ noMatchText[1] }}"</span
+                >{{ noMatchText[2] }}
               </p>
-              <p v-else class="as-vh-empty-body">No entries available</p>
+              <p v-else class="as-vh-empty-body">{{ t("UI_TABLE_NO_ENTRIES") }}</p>
             </div>
           </ComboboxViewport>
 
           <div v-if="chips.length > 0 || seeAllCount > 10" class="as-filter-field-dropdown-footer">
-            <button v-if="chips.length > 0" type="button" @click="clearAll">Reset</button>
+            <button v-if="chips.length > 0" type="button" @click="clearAll">
+              {{ t("UI_RESET") }}
+            </button>
             <button v-if="seeAllCount > 10" type="button" @click="openFilterDialog">
-              See All ({{ seeAllLabel }})
+              {{ t("UI_FILTER_SEE_ALL", { count: seeAllLabel }) }}
               <span class="as-kbd">F4</span>
             </button>
           </div>
@@ -552,7 +561,7 @@ function onF4(event: KeyboardEvent) {
           :id="inputId"
           class="as-filter-field-search"
           :value="searchTerm"
-          :placeholder="isTemporal ? 'YYYY-MM-DD' : undefined"
+          :placeholder="isTemporal ? t('UI_FILTER_DATE_PLACEHOLDER') : undefined"
           @input="searchTerm = ($event.target as HTMLInputElement).value"
           @keydown.backspace="onBackspace"
           @keydown.enter.prevent="commitTyped"
@@ -568,8 +577,8 @@ function onF4(event: KeyboardEvent) {
         type="button"
         class="as-filter-field-f4"
         tabindex="-1"
-        aria-label="Open filter dialog (F4)"
-        title="Open filter dialog (F4)"
+        :aria-label="t('UI_FILTER_OPEN_DIALOG')"
+        :title="t('UI_FILTER_OPEN_DIALOG')"
         @click="openFilterDialog"
       >
         <span class="i-as-value-help" aria-hidden="true" />

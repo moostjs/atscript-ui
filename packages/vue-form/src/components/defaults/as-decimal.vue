@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
+import { useAsTexts } from "../../composables/use-as-locale";
 import { useAsDecimal } from "../../composables/use-as-decimal";
 import { useAsDualInput } from "../../composables/use-as-dual-input";
 import { committedValue } from "../../composables/_shape";
@@ -63,6 +64,7 @@ const isNegative = computed(() => parts.value.sign === "-");
 // falls back to the unit code. Adornment strings stay visible in the
 // chrome pills, no need to repeat them in the tooltip.
 const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefined);
+const { t } = useAsTexts();
 </script>
 
 <template>
@@ -115,7 +117,7 @@ const shellTitle = computed(() => props.currencyCode ?? props.unitCode ?? undefi
             @blur="onBlurAll"
             :disabled="disabled"
             :readonly="readonly"
-            :aria-label="`decimals of ${label ?? name ?? ''}`"
+            :aria-label="t('UI_FORM_DECIMALS_OF', { field: label ?? name ?? '' })"
           />
         </template>
         <span v-if="suffix" class="as-suffix" aria-hidden="true">{{ suffix }}</span>

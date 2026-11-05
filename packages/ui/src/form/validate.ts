@@ -10,6 +10,7 @@ import { isSkippedNavField } from "./skipped-nav";
 import { validatorErrorsToMap } from "./error-utils";
 import type { FormDef, FormFieldDef } from "./types";
 import { childFields } from "./types";
+import { getUiTexts, type UiT } from "../i18n/ui-texts";
 
 /** Per-call options for the form validator function. */
 export interface TFormValidatorCallOptions {
@@ -137,6 +138,8 @@ export function getFormValidator(
 export interface TFieldValidatorOptions {
   /** Only report errors at the root path (for structure/array container validation). */
   rootOnly?: boolean;
+  /** Words the fallback error (`UI_INVALID_VALUE`); the active UI texts when omitted. */
+  t?: UiT;
 }
 
 /**
@@ -186,7 +189,7 @@ export function createFieldValidator(
         if (rootError) return rootError.message;
         return true;
       }
-      return cached.errors?.[0]?.message || "Invalid value";
+      return cached.errors?.[0]?.message || (opts?.t ?? getUiTexts().t)("UI_INVALID_VALUE");
     }
     return true;
   };

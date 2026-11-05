@@ -18,6 +18,8 @@ import {
   setMetaCacheIdentity,
   setMetaCacheMaxEntries,
 } from "./meta-cache";
+import { activateUiTexts, createUiTexts, type UiT } from "../i18n/ui-texts";
+import type { TableDef } from "../table/types";
 
 async function buildSerialized() {
   const { Author } = await import("../__tests__/fixtures/value-help-target.as");
@@ -555,5 +557,68 @@ describe("meta-cache", () => {
     off();
     resetMetaCache();
     expect(listener).toHaveBeenCalledTimes(2);
+  });
+});
+
+/** The `active` column's option labels. */
+async function labels(p: Promise<TableDef>) {
+  return (await p).columns.find((c) => c.path === "active")!.options!.map((o) => o.label);
+}
+
+describe("meta-cache — TableDef per UI locale", () => {
+  async function booleanTable() {
+    const { defineAnnotatedType } = await import("@atscript/typescript/utils");
+    const type = defineAnnotatedType("object")
+      .prop("id", defineAnnotatedType().designType("number").$type)
+      .prop("active", defineAnnotatedType().designType("boolean").$type).$type;
+    const meta = buildMetaResponse(serializeAnnotatedType(type));
+    meta.fields = {
+      id: { sortable: true, filterable: true },
+      active: { sortable: true, filterable: true },
+    } as unknown as typeof meta.fields;
+    return meta;
+  }
+  const texts = (locale: string, yes: string) => ({
+    locale: () => locale,
+    t: ((id: string) => (id === "UI_YES" ? yes : id === "UI_NO" ? "-" : id)) as UiT,
+  });
+
+  it("a remount in another locale gets labels in it; the same locale reuses its def", async () => {
+    const meta = await booleanTable();
+    const { factory, metaSpy } = makeFactory(async () => meta);
+    setDefaultClientFactory(factory);
+    const entry = getMetaEntry("/flags");
+
+    const de = getMetaTableDef(entry, texts("de", "Ja"));
+    expect(await labels(de)).toEqual(["Ja", "-"]);
+    // the app switched to English and remounted
+    const en = getMetaTableDef(getMetaEntry("/flags"), texts("en", "Yes"));
+    expect(await labels(en)).toEqual(["Yes", "-"]);
+    expect(getMetaTableDef(entry, texts("de", "Ja"))).toBe(de);
+    expect(metaSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the active UI texts by default", async () => {
+    const meta = await booleanTable();
+    setDefaultClientFactory(makeFactory(async () => meta).factory);
+    const undo = activateUiTexts(
+      createUiTexts({
+        locale: () => "de",
+        translate: () => (id) => (id === "UI_YES" ? "Ja" : undefined),
+      }),
+    );
+    expect(await labels(getMetaTableDef(getMetaEntry("/flags")))).toEqual(["Ja", "No"]);
+    undo();
+    expect(await labels(getMetaTableDef(getMetaEntry("/flags")))).toEqual(["Yes", "No"]);
+  });
+
+  it("a server render (no window) words the def with the caller's texts", async () => {
+    vi.unstubAllGlobals();
+    const meta = await booleanTable();
+    setDefaultClientFactory(makeFactory(async () => meta).factory);
+    expect(await labels(getMetaTableDef(getMetaEntry("/flags"), texts("de", "Ja")))).toEqual([
+      "Ja",
+      "-",
+    ]);
   });
 });
