@@ -1,4 +1,8 @@
-import { serializeAnnotatedType, type TSerializedAnnotatedType } from "@atscript/typescript/utils";
+import {
+  defineAnnotatedType,
+  serializeAnnotatedType,
+  type TSerializedAnnotatedType,
+} from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
 import { getColumn, getFilterableColumns, getSortableColumns } from "./column-resolver";
 import { createTableDef } from "./create-table-def";
@@ -763,5 +767,66 @@ describe("createTableDef — array of a literal union", () => {
       "In progress",
       "Done",
     ]);
+  });
+});
+
+describe("createTableDef — boolean columns (labels, nullable)", () => {
+  function booleanTable() {
+    const bool = () => defineAnnotatedType().designType("boolean");
+    const labelled = bool()
+      .annotate("ui.literalLabel" as never, { value: "true", label: "Active" } as never, true)
+      .annotate(
+        "ui.literalLabel" as never,
+        { value: "false", label: "Inactive" } as never,
+        true,
+      ).$type;
+    const type = defineAnnotatedType("object")
+      .prop("active", labelled)
+      .prop("plain", bool().$type)
+      .prop("optional", bool().optional().$type)
+      .prop(
+        "nullable",
+        defineAnnotatedType("union")
+          .item(bool().$type)
+          .item(defineAnnotatedType().designType("null").$type).$type,
+      )
+      .prop(
+        "status",
+        defineAnnotatedType("union")
+          .item(defineAnnotatedType().designType("string").value("a").$type)
+          .item(defineAnnotatedType().designType("null").$type).$type,
+      ).$type;
+    const names = ["active", "plain", "optional", "nullable", "status"];
+    const def = createTableDef(buildMeta(serializeAnnotatedType(type as never), names));
+    return (path: string) => getColumn(def, path)!;
+  }
+
+  it("a boolean column is a two-value option list with typed values and labels", () => {
+    const col = booleanTable();
+    expect(col("active").options).toEqual([
+      { key: "true", label: "Active", value: true },
+      { key: "false", label: "Inactive", value: false },
+    ]);
+    expect(col("active").type).toBe("boolean");
+    expect(col("active").valueKind).toBe("boolean");
+    // unlabelled: Yes / No
+    expect(col("plain").options?.map((o) => o.label)).toEqual(["Yes", "No"]);
+  });
+
+  it("boolean | null reads as a boolean column, nullable like an optional one", () => {
+    const col = booleanTable();
+    expect(col("nullable").type).toBe("boolean");
+    expect(col("nullable").valueKind).toBe("boolean");
+    expect(col("nullable").options?.map((o) => o.value)).toEqual([true, false]);
+    expect(col("nullable").nullable).toBe(true);
+    expect(col("optional").nullable).toBe(true);
+    expect(col("plain").nullable).toBe(false);
+  });
+
+  it("a literal union with a null member keeps its options and is nullable", () => {
+    const col = booleanTable();
+    expect(col("status").type).toBe("enum");
+    expect(col("status").options?.map((o) => o.value)).toEqual(["a"]);
+    expect(col("status").nullable).toBe(true);
   });
 });

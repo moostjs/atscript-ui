@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
-import { resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
+import { optionValue, resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
 import {
   filledFilterCount,
   isColumnFilterable,
@@ -43,9 +43,17 @@ const info = props.column.valueHelpInfo;
 const distinct = props.column.distinct;
 const options = props.column.options;
 
+// A filter saved before the picker carried typed values (a URL, a preset) may hold the
+// string form (`"true"`, `"1"`): read it as the option's typed value so it shows selected.
+const typedByKey = options && new Map(options.map((o) => [o.key, optionValue(o)]));
+
 function modelToValues(conds: FilterCondition[]): unknown[] {
   const values: unknown[] = [];
-  for (const c of conds) if (isSimpleEq(c)) values.push(c.value[0]);
+  for (const c of conds) {
+    if (!isSimpleEq(c)) continue;
+    const v = c.value[0];
+    values.push(typedByKey && typeof v === "string" ? (typedByKey.get(v) ?? v) : v);
+  }
   return values;
 }
 function valuesToModel(values: unknown[]): FilterCondition[] {
@@ -100,7 +108,8 @@ if (info) {
   provideTableContext({ state, client: {} as Client, controls: {} });
 } else if (options) {
   const enumRows: Record<string, unknown>[] = options.map((o) => ({
-    __value: o.key,
+    // The typed literal (`true`, `3`) — what the inline picker and the server use.
+    __value: optionValue(o),
     __label: o.label,
   }));
   const enumColumns: ColumnDef[] = [valueColumn(true)];

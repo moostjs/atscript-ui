@@ -106,11 +106,14 @@ exports.
 
 Values come out of the same column metadata the cells read:
 
-- union / enum columns export the option's **label**, not its key;
+- union / enum and boolean columns export the option's **label**, not its key
+  (a boolean reads `Yes` / `No` unless `@ui.literalLabel` names its values —
+  since 0.1.165);
 - `Date` values export as ISO 8601 (re-importable, unlike a
   locale-formatted date);
 - arrays join with `", "`, other objects become JSON;
-- numbers and booleans stay scalars, so a spreadsheet keeps them numeric;
+- numbers stay scalars, so a spreadsheet keeps them numeric (so do booleans on
+  a hand-built column without `options`);
 - `null` / `undefined` become an empty field.
 
 Override one column with `formatters`, or everything with `formatCell`.

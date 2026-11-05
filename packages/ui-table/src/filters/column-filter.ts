@@ -1,4 +1,4 @@
-import type { ColumnDef } from "@atscript/ui";
+import { optionValue, type ColumnDef } from "@atscript/ui";
 import {
   conditionsForType,
   isTemporalKind,
@@ -152,9 +152,47 @@ export function coercerOf(
   }
 }
 
-/** The `ColumnDef` fields the resolver reads; only `type` and `valueKind` are needed for the kind and encoding. */
+type OptionMatcher = (raw: string) => string | number | boolean | undefined;
+
+const matchers = new WeakMap<object, OptionMatcher>();
+
+/**
+ * Matches text to the typed value of the option (`column.options`: a literal union or a
+ * boolean) whose label or key it is (trimmed), so `Active` stands for `true`: an exact
+ * match first (`'A' | 'a'` keeps both apart), then a case-insensitive one; labels before
+ * keys, so a label that reads like another option's key names its own option.
+ * `undefined` when the column has no options. Built once per options list.
+ *
+ * @internal Shared with `parseColumnFilterInput`.
+ */
+export function optionMatcher(options: ColumnDef["options"]): OptionMatcher | undefined {
+  if (!options?.length) return undefined;
+  let match = matchers.get(options);
+  if (match) return match;
+  const exact = new Map<string, string | number | boolean>();
+  const folded = new Map<string, string | number | boolean>();
+  const add = (text: string, value: string | number | boolean) => {
+    if (!exact.has(text)) exact.set(text, value);
+    const lower = text.toLowerCase();
+    if (!folded.has(lower)) folded.set(lower, value);
+  };
+  for (const o of options) add(o.label.trim(), optionValue(o));
+  for (const o of options) add(o.key, optionValue(o));
+  match = (raw) => {
+    const text = raw.trim();
+    return exact.get(text) ?? folded.get(text.toLowerCase());
+  };
+  matchers.set(options, match);
+  return match;
+}
+
+/**
+ * The `ColumnDef` fields the resolver reads; only `type` and `valueKind` are needed for the
+ * kind and encoding (`options` lets typed text name an option by its label).
+ */
 export type FilterColumnInput = Pick<FilterableColumn, "type" | "valueKind"> &
-  Partial<FilterableColumn>;
+  Partial<FilterableColumn> &
+  Partial<Pick<ColumnDef, "options">>;
 
 const cache = new WeakMap<object, ColumnFilter>();
 
@@ -181,13 +219,16 @@ export function columnFilter(column: FilterColumnInput): ColumnFilter {
     const kind = resolveFilterKind(column);
     const conditions = conditionsOf(column, kind);
     const base = defaultConditionOf(kind);
+    const coerce = coercerOf(kind, column.valueKind);
+    const matchOption = optionMatcher(column.options);
     spec = {
       kind,
       conditions,
       // The type's own default when the column offers it, else the first it does offer.
       defaultCondition: conditions.length === 0 || conditions.includes(base) ? base : conditions[0],
       encoding: encodingOf(kind, column.valueKind),
-      coerce: coercerOf(kind, column.valueKind),
+      // An option's label (`Active`) is its value (`true`); other text is typed as the column's.
+      coerce: matchOption ? (raw) => matchOption(raw) ?? coerce(raw) : coerce,
     };
     cache.set(column, spec);
   }

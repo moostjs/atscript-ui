@@ -6,6 +6,11 @@ import {
 } from "../column-widths";
 import { mockColumn } from "../../__tests__/helpers";
 
+const options = (t: string, f: string) => [
+  { key: "true", label: t, value: true },
+  { key: "false", label: f, value: false },
+];
+
 describe("computeDefaultColumnWidth", () => {
   it("honours @ui.table.width annotation as-is (uncapped)", () => {
     expect(computeDefaultColumnWidth(mockColumn("a", { type: "text", width: "500px" }))).toBe(
@@ -40,6 +45,19 @@ describe("computeDefaultColumnWidth", () => {
 
   it("falls back to a 200px text default when no maxLen", () => {
     expect(computeDefaultColumnWidth(mockColumn("a", { type: "text" }))).toBe("200px");
+  });
+
+  it("sizes a labelled boolean from its labels (64px floor)", () => {
+    expect(
+      computeDefaultColumnWidth(
+        mockColumn("a", { type: "boolean", options: options("Yes", "No") }),
+      ),
+    ).toBe("64px");
+    expect(
+      computeDefaultColumnWidth(
+        mockColumn("a", { type: "boolean", options: options("Enabled", "Disabled") }),
+      ),
+    ).toBe("96px");
   });
 
   it("uses option-label length for enum when options are present", () => {

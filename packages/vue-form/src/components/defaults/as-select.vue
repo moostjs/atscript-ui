@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { optKey, optLabel } from "@atscript/ui";
+import { optKey, optLabel, optionValue } from "@atscript/ui";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 
@@ -24,7 +24,7 @@ defineProps<TAsComponentProps>();
           :aria-label="!label ? name : undefined"
         >
           <option v-if="placeholder" value="" disabled>{{ placeholder }}</option>
-          <option v-for="opt in options" :key="optKey(opt)" :value="optKey(opt)">
+          <option v-for="opt in options" :key="optKey(opt)" :value="optionValue(opt)">
             {{ optLabel(opt) }}
           </option>
         </select>

@@ -167,6 +167,7 @@ import {
   asArray,
   optKey,
   optLabel,
+  optionValue, // typed value an option writes (`true`, `3`); form options since 0.1.165
   optionLabel,
 } from "@atscript/ui";
 

@@ -405,6 +405,75 @@ export interface Host {
   });
 });
 
+describe("@ui.literalLabel on booleans", () => {
+  it("accepts 'true' / 'false' on boolean, optional, nullable, array and aliased hosts", async () => {
+    const m = await msgs(`
+@ui.literalLabel 'true', 'On'
+export type Flag = boolean
+export interface BoolHost {
+    @ui.literalLabel 'true', 'Active'
+    @ui.literalLabel 'false', 'Inactive'
+    active: boolean
+    @ui.literalLabel 'true', 'Yes please'
+    opt?: boolean
+    @ui.literalLabel 'false', 'Not set yet'
+    maybe: boolean | null
+    @ui.literalLabel 'true', 'On'
+    flags: boolean[]
+    @ui.literalLabel 'false', 'Off'
+    aliased: Flag
+    @ui.literalLabel 'open', 'Opened'
+    status: 'open' | 'closed' | null
+}`);
+    expect(m).toEqual([]);
+  });
+
+  it("any other value on a boolean is an error naming the two values", async () => {
+    const m = await msgs(`
+export interface BoolBad {
+    @ui.literalLabel 'yes', 'Yes'
+    active: boolean
+    @ui.literalLabel 'TRUE', 'Yes'
+    maybe: boolean | null
+    @ui.literalLabel 'true', 'A'
+    @ui.literalLabel 'true', 'B'
+    dup: boolean
+}`);
+    expect(m).toContain("E: 'yes' is not one of the literals: 'true', 'false'");
+    expect(m).toContain("E: 'TRUE' is not one of the literals: 'true', 'false'");
+    expect(m).toContain("E: duplicate @ui.literalLabel for 'true'");
+  });
+
+  it("a host of another kind is still rejected (LL1)", async () => {
+    const m = (
+      await msgs(`
+export interface BoolMixed {
+    @ui.literalLabel 'true', 'Yes'
+    n: number | null
+    @ui.literalLabel 'x', 'X'
+    s: string
+}`)
+    ).filter((x) => x.includes("requires a union of literal values or a boolean"));
+    expect(m).toHaveLength(2);
+  });
+
+  it("the value scope offers 'true' / 'false' for a boolean host", async () => {
+    const { doc } = await compile(`
+export interface BoolScope {
+    @ui.literalLabel 'true', 'Active'
+    active: boolean
+    @ui.literalLabel 'false', 'Off'
+    maybe?: boolean | null
+    @ui.literalLabel 'true', 'On'
+    flags: boolean[]
+}`);
+    const anns = doc.annotations.filter((a) => a.name === "ui.literalLabel");
+    for (const ann of anns.slice(-3)) {
+      expect(getValueCandidates(ann.token, 0, doc)?.map((c) => c.value)).toEqual(["true", "false"]);
+    }
+  });
+});
+
 describe("editor scopes", () => {
   it("scopes the field string and the filter by the sibling target", async () => {
     const { doc } = await compile(`

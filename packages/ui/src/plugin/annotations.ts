@@ -742,14 +742,20 @@ export const uiAnnotations: TAnnotationsTree = {
 
     literalLabel: new AnnotationSpec({
       description:
-        "Display label for one literal of a union (`'open' | 'closed'`). Repeat per literal; " +
-        "unlabelled literals keep their raw text. Used by form selects/radios, table cells, " +
-        "enum filter options, filter chips and export. A prop's labels are added to the referenced " +
-        "type's (`append` merge: the type's other labels stay); for the same literal the prop's label wins." +
+        "Display label for one literal of a union (`'open' | 'closed'`) or one value of a " +
+        "boolean (`'true'` / `'false'`). Repeat per literal; unlabelled literals keep their raw " +
+        "text, unlabelled booleans read Yes / No. Used by form selects/radios, read-only form " +
+        "fields, table cells, enum filter options, filter chips and export. A prop's labels are " +
+        "added to the referenced type's (`append` merge: the type's other labels stay); for the " +
+        "same literal the prop's label wins." +
         "\n\n**Example:**\n" +
         "```atscript\n" +
         "@ui.literalLabel 'in_progress', 'In progress'\n" +
         "export type Status = 'open' | 'in_progress'\n" +
+        "\n" +
+        "@ui.literalLabel 'true', 'Active'\n" +
+        "@ui.literalLabel 'false', 'Inactive'\n" +
+        "active: boolean\n" +
         "```\n",
       nodeType: ["prop", "type"],
       multiple: true,
@@ -758,7 +764,8 @@ export const uiAnnotations: TAnnotationsTree = {
         {
           name: "value",
           type: "string",
-          description: "The literal as text (`'2'` for the number literal `2`).",
+          description:
+            "The literal as text (`'2'` for the number literal `2`; `'true'` / `'false'` on a boolean).",
           valueScope: literalLabelValues,
         },
         { name: "label", type: "string", description: "Display label." },

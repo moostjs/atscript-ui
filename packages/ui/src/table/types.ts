@@ -225,7 +225,8 @@ export interface ColumnDef {
    */
   filterOps?: string[];
   /**
-   * Whether the column accepts `null` values (atscript prop is `optional`).
+   * Whether the column accepts `null` values (atscript prop is `optional`, or —
+   * since 0.1.165 — its type has a `null` member: `T | null`).
    * Drives operator-picker availability — `null` / `notNull` are dropped
    * for non-nullable columns since they can never match.
    */
@@ -237,7 +238,9 @@ export interface ColumnDef {
   /** Initial column ordering from @ui.table.order (lower = first). */
   order: number;
   /**
-   * Enumerated options for union literal types (e.g. 'a' | 'b' | 'c'). `value` is
+   * Enumerated options for union literal types (e.g. 'a' | 'b' | 'c') and — since
+   * 0.1.165 — booleans (`true` / `false`, labelled Yes / No unless
+   * `@ui.literalLabel` says otherwise). `value` is
    * the typed literal (`true`, `3`) — what a filter sends to the server; the
    * `key` is its string form. `createTableDef` always sets it (since 0.1.148);
    * a hand-built column may omit it, and the string `key` is used.

@@ -2,6 +2,7 @@ export type { TFormEntryOptions, ValueHelpInfo } from "./types";
 export type { ValueHelpSearchOptions, ValueHelpResult } from "./value-help-client";
 export { valueHelpDictPaths } from "./dict-paths";
 export {
+  DEFAULT_BOOLEAN_LABELS,
   extractFieldLiteralOptions,
   extractLiteralOptions,
   isPureLiteralUnion,

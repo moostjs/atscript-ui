@@ -167,7 +167,9 @@ function parseFilterInput(
  * date / date-time columns take the [temporal grammar](/tables/filtering#date-and-time-filters)
  * (default operator `eq`; a non-date value returns `undefined`), an `integer`
  * column rejects fractions, a `decimal` keeps its typed text as a string,
- * a boolean column accepts `true` / `false` only.
+ * a boolean column accepts `true` / `false` only. Since 0.1.165, on a column
+ * with `options` (a literal union or a boolean) an option's exact label or key
+ * (case-insensitive) is its typed value: `Active` → `eq true`.
  */
 function parseColumnFilterInput(raw: string, column: FilterableColumn): FilterCondition | undefined;
 

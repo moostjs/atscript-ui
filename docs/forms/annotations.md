@@ -347,7 +347,10 @@ When both are present the field renders an `AsRef` picker by default
 key — see [References](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
 `@ui.literalLabel` labels the literals of a union field's select / radio options
 without restating them in `@ui.form.options` — see
-[Union labels](/tables/filtering#union-labels).
+[Union labels](/tables/filtering#union-labels). On a `boolean` (since 0.1.165)
+it names `'true'` / `'false'`: the field stays a checkbox, and a read-only one
+shows the label instead (`Yes` / `No` when unlabelled) — see
+[Boolean labels](/tables/filtering#boolean-labels).
 
 ## Cross-cutting reads
 

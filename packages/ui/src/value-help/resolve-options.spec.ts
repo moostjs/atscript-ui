@@ -163,3 +163,15 @@ describe("resolveOptions — @ui.literalLabel on an array of a literal union", (
     ]);
   });
 });
+
+describe("resolveOptions — a boolean field", () => {
+  it("is the two values with their labels (Yes / No unless @ui.literalLabel says otherwise)", () => {
+    const flag = defineAnnotatedType().designType("boolean").$type;
+    expect(resolveOptions(flag, {})).toEqual([
+      { key: "true", label: "Yes", value: true },
+      { key: "false", label: "No", value: false },
+    ]);
+    flag.metadata.set("ui.literalLabel", [{ value: "true", label: "Active" }] as never);
+    expect(resolveOptions(flag, {})?.map(optLabel)).toEqual(["Active", "No"]);
+  });
+});

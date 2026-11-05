@@ -129,8 +129,9 @@ editor check them. All three apply to `prop` and `type`.
   without a foreign key: [References](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
 - `@ui.valueHelp.distinct` — offers the column's own stored values in the table
   filters: [Distinct values](/tables/filtering#distinct-values).
-- `@ui.literalLabel` — labels one literal of a union:
-  [Union labels](/tables/filtering#union-labels).
+- `@ui.literalLabel` — labels one literal of a union, or (since 0.1.165) one
+  value of a boolean: [Union labels](/tables/filtering#union-labels),
+  [Boolean labels](/tables/filtering#boolean-labels).
 
 ## `@ui.type` — shared renderer override
 

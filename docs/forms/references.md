@@ -139,8 +139,9 @@ export interface TicketOverview {
   existence and type, the filter's scope, repeating values and a
   manual-filterable target whose filter fields lack `@db.column.filterable`
   (the last two are warnings) — and the editor completes the target, the field
-  and the filter. On `@ui.literalLabel` it completes the union's literals for the
-  value and jumps from the value to the literal it names.
+  and the filter. On `@ui.literalLabel` it completes the union's literals (`'true'` /
+  `'false'` on a boolean) for the value and jumps from the value to the literal
+  it names.
 
 A custom picker that builds its own query passes `info.filter` and selects
 `info.targetField` — see the [API reference](/api/ui#valuehelpinfo).

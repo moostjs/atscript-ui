@@ -88,9 +88,9 @@ test.describe("Section 2 — Cell rendering by type", () => {
     await expect(statusBadge).toHaveText("active");
     await expect(statusBadge).toHaveClass(/scope-good/);
 
-    // MFA — boolean glyph; admin seeded `mfaEnabled: false`.
+    // MFA — boolean label (`@ui.literalLabel 'false', 'Disabled'`); admin seeded `mfaEnabled: false`.
     const mfaCell = await cellLocatorByPath(table, adminRow, "mfaEnabled");
-    expect(await mfaCell.textContent()).toContain("✗");
+    expect((await mfaCell.textContent())?.trim()).toBe("Disabled");
 
     // First Name / Last Name — separate text cells, NOT a JSON popup. The
     // absence of `.as-cell-json-trigger` is the load-bearing assertion.

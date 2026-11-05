@@ -317,6 +317,7 @@ export const componentClasses: Record<string, readonly string[]> = {
     "as-checkbox-field",
     "as-checkbox-indeterminate",
     "as-checkbox-row",
+    "as-checkbox-value",
     "as-field-description",
     "as-field-label",
     "as-field-remove-btn",

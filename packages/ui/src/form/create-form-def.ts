@@ -39,8 +39,9 @@ import {
   UI_FORM_SUFFIX_REF,
   UI_FORM_TYPE,
   UI_TYPE,
+  UI_LITERAL_LABEL,
 } from "../shared/annotation-keys";
-import { isPureLiteralUnion } from "../value-help/extract-literals";
+import { isEmptyMember, isPureLiteralUnion } from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
 import { isSkippedNavField } from "./skipped-nav";
 
@@ -367,7 +368,7 @@ function buildFieldDef(path: string, prop: TAtscriptAnnotatedType, edit: boolean
       type: "array",
       customType: isTags ? "tags" : isMultiselect ? "multiselect" : customType,
       itemType: arrayType.of,
-      itemField: createFieldDef("", arrayType.of, edit),
+      itemField: labelledBy(createFieldDef("", arrayType.of, edit), prop),
     } as FormArrayFieldDef;
   }
 
@@ -589,6 +590,18 @@ export function buildUnionVariants(typeDef: TAtscriptAnnotatedType): FormUnionVa
   return createUnionVariants(typeDef, false);
 }
 
+/**
+ * A scalar field inside `outer` (an array item, a union variant) also takes `outer`'s
+ * `@ui.literalLabel` labels — `flags: boolean[]`, `active: boolean | null`.
+ */
+function labelledBy(field: FormFieldDef, outer: TAtscriptAnnotatedType): FormFieldDef {
+  // `field.prop` is still unset on a recursive field that is being built (never a scalar)
+  if (field.prop?.type.kind === "" && outer.metadata.has(UI_LITERAL_LABEL)) {
+    field.labelsFrom = outer;
+  }
+  return field;
+}
+
 function createUnionVariants(typeDef: TAtscriptAnnotatedType, edit: boolean): FormUnionVariant[] {
   const complex = typeDef.type as TAtscriptTypeComplex;
   const items = complex.items ?? [typeDef];
@@ -596,6 +609,7 @@ function createUnionVariants(typeDef: TAtscriptAnnotatedType, edit: boolean): Fo
 
   for (const item of items) {
     const v = createVariant(item, edit);
+    if (v.itemField) labelledBy(v.itemField, typeDef);
     if (items.length > 1) {
       v.label = `${String(variants.length + 1)}. ${v.label}`;
     }
@@ -657,10 +671,7 @@ function soleValueMember(prop: TAtscriptAnnotatedType): TAtscriptAnnotatedType |
   const visit = (t: TAtscriptAnnotatedType): void => {
     if (t.type.kind === "union") {
       for (const item of (t.type as TAtscriptTypeComplex).items) visit(item);
-    } else if (
-      t.type.kind !== "" ||
-      (t.type.designType !== "null" && t.type.designType !== "undefined")
-    ) {
+    } else if (!isEmptyMember(t)) {
       members.add(t);
     }
   };

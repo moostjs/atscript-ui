@@ -1,6 +1,11 @@
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
-import { extractLiteralOptions, isPureLiteralUnion } from "./extract-literals";
+import {
+  DEFAULT_BOOLEAN_LABELS,
+  extractFieldLiteralOptions,
+  extractLiteralOptions,
+  isPureLiteralUnion,
+} from "./extract-literals";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -56,11 +61,11 @@ describe("extractLiteralOptions", () => {
     ]);
   });
 
-  it("keeps the typed literal on `value` (booleans stay booleans)", () => {
+  it("keeps the typed literal on `value` (booleans stay booleans, labelled Yes / No)", () => {
     const union = defineAnnotatedType("union").item(literal(true)).item(literal(false)).$type;
     expect(extractLiteralOptions(union)).toEqual([
-      { key: "true", label: "true", value: true },
-      { key: "false", label: "false", value: false },
+      { key: "true", label: "Yes", value: true },
+      { key: "false", label: "No", value: false },
     ]);
   });
 
@@ -167,5 +172,65 @@ describe("extractLiteralOptions — @ui.literalLabel", () => {
       { key: "1", label: "1", value: 1 },
       { key: "2", label: "Two", value: 2 },
     ]);
+  });
+});
+
+describe("extractLiteralOptions — booleans (Yes / No, @ui.literalLabel)", () => {
+  function booleanType() {
+    return defineAnnotatedType().designType("boolean").$type;
+  }
+  function nullType() {
+    return defineAnnotatedType().designType("null").$type;
+  }
+
+  it("a boolean is the two values true / false, labelled Yes / No by default", () => {
+    expect(DEFAULT_BOOLEAN_LABELS).toEqual({ true: "Yes", false: "No" });
+    expect(extractLiteralOptions(booleanType())).toEqual([
+      { key: "true", label: "Yes", value: true },
+      { key: "false", label: "No", value: false },
+    ]);
+  });
+
+  it("@ui.literalLabel 'true' / 'false' labels the values (the typed value stays boolean)", () => {
+    const flag = booleanType();
+    flag.metadata.set("ui.literalLabel", [
+      { value: "true", label: "Active" },
+      { value: "false", label: "Inactive" },
+    ] as never);
+    expect(extractLiteralOptions(flag)).toEqual([
+      { key: "true", label: "Active", value: true },
+      { key: "false", label: "Inactive", value: false },
+    ]);
+  });
+
+  it("boolean | null: the null member adds no option", () => {
+    const union = defineAnnotatedType("union").item(booleanType()).item(nullType()).$type;
+    union.metadata.set("ui.literalLabel", [{ value: "false", label: "Off" }] as never);
+    expect(extractLiteralOptions(union)).toEqual([
+      { key: "true", label: "Yes", value: true },
+      { key: "false", label: "Off", value: false },
+    ]);
+  });
+
+  it("a literal union with a null member keeps its literals ('a' | 'b' | null)", () => {
+    const union = defineAnnotatedType("union")
+      .item(literal("a"))
+      .item(literal("b"))
+      .item(nullType()).$type;
+    expect(extractLiteralOptions(union)?.map((o) => o.value)).toEqual(["a", "b"]);
+  });
+
+  it("boolean[]: the array prop's labels apply to its elements", () => {
+    const list = defineAnnotatedType("array").of(booleanType()).$type;
+    list.metadata.set("ui.literalLabel", [{ value: "true", label: "On" }] as never);
+    expect(extractFieldLiteralOptions(list)).toEqual([
+      { key: "true", label: "On", value: true },
+      { key: "false", label: "No", value: false },
+    ]);
+  });
+
+  it("a single literal that is not a boolean has no options (a discriminator stays plain)", () => {
+    expect(extractLiteralOptions(literal("a"))).toBeUndefined();
+    expect(extractLiteralOptions(literal(true))).toBeUndefined();
   });
 });

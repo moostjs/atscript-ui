@@ -150,7 +150,7 @@ setByPath(formData, "contacts.0.email", "new@example.com");
 | `decimal`   | `AsDecimal`   | Decimal numbers (`@db.amount.currency`, `@db.column.precision`, `@db.unit`) |
 | `select`    | `AsSelect`    | Literal union (`'a' \| 'b'`) or explicit `@ui.form.type 'select'`           |
 | `radio`     | `AsRadio`     | `@ui.form.type 'radio'`                                                     |
-| `checkbox`  | `AsCheckbox`  | `boolean` (tri-state via `useAsTriStateCheckbox`)                           |
+| `checkbox`  | `AsCheckbox`  | `boolean`, tri-state; read-only shows its `@ui.literalLabel` label          |
 | `paragraph` | `AsParagraph` | Read-only display (`@ui.form.type 'paragraph'`)                             |
 | `action`    | `AsAction`    | Phantom action button (`@ui.form.action 'id', 'label'`)                     |
 | `object`    | `AsObject`    | Nested structures                                                           |
@@ -169,7 +169,7 @@ setByPath(formData, "contacts.0.email", "new@example.com");
 | `string`              | `text`       | `AsInput`         | Set `@ui.form.type 'textarea'` / `'password'` to swap renderer id. |
 | `string.email`        | `text`       | `AsInput`         | `@expect.email` baked in via the atscript primitive.               |
 | `number`              | `number`     | `AsNumber`        | `@db.column.precision` switches to `decimal` if present.           |
-| `boolean`             | `checkbox`   | `AsCheckbox`      | Optional `boolean` → tri-state (true/false/undefined).             |
+| `boolean`             | `checkbox`   | `AsCheckbox`      | Optional → tri-state; read-only: label, `Yes` / `No` (0.1.165).    |
 | `Date`                | `date`       | `AsDate`          | Use `@ui.form.type 'datetime'` / `'time'` for finer granularity.   |
 | `T[]`                 | `array`      | `AsArray`         | `T` can be primitive, object, union, tuple.                        |
 | `[A, B]`              | `tuple`      | `AsTuple`         | Fixed-length positional.                                           |

@@ -6,13 +6,14 @@ import type { ExportScalar } from "./csv";
  * column metadata the cell renderers read:
  *
  * - `null` / `undefined` → `null` (an empty CSV field).
- * - union / enum columns (`column.options`) → the option's **label**, so the
- *   file reads like the screen; an unknown key falls back to the raw value.
+ * - union / enum and boolean columns (`column.options`) → the option's
+ *   **label** (`Yes` / `No` for an unlabelled boolean), so the file reads like
+ *   the screen; an unknown key falls back to the raw value.
  * - `Date` → ISO 8601 (spreadsheet- and re-import-friendly, unlike a
  *   locale-formatted date).
  * - arrays → comma-joined scalars; other objects → JSON.
- * - numbers / booleans pass through untouched so a spreadsheet keeps them
- *   numeric.
+ * - numbers (and booleans of a column without `options`) pass through
+ *   untouched so a spreadsheet keeps them numeric.
  *
  * Callers override per column (`formatters`) or globally (`formatCell`) when
  * they want different text.

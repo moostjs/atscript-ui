@@ -124,7 +124,7 @@ filter the server would refuse:
 | `number.int`, `@expect.int`, `@db.default.increment`…    | `integer`   | `number` (whole numbers only)                                    |
 | `number`                                                 | `number`    | `number`                                                         |
 | `decimal`                                                | `decimal`   | `number`                                                         |
-| `boolean`                                                | `boolean`   | `boolean` (`true` / `false` only)                                |
+| `boolean`                                                | `boolean`   | `boolean` (`true` / `false`, or a [label](#boolean-labels))      |
 | `string`                                                 | `string`    | `text`                                                           |
 | a union of literals of one kind (`1 \| 2`, `'a' \| 'b'`) | that kind   | `enum`, with typed option values                                 |
 | arrays, objects, JSON, mixed unions                      | none        | as before, no value coercion                                     |
@@ -282,7 +282,7 @@ the same whatever its source.
 | `number`                       | a number (`'5'` from a URL becomes `5`); an empty box stays unfilled, never `0`                                                                                        |
 | `integer`                      | a whole number; `5.5` is not a filter                                                                                                                                  |
 | `decimal`                      | a numeric **string** (`'12.50'`; a number from a URL is stringified) — decimals are strings end to end, so no digit is rounded, and the server accepts numeric strings |
-| `boolean`                      | `true` / `false` (case-insensitive text becomes a boolean; anything else is not a filter)                                                                              |
+| `boolean`                      | `true` / `false` (case-insensitive text becomes a boolean, and so does a [label](#boolean-labels); anything else is not a filter)                                      |
 | literal union dropdown         | the typed literal (`true`, `3`), not its string key                                                                                                                    |
 | anything else                  | as it is                                                                                                                                                               |
 
@@ -458,8 +458,10 @@ The Tier-2 default for a single inline filter chip / input. Reads
 Typed values are coerced to the column's type: number columns get
 numbers, and boolean columns understand `true` / `false`
 (case-insensitive) — since 0.1.133 they produce real booleans, so a
-boolean filter round-trips through the URL and matches. Any other
-text on a boolean column stays a string and matches nothing.
+boolean filter round-trips through the URL and matches. Since 0.1.165 a
+boolean column offers the Yes / No (or labelled) picker, like a literal
+union, and typed text may name an option by its label — see
+[Boolean labels](#boolean-labels).
 
 ### `<AsFilterDialog>` — per-column condition builder
 
@@ -569,6 +571,56 @@ An array of a union (`tags: Tag[]`) takes the labels too: the array prop's own
 `@ui.literalLabel` is added to the element type's labels (per literal, the array prop's label wins), and form selects and table cells and chips show them. On a SQL adapter the array is JSON storage (existence-only), so its filter bar input is the empty / not-empty one, not the value picker; where the adapter reports the column filterable (Mongo, memory), the picker emits `$in` / `eq`, which match by element containment.
 In the editor, `@ui.literalLabel` completes the union's literals for its first
 argument, hovering that value shows the literal, and go-to-definition on it jumps to the literal. This works in `annotate` blocks too.
+
+#### Boolean labels
+
+_Since 0.1.165._ A `boolean` column is a two-value option list: `true` / `false`,
+labelled **Yes** / **No** unless `@ui.literalLabel` names them (`'true'` /
+`'false'` are the only values the compiler accepts on a boolean):
+
+```atscript
+@ui.literalLabel 'true', 'Active'
+@ui.literalLabel 'false', 'Inactive'
+active: boolean
+```
+
+The labels reach the same consumers as a union's: the default cell (which used
+to show a check mark), the filter chips, CSV export, the inline picker and its
+dialog, and the condition editor's boolean select. The filter value stays a
+real boolean. An optional (`active?: boolean`) or nullable
+(`active: boolean | null`) column also offers _is empty_ / _is not empty_, like
+any nullable column. A `boolean[]` takes the labels per element.
+
+Typed filter text names an option by its label or key (an exact match first,
+then case-insensitively):
+`parseColumnFilterInput("Active", column)` is `eq true`, `!=Active` is
+`ne true`; on a literal-union column `In progress` is `eq 'in_progress'`, and
+text that names no option keeps the column's default (`contains` on a text
+union). The inline picker filters its list by label as you type, and Enter
+commits the highlighted row; text the list does not show — `!=Active`,
+`<empty>`, `!<empty>`, a raw `true` — is added as a condition instead.
+
+In forms a boolean stays a checkbox; a read-only one shows its label (`Active`,
+or `Yes` / `No`) instead of a checkbox, without the optional clear button. The
+labels of `active: boolean | null` and `flags: boolean[]` reach the checkbox of
+the variant / each item. `@ui.form.type 'select'` or `'radio'` on a boolean
+offers the labels and writes a real `true` / `false`. A `true | false` literal
+union reads Yes / No too.
+
+Coming from 0.1.164:
+
+- Boolean cells read `Yes` / `No` instead of a check mark, and CSV export
+  writes the label instead of `true` / `false`. To keep the old output, pass a
+  `formatters` entry to the export or a custom cell via `@ui.table.component`.
+- The boolean filter bar input is a picker instead of free text.
+- A column typed `T | null` is nullable (it offers _is empty_ / _is not
+  empty_), like an optional one.
+- A literal union with a `null` member (`'a' | 'b' | null`) gets its options
+  (picker, labels) instead of none, and `@ui.literalLabel` is accepted on it.
+- Typed text that is exactly an option's label or key filters by `eq` instead
+  of `contains`.
+- Form selects, radios and multiselects over a number literal union write
+  numbers (`3`), not strings (`"3"`).
 
 ## Programmatic filters
 

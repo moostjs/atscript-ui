@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { optKey, optLabel } from "@atscript/ui";
+import { optKey, optLabel, optionValue } from "@atscript/ui";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 
@@ -23,7 +23,7 @@ defineProps<TAsComponentProps>();
         <label v-for="opt in options" :key="optKey(opt)">
           <input
             type="radio"
-            :value="optKey(opt)"
+            :value="optionValue(opt)"
             v-model="model.value"
             @change="onBlur"
             @blur="onBlur"

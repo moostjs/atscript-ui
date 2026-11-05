@@ -93,6 +93,13 @@ interface FormFieldDef {
    * validators and `buildFormDiff` skip it. Since 0.1.144.
    */
   derived?: true;
+  /**
+   * The enclosing prop whose `@ui.literalLabel` labels also apply: the array
+   * prop of an item field (`flags: boolean[]`) or the union prop of a variant
+   * (`active: boolean | null`). Set only when that prop declares labels.
+   * Since 0.1.165.
+   */
+  labelsFrom?: TAtscriptAnnotatedType;
 }
 ```
 
@@ -293,12 +300,13 @@ interface ColumnDef {
   filterable: boolean;
   /** Narrower operators accepted when `filterable` is `false`, e.g. `["$exists"]` on a JSON-stored column. Since 0.1.139. */
   filterOps?: string[];
+  /** `true` for an optional prop, and (since 0.1.165) for a type with a `null` member (`T | null`). */
   nullable: boolean;
   visible: boolean;
   width?: string;
   maxLen?: number;
   order: number;
-  /** `value` (since 0.1.148) is the typed literal — `true`, `3` — that a filter sends; `key` is its string form. Always set by `createTableDef`; a hand-built column may omit it. */
+  /** A literal union's options and (since 0.1.165) a boolean's — `true` / `false`, labelled Yes / No unless `@ui.literalLabel` says otherwise. `value` (since 0.1.148) is the typed literal — `true`, `3` — that a filter sends; `key` is its string form. Always set by `createTableDef`; a hand-built column may omit it. */
   options?: { key: string; label: string; value?: string | number | boolean }[];
   valueHelpInfo?: ValueHelpInfo;
   /** Distinct-values picker (`@ui.valueHelp.distinct`): the table's own controller answers the values of `field`. Since 0.1.148. */
@@ -865,7 +873,16 @@ function extractLiteralOptions(
   prop: TAtscriptAnnotatedType,
 ): { key: string; label: string; value: string | number | boolean }[] | undefined; // `value` since 0.1.148
 function isPureLiteralUnion(prop: TAtscriptAnnotatedType): boolean;
+/** The labels of an unlabelled boolean's two values. Since 0.1.165. */
+const DEFAULT_BOOLEAN_LABELS: Readonly<{ true: string; false: string }>; // { true: "Yes", false: "No" }
 ```
+
+Since 0.1.165 `extractLiteralOptions` also answers a `boolean`: the options
+`true` / `false` with `DEFAULT_BOOLEAN_LABELS` unless `@ui.literalLabel` names
+them; `null` / `undefined` members of a union (`boolean | null`,
+`'a' | 'b' | null`) are skipped instead of making the type option-less.
+`isPureLiteralUnion` is unchanged, so a form still renders a boolean as a
+checkbox.
 
 `extractValueHelp` reads a `@ui.valueHelp` binding first (since 0.1.148) and returns its `filter` / `pinned`; a binding beats `@db.rel.FK`, and one whose target has no `@db.http.path` is ignored. It follows reference chains since 0.1.134: when the prop itself has no `@db.rel.FK`, it hops through `ref.type().props[ref.field]` (bounded, cycle-safe) until it meets a link that carries `@db.rel.FK` and whose target has `@db.http.path`, so a view field projected from an FK column resolves to the dictionary, not the intermediate table. The server does the same in `/meta` since @atscript/db 0.1.128.
 
@@ -949,8 +966,13 @@ See [Forms — References (FK)](/forms/references).
 ### Option helpers
 
 ```typescript
+type TFormEntryOptions =
+  | { key: string; label: string; value?: string | number | boolean } // `value` since 0.1.165
+  | string;
 function optKey(opt: TFormEntryOptions): string;
 function optLabel(opt: TFormEntryOptions): string;
+/** What a picker writes into the model: the typed literal (`true`, `3`) when the option has one, else the key (a string option is itself). Since 0.1.148; form options since 0.1.165. */
+function optionValue(opt: TFormEntryOptions): string | number | boolean;
 /** The `@ui.literalLabel` label of a union column's value (`undefined` when none) — what a custom cell shows. Since 0.1.148. */
 function optionLabel(
   column: { options?: { key: string; label: string }[] },
@@ -960,10 +982,11 @@ function parseStaticOptions(value: unknown): TFormEntryOptions[] | undefined;
 function resolveOptions(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
+  labelsFrom?: TAtscriptAnnotatedType, // since 0.1.165
 ): TFormEntryOptions[] | undefined;
 ```
 
-`resolveOptions` checks `@ui.form.options`, then `@ui.form.fn.options` via the active resolver, then literal-union extraction.
+`resolveOptions` checks `@ui.form.options`, then `@ui.form.fn.options` via the active resolver, then literal-union (and, since 0.1.165, boolean) extraction. Pass `field.labelsFrom` as `labelsFrom` so an array item or a union variant also takes the enclosing prop's `@ui.literalLabel` labels. The built-in `AsSelect`, `AsRadio` and `AsMultiSelect` bind `optionValue(opt)`, so a select over a boolean or a number union writes `true` / `3`, not `"true"` / `"3"` (since 0.1.165); a custom picker should do the same.
 
 ## Grid layout
 

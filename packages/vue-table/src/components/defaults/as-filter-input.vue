@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { ColumnDef } from "@atscript/ui";
+import { DEFAULT_BOOLEAN_LABELS, optionLabel, type ColumnDef } from "@atscript/ui";
 import type { FilterCondition, ColumnFilterType } from "@atscript/ui-table";
 import {
   columnFilter,
@@ -75,6 +75,14 @@ function updateValue(index: number, raw: string) {
   );
 }
 
+// The two values of a boolean, worded by the column (`@ui.literalLabel`, Yes / No by default).
+const boolOptions = computed(() =>
+  (["true", "false"] as const).map((key) => ({
+    key,
+    label: optionLabel(props.column, key) ?? DEFAULT_BOOLEAN_LABELS[key],
+  })),
+);
+
 function onBoolSelect(val: string) {
   const boolVal = val === "true";
   emit("update:condition", { ...props.condition, value: [boolVal] });
@@ -103,8 +111,7 @@ const inputAttrs = computed(() => {
     @change="onBoolSelect(($event.target as HTMLSelectElement).value)"
   >
     <option value="" disabled>Select...</option>
-    <option value="true">true</option>
-    <option value="false">false</option>
+    <option v-for="opt in boolOptions" :key="opt.key" :value="opt.key">{{ opt.label }}</option>
   </select>
 
   <!-- Date / date-time: native inputs, a pill for a relative or epoch value -->

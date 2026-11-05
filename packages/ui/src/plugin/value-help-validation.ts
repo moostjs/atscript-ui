@@ -182,14 +182,24 @@ function hostDesign(token: Token, doc: AtscriptDoc): TDesign | undefined {
   return host ? designOf(host.def, host.doc) : undefined;
 }
 
-/** One literal of a union: its text, and the const node (and document) that declares it. */
+/**
+ * One value a host can be labelled for: its text, and the const node (and document)
+ * that declares it — none for the two values of a `boolean`.
+ */
 interface TLiteral {
   text: string;
-  def: SemanticNode;
-  doc: AtscriptDoc;
+  def?: SemanticNode;
+  doc?: AtscriptDoc;
 }
 
-/** Collects the literal values of a pure literal union; `undefined` when it cannot be resolved. */
+/** The values of a `boolean` host, as `@ui.literalLabel` names them. */
+const BOOLEAN_VALUES = ["true", "false"] as const;
+
+/**
+ * Collects the values of a pure literal union or a `boolean` (`'true'` / `'false'`), or
+ * of an array of one; `null` / `undefined` members (`boolean | null`) have none. `false`
+ * when the host is anything else, `undefined` when it cannot be resolved.
+ */
 function collectLiterals(
   def: SemanticNode | undefined,
   doc: AtscriptDoc,
@@ -197,6 +207,7 @@ function collectLiterals(
   depth = 0,
 ): boolean | undefined {
   let unresolved = false;
+  const start = out.length;
   for (const leaf of leavesOf(def, doc, depth)) {
     if (!leaf) {
       unresolved = true;
@@ -208,11 +219,15 @@ function collectLiterals(
       const ok = collectLiterals(leaf.def.getDefinition(), leaf.doc, out, depth + 1);
       if (ok === false) return false;
       if (ok === undefined) unresolved = true;
-    } else {
+    } else if (leaf.def.entity === "primitive" && primitiveBaseType(leaf.def) === "boolean") {
+      for (const text of BOOLEAN_VALUES) out.push({ text });
+    } else if (!isEmptyLeaf(leaf.def)) {
       return false;
     }
   }
-  return unresolved ? undefined : true;
+  if (unresolved) return undefined;
+  // only `null` / `undefined` members: nothing to label
+  return out.length > start;
 }
 
 /** {@link collectLiterals} of the type an annotated node stands for. */
@@ -544,7 +559,8 @@ export function validateDistinct(token: Token, _args: Token[], doc: AtscriptDoc)
 /**
  * `valueScope` of `@ui.literalLabel`'s `value`: the literals of the annotated
  * union (or array of one), each linked to the literal it declares — completion
- * offers them and go-to-definition on the value jumps to the literal.
+ * offers them and go-to-definition on the value jumps to the literal. A `boolean`
+ * host offers `'true'` / `'false'` (since 0.1.165).
  */
 export function literalLabelValues(
   annotationToken: Token,
@@ -559,8 +575,11 @@ export function literalLabelValues(
   for (const { text, def, doc: declaring } of found) {
     if (seen.has(text)) continue;
     seen.add(text);
-    const token = def.token("identifier");
-    candidates.push({ value: text, ...(token && { definition: { doc: declaring, token } }) });
+    const token = def?.token("identifier");
+    candidates.push({
+      value: text,
+      ...(token && declaring && { definition: { doc: declaring, token } }),
+    });
   }
   return candidates.length > 0 ? candidates : undefined;
 }
@@ -572,10 +591,11 @@ export function validateLiteralLabel(token: Token, args: Token[], doc: AtscriptD
   const pure = collectHostLiterals(host, doc, found);
   const literals = found.map((l) => l.text);
 
-  // LL1: the host is a pure literal union (or an array of one)
+  // LL1: the host is a pure literal union or a boolean (or an array of one)
   if (pure === false) {
     errors.push({
-      message: "@ui.literalLabel requires a union of literal values (or an array of one)",
+      message:
+        "@ui.literalLabel requires a union of literal values or a boolean (or an array of one)",
       severity: ERROR,
       range: token.range,
     });

@@ -1,5 +1,5 @@
 <script setup lang="ts" generic="T extends string | number">
-import { hasFieldMeta, optKey, optLabel } from "@atscript/ui";
+import { hasFieldMeta, optKey, optLabel, optionValue } from "@atscript/ui";
 import {
   ComboboxAnchor,
   ComboboxContent,
@@ -45,7 +45,7 @@ function clearAll() {
 }
 
 function selectAll() {
-  props.model.value = (props.options ?? []).map((o) => optKey(o)) as T[];
+  props.model.value = (props.options ?? []).map((o) => optionValue(o)) as T[];
 }
 
 // ── Free entry (`tags`) ──────────────────────────────────────
@@ -172,7 +172,7 @@ function onTags(values: T[]) {
               <ComboboxItem
                 v-for="opt in options"
                 :key="optKey(opt)"
-                :value="optKey(opt)"
+                :value="optionValue(opt)"
                 class="as-multi-select-item"
               >
                 <span class="as-multi-select-item-label">{{ optLabel(opt) }}</span>

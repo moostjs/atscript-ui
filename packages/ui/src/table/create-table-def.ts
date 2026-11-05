@@ -22,7 +22,11 @@ import {
 } from "../shared/annotation-keys";
 import { extractMeasurement } from "../form/measurement";
 import { humanizePath } from "../shared/str";
-import { extractFieldLiteralOptions, type LiteralOption } from "../value-help/extract-literals";
+import {
+  extractFieldLiteralOptions,
+  isEmptyMember,
+  type LiteralOption,
+} from "../value-help/extract-literals";
 import { extractValueHelp } from "../value-help/extract-ref";
 import type { ValueHelpInfo } from "../value-help/types";
 import type {
@@ -169,7 +173,7 @@ function buildColumn(
     sortable: !decoration && (fieldMeta.sortable ?? false),
     filterable: !decoration && (fieldMeta.filterable ?? false),
     ...(filterOps && { filterOps: [...filterOps] }),
-    nullable: decoration || prop.optional === true,
+    nullable: decoration || prop.optional === true || hasEmptyMember(prop),
     width: getFieldMeta(prop, UI_TABLE_WIDTH) as string | undefined,
     maxLen: maxLengthMeta?.length,
     order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
@@ -240,11 +244,15 @@ function groupActions(actions: TDbActionInfo[]): TableActionsModel {
 }
 
 /** Infers a display type string from the annotated type's kind and designType. */
-function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: unknown): string {
+function inferDisplayType(prop: TAtscriptAnnotatedType, literalOpts?: LiteralOption[]): string {
   const kind = prop.type.kind;
   if (kind === "array") return "array";
   if (kind === "object") return "object";
-  if (kind === "union") return literalOpts !== undefined ? "enum" : "union";
+  if (kind === "union") {
+    if (literalOpts === undefined) return "union";
+    // `boolean | null`: the two values of a boolean, not an enum
+    return literalOpts.every((o) => typeof o.value === "boolean") ? "boolean" : "enum";
+  }
   if (kind === "") {
     const final = prop.type as TAtscriptTypeFinal;
     const dt = final.designType;
@@ -294,6 +302,14 @@ function scalarValueKind(prop: TAtscriptAnnotatedType): ColumnValueKind | undefi
   }
 }
 
+/** Whether a union has a `null` / `undefined` member (`T | null`): its value can be empty. */
+function hasEmptyMember(prop: TAtscriptAnnotatedType): boolean {
+  if (prop.type.kind !== "union") return false;
+  return (prop.type as TAtscriptTypeComplex).items.some(
+    (item) => isEmptyMember(item) || hasEmptyMember(item),
+  );
+}
+
 /** Kinds of every non-null leaf of a (possibly nested) union; `null` when one is not a scalar. */
 function collectUnionKinds(
   items: TAtscriptAnnotatedType[],
@@ -305,9 +321,7 @@ function collectUnionKinds(
       continue;
     }
     if (item.type.kind === "") {
-      const dt = (item.type as TAtscriptTypeFinal).designType;
-      if (dt === "null" || dt === "undefined") continue;
-      out.add(scalarValueKind(item));
+      if (!isEmptyMember(item)) out.add(scalarValueKind(item));
       continue;
     }
     out.add(undefined);

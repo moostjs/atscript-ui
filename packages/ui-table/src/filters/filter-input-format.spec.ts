@@ -342,3 +342,62 @@ describe("parseColumnFilterInput — storage-aware values (0.1.148)", () => {
     expect(parseColumnFilterInput("12.5x", dec)).toBeUndefined();
   });
 });
+
+describe("parseColumnFilterInput — an option's label stands for its value (0.1.165)", () => {
+  const flag = {
+    path: "active",
+    type: "boolean",
+    valueKind: "boolean" as const,
+    filterable: true,
+    nullable: true,
+    options: [
+      { key: "true", label: "Active", value: true },
+      { key: "false", label: "Inactive", value: false },
+    ],
+  };
+  const status = {
+    path: "status",
+    type: "enum",
+    valueKind: "string" as const,
+    filterable: true,
+    nullable: false,
+    options: [
+      { key: "open", label: "Open", value: "open" },
+      { key: "in_progress", label: "In progress", value: "in_progress" },
+    ],
+  };
+
+  it("a boolean column takes its labels (case-insensitive) and still true / false", () => {
+    expect(parseColumnFilterInput("Active", flag)).toEqual({ type: "eq", value: [true] });
+    expect(parseColumnFilterInput(" inactive ", flag)).toEqual({ type: "eq", value: [false] });
+    expect(parseColumnFilterInput("!=Active", flag)).toEqual({ type: "ne", value: [true] });
+    expect(parseColumnFilterInput("true", flag)).toEqual({ type: "eq", value: [true] });
+    expect(parseColumnFilterInput("<empty>", flag)).toEqual({ type: "null", value: [] });
+    expect(parseColumnFilterInput("maybe", flag)).toBeUndefined();
+  });
+
+  it("a literal-union column: a label or key is an exact match; other text keeps the pattern default", () => {
+    expect(parseColumnFilterInput("In progress", status)).toEqual({
+      type: "eq",
+      value: ["in_progress"],
+    });
+    expect(parseColumnFilterInput("open", status)).toEqual({ type: "eq", value: ["open"] });
+    expect(parseColumnFilterInput("!=in progress", status)).toEqual({
+      type: "ne",
+      value: ["in_progress"],
+    });
+    expect(parseColumnFilterInput("prog", status)).toEqual({ type: "contains", value: ["prog"] });
+  });
+
+  it("an exact match wins over a case-insensitive one ('A' | 'a')", () => {
+    const cased = {
+      ...status,
+      options: [
+        { key: "A", label: "A", value: "A" },
+        { key: "a", label: "a", value: "a" },
+      ],
+    };
+    expect(parseColumnFilterInput("a", cased)).toEqual({ type: "eq", value: ["a"] });
+    expect(parseColumnFilterInput("A", cased)).toEqual({ type: "eq", value: ["A"] });
+  });
+});

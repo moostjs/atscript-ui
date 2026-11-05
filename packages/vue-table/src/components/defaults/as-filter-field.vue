@@ -404,16 +404,32 @@ function onInputFocus() {
   scrollChipsToEnd();
 }
 
-function onEnter() {
-  if (hasDropdown.value || !searchTerm.value.trim()) return;
-
+/** Adds the typed text as a condition (`!=Active`, `<empty>`, `>5`…); `false` when it is none. */
+function commitTyped(): boolean {
   const parsed = parseColumnFilterInput(searchTerm.value, props.column);
-  if (!parsed) return;
-
+  if (!parsed) return false;
   const existing = state.filters.value[props.column.path] ?? [];
   const filled = existing.filter(isFilled);
-  state.setFieldFilter(props.column.path, [...filled, parsed]);
+  // a value already picked stays one chip
+  const duplicate =
+    isSimpleEq(parsed) && filled.some((c) => isSimpleEq(c) && c.value[0] === parsed.value[0]);
+  if (!duplicate) state.setFieldFilter(props.column.path, [...filled, parsed]);
   searchTerm.value = "";
+  return true;
+}
+
+const dropdownBodyEl = ref<HTMLElement | null>(null);
+
+// With a picker, Enter commits the highlighted row (Reka). Typed text the list does not
+// show — an operator (`!=Active`, `<empty>`), a raw value (`true`) — is a condition instead.
+function onPickerEnter(event: KeyboardEvent) {
+  const highlighted =
+    dropdownOpen.value && dropdownBodyEl.value?.querySelector("[data-highlighted]");
+  if (highlighted) return;
+  if (commitTyped()) {
+    event.preventDefault();
+    (event.target as HTMLInputElement).value = "";
+  }
 }
 
 // F4 on the search input opens the same filter dialog the value-help
@@ -462,6 +478,7 @@ function onF4(event: KeyboardEvent) {
                 :id="inputId"
                 class="as-filter-field-search"
                 @input="onSearchInput"
+                @keydown.enter="onPickerEnter"
                 @keydown.backspace="onBackspace"
                 @keydown.f4="onF4"
                 @focus="onInputFocus"
@@ -478,7 +495,7 @@ function onF4(event: KeyboardEvent) {
           @open-auto-focus.prevent
         >
           <ComboboxViewport>
-            <div class="as-filter-field-dropdown-body">
+            <div ref="dropdownBodyEl" class="as-filter-field-dropdown-body">
               <AsTableBase
                 render-mode="combobox"
                 :row-value-fn="rowValueFn"
@@ -538,7 +555,7 @@ function onF4(event: KeyboardEvent) {
           :placeholder="isTemporal ? 'YYYY-MM-DD' : undefined"
           @input="searchTerm = ($event.target as HTMLInputElement).value"
           @keydown.backspace="onBackspace"
-          @keydown.enter.prevent="onEnter"
+          @keydown.enter.prevent="commitTyped"
           @keydown.f4="onF4"
           @focus="scrollChipsToEnd()"
         />

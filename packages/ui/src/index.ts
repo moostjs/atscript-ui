@@ -251,6 +251,7 @@ export { NUMERIC_VALUE_KINDS, optionValue } from "./table/value-kind";
 
 // ── Value-help (unified options resolution) ─────────────────
 export {
+  DEFAULT_BOOLEAN_LABELS,
   extractFieldLiteralOptions,
   extractLiteralOptions,
   isPureLiteralUnion,

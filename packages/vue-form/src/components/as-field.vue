@@ -425,7 +425,7 @@ if (props.field.allStatic) {
     getFieldMeta(prop, UI_FORM_PLACEHOLDER) ??
     (prop.metadata.has("db.writeOnly") ? "(hidden — enter a value to replace)" : undefined);
   styles = getFieldMeta(prop, UI_FORM_STYLES);
-  options = resolveOptions(prop, emptyScope);
+  options = resolveOptions(prop, emptyScope, props.field.labelsFrom);
   attrs =
     getFieldMeta(prop, UI_FORM_ATTR) !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
 
@@ -567,8 +567,8 @@ if (props.field.allStatic) {
 
   options = maybeComputed(
     hasFn.has("options"),
-    () => resolveOptions(prop, fs.value),
-    resolveOptions(prop, emptyScope),
+    () => resolveOptions(prop, fs.value, props.field.labelsFrom),
+    resolveOptions(prop, emptyScope, props.field.labelsFrom),
   );
 
   const hasFnAttr = hasFn.has("attr");

@@ -67,6 +67,13 @@ export interface FormFieldDef {
    * Since 0.1.144.
    */
   derived?: true;
+  /**
+   * The enclosing prop whose `@ui.literalLabel` labels also apply to this
+   * field's values: the array prop of an item field (`flags: boolean[]`) or the
+   * union prop of a variant (`active: boolean | null`). Set only when that prop
+   * declares labels; pass it to `resolveOptions` as `labelsFrom`. Since 0.1.165.
+   */
+  labelsFrom?: TAtscriptAnnotatedType;
 }
 
 /**

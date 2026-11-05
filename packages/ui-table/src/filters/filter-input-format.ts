@@ -4,6 +4,7 @@ import {
   coercerOf,
   columnFilter,
   defaultConditionOf,
+  optionMatcher,
   type FilterColumnInput,
 } from "./column-filter";
 
@@ -71,6 +72,9 @@ export function parseFilterInput(
  * values are checked against the column's storage (`valueKind`): a date column
  * takes the temporal grammar, a boolean column `true` / `false`, an integer
  * column integers; anything else returns `undefined`, so no request is sent.
+ * On a column with `options` (a literal union or a boolean), text that is an
+ * option's label or key (case-insensitive) is that option's value: `Active` →
+ * `eq true`, `!=Active` → `ne true` (since 0.1.165).
  *
  * @since 0.1.139
  */
@@ -80,7 +84,13 @@ export function parseColumnFilterInput(
 ): FilterCondition | undefined {
   const spec = columnFilter(column);
   // The kind's own default, not the column's fallback: an operator the column does not offer is no filter.
-  return parseInput(text, spec.coerce, defaultConditionOf(spec.kind), spec.conditions);
+  return parseInput(
+    text,
+    spec.coerce,
+    defaultConditionOf(spec.kind),
+    spec.conditions,
+    optionMatcher(column.options),
+  );
 }
 
 function parseInput(
@@ -88,9 +98,14 @@ function parseInput(
   coerce: Coerce,
   fallback: FilterConditionType,
   available: readonly FilterConditionType[],
+  matchOption?: (raw: string) => string | number | boolean | undefined,
 ): FilterCondition | undefined {
   const trimmed = text.trim();
   if (trimmed === "") return undefined;
+
+  // 0. An option named by its label or key (`Active`) is that value, exactly.
+  const option = matchOption?.(trimmed);
+  if (option !== undefined && available.includes("eq")) return { type: "eq", value: [option] };
 
   // Wildcard and regex operands are text: they are not typed like the column.
   const build = (

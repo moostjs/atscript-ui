@@ -29,7 +29,8 @@ export function computeDefaultColumnWidth(col: ColumnDef): string {
 function rawDefaultPx(col: ColumnDef): number {
   switch (col.type) {
     case "boolean":
-      return 64;
+      // labelled values (`Yes` / `No`, `@ui.literalLabel`) fit without truncation
+      return Math.max(64, longestLabel(col) * 8 + 32);
     case "number":
       return 96;
     case "ref":
@@ -38,14 +39,7 @@ function rawDefaultPx(col: ColumnDef): number {
     case "object":
       return 240;
     case "enum": {
-      if (col.options?.length) {
-        let longest = 0;
-        for (const opt of col.options) {
-          if (opt.label.length > longest) longest = opt.label.length;
-        }
-        return Math.max(96, longest * 8 + 48);
-      }
-      return 160;
+      return col.options?.length ? Math.max(96, longestLabel(col) * 8 + 48) : 160;
     }
     case "text": {
       if (col.maxLen && col.maxLen > 0) {
@@ -56,6 +50,15 @@ function rawDefaultPx(col: ColumnDef): number {
     default:
       return 160;
   }
+}
+
+/** Character count of the longest option label (`0` without options). */
+function longestLabel(col: ColumnDef): number {
+  let longest = 0;
+  for (const opt of col.options ?? []) {
+    if (opt.label.length > longest) longest = opt.label.length;
+  }
+  return longest;
 }
 
 function capDefault(px: number): number {

@@ -18,7 +18,7 @@ Built-in cells, custom cell dispatch, slot API, locale.
 | `text`      | `AsTableCellValue` | Passthrough via `formatCellValue`.                                                       |
 | `enum`      | `AsTableCellValue` | Enum label (lookup `column.options`).                                                    |
 | `ref`       | `AsTableCellValue` | FK display label resolved from joined row data.                                          |
-| `boolean`   | `AsTableCellValue` | Stringified (locale-aware via `formatCellValue`).                                        |
+| `boolean`   | `AsTableCellValue` | Option label: `@ui.literalLabel` or `Yes` / `No` (`DEFAULT_BOOLEAN_LABELS`).             |
 | `number`    | `AsCellNumber`     | `Intl.NumberFormat` with currency, precision, unit. Right-aligned, tabular-nums.         |
 | `date`      | `AsCellDate`       | Date-only via `Intl.DateTimeFormat`.                                                     |
 | `datetime`  | `AsCellDate`       | Date + time-of-day. Honours timezone from `useCellLocale`.                               |

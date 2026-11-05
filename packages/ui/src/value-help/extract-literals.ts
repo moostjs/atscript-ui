@@ -18,8 +18,21 @@ export interface LiteralOption {
 }
 
 /**
- * Extracts options from a union of literal types (e.g. 'a' | 'b' | 'c').
- * Returns undefined if the type is not a pure union of literals.
+ * The labels an unlabelled `boolean` value shows — in table cells, filter chips,
+ * the filter picker, export and read-only form fields. The one place the default
+ * wording lives. Since 0.1.165.
+ */
+export const DEFAULT_BOOLEAN_LABELS: Readonly<Record<"true" | "false", string>> = Object.freeze({
+  true: "Yes",
+  false: "No",
+});
+
+/**
+ * Extracts options from a union of literal types (e.g. 'a' | 'b' | 'c') or a
+ * `boolean` (since 0.1.165: the two values `true` / `false`, labelled
+ * {@link DEFAULT_BOOLEAN_LABELS} unless `@ui.literalLabel` says otherwise).
+ * `null` / `undefined` members of a union (`'a' | 'b' | null`, `boolean | null`)
+ * are not values and are skipped. Returns undefined for anything else.
  *
  * Handles nested unions created by flattenAnnotatedType, which recurses
  * into union items and produces synthetic unions containing both individual
@@ -29,8 +42,13 @@ export function extractLiteralOptions(
   prop: TAtscriptAnnotatedType,
   outer?: TAtscriptAnnotatedType,
 ): LiteralOption[] | undefined {
-  if (prop.type.kind !== "union") return undefined;
-  const result = collectLiterals((prop.type as TAtscriptTypeComplex).items, new Set());
+  const items =
+    prop.type.kind === "union"
+      ? (prop.type as TAtscriptTypeComplex).items
+      : isBooleanPrimitive(prop)
+        ? [prop]
+        : undefined;
+  const result = items && collectLiterals(items, new Set());
   if (!result || result.length === 0) return undefined;
   // `@ui.literalLabel` (since 0.1.148): a label per literal, raw text otherwise.
   // `mergeStrategy: "append"` lists the referenced type's labels first, then the prop's own,
@@ -50,9 +68,10 @@ export function extractLiteralOptions(
 }
 
 /**
- * The literal options of a field: a literal union's, or those of an array of one
- * (`tags: Tag[]`), where the array prop's own `@ui.literalLabel` labels win over the
- * element type's. `undefined` when the field is neither. Since 0.1.148.
+ * The literal options of a field: a literal union's or a boolean's (since 0.1.165),
+ * or those of an array of one (`tags: Tag[]`, `flags: boolean[]`), where the array
+ * prop's own `@ui.literalLabel` labels win over the element type's. `undefined` when
+ * the field is neither. Since 0.1.148.
  */
 export function extractFieldLiteralOptions(
   prop: TAtscriptAnnotatedType,
@@ -61,6 +80,18 @@ export function extractFieldLiteralOptions(
     return extractLiteralOptions((prop.type as TAtscriptTypeArray).of, prop);
   }
   return extractLiteralOptions(prop);
+}
+
+/** A `null` / `undefined` member of a union (`T | null`): no value of its own. */
+export function isEmptyMember(item: TAtscriptAnnotatedType): boolean {
+  const dt = (item.type as TAtscriptTypeFinal).designType;
+  return item.type.kind === "" && (dt === "null" || dt === "undefined");
+}
+
+/** A `boolean` (not a `true` / `false` literal). */
+function isBooleanPrimitive(prop: TAtscriptAnnotatedType): boolean {
+  const final = prop.type as TAtscriptTypeFinal;
+  return prop.type.kind === "" && final.designType === "boolean" && final.value === undefined;
 }
 
 /** Returns true when the annotated type is a union composed entirely of literal values. */
@@ -83,8 +114,10 @@ function checkAllLiterals(items: TAtscriptAnnotatedType[]): boolean {
 }
 
 /**
- * Recursively collects literal values from union items.
- * Returns null if any non-literal, non-union item is found (invalid union).
+ * Recursively collects literal values from union items: a literal is one value
+ * (a `true` / `false` literal default-labelled like a boolean's), a `boolean` the
+ * two (`true` / `false`, default-labelled), a `null` / `undefined`
+ * member none. Returns null if any other item is found (no options).
  * Returns empty array when all items are valid but already seen (deduped).
  */
 function collectLiterals(
@@ -92,14 +125,24 @@ function collectLiterals(
   seen: Set<string>,
 ): LiteralOption[] | null {
   const result: LiteralOption[] = [];
+  const add = (raw: string | number | boolean) => {
+    const val = String(raw);
+    if (!seen.has(val)) {
+      seen.add(val);
+      // a `true` / `false` literal reads like a boolean's value
+      const label = typeof raw === "boolean" ? DEFAULT_BOOLEAN_LABELS[raw ? "true" : "false"] : val;
+      result.push({ key: val, label, value: raw });
+    }
+  };
   for (const item of items) {
-    if (item.type.kind === "" && (item.type as TAtscriptTypeFinal).value !== undefined) {
-      const raw = (item.type as TAtscriptTypeFinal).value as string | number | boolean;
-      const val = String(raw);
-      if (!seen.has(val)) {
-        seen.add(val);
-        result.push({ key: val, label: val, value: raw });
-      }
+    const final = item.type as TAtscriptTypeFinal;
+    if (item.type.kind === "" && final.value !== undefined) {
+      add(final.value as string | number | boolean);
+    } else if (isBooleanPrimitive(item)) {
+      add(true);
+      add(false);
+    } else if (isEmptyMember(item)) {
+      continue;
     } else if (item.type.kind === "union") {
       const nested = collectLiterals((item.type as TAtscriptTypeComplex).items, seen);
       if (nested === null) return null;

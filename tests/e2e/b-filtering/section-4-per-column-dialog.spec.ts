@@ -214,13 +214,27 @@ test.describe("Section 4.11 — Conditions-only dialog (non-value-help)", () => 
     expect(await select.inputValue()).toBe("eq");
   });
 
-  test("MFA Enabled (non-nullable boolean): operator set is { eq, ne }, value is a select", async ({
+  test("MFA Enabled (non-nullable boolean): Values lists the labels; conditions are { eq, ne } with a labelled select", async ({
     page,
   }) => {
     await gotoTable(page, "users");
     const pill = await addFilterPill(page, "MFA Enabled");
     const dialog = await openDialogViaF4(page, pill);
 
+    // A boolean is a two-value option list: the dialog opens on Values with the
+    // `@ui.literalLabel` labels.
+    const tabs = dialog.locator(".as-config-tab-trigger");
+    await expect(tabs.first()).toHaveAttribute("data-state", "active");
+    // selection / filler cells carry no text
+    await expect
+      .poll(async () =>
+        (await dialog.locator("table.as-table tbody tr td").allTextContents())
+          .map((t) => t.trim())
+          .filter(Boolean),
+      )
+      .toEqual(["Enabled", "Disabled"]);
+
+    await dialog.locator(".as-config-tab-trigger:has-text('Conditions')").click();
     const select = dialog.locator(".as-filter-condition-select").first();
     const ops = await select.locator("option").allTextContents();
     const trimmed = ops.map((s) => s.trim());
@@ -229,9 +243,11 @@ test.describe("Section 4.11 — Conditions-only dialog (non-value-help)", () => 
     // booleans those operators would surface — `conditionsForType` reads the
     // column's `nullable` flag to decide.
     expect(new Set(trimmed)).toEqual(new Set(["equals", "not equals"]));
-    // Value input is rendered as a `<select>` with true/false options
+    // Value input is rendered as a `<select>` worded by the labels
     // (boolean filter type → `as-filter-select`).
-    await expect(dialog.locator(".as-filter-select")).toHaveCount(1);
+    const valueSelect = dialog.locator(".as-filter-select");
+    await expect(valueSelect).toHaveCount(1);
+    await expect(valueSelect.locator("option:not([disabled])")).toHaveText(["Enabled", "Disabled"]);
   });
 
   test("`bw` operator on number renders two value inputs", async ({ page }) => {

@@ -1,4 +1,4 @@
-import { str } from "@atscript/ui";
+import { DEFAULT_BOOLEAN_LABELS, str } from "@atscript/ui";
 
 // Fallback formatter has no column metadata (currency/unit), so it must not
 // group — grouping is reserved for measured values rendered by <AsCellNumber>.
@@ -10,7 +10,7 @@ export function formatCellValue(value: unknown, type: string): string {
   if (value === null || value === undefined) return "";
   switch (type) {
     case "boolean":
-      return value ? "\u2713" : "\u2717";
+      return value ? DEFAULT_BOOLEAN_LABELS.true : DEFAULT_BOOLEAN_LABELS.false;
     case "number": {
       // `decimal` fields arrive as strings on the wire (e.g. "19.99"); coerce
       // so the default cell doesn't regress to an unformatted string when no

@@ -2,7 +2,7 @@ import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { TFormEntryOptions } from "./types";
 import { UI_FORM_FN_OPTIONS, UI_FORM_OPTIONS } from "../shared/annotation-keys";
 import { resolveFieldProp, asArray } from "../shared/field-resolver";
-import { extractFieldLiteralOptions } from "./extract-literals";
+import { extractFieldLiteralOptions, extractLiteralOptions } from "./extract-literals";
 
 /** Extracts the key from an option entry. */
 export function optKey(opt: TFormEntryOptions): string {
@@ -17,7 +17,7 @@ export function optLabel(opt: TFormEntryOptions): string {
 const labelMaps = new WeakMap<object, Map<string, string>>();
 
 /**
- * The display label of a literal-union column's option (`@ui.literalLabel`) for
+ * The display label of a literal-union (or boolean) column's option (`@ui.literalLabel`) for
  * `value` — `undefined` when the column has no options or none matches. Map-backed
  * per options array, so rendering a table does not scan the options per cell.
  * The one lookup behind the table cell, the filter chips, export and a custom cell.
@@ -58,12 +58,14 @@ export function parseStaticOptions(raw: unknown): TFormEntryOptions[] {
  * Resolves options from metadata with a fallback chain:
  * 1. `@ui.form.fn.options` (dynamic, compiled by ui-fns)
  * 2. `@ui.form.options` (static annotation)
- * 3. Literal union type extraction (auto-derived from type)
+ * 3. Literal union / boolean extraction (auto-derived from type); `labelsFrom`
+ *    (`FormFieldDef.labelsFrom`, since 0.1.165) adds an enclosing prop's labels
  * 4. Future: dictionary / value-help lookup
  */
 export function resolveOptions(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
+  labelsFrom?: TAtscriptAnnotatedType,
 ): TFormEntryOptions[] | undefined {
   const resolved = resolveFieldProp<TFormEntryOptions[]>(
     prop,
@@ -73,5 +75,5 @@ export function resolveOptions(
     { transform: parseStaticOptions },
   );
   if (resolved !== undefined) return resolved;
-  return extractFieldLiteralOptions(prop);
+  return labelsFrom ? extractLiteralOptions(prop, labelsFrom) : extractFieldLiteralOptions(prop);
 }

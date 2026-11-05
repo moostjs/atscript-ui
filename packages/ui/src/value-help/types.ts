@@ -1,7 +1,13 @@
 import type { FilterExpr } from "@atscript/db-client";
 
 /** An option for select/radio fields — either a plain string or a `{ key, label }` pair. */
-export type TFormEntryOptions = { key: string; label: string } | string;
+/**
+ * A form option: a plain string, or `{ key, label }` — plus, for options derived from a
+ * literal union or a boolean, the typed `value` (`true`, `3`) the field stores (since 0.1.165).
+ */
+export type TFormEntryOptions =
+  | { key: string; label: string; value?: string | number | boolean }
+  | string;
 
 // ── Value-help types (FK reference resolution) ──────────────
 

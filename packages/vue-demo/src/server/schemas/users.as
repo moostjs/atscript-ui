@@ -33,6 +33,8 @@ export interface UsersTable {
 
     @meta.label 'MFA Enabled'
     @db.default 'false'
+    @ui.literalLabel 'true', 'Enabled'
+    @ui.literalLabel 'false', 'Disabled'
     mfaEnabled: boolean
 
     @meta.label 'Profile'
