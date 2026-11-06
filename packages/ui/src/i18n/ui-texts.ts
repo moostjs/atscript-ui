@@ -139,10 +139,20 @@ export function createUiTexts(opts: {
 
 let globalLocale: string | undefined;
 let globalTranslate: UiTranslate | undefined;
-const globalTexts = createUiTexts({
+const globalSource = createUiTexts({
   locale: () => globalLocale,
   translate: () => globalTranslate,
 });
+const globalTexts: UiTexts = {
+  ...globalSource,
+  // One process renders for many users on a server: the texts one request's
+  // server served (its `$i18n`) must never reach the next request through the
+  // process-global source. Only an app's own texts (`provideAsLocale`) take
+  // them there; in a browser the global source belongs to the one user.
+  merge: (locale, served) => {
+    if (typeof window !== "undefined") globalSource.merge(locale, served);
+  },
+};
 /** Activated sources, most recent last; the global one when empty. */
 const activated: UiTexts[] = [];
 

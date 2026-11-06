@@ -50,11 +50,18 @@ interface AsFormProps {
 
 **Emits**:
 
-- `submit(data)` — validation passed, data ready to ship.
+- `submit(data)` — validation passed, data ready to ship. Since 0.1.165 `data` has the type's `@normalize.*` applied (trimmed, case-folded) — what was validated; the form itself keeps what the user typed ([Normalized before validation](/forms/validation#normalized-before-validation)).
 - `error(errors)` — validation failed; payload is `{ path, message }[]`.
 - `action(name, data)` — phantom `<AsAction>` button dispatched.
 - `unsupportedAction(name, data)` — action name not declared on the form's type.
 - `change(type, path, value, data)` — granular per-field change; `type` is `TAsChangeType`.
+
+::: warning BREAKING
+Since 0.1.165 `submit` emits the **normalized** data (`@normalize.trim` /
+`.lowercase` / `.uppercase` applied), not the form's raw value. A handler that
+reads the typed value from `formData` instead of the emitted `data` still
+gets the raw one.
+:::
 
 `data` is the model value itself, not the `{ value }` container passed as `formData`, and is typed that way (`TAsFormValue<typeof formData>`; typed correctly since 0.1.164). With `createAsFormDef(Product)`, a `save(product: Product)` handler binds directly: `@submit="save"`. Slots get the container as `data` (`data.value` is the model). Navigation fields the form leaves out (`@db.rel.*` without any `@ui.form.*`) are absent from the `submit` payload.
 
@@ -766,7 +773,7 @@ function useAsDualInput(options: UseAsDualInputOptions): UseAsDualInputReturn;
 
 ### `useAsLocale()` / `provideAsLocale(getter)`
 
-Provide / inject the app's BCP-47 locale: it drives the date and decimal composables and the language of the built-in texts of every `@atscript/vue-*` component. The getter shape lets reactive sources flow through without an extra `computed()` at the call site. `translate` (optional) words the built-in texts first — lookup order in [Language & Translations](/guide/i18n#provideaslocale-getter-translate). One per app — SSR-safe.
+Provide / inject the app's BCP-47 locale: it drives the date and decimal composables and the language of the built-in texts of every `@atscript/vue-*` component. The getter shape lets reactive sources flow through without an extra `computed()` at the call site. `translate` (optional) words the built-in texts first — lookup order in [Language & Translations](/guide/i18n#provideaslocale-getter-translate). One per app — SSR-safe. Since 0.1.165 the app's tables, value help and action forms ask `/meta` in this locale and merge the texts it serves, and client-side validation messages are worded in it ([Tables, value help and action forms](/guide/i18n#tables-value-help-and-action-forms)).
 
 ```typescript
 function provideAsLocale(getter: () => string | undefined, translate?: UiTranslate): void;

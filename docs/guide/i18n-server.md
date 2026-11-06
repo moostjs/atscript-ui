@@ -69,8 +69,13 @@ internal messages.
 
 ## Tables without workflows
 
+`@atscript/moost-db` (_since 0.1.170_) serves `/meta` and action forms in the
+request's language with their own `$i18n`, which tables, value help and
+action forms merge into the app's texts
+([Tables, value help and action forms](/guide/i18n#tables-value-help-and-action-forms)).
 `@atscript/moost-wf` registers `AS_UI_MESSAGES` on import. An app that serves
-tables but no workflow forms registers the built-in UI texts once itself:
+tables but no workflow forms registers the built-in UI texts once itself, so
+`/meta` carries them translated:
 
 ```ts
 import { registerMessages } from "moost";

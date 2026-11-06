@@ -132,6 +132,12 @@ function createSortValueReader(
 export interface TableContext {
   state: ReactiveTableState;
   client: Client;
+  /**
+   * The UI locale `client` asks the server in (its `/meta` entry's, see
+   * `useTable`); `undefined` without one. What it serves belongs to this
+   * locale. Since 0.1.165.
+   */
+  locale?: string;
   /** Skin-slot overrides for table chrome (header cells, filter dialog, etc.). */
   controls: TAsTableControls;
   /** Cell-type → component dispatch map. */

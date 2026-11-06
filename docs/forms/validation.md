@@ -23,9 +23,7 @@ fires, fresh-field behaviour and how to merge server-side errors.
 ### Layer 1: `@expect.*`
 
 Defined by atscript core. vue-form just hands them to
-`getFormValidator(def)`
-(`packages/vue-form/src/composables/use-as-form.ts:178-180`) and walks
-the result.
+`getFormValidator(def)` and walks the result.
 
 ```atscript
 @meta.label 'Username'
@@ -105,6 +103,48 @@ For a constraint that depends on multiple fields at once, prefer a
 [form-level validator](#form-level-errors) — it reports in the
 form-level banner instead of under one of the fields.
 
+## Normalized before validation
+
+_Since 0.1.165._ `@normalize.trim`, `@normalize.lowercase` and
+`@normalize.uppercase` (atscript core) apply on submit the way they apply on
+the server: `<AsForm>` normalizes the data, validates the result and emits
+**the normalized data** with `@submit`. A field validates its value
+normalized too, so live errors and submit agree.
+
+```atscript
+@normalize.trim
+@normalize.lowercase
+@expect.minLength 3
+login: string
+```
+
+Typing `"  Ann "` submits `{ login: "ann" }`; typing `" ab "` fails
+`minLength 3` (two characters once trimmed) — the same answer the server would
+give.
+
+::: warning BREAKING
+Since 0.1.165 live and submit validation judge the **normalized** value of
+fields with `@normalize.*`: a value that only met a length rule thanks to
+surrounding spaces now fails in the browser, as it always did on the server.
+:::
+
+- **The form keeps what the user typed.** The normalized value is what is
+  validated and emitted; the inputs don't change under the user's cursor. To
+  show the stored value after saving, load it back into `formData` (e.g. from
+  the server's answer).
+- **Change tracking** (`getPatch()` / `changes`) compares what the form shows;
+  `@atscript/db-client` writes normalize their payload again before sending,
+  so a patch built from the form is stored normalized as well. Normalizing
+  twice changes nothing.
+- Building your own form root? `getFormValidator(def).normalize(data)` does
+  the same step ([@atscript/ui reference](/api/ui#getformvalidator-def-opts)).
+
+## Messages in the user's language
+
+_Since 0.1.165._ Messages are reported in the app's language
+([`provideAsLocale`](/guide/i18n)), looked up by the validator's code: see
+[Validation messages in the browser](/guide/i18n#validation-messages-in-the-browser).
+
 ## A complete example
 
 A `ValidationForm.as` schema that exercises all three layers in one type:
@@ -171,8 +211,7 @@ const { def, formData } = createAsFormDef(ValidationForm);
 ## When does validation fire?
 
 Each field decides per-keystroke whether it's "validation-active" based
-on the form's `firstValidation` strategy
-(`packages/vue-form/src/composables/use-as-field.ts:62-77`):
+on the form's `firstValidation` strategy:
 
 | Strategy          | Becomes active after…                  |
 | ----------------- | -------------------------------------- |
@@ -189,10 +228,9 @@ Pass it as a prop:
 ```
 
 On **submit**, the entire form validates synchronously — every field
-with a rule runs, errors collect, and either `@submit` (clean) or
-`@error` (dirty) fires. Sections containing errors auto-expand so the
-user can see what went wrong
-(`use-as-form.ts:238-248`).
+with a rule runs, errors collect, and either `@submit` (clean, with the
+[normalized data](#normalized-before-validation)) or `@error` (dirty) fires. Sections containing errors auto-expand so the
+user can see what went wrong.
 
 ::: info Default is `on-change`
 After the first edit on a leaf field, errors update on every
@@ -202,8 +240,7 @@ keystroke. Until the user types, validation is silent.
 ## Fresh fields
 
 Newly-mounted fields are marked **fresh** until the user edits them or
-submits again
-(`packages/vue-form/src/composables/use-as-state.ts:32-38`). This
+submits again. This
 prevents a freshly-added array item from lighting up every required
 field red the moment it renders.
 
@@ -240,7 +277,7 @@ explicit dismiss button. Programmatic dismissal is available via
 
 For arrays / unions / structured fields the dismissal still works —
 any descendant mutation drops the ancestor error from the internal
-map too (`use-as-form.ts:302-323`).
+map too.
 
 If your host maintains its own `serverErrors` map and prunes entries
 as they get resolved, use
@@ -324,8 +361,7 @@ async function onSubmit(data: SignupForm) {
 
 ## Programmatic control
 
-The slots on `<AsForm>` expose imperative helpers (see
-`use-as-form.ts:108-141`):
+The slots on `<AsForm>` expose imperative helpers:
 
 ```vue
 <AsForm :def="def" :form-data="formData" :types="types">

@@ -100,7 +100,9 @@ interface AsPasswordRulesProps extends TAsComponentProps {
 
 - Rule strings reuse `@atscript/ui-fns`' `compileFieldFn` — the same FNPool
   cache the framework uses for `@ui.form.fn.*`. Two policies with the same
-  rule body share one compiled instance.
+  rule body share one compiled instance. A rule is called as
+  `(password, data, context, entry, t)`; its `t` is the app's
+  ([`provideAsLocale`](/guide/i18n)) since 0.1.165.
 - Empty password ⇒ every row reads as unpassed, even if a no-op rule would
   technically return true.
 - Throwing rules are treated as unpassed and logged once per distinct source.

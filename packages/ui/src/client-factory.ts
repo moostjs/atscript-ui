@@ -12,8 +12,13 @@ import { Client, type AtscriptClientShape, type ClientOptions } from "@atscript/
  *   given `metaKey` (e.g. the route template of a parametric mount). Since 0.1.153.
  * - `metaStore` — `false` during server rendering, so `/meta` bodies are never
  *   kept in a process-wide store shared by every viewer. Since 0.1.153.
+ * - `locale` — the UI locale the client is for (`provideAsLocale` /
+ *   `setUiLocale`), sent as `Accept-Language`: `/meta`, its action forms and
+ *   error bodies come back in it. Set only when the app has a locale. Since 0.1.165.
  */
-export type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore">;
+export type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore"> & {
+  locale?: string;
+};
 
 /**
  * Factory that creates a `Client` for a given URL.

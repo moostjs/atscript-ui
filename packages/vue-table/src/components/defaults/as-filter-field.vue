@@ -48,7 +48,8 @@ const props = defineProps<{
 
 const { state } = useTableContext();
 const { formatCondition } = useConditionFormat(state);
-const { t } = useAsTexts();
+const texts = useAsTexts();
+const { t } = texts;
 const noMatchText = computed(() =>
   textAround(t, "UI_TABLE_NO_MATCH_SEARCH", "term", { term: searchTerm.value }),
 );
@@ -71,7 +72,7 @@ let innerState: ReturnType<typeof useTable> | undefined;
 const resolved = shallowRef<ResolvedValueHelp | null>(null);
 
 if (info) {
-  vhClient = new ValueHelpClient(getMetaEntry(info.url).client);
+  vhClient = new ValueHelpClient(getMetaEntry(info.url, undefined, { texts }).client);
 
   innerState = useTable(info.url, {
     select: "none",
@@ -89,7 +90,11 @@ if (info) {
 const DISTINCT_WINDOW = 100;
 const DISTINCT_SHOWN = 10;
 const distinctPicker = distinct
-  ? useDistinctPicker(createDistinctPager(state, props.column), DISTINCT_WINDOW, DISTINCT_SHOWN)
+  ? useDistinctPicker(
+      createDistinctPager(state, props.column, texts),
+      DISTINCT_WINDOW,
+      DISTINCT_SHOWN,
+    )
   : undefined;
 
 const dictColumns = computed<ColumnDef[]>(() => {
@@ -103,7 +108,7 @@ async function ensureResolved(): Promise<ResolvedValueHelp | null> {
   if (resolved.value) return resolved.value;
   if (!info) return null;
   try {
-    resolved.value = await resolveValueHelp(info.url);
+    resolved.value = await resolveValueHelp(info.url, { texts });
     return resolved.value;
   } catch (err) {
     // The target answered 4xx (not readable for this caller): no picker, free text.

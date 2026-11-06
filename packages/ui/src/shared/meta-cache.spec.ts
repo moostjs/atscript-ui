@@ -18,7 +18,13 @@ import {
   setMetaCacheIdentity,
   setMetaCacheMaxEntries,
 } from "./meta-cache";
-import { activateUiTexts, createUiTexts, type UiT } from "../i18n/ui-texts";
+import {
+  activateUiTexts,
+  createUiTexts,
+  getUiTexts,
+  setUiLocale,
+  type UiT,
+} from "../i18n/ui-texts";
 import type { TableDef } from "../table/types";
 
 async function buildSerialized() {
@@ -620,5 +626,144 @@ describe("meta-cache — TableDef per UI locale", () => {
       "Ja",
       "-",
     ]);
+  });
+});
+
+/** Lets settled `/meta` promises run their continuations. */
+function flush() {
+  return new Promise((resolve) => setTimeout(resolve));
+}
+
+describe("meta-cache — one entry per UI locale", () => {
+  /**
+   * Served only by the server-render tests: the browser tests legitimately
+   * merge `SERVED` into the browser-global texts, which no test can reset.
+   */
+  const SERVER_ONLY = "Served to one request only";
+  const SERVED: Record<string, string> = {
+    UI_CANCEL: "Abbrechen",
+    MIN_LENGTH: "Mindestens {min} Zeichen",
+  };
+  async function servedMeta(served = SERVED) {
+    const meta = buildMetaResponse(await buildSerialized());
+    return { ...meta, type: { ...(meta.type as object), $i18n: served } };
+  }
+  /** What a server answers one German viewer's server render. */
+  const serverMeta = () => servedMeta({ ...SERVED, [SERVER_ONLY]: "Nur einer Anfrage serviert" });
+  function recordingFactory(metaImpl: () => Promise<unknown>) {
+    const calls: unknown[][] = [];
+    const metaSpy = vi.fn(metaImpl);
+    const factory: ClientFactory = (...args) => {
+      calls.push(args);
+      return { meta: metaSpy, invalidateMeta: vi.fn() } as unknown as Client;
+    };
+    return { factory, calls, metaSpy };
+  }
+  const textsIn = (locale: string) => createUiTexts({ locale: () => locale });
+
+  it("each locale gets its own entry, asked in it; switching back finds it cached", async () => {
+    const meta = await servedMeta();
+    const { factory, calls, metaSpy } = recordingFactory(async () => meta);
+    const de = textsIn("de");
+    const en = textsIn("en");
+
+    const inGerman = getMetaEntry("/authors", factory, { texts: de });
+    const inEnglish = getMetaEntry("/authors", factory, { texts: en });
+    expect(inEnglish).not.toBe(inGerman);
+    expect(calls).toEqual([
+      ["/authors", { locale: "de" }],
+      ["/authors", { locale: "en" }],
+    ]);
+    // back to German: no new client, no new request
+    expect(getMetaEntry("/authors", factory, { texts: textsIn("de") })).toBe(inGerman);
+    expect(metaSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("follows the active UI texts by default", async () => {
+    const meta = await servedMeta();
+    const { factory, calls } = recordingFactory(async () => meta);
+    setDefaultClientFactory(factory);
+    const undo = activateUiTexts(textsIn("de"));
+    const entry = getMetaEntry("/authors");
+    expect(resolveValueHelp("/authors")).toBe(entry.resolved);
+    undo();
+    expect(getMetaEntry("/authors")).not.toBe(entry);
+    expect(calls).toEqual([["/authors", { locale: "de" }], ["/authors"]]);
+  });
+
+  it("merges the texts /meta serves into every app's texts for that locale", async () => {
+    const meta = await servedMeta();
+    const { factory } = recordingFactory(async () => meta);
+    const app = textsIn("de");
+    const otherApp = textsIn("de");
+
+    await getMetaEntry("/authors", factory, { texts: app }).meta;
+    await flush();
+    expect(app.t("UI_CANCEL")).toBe("Abbrechen");
+    expect(app.t("MIN_LENGTH", { min: 3 })).toBe("Mindestens 3 Zeichen");
+    // a cached entry still serves a second app
+    expect(otherApp.t("UI_CANCEL")).toBe("Cancel");
+    await resolveValueHelp("/authors", { texts: otherApp });
+    await flush();
+    expect(otherApp.t("UI_CANCEL")).toBe("Abbrechen");
+  });
+
+  it("a real Client sends the locale as Accept-Language", async () => {
+    const meta = await servedMeta();
+    const fetchMeta = vi.fn(
+      async (_url: string, _init?: RequestInit) =>
+        new Response(JSON.stringify(meta), { headers: { "content-type": "application/json" } }),
+    );
+    setDefaultClientFactory(
+      (url, options) =>
+        new Client(url, { ...options, fetch: fetchMeta as unknown as typeof fetch }),
+    );
+    const app = textsIn("de");
+
+    await getMetaEntry("/authors", undefined, { texts: app }).meta;
+    await flush();
+    const headers = new Headers(fetchMeta.mock.calls[0]![1]?.headers);
+    expect(headers.get("accept-language")).toBe("de");
+    expect(app.t("UI_CANCEL")).toBe("Abbrechen");
+  });
+
+  it("a server render asks in the caller's locale and merges into the caller's texts", async () => {
+    vi.unstubAllGlobals();
+    const meta = await serverMeta();
+    const { factory, calls } = recordingFactory(async () => meta);
+    const request = textsIn("de");
+
+    await getMetaEntry("/authors", factory, { texts: request }).meta;
+    await flush();
+    expect(calls).toEqual([["/authors", { metaStore: false, locale: "de" }]]);
+    expect(request.t("UI_CANCEL")).toBe("Abbrechen");
+    // nothing global was touched
+    expect(getUiTexts().t(SERVER_ONLY)).toBe(SERVER_ONLY);
+  });
+
+  it("a server render without the app's texts never fills the process-global texts", async () => {
+    vi.unstubAllGlobals();
+    const meta = await serverMeta();
+    setDefaultClientFactory(recordingFactory(async () => meta).factory);
+
+    // a viewer whose request asked in German (the self-fetch forwards Accept-Language)
+    await getMetaEntry("/authors").meta;
+    await resolveValueHelp("/authors");
+    await flush();
+    // …and the next request in the process
+    expect(getUiTexts().t(SERVER_ONLY)).toBe(SERVER_ONLY);
+  });
+
+  it("in a browser the global texts (setUiLocale apps) still take what /meta serves", async () => {
+    const meta = await servedMeta();
+    setDefaultClientFactory(recordingFactory(async () => meta).factory);
+    setUiLocale("de");
+    try {
+      await getMetaEntry("/authors").meta;
+      await flush();
+      expect(getUiTexts().t("UI_CANCEL")).toBe("Abbrechen");
+    } finally {
+      setUiLocale(undefined);
+    }
   });
 });

@@ -32,7 +32,8 @@ import { useAsTexts } from "@atscript/vue-form/locale";
 const props = defineProps<{
   column: ColumnDef;
 }>();
-const { t } = useAsTexts();
+const texts = useAsTexts();
+const { t } = texts;
 
 const model = defineModel<FilterCondition[]>({ default: () => [] });
 
@@ -93,7 +94,7 @@ if (info) {
     alwaysSelected: [info.targetField],
   });
 } else if (distinct) {
-  const fetchPage = createDistinctPager(outer?.state, props.column);
+  const fetchPage = createDistinctPager(outer?.state, props.column, texts);
   const { state } = createStaticTableState({
     rows: [],
     columns: [valueColumn(false, t)],
@@ -132,7 +133,7 @@ if (info) {
 // which fields to keep.
 if (info) {
   onMounted(() => {
-    void resolveValueHelp(info.url)
+    void resolveValueHelp(info.url, { texts })
       .then((r) => {
         resolved.value = r;
       })

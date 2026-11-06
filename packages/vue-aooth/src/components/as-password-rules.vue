@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { AsFieldShell, type TAsComponentProps } from "@atscript/vue-form";
 import { compileFieldFn } from "@atscript/ui-fns";
+import { useAsTexts } from "@atscript/vue-form/locale";
 import type { AsPasswordRulesPolicy } from "../types";
 
 const props = defineProps<
@@ -15,12 +16,14 @@ const props = defineProps<
 // useful (one log line per broken policy) without flooding the console on
 // every keystroke re-evaluation.
 const warned = new Set<string>();
+// A rule's trailing `t` speaks the app's language (`provideAsLocale`).
+const { t } = useAsTexts();
 
 function evalRule(rule: string, password: string): boolean {
   try {
     // The aooth wire-format rule is `(password, context?) => boolean`.
     // `compileFieldFn` invokes the user's function positionally as
-    // `(v, data, context, entry)` — so the rule's first positional arg
+    // `(v, data, context, entry, t)` — so the rule's first positional arg
     // (`password`) receives our `v`. Extras are ignored.
     // `entry` must be present on the scope object — `compileFieldFn` wraps
     // the rule in a `with(__ctx__)` block, so referenced identifiers need
@@ -30,6 +33,7 @@ function evalRule(rule: string, password: string): boolean {
       data: {},
       context: {},
       entry: undefined,
+      t,
     });
   } catch (err) {
     if (!warned.has(rule)) {

@@ -29,11 +29,13 @@ export function setRouterNavigate(fn: (url: string) => void | Promise<void>) {
  * to a full-page navigation — vue-router rejects non-route paths.
  */
 export const clientFactory: ClientFactory = (url, options) => {
-  const key = url.replace(/^\/+|\/+$/g, "");
+  // One client per URL and locale: a client asks `/meta` in its own locale.
+  const path = url.replace(/^\/+|\/+$/g, "");
+  const key = options?.locale ? `${path}#${options.locale}` : path;
   let c = cache.get(key);
   if (!c) {
     c = new Client(url, {
-      // Library-requested options (`metaKey`, `metaStore`) go in first.
+      // Library-requested options (`metaKey`, `metaStore`, `locale`) go in first.
       ...options,
       fetch: sharedFetch,
       navigate: async (target) => {

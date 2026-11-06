@@ -638,24 +638,35 @@ Both validators let server-managed db fields through, so a create form built fro
 
 ### `getFormValidator(def, opts?)`
 
-Returns a reusable validator function bound to a `FormDef`. Built once, called per submit.
+Returns a reusable validator bound to a `FormDef`. Built once, called per submit.
 
 ```typescript
-function getFormValidator(
-  def: FormDef,
-  opts?: Partial<TValidatorOptions>,
-): (callOpts: {
-  data: Record<string, unknown>;
-  context?: Record<string, unknown>;
-  t?: UiT; // since 0.1.165: the `t` of `@ui.form.validate` rules (ui-fns)
-}) => Record<string, string>;
+function getFormValidator(def: FormDef, opts?: Partial<TValidatorOptions>): FormValidator;
+
+interface FormValidator {
+  (callOpts: {
+    data: Record<string, unknown>;
+    context?: Record<string, unknown>;
+    t?: UiT; // since 0.1.165: the app's texts — see below
+  }): Record<string, string>;
+  normalize<T>(data: T): T; // since 0.1.165
+}
 ```
 
-Returns an errors record keyed by dot-separated field path (empty when valid). An error on the root type itself (a failing interface-level `@ui.form.validate`) is keyed `__form` (_since 0.1.158_; earlier it was keyed `""`).
+Calling it returns an errors record keyed by dot-separated field path (empty when valid). An error on the root type itself (a failing interface-level `@ui.form.validate`) is keyed `__form` (_since 0.1.158_; earlier it was keyed `""`).
+
+`normalize(data)` (_since 0.1.165_) applies the type's `@normalize.*` annotations (`trim`, `lowercase`, `uppercase`) to the data — copy-on-change, `data` itself when nothing changes — judged with this validator's options. The validator checks data as given, so validate and submit the normalized value, as the server does:
+
+```typescript
+const validator = getFormValidator(def);
+const data = validator.normalize(formData.value);
+const errors = validator({ data, t });
+if (Object.keys(errors).length === 0) await client.insert(data);
+```
 
 ### `createFieldValidator(prop, opts?)`
 
-Field-level validator with internal `Validator` caching. Returns `true` on success or the first error message string.
+Field-level validator with internal `Validator` caching. Returns `true` on success or the first error message string. The value is judged with the prop's `@normalize.*` applied, as a submit judges it (_since 0.1.165_); the value itself is not changed.
 
 ```typescript
 function createFieldValidator(
@@ -664,9 +675,11 @@ function createFieldValidator(
 ): (value: unknown, externalCtx?: { data: unknown; context: unknown; t?: UiT }) => true | string;
 ```
 
-`externalCtx.t` / `callOpts.t` (since 0.1.165) is the app's texts for
-`@ui.form.validate` rules: their `t` argument, and the language their messages
-are reported in ([Texts in the user's language](/forms/dynamic-fields#texts-in-the-users-language)).
+`externalCtx.t` / `callOpts.t` (since 0.1.165) is the app's texts: the `t`
+argument of `@ui.form.validate` rules, and the language every message is
+reported in ([Texts in the user's language](/forms/dynamic-fields#texts-in-the-users-language),
+[Validation messages in the browser](/guide/i18n#validation-messages-in-the-browser)).
+Without `t`, the active UI texts are used.
 `<AsForm>` passes its app's.
 
 ### `isContainerKind(kind)`
@@ -944,12 +957,15 @@ function invalidateValueHelpCache(client?: Client): void; // one client, or all 
 
 `resetMetaCache()` clears every shared search, and so does a backend action or delete run through `<AsTable>`. Call `invalidateValueHelpCache()` after writing a dictionary any other way when pickers must refetch immediately.
 
-### `resolveValueHelp(url)` / `resetValueHelpCache()`
+### `resolveValueHelp(url, options?)` / `resetValueHelpCache()`
 
-Globally caches resolved value-help endpoints by URL so multiple fields pointing at the same target share one `/meta` fetch.
+Globally caches resolved value-help endpoints by URL (and UI locale) so multiple fields pointing at the same target share one `/meta` fetch. `options.texts` (_since 0.1.165_) is the app's UI texts, as for [`getMetaEntry`](#meta-cache).
 
 ```typescript
-function resolveValueHelp(url: string): Promise<ResolvedValueHelp>;
+function resolveValueHelp(
+  url: string,
+  options?: { texts?: MetaEntryOptions["texts"] },
+): Promise<ResolvedValueHelp>;
 function resetValueHelpCache(): void;
 
 interface ResolvedValueHelp {
@@ -1147,7 +1163,7 @@ function str(value: unknown): string;
 
 ```typescript
 type ClientFactory = (url: string, options?: ClientFactoryOptions) => Client; // `Client` from `@atscript/db-client`
-type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore">; // since 0.1.153
+type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore"> & { locale?: string }; // since 0.1.153; `locale` since 0.1.165
 
 /** What `getDefaultClientFactory()` returns: generic like `Client` (since 0.1.164). */
 type TypedClientFactory = <T extends AtscriptClientShape = AtscriptClientShape>(
@@ -1169,15 +1185,35 @@ const products = getDefaultClientFactory()<typeof Product>("/api/db/tables/produ
 await products.insert({ name: "Lamp", price: 12 }); // typed against Product
 ```
 
-Spread the optional second argument into the `Client` options you build (_since 0.1.153_): the library passes `metaKey` for a table given [`metaKey`](#meta-cache), and `metaStore: false` during server rendering. A factory that ignores it still works, but loses those two behaviors.
+Spread the optional second argument into the `Client` options you build (_since 0.1.153_): the library passes `metaKey` for a table given [`metaKey`](#meta-cache), `metaStore: false` during server rendering, and _since 0.1.165_ the app's UI `locale` (when it has one), which the client sends as `Accept-Language` so `/meta`, action forms and error bodies come back in that language. A factory that ignores it still works, but loses those behaviors.
 
 ```typescript
 setDefaultClientFactory((url, options) => new Client(url, { ...options, fetch: appFetch }));
 ```
 
+A factory that hands back cached clients keeps one per URL **and locale** — a client answers in the locale it was created with:
+
+```typescript
+const clients = new Map<string, Client>();
+setDefaultClientFactory((url, options) => {
+  const key = `${url}#${options?.locale ?? ""}`;
+  let client = clients.get(key);
+  if (!client) clients.set(key, (client = new Client(url, { ...options, fetch: appFetch })));
+  return client;
+});
+```
+
+::: warning BREAKING
+Since 0.1.165 the library asks a factory for a client per URL **and locale**
+(`options.locale`). A factory that caches clients by URL alone hands the
+first locale's client to every locale: `/meta`, action forms and errors come
+back in the wrong language, and that language's texts are merged into the
+other locale. Key cached clients by URL and `options.locale`, as above.
+:::
+
 ## Meta cache
 
-A single `/meta` fetch per URL is cached across `useTable` instances and `resolveValueHelp` calls. `getMetaEntry` is synchronous — the promises on the entry resolve once the underlying fetch settles.
+A single `/meta` fetch per URL and UI locale is cached across `useTable` instances and `resolveValueHelp` calls. `getMetaEntry` is synchronous — the promises on the entry resolve once the underlying fetch settles.
 
 ```typescript
 function getMetaEntry(
@@ -1199,6 +1235,11 @@ function onMetaCacheReset(listener: () => void): () => void; // since 0.1.153
 
 interface MetaEntryOptions {
   metaKey?: string; // since 0.1.153 — `/meta` revalidation key, default the URL
+  /** Since 0.1.165 — the app's UI texts; default: the active ones. Components pass their app's. */
+  texts?: {
+    locale(): string | undefined;
+    merge(locale: string | undefined, served: unknown): void; // receives `/meta` `type.$i18n`
+  };
 }
 
 interface MetaCacheEntry {
@@ -1215,9 +1256,13 @@ interface MetaCacheEntry {
 - **`resetMetaCache()`** drops every entry, the value-help searches shared under them and — _since 0.1.151_, with `@atscript/db-client` ≥ 0.1.151 — the `/meta` each cached `Client` memoizes (`Client.invalidateMeta()`), so a `ClientFactory` that reuses `Client` instances refetches too. _Since 0.1.153_ it also clears the `@atscript/db-client` meta stores (the shared default one, and any custom `metaStore` your factory gave a cached client) and runs every `onMetaCacheReset` listener (the presets cache registers one). Components already mounted keep the entry they hold; remount them (e.g. navigate) to pick up the new `/meta`. Clients you use outside the cache (`client.meta()`, `client.action()` on a client you keep yourself) need their own `invalidateMeta()` call.
 - **Server rendering never caches** (_since 0.1.151_). Without a browser `window`, every `getMetaEntry` call builds a fresh entry, so one viewer's render never sees another's `/meta`, and _since 0.1.153_ the factory is asked for `metaStore: false` so no `/meta` body lands in a process-wide store. Your server-side `ClientFactory` must not hand one `Client` to several requests either — a `Client` memoizes its `/meta`. Never mutate the `meta` object an entry resolves to: in-process consumers may share it by reference.
 
+### One entry per UI locale
+
+_Since 0.1.165._ Each entry belongs to the locale of `options.texts` (in Vue, `useTable` and the value-help pass the app's texts from `provideAsLocale`; without `texts`, the active UI texts, see `setUiLocale`). Its client is created with that `locale`, so it asks `/meta` in it (`Accept-Language`); the texts `/meta` serves (`type.$i18n`: validator templates, built-in UI texts, translated expression texts) are merged into the app's texts for that locale once it arrives. After a locale switch, remounted views get the new locale's entry; switching back finds the previous one still cached. A server render passes the request's texts and gets a fresh, uncached entry as before; nothing is kept per locale in module state. On a server the process-wide texts (`setUiLocale`, the default without `texts`) never take served texts — one request's language must not reach the next.
+
 ### Size limit
 
-_Since 0.1.154._ The cache keeps the 100 most recently used URLs; a hit makes a URL the most recent, and older entries beyond the limit are dropped (their `type` / `TableDef`, shared per `ETag`, go with the last entry using them). An app that opens many parametric URLs (`/api/db/ticket-issue/${key}`) no longer grows the cache for the life of the tab. 100 covers a page's tables plus the dictionaries its filters and forms pick from, and the recent navigation history; revisiting a dropped URL costs one `/meta` request — a `304` when the db-client meta store still holds its body. Dropping entries never clears the shared default meta store; a custom `metaStore` your factory supplied is cleared once no cached entry uses it any more, since a reset would no longer reach it.
+_Since 0.1.154._ The cache keeps the 100 most recently used entries (one per URL and locale); a hit makes an entry the most recent, and older entries beyond the limit are dropped (their `type` / `TableDef`, shared per `ETag`, go with the last entry using them). An app that opens many parametric URLs (`/api/db/ticket-issue/${key}`) no longer grows the cache for the life of the tab. 100 covers a page's tables plus the dictionaries its filters and forms pick from, and the recent navigation history; revisiting a dropped URL costs one `/meta` request — a `304` when the db-client meta store still holds its body. Dropping entries never clears the shared default meta store; a custom `metaStore` your factory supplied is cleared once no cached entry uses it any more, since a reset would no longer reach it.
 
 ```typescript
 setMetaCacheMaxEntries(300); // keep more; `Infinity` = no limit, no argument = back to 100

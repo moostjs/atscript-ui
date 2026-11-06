@@ -1,5 +1,7 @@
 import { mount } from "@vue/test-utils";
 import { describe, expect, it } from "vitest";
+import { defineComponent, h, nextTick, ref } from "vue";
+import { provideAsLocale } from "@atscript/vue-form";
 import AsPasswordRules from "../components/as-password-rules.vue";
 
 type Policy = { rule: string; description?: string; errorMessage?: string };
@@ -109,5 +111,37 @@ describe("AsPasswordRules", () => {
     });
     expect(wrapper.find(".as-password-rules").exists()).toBe(false);
     expect(wrapper.find(".as-password-rules-list").exists()).toBe(false);
+  });
+
+  it("a rule's trailing `t` is its app's (provideAsLocale), not the last mounted app's", async () => {
+    const policies: Policy[] = [
+      { rule: "(p, data, ctx, entry, t) => t('Strong') === 'Stark'", description: "Strong" },
+    ];
+    const password = ref("x");
+    const german = mount(
+      defineComponent({
+        setup() {
+          provideAsLocale(
+            () => "de",
+            (id) => (id === "Strong" ? "Stark" : undefined),
+          );
+          return () => h(AsPasswordRules, baseProps({ policies, password: password.value }));
+        },
+      }),
+    );
+    // A second app on the page, in English, mounted later.
+    const english = mount(
+      defineComponent({
+        setup() {
+          provideAsLocale(() => "en");
+          return () => h("div");
+        },
+      }),
+    );
+    password.value = "xy";
+    await nextTick();
+    expect(german.find(".as-password-rules-row").attributes("data-passed")).toBe("true");
+    english.unmount();
+    german.unmount();
   });
 });

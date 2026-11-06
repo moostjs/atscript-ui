@@ -397,7 +397,7 @@ import { Client } from "@atscript/db-client";
 
 const clientFactory: ClientFactory = (url, options) =>
   new Client(url, {
-    ...options, // library-requested metaKey / metaStore (0.1.153)
+    ...options, // library-requested metaKey / metaStore (0.1.153), locale (0.1.165)
     fetch: (input, init) =>
       fetch(input, {
         ...init,

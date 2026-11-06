@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, ref, shallowRef } from "vue";
 import {
+  activateUiTexts,
+  createUiTexts,
   resetMetaCache,
   setDefaultClientFactory,
   resetDefaultClientFactory,
@@ -151,6 +153,25 @@ describe("hasValuePicker gating", () => {
 });
 
 describe("createDistinctPager", () => {
+  it("asks through the entry of the app's locale, not of the last mounted app", async () => {
+    const calls: unknown[][] = [];
+    const client = fakeClient(async () => [{ city: "A" }]);
+    setDefaultClientFactory((...args) => {
+      calls.push(args);
+      return client;
+    });
+    // a second app on the page, in English, activated after ours
+    const undo = activateUiTexts(createUiTexts({ locale: () => "en" }));
+    try {
+      const ours = createUiTexts({ locale: () => "de" });
+      const fetch = createDistinctPager({ tableDef: shallowRef({} as never) }, column(), ours);
+      await fetch("x", 1, 10);
+      expect(calls).toEqual([["/customers", { locale: "de" }]]);
+    } finally {
+      undo();
+    }
+  });
+
   function pager(col: ColumnDef, rows: Record<string, unknown>[] = [{ city: "A" }]) {
     const client = fakeClient(async () => rows);
     setDefaultClientFactory(() => client);

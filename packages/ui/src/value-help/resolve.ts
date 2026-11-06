@@ -3,7 +3,7 @@ import type {
   TAtscriptTypeFinal,
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
-import { getMetaEntry, resetMetaCache } from "../shared/meta-cache";
+import { getMetaEntry, resetMetaCache, type MetaEntryOptions } from "../shared/meta-cache";
 import { META_ID, UI_DICT_ATTR, UI_DICT_DESCR, UI_DICT_LABEL } from "../shared/annotation-keys";
 import type { MetaResponse } from "../table/types";
 
@@ -26,13 +26,20 @@ export interface ResolvedValueHelp {
 /**
  * Lazily fetch and extract value-help metadata for the given URL.
  *
- * - Issues exactly one `GET {url}/meta` per URL across the session (shared via meta-cache).
+ * - Issues exactly one `GET {url}/meta` per URL and UI locale across the
+ *   session (shared via meta-cache).
  * - Concurrent callers with the same URL share the in-flight promise.
  * - If the underlying fetch rejects, the cache entry is evicted so a later
  *   retry performs a fresh fetch.
+ *
+ * `options.texts` — the app's UI texts (see `getMetaEntry`); the active ones
+ * by default.
  */
-export function resolveValueHelp(url: string): Promise<ResolvedValueHelp> {
-  const entry = getMetaEntry(url);
+export function resolveValueHelp(
+  url: string,
+  options?: Pick<MetaEntryOptions, "texts">,
+): Promise<ResolvedValueHelp> {
+  const entry = getMetaEntry(url, undefined, options);
   if (entry.resolved) return entry.resolved;
   entry.resolved = Promise.all([entry.meta, entry.type]).then(([meta, type]) =>
     buildResolved(url, meta, type),

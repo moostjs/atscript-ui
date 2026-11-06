@@ -36,7 +36,12 @@ import type {
   TAsTableControls,
   TVueTableActionInfo,
 } from "../types";
-import { createTableState, provideTableContext, type QueryFn } from "./use-table-state";
+import {
+  createTableState,
+  provideTableContext,
+  type QueryFn,
+  type TableContext,
+} from "./use-table-state";
 import { useTableSelection, type SelectionPersistence } from "./use-table-selection";
 import { injectPresetsApp } from "./as-presets-app";
 import { useCellLocale } from "./use-cell-locale";
@@ -249,13 +254,15 @@ export function finalizeTableState(
     | "components"
     | "formTypes"
     | "formComponents"
-  >,
+  > &
+    Pick<TableContext, "locale">,
 ): void {
   useTableSelection(state, { mode: opts?.selectionPersistence ?? "trim" });
   if (opts?.provideContext === false) return;
   provideTableContext({
     state,
     client,
+    locale: opts?.locale,
     controls: opts?.controls ?? {},
     types: opts?.types,
     components: opts?.components,
@@ -270,12 +277,16 @@ export function finalizeTableState(
  * @param url — Table endpoint URL (e.g. "/db/tables/products")
  */
 export function useTable(url: string, opts?: UseTableOptions): ReactiveTableState {
-  const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey });
+  // The app's UI locale picks the entry (its client asks `/meta` in it) and
+  // receives the texts `/meta` serves for it.
+  const texts = useAsTexts();
+  const locale = texts.locale();
+  const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey, texts });
   // Mounted tables (and their filters' pickers) keep their entry in the cache.
   if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
   const { client } = entry;
   // Its labels in the app's UI locale (one TableDef per locale).
-  const defPromise = getMetaTableDef(entry, useAsTexts());
+  const defPromise = getMetaTableDef(entry, texts);
 
   // The zone the filters read dates in is the zone the cells render them in.
   const cellLocale = getCurrentInstance() ? useCellLocale() : undefined;
@@ -358,7 +369,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     },
   });
 
-  finalizeTableState(state, client as Client, opts);
+  finalizeTableState(state, client as Client, { ...opts, locale });
 
   defPromise
     .then((def) => {

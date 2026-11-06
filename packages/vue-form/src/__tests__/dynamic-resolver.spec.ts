@@ -202,6 +202,21 @@ describe("dynamic resolver – ui.form.fn.options", () => {
     expect(wrapper.text()).toContain("Red");
     expect(wrapper.text()).toContain("Blue");
   });
+
+  it("runs only with the field's scope (never once more with an empty one)", async () => {
+    // Reads nested context: with an empty scope (`context: {}`) it would throw.
+    const type = objectType({
+      color: stringProp({
+        "ui.type": "select",
+        [UI_FORM_FN_OPTIONS]: "(v, data, context) => context.palette.colors",
+      }),
+    });
+    const { wrapper } = mountForm(type, {
+      formContext: { palette: { colors: [{ value: "red", label: "Red" }] } },
+    });
+    await nextTick();
+    expect(wrapper.text()).toContain("Red");
+  });
 });
 
 describe("dynamic resolver – scope context", () => {

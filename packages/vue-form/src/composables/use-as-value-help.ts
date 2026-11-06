@@ -22,6 +22,7 @@ import {
   shallowRef,
   watch,
 } from "vue";
+import { useAsTexts } from "./use-as-locale";
 
 /** Vue inject key used by `AsForm` to publish a per-form `ClientFactory` override. */
 export const CLIENT_FACTORY_KEY: InjectionKey<ClientFactory> = Symbol("as-client-factory");
@@ -55,7 +56,9 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
   // Only applied when this is the first consumer for `info.url` — the shared
   // meta cache reuses an existing Client if one was already created.
   const injectedFactory = inject(CLIENT_FACTORY_KEY, null) ?? undefined;
-  const entry = getMetaEntry(info.url, injectedFactory);
+  // The app's texts pick the locale's entry and receive the texts `/meta` serves.
+  const texts = useAsTexts();
+  const entry = getMetaEntry(info.url, injectedFactory, { texts });
   // Held while mounted, so `kickoff`'s `resolveValueHelp` finds this entry (and its client).
   if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
   const vhClient = new ValueHelpClient(entry.client);
@@ -80,7 +83,7 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
 
   async function kickoff(): Promise<void> {
     if (kickoffPromise) return kickoffPromise;
-    kickoffPromise = resolveValueHelp(info.url)
+    kickoffPromise = resolveValueHelp(info.url, { texts })
       .then((r) => {
         resolved.value = r;
         status.value = "ready";

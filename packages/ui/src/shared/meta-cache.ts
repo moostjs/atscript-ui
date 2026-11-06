@@ -1,7 +1,11 @@
 import { clearMetaStore, defaultMetaStore, type Client, type MetaStore } from "@atscript/db-client";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType } from "@atscript/typescript/utils";
-import { getDefaultClientFactory, type ClientFactory } from "../client-factory";
+import {
+  getDefaultClientFactory,
+  type ClientFactory,
+  type ClientFactoryOptions,
+} from "../client-factory";
 import { createTableDef } from "../table/create-table-def";
 import type { MetaResponse, TableDef } from "../table/types";
 import type { ResolvedValueHelp } from "../value-help/resolve";
@@ -9,18 +13,26 @@ import { invalidateValueHelpCache } from "../value-help/value-help-client";
 import { getUiTexts, type UiTexts } from "../i18n/ui-texts";
 
 /**
- * Shared per-URL cache. A single entry holds the `Client` instance, the raw
- * `/meta` promise, the deserialized type, and lazily-populated derived shapes
- * (`ResolvedValueHelp` for value-help, `TableDef` for tables). Both
+ * Shared per-URL-and-locale cache. A single entry holds the `Client` instance,
+ * the raw `/meta` promise, the deserialized type, and lazily-populated derived
+ * shapes (`ResolvedValueHelp` for value-help, `TableDef` for tables). Both
  * `resolveValueHelp` and `useTable` route through it so a given URL triggers
- * at most one network round-trip and one `deserializeAnnotatedType`.
+ * at most one network round-trip and one `deserializeAnnotatedType` per UI
+ * locale.
+ *
+ * Each entry belongs to one UI locale (see {@link MetaEntryOptions.texts}):
+ * its client sends it as `Accept-Language`, so `/meta` comes back translated,
+ * and the texts it serves (`type.$i18n`) are merged into the app's UI texts
+ * for that locale. After a locale switch, remounted views get the new
+ * locale's entry; switching back finds the previous one still cached.
  *
  * Byte-identical `/meta` bodies (same `ETag`, e.g. one parametric controller
  * under different route params) also share the deserialized type and the
  * `TableDef` across URLs.
  *
  * The cache keeps the {@link setMetaCacheMaxEntries} most recently used
- * URLs; an entry held with {@link retainMetaEntry} is never evicted.
+ * entries (one per URL and locale); an entry held with {@link retainMetaEntry}
+ * is never evicted.
  *
  * `/meta` is projected per viewer, so the cache belongs to one identity
  * (`setMetaCacheIdentity`) and exists only in the browser: during server
@@ -46,6 +58,14 @@ export interface MetaEntryOptions {
    * URL, like the factory. Since 0.1.153.
    */
   metaKey?: string;
+  /**
+   * The app's UI texts (default: the active ones, see `setUiLocale`; the Vue
+   * components pass their app's). Their current locale picks the entry and is
+   * passed to the {@link ClientFactory} as `locale`; the texts `/meta` serves
+   * for it (`type.$i18n`) are merged into them. Pass them on a server render,
+   * where no app's texts are active. Since 0.1.165.
+   */
+  texts?: Pick<UiTexts, "locale" | "merge">;
 }
 
 /** What a `/meta` body deserializes to — shared by every URL serving the same bytes. */
@@ -57,7 +77,8 @@ interface Derived {
 
 /** Bookkeeping behind each handed-out entry (kept off the public shape). */
 interface Slot {
-  url: string;
+  /** The cache key: the URL, and the UI locale when there is one. */
+  key: string;
   derived: Promise<Derived>;
   /** Open {@link retainMetaEntry} holds. */
   holds: number;
@@ -67,6 +88,8 @@ interface Slot {
   store?: MetaStore;
   /** {@link getMetaTableDef} per UI locale. */
   tableDefs: Map<string, Promise<TableDef>>;
+  /** The UI texts the served `$i18n` was merged into (or is being merged into). */
+  mergedInto: WeakSet<object>;
 }
 
 /**
@@ -78,7 +101,7 @@ interface Slot {
  */
 const DEFAULT_MAX_ENTRIES = 100;
 let maxEntries = DEFAULT_MAX_ENTRIES;
-/** Per-URL entries, least recently used first. Browser only. */
+/** Entries by {@link cacheKey}, least recently used first. Browser only. */
 const cache = new Map<string, MetaCacheEntry>();
 const slots = new WeakMap<MetaCacheEntry, Slot>();
 /** Derived shapes per `ETag`, counted by the cached entries that use them. Browser only. */
@@ -89,35 +112,45 @@ const customStores = new Map<MetaStore, number>();
 let identity: string | null | undefined;
 const resetListeners = new Set<() => void>();
 
+/** The cache key of `url` in `locale`. */
+function cacheKey(url: string, locale: string | undefined): string {
+  return locale === undefined ? url : `${url}\n${locale}`;
+}
+
 /**
- * Get or create the cache entry for `url`. First caller's `factory` (and
- * `options.metaKey`) seeds the `Client`; subsequent callers reuse it. On
- * `meta` rejection, the entry is evicted so the next call retries. A hit
- * marks the URL most recently used; hold an entry you keep using with
- * {@link retainMetaEntry}. Without a browser `window` nothing is cached and
- * the client is asked for `metaStore: false`.
+ * Get or create the cache entry for `url` in the UI locale of
+ * `options.texts`. First caller's `factory` (and `options.metaKey`) seeds the
+ * `Client`; subsequent callers reuse it. On `meta` rejection, the entry is
+ * evicted so the next call retries. A hit marks the entry most recently used;
+ * hold an entry you keep using with {@link retainMetaEntry}. Without a browser
+ * `window` nothing is cached and the client is asked for `metaStore: false`.
  */
 export function getMetaEntry(
   url: string,
   factory?: ClientFactory,
   options?: MetaEntryOptions,
 ): MetaCacheEntry {
+  const texts = options?.texts ?? getUiTexts();
+  const locale = texts.locale();
+  const key = cacheKey(url, locale);
   const browser = typeof window !== "undefined";
-  const existing = browser ? cache.get(url) : undefined;
+  const existing = browser ? cache.get(key) : undefined;
   if (existing) {
-    touch(url, existing);
+    touch(key, existing);
+    mergeServedTexts(existing, texts, locale);
     return existing;
   }
 
+  const clientOptions: ClientFactoryOptions = {};
+  if (!browser) clientOptions.metaStore = false;
+  else if (options?.metaKey) clientOptions.metaKey = options.metaKey;
+  if (locale !== undefined) clientOptions.locale = locale;
   const f = factory ?? getDefaultClientFactory();
-  let client: Client;
-  if (!browser) client = f(url, { metaStore: false });
-  else if (options?.metaKey) client = f(url, { metaKey: options.metaKey });
-  else client = f(url);
+  const client = Object.keys(clientOptions).length > 0 ? f(url, clientOptions) : f(url);
 
   const meta = (client.meta() as Promise<MetaResponse>).catch((err) => {
     // A reset may have replaced the entry while this request was in flight.
-    if (cache.get(url) === entry) evict(url, entry);
+    if (cache.get(key) === entry) evict(key, entry);
     throw err;
   });
   const derived = meta.then((m) => derive(entry, client, m));
@@ -126,15 +159,32 @@ export function getMetaEntry(
   type.catch(() => {});
 
   const entry: MetaCacheEntry = { client, meta, type };
-  const slot: Slot = { url, derived, holds: 0, tableDefs: new Map() };
+  const slot: Slot = { key, derived, holds: 0, tableDefs: new Map(), mergedInto: new WeakSet() };
   slots.set(entry, slot);
   if (browser) {
     slot.store = customStoreOf(client);
     if (slot.store) customStores.set(slot.store, (customStores.get(slot.store) ?? 0) + 1);
-    cache.set(url, entry);
+    cache.set(key, entry);
     trim(entry);
   }
+  mergeServedTexts(entry, texts, locale);
   return entry;
+}
+
+/**
+ * Merges the texts `entry`'s `/meta` serves (`type.$i18n`) into `texts` for
+ * `locale` — once per entry and texts, when `/meta` arrives.
+ */
+function mergeServedTexts(
+  entry: MetaCacheEntry,
+  texts: Pick<UiTexts, "merge">,
+  locale: string | undefined,
+): void {
+  const slot = slots.get(entry)!;
+  if (slot.mergedInto.has(texts)) return;
+  slot.mergedInto.add(texts);
+  // A failed `/meta` reaches the callers through `entry.meta`.
+  entry.meta.then((m) => texts.merge(locale, m.type?.$i18n)).catch(() => {});
 }
 
 /**
@@ -155,17 +205,18 @@ export function retainMetaEntry(entry: MetaCacheEntry): () => void {
     released = true;
     slot.holds--;
     // In use until now: most recently used.
-    if (slot.holds === 0 && cache.get(slot.url) === entry) {
-      touch(slot.url, entry);
+    if (slot.holds === 0 && cache.get(slot.key) === entry) {
+      touch(slot.key, entry);
       trim();
     }
   };
 }
 
 /**
- * How many URLs the meta cache keeps (default `100`). Least recently used
- * entries beyond it are dropped — entries held with {@link retainMetaEntry}
- * (every mounted table and form value-help) never are, and may exceed it.
+ * How many entries (one per URL and UI locale) the meta cache keeps (default
+ * `100`). Least recently used entries beyond it are dropped — entries held
+ * with {@link retainMetaEntry} (every mounted table and form value-help)
+ * never are, and may exceed it.
  * At least `1`; `Infinity` turns the limit off; no argument restores the
  * default. Since 0.1.154.
  */
@@ -174,9 +225,9 @@ export function setMetaCacheMaxEntries(max?: number): void {
   trim();
 }
 
-function touch(url: string, entry: MetaCacheEntry): void {
-  cache.delete(url);
-  cache.set(url, entry);
+function touch(key: string, entry: MetaCacheEntry): void {
+  cache.delete(key);
+  cache.set(key, entry);
 }
 
 /**
@@ -185,8 +236,8 @@ function touch(url: string, entry: MetaCacheEntry): void {
  */
 function trim(spare?: MetaCacheEntry): void {
   if (cache.size <= maxEntries) return;
-  for (const [url, entry] of cache) {
-    if (entry !== spare && slots.get(entry)!.holds === 0) evict(url, entry);
+  for (const [key, entry] of cache) {
+    if (entry !== spare && slots.get(entry)!.holds === 0) evict(key, entry);
     if (cache.size <= maxEntries) return;
   }
 }
@@ -197,8 +248,8 @@ function trim(spare?: MetaCacheEntry): void {
  * `/meta` goes now — a factory that reuses clients per URL would otherwise
  * hand it to the next viewer.
  */
-function evict(url: string, entry: MetaCacheEntry): void {
-  cache.delete(url);
+function evict(key: string, entry: MetaCacheEntry): void {
+  cache.delete(key);
   // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
   entry.client.invalidateMeta?.();
   // Only a cached entry gets here, and a reset clears the counts with the cache.
@@ -255,7 +306,7 @@ export function getMetaTableDef(
 function derive(entry: MetaCacheEntry, client: Client, meta: MetaResponse): Derived {
   const slot = slots.get(entry)!;
   // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
-  const etag = cache.get(slot.url) === entry ? client.metaEtag?.() : undefined;
+  const etag = cache.get(slot.key) === entry ? client.metaEtag?.() : undefined;
   if (etag === undefined) return { type: deserializeAnnotatedType(meta.type) };
   let shared = derivedByEtag.get(etag);
   if (shared) shared.refs++;

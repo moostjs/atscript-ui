@@ -419,6 +419,7 @@ Inject the context provided by `AsTableRoot` (or `provideTableContext`).
 interface TableContext {
   state: ReactiveTableState;
   client: Client;
+  locale?: string; // since 0.1.165 — the UI locale `client` asks in; what it serves belongs to it
   controls: TAsTableControls;
   types?: TAsCellTypeComponents;
   components?: Record<string, Component>;

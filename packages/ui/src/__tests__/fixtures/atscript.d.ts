@@ -65,7 +65,7 @@ declare global {
     "db.column.searchable": boolean
     "db.column.version": boolean
     "db.column.version.exempt": boolean
-    "db.default": string
+    "db.default": string | number | boolean
     "db.default.increment": number | true
     "db.default.uuid": boolean
     "db.default.now": boolean

@@ -176,7 +176,11 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   clearErrors: () => void;
   /** Imperatively set external-error messages by path. */
   setErrors: (errors: Record<string, string>) => void;
-  /** Trigger submit. Emits `submit` on success and `error` on validation failure. */
+  /**
+   * Trigger submit. Applies the type's `@normalize.*` (trim, case) to the data,
+   * validates the result and emits it with `submit` on success, `error` on
+   * validation failure. The form data itself is left as typed.
+   */
   onSubmit: () => void;
   /** Resolved submit-button text (`@ui.form.submit.text` / fn variant). */
   submitText: ComputedRef<string>;
@@ -283,6 +287,9 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   const formValidator = computed(() =>
     getFormValidator(options.def(), { errorLimit: Number.MAX_SAFE_INTEGER }),
   );
+  // The data a submit validates and emits: the domain data with the type's
+  // `@normalize.*` applied (set by `onSubmit`, the only caller of `submit()`).
+  let submitting: Record<string, unknown> = {};
 
   // ── Form state composable (also publishes FORM_STATE_KEY etc.) ──
   const {
@@ -300,7 +307,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     // RAW data — same values, without a proxy hop on every leaf read.
     submitValidator: () =>
       formValidator.value({
-        data: domainData() as Record<string, unknown>,
+        data: submitting,
         context: (formContext.value ?? {}) as Record<string, unknown>,
         t,
       }),
@@ -551,12 +558,16 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // ── Submit ────────────────────────────────────────────────
   function onSubmit() {
     rootErrorDismissed.value = false;
+    // `@normalize.*` (trim, case) applies to what is validated and submitted,
+    // as on the server; the form keeps showing what the user typed.
+    const data = formValidator.value.normalize(domainData());
+    submitting = data as Record<string, unknown>;
     const result = submit();
     if (result === true) {
       internalErrors.value = {};
       // Related rows of navigation fields the form leaves out (loaded with
       // `$with`, never rendered or validated) are not submitted.
-      options.emits?.submit?.(omitSkippedNavFields(options.def(), domainData()));
+      options.emits?.submit?.(omitSkippedNavFields(options.def(), data));
     } else {
       const errs: Record<string, string> = {};
       for (const e of result) errs[e.path] = e.message;

@@ -220,6 +220,8 @@ export function mockTableDef(columns: ColumnDef[], fetchableExtra: string[] = []
 }
 
 type MountTableStateOptions = {
+  /** The UI locale the context's client asks in (`TableContext.locale`). */
+  locale?: string;
   data?: Record<string, unknown>[];
   count?: number;
   pages?: ReturnType<typeof vi.fn>;
@@ -310,7 +312,12 @@ function mountWith(
         state = s;
         initFn(internals, s);
         if (!render) return () => h("div");
-        provideTableContext({ state, client: opts.client ?? client, controls: {} });
+        provideTableContext({
+          state,
+          client: opts.client ?? client,
+          locale: opts.locale,
+          controls: {},
+        });
         return () => render() as ReturnType<typeof h>;
       },
     }),

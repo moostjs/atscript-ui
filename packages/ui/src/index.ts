@@ -158,7 +158,11 @@ export {
   getDefaultValidatorPlugins,
   isContainerKind,
 } from "./form/validate";
-export type { TFormValidatorCallOptions, TFieldValidatorOptions } from "./form/validate";
+export type {
+  FormValidator,
+  TFormValidatorCallOptions,
+  TFieldValidatorOptions,
+} from "./form/validate";
 
 // ── Form diff engine (framework-agnostic) ───────────────────
 export { buildFormDiff, deepEqual } from "./form/diff";

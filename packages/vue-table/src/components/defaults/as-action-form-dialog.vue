@@ -24,8 +24,10 @@ import { formatIdentifier } from "@atscript/db-client";
 import { useTableContext } from "../../composables/use-table-state";
 import { intentToScope, rowsLabel } from "../../composables/state/intent-scope";
 
-const { state, client, formTypes, formComponents } = useTableContext();
-const { t } = useAsTexts();
+// `locale`: the one the table's client asks in — what it serves belongs to it.
+const { state, client, locale: clientLocale, formTypes, formComponents } = useTableContext();
+const texts = useAsTexts();
+const { t } = texts;
 
 const req = state.actionFormRequest;
 const open = computed({
@@ -91,6 +93,13 @@ watch(
         error.value = `Form schema "${next.action.inputForm}" not registered on server.`;
         return;
       }
+      // The form's own served texts (translated expression literals), in the
+      // client's locale. Optional: a missing or failing lookup never blocks the form.
+      const served = await client.getActionFormTexts?.(next.action.name).catch(() => undefined);
+      if (stale()) return;
+      // Merged only while the app still shows that locale (a switch without a
+      // remount keeps the table's client on the old one).
+      if (clientLocale === texts.locale()) texts.merge(clientLocale, served);
       def.value = createFormDef(annotated);
       formData.value = createFormData(annotated) as { value: Record<string, unknown> };
     } catch (err) {

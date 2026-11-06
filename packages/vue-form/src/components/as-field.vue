@@ -565,11 +565,11 @@ if (props.field.allStatic) {
     getFieldMeta(prop, UI_FORM_STYLES),
   );
 
-  options = maybeComputed(
-    hasFn.has("options"),
-    () => resolveOptions(prop, fs.value, props.field.labelsFrom, t),
-    resolveOptions(prop, emptyScope, props.field.labelsFrom, t),
-  );
+  // Not `maybeComputed`: its static argument would run `fn.options` once more
+  // with an empty scope.
+  options = hasFn.has("options")
+    ? computed(() => resolveOptions(prop, fs.value, props.field.labelsFrom, t))
+    : resolveOptions(prop, emptyScope, props.field.labelsFrom, t);
 
   const hasFnAttr = hasFn.has("attr");
   attrs = hasFnAttr
