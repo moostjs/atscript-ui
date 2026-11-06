@@ -12,8 +12,7 @@ plug in your own design system.
 
 ## The default type map
 
-`createDefaultTypes()` is a six-line factory
-(`packages/vue-form/src/composables/create-default-types.ts`) that
+[`createDefaultTypes()`](/api/vue-form#createdefaulttypes) is a small factory that
 returns a fresh map of every built-in type to a Tier-2 default
 component:
 
@@ -181,8 +180,7 @@ array is a compile error (and ignored at runtime).
 
 ## Component resolution
 
-When `<AsField>` mounts it picks a component in this order
-(`packages/vue-form/src/components/as-field.vue:373-386`):
+When `<AsField>` mounts it picks a component in this order:
 
 ```text
 1. @ui.form.component  →  components[name]

@@ -1,7 +1,14 @@
 import { ref, shallowReactive, shallowRef } from "vue";
 import type { ShallowRef } from "vue";
 import type { FilterExpr } from "@uniqu/core";
-import type { ColumnDef, MetaEntryOptions, TableDef, UiT, ValueHelpInfo } from "@atscript/ui";
+import type {
+  ClientFactory,
+  ColumnDef,
+  MetaEntryOptions,
+  TableDef,
+  UiT,
+  ValueHelpInfo,
+} from "@atscript/ui";
 import { stableValueKey } from "@atscript/ui-table";
 import {
   NUMERIC_VALUE_KINDS,
@@ -105,13 +112,16 @@ export function declineIfRejected(host: PickerHost, info: ValueHelpInfo, err: un
  * on a sortable column; otherwise the first `size` values are the whole list — search
  * narrows it. A 4xx rejects: the picker shows the error. An unsearched first page is
  * reused for a short while, so reopening a picker (or its dialog) does not re-ask.
- * `texts` — the app's UI texts (`useAsTexts()`): the values are asked in its
- * locale, through that locale's `/meta` entry and client.
+ * `opts.texts` — the app's UI texts (`useAsTexts()`): each request is asked in
+ * their current locale, through that locale's `/meta` entry — the table's own
+ * entry while the locale is the one the table mounted in. `opts.clientFactory`
+ * — the table's (`TableContext.clientFactory`), so an entry this creates (after
+ * a locale switch) is built the way the table's is.
  */
 export function createDistinctPager(
   host: PickerHost,
   column: ColumnDef,
-  texts?: MetaEntryOptions["texts"],
+  opts?: { texts?: MetaEntryOptions["texts"]; clientFactory?: ClientFactory },
 ) {
   const { url, field } = column.distinct!;
   const numeric = column.valueKind !== undefined && NUMERIC_VALUE_KINDS.has(column.valueKind);
@@ -128,14 +138,18 @@ export function createDistinctPager(
     // The table's forced scope narrows the values like it narrows the rows.
     const scope = host?.forceFilters?.value;
     const load = () =>
-      fetchDistinctValues(getMetaEntry(url, undefined, { texts }).client, field, {
-        text,
-        limit: size,
-        skip,
-        sortable: paged,
-        numeric,
-        filter: scope,
-      });
+      fetchDistinctValues(
+        getMetaEntry(url, opts?.clientFactory, { texts: opts?.texts }).client,
+        field,
+        {
+          text,
+          limit: size,
+          skip,
+          sortable: paged,
+          numeric,
+          filter: scope,
+        },
+      );
 
     let result: { items: unknown[]; hasMore: boolean };
     if (empty) {

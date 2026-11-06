@@ -168,15 +168,19 @@ export function usePresets(opts: UsePresetsOptions): UsePresetsReturn {
   // could show the previous user's presets.
   const cached = isPresetsCacheActive();
   const cacheKey = presetsCacheKey(opts.url, app, opts.tableKey);
+  // The app's UI locale, like the table's: the server answers (errors,
+  // preflight messages) in it. A new locale applies to what mounts next.
+  const texts = useAsTexts();
+  const { t } = texts;
+  const locale = texts.locale();
   const client = new PresetsClient({
     url: opts.url,
     app,
     tableKey: opts.tableKey,
-    client: cached ? sharedPresetsClient(opts.url, opts.clientFactory) : undefined,
+    client: cached ? sharedPresetsClient(opts.url, opts.clientFactory, locale) : undefined,
     clientFactory: opts.clientFactory,
+    locale,
   });
-
-  const { t } = useAsTexts();
   const systemPresetsResolved = computed(() => resolveSystemPresets(opts.systemPresets, t));
 
   const presets = shallowRef<AsPresetEntryRow[]>([]);

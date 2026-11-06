@@ -16,7 +16,7 @@ Install matrix, end-to-end hello flow, atscript config, minimal client mount.
 | Scenario                                              | Packages                                                                                                                                                     |
 | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Client only** (forms-only flows, separate backend)  | `vue`, `@atscript/core`, `@atscript/typescript`, `@atscript/ui`, `@atscript/vue-form`, `@atscript/vue-wf`                                                    |
-| **Server only** (HTTP service, no Vue)                | `moost`, `@moostjs/event-http`, `@moostjs/event-wf`, `@prostojs/wf`, `@atscript/core`, `@atscript/typescript`, `@atscript/moost-wf`                          |
+| **Server only** (HTTP service, no Vue)                | `moost`, `@moostjs/event-http`, `@moostjs/event-wf`, `@atscript/core`, `@atscript/typescript`, `@atscript/moost-wf`                                          |
 | **Server + persistence** (multi-tenant durable state) | add `@atscript/db` and one adapter (`@atscript/db-sqlite` / `@atscript/db-postgres` / `@atscript/db-mysql` / `@atscript/db-mongo`) — see `atscript-db` skill |
 | **Both ends**                                         | union of the above                                                                                                                                           |
 
@@ -25,7 +25,7 @@ Install matrix, end-to-end hello flow, atscript config, minimal client mount.
 pnpm add @atscript/core @atscript/typescript @atscript/ui @atscript/vue-form @atscript/vue-wf vue
 
 # Server (HTTP trigger)
-pnpm add moost @moostjs/event-http @moostjs/event-wf @prostojs/wf @atscript/moost-wf
+pnpm add moost @moostjs/event-http @moostjs/event-wf @atscript/moost-wf
 pnpm add -D @atscript/core @atscript/typescript unplugin-atscript
 
 # Optional: persistence

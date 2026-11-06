@@ -35,7 +35,7 @@ npx skills add moostjs/atscript-db      # sibling — needed only if persisting 
 pnpm add @atscript/core @atscript/typescript @atscript/ui @atscript/vue-form @atscript/vue-wf vue
 
 # Server
-pnpm add @atscript/moost-wf moost @moostjs/event-http @moostjs/event-wf @prostojs/wf
+pnpm add @atscript/moost-wf moost @moostjs/event-http @moostjs/event-wf
 pnpm add @atscript/db @atscript/db-sqlite        # only if persisting via AsWfStore
 ```
 

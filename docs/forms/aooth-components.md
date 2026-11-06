@@ -47,8 +47,6 @@ Multi-consent checkbox group with per-item required validation and inline
 markdown links. The bound value is `string[]`; checked ids are committed
 in insertion order.
 
-Source: `packages/vue-aooth/src/components/as-consent-array.vue`.
-
 ```ts
 interface AsConsentArrayItem {
   id: string;
@@ -82,8 +80,6 @@ The full server-driven flow lives in the API reference at
 Display-only readout of password-policy fulfilment. Pair it with a sibling
 password field; the component re-evaluates on every keystroke and toggles each
 row's met / unmet state via `data-passed="true" | "false"`.
-
-Source: `packages/vue-aooth/src/components/as-password-rules.vue`.
 
 ```ts
 interface AsPasswordRulesPolicy {
@@ -125,8 +121,6 @@ TOTP enrolment — for `otpauth://` URIs it also surfaces the `?secret=` query
 param as a manual-entry fallback so users on devices that can't scan can type
 the secret in by hand.
 
-Source: `packages/vue-aooth/src/components/as-qr-code.vue`.
-
 ```ts
 interface AsQrCodeProps extends TAsComponentProps<string | undefined> {
   size?: number; // SVG width in px, default 192
@@ -164,8 +158,6 @@ Copy button. Click writes through `navigator.clipboard.writeText` and swaps the
 button label to "Copied" for ~1.5 s; focusing the input selects the full value
 for fallback Ctrl+C / Cmd+C copy.
 
-Source: `packages/vue-aooth/src/components/as-copy.vue`.
-
 ```ts
 interface AsCopyProps extends TAsComponentProps<string | undefined> {
   copyLabel?: string; // default: the UI text UI_AOOTH_COPY ("Copy")
@@ -197,8 +189,6 @@ divider as compact chips. Each button is a **one-click action**: clicking
 selects the provider id _and_ fires the form action in a single click — there
 is no separate submit button. The bound value is the selected provider id
 (`string | undefined`).
-
-Source: `packages/vue-aooth/src/components/as-sso-providers.vue`.
 
 ```ts
 interface AsSsoProvider {
@@ -292,8 +282,7 @@ use `(data, ctx)`. See [Dynamic Fields](/forms/dynamic-fields#scope-passed-to-ev
 When the value should land in the bound data slot (typed columns, downstream
 serialization), use a **data field** with `@meta.readonly` + `@ui.form.fn.value`
 instead. `AsField` resolves the function and writes the result into the bound
-path through a watcher (see `packages/vue-form/src/components/as-field.vue`,
-the "Readonly watcher" block around the `phantomValue` setup). Phantom is the
+path through a watcher. Phantom is the
 cleaner shape whenever the value is display-only.
 
 ## Cross-links

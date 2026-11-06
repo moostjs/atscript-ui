@@ -162,4 +162,28 @@ describe("resolveValueHelp", () => {
     expect(metaSpy).toHaveBeenCalledTimes(2);
     expect(retried.labelField).toBe("name");
   });
+
+  // Why: a host with its own factory (a form's or table's `clientFactory`)
+  // resolving in a locale nothing created an entry for yet got a client from
+  // the app-wide default instead — another transport, another auth.
+  it("builds a new entry with the caller's clientFactory, in the caller's locale", async () => {
+    const serialized = await buildSerialized();
+    const fallback = makeFactory(async () => buildMetaResponse(serialized));
+    setDefaultClientFactory(fallback.factory);
+    const own = makeFactory(async () => buildMetaResponse(serialized));
+    const calls: unknown[][] = [];
+    const clientFactory: ClientFactory = (...args) => {
+      calls.push(args);
+      return own.factory(...args);
+    };
+
+    await resolveValueHelp("/authors", {
+      clientFactory,
+      texts: { locale: () => "de", merge: () => {} },
+    });
+
+    expect(calls).toEqual([["/authors", { locale: "de" }]]);
+    expect(own.metaSpy).toHaveBeenCalledTimes(1);
+    expect(fallback.metaSpy).not.toHaveBeenCalled();
+  });
 });

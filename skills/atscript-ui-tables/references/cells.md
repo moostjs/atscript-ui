@@ -62,11 +62,11 @@ defineProps<{
 
 ### AsTableCellValue
 
-`components/defaults/as-table-cell-value.vue`. Passthrough via `formatCellValue(getCellValue(row, column.path), column.type)`. Adds `as-cell-number` class for numeric columns so the alignment shortcut applies.
+Passthrough via `formatCellValue(getCellValue(row, column.path), column.type)`. Adds `as-cell-number` class for numeric columns so the alignment shortcut applies.
 
 ### AsCellNumber
 
-`components/defaults/as-cell-number.vue`. Locale-aware decimal formatter. Reads:
+Locale-aware decimal formatter. Reads:
 
 | Source                  | Annotation                                | Field on `ColumnDef`        |
 | ----------------------- | ----------------------------------------- | --------------------------- |
@@ -80,7 +80,7 @@ Money branch wins over precision (CLDR currency fraction digits beat static conf
 
 ### AsCellDate
 
-`components/defaults/as-cell-date.vue`. Three sub-modes based on `column.type`:
+Three sub-modes based on `column.type`:
 
 - `date` → `{ year: "numeric", month: "short", day: "2-digit" }`
 - `datetime` → adds `{ hour: "2-digit", minute: "2-digit" }`
@@ -88,11 +88,11 @@ Money branch wins over precision (CLDR currency fraction digits beat static conf
 
 Reads timezone from `useCellLocale().timezone` (omitted → browser default). `title` attribute always carries the canonical ISO string for e2e tests.
 
-Renders blank for null-like values (`null` / `undefined` / `""` / unparseable) **and** for the Unix epoch sentinel — any value whose timestamp is exactly `0` (`t !== 0` guard in `as-cell-date.vue`). A backend that stores "no date" as epoch 0 gets an empty cell, not `Jan 01, 1970`.
+Renders blank for null-like values (`null` / `undefined` / `""` / unparseable) **and** for the Unix epoch sentinel — any value whose timestamp is exactly `0`. A backend that stores "no date" as epoch 0 gets an empty cell, not `Jan 01, 1970`.
 
 ### AsCellArray
 
-`components/defaults/as-cell-array.vue`. Branches on element type:
+Branches on element type:
 
 - Empty array → empty cell.
 - All primitive elements → chip list `<span class="as-cell-chips">`.
@@ -100,15 +100,15 @@ Renders blank for null-like values (`null` / `undefined` / `""` / unparseable) *
 
 ### AsCellJson
 
-`components/defaults/as-cell-json.vue`. Object → JSON tree popover via `<AsCellJsonPopover>`. Non-object values render empty (use `AsTableCellValue` for those).
+Object → JSON tree popover via `<AsCellJsonPopover>`. Non-object values render empty (use `AsTableCellValue` for those).
 
 ### AsCellUnion
 
-`components/defaults/as-cell-union.vue`. Per-row dispatcher: inspects `getCellValue(row, column.path)`, picks one of `array-chips` / `array-json` / `array-empty` / `object` / `primitive`, and renders the matching sub-component. Use for fields whose `.as` type is a union of disparate shapes.
+Per-row dispatcher: inspects `getCellValue(row, column.path)`, picks one of `array-chips` / `array-json` / `array-empty` / `object` / `primitive`, and renders the matching sub-component. Use for fields whose `.as` type is a union of disparate shapes.
 
 ### AsRowActions
 
-`components/defaults/as-row-actions.vue`. Renders either:
+Renders either:
 
 - 0 actions → empty `<td>` (placeholder for `table-layout: fixed`).
 - 1 action → single labelled / icon button.

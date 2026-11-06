@@ -168,8 +168,26 @@ const activated: UiTexts[] = [];
  * ```
  */
 export function setUiLocale(locale: string | undefined, translate?: UiTranslate): void {
+  const changed = locale !== globalLocale;
   globalLocale = locale;
   globalTranslate = translate;
+  if (changed) for (const listener of localeListeners) listener();
+}
+
+const localeListeners = new Set<() => void>();
+
+/**
+ * Runs `listener` whenever `setUiLocale` changes the browser-global locale
+ * (it is not reactive); returns the unsubscribe. For views that follow a
+ * locale switch without a remount.
+ *
+ * @internal Shared with the `@atscript/vue-*` packages.
+ */
+export function onUiLocaleChange(listener: () => void): () => void {
+  localeListeners.add(listener);
+  return () => {
+    localeListeners.delete(listener);
+  };
 }
 
 /**

@@ -20,7 +20,17 @@ fieldName: ui.action
 
 ## Listen with `@action`
 
-`<AsForm>` emits `action` with the id and the current form data:
+`<AsForm>` emits `action` with the id and the data a submit would send:
+normalized (`@normalize.*` applied) and without the navigation fields the form
+leaves out — but **not validated**: an action is not a submit, so it fires
+whatever the user has typed so far
+([Normalized before validation](/forms/validation#normalized-before-validation)).
+The form itself keeps what the user typed.
+
+::: warning BREAKING
+Since 0.1.168 `action` and `unsupported-action` carry this normalized data;
+before, they carried the raw form value.
+:::
 
 ```vue
 <script setup lang="ts">
@@ -46,8 +56,26 @@ function onSubmit(data: unknown) {
 ```
 
 The `action` event signature is `(name: string, data: TFormData) => void` —
-see `useAsForm`'s emits contract in
-`packages/vue-form/src/composables/use-as-form.ts`.
+see [`AsForm`](/api/vue-form#asform) emits.
+
+## Fire an action from the host
+
+_Since 0.1.168._ A template ref to `<AsForm>` exposes `action(name)`: it fires
+a form action as its button would — `action` (or `unsupported-action` for an
+id the form doesn't declare) is emitted with the same normalized data.
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+
+const form = ref<{ action: (name: string) => void }>();
+</script>
+
+<template>
+  <AsForm ref="form" :def="def" :form-data="formData" :types="types" @action="onAction" />
+  <button type="button" @click="form?.action('save-draft')">Save draft</button>
+</template>
+```
 
 ## Multi-action form
 

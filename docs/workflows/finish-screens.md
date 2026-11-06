@@ -366,9 +366,8 @@ for the broader shortcut tree.
 
 ## Reference
 
-- Types and helpers: `packages/moost-wf/src/wf-finished.ts`
-- Default component: `packages/vue-wf/src/components/defaults/as-wf-finish.vue`
-- Client wiring: `packages/vue-wf/src/components/as-wf-form.vue`
+- Types and helpers: [finish-screen envelope](/api/moost-wf#finish-screen-envelope) (`@atscript/moost-wf`)
+- Default component and client wiring: [`AsWfForm`](/api/vue-wf#component-—-aswfform) (`@atscript/vue-wf`)
 
 ## Where to go next
 

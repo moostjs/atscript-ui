@@ -353,6 +353,7 @@ function createLocalState(): ReactiveTableState {
     components: props.components,
     formTypes: props.formTypes,
     formComponents: props.formComponents,
+    clientFactory: props.clientFactory,
   });
   watch(
     () => props.rows,

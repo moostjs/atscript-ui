@@ -17,3 +17,14 @@ export interface DataActionForm {
     @wf.action.withData 'saveDraft'
     saveAction: ui.action
 }
+
+@meta.label 'Normalized Draft Form'
+export interface NormalizedDraftForm {
+    @meta.label 'Username'
+    @normalize.trim
+    username: string
+
+    @meta.label 'Save Draft'
+    @wf.action.withData 'saveDraft'
+    saveAction: ui.action
+}

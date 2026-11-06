@@ -105,8 +105,8 @@ That is the entire form. Twelve lines of Vue, including imports.
 **`createAsFormDef(BasicForm)`** parses the imported type's runtime
 metadata into a `FormDef` (the framework-agnostic shape from
 `@atscript/ui`) and creates a reactive `formData` container with all
-declared defaults already applied. The implementation is six lines —
-see `packages/vue-form/src/composables/create-as-form-def.ts`.
+declared defaults already applied — see
+[`createAsFormDef`](/api/vue-form#createasformdef-type-context-opts).
 
 The returned `formData` is **wrapped**: `{ value: domainData }`. This
 wrapping lets `getByPath`/`setByPath` treat the root the same way as
@@ -151,10 +151,9 @@ manually-wrapped `ref({ value: { ... } })`). That keeps the wrapper
 invariant intact and ensures declared defaults are in place at first
 render.
 
-The full prop surface is in
-`packages/vue-form/src/components/as-form.vue` (e.g. `errors`,
-`firstValidation`, `loading`, `hideRootTitle`, `clientFactory`,
-`components`).
+The full prop surface is in the [`AsForm` reference](/api/vue-form#asform)
+(e.g. `errors`, `firstValidation`, `loading`, `hideRootTitle`,
+`clientFactory`, `components`).
 
 ## Submit flow
 
@@ -183,8 +182,8 @@ automatically. Add custom rules with `@ui.form.validate`; see
 [Validation](/forms/validation).
 
 ::: info Where state lives
-`<AsForm>` calls `useAsForm()` under the hood
-(`packages/vue-form/src/composables/use-as-form.ts`). It owns the
+`<AsForm>` calls [`useAsForm()`](/api/vue-form#useasform-options) under the
+hood. It owns the
 data container, validator, external-error dismissal, action dispatch
 and change-merging logic. You can call `useAsForm()` directly from a
 custom form root if you need a non-standard chrome.

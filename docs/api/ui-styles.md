@@ -294,7 +294,7 @@ export default {
 };
 ```
 
-`AsResolver()` returns a `ComponentResolverObject` that auto-imports the **Tier 1 primary components** — `AsField`, `AsFilters`, `AsForm`, `AsIterator`, `AsPresetPicker`, `AsTable`, `AsTableActions`, `AsTableRoot`, `AsWfForm`, `AsWindowTable` — on first use in a template. (Authoritative source: `primaryComponents` in `packages/ui-styles/src/generated/component-classes.ts`.)
+`AsResolver()` returns a `ComponentResolverObject` that auto-imports the **Tier 1 primary components** — `AsField`, `AsFilters`, `AsForm`, `AsIterator`, `AsPresetPicker`, `AsTable`, `AsTableActions`, `AsTableRoot`, `AsWfForm`, `AsWindowTable` — on first use in a template.
 
 Tier-2 defaults (`AsInput`, `AsFilterDialog`, …) are not auto-resolved — users import them explicitly when composing custom defaults. Composables (`useTable`, …) are never handled by `unplugin-vue-components`.
 

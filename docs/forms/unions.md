@@ -87,7 +87,7 @@ make one variant's email property optional.
 ## Switching variants
 
 Picking a different variant calls `changeVariant(newIndex)` on
-`useAsUnion` (`packages/vue-form/src/composables/use-as-union.ts`).
+[`useAsUnion`](/api/vue-form#useasunion-props).
 The composable:
 
 1. **Stashes** the current variant's data into an in-memory map keyed
@@ -186,7 +186,7 @@ const components = { "contact-card": ContactCard };
 
 Wrap with `<AsFieldShell>` — `useAsUnion` does **not** itself provide
 the union context that `AsFieldShell` would inject; only the default
-`as-union.vue` does. That means the shell will render label /
+`AsUnion` component does. That means the shell will render label /
 description / error / required marker but **not** paint its own
 variant picker on top of yours.
 

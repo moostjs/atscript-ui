@@ -227,8 +227,7 @@ When the resolved value should land in the bound data slot — because a
 downstream column, audit log, or schema expects it — use a data field
 with `@meta.readonly` + `@ui.form.fn.value` instead of a phantom one.
 `AsField` resolves the function and writes the result into the bound
-path through a watcher (see the "Readonly watcher" block in
-`packages/vue-form/src/components/as-field.vue`). Phantom is the
+path through a watcher. Phantom is the
 cleaner shape whenever the value is purely display.
 
 ## What stays server-side

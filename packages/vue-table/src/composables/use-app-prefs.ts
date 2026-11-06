@@ -4,7 +4,8 @@ import {
   type AsPresetEntryRow,
   isUnavailableError,
 } from "@atscript/ui-table";
-import { type ClientFactory } from "@atscript/ui";
+import { getUiTexts, type ClientFactory, type UiTexts } from "@atscript/ui";
+import { injectAsTexts } from "@atscript/vue-form/locale";
 import { type EventBusKey, StorageSerializers, useEventBus, useStorage } from "@vueuse/core";
 import {
   type ComputedRef,
@@ -86,6 +87,11 @@ interface AppPrefsInstance {
   cacheEnabled: boolean;
   public: UseAppPrefsReturn;
   dispose: () => void;
+  /**
+   * Binds the instance to its app's texts: the first caller below a
+   * `provideAsLocale`. Permanent — the instance is a singleton per (app, url).
+   */
+  bindTexts: (texts: UiTexts) => void;
 }
 
 // Singleton registry keyed by `${app}|${url}`. Prevents N parallel
@@ -116,19 +122,23 @@ function instanceKey(app: string, url: string): string {
 export function useAppPrefs(opts: UseAppPrefsOptions): UseAppPrefsReturn {
   const app = injectPresetsApp(opts.app);
   const key = instanceKey(app, opts.url);
-  const existing = REGISTRY.get(key);
-  if (existing) {
+  let instance = REGISTRY.get(key);
+  if (instance) {
     const requested = opts.cache !== false;
-    if (requested !== existing.cacheEnabled) {
+    if (requested !== instance.cacheEnabled) {
       // eslint-disable-next-line no-console
       console.warn(
-        `[vue-table] useAppPrefs("${app}", "${opts.url}"): cache=${requested} ignored — first caller registered cache=${existing.cacheEnabled}.`,
+        `[vue-table] useAppPrefs("${app}", "${opts.url}"): cache=${requested} ignored — first caller registered cache=${instance.cacheEnabled}.`,
       );
     }
-    return existing.public;
+  } else {
+    instance = createInstance(app, opts);
+    REGISTRY.set(key, instance);
   }
-  const instance = createInstance(app, opts);
-  REGISTRY.set(key, instance);
+  // Browser only: on a server the registry outlives the request, and binding
+  // would keep that request's texts (and its locale) for the process.
+  const ownTexts = typeof window !== "undefined" ? injectAsTexts() : null;
+  if (ownTexts) instance.bindTexts(ownTexts);
   return instance.public;
 }
 
@@ -147,10 +157,17 @@ function createInstance(app: string, opts: UseAppPrefsOptions): AppPrefsInstance
   const scope = effectScope(true);
   return scope.run((): AppPrefsInstance => {
     const cacheEnabled = opts.cache !== false;
+    // The app's texts, once a caller below its `provideAsLocale` binds them
+    // (the first caller is often the root that provides them); until then the
+    // active ones.
+    let texts: UiTexts | undefined;
     const client = new AppPrefsClient({
       url: opts.url,
       app,
       clientFactory: opts.clientFactory,
+      // The singleton outlives every view: each request asks in its app's
+      // UI locale of the moment.
+      locale: () => (texts ?? getUiTexts()).locale(),
     });
 
     const cacheKey = `${CACHE_PREFIX}:${app}`;
@@ -298,6 +315,9 @@ function createInstance(app: string, opts: UseAppPrefsOptions): AppPrefsInstance
       dispose() {
         channel?.close();
         scope.stop();
+      },
+      bindTexts(own) {
+        texts ??= own;
       },
     };
   })!;

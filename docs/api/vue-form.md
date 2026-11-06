@@ -46,14 +46,14 @@ interface AsFormProps {
 }
 ```
 
-**Expose** (template ref): alongside the form's own controls, the instance carries error control — `clearErrors()`, `setErrors(errors)` (see [External errors](/forms/validation#external-errors)) — and the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
+**Expose** (template ref): alongside the form's own controls, the instance carries error control — `clearErrors()`, `setErrors(errors)` (see [External errors](/forms/validation#external-errors)) — `action(name)` (fires a form action as its button would — emits `action` / `unsupported-action` with the normalized data; since 0.1.168) and the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
 
 **Emits**:
 
 - `submit(data)` — validation passed, data ready to ship. Since 0.1.165 `data` has the type's `@normalize.*` applied (trimmed, case-folded) — what was validated; the form itself keeps what the user typed ([Normalized before validation](/forms/validation#normalized-before-validation)).
 - `error(errors)` — validation failed; payload is `{ path, message }[]`.
-- `action(name, data)` — phantom `<AsAction>` button dispatched.
-- `unsupportedAction(name, data)` — action name not declared on the form's type.
+- `action(name, data)` — phantom `<AsAction>` button dispatched. `data` is what a submit would send — normalized, without the navigation fields the form leaves out — but not validated (an action is not a submit).
+- `unsupportedAction(name, data)` — action name not declared on the form's type; same `data`.
 - `change(type, path, value, data)` — granular per-field change; `type` is `TAsChangeType`.
 
 ::: warning BREAKING
@@ -61,6 +61,14 @@ Since 0.1.165 `submit` emits the **normalized** data (`@normalize.trim` /
 `.lowercase` / `.uppercase` applied), not the form's raw value. A handler that
 reads the typed value from `formData` instead of the emitted `data` still
 gets the raw one.
+:::
+
+::: warning BREAKING
+Since 0.1.168 `action` / `unsupported-action` emit the same **normalized**
+data as `submit`, without the navigation fields the form leaves out (before:
+the raw form value), and `@ui.form.validate` rules — on a field or a
+container — see the normalized data live, as a submit does
+([Normalized before validation](/forms/validation#normalized-before-validation)).
 :::
 
 `data` is the model value itself, not the `{ value }` container passed as `formData`, and is typed that way (`TAsFormValue<typeof formData>`; typed correctly since 0.1.164). With `createAsFormDef(Product)`, a `save(product: Product)` handler binds directly: `@submit="save"`. Slots get the container as `data` (`data.value` is the model). Navigation fields the form leaves out (`@db.rel.*` without any `@ui.form.*`) are absent from the `submit` payload.
@@ -790,6 +798,23 @@ function useAsLocale(): UseAsLocaleReturn;
 
 Both are also exported from `@atscript/vue-form/locale`, a subpath that does not reach the form components.
 
+### `getAsServedTexts(ssrContext)` / `provideAsServedTexts(app, served)`
+
+Server rendering: hand the texts the server served during the render (`/meta` `$i18n`, merged into the request's `provideAsLocale` texts) to the browser app, so it hydrates with the same words instead of English until its own requests return. Since 0.1.168. Recipe: [Server rendering](/guide/i18n#server-rendering).
+
+```typescript
+/** Texts per locale (`""` = no locale) — plain JSON. */
+type AsServedTexts = Readonly<Record<string, Readonly<Record<string, string>>>>;
+
+/** Server: after `await renderToString(app, ssrContext)`; `undefined` when nothing was served. */
+function getAsServedTexts(ssrContext: object): AsServedTexts | undefined;
+
+/** Browser: before `app.mount()`; `provideAsLocale` starts with these texts. */
+function provideAsServedTexts(app: App, served: AsServedTexts | undefined): void;
+```
+
+Only an app's own texts (`provideAsLocale`) are collected, never the process-wide ones. What hydrates cleanly: [Server rendering](/guide/i18n#server-rendering). Both are also exported from `@atscript/vue-form/locale`.
+
 ### `useAsPath()` / `useAsTypeMap()` / `useAsData()`
 
 Context wrappers. Useful in deeply nested custom components that need the current field path, the form's `:types` map, or reactive access to form data — including writing other fields (`setSibling` / `setValueAt`, since 0.1.164).
@@ -855,7 +880,7 @@ function useAsDescendantErrorCounts(): ComputedRef<Map<string, number>> | undefi
 
 The full prop contract for custom field components. Implement this so `AsField` can pass every resolved field state.
 
-Key fields (excerpt — full type lives in `components/types.ts`):
+Key fields (excerpt — the full type is exported as `TAsComponentProps`):
 
 ```typescript
 interface TAsBaseComponentProps {

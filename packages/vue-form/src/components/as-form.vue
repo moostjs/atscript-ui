@@ -106,6 +106,12 @@ const form = useAsForm<TFormData, TFormContext>({
 // reactive tracker (false / [] when off).
 defineExpose({
   submit: form.onSubmit,
+  /**
+   * Fire a form action as its button would: emits `action` (or
+   * `unsupported-action`) with the data a submit would send — normalized,
+   * not validated.
+   */
+  action: form.invokeAction,
   reset: form.reset,
   /** Clear all error state (per-field + the submit-time map behind badges). */
   clearErrors: form.clearErrors,

@@ -37,13 +37,13 @@ Root component. Renders an HTML `<form>`, owns the form-state machine, wires pro
 
 ### Emits
 
-| Event                | Payload                                                                | When                                                                                                                                                     |
-| -------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `submit`             | `(data: TFormData)`                                                    | Form submitted; validation passed. `data` is normalized (`@normalize.*`, 0.1.165).                                                                       |
-| `error`              | `(errors: { path: string; message: string }[])`                        | Submit attempted; validation failed.                                                                                                                     |
-| `action`             | `(name: string, data: TFormData)`                                      | A `@ui.form.action` button (or `@wf.action.withData`) fires.                                                                                             |
-| `unsupported-action` | `(name: string, data: TFormData)`                                      | Action name dispatched but no field declares it.                                                                                                         |
-| `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur / array add+remove / union switch. For dirty state + an `@atscript/db` patch of edits, see [form-change-tracking.md](form-change-tracking.md). |
+| Event                | Payload                                                                | When                                                                                                                                                               |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `submit`             | `(data: TFormData)`                                                    | Form submitted; validation passed. `data` is normalized (`@normalize.*`, 0.1.165).                                                                                 |
+| `error`              | `(errors: { path: string; message: string }[])`                        | Submit attempted; validation failed.                                                                                                                               |
+| `action`             | `(name: string, data: TFormData)`                                      | A `@ui.form.action` button (or `@wf.action.withData`) fires. `data` = normalized, nav-skipped, NOT validated (0.1.168; was raw). Exposed `action(name)` fires one. |
+| `unsupported-action` | `(name: string, data: TFormData)`                                      | Action name dispatched but no field declares it.                                                                                                                   |
+| `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur / array add+remove / union switch. For dirty state + an `@atscript/db` patch of edits, see [form-change-tracking.md](form-change-tracking.md).           |
 
 ### Slots
 
@@ -193,7 +193,7 @@ Optional + `@meta.required` (`name?: string`): atscript ≥ 0.1.103 rejects `nul
 
 `@expect.*` rules live in the atscript skill — see `expect.md` there for the catalog.
 
-**`@normalize.*` (0.1.165):** `@normalize.trim` / `.lowercase` / `.uppercase` apply before client validation, like on the server. `<AsForm>` validates the normalized data and emits it with `@submit` (`{ login: "ann" }` for `"  Ann "`); the form inputs keep what the user typed. Field live validation judges the normalized value too. Own form root: `const v = getFormValidator(def); const data = v.normalize(raw); v({ data, t })`. db-client writes normalize again (idempotent).
+**`@normalize.*` (0.1.165):** `@normalize.trim` / `.lowercase` / `.uppercase` apply before client validation, like on the server. `<AsForm>` validates the normalized data and emits it with `@submit` (`{ login: "ann" }` for `"  Ann "`); the form inputs keep what the user typed. Field live validation judges the normalized value too; since 0.1.168 `@ui.form.validate` rules get the normalized `data` live (same view as submit), container rules judge their normalized value, and `@action` / withData actions carry normalized data. Own form root: `const v = getFormValidator(def); const data = v.normalize(raw); v({ data, t })`. db-client writes normalize again (idempotent).
 
 **Messages (0.1.165):** client-side errors are worded by code (`MIN_LENGTH` + params) through the app's `t` (`provideAsLocale` translator → served `$i18n` → English).
 

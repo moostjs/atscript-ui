@@ -314,6 +314,46 @@ describe("AsWfForm", () => {
     expect(calls[1]!.body).toHaveProperty("input.formData");
   });
 
+  // Why: a with-data action shipped the raw form data while a submit ships the
+  // normalized data (`@normalize.*`), so the step got "  ann " from "Save draft"
+  // and "ann" from "Submit".
+  it("a withData action ships the normalized form data, like a submit", async () => {
+    const { NormalizedDraftForm } = await import("./fixtures/action-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(NormalizedDraftForm, { token: "tok1" }),
+      mockInputRequired(NormalizedDraftForm, { token: "tok2" }),
+    ]);
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+    await wrapper.find("input").setValue("  ann ");
+
+    const saveBtn = wrapper.findAll("button[type='button']").find((b) => b.text().includes("Save"));
+    await saveBtn!.trigger("click");
+    await flushPromises();
+
+    expect(calls[1]!.body).toHaveProperty("input.action", "saveDraft");
+    expect(calls[1]!.body).toHaveProperty("input.formData", { username: "ann" });
+  });
+
+  // Why: the docs promise that a host-fired `action(name)` of a withData action
+  // ships the current form payload; it shipped none.
+  it("a host-fired withData action without data ships the form's current (normalized) data", async () => {
+    const { NormalizedDraftForm } = await import("./fixtures/action-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(NormalizedDraftForm, { token: "tok1" }),
+      mockInputRequired(NormalizedDraftForm, { token: "tok2" }),
+    ]);
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+    await wrapper.find("input").setValue(" bob");
+
+    (wrapper.vm as any).action("saveDraft");
+    await flushPromises();
+
+    expect(calls[1]!.body).toHaveProperty("input.action", "saveDraft");
+    expect(calls[1]!.body).toHaveProperty("input.formData", { username: "bob" });
+  });
+
   it("exposes supportsAction reflecting declared action ids", async () => {
     const { ActionForm } = await import("./fixtures/action-form.as");
     mockFetch([mockInputRequired(ActionForm)]);

@@ -85,6 +85,7 @@ import {
   COMPONENTS_KEY,
   DISMISS_EXTERNAL_AT_KEY,
   ERRORS_KEY,
+  FORM_NORMALIZED_DATA_KEY,
   HIDE_ROOT_TITLE_KEY,
   LEVEL_KEY,
   PATH_PREFIX_KEY,
@@ -109,6 +110,7 @@ const hideRootTitle = inject(HIDE_ROOT_TITLE_KEY, false);
 const handleAction = inject(ACTION_HANDLER_KEY, () => {});
 const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 const dismissExternalAt = inject(DISMISS_EXTERNAL_AT_KEY, () => {});
+const normalizedFormData = inject(FORM_NORMALIZED_DATA_KEY, undefined);
 // The app's UI texts: everything this field words (boolean labels, fallbacks)
 // is worded with them, so a server render matches the client's.
 const { t } = useAsTexts();
@@ -648,16 +650,20 @@ if (props.field.allStatic) {
 // cross-field rule like `(v, data) => v === data.newPassword` would
 // always fail on the live path even when the values match.
 //
-// Unwrap the form-data wrapper (`{ value: domain }`) before passing
-// it so `data.fieldName` resolves to the domain field. The submit-time
-// path (`useAsForm.submitValidator`) already passes the unwrapped
-// domain via `getDomainData()`; mirroring that here keeps validator
-// authors writing `data.field` uniformly across paths. Matches every
-// other call site of `rootFormData()` in the codebase — all walk
-// through `.value` before reading domain fields.
+// `data` is the domain data (`data.fieldName` resolves to the field) with
+// the type's `@normalize.*` applied — the view a submit validates, so a rule
+// reading a sibling sees the same value live and on submit. The form computes
+// it once per data change; the getter keeps it unread (and untracked) by the
+// fields whose rules never read `data`. Outside `<AsForm>`: the raw data.
 function formRule(v: unknown) {
   return formValidate(v, {
-    data: (rootFormData() as { value: Record<string, unknown> }).value ?? {},
+    get data() {
+      return (
+        normalizedFormData?.value ??
+        (rootFormData() as { value: Record<string, unknown> }).value ??
+        {}
+      );
+    },
     context: formContext.value,
     t,
   });

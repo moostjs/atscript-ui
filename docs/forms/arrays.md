@@ -120,8 +120,7 @@ const { def, formData } = createAsFormDef(ArrayShowcaseForm);
 
 ## Add / Remove constraints
 
-`canAdd` and `canRemove` are derived from the length constraints
-(`packages/vue-form/src/composables/use-as-array.ts:92-98`):
+`canAdd` and `canRemove` are derived from the length constraints:
 
 ```ts
 const canAdd = !disabled && length < maxLength;
@@ -146,8 +145,7 @@ button: "Add tag", "Add tag", "Add tag". Without it the default is
 "item" — fine for prototypes, not for real UI.
 
 Falls back to the item's prop name if not set on the array prop —
-useful for tuples and inline arrays. See
-`packages/vue-form/src/components/as-field.vue:308-316`.
+useful for tuples and inline arrays.
 
 ## Item identity
 

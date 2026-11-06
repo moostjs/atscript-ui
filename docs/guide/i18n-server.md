@@ -44,8 +44,9 @@ language. `@ui.form.attr` values, class names and styles are not texts.
 
 The workflow's state and context are never translated: they are data. For the
 languages in the translator's `locales` (a map's keys, or the `locales`
-option), the schema is computed once per form and language and reused for
-every request; any other locale is translated per request.
+option), the schema is computed once per form and language — and per
+translator `scope` (a tenant, a brand) when the translator has one — and reused
+for every request; any other locale is translated per request.
 
 ## `$i18n` — what the browser translates itself
 

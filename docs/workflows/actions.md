@@ -234,6 +234,13 @@ const form = ref<InstanceType<typeof AsWfForm>>();
 ships the current form payload, a plain `@ui.form.action` action ships
 none — the host never needs to know which kind it is.
 
+::: warning BREAKING
+Since 0.1.168 a `@wf.action.withData` action ships the **normalized** form
+data (`@normalize.*` applied, as a submit sends it) — before, the raw form
+value. Fired from the host without `data`, it ships the form's current
+payload (before: none).
+:::
+
 **Gate on `supportsAction(name)`, always.** It is `true` only when the
 **current** step's form declares that action id; reused challenge steps
 may not whitelist `cancel`, and firing an undeclared action is rejected

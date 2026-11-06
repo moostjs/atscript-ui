@@ -317,7 +317,7 @@ import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
 
 ### `AsFilterField`
 
-Single column's filter row inside the filter dialog or active-filters bar.
+Single column's filter row inside the filter dialog or active-filters bar. Since 0.1.168 it is rebuilt when the app's UI locale changes, so its value pickers (dictionary, distinct values) ask in the new locale, through the table's `clientFactory`.
 
 ### `AsResidualFilter`
 
@@ -347,7 +347,7 @@ Per-row actions cell — single button or `…` dropdown. Actions the row disabl
 
 ### `useTable(url, opts?)`
 
-Main entry point. Resolves table metadata, builds the `TableDef`, wires presets/drafts/selection, and returns the reactive state.
+Main entry point. Resolves table metadata, builds the `TableDef`, wires presets/drafts/selection, and returns the reactive state. During a server render it loads no metadata (the state stays `loadingMetadata`, its context `client` is built without asking `/meta`); the browser loads it after hydration.
 
 ```typescript
 function useTable(url: string, opts?: UseTableOptions): ReactiveTableState;
@@ -420,6 +420,7 @@ interface TableContext {
   state: ReactiveTableState;
   client: Client;
   locale?: string; // since 0.1.165 — the UI locale `client` asks in; what it serves belongs to it
+  clientFactory?: ClientFactory; // since 0.1.168 — the table's; its filter pickers build their clients with it
   controls: TAsTableControls;
   types?: TAsCellTypeComponents;
   components?: Record<string, Component>;
@@ -748,6 +749,8 @@ interface UsePresetsReturn {
 
 Once the app calls `setMetaCacheIdentity()`, loads and writes go through the [presets session cache](/tables/presets#session-cache) (since 0.1.153): a re-mount applies cached rows synchronously, and a write refreshes every other mounted `usePresets` on the same `(url, app, tableKey)`, in this tab and others.
 
+Since 0.1.168 the presets client asks in the app's UI locale (`useAsTexts().locale()` at setup, like the table): its error and preflight messages come back in that language.
+
 Every mutator rethrows on failure; `error` here is the **load** channel only.
 Mutation failures are recorded on the wired `state.preset.lastError`
 (since 0.1.133), so a UI that only needs to render the failure can watch that
@@ -757,7 +760,7 @@ ref instead of wrapping each call.
 
 ### `useAppPrefs(options)`
 
-Manages the `appConf` row (app-wide user prefs: appearance, density, locale). Calls with the same `(app, url)` share a single underlying instance — duplicate widgets make one `/query?type=appConf` request total. Cross-tab sync rides BroadcastChannel; in-window sync rides a `useEventBus`.
+Manages the `appConf` row (app-wide user prefs: appearance, density, locale). Calls with the same `(app, url)` share a single underlying instance — duplicate widgets make one `/query?type=appConf` request total. Cross-tab sync rides BroadcastChannel; in-window sync rides a `useEventBus`. Since 0.1.168 each request asks in its app's UI locale of the moment — the `provideAsLocale` of the first caller below one (else `setUiLocale`'s) — so error and preflight messages come back translated.
 
 ```typescript
 interface UseAppPrefsOptions {
@@ -910,7 +913,7 @@ type TAsCellTypeComponents = {
 
 ### `ReactiveTableState`
 
-The full reactive state object. See the canonical definition in `packages/vue-table/src/types.ts`; the main slots are:
+The full reactive state object (the `ReactiveTableState` type exported by `@atscript/vue-table`); the main slots are:
 
 - **Metadata**: `tableDef`, `loadingMetadata`, `metadataError`.
 - **Columns**: `columns`, `allColumns`, `columnNames`, `columnWidths`.

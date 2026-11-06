@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, toRaw, watch, type Component } from "vue";
+import { computed, ref, toRaw, watch, type Component } from "vue";
 import { useWfForm } from "../use-wf-form";
 import type { UseWfFormOptions, WfFormError } from "../use-wf-form";
 import { AsForm, type TAsTypeComponents } from "@atscript/vue-form";
@@ -94,11 +94,26 @@ function onSubmit(data: unknown) {
   wf.submit(raw);
 }
 
-function onAction(name: string, data?: unknown) {
+const asForm = ref<{ action: (name: string) => void } | null>(null);
+
+/** The form's `action` / `unsupported-action`: it always carries the form's data. */
+function onFormAction(name: string, data?: unknown) {
   if (withDataActions.value.has(name)) {
-    wf.actionWithData(name, toRaw(data) as Record<string, unknown>);
+    void wf.actionWithData(name, toRaw(data) as Record<string, unknown>);
   } else {
-    wf.action(name);
+    void wf.action(name);
+  }
+}
+
+/**
+ * Fired by the host (`ref`, slot): a `withData` action without data is fired
+ * by the form with its current data — what its own button sends, normalized.
+ */
+function onAction(name: string, data?: unknown) {
+  if (data === undefined && asForm.value && withDataActions.value.has(name)) {
+    asForm.value.action(name);
+  } else {
+    onFormAction(name, data);
   }
 }
 
@@ -186,6 +201,7 @@ defineExpose({ action: onAction, supportsAction });
         </div>
       </slot>
       <AsForm
+        ref="asForm"
         :key="wf.formKey.value"
         :def="wf.formDef.value"
         :form-data="wf.formData.value"
@@ -199,8 +215,8 @@ defineExpose({ action: onAction, supportsAction });
         :hide-submit="hideSubmit"
         :loading="wf.loading.value"
         @submit="onSubmit"
-        @action="onAction"
-        @unsupported-action="onAction"
+        @action="onFormAction"
+        @unsupported-action="onFormAction"
       >
         <template v-if="$slots['form.header']" #form.header="slotProps">
           <slot name="form.header" v-bind="slotProps" />

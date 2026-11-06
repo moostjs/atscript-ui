@@ -226,6 +226,27 @@ describe("moost-wf in the request's language", () => {
     expect(a).toEqual(b);
   });
 
+  // Why: the memo was indexed by locale only, so two tenants (translator
+  // scopes) of one locale kept evicting each other's localized schema.
+  it("keeps the localized schema of two translator scopes of one locale side by side", () => {
+    let scope = "acme";
+    setTranslator(
+      (id, _params, { locale, scope: s }) =>
+        locale === "de" && id === "Profile" ? `Profil (${String(s)})` : undefined,
+      { locales: ["en", "de"], scope: () => scope },
+    );
+    const acme = inLocale("de", () => serializeFormSchema(I18nForm)) as TSerializedAnnotatedType;
+    scope = "globex";
+    const globex = inLocale("de", () => serializeFormSchema(I18nForm)) as TSerializedAnnotatedType;
+    expect(acme.metadata["meta.label"]).toBe("Profil (acme)");
+    expect(globex.metadata["meta.label"]).toBe("Profil (globex)");
+    // both stay memoized: neither evicted the other
+    scope = "acme";
+    expect(inLocale("de", () => serializeFormSchema(I18nForm))).toBe(acme);
+    scope = "globex";
+    expect(inLocale("de", () => serializeFormSchema(I18nForm))).toBe(globex);
+  });
+
   it("localizes validation errors by code before building the error map", async () => {
     deTranslator();
     const de = await submit({ name: "ab" }, "de");

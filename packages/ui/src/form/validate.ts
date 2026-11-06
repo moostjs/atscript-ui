@@ -6,7 +6,7 @@ import type {
 } from "@atscript/typescript/utils";
 import { localizeErrors, normalizeForType, Validator } from "@atscript/typescript/utils";
 import { createDbValidatorPlugin, type DbValidationContext } from "@atscript/db/validator";
-import { DB_COLUMN_DERIVED, DB_REL_FK } from "../shared/annotation-keys";
+import { DB_COLUMN_DERIVED, DB_REL_FK, UI_FORM_VALIDATE } from "../shared/annotation-keys";
 import { isSkippedNavField } from "./skipped-nav";
 import { validatorErrorsToMap } from "./error-utils";
 import type { FormDef, FormFieldDef } from "./types";
@@ -223,8 +223,11 @@ export function createFieldValidator(
   let options: Partial<TValidatorOptions>;
   // A container validated at its root only is not walked for normalizers:
   // they change strings inside it, which its own root checks (shape, length)
-  // never read. Its children are judged normalized by their own fields.
+  // never read. Its children are judged normalized by their own fields. A
+  // container rule (`@ui.form.validate`) does read them: it is judged on the
+  // normalized value, as a submit judges it.
   const rootOfContainer = opts?.rootOnly === true && isContainerKind(prop.type.kind);
+  const skipNormalize = rootOfContainer && !prop.metadata.has(UI_FORM_VALIDATE);
 
   return (value, externalCtx) => {
     if (!cached) {
@@ -235,7 +238,7 @@ export function createFieldValidator(
       };
       cached = new Validator(prop, options);
     }
-    const judged = rootOfContainer ? value : normalizeForType(prop, value, options);
+    const judged = skipNormalize ? value : normalizeForType(prop, value, options);
     if (cached.validate(judged, true, externalCtx)) return true;
     const t = externalCtx?.t ?? opts?.t ?? getUiTexts().t;
     if (opts?.rootOnly) {

@@ -281,13 +281,13 @@ is the composable equivalent.
 
 ## References
 
-| Domain                      | File                                                     | When                                                                                                                              |
-| --------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Vue handle + provide/inject | `packages/vue-form/src/composables/use-as-form-patch.ts` | `useAsFormPatch()` + `rebaseOnto()` contract, baseline lifecycle, snapshot/clone semantics, single-write/remount, throw-when-off. |
-| `track-changes` prop wiring | `packages/vue-form/src/components/as-form.vue`           | Where the prop maps to `trackChanges`; the `defineExpose` surface (incl. `rebaseOnto`) on the instance.                           |
-| Slot-prop bag + reset path  | `packages/vue-form/src/composables/use-as-form.ts`       | `isDirty`/`changes`/`getPatch`/`getChanges` in slot props (no `rebase`/`rebaseOnto` there); `reset()` calling `rebase()`.         |
-| Diff engine + patch shape   | `packages/ui/src/form/diff.ts`                           | `buildFormDiff`, nested replace/merge, keyed-array ops, `$cas` lift, version-column exclusion.                                    |
-| Rebase + apply engine       | `packages/ui/src/form/{rebase,apply,clone}.ts`           | `buildFormRebase` 3-way merge (conflict classify, ancestor-clear), `applyFormChanges` write rules, `deepClone`/`deepEqual`.       |
+| Domain                      | Public API                                                               | Covers                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| Vue handle + provide/inject | `useAsFormPatch()` — https://ui.atscript.dev/api/vue-form#useasformpatch | `rebaseOnto()` contract, baseline lifecycle, snapshot/clone semantics, single-write/remount, throw-when-off.              |
+| `track-changes` prop wiring | `<AsForm track-changes>` — https://ui.atscript.dev/api/vue-form#asform   | The prop (≡ `useAsForm({ trackChanges })`) and the instance's exposed methods (incl. `rebaseOnto`).                       |
+| Slot-prop bag + reset path  | `useAsForm()` — https://ui.atscript.dev/api/vue-form#useasform-options   | `isDirty`/`changes`/`getPatch`/`getChanges` in slot props (no `rebase`/`rebaseOnto` there); `reset()` calling `rebase()`. |
+| Diff engine + patch shape   | `buildFormDiff` — https://ui.atscript.dev/api/ui#form-diff-engine        | Nested replace/merge, keyed-array ops, `$cas` lift, version-column exclusion.                                             |
+| Rebase + apply engine       | `buildFormRebase` / `applyFormChanges` (`@atscript/ui`)                  | 3-way merge (conflict classify, ancestor-clear), write rules, `deepClone`/`deepEqual`.                                    |
 
 ## See also
 

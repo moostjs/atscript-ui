@@ -28,10 +28,11 @@ export function currentTranslation(): TTranslation | undefined {
 }
 
 /**
- * Localized schemas per serialized schema, then per locale — each with the
- * translation key it was made under. The key changes with every
- * `setTranslator` / `registerMessages` generation: the locale's entry is then
- * replaced, so a schema keeps one output per served locale.
+ * Localized schemas per serialized schema, then per translation partition
+ * (the locale, plus the translator's scope — a tenant, a brand — when it has
+ * one), each with the translation key it was made under. The key changes with
+ * every `setTranslator` / `registerMessages` generation: the partition's entry
+ * is then replaced, so a schema keeps one output per served locale and scope.
  */
 const memo = new WeakMap<object, Map<string, { key: string; out: TSerializedAnnotatedType }>>();
 
@@ -39,20 +40,21 @@ const memo = new WeakMap<object, Map<string, { key: string; out: TSerializedAnno
  * `schema` in the translation's language: its texts translated, `$i18n`
  * holding the translated message templates and the translated literals of
  * its expressions. The schema itself when nothing changes. Memoized per
- * (schema, locale) for the translator's locales; computed per call otherwise.
+ * (schema, partition) for the translator's locales and scopes; computed per
+ * call otherwise.
  */
 export function localizeSchema(
   schema: TSerializedAnnotatedType,
   translation: TTranslation,
 ): TSerializedAnnotatedType {
-  const { key, locale } = translation;
+  const { key, partition } = translation;
   if (key === undefined) return build(schema, translation);
-  let byLocale = memo.get(schema);
-  const hit = byLocale?.get(locale);
+  let byPartition = memo.get(schema);
+  const hit = byPartition?.get(partition);
   if (hit?.key === key) return hit.out;
   const out = build(schema, translation);
-  if (!byLocale) memo.set(schema, (byLocale = new Map()));
-  byLocale.set(locale, { key, out });
+  if (!byPartition) memo.set(schema, (byPartition = new Map()));
+  byPartition.set(partition, { key, out });
   return out;
 }
 

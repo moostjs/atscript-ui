@@ -351,3 +351,52 @@ describe("isUnavailableError", () => {
     expect(isUnavailableError(null)).toBe(false);
   });
 });
+
+// Why: the presets client was built without the app's locale, so the server's
+// error bodies and the preflight validator's messages stayed English for a
+// German viewer while every other atscript-ui client asked in German.
+describe("PresetsClient — the app's UI locale", () => {
+  it("asks the factory for a client in the locale and sends it with the capabilities request", async () => {
+    const client = makeMockClient();
+    client.query.mockResolvedValue([]);
+    const factory = vi.fn(() => client as unknown as Client);
+    const headers: unknown[] = [];
+    const fetchImpl = makeMockFetch((_url, init) => {
+      headers.push(init.headers);
+      return new Response(JSON.stringify({ canPublish: false, presetLimit: 1, userId: "a" }), {
+        status: 200,
+      });
+    });
+    const sut = new PresetsClient({
+      url: "/db/_presets",
+      app: "demo",
+      tableKey: "products",
+      clientFactory: factory,
+      locale: "de",
+      fetch: fetchImpl,
+    });
+    await sut.list();
+    expect(factory).toHaveBeenCalledWith("/db/_presets", { locale: "de" });
+    expect(headers[0]).toMatchObject({ Accept: "application/json", "Accept-Language": "de" });
+  });
+
+  it("without a locale keeps the plain factory call and headers", async () => {
+    const client = makeMockClient();
+    client.query.mockResolvedValue([]);
+    const factory = vi.fn(() => client as unknown as Client);
+    const headers: unknown[] = [];
+    const sut = new PresetsClient({
+      url: "/db/_presets",
+      app: "demo",
+      tableKey: "products",
+      clientFactory: factory,
+      fetch: makeMockFetch((_url, init) => {
+        headers.push(init.headers);
+        return new Response("{}", { status: 200 });
+      }),
+    });
+    await sut.list();
+    expect(factory.mock.calls[0]).toEqual(["/db/_presets"]);
+    expect(headers[0]).toEqual({ Accept: "application/json" });
+  });
+});

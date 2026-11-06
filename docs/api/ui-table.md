@@ -624,7 +624,14 @@ interface PresetsClientConfig {
   /** Pre-built `Client` (auth-configured by the host). Wins over `clientFactory`. */
   client?: Client;
   /** Builds a `Client` for the given URL. Defaults to `getDefaultClientFactory()`. */
-  clientFactory?: (url: string) => Client;
+  clientFactory?: ClientFactory;
+  /**
+   * Since 0.1.168: the UI locale to ask in — a string, or a getter read per request.
+   * The factory is asked for `{ locale }` (one client per locale) and the
+   * capabilities request sends `Accept-Language`, so errors and preflight
+   * messages come back translated. A pre-built `client` is used as given.
+   */
+  locale?: PresetsLocale; // string | (() => string | undefined)
   /** Fetch impl for the `GET /capabilities` side-channel. Defaults to `globalThis.fetch`. */
   fetch?: typeof globalThis.fetch;
 }
@@ -689,7 +696,7 @@ function invalidatePresetsCache(): void; // also runs on every `resetMetaCache()
 function isPresetsCacheActive(): boolean; // browser && identity bound && max age >= 0
 ```
 
-Building blocks for framework adapters (`usePresets` in `@atscript/vue-table` is built on them): `presetsCacheKey(url, app, tableKey)`, `cachedPresetRows(key)`, `cachedPresetCapabilities(key)`, `loadPresetRows(key, fetchRows, { force?, origin? })`, `loadPresetCapabilities(key, fetchCaps, origin?)`, `subscribePresetsCache(key, listener)`, `publishPresetsWrite(key)`, `sharedPresetsClient(url, factory?)`, and the `PresetRows` / `PresetsCacheListener` types.
+Building blocks for framework adapters (`usePresets` in `@atscript/vue-table` is built on them): `presetsCacheKey(url, app, tableKey)`, `cachedPresetRows(key)`, `cachedPresetCapabilities(key)`, `loadPresetRows(key, fetchRows, { force?, origin? })`, `loadPresetCapabilities(key, fetchCaps, origin?)`, `subscribePresetsCache(key, listener)`, `publishPresetsWrite(key)`, `sharedPresetsClient(url, factory?, locale?)` (one client per URL, factory and UI locale — `locale` since 0.1.168), and the `PresetRows` / `PresetsCacheListener` types.
 
 ### `PresetsHttpError` / `isUnavailableError`
 
@@ -712,7 +719,12 @@ interface AppPrefsClientConfig {
   url: string;
   app: string;
   client?: Client;
-  clientFactory?: (url: string) => Client;
+  clientFactory?: ClientFactory;
+  /**
+   * Since 0.1.168: the UI locale to ask in, like `PresetsClientConfig.locale`.
+   * App prefs outlive any view: pass a getter to follow the app's locale.
+   */
+  locale?: PresetsLocale;
 }
 
 interface AppPrefsLoadResult {

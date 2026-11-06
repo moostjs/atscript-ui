@@ -64,3 +64,10 @@ export const UNION_CONTEXT_KEY: InjectionKey<TAsUnionContext | undefined> =
 // `<AsForm>` (or `trackChanges` on `useAsForm`). Public reader:
 // `useAsFormPatch()` (throws a clear error when absent).
 export const FORM_PATCH_KEY: InjectionKey<AsFormPatchHandle> = Symbol("atui.form-patch");
+
+// The domain data with the type's `@normalize.*` applied — the view a submit
+// validates. Provided by `useAsForm` (computed once per data change); field
+// live validation hands it to `@ui.form.validate` rules as `data`.
+export const FORM_NORMALIZED_DATA_KEY: InjectionKey<ComputedRef<Record<string, unknown>>> = Symbol(
+  "atui.form-normalized-data",
+);

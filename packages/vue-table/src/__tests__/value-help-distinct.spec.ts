@@ -4,12 +4,16 @@ import { defineComponent, h, nextTick, ref, shallowRef } from "vue";
 import {
   activateUiTexts,
   createUiTexts,
+  getMetaEntry,
   resetMetaCache,
   setDefaultClientFactory,
   resetDefaultClientFactory,
   type ColumnDef,
 } from "@atscript/ui";
 import AsFilterValueHelp from "../components/internal/as-filter-value-help.vue";
+import { provideTableContext } from "../composables/use-table-state";
+import AsFilterField from "../components/defaults/as-filter-field.vue";
+import { mountWithTableContext, ownerColumn, recordingFactory } from "./helpers";
 import {
   createDistinctPager,
   declineIfRejected,
@@ -130,6 +134,78 @@ describe("AsFilterValueHelp — distinct values", () => {
   });
 });
 
+describe("AsFilterValueHelp — the table's client factory", () => {
+  // Why: the dialog's pickers built their clients with the app-wide default
+  // factory, so a table given its own `clientFactory` (auth, transport) had
+  // its filter pickers talk to the server without it.
+  it("asks the distinct values through the clientFactory of the table it belongs to", async () => {
+    const fallback = vi.fn(() => {
+      throw new Error("the default factory must not be used");
+    });
+    setDefaultClientFactory(fallback as never);
+    const client = fakeClient(async () => [{ city: "Berlin" }]);
+    const tableFactory = vi.fn(() => client);
+    const Host = defineComponent({
+      setup() {
+        provideTableContext({
+          state: { tableDef: shallowRef(null) } as never,
+          client: {} as never,
+          clientFactory: tableFactory as never,
+          controls: {},
+        });
+        return () => h(AsFilterValueHelp as never, { column: column(), modelValue: [] });
+      },
+    });
+    const wrapper = mount(Host, { attachTo: document.body });
+    const comp = wrapper.findComponent(AsFilterValueHelp as never);
+    await flushPromises();
+    const state = (comp as unknown as { vm: { $: { setupState: { innerState: never } } } }).vm.$
+      .setupState.innerState as unknown as { viewportRowCount: { value: number } };
+    state.viewportRowCount.value = 10;
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    expect(tableFactory).toHaveBeenCalled();
+    expect(
+      (client as unknown as { aggregate: ReturnType<typeof vi.fn> }).aggregate,
+    ).toHaveBeenCalled();
+    expect(fallback).not.toHaveBeenCalled();
+    wrapper.unmount();
+  });
+});
+
+describe("AsFilterField — a locale switch without a remount", () => {
+  // Why: the inline picker kept the dictionary table, its resolved metadata and
+  // its client of the locale it mounted in; only its search client followed.
+  it("rebuilds its pickers in the new locale, through the table's factory", async () => {
+    const { asked, factory: tableFactory, fallback } = recordingFactory();
+    const locale = ref("de");
+    const undo = activateUiTexts(createUiTexts({ locale: () => locale.value }));
+    try {
+      const col = ownerColumn();
+      const { wrapper } = mountWithTableContext(AsFilterField, {
+        columns: [col],
+        props: { column: col },
+        clientFactory: tableFactory as never,
+      });
+      await flushPromises();
+      expect(asked).toEqual([["/owners", "de"]]);
+
+      locale.value = "en";
+      await nextTick();
+      await flushPromises();
+      expect(asked).toEqual([
+        ["/owners", "de"],
+        ["/owners", "en"],
+      ]);
+      expect(fallback).not.toHaveBeenCalled();
+      wrapper.unmount();
+    } finally {
+      undo();
+    }
+  });
+});
+
 describe("hasValuePicker gating", () => {
   const opts = [{ key: "bug", label: "Bug" }];
 
@@ -164,12 +240,48 @@ describe("createDistinctPager", () => {
     const undo = activateUiTexts(createUiTexts({ locale: () => "en" }));
     try {
       const ours = createUiTexts({ locale: () => "de" });
-      const fetch = createDistinctPager({ tableDef: shallowRef({} as never) }, column(), ours);
+      const fetch = createDistinctPager({ tableDef: shallowRef({} as never) }, column(), {
+        texts: ours,
+      });
       await fetch("x", 1, 10);
       expect(calls).toEqual([["/customers", { locale: "de" }]]);
     } finally {
       undo();
     }
+  });
+
+  // Why: after a locale switch without a remount the pager asked through a new
+  // entry built by the DEFAULT factory — dropping the table's `clientFactory`
+  // (auth, transport). Same locale must stay on the table's entry (no extra `/meta`).
+  it("follows a locale switch through the table's factory; the same locale reuses the table's entry", async () => {
+    const fallback = vi.fn(() => {
+      throw new Error("the default factory must not be used");
+    });
+    setDefaultClientFactory(fallback as never);
+    const created: unknown[] = [];
+    const tableFactory = vi.fn((url: string, opts?: { locale?: string }) => {
+      created.push([url, opts]);
+      return fakeClient(async () => [{ city: opts?.locale ?? "-" }]);
+    });
+    const locale = ref("de");
+    const texts = createUiTexts({ locale: () => locale.value });
+    // the table's own entry, as `useTable` creates it
+    getMetaEntry("/customers", tableFactory as never, { texts });
+    const fetch = createDistinctPager({ tableDef: shallowRef({} as never) }, column(), {
+      texts,
+      clientFactory: tableFactory as never,
+    });
+
+    expect((await fetch("x", 1, 10)).data[0]!.__value).toBe("de");
+    expect(created).toEqual([["/customers", { locale: "de" }]]);
+
+    locale.value = "en";
+    expect((await fetch("x", 1, 10)).data[0]!.__value).toBe("en");
+    expect(created).toEqual([
+      ["/customers", { locale: "de" }],
+      ["/customers", { locale: "en" }],
+    ]);
+    expect(fallback).not.toHaveBeenCalled();
   });
 
   function pager(col: ColumnDef, rows: Record<string, unknown>[] = [{ city: "A" }]) {

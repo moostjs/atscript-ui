@@ -1,6 +1,8 @@
-import { Client } from "@atscript/db-client";
-import { getDefaultClientFactory } from "@atscript/ui";
+import type { Client } from "@atscript/db-client";
+import type { ClientFactory } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
+
+import { clientPerLocale, type PresetsLocale } from "./locale-client";
 
 import type { AppConfData, AsPresetEntryRow } from "./preset-data-types";
 import { appConfId } from "./preset-id";
@@ -17,7 +19,16 @@ export interface AppPrefsClientConfig {
   /** Pre-built Client (auth-configured by host). */
   client?: Client;
   /** Builds a Client when `client` is absent. Defaults to the app-wide `getDefaultClientFactory()`. */
-  clientFactory?: (url: string) => Client;
+  clientFactory?: ClientFactory;
+  /**
+   * The UI locale to ask the server in — a string, or a getter read on every
+   * request (app prefs outlive any view, so follow the app's locale with a
+   * getter). The client is asked for it from `clientFactory`
+   * (`ClientFactoryOptions.locale`, sent as `Accept-Language`: one client per
+   * locale), so error messages and the preflight validator's messages come
+   * back in that language. A pre-built `client` is used as given. Since 0.1.168.
+   */
+  locale?: PresetsLocale;
 }
 
 export interface AppPrefsLoadResult {
@@ -44,13 +55,18 @@ type AppConfWritePayload = {
  */
 export class AppPrefsClient {
   private readonly app: string;
-  private readonly client: Client;
+  private readonly clientNow: () => Client;
 
   constructor(cfg: AppPrefsClientConfig) {
     if (!cfg.url) throw new Error("AppPrefsClient: `url` is required");
     if (!cfg.app) throw new Error("AppPrefsClient: `app` is required");
     this.app = cfg.app;
-    this.client = cfg.client ?? (cfg.clientFactory ?? getDefaultClientFactory())(cfg.url);
+    this.clientNow = clientPerLocale(cfg);
+  }
+
+  /** The db client for the current locale. */
+  private get client(): Client {
+    return this.clientNow();
   }
 
   /** Fetch the single `appConf` row for `(user, app)`. */

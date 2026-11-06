@@ -247,6 +247,21 @@ describe("presets cache — identity scoping", () => {
     expect(cachedPresetRows(KEY)).toBeUndefined();
   });
 
+  // Why: one shared client per URL served every locale, so its messages
+  // stayed in the language of whoever built it first.
+  it("shares one client per URL and UI locale, built for the locale", () => {
+    const factory = vi.fn((url: string) => ({ url }) as unknown as Client);
+    const de = sharedPresetsClient("/db/_presets", factory, "de");
+    expect(sharedPresetsClient("/db/_presets", factory, "de")).toBe(de);
+    expect(sharedPresetsClient("/db/_presets", factory, "en")).not.toBe(de);
+    expect(sharedPresetsClient("/db/_presets", factory)).not.toBe(de);
+    expect(factory.mock.calls).toEqual([
+      ["/db/_presets", { locale: "de" }],
+      ["/db/_presets", { locale: "en" }],
+      ["/db/_presets"],
+    ]);
+  });
+
   it("invalidatePresetsCache drops everything", async () => {
     await loadPresetRows(KEY, async () => list([row("p1", "alice")]));
     invalidatePresetsCache();

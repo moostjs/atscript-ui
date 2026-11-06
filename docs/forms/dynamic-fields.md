@@ -127,7 +127,7 @@ A `DynamicForm.as` schema that exercises every dynamic key on one form:
 ```atscript
 @meta.label 'Event Registration'
 
-@ui.form.fn.title '(data) => data.firstName ? "Registration for " + data.firstName : "Event Registration"'
+@ui.form.fn.title '(data, ctx, t) => data.firstName ? t("Registration for {name}", { name: data.firstName }) : "Event Registration"'
 @ui.form.fn.submit.text '(data) => data.hasPlusOne ? "Register 2 attendees" : "Register"'
 @ui.form.fn.submit.disabled '(data) => !data.firstName || !data.email'
 export interface EventRegistration {
@@ -137,7 +137,7 @@ export interface EventRegistration {
 
     @meta.label 'Email'
     @ui.form.grid.colSpan '6'
-    @ui.form.fn.placeholder '(v, data) => data.firstName ? "Email for " + data.firstName : "you@example.com"'
+    @ui.form.fn.placeholder '(v, data, ctx, entry, t) => data.firstName ? t("Email for {name}", { name: data.firstName }) : "you@example.com"'
     email: string
 
     @meta.label 'Bringing a plus-one?'
@@ -152,7 +152,7 @@ export interface EventRegistration {
     shirtSize: ui.select
 
     @meta.label 'Notes'
-    @ui.form.fn.hint '(v, data) => (v ? v.length : 0) + " / 500 chars"'
+    @ui.form.fn.hint '(v, data, ctx, entry, t) => t("{count} / 500 chars", { count: v ? v.length : 0 })'
     @ui.form.fn.classes '(v, data) => (v && v.length > 400) ? "as-notes-warn" : ""'
     @ui.form.validate '(v, data) => !v || v.length <= 500 || "Notes must be 500 chars or fewer"'
     notes: string

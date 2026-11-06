@@ -3,6 +3,7 @@ import type {
   TAtscriptTypeFinal,
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
+import type { ClientFactory } from "../client-factory";
 import { getMetaEntry, resetMetaCache, type MetaEntryOptions } from "../shared/meta-cache";
 import { META_ID, UI_DICT_ATTR, UI_DICT_DESCR, UI_DICT_LABEL } from "../shared/annotation-keys";
 import type { MetaResponse } from "../table/types";
@@ -33,13 +34,16 @@ export interface ResolvedValueHelp {
  *   retry performs a fresh fetch.
  *
  * `options.texts` — the app's UI texts (see `getMetaEntry`); the active ones
- * by default.
+ * by default. `options.clientFactory` — the factory the host (a form's or a
+ * table's `clientFactory`) builds its clients with: it seeds the client when
+ * this call creates the entry for the URL and locale (default: the app-wide
+ * one). Since 0.1.168.
  */
 export function resolveValueHelp(
   url: string,
-  options?: Pick<MetaEntryOptions, "texts">,
+  options?: Pick<MetaEntryOptions, "texts"> & { clientFactory?: ClientFactory },
 ): Promise<ResolvedValueHelp> {
-  const entry = getMetaEntry(url, undefined, options);
+  const entry = getMetaEntry(url, options?.clientFactory, { texts: options?.texts });
   if (entry.resolved) return entry.resolved;
   entry.resolved = Promise.all([entry.meta, entry.type]).then(([meta, type]) =>
     buildResolved(url, meta, type),

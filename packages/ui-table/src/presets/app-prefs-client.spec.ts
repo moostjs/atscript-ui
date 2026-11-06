@@ -175,3 +175,33 @@ describe("AppPrefsClient construction", () => {
     expect(() => new AppPrefsClient({ url: "/y", app: "" })).toThrow();
   });
 });
+
+// Why: app prefs outlive every view, and their client never received the app's
+// locale — its error and preflight messages stayed English. A getter follows
+// the app's locale per request, one client per locale.
+describe("AppPrefsClient — the app's UI locale", () => {
+  it("asks each request through the factory's client for the locale of the moment", async () => {
+    const de = makeMockClient();
+    const en = makeMockClient();
+    de.query.mockResolvedValue([]);
+    en.query.mockResolvedValue([]);
+    const factory = vi.fn(
+      (_url: string, opts?: { locale?: string }) =>
+        (opts?.locale === "de" ? de : en) as unknown as Client,
+    );
+    let locale = "de";
+    const sut = new AppPrefsClient({
+      url: "/db/_presets",
+      app: "demo",
+      clientFactory: factory,
+      locale: () => locale,
+    });
+    await sut.load();
+    await sut.load();
+    locale = "en";
+    await sut.load();
+    expect(de.query).toHaveBeenCalledTimes(2);
+    expect(en.query).toHaveBeenCalledTimes(1);
+    expect(factory.mock.calls.map((c) => c[1])).toEqual([{ locale: "de" }, { locale: "en" }]);
+  });
+});

@@ -39,6 +39,8 @@ const model = defineModel<FilterCondition[]>({ default: () => [] });
 
 // The table this dialog belongs to — read before the inner state is provided below.
 const outer = useTableContextOptional();
+// Its pickers build their clients the way the table does.
+const clientFactory = outer?.clientFactory;
 // A dictionary target (FK or `@ui.valueHelp`): a full inner table.
 const info = props.column.valueHelpInfo;
 // Distinct values of the column itself (`@ui.valueHelp.distinct`) read like an
@@ -92,9 +94,10 @@ if (info) {
     // committed field is always fetched, even when it is not a key / label.
     forceFilters: info.filter,
     alwaysSelected: [info.targetField],
+    clientFactory,
   });
 } else if (distinct) {
-  const fetchPage = createDistinctPager(outer?.state, props.column, texts);
+  const fetchPage = createDistinctPager(outer?.state, props.column, { texts, clientFactory });
   const { state } = createStaticTableState({
     rows: [],
     columns: [valueColumn(false, t)],
@@ -133,7 +136,7 @@ if (info) {
 // which fields to keep.
 if (info) {
   onMounted(() => {
-    void resolveValueHelp(info.url, { texts })
+    void resolveValueHelp(info.url, { texts, clientFactory })
       .then((r) => {
         resolved.value = r;
       })

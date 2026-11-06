@@ -1,6 +1,8 @@
 import { Client, ClientError } from "@atscript/db-client";
-import { getDefaultClientFactory } from "@atscript/ui";
+import type { ClientFactory } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
+
+import { clientPerLocale, currentLocale, type PresetsLocale } from "./locale-client";
 
 import type {
   AsPresetEntryRow,
@@ -27,7 +29,16 @@ export interface PresetsClientConfig {
   /** Pre-built Client (auth-configured by the host). Wins over `clientFactory`. */
   client?: Client;
   /** Builds a Client for the given URL. Defaults to the app-wide `getDefaultClientFactory()`. */
-  clientFactory?: (url: string) => Client;
+  clientFactory?: ClientFactory;
+  /**
+   * The UI locale to ask the server in — a string, or a getter read on every
+   * request. The client is asked for it from `clientFactory`
+   * (`ClientFactoryOptions.locale`, sent as `Accept-Language`: one client per
+   * locale), and the capabilities request sends it too, so error messages
+   * and the preflight validator's messages come back in that language. A
+   * pre-built `client` is used as given. Since 0.1.168.
+   */
+  locale?: PresetsLocale;
   /**
    * Fetch implementation for the `GET /capabilities` side-channel. Defaults
    * to `globalThis.fetch`. Cookie-based auth needs no override.
@@ -89,7 +100,8 @@ export class PresetsClient {
   private readonly url: string;
   private readonly app: string;
   private readonly tableKey: string;
-  private readonly client: Client;
+  private readonly clientNow: () => Client;
+  private readonly locale?: PresetsLocale;
   private readonly fetchImpl: typeof globalThis.fetch;
 
   constructor(cfg: PresetsClientConfig) {
@@ -99,8 +111,14 @@ export class PresetsClient {
     this.url = cfg.url;
     this.app = cfg.app;
     this.tableKey = cfg.tableKey;
-    this.client = cfg.client ?? (cfg.clientFactory ?? getDefaultClientFactory())(cfg.url);
+    this.clientNow = clientPerLocale(cfg);
+    this.locale = cfg.locale;
     this.fetchImpl = cfg.fetch ?? globalThis.fetch.bind(globalThis);
+  }
+
+  /** The db client for the current locale. */
+  private get client(): Client {
+    return this.clientNow();
   }
 
   /**
@@ -155,10 +173,13 @@ export class PresetsClient {
   async loadCapabilities(): Promise<PresetCapabilities> {
     const params = new URLSearchParams({ app: this.app, tableKey: this.tableKey });
     const target = `${this.url.replace(/\/+$/, "")}/capabilities?${params.toString()}`;
+    const headers: Record<string, string> = { Accept: "application/json" };
+    const locale = currentLocale(this.locale);
+    if (locale) headers["Accept-Language"] = locale;
     const res = await this.fetchImpl(target, {
       method: "GET",
       credentials: "same-origin",
-      headers: { Accept: "application/json" },
+      headers,
     });
     if (!res.ok) {
       throw new PresetsHttpError(res.status, `Capabilities fetch failed (${res.status})`);

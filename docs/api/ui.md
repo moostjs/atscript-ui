@@ -959,12 +959,12 @@ function invalidateValueHelpCache(client?: Client): void; // one client, or all 
 
 ### `resolveValueHelp(url, options?)` / `resetValueHelpCache()`
 
-Globally caches resolved value-help endpoints by URL (and UI locale) so multiple fields pointing at the same target share one `/meta` fetch. `options.texts` (_since 0.1.165_) is the app's UI texts, as for [`getMetaEntry`](#meta-cache).
+Globally caches resolved value-help endpoints by URL (and UI locale) so multiple fields pointing at the same target share one `/meta` fetch. `options.texts` (_since 0.1.165_) is the app's UI texts, as for [`getMetaEntry`](#meta-cache). `options.clientFactory` (_since 0.1.168_) is the factory of the host the picker belongs to (a form's or a table's `clientFactory`): it builds the client when this call creates the entry for the URL and locale — e.g. after a locale switch — instead of the app-wide default.
 
 ```typescript
 function resolveValueHelp(
   url: string,
-  options?: { texts?: MetaEntryOptions["texts"] },
+  options?: { texts?: MetaEntryOptions["texts"]; clientFactory?: ClientFactory },
 ): Promise<ResolvedValueHelp>;
 function resetValueHelpCache(): void;
 

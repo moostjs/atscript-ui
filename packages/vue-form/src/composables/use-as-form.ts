@@ -36,6 +36,7 @@ import {
   COMPONENTS_KEY,
   DISMISS_EXTERNAL_AT_KEY,
   ERRORS_KEY,
+  FORM_NORMALIZED_DATA_KEY,
   FORM_PATCH_KEY,
   HIDE_ROOT_TITLE_KEY,
   PATH_PREFIX_KEY,
@@ -290,6 +291,13 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // The data a submit validates and emits: the domain data with the type's
   // `@normalize.*` applied (set by `onSubmit`, the only caller of `submit()`).
   let submitting: Record<string, unknown> = {};
+  // The same normalized view for live validation: `@ui.form.validate` rules
+  // read their siblings in it, as on submit. One copy per data change, shared
+  // by every field — and computed only while a rule reads it.
+  const normalizedData = computed(
+    () => (formValidator.value.normalize(getDomainData()) ?? {}) as Record<string, unknown>,
+  );
+  provide(FORM_NORMALIZED_DATA_KEY, normalizedData);
 
   // ── Form state composable (also publishes FORM_STATE_KEY etc.) ──
   const {
@@ -527,10 +535,16 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   }
 
   function invokeAction(name: string) {
-    if (supportsAction(options.def(), name)) {
-      options.emits?.action?.(name, domainData());
+    // The data an action carries is what a submit would send: normalized
+    // (`@normalize.*`), without the navigation fields the form leaves out.
+    // Not validated — an action is not a submit (a workflow validates a
+    // `withData` action's data deep-partial on the server).
+    const def = options.def();
+    const data = omitSkippedNavFields(def, formValidator.value.normalize(domainData()));
+    if (supportsAction(def, name)) {
+      options.emits?.action?.(name, data);
     } else {
-      options.emits?.unsupportedAction?.(name, domainData());
+      options.emits?.unsupportedAction?.(name, data);
     }
   }
   provide(ACTION_HANDLER_KEY, invokeAction);

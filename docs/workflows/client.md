@@ -231,7 +231,8 @@ Sometimes the button that fires a workflow action lives in the **host**
 around `<AsWfForm>`, not in the rendered form — most often a dialog's own
 _Cancel_ button. Reach the surface via a component `ref`: `action(name, data?)`
 fires the named action (auto-classifying — a `@wf.action.withData` action ships
-the current form payload, a plain `@ui.form.action` action ships none), and
+the current form payload, normalized like a submit's, a plain `@ui.form.action`
+action ships none), and
 `supportsAction(name)` gates it. **Gate on the action id, not the field name**
 (the field is typically `cancelAction` while the id is `cancel`); firing an
 undeclared action is rejected server-side.
@@ -437,8 +438,8 @@ The `<AsForm>` shell itself is SSR-safe — it has nothing to render until `form
 
 ## Reference
 
-- Component: `packages/vue-wf/src/components/as-wf-form.vue`
-- Composable: `packages/vue-wf/src/use-wf-form.ts`
+- Component: [`AsWfForm`](/api/vue-wf#component-—-aswfform)
+- Composable: [`useWfForm`](/api/vue-wf#composable-—-usewfform)
 
 ## Where to go next
 

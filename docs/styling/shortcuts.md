@@ -1,6 +1,6 @@
 # The as-\* Shortcut System
 
-Every visual rule in `@atscript/vue-form`, `@atscript/vue-table`, and `@atscript/vue-wf` lives in a single shortcut tree under [`packages/ui-styles/src/shortcuts/`](https://github.com/moostjs/atscript-ui/tree/main/packages/ui-styles/src/shortcuts). Components emit `as-*` class names; the shortcuts turn those into vunor-primitive compositions. Once you know the tree, theming and per-state tweaks happen in one place instead of scattered across your stylesheet.
+Every visual rule in `@atscript/vue-form`, `@atscript/vue-table`, and `@atscript/vue-wf` lives in a single shortcut tree shipped by `@atscript/ui-styles` ([reference](/api/ui-styles#shortcuts)). Components emit `as-*` class names; the shortcuts turn those into vunor-primitive compositions. Once you know the tree, theming and per-state tweaks happen in one place instead of scattered across your stylesheet.
 
 ## Naming convention
 
@@ -12,17 +12,17 @@ Two rules cover the entire tree:
 For example, descriptive helper text:
 
 ```typescript
-// shortcuts/common/index.ts
+// common shortcuts
 "as-description": "text-callout text-current/60 m-0",
 ```
 
 ```typescript
-// shortcuts/form/as-field.ts
+// form shortcuts
 "as-field-description": "as-description -mt-[0.2em]",
 ```
 
 ```typescript
-// shortcuts/form/as-form.ts
+// form shortcuts
 "as-form-description": "as-description",
 ```
 
@@ -177,7 +177,7 @@ The handful you'll reach for most when restyling form chrome:
 | `as-field-label`       | (via `as-default-field` `[&_label]`) | label weight / casing                              |
 | `as-field-description` | `as-description` + offset            | description text styling                           |
 
-`as-field-label`, `as-field-description`, `as-error-slot`, and `as-field-header-row` are reachable the same way. For the complete catalog of every `as-*` shortcut name, see the [`@atscript/ui-styles` API reference](/api/ui-styles#shortcuts) and the [source shortcut tree](https://github.com/moostjs/atscript-ui/tree/main/packages/ui-styles/src/shortcuts).
+`as-field-label`, `as-field-description`, `as-error-slot`, and `as-field-header-row` are reachable the same way. For the complete catalog of every `as-*` shortcut name, see the [`@atscript/ui-styles` API reference](/api/ui-styles#shortcuts).
 
 ### Tunable CSS custom properties
 
@@ -226,7 +226,7 @@ A few real entries from the source so the patterns are concrete.
 ### Form error banner
 
 ```typescript
-// shortcuts/form/as-form.ts
+// form shortcuts
 "as-form-error":
   "scope-error surface-50 border-1 rounded-r2 px-$m py-$s mb-$s text-callout text-current-hl flex items-center gap-$s",
 ```
@@ -239,7 +239,7 @@ A few real entries from the source so the patterns are concrete.
 ### Table number cell
 
 ```typescript
-// shortcuts/table/as-cell.ts
+// table shortcuts
 "as-cell-decimal": "text-right tabular-nums font-mono",
 ```
 
@@ -248,7 +248,7 @@ A minimal shortcut. Right-alignment plus tabular-numerals so numbers in a column
 ### Close button with state map
 
 ```typescript
-// shortcuts/common/index.ts
+// common shortcuts
 "as-close-btn": {
   "":
     "inline-grid place-items-center size-fingertip-s p-0 border-0 " +
@@ -306,7 +306,7 @@ to register anything beyond installing the preset.
 ### Default form field, deep selectors
 
 ```typescript
-// shortcuts/form/as-field.ts
+// form shortcuts
 "as-default-field": {
   "": "as-grid-item flex flex-col gap-$xs relative",
   "[&_label]:": "font-600",

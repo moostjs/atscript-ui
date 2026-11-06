@@ -54,7 +54,7 @@ Drop the container below 480px and every field stacks vertically.
 no aliases for rows.
 
 Invalid values (`'0'`, negatives, decimals, unknown aliases) silently fall back
-to the default. See `packages/ui/src/form/grid.ts` for the parser.
+to the default.
 
 ## Responsive override
 
@@ -132,7 +132,7 @@ pair stacks because their container is narrow enough.
 
 ## How spans translate to classes
 
-`packages/ui/src/form/grid.ts:buildGridClasses` emits a UnoCSS class string per
+[`buildGridClasses`](/api/ui#grid-layout) emits a UnoCSS class string per
 field:
 
 | Desktop span | Narrow span | Generated classes                                |

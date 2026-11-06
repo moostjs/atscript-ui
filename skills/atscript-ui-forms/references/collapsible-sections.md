@@ -84,4 +84,4 @@ import { useAsNestedSectionsStore, provideAsNestedSectionsStore } from "@atscrip
 
 ## See also
 
-Reference docs: https://ui.atscript.dev/forms/collapsible-sections. Source: `packages/vue-form/src/components/as-collapsible.vue`.
+Reference docs: https://ui.atscript.dev/forms/collapsible-sections (component: `AsCollapsible`, https://ui.atscript.dev/api/vue-form#ascollapsible).

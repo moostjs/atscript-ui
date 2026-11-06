@@ -118,6 +118,26 @@ function cacheKey(url: string, locale: string | undefined): string {
 }
 
 /**
+ * `factory`'s client for `url` in `locale`, as a cache entry gets it: asked
+ * for `metaStore: false` without a browser `window`, else for `metaKey`.
+ *
+ * @internal Shared with `@atscript/vue-table`.
+ */
+export function createMetaClient(
+  url: string,
+  factory: ClientFactory | undefined,
+  locale: string | undefined,
+  metaKey?: string,
+): Client {
+  const clientOptions: ClientFactoryOptions = {};
+  if (typeof window === "undefined") clientOptions.metaStore = false;
+  else if (metaKey) clientOptions.metaKey = metaKey;
+  if (locale !== undefined) clientOptions.locale = locale;
+  const f = factory ?? getDefaultClientFactory();
+  return Object.keys(clientOptions).length > 0 ? f(url, clientOptions) : f(url);
+}
+
+/**
  * Get or create the cache entry for `url` in the UI locale of
  * `options.texts`. First caller's `factory` (and `options.metaKey`) seeds the
  * `Client`; subsequent callers reuse it. On `meta` rejection, the entry is
@@ -141,12 +161,7 @@ export function getMetaEntry(
     return existing;
   }
 
-  const clientOptions: ClientFactoryOptions = {};
-  if (!browser) clientOptions.metaStore = false;
-  else if (options?.metaKey) clientOptions.metaKey = options.metaKey;
-  if (locale !== undefined) clientOptions.locale = locale;
-  const f = factory ?? getDefaultClientFactory();
-  const client = Object.keys(clientOptions).length > 0 ? f(url, clientOptions) : f(url);
+  const client = createMetaClient(url, factory, locale, options?.metaKey);
 
   const meta = (client.meta() as Promise<MetaResponse>).catch((err) => {
     // A reset may have replaced the entry while this request was in flight.

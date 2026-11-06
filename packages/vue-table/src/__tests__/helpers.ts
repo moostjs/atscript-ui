@@ -1,4 +1,9 @@
-import type { ColumnDef, MetaResponse, TableDef } from "@atscript/ui";
+import {
+  setDefaultClientFactory,
+  type ColumnDef,
+  type MetaResponse,
+  type TableDef,
+} from "@atscript/ui";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import type { Client } from "@atscript/db-client";
 import { mount, type VueWrapper } from "@vue/test-utils";
@@ -222,6 +227,8 @@ export function mockTableDef(columns: ColumnDef[], fetchableExtra: string[] = []
 type MountTableStateOptions = {
   /** The UI locale the context's client asks in (`TableContext.locale`). */
   locale?: string;
+  /** The table's client factory (`TableContext.clientFactory`). */
+  clientFactory?: import("@atscript/ui").ClientFactory;
   data?: Record<string, unknown>[];
   count?: number;
   pages?: ReturnType<typeof vi.fn>;
@@ -316,6 +323,7 @@ function mountWith(
           state,
           client: opts.client ?? client,
           locale: opts.locale,
+          clientFactory: opts.clientFactory,
           controls: {},
         });
         return () => render() as ReturnType<typeof h>;
@@ -466,3 +474,24 @@ export function seedWindowCache(
   }
   state.totalCount.value = totalCount;
 }
+
+/**
+ * A client factory recording the `[url, locale]` of every client it builds;
+ * the default factory (`fallback`) throws when used.
+ */
+export function recordingFactory() {
+  const asked: unknown[] = [];
+  const factory = vi.fn((url: string, opts?: { locale?: string }) => {
+    asked.push([url, opts?.locale]);
+    return createMockClient({ meta: createMockMeta(["id", "name"]) }).client;
+  });
+  const fallback = vi.fn(() => {
+    throw new Error("the default factory must not be used");
+  });
+  setDefaultClientFactory(fallback as never);
+  return { asked, factory, fallback };
+}
+
+/** A filterable column with a `/owners` dictionary. */
+export const ownerColumn = (): ColumnDef =>
+  mockColumn("owner", { filterable: true, valueHelpInfo: { url: "/owners", targetField: "id" } });

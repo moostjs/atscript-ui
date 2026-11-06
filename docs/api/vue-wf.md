@@ -128,7 +128,7 @@ page. For the narrative on every slot (with defaults and examples), see
 Reach these via a component `ref` (`const form = ref<InstanceType<typeof AsWfForm>>()`). The same two are mirrored in the `default` slot bag's `actions`. Lets a host fire a workflow action it renders itself — e.g. a dialog's own _Cancel_ button — without dropping `<AsWfForm>` for the headless [`useWfForm`](#composable-usewfform). See [Calling actions from the client](/workflows/actions#calling-actions-from-the-client) for the pattern.
 
 ```typescript
-/** Fire the named workflow action. Auto-classifies: a `@wf.action.withData` action sends the current form payload; a plain `@ui.form.action` action sends none. */
+/** Fire the named workflow action. Auto-classifies: a `@wf.action.withData` action sends `data`, or without it the current form payload (since 0.1.168; normalized, as a submit sends it); a plain `@ui.form.action` action sends none. */
 action(name: string, data?: unknown): void;
 /** `true` only when the current step's form declares that action id (`@ui.form.action` id ∪ `@wf.action.withData` value). Gate the host affordance on this — firing an undeclared action is rejected server-side. */
 supportsAction(name: string): boolean;

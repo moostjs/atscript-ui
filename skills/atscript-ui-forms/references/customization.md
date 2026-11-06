@@ -444,7 +444,7 @@ Available from `@atscript/vue-form`:
 
 A `@ui.form.component` on a **structured (object) field** replaces that field's whole section chrome (the stock `AsObject` collapsible). The component gets the object's `FormObjectFieldDef` on `props.field` and re-renders the children itself — tabbed shell, side-nav, wizard, split. Children stay first-class fields (data binding, validation, path, level alternation) as long as you route them back through `AsIterator` / `AsField`.
 
-AsField already provides two things to the custom component's subtree (`packages/vue-form/src/components/as-field.vue`): `PATH_PREFIX_KEY` = the object's **absolute path**, and `LEVEL_KEY` = the object's **level**. So an `AsIterator` with no `:path-prefix` / `:levels` re-renders the object's own direct children exactly as `AsObject` would.
+AsField already provides two things to the custom component's subtree: `PATH_PREFIX_KEY` = the object's **absolute path**, and `LEVEL_KEY` = the object's **level**. So an `AsIterator` with no `:path-prefix` / `:levels` re-renders the object's own direct children exactly as `AsObject` would.
 
 Primitives (all exported from `@atscript/vue-form`):
 
@@ -550,7 +550,7 @@ Every `AsObject` renders a 12-column CSS grid; fields default to the full row. T
 
 | Rule                                                                                                                                                                                                                                    |
 | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Invalid values (`'0'`, negatives, decimals, unknown aliases) silently fall back to the default (col 12 / row 1). Parser: `packages/ui/src/form/grid.ts`.                                                                                |
+| Invalid values (`'0'`, negatives, decimals, unknown aliases) silently fall back to the default (col 12 / row 1).                                                                                                                        |
 | Responsiveness is **container-query** driven, not viewport: `as-narrow:` compiles to `@container as-grid (max-width: 480px)`. The grid registers `container-name: as-grid` via the `as-form-grid` shortcut.                             |
 | Narrow span defaults to `'12'` (auto-stack) regardless of desktop span — never write `'6', '12'` by hand. The narrow 2nd arg exists to opt into something other than full-width.                                                        |
 | A nested `AsObject` re-checks its **own** width: a `colSpan '6'` struct whose inner field is `colSpan '6'` auto-stacks on desktop because the inner container is `< 480px`.                                                             |

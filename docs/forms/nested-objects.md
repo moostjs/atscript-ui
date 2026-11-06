@@ -157,7 +157,7 @@ export interface NestedForm {
         lastName?: string
 
         @meta.label 'Contact Email'
-        @ui.form.fn.description '(v, data) => data.contact?.firstName ? "Email for " + data.contact.firstName : "Contact email address"'
+        @ui.form.fn.description '(v, data, ctx, entry, t) => data.contact?.firstName ? t("Email for {name}", { name: data.contact.firstName }) : "Contact email address"'
         email?: string.email
 
         @meta.label 'Department'
@@ -255,8 +255,7 @@ section.
 ## Error-aware auto-open
 
 `useAsForm` watches every error path and walks ancestors, opening
-each section along the way
-(`packages/vue-form/src/composables/use-as-form.ts:238-248`). After a
+each section along the way. After a
 submit with errors in `address.country.code`, both the `address` and
 `address.country` sections are open before the next paint.
 
@@ -312,7 +311,7 @@ External `:errors` entries count until dismissed by an edit.
 
 `AsForm` provides a `AsNestedSectionsStore` so the entire form shares
 one expand/collapse registry
-(`packages/vue-form/src/composables/use-as-nested-sections-store.ts`).
+([`useAsNestedSectionsStore()`](/api/vue-form#useasnestedsectionsstore-provideasnestedsectionsstore)).
 
 That registry can be **lifted above** the form. Call
 `provideAsNestedSectionsStore()` from a page-level setup block when
@@ -344,8 +343,7 @@ const { def, formData } = createAsFormDef(NestedForm);
 ```
 
 `AsForm` will inherit the page-supplied store instead of creating its
-own
-(`packages/vue-form/src/composables/use-as-form.ts:222-225`).
+own.
 
 ## Custom object renderer
 

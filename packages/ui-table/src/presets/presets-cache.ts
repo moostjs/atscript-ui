@@ -6,6 +6,7 @@ import {
   type ClientFactory,
 } from "@atscript/ui";
 
+import { localeClient } from "./locale-client";
 import type { AsPresetEntryRow, PresetCapabilities } from "./preset-data-types";
 import type { PresetsListResult } from "./presets-client";
 
@@ -190,9 +191,11 @@ function trim(): void {
 }
 
 /**
- * The shared db `Client` for a presets URL (one per URL and factory). Since 0.1.153.
+ * The shared db `Client` for a presets URL (one per URL, factory and UI
+ * locale). Since 0.1.153. `locale` (since 0.1.168) is passed to the factory
+ * (`ClientFactoryOptions.locale`), so its messages come back in that language.
  */
-export function sharedPresetsClient(url: string, factory?: ClientFactory): Client {
+export function sharedPresetsClient(url: string, factory?: ClientFactory, locale?: string): Client {
   wire();
   const f = factory ?? getDefaultClientFactory();
   let byUrl = clients.get(f);
@@ -200,10 +203,11 @@ export function sharedPresetsClient(url: string, factory?: ClientFactory): Clien
     byUrl = new Map();
     clients.set(f, byUrl);
   }
-  let client = byUrl.get(url);
+  const key = locale === undefined ? url : `${url}\n${locale}`;
+  let client = byUrl.get(key);
   if (!client) {
-    client = f(url);
-    byUrl.set(url, client);
+    client = localeClient(f, url, locale);
+    byUrl.set(key, client);
   }
   return client;
 }

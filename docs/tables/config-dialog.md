@@ -85,7 +85,7 @@ state.sorters.value = sortersModel.value;
 state.configDialogOpen.value = false;
 ```
 
-That's the entire flow. The root watcher in `use-table-query.ts`
+That's the entire flow. The table state's root watcher
 observes these arrays and fires a re-query when needed. The dialog
 does **not** call `state.query()`. This is part of the broader
 model-driven contract — every writer (this dialog, the column

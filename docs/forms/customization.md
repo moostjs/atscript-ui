@@ -102,8 +102,7 @@ const components = {
 </template>
 ```
 
-`as-field.vue` resolves components in this order
-(`packages/vue-form/src/components/as-field.vue:373-386`):
+`<AsField>` resolves components in this order:
 
 1. `@ui.form.component 'name'` → `components[name]`
 2. `@ui.form.type 'name'` → `types[name]` (built-in id)

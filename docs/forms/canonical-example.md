@@ -14,12 +14,8 @@ that shows how they fit together, so you don't have to guess which plausible
 combination is the real one.
 
 ::: tip This page is executable
-The component below is
-`packages/vue-form/src/__tests__/fixtures/canonical-form.vue` verbatim — only
-the imports differ (in the repo they point at the sources instead of the
-package). It is type-checked and mounted by
-`packages/vue-form/src/__tests__/canonical-form.spec.ts`, which asserts the
-behaviours called out along the way.
+The component below is type-checked and mounted by the library's test suite,
+which asserts the behaviours called out along the way.
 :::
 
 ## 1. The type

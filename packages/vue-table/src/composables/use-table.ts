@@ -1,10 +1,12 @@
 import {
+  createMetaClient,
   getMetaEntry,
   getMetaTableDef,
   resetMetaCache,
   retainMetaEntry,
   type ClientFactory,
   type SortControl,
+  type TableDef,
 } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import { useAsTexts } from "@atscript/vue-form/locale";
@@ -254,6 +256,7 @@ export function finalizeTableState(
     | "components"
     | "formTypes"
     | "formComponents"
+    | "clientFactory"
   > &
     Pick<TableContext, "locale">,
 ): void {
@@ -263,6 +266,7 @@ export function finalizeTableState(
     state,
     client,
     locale: opts?.locale,
+    clientFactory: opts?.clientFactory,
     controls: opts?.controls ?? {},
     types: opts?.types,
     components: opts?.components,
@@ -281,12 +285,21 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   // receives the texts `/meta` serves for it.
   const texts = useAsTexts();
   const locale = texts.locale();
-  const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey, texts });
-  // Mounted tables (and their filters' pickers) keep their entry in the cache.
-  if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
-  const { client } = entry;
-  // Its labels in the app's UI locale (one TableDef per locale).
-  const defPromise = getMetaTableDef(entry, texts);
+  let client: Client;
+  let defPromise: Promise<TableDef> | undefined;
+  if (typeof window !== "undefined") {
+    const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey, texts });
+    // Mounted tables (and their filters' pickers) keep their entry in the cache.
+    if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
+    client = entry.client;
+    // Its labels in the app's UI locale (one TableDef per locale).
+    defPromise = getMetaTableDef(entry, texts);
+  } else {
+    // A server render does not wait for `/meta`, so it asks nothing: the table
+    // renders loading and the browser loads its metadata after hydration. The
+    // state still gets its client, as a cache entry would.
+    client = createMetaClient(url, opts?.clientFactory, locale);
+  }
 
   // The zone the filters read dates in is the zone the cells render them in.
   const cellLocale = getCurrentInstance() ? useCellLocale() : undefined;
@@ -313,7 +326,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     : null;
 
   const { state, internals } = createTableState({
-    client: client as Client,
+    client,
     limit: opts?.limit,
     selection: {
       rowValueFn: opts?.rowValueFn,
@@ -369,10 +382,10 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
     },
   });
 
-  finalizeTableState(state, client as Client, { ...opts, locale });
+  finalizeTableState(state, client, { ...opts, locale });
 
   defPromise
-    .then((def) => {
+    ?.then((def) => {
       internals.init(def);
     })
     .catch((err) => {

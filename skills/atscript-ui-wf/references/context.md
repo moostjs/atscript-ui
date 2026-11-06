@@ -124,7 +124,7 @@ const wf = useWfForm({ path: "/wf/trigger", name: "auth/login" });
 The strongest pattern: drive form rendering from context inside the `.as` schema itself, with no template changes per step.
 
 ```atscript
-@ui.form.fn.title '(data, ctx) => "Verify code sent to " + ctx.email'
+@ui.form.fn.title '(data, ctx, t) => t("Verify code sent to {email}", { email: ctx.email })'
 @wf.context.pass 'email'
 export interface MfaPincodeForm {
     @meta.label 'Code'
@@ -132,7 +132,7 @@ export interface MfaPincodeForm {
 }
 ```
 
-The `@ui.form.fn.title` callback is form-level — it receives `(data, ctx)` where `data` is the form's current values and `ctx` is the form's `formContext`. See `atscript-ui-forms` skill's `dynamic-fields.md` for the full `@ui.form.fn.*` surface.
+The `@ui.form.fn.title` callback is form-level — it receives `(data, ctx, t)` where `data` is the form's current values, `ctx` is the form's `formContext` and `t` fills a whole-sentence template (translatable; never concatenate user texts). See `atscript-ui-forms` skill's `dynamic-fields.md` for the full `@ui.form.fn.*` surface.
 
 ## Recipe — dynamic step title from context
 
@@ -141,7 +141,7 @@ End-to-end: server stamps email into ctx → client renders MFA form with the em
 ### Form schema
 
 ```atscript
-@ui.form.fn.title '(data, ctx) => "Verify code sent to " + ctx.email'
+@ui.form.fn.title '(data, ctx, t) => t("Verify code sent to {email}", { email: ctx.email })'
 @wf.context.pass 'email'
 export interface MfaPincodeForm {
     @meta.label 'Verification code'
@@ -182,7 +182,7 @@ Server → client:
   }
 ```
 
-The client's `AsForm` runs the `@ui.form.fn.title` callback with `(data, ctx)` where `ctx = { email: "u@x.io" }` and renders `"Verify code sent to u@x.io"` as the title.
+The client's `AsForm` runs the `@ui.form.fn.title` callback with `(data, ctx, t)` where `ctx = { email: "u@x.io" }` and renders `"Verify code sent to u@x.io"` as the title.
 
 ### Why this works
 

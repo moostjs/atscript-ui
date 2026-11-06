@@ -305,7 +305,7 @@ Columns provided by `AsWfStateRecord`: `handle`, `schemaId`, `state` (JSON), `ex
 
 ### `AsWfStore`
 
-Persistent `WfStateStore` (from `@prostojs/wf/outlets`) backed by an `AtscriptDbTable`. Lifts `schemaId` out of the JSON blob into an indexed top-level column; populates `@wf.store.fromContext`-annotated shadow columns on every write.
+Persistent `WfStateStore` (from `@moostjs/event-wf`) backed by an `AtscriptDbTable`. Lifts `schemaId` out of the JSON blob into an indexed top-level column; populates `@wf.store.fromContext`-annotated shadow columns on every write.
 
 ```typescript
 class AsWfStore implements WfStateStore {

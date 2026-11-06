@@ -298,6 +298,8 @@ export {
   onMetaCacheReset,
 } from "./shared/meta-cache";
 export type { MetaCacheEntry, MetaEntryOptions } from "./shared/meta-cache";
+/** @internal Shared with `@atscript/vue-table`. */
+export { createMetaClient } from "./shared/meta-cache";
 
 // ── Shared utilities ────────────────────────────────────────
 export { str, escapeRegex } from "./shared/str";
@@ -317,6 +319,6 @@ export type { TModelRoute } from "./nav/model-routes";
 export { setUiLocale } from "./i18n/ui-texts";
 export type { UiTranslate, UiT, UiTextParams } from "./i18n/ui-texts";
 /** @internal Shared with `@atscript/ui-table` and the `@atscript/vue-*` packages. */
-export { createUiTexts, getUiTexts, activateUiTexts } from "./i18n/ui-texts";
+export { createUiTexts, getUiTexts, activateUiTexts, onUiLocaleChange } from "./i18n/ui-texts";
 /** @internal */
 export type { UiTexts } from "./i18n/ui-texts";

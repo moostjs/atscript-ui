@@ -26,8 +26,8 @@ mysql / mongo. The schema is portable.
 ## The storage row
 
 `AsPresetEntry` is one row per preset, userConf, or appConf. The
-schema lives at
-[`packages/moost-ui-presets/src/as-preset-entry.as`](https://github.com/mav-rik/atscript-ui/blob/main/packages/moost-ui-presets/src/as-preset-entry.as):
+schema ships with `@atscript/moost-ui-presets`
+([reference](/api/moost-ui-presets#schema-—-aspresetentry)):
 
 ```atscript
 @db.table 'as_presets'

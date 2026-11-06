@@ -3,6 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { provideAsLocale } from "@atscript/vue-form";
 import { AS_PRESETS_APP } from "../composables/as-presets-app";
 import { usePresets, type UsePresetsReturn } from "../composables/use-presets";
 
@@ -374,6 +375,44 @@ describe("usePresets", () => {
       await expect(ret.deletePreset("sys:standard")).rejects.toThrow();
     } finally {
       globalThis.fetch = restoreFetch;
+    }
+  });
+});
+
+// Why: the presets client was built without the app's locale, so the server's
+// error bodies and the preflight messages stayed English for a German viewer.
+describe("usePresets — the app's UI locale", () => {
+  it("builds its client for the app's locale and asks capabilities in it", async () => {
+    const client = makeMockClient();
+    client.query.mockResolvedValue([]);
+    const factory = vi.fn(() => client as unknown as Client);
+    const languages: (string | null)[] = [];
+    const origFetch = globalThis.fetch;
+    globalThis.fetch = ((_url: string, init?: RequestInit) => {
+      languages.push(new Headers(init?.headers).get("accept-language"));
+      return Promise.resolve(new Response("{}", { status: 500 }));
+    }) as typeof globalThis.fetch;
+    try {
+      const Page = defineComponent({
+        setup() {
+          usePresets({ url: "/db/_presets", tableKey: "products", clientFactory: factory });
+          return () => h("div");
+        },
+      });
+      mount(
+        defineComponent({
+          setup() {
+            provideAsLocale(() => "de");
+            return () => h(Page);
+          },
+        }),
+        { global: { provide: { [AS_PRESETS_APP as symbol]: "demo" } } },
+      );
+      await flushPromises();
+      expect(factory).toHaveBeenCalledWith("/db/_presets", { locale: "de" });
+      expect(languages).toEqual(["de"]);
+    } finally {
+      globalThis.fetch = origFetch;
     }
   });
 });

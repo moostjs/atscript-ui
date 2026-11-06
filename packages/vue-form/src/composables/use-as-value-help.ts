@@ -22,7 +22,7 @@ import {
   shallowRef,
   watch,
 } from "vue";
-import { useAsTexts } from "./use-as-locale";
+import { useAsTexts, useUiLocaleKey } from "./use-as-locale";
 
 /** Vue inject key used by `AsForm` to publish a per-form `ClientFactory` override. */
 export const CLIENT_FACTORY_KEY: InjectionKey<ClientFactory> = Symbol("as-client-factory");
@@ -58,10 +58,26 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
   const injectedFactory = inject(CLIENT_FACTORY_KEY, null) ?? undefined;
   // The app's texts pick the locale's entry and receive the texts `/meta` serves.
   const texts = useAsTexts();
-  const entry = getMetaEntry(info.url, injectedFactory, { texts });
-  // Held while mounted, so `kickoff`'s `resolveValueHelp` finds this entry (and its client).
-  if (getCurrentScope()) onScopeDispose(retainMetaEntry(entry));
-  const vhClient = new ValueHelpClient(entry.client);
+  const scoped = !!getCurrentScope();
+  // The picker works in the browser only (`kickoff` runs on mount): a server
+  // render asks nothing — a `/meta` answered after the HTML was written would
+  // only merge texts the page never showed.
+  const browser = typeof window !== "undefined";
+  let release: (() => void) | undefined;
+  let vhClient: ValueHelpClient | undefined;
+  /**
+   * Binds the entry of the app's current locale — held while mounted, so
+   * `kickoff`'s `resolveValueHelp` finds it (and its client).
+   */
+  function bindEntry(): void {
+    const entry = getMetaEntry(info.url, injectedFactory, { texts });
+    const previous = release;
+    release = scoped ? retainMetaEntry(entry) : undefined;
+    previous?.();
+    vhClient = new ValueHelpClient(entry.client);
+  }
+  if (browser) bindEntry();
+  if (scoped) onScopeDispose(() => release?.());
 
   const resolved = shallowRef<ResolvedValueHelp | null>(null);
   const status = ref<UseAsValueHelpStatus>("loading");
@@ -75,7 +91,11 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
 
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
   let kickoffPromise: Promise<void> | undefined;
+  /** Bumped per kickoff: a superseded one (a previous locale's) never lands. */
+  let kickoffSeq = 0;
   let lastSearchedText: string | undefined;
+  /** Bumped per search: a superseded one (an older text or locale) never lands. */
+  let searchSeq = 0;
 
   onUnmounted(() => {
     if (debounceTimer !== undefined) clearTimeout(debounceTimer);
@@ -83,16 +103,34 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
 
   async function kickoff(): Promise<void> {
     if (kickoffPromise) return kickoffPromise;
-    kickoffPromise = resolveValueHelp(info.url, { texts })
+    const mine = ++kickoffSeq;
+    kickoffPromise = resolveValueHelp(info.url, { texts, clientFactory: injectedFactory })
       .then((r) => {
+        if (mine !== kickoffSeq) return;
         resolved.value = r;
         status.value = "ready";
       })
       .catch(() => {
-        status.value = "error";
+        if (mine === kickoffSeq) status.value = "error";
       });
     return kickoffPromise;
   }
+
+  // A locale switch without a remount — of the app's `provideAsLocale` getter
+  // or of `setUiLocale`: from now on the picker asks in the new locale, through
+  // the same factory; a started resolve restarts in it, and its arrival re-runs
+  // the current search.
+  function followLocale(): void {
+    if (!browser) return;
+    bindEntry();
+    lastSearchedText = undefined;
+    searchSeq++;
+    if (!kickoffPromise) return;
+    kickoffPromise = undefined;
+    void kickoff();
+  }
+  // `sync`: a `setUiLocale` re-binds before its caller goes on.
+  watch(useUiLocaleKey(texts), followLocale, { flush: "sync" });
 
   function scheduleSearch(text: string) {
     if (debounceTimer !== undefined) clearTimeout(debounceTimer);
@@ -103,9 +141,10 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
 
   async function doSearch(text: string) {
     const r = resolved.value;
-    if (!r) return;
+    if (!r || !vhClient) return;
     if (text === lastSearchedText) return;
     lastSearchedText = text;
+    const mine = ++searchSeq;
     searching.value = true;
     try {
       const result = await vhClient.search(r, {
@@ -116,11 +155,11 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
         filter: info.filter,
         valueField: info.targetField,
       });
-      results.value = result.items;
+      if (mine === searchSeq) results.value = result.items;
     } catch {
-      results.value = [];
+      if (mine === searchSeq) results.value = [];
     } finally {
-      searching.value = false;
+      if (mine === searchSeq) searching.value = false;
     }
   }
 
@@ -146,7 +185,9 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
     model.value = undefined;
     searchText.value = "";
     results.value = [];
+    searching.value = false;
     lastSearchedText = undefined;
+    searchSeq++;
   }
 
   return {

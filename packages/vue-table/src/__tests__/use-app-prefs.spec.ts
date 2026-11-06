@@ -1,8 +1,10 @@
 import { ClientError } from "@atscript/db-client";
 import type { Client } from "@atscript/db-client";
 import { flushPromises, mount } from "@vue/test-utils";
-import { defineComponent, h } from "vue";
+import { defineComponent, h, ref } from "vue";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { activateUiTexts, createUiTexts } from "@atscript/ui";
+import { provideAsLocale } from "@atscript/vue-form";
 
 import { AS_PRESETS_APP } from "../composables/as-presets-app";
 import {
@@ -636,6 +638,48 @@ describe("useAppPrefs BroadcastChannel", () => {
     } finally {
       globalRef.BroadcastChannel = original;
       disposeAppPrefs("demo", "/db/_ssr");
+    }
+  });
+});
+
+// Why: the prefs client never received the app's locale, so its error and
+// preflight messages stayed English. The singleton outlives views, so it reads
+// its app's UI locale per request — its own app's, not whichever app (or
+// `setUiLocale`) was activated last.
+describe("useAppPrefs — the app's UI locale", () => {
+  it("asks the factory for a client in its app's locale of the moment", async () => {
+    const client = makeMockClient();
+    client.query.mockResolvedValue([]);
+    const factory = vi.fn(() => client as unknown as Client);
+    const locale = ref("de");
+    let ret!: UseAppPrefsReturn;
+    const Widget = defineComponent({
+      setup() {
+        ret = useAppPrefs({ url: "/db/_presets", clientFactory: factory, cache: false });
+        return () => h("div");
+      },
+    });
+    mount(
+      defineComponent({
+        setup() {
+          provideAsLocale(() => locale.value);
+          return () => h(Widget);
+        },
+      }),
+      { global: { provide: { [AS_PRESETS_APP as symbol]: "demo" } } },
+    );
+    // another app activated later, in another locale
+    const undo = activateUiTexts(createUiTexts({ locale: () => "fr" }));
+    try {
+      await flushPromises();
+      locale.value = "en";
+      await ret.reload();
+      expect(factory.mock.calls.map((c) => (c as unknown[])[1])).toEqual([
+        { locale: "de" },
+        { locale: "en" },
+      ]);
+    } finally {
+      undo();
     }
   });
 });

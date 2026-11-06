@@ -10,8 +10,8 @@ custom components, see [Customization](/forms/customization).
 
 ## The contract
 
-Every field component receives a `TAsComponentProps<T>` interface (declared in
-`packages/vue-form/src/components/types.ts`). `T` is the field's value type:
+Every field component receives a [`TAsComponentProps<T>`](/api/vue-form#tascomponentprops-v)
+interface. `T` is the field's value type:
 `string`, `number`, `string[]`, etc.
 
 ```typescript
@@ -60,8 +60,8 @@ Annotated breakdown of the props you'll touch most:
 | `level`                     | Nesting depth (0 at root, increments per nested object/array)              |
 | `onBlur`                    | Call when your control blurs — triggers field validation                   |
 
-The complete list (and forward-compat fields) is in
-`packages/vue-form/src/components/types.ts`.
+The complete list (and forward-compat fields) is in the
+[`TAsComponentProps` reference](/api/vue-form#tascomponentprops-v).
 
 ## Emits
 
@@ -184,8 +184,7 @@ and external-error wiring. `isDirty` is a reactive per-field
 "changed-since-baseline" flag — `false` unless the form has `track-changes` on —
 so a custom field can mark itself visually; see
 [Change tracking — per-field dirty](/forms/change-tracking#marking-changed-fields-per-field-dirty).
-See `packages/vue-form/src/composables/use-as-field.ts` for the full options
-shape.
+See [`useAsField`](/api/vue-form#useasfield-opts) for the full options shape.
 
 ### `useAsData`
 

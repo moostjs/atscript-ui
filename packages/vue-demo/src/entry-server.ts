@@ -1,4 +1,5 @@
 import { installDynamicResolver } from "@atscript/ui-fns";
+import { getAsServedTexts } from "@atscript/vue-form";
 import { renderToString } from "vue/server-renderer";
 import { createApp } from "./app";
 
@@ -16,6 +17,12 @@ export async function render(url: string) {
   const ctx: Record<string, unknown> = {};
   const html = await renderToString(app, ctx);
 
-  const state = JSON.stringify((ctx as { state?: unknown }).state ?? {});
-  return { html, state };
+  // The texts the server served while rendering (e.g. `/meta` `$i18n`): the
+  // browser app starts with them, so hydration shows the same words.
+  const state = {
+    ...(ctx as { state?: Record<string, unknown> }).state,
+    asTexts: getAsServedTexts(ctx),
+  };
+  // Inlined into a <script>: escape `<` so no text can close it.
+  return { html, state: JSON.stringify(state).replace(/</g, "\\u003c") };
 }

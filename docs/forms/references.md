@@ -39,7 +39,7 @@ export interface OrdersTable {
 
 When `<AsField>` resolves to a FK field it routes through the `ref` entry in
 your types map — by default `AsRef`, a Reka-ui Combobox driven by a
-`ValueHelpClient` (`packages/ui/src/value-help/value-help-client.ts`).
+[`ValueHelpClient`](/api/ui#valuehelpclient).
 
 ## Reference chains
 
@@ -85,8 +85,8 @@ that:
    `<AsTable>` actions, call `invalidateValueHelpCache()` so pickers refetch at
    once. See the [API reference](/api/ui#setvaluehelpcachettl-ms-invalidatevaluehelpcache-client).
 
-The client is created lazily and shared by every ref field in the form — see
-the `clientFactory` provide in `packages/vue-form/src/components/as-form.vue`.
+The client is created lazily and shared by every ref field in the form — pass
+`<AsForm>`'s [`clientFactory`](/api/vue-form#asform) prop to build it your way.
 
 ## Binding without a foreign key: `@ui.valueHelp`
 

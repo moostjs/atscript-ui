@@ -1,5 +1,6 @@
 import { setDefaultClientFactory } from "@atscript/ui";
 import { installDynamicResolver } from "@atscript/ui-fns";
+import { provideAsServedTexts, type AsServedTexts } from "@atscript/vue-form";
 import { createApp } from "./app";
 import { clientFactory, setRouterNavigate } from "./client/api/client-factory";
 import "@unocss/reset/tailwind.css";
@@ -14,6 +15,9 @@ installDynamicResolver();
 setDefaultClientFactory(clientFactory);
 
 const { app, router } = createApp();
+// The texts the server render used — the app hydrates with the same words.
+const ssrState = (window as { __SSR_STATE__?: { asTexts?: AsServedTexts } }).__SSR_STATE__;
+provideAsServedTexts(app, ssrState?.asTexts);
 // Wire SPA-mode navigation for `processor: 'navigate'` actions — without
 // this, `Client.action()` falls back to `location.assign(url)` and the
 // page hard-reloads on every "View orders" / "Edit" action.

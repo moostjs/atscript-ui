@@ -14,6 +14,7 @@ import {
   type Ref,
 } from "vue";
 import {
+  type ClientFactory,
   type ColumnDef,
   type PaginationControl,
   type SortControl,
@@ -138,6 +139,13 @@ export interface TableContext {
    * locale. Since 0.1.165.
    */
   locale?: string;
+  /**
+   * The table's `clientFactory` (see `UseTableOptions`), `undefined` for the
+   * app-wide default. The filters' value pickers build their clients with it,
+   * so a dictionary or distinct-values picker talks to the server the way the
+   * table does. Since 0.1.168.
+   */
+  clientFactory?: ClientFactory;
   /** Skin-slot overrides for table chrome (header cells, filter dialog, etc.). */
   controls: TAsTableControls;
   /** Cell-type → component dispatch map. */

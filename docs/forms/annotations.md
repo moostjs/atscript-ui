@@ -22,9 +22,9 @@ Annotations come from three families:
   for measurement adornments and FK pickers. See
   [db.atscript.dev](https://db.atscript.dev).
 
-Annotation key constants live in `packages/ui/src/plugin/*.ts` — every
-table below pairs the `.as` syntax with the underlying string key so
-you can grep the source.
+Every table below pairs the `.as` syntax with the underlying string key —
+the [annotation key constants](/api/ui#annotation-key-constants) exported by
+`@atscript/ui` name them.
 
 ## `@meta.*` — semantics
 
@@ -97,7 +97,7 @@ know how to dispatch — `text`, `password`, `textarea`, `number`,
 For primitives it folds into the field's structural `type` at
 FormDef-build time; for structured fields (`object`, `array`, `union`,
 `tuple`) it lives in `customType` and is checked first in the lookup
-(see `packages/vue-form/src/components/as-field.vue:373-386`).
+(see [Component resolution](/forms/field-types#component-resolution)).
 
 ```atscript
 @ui.type 'password'
@@ -174,8 +174,7 @@ See [Grid Layout](/forms/grid-layout) for the 12-column grid and the
 ### Adornments
 
 Read together to drive the merged prefix / suffix chrome inside
-numeric and decimal inputs. See `as-field.vue:199-307` for the full
-resolution chain.
+numeric and decimal inputs.
 
 | Annotation                                | Effect                                              |
 | ----------------------------------------- | --------------------------------------------------- |
@@ -243,7 +242,7 @@ form-level rule. See [Validation](/forms/validation) and
 | `@ui.form.type 'textarea'`     | Flips to a different **built-in** renderer (`text`, `password`, `textarea`, `number`, `decimal`, `select`, `radio`, `checkbox`, `multiselect`, `date`, `datetime`, `time`, `paragraph`, `action`). Reserved for built-ins. |
 | `@ui.form.component 'MyInput'` | Resolves a **named** component from the `:components` map (highest precedence). The dedicated mechanism for custom renderers.                                                                                              |
 
-Resolution precedence (see `as-field.vue:373-386`):
+Resolution precedence:
 
 ```text
 @ui.form.component  →  components[name]
@@ -310,7 +309,7 @@ Full coverage in [Dynamic Fields](/forms/dynamic-fields).
 
 ::: warning Trade-offs
 Every `@ui.form.fn.*` key on a field promotes it from the static
-fast-path to the dynamic path (`as-field.vue:409` vs `:446`). The
+fast-path to the dynamic path. The
 dynamic path builds a reactive `TFnScope` per evaluation, so reach
 for `fn.*` when the value depends on other form state and stick with
 the static keys when it doesn't.
@@ -359,7 +358,7 @@ A few patterns you'll see again and again:
 - **Optional + required** — `firstName?: string` with `@meta.required`
   means "if you provide it, you must provide a value". In practice
   vue-form treats this as not-required for the field marker (the `*`
-  would mislead) — see `as-field.vue:167-181`.
+  would mislead).
 - **Phantom fields** — fields with no input element (paragraphs,
   actions) read `@meta.default` (or `@ui.form.fn.value` dynamically) as
   the displayed value.

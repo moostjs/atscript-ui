@@ -31,8 +31,7 @@ longitude, R / G / B), use an object instead, or a
 
 `useAsTuple()` runs an `onMounted` hook that fills missing positions
 with their type's default value — non-optional tuples are guaranteed
-to be the correct length before the user sees them
-(`packages/vue-form/src/composables/use-as-tuple.ts:45-71`).
+to be the correct length before the user sees them.
 
 ```ts
 function fillMissing() {

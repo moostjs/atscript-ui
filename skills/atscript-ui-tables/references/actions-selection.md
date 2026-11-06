@@ -91,7 +91,7 @@ Identifier objects are object-only (never bare scalars) — cross-link atscript-
 
 ## AsRowActions
 
-`components/defaults/as-row-actions.vue`. Renders the cell for the synthesized `__actions` pseudo-column.
+Renders the cell for the synthesized `__actions` pseudo-column.
 
 - 0 visible actions → empty `<td>` (placeholder for `table-layout: fixed`).
 - 1 action → three-way render:

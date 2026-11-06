@@ -112,8 +112,13 @@ export type {
 } from "./composables/use-as-tri-state-checkbox";
 
 // Composables — locale (drives decimal/currency formatting and the built-in texts)
-export { provideAsLocale, useAsLocale } from "./composables/use-as-locale";
-export type { UseAsLocaleReturn } from "./composables/use-as-locale";
+export {
+  getAsServedTexts,
+  provideAsLocale,
+  provideAsServedTexts,
+  useAsLocale,
+} from "./composables/use-as-locale";
+export type { AsServedTexts, UseAsLocaleReturn } from "./composables/use-as-locale";
 
 // Composables — measurement & date inputs (companions to defaults)
 export { useAsDecimal } from "./composables/use-as-decimal";

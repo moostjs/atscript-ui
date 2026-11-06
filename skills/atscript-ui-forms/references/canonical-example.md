@@ -7,9 +7,8 @@ mapped onto fields, and one custom control registered through `types`. Copy this
 when asked "wire a form to the db client", "OCC form example", or "show server
 field errors on the fields".
 
-The component below is kept verbatim in
-`packages/vue-form/src/__tests__/fixtures/canonical-form.vue` and is mounted by
-`canonical-form.spec.ts` — every claim here is an assertion there.
+The component below is mounted by the library's test suite — every claim here
+is an assertion there.
 
 ## Contents
 

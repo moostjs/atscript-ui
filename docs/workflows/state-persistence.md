@@ -91,7 +91,7 @@ contract.
 
 ## Wiring `AsWfStore`
 
-`AsWfStore` implements `WfStateStore` from `@prostojs/wf/outlets`,
+`AsWfStore` implements `WfStateStore` from `@moostjs/event-wf`,
 backed by any `AtscriptDbTable` whose row shape extends
 `AsWfStateRecord`.
 
@@ -212,18 +212,43 @@ new HandleStateStrategy({ store: wfStore, hashHandles: { secret: process.env.WF_
 
 - **Off by default.** Turn it on for every `HandleStateStrategy` backed by
   `AsWfStore` (`@prostojs/wf` 0.3+).
-- **Upgrading.** Rows written before you turned it on keep their raw handle;
-  with the default handle generator those handles still resume (once —
-  resuming moves them to a hashed key or consumes them). With a custom
-  `generateHandle` the fallback is off unless you pass
+- **Upgrading.** Rows written before you turned it on keep their raw handle
+  as their key. With the default handle generator those handles still resume:
+  the first resume reads the raw key once and moves the row to the hashed key
+  (or consumes it if the flow finishes); the handle doesn't change. With a
+  custom `generateHandle` the fallback is off unless you pass
   `hashHandles: { legacyHandle: (token) => /* exactly the shape you issued */ }`
   (`rawFallback: true` without `legacyHandle` throws). The fallback exists in
   `@prostojs/wf` 0.3.x only: a raw-key handle that never expires stops resuming
   with 0.4, so give flows a TTL.
-- **Finding a row by its handle** (to revoke a link): the key is
-  `hashWfHandle(handle, secret?)` from `@prostojs/wf/outlets` —
-  `await wfStore.delete(hashWfHandle(handle))`. Shadow columns
-  (`@wf.store.fromContext`) remain the way to query rows.
+- **Revoking a link.** Call `consume(handle)` on the strategy that issued it:
+  it deletes the row under its hashed key, and under the raw key while the
+  raw-key fallback is on. The handle is the part of the `wfs` token after the
+  first `.` — the token is `<strategy name>.<handle>` (`default.<handle>` with
+  a single strategy):
+
+  ```ts
+  const handle = wfs.slice(wfs.indexOf(".") + 1); // "default.<handle>" → "<handle>"
+  await handleStrategy.consume(handle);
+  ```
+
+  Without the strategy instance (a separate process, a database job), the key
+  is `hashWfHandle(handle, secret?)` from `@moostjs/event-wf` (≥ 0.7.4), with
+  the same `secret` as `hashHandles` — and delete the raw handle too: a row
+  not resumed since hashing was turned on still sits there, and the link
+  would still resume:
+
+  ```ts
+  import { hashWfHandle } from "@moostjs/event-wf";
+
+  await wfStore.delete(hashWfHandle(handle)); // pass the secret when you hash with one
+  await wfStore.delete(handle); // a row stored before hashing was turned on
+  ```
+
+  Shadow columns (`@wf.store.fromContext`) remain the way to query rows. Full
+  reference: [Hashing Handles](https://moost.org/wf/outlets#hashing-handles)
+  in the Moost docs.
+
 - **Changing or removing the secret** invalidates every open handle.
 - **New handles** are 22 URL-safe characters instead of a UUID; don't parse
   their shape.

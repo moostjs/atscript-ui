@@ -171,6 +171,7 @@ export {
 // ── AppPrefsClient (app-wide user prefs) ────────────────────
 export type { AppPrefsClientConfig, AppPrefsLoadResult } from "./presets/app-prefs-client";
 export { AppPrefsClient } from "./presets/app-prefs-client";
+export type { PresetsLocale } from "./presets/locale-client";
 
 // ── Query builder ──────────────────────────────────────────
 export type { BuildTableQueryOptions } from "./query/build-table-query";

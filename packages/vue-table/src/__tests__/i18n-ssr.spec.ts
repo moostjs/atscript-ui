@@ -5,7 +5,9 @@ import { renderToString } from "vue/server-renderer";
 import type { Client } from "@atscript/db-client";
 import { provideAsLocale } from "@atscript/vue-form";
 import AsTableCellValue from "../components/defaults/as-table-cell-value.vue";
-import { createTableState } from "../composables/use-table-state";
+import { createTableState, useTableContext } from "../composables/use-table-state";
+import { useTable } from "../composables/use-table";
+import { resetDefaultClientFactory, setDefaultClientFactory } from "@atscript/ui";
 import type { ReactiveTableState } from "../types";
 import { mockColumn, mockTableDef } from "./helpers";
 
@@ -60,5 +62,51 @@ describe("table texts on a server", () => {
     expect(remove?.label).toBe("Löschen");
     expect(remove?.promptText).toEqual(["Eintrag $1 löschen?", "Delete $N items?"]);
     expect(state.preset.systemPresets.value[0]?.label).toBe("Standardansicht");
+  });
+});
+
+// Why: every server render asked an uncached `/meta` per table, deserialized
+// it and initialised the state after the HTML was written — nothing waited for it.
+describe("useTable on a server", () => {
+  it("asks no /meta, yet the state has its client (in the app's locale)", async () => {
+    const meta = vi.fn(() => new Promise(() => {}));
+    const built: unknown[] = [];
+    setDefaultClientFactory(((url: string, opts?: unknown) => {
+      built.push([url, opts]);
+      return { meta, pages: vi.fn() } as unknown as Client;
+    }) as never);
+    try {
+      let state!: ReactiveTableState;
+      let client: Client | undefined;
+      const Cell = defineComponent({
+        setup() {
+          client = useTableContext().client;
+          return () => h("span");
+        },
+      });
+      const app = createSSRApp(
+        defineComponent({
+          setup() {
+            provideAsLocale(() => "de");
+            return () =>
+              h(
+                defineComponent({
+                  setup() {
+                    state = useTable("/api/db/tables/products", { queryOnMount: false });
+                    return () => h(Cell);
+                  },
+                }),
+              );
+          },
+        }),
+      );
+      await renderToString(app);
+      expect(meta).not.toHaveBeenCalled();
+      expect(built).toEqual([["/api/db/tables/products", { metaStore: false, locale: "de" }]]);
+      expect(client).toBeDefined();
+      expect(state.loadingMetadata.value).toBe(true);
+    } finally {
+      resetDefaultClientFactory();
+    }
   });
 });

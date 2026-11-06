@@ -132,6 +132,12 @@ surrounding spaces now fails in the browser, as it always did on the server.
   validated and emitted; the inputs don't change under the user's cursor. To
   show the stored value after saving, load it back into `formData` (e.g. from
   the server's answer).
+- **Actions carry the same data** (since 0.1.168): `@action` /
+  `@unsupported-action` emit the normalized data a submit would send (not
+  validated), and so does a workflow's `@wf.action.withData` action.
+- **Rules see it live too** (since 0.1.168): a `@ui.form.validate` rule reads
+  its siblings (`data`) normalized while the user types, and a container's
+  rule judges its normalized value — the same view a submit validates.
 - **Change tracking** (`getPatch()` / `changes`) compares what the form shows;
   `@atscript/db-client` writes normalize their payload again before sending,
   so a patch built from the form is stored normalized as well. Normalizing
@@ -271,7 +277,7 @@ const serverErrors = {
 ```
 
 External errors **auto-dismiss** as the user edits the offending
-field (`as-field.vue:677-683`). The form-level banner has its own
+field. The form-level banner has its own
 explicit dismiss button. Programmatic dismissal is available via
 `useAsForm()`'s `dismissError(path)` and `dismissFormError()`.
 

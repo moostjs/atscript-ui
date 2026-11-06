@@ -23,7 +23,7 @@ import {
 } from "reka-ui";
 import { useConditionFormat } from "../../composables/use-condition-format";
 import { textAround } from "../../utils/text-around";
-import { useAsTexts } from "@atscript/vue-form/locale";
+import { useAsTexts, useUiLocaleKey } from "@atscript/vue-form/locale";
 import { hasValuePicker } from "../../composables/use-value-pickers";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTableComponent } from "../../composables/use-table-component";
@@ -34,7 +34,11 @@ import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
 const { state } = useTableContext();
 const { formatCondition } = useConditionFormat(state);
-const { t } = useAsTexts();
+const texts = useAsTexts();
+const { t } = texts;
+// Keys the value-help picker: rebuilt per UI locale (`provideAsLocale` or
+// `setUiLocale`), it asks in the new one (its selection lives in the model).
+const locale = useUiLocaleKey(texts);
 // Static skin-slot resolution — `controls.filterValueHelp` replaces the
 // internal default without it ever being a public export.
 const FilterValueHelp = useTableComponent("filterValueHelp", AsFilterValueHelp);
@@ -248,7 +252,12 @@ function onOpenAutoFocus(event: Event) {
           </TabsList>
 
           <TabsContent value="value-help" class="as-filter-dialog-tab-content">
-            <component :is="FilterValueHelp" :column="column" v-model="valueHelpConditions" />
+            <component
+              :is="FilterValueHelp"
+              :key="locale ?? ''"
+              :column="column"
+              v-model="valueHelpConditions"
+            />
           </TabsContent>
 
           <TabsContent
