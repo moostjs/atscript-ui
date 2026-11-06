@@ -5,14 +5,14 @@ packages:
 catalog:
   "@aooth/arbac": ^0.2.4
   "@aooth/arbac-moost": ^0.2.4
-  "@atscript/core": ^0.2.7
-  "@atscript/db": ^0.1.170
-  "@atscript/db-client": ^0.1.170
-  "@atscript/db-sql-tools": ^0.1.170
-  "@atscript/db-sqlite": ^0.1.170
-  "@atscript/moost-db": ^0.1.170
-  "@atscript/moost-validator": ^0.2.7
-  "@atscript/typescript": ^0.2.7
+  "@atscript/core": ^0.2.8
+  "@atscript/db": ^0.1.171
+  "@atscript/db-client": ^0.1.171
+  "@atscript/db-sql-tools": ^0.1.171
+  "@atscript/db-sqlite": ^0.1.171
+  "@atscript/moost-db": ^0.1.171
+  "@atscript/moost-validator": ^0.2.8
+  "@atscript/typescript": ^0.2.8
   "@iconify/utils": ^3.1.3
   "@moostjs/event-http": ^0.7.3
   "@moostjs/event-wf": ^0.7.3
@@ -41,7 +41,7 @@ catalog:
   sirv: ^3.0.2
   typescript: ^5
   unocss: ^66.7.0
-  unplugin-atscript: ^0.2.7
+  unplugin-atscript: ^0.2.8
   unplugin-swc: ^1.5.9
   vite: npm:@voidzero-dev/vite-plus-core@0.1.14
   vite-plus: 0.1.14
@@ -49,7 +49,7 @@ catalog:
   vue: ^3
   vue-router: ^4
   vue-tsc: ~3.2.9
-  vunor: ^0.4.0
+  vunor: ^0.4.1
 
 catalogMode: prefer
 
