@@ -100,4 +100,7 @@ export interface I18nForm {
 
     @ui.form.action 'skip', 'Skip'
     skipAction: ui.action
+
+    @ui.form.fn.value '(v, data, ctx, entry, t) => ctx.recipient ? t("Code sent to {recipient}.", { recipient: ctx.recipient }) : "Request a code"'
+    sent: ui.paragraph
 }

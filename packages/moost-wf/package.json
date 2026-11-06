@@ -68,6 +68,7 @@
     "@atscript/db-sqlite": "catalog:",
     "@atscript/typescript": "catalog:",
     "@atscript/ui": "workspace:^",
+    "@atscript/ui-fns": "workspace:^",
     "@moostjs/event-wf": "catalog:",
     "@prostojs/wf": "^0.3.0",
     "@uniqu/core": "catalog:",

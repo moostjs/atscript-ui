@@ -55,8 +55,8 @@ A server that translates (moost's `setTranslator`, see
 [Translations on the server](/guide/i18n-server)) collects the string literals
 of every text-producing function — `fn.label`, `fn.description`, `fn.hint`,
 `fn.placeholder`, `fn.title`, `fn.submit.text`, `fn.options`, `fn.attr`,
-`@ui.form.validate` — and serves their translations with the form. On the
-client:
+`fn.value` (_since 0.1.166_), `@ui.form.validate` — and serves the
+translations it has with the form. On the client:
 
 - a **result** that is exactly one of those texts is shown translated — labels,
   descriptions, hints, placeholders, titles, submit texts, option labels (never
@@ -71,6 +71,9 @@ notes?: string
 
 @ui.form.fn.label '(v) => v ? "Name (set)" : "Name"'
 name: string
+
+@ui.form.fn.value '(v, data, ctx, entry, t) => t("Code sent to {recipient}.", { recipient: ctx.recipient })'
+codeSent: ui.paragraph
 ```
 
 Write texts as whole literals: `"Hello " + name` cannot match a translation,
@@ -81,9 +84,11 @@ Write texts as whole literals: `"Hello " + name` cannot match a translation,
 the server translates "Admin". Return literals from text functions, put data
 in with `t("… {name}", { name: data.name })`, and wrap data itself in `t` only
 when you mean to translate it. Your own `translate` (`provideAsLocale`) is
-called with these results too. `fn.classes`, `fn.styles`, `fn.value` and
-the boolean functions are never translated. `t` uses the texts of
-`provideAsLocale` ([Language & Translations](/guide/i18n)).
+called with these results too. The results of `fn.value` and `fn.attr` are
+never matched against the served texts — a value is data — so wrap their texts
+in `t`, as `codeSent` above does. `fn.classes`, `fn.styles` and the boolean
+functions hold no texts. `t` uses the texts of `provideAsLocale`
+([Language & Translations](/guide/i18n)).
 
 ## Every static prop has a dynamic counterpart
 
@@ -213,7 +218,7 @@ city: ui.select
 
 ```atscript
 @meta.label 'Welcome'
-@ui.form.fn.title '(data, ctx) => "Welcome " + ctx.userName'
+@ui.form.fn.title '(data, ctx, t) => t("Welcome {name}", { name: ctx.userName })'
 export interface WelcomeForm { ... }
 ```
 

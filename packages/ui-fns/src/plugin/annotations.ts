@@ -216,7 +216,11 @@ export const uiFnsAnnotations: TAnnotationsTree = {
         disabled: fnAnnotation("Computed disabled state: (value, data, context, entry) => boolean"),
         hidden: fnAnnotation("Computed hidden state: (value, data, context, entry) => boolean"),
         readonly: fnAnnotation("Computed readonly state: (value, data, context, entry) => boolean"),
-        value: fnAnnotation("Computed default value: (value, data, context, entry) => any"),
+        value: fnAnnotation(
+          "Computed value: (value, data, context, entry) => any — the field's default " +
+            "(kept in sync while readonly); the text a display-only field (`ui.paragraph`) shows",
+          true,
+        ),
         classes: fnAnnotation(
           "Computed CSS classes: (value, data, context, entry) => string | Record<string, boolean>",
         ),

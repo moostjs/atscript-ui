@@ -92,7 +92,7 @@ const code = `return (${fnStr})(data, context, t)`;
 
 So form-level fns receive `(data, context, t)` and field-level fns receive `(v, data, context, entry, t)`. The same `fn.title` / `fn.description` keys on a nested object field (its section header) are field-level.
 
-**`t` and translated results (since 0.1.165).** `t(text, params?)` = the text in the app's language (server-served `$i18n` by exact match, else `text`; `{name}` filled from `params`). A string result of `fn.label/description/hint/placeholder/title/submit.text`, a computed option `label` (never `key`) and a `@ui.form.validate` message are shown translated when they exactly match a served text. Write whole literals (`t("Hello {name}", { name })`), never concatenations. Data-derived results are matched too (`(v, data) => data.name` → a user named "Admin" shows a served "Admin" translation; the app's `translate` is called with it): return literals, inject data via `t` params, wrap data in `t` only deliberately. `fn.classes/styles/value/attr` results are never translated. Rules: atscript-ui skill `references/i18n.md` (S5).
+**`t` and translated results (since 0.1.165).** `t(text, params?)` = the text in the app's language (server-served `$i18n` by exact match, else `text`; `{name}` filled from `params`). A string result of `fn.label/description/hint/placeholder/title/submit.text`, a computed option `label` (never `key`) and a `@ui.form.validate` message are shown translated when they exactly match a served text. Write whole literals (`t("Hello {name}", { name })`), never concatenations. Data-derived results are matched too (`(v, data) => data.name` → a user named "Admin" shows a served "Admin" translation; the app's `translate` is called with it): return literals, inject data via `t` params, wrap data in `t` only deliberately. `fn.value/attr` results are never matched — wrap their texts in `t(...)` (their literals are served; `fn.value`, e.g. a `ui.paragraph`'s text, since 0.1.166). `fn.classes/styles` hold no texts. Rules: atscript-ui skill `references/i18n.md` (S5).
 
 ## `@ui.form.fn.*` exhaustive table
 
@@ -138,7 +138,7 @@ state?: string
 ```atscript
 country: string
 
-@ui.form.fn.label '(_, data) => "Phone for " + (data.country || "unknown")'
+@ui.form.fn.label '(_, data, ctx, entry, t) => t("Phone for {country}", { country: data.country || t("unknown") })'
 phone: string
 ```
 
@@ -187,11 +187,11 @@ export interface User {
 ```atscript
 @meta.label 'Summary'
 @ui.form.type 'paragraph'
-@ui.form.fn.value '(_, data) => data.items.length + " items, total " + data.items.reduce((s,i)=>s+i.price,0).toFixed(2)'
+@ui.form.fn.value '(_, data, ctx, entry, t) => t("{count} items, total {total}", { count: data.items.length, total: data.items.reduce((s, i) => s + i.price, 0).toFixed(2) })'
 summary?: string
 ```
 
-The field never enters the data — `paragraph` is a phantom renderer. `_` is `v` (always `undefined` for phantoms).
+The field never enters the data — `paragraph` is a phantom renderer. `_` is `v` (always `undefined` for phantoms). The whole sentence is one `t(...)` template, so a translating server serves it in `$i18n` (since 0.1.166); `"… items" + x` concatenation could never match a translation.
 
 ### Readonly field that auto-fills
 

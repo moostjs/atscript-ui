@@ -54,8 +54,10 @@ The form schema carries `$i18n`, merged by `<AsWfForm>` into the app's texts:
 - the validator's message templates (`MIN_LENGTH`, …) and the built-in UI texts
   (`UI_*`) in the request's language, with `{name}` placeholders kept;
 - the translated string literals of the form's expressions
-  (`@ui.form.fn.label`, `@ui.form.validate`, …): a result that is exactly one of
-  them is shown translated, and `t(text, params)` in an expression reads them.
+  (`@ui.form.fn.label`, `@ui.form.fn.value`, `@ui.form.validate`, …): a result
+  that is exactly one of them is shown translated, and `t(text, params)` in an
+  expression reads them — the way to translate the text of a display-only
+  `ui.paragraph`.
   See [Texts in the user's language](/forms/dynamic-fields#texts-in-the-users-language).
 
 Only entries that differ from English are sent.

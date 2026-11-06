@@ -1,6 +1,15 @@
-import { serializeAnnotatedType, translateServed } from "@atscript/typescript/utils";
+import { userTextAnnotations } from "@atscript/core";
+import {
+  deserializeAnnotatedType,
+  serializeAnnotatedType,
+  translateServed,
+  type TAtscriptAnnotatedType,
+} from "@atscript/typescript/utils";
+import { createUiTexts } from "@atscript/ui";
 import { describe, expect, it } from "vite-plus/test";
 
+import { uiFnsAnnotations } from "../plugin/annotations";
+import { DynamicFieldResolver } from "../runtime/dynamic-resolver";
 import { ServedTexts } from "./fixtures/served-texts.as.js";
 
 const de: Record<string, string> = {
@@ -24,6 +33,7 @@ const de: Record<string, string> = {
   "Add phone": "Telefon hinzufügen",
   "Remove phone": "Telefon entfernen",
   "Resend code": "Code erneut senden",
+  "Code sent to {recipient}.": "Code an {recipient} gesendet.",
 };
 
 function served() {
@@ -76,5 +86,59 @@ describe("@ui.* texts in a served type", () => {
     });
     // A class name is no user text: `@ui.form.fn.classes` is not extracted.
     expect(texts).not.toHaveProperty("is-set");
+  });
+});
+
+describe("@ui.form.fn.value on a display-only field", () => {
+  it("serves the translated literals of its expression, and only translated ones", () => {
+    const { value, texts } = served();
+    expect(value.type.props.sent.metadata["ui.form.fn.value"]).toContain(
+      't("Code sent to {recipient}."',
+    );
+    expect(texts["Code sent to {recipient}."]).toBe("Code an {recipient} gesendet.");
+    // A literal the translator has no text for adds nothing to what is served.
+    expect(texts).not.toHaveProperty("Request a code");
+  });
+
+  it("shows `t(…)` in the served language, params filled", () => {
+    const { value, texts } = served();
+    const appTexts = createUiTexts({ locale: () => "de" });
+    appTexts.merge("de", texts);
+    // A phantom field is no key of the interface: read it from the served type.
+    const props = deserializeAnnotatedType(value as never).type as unknown as {
+      props: Map<string, TAtscriptAnnotatedType>;
+    };
+    const resolver = new DynamicFieldResolver();
+    const show = (context: Record<string, unknown>) =>
+      resolver.resolveFieldProp(props.props.get("sent")!, "ui.form.fn.value", undefined, {
+        v: undefined,
+        data: {},
+        context,
+        entry: undefined,
+        t: appTexts.t,
+      });
+    expect(show({ recipient: "a@b.c" })).toBe("Code an a@b.c gesendet.");
+    // Not through `t`: the value as the fn returns it.
+    expect(show({})).toBe("Request a code");
+  });
+});
+
+describe("which fn annotations hold user text", () => {
+  it("every fn whose result users see — never the logic and styling fns", () => {
+    // Not here: fn.disabled / hidden / readonly / submit.disabled (booleans),
+    // fn.classes / styles and their table twins (CSS).
+    expect(Object.fromEntries(userTextAnnotations(uiFnsAnnotations))).toEqual({
+      "ui.form.validate": "expression",
+      "ui.form.fn.title": "expression",
+      "ui.form.fn.submit.text": "expression",
+      "ui.form.fn.label": "expression",
+      "ui.form.fn.description": "expression",
+      "ui.form.fn.hint": "expression",
+      "ui.form.fn.placeholder": "expression",
+      "ui.form.fn.value": "expression",
+      "ui.form.fn.options": "expression",
+      "ui.form.fn.attr": ["fn()"],
+      "ui.table.fn.attr": ["fn()"],
+    });
   });
 });

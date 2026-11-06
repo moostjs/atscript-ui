@@ -243,6 +243,9 @@ importers:
       '@atscript/ui':
         specifier: workspace:^
         version: link:../ui
+      '@atscript/ui-fns':
+        specifier: workspace:^
+        version: link:../ui-fns
       '@moostjs/event-wf':
         specifier: 'catalog:'
         version: 0.7.3(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/mate@0.5.1)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1))(@wooksjs/http-body@0.8.1(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)))(moost@0.7.3)(wooks@0.8.1)

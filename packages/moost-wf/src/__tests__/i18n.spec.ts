@@ -1,4 +1,9 @@
-import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
+import {
+  deserializeAnnotatedType,
+  type TSerializedAnnotatedType,
+} from "@atscript/typescript/utils";
+import { createUiTexts } from "@atscript/ui";
+import { DynamicFieldResolver } from "@atscript/ui-fns";
 import { HandleStateStrategy, WfStateStoreMemory } from "@prostojs/wf/outlets";
 import { EventContext, run, useLocale } from "@wooksjs/event-core";
 import { createHttpApp, useAcceptLanguage } from "@wooksjs/event-http";
@@ -29,6 +34,7 @@ const DE = {
   "rate-limited": "begrenzt",
   // A value of the workflow's context: never translated.
   "keep me": "NICHT ÜBERSETZEN",
+  "Code sent to {recipient}.": "Code an {recipient} gesendet.",
 };
 
 const store = new WfStateStoreMemory();
@@ -152,6 +158,37 @@ describe("moost-wf in the request's language", () => {
     });
     // The passed context is data, never translated.
     expect(json.inputRequired!.context.note).toBe("keep me");
+  });
+
+  it("serves the translated literals of a display-only field's computed text", async () => {
+    deTranslator();
+    const schema = (await post({ wfid: "i18n/form" }, "de")).json.inputRequired!.payload;
+    const i18n = schema.$i18n as Record<string, string>;
+    // The expression is served as written; its translated literal next to it.
+    expect(props(schema).sent!.metadata["ui.form.fn.value"]).toContain(
+      't("Code sent to {recipient}."',
+    );
+    expect(i18n["Code sent to {recipient}."]).toBe("Code an {recipient} gesendet.");
+    // Only what the translator translated: no entry for a literal it has no text for.
+    expect(i18n).not.toHaveProperty("Request a code");
+    // The source locale and no translator: nothing served.
+    expect(inLocale("en", () => serializeFormSchema(I18nForm))).not.toHaveProperty("$i18n");
+    setTranslator(undefined);
+    expect(inLocale("de", () => serializeFormSchema(I18nForm))).not.toHaveProperty("$i18n");
+
+    // The client: the served texts merged into the app's, `t` in the fn's scope.
+    const texts = createUiTexts({ locale: () => "de" });
+    texts.merge("de", i18n);
+    const served = deserializeAnnotatedType(schema).type as unknown as {
+      props: Map<string, never>;
+    };
+    const shown = new DynamicFieldResolver().resolveFieldProp(
+      served.props.get("sent")!,
+      "ui.form.fn.value",
+      undefined,
+      { v: undefined, data: {}, context: { recipient: "a@b.c" }, entry: undefined, t: texts.t },
+    );
+    expect(shown).toBe("Code an a@b.c gesendet.");
   });
 
   it("serves the source schema without Accept-Language (default locale) and without translator", async () => {

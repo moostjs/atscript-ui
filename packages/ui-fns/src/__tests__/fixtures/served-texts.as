@@ -29,4 +29,7 @@ export interface ServedTexts {
 
     @ui.form.action 'resend', 'Resend code'
     resend: ui.action
+
+    @ui.form.fn.value '(v, data, ctx, entry, t) => ctx.recipient ? t("Code sent to {recipient}.", { recipient: ctx.recipient }) : "Request a code"'
+    sent: ui.paragraph
 }
