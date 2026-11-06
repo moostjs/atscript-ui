@@ -7,11 +7,11 @@ settings:
 catalogs:
   default:
     '@aooth/arbac':
-      specifier: ^0.2.5
-      version: 0.2.5
+      specifier: ^0.2.6
+      version: 0.2.6
     '@aooth/arbac-moost':
-      specifier: ^0.2.5
-      version: 0.2.5
+      specifier: ^0.2.6
+      version: 0.2.6
     '@atscript/core':
       specifier: ^0.2.9
       version: 0.2.9
@@ -442,10 +442,10 @@ importers:
     dependencies:
       '@aooth/arbac':
         specifier: 'catalog:'
-        version: 0.2.5
+        version: 0.2.6
       '@aooth/arbac-moost':
         specifier: 'catalog:'
-        version: 0.2.5(@atscript/db@0.1.174)(@atscript/moost-db@0.1.174(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.174)(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@uniqu/core@0.2.1)(@wooksjs/event-core@0.8.1)(@wooksjs/http-body@0.8.1(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)))(moost@0.7.4))(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@wooksjs/event-core@0.8.1)(moost@0.7.4)
+        version: 0.2.6(@atscript/db@0.1.174)(@atscript/moost-db@0.1.174(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.174)(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@uniqu/core@0.2.1)(@wooksjs/event-core@0.8.1)(@wooksjs/http-body@0.8.1(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)))(moost@0.7.4))(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@wooksjs/event-core@0.8.1)(moost@0.7.4)
       '@atscript/db-client':
         specifier: 'catalog:'
         version: 0.1.174(@atscript/db@0.1.174)(@atscript/typescript@0.2.9)
@@ -741,18 +741,18 @@ packages:
   '@antfu/install-pkg@1.1.0':
     resolution: {integrity: sha512-MGQsmw10ZyI+EJo45CdSER4zEb+p31LpDAFp2Z3gkSd1yqVZGi0Ebx++YTEMonJy4oChEMLsxZ64j8FH6sSqtQ==}
 
-  '@aooth/arbac-core@0.2.5':
-    resolution: {integrity: sha512-7CjEZ8xNZxqFc+zILidsE9BankJmYOykc7pjlsXVHBLjpa3zqX6cfuqQK0hSrqwNXZSEQDY6u4oe73cABjOgbw==}
+  '@aooth/arbac-core@0.2.6':
+    resolution: {integrity: sha512-bTy+Vuq9sca8OR/icZO9ur4W9ofSn+U49xst8T4vw29U4iRaMU23s89y5tHNWRHFHJrNh9cG2OFdf3lqBSnC5g==}
 
-  '@aooth/arbac-moost@0.2.5':
-    resolution: {integrity: sha512-zAjL1Wyhlw1U/c5GlilmKsfQpLBxaeUJpnyOYR1BoGE8v8tn0BjJVmEYad12lVW+ERCmjcuF4GMGc4vIWrUlcw==}
+  '@aooth/arbac-moost@0.2.6':
+    resolution: {integrity: sha512-aieOlVbRLUyKicMXiKD9XKbn/VOxGSNI8wc8s8o7IlEsmJIChnmP8V2xsbWIjcDIITfg5jENhANwCTgvGKlWyQ==}
     peerDependencies:
-      '@atscript/db': ^0.1.171
-      '@atscript/moost-db': ^0.1.171
-      '@atscript/typescript': ^0.2.8
-      '@moostjs/event-http': ^0.7.3
+      '@atscript/db': ^0.1.174
+      '@atscript/moost-db': ^0.1.174
+      '@atscript/typescript': ^0.2.9
+      '@moostjs/event-http': ^0.7.4
       '@wooksjs/event-core': ^0.8.1
-      moost: ^0.7.3
+      moost: ^0.7.4
     peerDependenciesMeta:
       '@atscript/db':
         optional: true
@@ -761,14 +761,14 @@ packages:
       '@atscript/typescript':
         optional: true
 
-  '@aooth/arbac@0.2.5':
-    resolution: {integrity: sha512-mkbc2SMBQ/IAP7oHA2guY5bUFY/lNJtFTvDkNMBOTgGhnxOe7J9OhYRkBxyXBlQ/V2L3S49HKQ2sYlpwgt+ZgA==}
+  '@aooth/arbac@0.2.6':
+    resolution: {integrity: sha512-X0bEUIdHCP7paoCyOxULd1IQBDOVWVcggc9RVIOfQyzMSm5zfUnxKi8QtGtp5wwsM8M1f/pGkZjbTr19m0JDPw==}
     hasBin: true
 
-  '@aooth/user@0.2.5':
-    resolution: {integrity: sha512-oJem4IvDYds/geOmG5RK67x3GG11uTnk2Vi/pV3AXk1gmlOJaP5qZVFdYlTLcC1MKuAm2qXTkIfb1q+ydMfxiA==}
+  '@aooth/user@0.2.6':
+    resolution: {integrity: sha512-DyEqpAmjeSXcWLcyIxAOuM8WKl7Mzo1NwyxtX6urU8sGCfGZhrTzkTcLl4HrnDl3+YlXv/3spUNoVkbRmHL+7w==}
     peerDependencies:
-      '@atscript/db': ^0.1.171
+      '@atscript/db': ^0.1.174
     peerDependenciesMeta:
       '@atscript/db':
         optional: true
@@ -3976,13 +3976,13 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.1.1
 
-  '@aooth/arbac-core@0.2.5': {}
+  '@aooth/arbac-core@0.2.6': {}
 
-  '@aooth/arbac-moost@0.2.5(@atscript/db@0.1.174)(@atscript/moost-db@0.1.174(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.174)(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@uniqu/core@0.2.1)(@wooksjs/event-core@0.8.1)(@wooksjs/http-body@0.8.1(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)))(moost@0.7.4))(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@wooksjs/event-core@0.8.1)(moost@0.7.4)':
+  '@aooth/arbac-moost@0.2.6(@atscript/db@0.1.174)(@atscript/moost-db@0.1.174(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.174)(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@uniqu/core@0.2.1)(@wooksjs/event-core@0.8.1)(@wooksjs/http-body@0.8.1(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)))(moost@0.7.4))(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@wooksjs/event-core@0.8.1)(moost@0.7.4)':
     dependencies:
-      '@aooth/arbac': 0.2.5
-      '@aooth/arbac-core': 0.2.5
-      '@aooth/user': 0.2.5(@atscript/db@0.1.174)
+      '@aooth/arbac': 0.2.6
+      '@aooth/arbac-core': 0.2.6
+      '@aooth/user': 0.2.6(@atscript/db@0.1.174)
       '@moostjs/event-http': 0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1)
       '@uniqu/core': 0.2.1
       '@wooksjs/event-core': 0.8.1
@@ -3992,11 +3992,11 @@ snapshots:
       '@atscript/moost-db': 0.1.174(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.174)(@atscript/typescript@0.2.9)(@moostjs/event-http@0.7.4(@prostojs/infact@0.6.1)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(moost@0.7.4)(wooks@0.8.1))(@uniqu/core@0.2.1)(@wooksjs/event-core@0.8.1)(@wooksjs/http-body@0.8.1(@wooksjs/event-core@0.8.1)(@wooksjs/event-http@0.8.1(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)))(moost@0.7.4)
       '@atscript/typescript': 0.2.9(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/db@0.1.174)(@prostojs/logger@0.4.3)(@prostojs/router@0.3.6)(@wooksjs/event-core@0.8.1)(wooks@0.8.1)
 
-  '@aooth/arbac@0.2.5':
+  '@aooth/arbac@0.2.6':
     dependencies:
-      '@aooth/arbac-core': 0.2.5
+      '@aooth/arbac-core': 0.2.6
 
-  '@aooth/user@0.2.5(@atscript/db@0.1.174)':
+  '@aooth/user@0.2.6(@atscript/db@0.1.174)':
     optionalDependencies:
       '@atscript/db': 0.1.174(@atscript/core@0.2.9(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0))(@atscript/typescript@0.2.9)(@uniqu/core@0.2.1)
 
