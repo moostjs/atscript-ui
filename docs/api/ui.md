@@ -209,7 +209,7 @@ An `@db.onUpdate.inc` change counter (`@atscript/db` 0.1.162+) — a top-level i
 
 ```ts
 // An edit form
-formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+formDef.value = createFormDef(deserializeServedType(meta.type), {
   mode: "edit",
   versionColumn: meta.versionColumn,
   metaFields: meta.fields,
@@ -700,6 +700,19 @@ whose def is `served` (`FormDef.served`) are final too: `getFormValidator` reads
 it from the def; for `createFieldValidator` pass `served: () => true` when the
 prop's schema was served translated. Validator codes (`MIN_LENGTH`, …) are always
 looked up.
+
+### `UI_FORM_VALIDATE_ERROR_CODE`
+
+```typescript
+const UI_FORM_VALIDATE_ERROR_CODE = "UI_FORM_VALIDATE";
+```
+
+_Since 0.1.170._ The `code` of the error a failing `@ui.form.validate` rule
+reports on an atscript `Validator` (with the ui-fns plugin installed). Its
+message is final text, already worded with the app's `t`, so the validators
+above never look it up again. Not a UI text code (it is not in
+`AS_UI_MESSAGES`, your `translate` never receives it), and not the
+annotation-key constant `UI_FORM_VALIDATE` (`"ui.form.validate"`).
 
 ### `isContainerKind(kind)`
 

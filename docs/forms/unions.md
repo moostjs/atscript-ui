@@ -132,11 +132,21 @@ top, the active variant's fields below.
 ```vue
 <script setup lang="ts">
 import { computed } from "vue";
-import { AsField, AsFieldShell, type TAsComponentProps, useAsUnion } from "@atscript/vue-form";
+import {
+  AsField,
+  AsFieldShell,
+  type TAsComponentProps,
+  useAsLocale,
+  useAsModelTexts,
+  useAsUnion,
+  variantLabel,
+} from "@atscript/vue-form";
 import { isObjectField } from "@atscript/ui";
 
 const props = defineProps<TAsComponentProps>();
 const { unionField, localUnionIndex, innerField, changeVariant } = useAsUnion(props);
+const { t } = useAsLocale();
+const modelT = useAsModelTexts();
 
 const variants = computed(() => unionField.value?.unionVariants ?? []);
 const activeFields = computed(() => {
@@ -162,7 +172,7 @@ function pick(index: number) {
           :aria-checked="localUnionIndex === vi"
           @click="pick(vi)"
         >
-          {{ v.label }}
+          {{ variantLabel(v, t, modelT()) }}
         </button>
       </div>
       <AsField v-for="f of activeFields" :key="f.path ?? f.name" :field="f" />
@@ -170,6 +180,11 @@ function pick(index: number) {
   </AsFieldShell>
 </template>
 ```
+
+`variantLabel` (_since 0.1.170_) renders a variant's label in the app's
+language: a generated name ("1. String") through `t`, a declared `@meta.label`
+through the model-text translator. `v.label` alone is the English or source
+text — see [Types compiled into the client](/guide/i18n#types-compiled-into-the-client).
 
 Opt in per field with `@ui.form.component`:
 

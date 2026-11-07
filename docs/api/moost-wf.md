@@ -177,7 +177,9 @@ With a translator registered (moost's `setTranslator`) and a locale picked for
 the request, the schema's texts are translated and it carries `$i18n` (since
 0.1.165): one object per type and locale, so it is the same object for every
 request in that language. Without a translator the output is the untranslated
-schema, unchanged. See [Translations on the server](/guide/i18n-server).
+schema, unchanged. _Since 0.1.170_ a schema in which anything was translated
+always carries `$i18n`, even an empty `{}`: it is how the client knows not to
+translate the texts again. See [Translations on the server](/guide/i18n-server).
 
 ### `extractPassContext(type, wfContext)`
 

@@ -229,6 +229,8 @@ const u = useAsUnion(props);
 // u.optionalEnabled         ComputedRef<boolean>          (model !== null && !== undefined)
 ```
 
+Variant labels (0.1.170): render `variantLabel(v, t, modelT())` (`@atscript/vue-form`; `t` = `useAsLocale().t`, `modelT = useAsModelTexts()`), never raw `v.label` — that is the English generated name (`labelCode`) or the untranslated `@meta.label` (`labelText`) of a local type.
+
 `innerField` is the synthesized FormFieldDef for the active variant — pass to `<AsField :field="u.innerField.value" />` to dispatch through normal AsField wiring (e.g. AsObject for a struct-variant, AsField for an itemField-variant).
 
 ## Variant switching wipes data

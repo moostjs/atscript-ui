@@ -67,11 +67,10 @@ with `@db.column` needs nothing extra — see
 Pass `meta.versionColumn` to `createFormDef`, with `mode: "edit"`:
 
 ```ts
-import { createFormDef } from "@atscript/ui";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { createFormDef, deserializeServedType } from "@atscript/ui";
 
 const meta = await client.meta();
-const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
+const formDef = createFormDef(deserializeServedType(meta.type), {
   mode: "edit",
   versionColumn: meta.versionColumn,
 });
@@ -82,6 +81,10 @@ const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
 server sets them on every update and ignores a sent value. A
 `@db.column.derived` field needs no option — it renders read-only and is
 never sent; see [`createFormDef`](/api/ui#createformdef-type-opts).
+`deserializeServedType` (_since 0.1.170_) deserializes like
+`deserializeAnnotatedType` and also marks a `/meta` type the server already
+translated, so the form does not translate it a second time — see
+[Types compiled into the client](/guide/i18n#types-compiled-into-the-client).
 
 `AsForm` iterates `def.fields[]` and the version prop is no longer there,
 so no input is painted. But the version value still lives on the loaded
@@ -134,8 +137,7 @@ A complete edit-page wiring loads a row, builds the form def with
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { AsForm } from "@atscript/vue-form";
-import { createFormDef, type FormDef } from "@atscript/ui";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { createFormDef, deserializeServedType, type FormDef } from "@atscript/ui";
 import { VersionMismatchError, Client } from "@atscript/db-client";
 
 const props = defineProps<{ url: string; id: string | number }>();
@@ -147,7 +149,7 @@ const error = ref<string | null>(null);
 
 async function load() {
   const meta = await client.meta();
-  formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+  formDef.value = createFormDef(deserializeServedType(meta.type), {
     mode: "edit",
     versionColumn: meta.versionColumn,
   });

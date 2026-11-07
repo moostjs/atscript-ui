@@ -29,8 +29,7 @@ export interface ProductsTable {
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { AsForm } from "@atscript/vue-form";
-import { createFormDef, type FormDef } from "@atscript/ui";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { createFormDef, deserializeServedType, type FormDef } from "@atscript/ui";
 import { VersionMismatchError, Client } from "@atscript/db-client";
 
 const props = defineProps<{ url: string; id: string | number }>();
@@ -41,7 +40,7 @@ const error = ref<string | null>(null);
 
 async function load() {
   const meta = await client.meta(); // meta.versionColumn === 'version'
-  formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+  formDef.value = createFormDef(deserializeServedType(meta.type), {
     mode: "edit",
     versionColumn: meta.versionColumn,
   });
@@ -90,7 +89,7 @@ async function onSubmit(data: unknown) {
 
 ```ts
 import { createFormDef } from "@atscript/ui"; // opts: { mode?: "create" | "edit", versionColumn?: string, metaFields? }
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { deserializeServedType } from "@atscript/ui"; // not deserializeAnnotatedType: marks a translated /meta type (0.1.170)
 import { Client, VersionMismatchError } from "@atscript/db-client";
 import { AsForm } from "@atscript/vue-form";
 ```

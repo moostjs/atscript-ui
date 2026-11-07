@@ -64,8 +64,9 @@ The form schema carries `$i18n`, merged by `<AsWfForm>` into the app's texts:
 Only entries that differ from English are sent. `$i18n` is also what marks a
 schema as translated by the server: it is present whenever the server translated
 the schema, even as an empty `{}`, and the client then does not translate the
-schema's texts a second time. A server older than 0.1.170 can omit an empty
-`$i18n`: upgrade server and client together.
+schema's texts a second time. An older server (`@atscript/moost-wf` before
+0.1.170; `@atscript/moost-db` before 0.1.175 for `/meta` and action forms) can
+omit an empty `$i18n`: upgrade server and client together.
 
 ## Registered templates are public
 

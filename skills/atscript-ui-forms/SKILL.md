@@ -200,12 +200,11 @@ import type {
 For tables annotated with `@db.column.version`, the server returns `meta.versionColumn` and auto-handles compare-and-set on update. Wire the form so the version field doesn't render as an input but the value still rides the wire:
 
 ```ts
-import { createFormDef } from "@atscript/ui";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { createFormDef, deserializeServedType } from "@atscript/ui";
 import { VersionMismatchError } from "@atscript/db-client";
 
 const meta = await client.meta();
-const formDef = createFormDef(deserializeAnnotatedType(meta.type), {
+const formDef = createFormDef(deserializeServedType(meta.type), {
   mode: "edit", // @db.onUpdate.now / .inc fields → read-only, never sent
   versionColumn: meta.versionColumn, // logical field name — https://ui.atscript.dev/api/ui#metaresponse
 });

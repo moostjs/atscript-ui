@@ -163,10 +163,15 @@ type TBuildFieldEntryOpts = Partial<
     TFieldEvaluated,
     "name" | "type" | "component" | "optional" | "disabled" | "hidden" | "readonly"
   >
->;
+> & {
+  /** Since 0.1.170: translates the model's option labels of `entry.options` (`useAsModelTexts()()`). */
+  modelT?: UserTextT;
+};
 ```
 
 The returned scope is the full evaluation scope (with `entry` populated). Use it when invoking other compiled fns that depend on resolved field state.
+
+`opts.modelT` (_since 0.1.170_) translates the static option labels (`@ui.form.options`, `@ui.literalLabel`) of a type compiled into the client, with the source text as the key; omit it for a served type, which arrives translated. The default boolean labels are worded with `baseScope.t`. See [Types compiled into the client](/guide/i18n#types-compiled-into-the-client).
 
 ## Types
 
