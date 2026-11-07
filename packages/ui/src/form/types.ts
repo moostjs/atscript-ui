@@ -96,6 +96,12 @@ export interface FormDef {
   mainFields: FormFieldDef[];
   pushDownFields: FormFieldDef[];
   flatMap: Map<string, TAtscriptAnnotatedType>;
+  /**
+   * Set when `type` was served already translated (`deserializeServedType`): a
+   * renderer then skips translating the type's texts with the app's `t`.
+   * Present on the form's own def only.
+   */
+  served?: true;
 }
 
 // ── Array, Object, Union, Tuple extensions ───────────────────
@@ -104,6 +110,12 @@ export interface FormDef {
 export interface FormUnionVariant {
   /** Display label — from @meta.label or auto-generated (e.g. "1. String") */
   label: string;
+  /**
+   * The `@meta.label` text `label` ends with. Translate it at render time
+   * (`userText`) — a definition is built once for every locale and for texts
+   * a server already translated.
+   */
+  labelText?: string;
   /**
    * The UI text code of an auto-generated label's type name
    * (`UI_FORM_TYPE_STRING`); `label` ends with its English text. Render the

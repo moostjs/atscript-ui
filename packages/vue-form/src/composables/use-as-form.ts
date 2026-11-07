@@ -39,6 +39,7 @@ import {
   FORM_NORMALIZED_DATA_KEY,
   FORM_PATCH_KEY,
   HIDE_ROOT_TITLE_KEY,
+  MODEL_TEXTS_KEY,
   PATH_PREFIX_KEY,
   ROOT_DATA_KEY,
   TYPES_KEY,
@@ -298,6 +299,10 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     () => (formValidator.value.normalize(getDomainData()) ?? {}) as Record<string, unknown>,
   );
   provide(FORM_NORMALIZED_DATA_KEY, normalizedData);
+  // The model's own texts (labels, hints, …) are translated by the app's `t` unless the def's
+  // schema was served translated. Read per use: the def and the locale are reactive.
+  const modelT = () => (options.def().served ? undefined : t);
+  provide(MODEL_TEXTS_KEY, modelT);
 
   // ── Form state composable (also publishes FORM_STATE_KEY etc.) ──
   const {
@@ -474,6 +479,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
         UI_FORM_FN_SUBMIT_TEXT,
         UI_FORM_SUBMIT_TEXT,
         ctx.value,
+        { t: modelT() },
       ) ?? t("UI_FORM_SUBMIT"),
   );
   const submitDisabled = computed(
@@ -495,7 +501,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   // identically (the root field's prop IS the form's annotated type). No
   // field-name fallback: a form header title may legitimately be undefined.
   const resolveRootProp = (fnKey: string, staticKey: string): string | undefined =>
-    resolveFormProp<string>(options.def().type, fnKey, staticKey, ctx.value);
+    resolveFormProp<string>(options.def().type, fnKey, staticKey, ctx.value, { t: modelT() });
   const title = computed(() => resolveRootProp(UI_FORM_FN_TITLE, META_LABEL));
   const description = computed(() => resolveRootProp(UI_FORM_FN_DESCRIPTION, META_DESCRIPTION));
 

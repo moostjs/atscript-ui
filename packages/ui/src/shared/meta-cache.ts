@@ -1,6 +1,6 @@
 import { clearMetaStore, defaultMetaStore, type Client, type MetaStore } from "@atscript/db-client";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { deserializeServedType } from "../i18n/model-texts";
 import {
   getDefaultClientFactory,
   type ClientFactory,
@@ -17,7 +17,7 @@ import { getUiTexts, type UiTexts } from "../i18n/ui-texts";
  * the raw `/meta` promise, the deserialized type, and lazily-populated derived
  * shapes (`ResolvedValueHelp` for value-help, `TableDef` for tables). Both
  * `resolveValueHelp` and `useTable` route through it so a given URL triggers
- * at most one network round-trip and one `deserializeAnnotatedType` per UI
+ * at most one network round-trip and one `deserializeServedType` per UI
  * locale.
  *
  * Each entry belongs to one UI locale (see {@link MetaEntryOptions.texts}):
@@ -322,11 +322,11 @@ function derive(entry: MetaCacheEntry, client: Client, meta: MetaResponse): Deri
   const slot = slots.get(entry)!;
   // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
   const etag = cache.get(slot.key) === entry ? client.metaEtag?.() : undefined;
-  if (etag === undefined) return { type: deserializeAnnotatedType(meta.type) };
+  if (etag === undefined) return { type: deserializeServedType(meta.type) };
   let shared = derivedByEtag.get(etag);
   if (shared) shared.refs++;
   else {
-    shared = { derived: { type: deserializeAnnotatedType(meta.type) }, refs: 1 };
+    shared = { derived: { type: deserializeServedType(meta.type) }, refs: 1 };
     derivedByEtag.set(etag, shared);
   }
   slot.etag = etag;

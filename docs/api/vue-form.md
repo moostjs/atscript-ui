@@ -798,6 +798,32 @@ function useAsLocale(): UseAsLocaleReturn;
 
 Both are also exported from `@atscript/vue-form/locale`, a subpath that does not reach the form components.
 
+### `useAsModelTexts()`
+
+_Since 0.1.170._ The translator for the model's own texts (labels, hints, option labels, …) of the form the caller renders in: the app's `t` — the source text is the key, as on the server — or `undefined` when the form's schema was served translated. A getter: call it where the text is read, so a locale switch re-renders. Pass the result to `userText` / `fieldText` from `@atscript/ui`; outside a form it returns the app's `t`.
+
+```typescript
+function useAsModelTexts(): () => UserTextT | undefined;
+```
+
+```vue
+<script setup lang="ts">
+import { fieldText, META_LABEL } from "@atscript/ui";
+import { useAsModelTexts } from "@atscript/vue-form";
+
+const modelT = useAsModelTexts();
+// in a render or a computed: fieldText(props.field.prop, META_LABEL, modelT())
+</script>
+```
+
+### `variantLabel(variant, t, text?)`
+
+_Since 0.1.170._ A union variant's label in the app's language, for a custom union component: a generated type name (`labelCode`, "1. String") is worded with `t` (`useAsLocale().t`), a declared `@meta.label` (`labelText`) is translated with `text` (`useAsModelTexts()()`).
+
+```typescript
+function variantLabel(variant: FormUnionVariant, t: UiT, text?: UserTextT): string;
+```
+
 ### `getAsServedTexts(ssrContext)` / `provideAsServedTexts(app, served)`
 
 Server rendering: hand the texts the server served during the render (`/meta` `$i18n`, merged into the request's `provideAsLocale` texts) to the browser app, so it hydrates with the same words instead of English until its own requests return. Since 0.1.168. Recipe: [Server rendering](/guide/i18n#server-rendering).

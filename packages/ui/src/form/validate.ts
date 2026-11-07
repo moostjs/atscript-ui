@@ -40,11 +40,23 @@ export interface FormValidator {
 }
 
 /**
+ * The code of the error a failing `@ui.form.validate` rule reports: its message is
+ * worded with the app's `t` already (the rule's own `t`), so it is never looked up again.
+ */
+export const UI_FORM_VALIDATE_ERROR_CODE = "UI_FORM_VALIDATE";
+
+/**
  * `error`'s message in the language of `t` (looked up by code or text, see
  * {@link TFormValidatorCallOptions.t}); the English message when `t` has none.
  * Its `details` are dropped first: only the message is read.
+ *
+ * A message that is final text is returned as it is: a rule's (`UI_FORM_VALIDATE`: worded
+ * already), and, when `served` (the type's schema was translated by the server), every
+ * message of the type's own annotations (`@expect.*` / `@meta.required` messages) — looking
+ * a translated text up as an id would translate it twice. Codes are always looked up.
  */
-function messageIn(error: TError, t: UiT): string {
+function messageIn(error: TError, t: UiT, served?: boolean): string {
+  if (error.code === UI_FORM_VALIDATE_ERROR_CODE || (served && error.custom)) return error.message;
   return localizeErrors([{ ...error, details: undefined }], (id, params) => {
     const text = t(id, params);
     return text === id ? undefined : text;
@@ -155,6 +167,7 @@ export function getFormValidator(def: FormDef, opts?: Partial<TValidatorOptions>
     ],
   };
   const validator = new Validator(def.type, options);
+  const served = def.served === true;
 
   const validate = (callOpts: TFormValidatorCallOptions) => {
     const isValid = validator.validate(callOpts.data, true, {
@@ -166,7 +179,7 @@ export function getFormValidator(def: FormDef, opts?: Partial<TValidatorOptions>
 
     const t = callOpts.t ?? getUiTexts().t;
     return validatorErrorsToMap(
-      validator.errors.map((e) => ({ path: e.path, message: messageIn(e, t) })),
+      validator.errors.map((e) => ({ path: e.path, message: messageIn(e, t, served) })),
     );
   };
   return Object.assign(validate, {
@@ -182,6 +195,11 @@ export interface TFieldValidatorOptions {
   rootOnly?: boolean;
   /** Words the fallback error (`UI_INVALID_VALUE`); the active UI texts when omitted. */
   t?: UiT;
+  /**
+   * Whether the prop's schema was served translated (read per validation): the messages of its
+   * own annotations are then not looked up as ids again. Codes are still translated.
+   */
+  served?: () => boolean;
 }
 
 /**
@@ -241,11 +259,12 @@ export function createFieldValidator(
     const judged = skipNormalize ? value : normalizeForType(prop, value, options);
     if (cached.validate(judged, true, externalCtx)) return true;
     const t = externalCtx?.t ?? opts?.t ?? getUiTexts().t;
+    const served = opts?.served?.();
     if (opts?.rootOnly) {
       const rootError = cached.errors?.find((e) => e.path === "");
-      return rootError ? messageIn(rootError, t) : true;
+      return rootError ? messageIn(rootError, t, served) : true;
     }
     const error = cached.errors?.[0];
-    return (error && messageIn(error, t)) || t("UI_INVALID_VALUE");
+    return (error && messageIn(error, t, served)) || t("UI_INVALID_VALUE");
   };
 }

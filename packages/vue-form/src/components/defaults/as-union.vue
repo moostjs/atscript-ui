@@ -7,6 +7,7 @@ import { useAsTypeMap } from "../../composables/use-as-type-map";
 import { useAsOptionalAddFlow } from "../../composables/use-as-optional-add-flow";
 import { UNION_CONTEXT_KEY } from "../../composables/internal-keys";
 import { useAsTexts } from "../../composables/use-as-locale";
+import { useAsModelTexts } from "../../composables/use-as-model-texts";
 import { variantLabel } from "../../composables/variant-label";
 
 const props = defineProps<TAsComponentProps>();
@@ -76,6 +77,7 @@ function handleVariantPick(vi: number) {
   selectPicker(() => pickAndFocus(vi));
 }
 const { t } = useAsTexts();
+const modelT = useAsModelTexts();
 </script>
 
 <template>
@@ -99,7 +101,7 @@ const { t } = useAsTexts();
           class="as-dropdown-item"
           @click="handleVariantPick(vi)"
         >
-          {{ variantLabel(v, t) }}
+          {{ variantLabel(v, t, modelT()) }}
         </button>
       </div>
     </div>

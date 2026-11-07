@@ -10,6 +10,7 @@ import {
   UI_NAV_ORDER,
 } from "../shared/annotation-keys";
 import { getFieldMeta, hasFieldMeta } from "../shared/field-resolver";
+import { fieldText, isServedType, type UserTextT } from "../i18n/model-texts";
 import { humanizePath } from "../shared/str";
 
 /** A navigable route derived from a DB-backed model's metadata. */
@@ -39,10 +40,18 @@ export interface TModelRoute {
  * Routes are sorted by `order` ascending (undefined last, ties keep input
  * order). Hidden models are returned with `hidden: true` — filtering and
  * grouping are left to the consumer.
+ *
+ * `t` translates the label and the group of a model compiled into the client
+ * (the app's `t`; the keys are the source texts, as on the server). A served
+ * model (`deserializeServedType`) is translated already.
  */
-export function buildModelRoutes(models: readonly TAtscriptAnnotatedType[]): TModelRoute[] {
+export function buildModelRoutes(
+  models: readonly TAtscriptAnnotatedType[],
+  opts: { t?: UserTextT } = {},
+): TModelRoute[] {
   const routes: TModelRoute[] = [];
   for (const model of models) {
+    const t = isServedType(model) ? undefined : opts.t;
     const table = getFieldMeta(model, DB_TABLE);
     const view = getFieldMeta(model, DB_VIEW);
     const isView = view !== undefined || hasFieldMeta(model, DB_VIEW_FOR);
@@ -52,10 +61,10 @@ export function buildModelRoutes(models: readonly TAtscriptAnnotatedType[]): TMo
     if (path === undefined) continue;
 
     const label =
-      getFieldMeta(model, META_LABEL) ?? humanizePath(path.slice(path.lastIndexOf("/") + 1));
+      fieldText(model, META_LABEL, t) ?? humanizePath(path.slice(path.lastIndexOf("/") + 1));
     const route: TModelRoute = { model, path, label, kind: isView ? "view" : "table" };
 
-    const group = getFieldMeta(model, UI_NAV_GROUP);
+    const group = fieldText(model, UI_NAV_GROUP, t);
     if (typeof group === "string") route.group = group;
     const order = getFieldMeta(model, UI_NAV_ORDER);
     if (typeof order === "number") route.order = order;

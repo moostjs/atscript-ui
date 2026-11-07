@@ -5,6 +5,7 @@ import {
   type TResolveOptions,
 } from "@atscript/ui";
 import { buildFieldEntry, type TFnScope } from "@atscript/ui-fns";
+import { useAsModelTexts } from "./use-as-model-texts";
 import { useFormContext } from "./use-form-context";
 
 /**
@@ -59,6 +60,7 @@ export interface UseAsFieldScopeReturn {
  */
 export function useAsFieldScope(): UseAsFieldScopeReturn {
   const { buildPath, getByPath, buildScope } = useFormContext("useAsFieldScope");
+  const modelT = useAsModelTexts();
 
   function absolutePath(field: FormFieldDef): string {
     return buildPath(field.path);
@@ -70,6 +72,7 @@ export function useAsFieldScope(): UseAsFieldScopeReturn {
     return buildFieldEntry(field.prop, base, field.path, {
       type: field.type,
       name: field.name,
+      modelT: modelT(),
     });
   }
 

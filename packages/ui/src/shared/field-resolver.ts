@@ -1,4 +1,5 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import { userText, type UserTextT } from "../i18n/model-texts";
 import {
   UI_FORM_ATTR,
   UI_FORM_FN_ATTR,
@@ -12,6 +13,11 @@ import {
 export interface TResolveOptions<T> {
   /** When true, any non-undefined static value is returned as `true` (for boolean flags like ui.disabled). */
   staticAsBoolean?: boolean;
+  /**
+   * Translates a static text of the model (`meta.label`, `ui.form.hint`, …) before it is returned
+   * (and transformed). A dynamic result is the resolver's own to translate. Omit for the source text.
+   */
+  t?: UserTextT;
   /** Transform the raw static value before returning. */
   transform?: (raw: unknown) => T;
 }
@@ -85,8 +91,8 @@ export function resolveStatic<T>(
   const staticVal = metadata.get(staticKey as keyof AtscriptMetadata);
   if (staticVal !== undefined) {
     if (opts?.staticAsBoolean) return true as T;
-    if (opts?.transform) return opts.transform(staticVal);
-    return staticVal as T;
+    const value = userText(staticKey, staticVal, opts?.t);
+    return (opts?.transform ? opts.transform(value) : value) as T;
   }
   return undefined;
 }

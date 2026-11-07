@@ -191,6 +191,18 @@ describe("moost-wf in the request's language", () => {
     expect(shown).toBe("Code an a@b.c gesendet.");
   });
 
+  // Why: `$i18n` is what tells a client the texts are translated already; it was left out when
+  // empty, so a translator with only model texts (no message templates) got translated twice.
+  it("marks a translated schema with $i18n, even an empty one", () => {
+    setTranslator({ en: {}, de: { Profile: "Profil" } });
+    const de = inLocale("de", () => serializeFormSchema(I18nForm)) as TSerializedAnnotatedType;
+    expect(de.metadata["meta.label"]).toBe("Profil");
+    expect(de.$i18n).toEqual({});
+    // Nothing translated: nothing marked.
+    setTranslator({ en: {}, de: { "Not in the schema": "x" } });
+    expect(inLocale("de", () => serializeFormSchema(I18nForm))).not.toHaveProperty("$i18n");
+  });
+
   it("serves the source schema without Accept-Language (default locale) and without translator", async () => {
     const untranslated = (await post({ wfid: "i18n/form" })).json.inputRequired!.payload;
     expect(untranslated).toEqual(serializeFormSchema(I18nForm));

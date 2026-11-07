@@ -1,5 +1,11 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
-import type { FieldResolver, TFormEntryOptions, TResolveOptions, UiT } from "@atscript/ui";
+import type {
+  FieldResolver,
+  TFormEntryOptions,
+  TResolveOptions,
+  UiT,
+  UserTextT,
+} from "@atscript/ui";
 import {
   META_READONLY,
   UI_FORM_COMPONENT,
@@ -85,7 +91,14 @@ export type TBuildFieldEntryOpts = Partial<
     TFieldEvaluated,
     "name" | "type" | "component" | "optional" | "disabled" | "hidden" | "readonly"
   >
->;
+> & {
+  /**
+   * Translates the texts the model declares (the option labels of `entry.options`): the app's
+   * model-text translator (`useAsModelTexts()()`). Omit for the source texts — a served type
+   * is translated already. The default boolean labels are worded with the scope's `t`.
+   */
+  modelT?: UserTextT;
+};
 
 /**
  * Dynamic field resolver — extends static resolution with `new Function` compilation
@@ -239,6 +252,12 @@ export function buildFieldEntry(
   };
 
   const scope: TFnScope = { ...baseScope, entry };
-  entry.options = resolveOptions(prop, scope as unknown as Record<string, unknown>);
+  entry.options = resolveOptions(
+    prop,
+    scope as unknown as Record<string, unknown>,
+    undefined,
+    baseScope.t,
+    opts?.modelT,
+  );
   return scope;
 }

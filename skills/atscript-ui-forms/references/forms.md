@@ -197,6 +197,8 @@ Optional + `@meta.required` (`name?: string`): atscript ≥ 0.1.103 rejects `nul
 
 **Messages (0.1.165):** client-side errors are worded by code (`MIN_LENGTH` + params) through the app's `t` (`provideAsLocale` translator → served `$i18n` → English).
 
+**Local types (0.1.170):** a form built from a type compiled into the client (`createFormDef(LocalType)`) translates its model texts (label, description, hint, placeholder, prefix/suffix, option labels, title, submit text, union variant labels) at render time through the app's `provideAsLocale` translator, with the source text as the key — the same catalogue as the server's. A served schema (`$i18n`) is not translated again (`deserializeServedType`, `FormDef.served`). Never mutate a compiled type in place. Rules 14–15 in the atscript-ui skill's `references/i18n.md`.
+
 Custom validator example (requires `installDynamicResolver()` from `@atscript/ui-fns`):
 
 ```atscript

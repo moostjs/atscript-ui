@@ -13,7 +13,8 @@ import {
 import {
   createFormData,
   createFormDef,
-  getFieldMeta,
+  fieldText,
+  markServedType,
   META_LABEL,
   UI_FORM_SUBMIT_TEXT,
   type FormDef,
@@ -100,6 +101,9 @@ watch(
       // Merged only while the app still shows that locale (a switch without a
       // remount keeps the table's client on the old one).
       if (clientLocale === texts.locale()) texts.merge(clientLocale, served);
+      // The schema is translated by the server when it carries `$i18n`: the form (and this
+      // dialog's title) must not translate it again with the app's `t`.
+      if (served !== undefined) markServedType(annotated);
       def.value = createFormDef(annotated);
       formData.value = createFormData(annotated) as { value: Record<string, unknown> };
     } catch (err) {
@@ -129,14 +133,16 @@ const view = computed(() => {
   const allIds = slice.map((id) => formatIdentifier(id, r.preferredId));
   const intent = r.action.intent;
   const scope = intent ? intentToScope(intent) : undefined;
+  // A form schema the server translated is shown as served; a compiled one is translated here.
+  const text = d?.served ? undefined : t;
   const title =
-    (d ? getFieldMeta(d.type, META_LABEL) : undefined) ?? r.action.label ?? r.action.name;
+    (d ? fieldText(d.type, META_LABEL, text) : undefined) ?? r.action.label ?? r.action.name;
   return {
     // A query-targeted run has no ids to list: the title carries its count.
     title: r.count === undefined ? title : `${title} · ${rowsLabel(r.count, t)}`,
     // Default verb avoids collisions with "Cancel" on negative-intent actions
     // ("Cancel" vs "Cancel orders"); intent colour carries the semantic.
-    submitText: (d && getFieldMeta(d.type, UI_FORM_SUBMIT_TEXT)) || t("UI_ACTION_PROCEED"),
+    submitText: (d && fieldText(d.type, UI_FORM_SUBMIT_TEXT, text)) || t("UI_ACTION_PROCEED"),
     submitClass: scope ? `as-action-form-submit-${scope}` : undefined,
     description: r.action.description ?? "",
     allIds,

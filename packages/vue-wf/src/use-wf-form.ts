@@ -1,10 +1,9 @@
 import type { FormDef, UiT } from "@atscript/ui";
-import { createFormDef, createFormData } from "@atscript/ui";
+import { createFormDef, createFormData, deserializeServedType } from "@atscript/ui";
 import { AS_UI_MESSAGES } from "@atscript/ui/messages";
 import { useAsTexts } from "@atscript/vue-form/locale";
 import type { WfFinished } from "@atscript/moost-wf";
 import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
 import { onMounted, onUnmounted, reactive, ref, shallowRef, type Ref, type ShallowRef } from "vue";
 
 /**
@@ -258,7 +257,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     if (payloadJson !== lastPayloadJson) {
       lastPayloadJson = payloadJson;
       formKey.value++;
-      const type = deserializeAnnotatedType(ir.payload as TSerializedAnnotatedType);
+      // Served translated when it carries `$i18n`: the form does not translate it again.
+      const type = deserializeServedType(ir.payload as TSerializedAnnotatedType);
       formDef.value = createFormDef(type);
       formData.value = reactive(createFormData(type)) as Record<string, unknown>;
     }

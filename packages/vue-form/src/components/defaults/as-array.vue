@@ -12,6 +12,7 @@ import AsItemsChip from "../internal/as-items-chip.vue";
 import AsArrayClearBtn from "../internal/as-array-clear-btn.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
 import { useAsTexts } from "../../composables/use-as-locale";
+import { useAsModelTexts } from "../../composables/use-as-model-texts";
 import { variantLabel } from "../../composables/variant-label";
 
 const props = defineProps<TAsComponentProps>();
@@ -43,6 +44,7 @@ const {
 const level = computed(() => props.level ?? 0);
 
 const { t } = useAsTexts();
+const modelT = useAsModelTexts();
 
 // `singularLabel` is pre-resolved upstream by AsField; fall back to "item"
 // when the prop is missing (custom mounts that bypass AsField).
@@ -158,7 +160,7 @@ function handleEnableOptional() {
               class="as-dropdown-item"
               @click="selectAdd(() => handleAdd(vi))"
             >
-              {{ variantLabel(v, t) }}
+              {{ variantLabel(v, t, modelT()) }}
             </button>
           </div>
         </div>

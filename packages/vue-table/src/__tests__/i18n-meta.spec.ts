@@ -3,7 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, Fragment, h, nextTick, ref } from "vue";
 import { defineAnnotatedType } from "@atscript/typescript/utils";
 import type { Client } from "@atscript/db-client";
-import type { ClientFactory, UiTexts } from "@atscript/ui";
+import type { ClientFactory, UiTexts, UiTranslate } from "@atscript/ui";
 import { provideAsLocale } from "@atscript/vue-form";
 import { useAsTexts } from "@atscript/vue-form/locale";
 import { clearTableCache, useTable } from "../composables/use-table";
@@ -16,6 +16,11 @@ import {
   mountWithTableContext,
   stubClient,
 } from "./helpers";
+
+/** The app's translator and the dialog title it reads, for the dialog-texts tests. */
+const titleDe: UiTranslate = (id) =>
+  id === "Reschedule order" ? "Bestellung verschieben" : undefined;
+const titleOf = () => document.body.querySelector(".as-action-form-title")?.textContent;
 
 afterEach(() => {
   clearTableCache();
@@ -112,10 +117,12 @@ describe("<AsActionFormDialog> — the action form's own served texts", () => {
     clientLocale: string,
     appLocale: { value: string },
     getActionFormTexts?: unknown,
+    translate?: UiTranslate,
+    formType = form,
   ) {
     const asked: string[] = [];
     const client = stubClient({
-      getActionForm: () => Promise.resolve(form),
+      getActionForm: () => Promise.resolve(formType),
       getActionFormTexts:
         getActionFormTexts ??
         ((name: string) => {
@@ -132,7 +139,7 @@ describe("<AsActionFormDialog> — the action form's own served texts", () => {
     });
     const App = defineComponent({
       setup() {
-        provideAsLocale(() => appLocale.value);
+        provideAsLocale(() => appLocale.value, translate);
         return () => h(Fragment, [h(AsActionFormDialog), h(Probe)]);
       },
     });
@@ -168,6 +175,33 @@ describe("<AsActionFormDialog> — the action form's own served texts", () => {
     expect(texts().locale()).toBe("en");
     expect(texts().t("Some literal")).toBe("Some literal");
     wrapper.unmount();
+  });
+
+  describe("the dialog's own texts", () => {
+    const titled = () =>
+      defineAnnotatedType("object")
+        .prop("when", defineAnnotatedType().designType("string").$type)
+        .annotate("meta.label" as never, "Reschedule order" as never).$type;
+
+    it("a form schema compiled into the client is titled in the app's language", async () => {
+      const { open, wrapper } = mountDialog(
+        "de",
+        ref("de"),
+        () => Promise.resolve(undefined),
+        titleDe,
+        titled(),
+      );
+      await open();
+      expect(titleOf()).toBe("Bestellung verschieben");
+      wrapper.unmount();
+    });
+
+    it("a form schema the server served translated (with $i18n) is not translated again", async () => {
+      const { open, wrapper } = mountDialog("de", ref("de"), undefined, titleDe, titled());
+      await open();
+      expect(titleOf()).toBe("Reschedule order");
+      wrapper.unmount();
+    });
   });
 
   it("a failing lookup of the form's texts never blocks the form", async () => {

@@ -157,6 +157,7 @@ export {
   setDefaultValidatorPlugins,
   getDefaultValidatorPlugins,
   isContainerKind,
+  UI_FORM_VALIDATE_ERROR_CODE,
 } from "./form/validate";
 export type {
   FormValidator,
@@ -322,3 +323,10 @@ export type { UiTranslate, UiT, UiTextParams } from "./i18n/ui-texts";
 export { createUiTexts, getUiTexts, activateUiTexts, onUiLocaleChange } from "./i18n/ui-texts";
 /** @internal */
 export type { UiTexts } from "./i18n/ui-texts";
+
+// The model's own texts (labels, hints, option labels, …), translated at render time with the
+// app's `t` by the rules and keys the server translates a served type by.
+export type { UserTextT } from "./i18n/model-texts";
+export { userText, fieldText, deserializeServedType, markServedType } from "./i18n/model-texts";
+/** @internal */
+export { isServedType } from "./i18n/model-texts";

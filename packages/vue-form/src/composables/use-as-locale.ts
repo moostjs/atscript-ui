@@ -56,7 +56,9 @@ const SSR_TEXTS = Symbol.for("atscript.ui.ssr-texts");
  * first (return `undefined` to fall back).
  *
  * Call it once at the app root. To switch the language of an open page,
- * remount the view (`<RouterView :key="locale" />`). With server rendering,
+ * remount the view (`<RouterView :key="locale" />`): the built-in component
+ * texts, tables and value help follow a new locale at the next mount (a form's own
+ * model texts re-render without a remount). With server rendering,
  * hand the texts the render used to the browser app: {@link getAsServedTexts}
  * and {@link provideAsServedTexts}.
  */

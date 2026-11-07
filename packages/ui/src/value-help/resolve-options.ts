@@ -4,6 +4,7 @@ import { UI_FORM_FN_OPTIONS, UI_FORM_OPTIONS } from "../shared/annotation-keys";
 import { resolveFieldProp, asArray } from "../shared/field-resolver";
 import { extractFieldLiteralOptions, extractLiteralOptions } from "./extract-literals";
 import type { UiT } from "../i18n/ui-texts";
+import { userText, type UserTextT } from "../i18n/model-texts";
 
 /** Extracts the key from an option entry. */
 export function optKey(opt: TFormEntryOptions): string {
@@ -42,14 +43,17 @@ export function optionLabel(
 }
 
 /**
- * Converts raw option annotation value to a normalized array.
+ * Converts raw option annotation value to a normalized array. `t` translates
+ * the labels (never the keys: an option without a value is its own key).
  */
-export function parseStaticOptions(raw: unknown): TFormEntryOptions[] {
+export function parseStaticOptions(raw: unknown, t?: UserTextT): TFormEntryOptions[] {
   const items = asArray(raw);
   return items.map((item) => {
     if (typeof item === "object" && item !== null && "label" in item) {
       const { label, value } = item as { label: string; value?: string };
-      return value !== undefined ? { key: value, label } : label;
+      const shown = userText(UI_FORM_OPTIONS, { label }, t).label;
+      if (value !== undefined) return { key: value, label: shown };
+      return shown === label ? label : { key: label, label: shown };
     }
     return String(item);
   });
@@ -65,22 +69,25 @@ export function parseStaticOptions(raw: unknown): TFormEntryOptions[] {
  *
  * `t` words the default boolean labels (`UI_YES` / `UI_NO`); the active UI
  * texts when omitted — a component passes its app's (`useAsLocale().t`).
+ * `text` translates the labels the model declares (`@ui.form.options`,
+ * `@ui.literalLabel`); a computed option list is the fn's own to translate.
  */
 export function resolveOptions(
   prop: TAtscriptAnnotatedType,
   scope: Record<string, unknown>,
   labelsFrom?: TAtscriptAnnotatedType,
   t?: UiT,
+  text?: UserTextT,
 ): TFormEntryOptions[] | undefined {
   const resolved = resolveFieldProp<TFormEntryOptions[]>(
     prop,
     UI_FORM_FN_OPTIONS,
     UI_FORM_OPTIONS,
     scope,
-    { transform: parseStaticOptions },
+    { transform: (raw) => parseStaticOptions(raw, text) },
   );
   if (resolved !== undefined) return resolved;
   return labelsFrom
-    ? extractLiteralOptions(prop, labelsFrom, t)
-    : extractFieldLiteralOptions(prop, t);
+    ? extractLiteralOptions(prop, labelsFrom, t, text)
+    : extractFieldLiteralOptions(prop, t, text);
 }

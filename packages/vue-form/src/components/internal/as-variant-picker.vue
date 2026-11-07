@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import type { TAsUnionContext } from "../types";
 import { useAsDropdown } from "../../composables/use-as-dropdown";
 import { useAsTexts } from "../../composables/use-as-locale";
+import { useAsModelTexts } from "../../composables/use-as-model-texts";
 import { variantLabel } from "../../composables/variant-label";
 
 const props = defineProps<{
@@ -11,6 +12,7 @@ const props = defineProps<{
 }>();
 
 const { t } = useAsTexts();
+const modelT = useAsModelTexts();
 const dropdownRef = ref<HTMLElement | null>(null);
 const { isOpen, toggle, select } = useAsDropdown(dropdownRef);
 
@@ -18,7 +20,7 @@ const { isOpen, toggle, select } = useAsDropdown(dropdownRef);
 // rows read as a numbered list. The trigger shows just the type name.
 const currentLabel = computed(() => {
   const variant = props.unionContext.variants[props.unionContext.currentIndex.value];
-  const raw = variant ? variantLabel(variant, t) : "";
+  const raw = variant ? variantLabel(variant, t, modelT()) : "";
   return raw.replace(/^\d+\.\s+/, "");
 });
 
@@ -47,7 +49,7 @@ function onSelectVariant(ctx: TAsUnionContext, index: number) {
         :class="{ 'as-dropdown-item--active': unionContext.currentIndex.value === vi }"
         @click="onSelectVariant(unionContext, vi)"
       >
-        {{ variantLabel(v, t) }}
+        {{ variantLabel(v, t, modelT()) }}
       </button>
     </div>
   </div>

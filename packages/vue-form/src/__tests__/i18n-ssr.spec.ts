@@ -80,3 +80,45 @@ describe("definition texts on a server", () => {
     expect(html).not.toMatch(/>Yes<|current: String|\(hidden/);
   });
 });
+
+const modelDe: UiTranslate = (id) =>
+  ({
+    Order: "Bestellung",
+    Name: "Name (de)",
+    "Place order": "Bestellen",
+    "By card": "Mit Karte",
+  })[id];
+const modelFr: UiTranslate = (id) => ({ Order: "Commande", Name: "Nom" })[id];
+
+describe("model texts on a server", () => {
+  async function renderOrder(translate: UiTranslate | undefined): Promise<string> {
+    const { MtOrder } = await import("./fixtures/model-texts.as");
+    const type = MtOrder as unknown as import("@atscript/typescript/utils").TAtscriptAnnotatedType;
+    const app = createSSRApp(
+      defineComponent({
+        setup() {
+          provideAsLocale(() => "de", translate);
+          const def = createFormDef(type);
+          const formData = { value: { pay: { number: "1" } } };
+          return () => h(AsForm as Component, { def, formData, types: createDefaultTypes() });
+        },
+      }),
+    );
+    return renderToString(app);
+  }
+
+  it("a type compiled into the app renders translated by that app's own translator", async () => {
+    const [german, french, plain] = await Promise.all([
+      renderOrder(modelDe),
+      renderOrder(modelFr),
+      renderOrder(undefined),
+    ]);
+    expect(german).toContain("Name (de)");
+    expect(german).toContain(">Bestellen<");
+    expect(german).toContain("Mit Karte");
+    expect(french).toContain("Commande");
+    expect(french).not.toContain("Name (de)");
+    expect(plain).toContain(">Place order<");
+    expect(plain).not.toContain("Bestellung");
+  });
+});

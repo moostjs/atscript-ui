@@ -92,6 +92,20 @@ describe("useWfForm — served texts", () => {
     wrapper.unmount();
   });
 
+  it("marks a form schema that carries $i18n as served: its texts are not translated again", async () => {
+    mockFetch([
+      withTexts({ UI_FORM_SUBMIT: "Absenden" }),
+      mockInputRequired(Form, { token: "t2" }),
+    ]);
+    const { wf, wrapper } = mountWf({}, () => "de");
+    await wf().start();
+    expect(wf().formDef.value?.served).toBe(true);
+    // a schema without `$i18n` is untranslated source: the app's `t` words it
+    await wf().submit({ name: "a" });
+    expect(wf().formDef.value?.served).toBeUndefined();
+    wrapper.unmount();
+  });
+
   it("texts answering the app's own Accept-Language don't land in the provider's locale", async () => {
     mockFetch([withTexts({ UI_FORM_SUBMIT: "Invia" })]);
     const { wf, t, wrapper } = mountWf(

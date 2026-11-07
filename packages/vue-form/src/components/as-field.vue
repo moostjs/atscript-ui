@@ -13,6 +13,8 @@ import {
   resolveAttrs,
   resolveSingularLabel,
   getFieldMeta,
+  fieldText,
+  userText,
   UI_FORM_LABEL_SINGULAR,
   hasFieldMeta,
   isFieldHidden,
@@ -68,6 +70,7 @@ import {
 } from "@atscript/ui";
 import { useAsData } from "../composables/use-as-data";
 import { useAsLocale, useAsTexts } from "../composables/use-as-locale";
+import { useAsModelTexts } from "../composables/use-as-model-texts";
 import { buildFieldEntry, type TFnScope } from "@atscript/ui-fns";
 import {
   computed,
@@ -114,6 +117,10 @@ const normalizedFormData = inject(FORM_NORMALIZED_DATA_KEY, undefined);
 // The app's UI texts: everything this field words (boolean labels, fallbacks)
 // is worded with them, so a server render matches the client's.
 const { t } = useAsTexts();
+// The model's own texts (label, hint, prefix, option labels, …) are translated with the app's `t`
+// too, unless the form's schema was served translated. Read where a text is shown, so a locale
+// switch re-renders it.
+const modelT = useAsModelTexts();
 
 // ── Form context ────────────────────────────────────────────
 const { rootFormData, formContext, joinPath, buildPath, getByPath, setByPath, buildScope } =
@@ -152,6 +159,11 @@ if (isStructured || isUnion) {
 
 // Helper to unwrap value (handles both static and computed)
 const unwrap = <T>(v: T | ComputedRef<T>): T => (isRef(v) ? v.value : v);
+
+// A text of the model in the app's language. A static one (a plain value) is translated here; a
+// dynamic one (a computed: a fn's result) is already translated by the resolver.
+const shown = <T extends string | undefined>(key: string, v: T | ComputedRef<T>): T =>
+  isRef(v) ? v.value : userText(key, v, modelT());
 
 // Helper: returns a computed when dynamic, static value otherwise
 function maybeComputed<T>(
@@ -279,7 +291,9 @@ if (hasAdornment) {
   // Prefix: explicit @ui.form.prefix wins → .ref → currency narrow symbol.
   const prefixRefValue = prefixRefField ? _data.siblingValue<string>(prefixRefField) : undefined;
   resolvedPrefix = computed<string | undefined>(() => {
-    if (prefixLiteral !== undefined && prefixLiteral.length > 0) return prefixLiteral;
+    if (prefixLiteral !== undefined && prefixLiteral.length > 0) {
+      return userText(UI_FORM_PREFIX, prefixLiteral, modelT());
+    }
     if (prefixRefValue) {
       const v = prefixRefValue.value;
       if (typeof v === "string" && v.length > 0) return v;
@@ -293,7 +307,9 @@ if (hasAdornment) {
   // Suffix: explicit @ui.form.suffix wins → .ref → unit code.
   const suffixRefValue = suffixRefField ? _data.siblingValue<string>(suffixRefField) : undefined;
   resolvedSuffix = computed<string | undefined>(() => {
-    if (suffixLiteral !== undefined && suffixLiteral.length > 0) return suffixLiteral;
+    if (suffixLiteral !== undefined && suffixLiteral.length > 0) {
+      return userText(UI_FORM_SUFFIX, suffixLiteral, modelT());
+    }
     if (suffixRefValue) {
       const v = suffixRefValue.value;
       if (typeof v === "string" && v.length > 0) return v;
@@ -316,12 +332,15 @@ if (hasAdornment) {
 }
 // `@ui.form.label.singular` lives on the array prop; fall back to the
 // item prop, then to "item" (`UI_ITEM`).
-let singularLabel: string | undefined;
-if (isArrayField(props.field)) {
-  singularLabel =
-    (getFieldMeta(prop, UI_FORM_LABEL_SINGULAR) as string | undefined) ||
-    resolveSingularLabel(props.field.itemField.prop, t);
-}
+const arrayItemProp = isArrayField(props.field) ? props.field.itemField.prop : undefined;
+const singularLabelOf = () => {
+  if (!arrayItemProp) return arrayItemProp;
+  const text = modelT();
+  return (
+    (fieldText(prop, UI_FORM_LABEL_SINGULAR, text) as string | undefined) ||
+    resolveSingularLabel(arrayItemProp, t, text)
+  );
+};
 
 // ── Stable a11y ids (one trio per AsField mount, shared with defaults) ──
 const _id = useId();
@@ -331,14 +350,19 @@ const descId = `${inputId}-desc`;
 const statusId = `${inputId}-status`;
 const formActionMeta = getFieldMeta(prop, UI_FORM_ACTION);
 const wfActionWithData = getFieldMeta(prop, WF_ACTION_WITH_DATA) as string | undefined;
-const formAction: TFormAction | undefined = formActionMeta
-  ? {
-      id: formActionMeta.id,
-      label: formActionMeta.label ?? getFieldMeta(prop, META_LABEL) ?? props.field.name,
-    }
-  : wfActionWithData
-    ? { id: wfActionWithData, label: getFieldMeta(prop, META_LABEL) ?? props.field.name }
-    : undefined;
+let lastFormAction: TFormAction | undefined;
+// The same object while id and label are unchanged: it is a prop of the field's component.
+const formActionOf = (): TFormAction | undefined => {
+  const id = formActionMeta?.id ?? wfActionWithData;
+  if (id === undefined) return undefined;
+  const text = modelT();
+  const label =
+    userText(UI_FORM_ACTION, formActionMeta, text)?.label ??
+    fieldText(prop, META_LABEL, text) ??
+    props.field.name;
+  if (lastFormAction?.id !== id || lastFormAction.label !== label) lastFormAction = { id, label };
+  return lastFormAction;
+};
 
 // ── Grid footprint (static — annotations are read-once) ─────
 // `as-grid-item` already covers the col=12/row=1 default; only emit
@@ -351,7 +375,11 @@ const gridClasses = buildGridClasses(
 );
 
 // ── Cached validator (created once per field) ────────────────
-const formValidate = createFieldValidator(prop, { rootOnly: isStructured || isUnion, t });
+const formValidate = createFieldValidator(prop, {
+  rootOnly: isStructured || isUnion,
+  t,
+  served: () => modelT() === undefined,
+});
 
 // ── Helpers for v-model with absolute path support ──────────
 function getModel() {
@@ -386,7 +414,7 @@ let hidden: boolean | ComputedRef<boolean>;
 let optional: boolean | ComputedRef<boolean>;
 let readonly: boolean | ComputedRef<boolean>;
 let required: boolean | ComputedRef<boolean> | undefined;
-let label: string | ComputedRef<string>;
+let label: string | undefined | ComputedRef<string | undefined>;
 let description: string | undefined | ComputedRef<string | undefined>;
 let hint: string | undefined | ComputedRef<string | undefined>;
 let placeholder: string | undefined | ComputedRef<string | undefined>;
@@ -397,6 +425,17 @@ let attrs: Record<string, unknown> | ComputedRef<Record<string, unknown> | undef
 let classesBase: Record<string, boolean> | ComputedRef<Record<string, boolean>>;
 let phantomValue: unknown;
 let hasCustomValidators: boolean;
+// The set-only placeholder of a write-only field (a built-in UI text, not the model's).
+let fallbackPlaceholder: string | undefined;
+
+const optionsOf = (scope: Record<string, unknown>) =>
+  resolveOptions(prop, scope, props.field.labelsFrom, t, modelT());
+// Options without a fn: a plain `undefined` for the common field without any; else computed, as
+// the labels follow the locale. Resolved once here: the computed's first value is the check.
+const staticOptions = () => {
+  const resolved = computed(() => optionsOf(emptyScope));
+  return resolved.value === undefined ? undefined : resolved;
+};
 
 // Static — shared by both paths. A `derived` field is server-owned: always
 // read-only, never marked required, never validated.
@@ -418,22 +457,20 @@ if (props.field.allStatic) {
   required = props.field.phantom ? undefined : hasMetaRequired;
 
   // Display: static reads
-  label = getFieldMeta(prop, META_LABEL) ?? props.field.name;
+  label = getFieldMeta(prop, META_LABEL);
   description = getFieldMeta(prop, META_DESCRIPTION);
   hint = getFieldMeta(prop, UI_FORM_HINT);
+  placeholder = getFieldMeta(prop, UI_FORM_PLACEHOLDER);
   // @db.writeOnly fields are sealed out of reads — the input always starts
   // empty, so default a set-only affordance unless a placeholder is declared.
-  placeholder =
-    getFieldMeta(prop, UI_FORM_PLACEHOLDER) ??
-    (prop.metadata.has("db.writeOnly") ? t("UI_FORM_HIDDEN_PLACEHOLDER") : undefined);
+  if (prop.metadata.has("db.writeOnly")) fallbackPlaceholder = t("UI_FORM_HIDDEN_PLACEHOLDER");
   styles = getFieldMeta(prop, UI_FORM_STYLES);
-  options = resolveOptions(prop, emptyScope, props.field.labelsFrom, t);
+  options = staticOptions();
   attrs =
     getFieldMeta(prop, UI_FORM_ATTR) !== undefined ? resolveAttrs(prop, emptyScope) : undefined;
 
   // Title: static (for structure/array/union fields)
-  title =
-    isStructured || isUnion ? (getFieldMeta(prop, META_LABEL) ?? props.field.name) : undefined;
+  title = getFieldMeta(prop, META_LABEL);
 
   // Classes: plain object (no computed)
   classesBase = buildFieldClasses(
@@ -518,6 +555,7 @@ if (props.field.allStatic) {
           disabled: unwrap(disabled),
           hidden: unwrap(hidden),
           readonly: unwrap(readonly),
+          modelT: modelT(),
         }),
       )
     : undefined;
@@ -540,7 +578,7 @@ if (props.field.allStatic) {
     hasFn.has("label"),
     () =>
       resolveFieldProp<string>(prop, UI_FORM_FN_LABEL, META_LABEL, fs.value) ?? props.field.name,
-    getFieldMeta(prop, META_LABEL) ?? props.field.name,
+    getFieldMeta(prop, META_LABEL),
   );
 
   description = maybeComputed(
@@ -569,9 +607,7 @@ if (props.field.allStatic) {
 
   // Not `maybeComputed`: its static argument would run `fn.options` once more
   // with an empty scope.
-  options = hasFn.has("options")
-    ? computed(() => resolveOptions(prop, fs.value, props.field.labelsFrom, t))
-    : resolveOptions(prop, emptyScope, props.field.labelsFrom, t);
+  options = hasFn.has("options") ? computed(() => optionsOf(fs.value)) : staticOptions();
 
   const hasFnAttr = hasFn.has("attr");
   attrs = hasFnAttr
@@ -586,7 +622,7 @@ if (props.field.allStatic) {
       ? maybeComputed(
           hasFn.has("title"),
           () => resolveHeaderProp(UI_FORM_FN_TITLE, META_LABEL) ?? props.field.name,
-          getFieldMeta(prop, META_LABEL) ?? props.field.name,
+          getFieldMeta(prop, META_LABEL),
         )
       : undefined;
 
@@ -734,7 +770,6 @@ const invariantProps = {
   onBlur,
   model: slotModel,
   type: props.field.type,
-  formAction,
   name: props.field.name,
   field: props.field,
   maxLength,
@@ -745,7 +780,6 @@ const invariantProps = {
   // Resolved-once props: annotation reads + path/ids
   path: absolutePath.value,
   valueHelp,
-  singularLabel,
   // Static literal precision (the storage cap — composables pad to this).
   precisionScale,
   // Whether AsField saw at least one adornment-driving annotation on this
@@ -759,16 +793,24 @@ const invariantProps = {
 };
 
 // ── Display props — cached separately from error state ────────
-// For allStatic fields this computed has zero reactive deps (evaluated
-// once and cached). Error-only changes skip re-evaluating all unwrap() calls.
+// For allStatic fields this computed reads only the app's texts (the locale, the
+// served dicts) and the form def — never the data. Error-only changes skip
+// re-evaluating all unwrap() calls.
 const displayProps = computed(() => {
-  const titleValue = isRoot && hideRootTitle ? undefined : unwrap(title);
+  const titleValue =
+    isRoot && hideRootTitle
+      ? undefined
+      : isStructured || isUnion
+        ? (shown(META_LABEL, title) ?? props.field.name)
+        : undefined;
   return {
     value: unwrap(phantomValue),
-    label: unwrap(label),
-    description: unwrap(description),
-    hint: unwrap(hint),
-    placeholder: unwrap(placeholder),
+    label: shown(META_LABEL, label) ?? props.field.name,
+    description: shown(META_DESCRIPTION, description),
+    hint: shown(UI_FORM_HINT, hint),
+    placeholder: shown(UI_FORM_PLACEHOLDER, placeholder) ?? fallbackPlaceholder,
+    formAction: formActionOf(),
+    singularLabel: singularLabelOf(),
     style: unwrap(styles),
     optional: unwrap(optional),
     onToggleOptional: unwrap(optional) ? toggleOptional : undefined,
@@ -848,8 +890,8 @@ const ariaDescribedBy = computed<string | undefined>(() => {
     @action="handleAction"
   />
   <div v-else class="as-field-missing">
-    [{{ unwrap(label) }}] No component for type "{{ field.customType ?? field.type }}"{{
-      componentName ? ` (component "${componentName}" not supplied)` : ""
-    }}
+    [{{ unwrap(label) ?? field.name }}] No component for type "{{
+      field.customType ?? field.type
+    }}"{{ componentName ? ` (component "${componentName}" not supplied)` : "" }}
   </div>
 </template>

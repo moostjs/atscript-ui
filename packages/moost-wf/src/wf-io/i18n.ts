@@ -66,7 +66,9 @@ function build(
   // moost memoizes `messages()` per generation and locale: shared when the schema adds no texts.
   const messages = translation.messages();
   const i18n = Object.keys(texts).length > 0 ? { ...messages, ...texts } : messages;
-  return Object.keys(i18n).length > 0 ? { ...value, $i18n: i18n } : value;
+  // `$i18n` is what marks a schema as served (translated): present, even empty, whenever
+  // the schema was translated — a client must not translate it a second time.
+  return Object.keys(i18n).length > 0 || value !== schema ? { ...value, $i18n: i18n } : value;
 }
 
 /** A text's translation, `undefined` when it has none (the source text is the id). */

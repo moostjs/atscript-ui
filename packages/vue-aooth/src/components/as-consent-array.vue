@@ -1,7 +1,12 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { AsFieldShell, useAsField, type TAsComponentProps } from "@atscript/vue-form";
-import { getFieldMeta, META_LABEL } from "@atscript/ui";
+import {
+  AsFieldShell,
+  useAsField,
+  useAsModelTexts,
+  type TAsComponentProps,
+} from "@atscript/vue-form";
+import { fieldText, META_LABEL } from "@atscript/ui";
 import type { AsConsentArrayItem } from "../types";
 
 const props = defineProps<
@@ -24,10 +29,11 @@ const consents = computed<AsConsentArrayItem[]>(() => props.pendingConsents ?? [
 // which produces a redundant "Consents" header above the checkbox group.
 // Only render a label when the consumer explicitly sets `@meta.label` on
 // the field — each checkbox already carries its own text.
+const modelT = useAsModelTexts();
 const explicitLabel = computed<string | undefined>(() => {
   const prop = props.field?.prop;
   if (!prop) return undefined;
-  const meta = getFieldMeta(prop, META_LABEL);
+  const meta = fieldText(prop, META_LABEL, modelT());
   return typeof meta === "string" ? meta : undefined;
 });
 

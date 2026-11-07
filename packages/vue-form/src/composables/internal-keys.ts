@@ -1,3 +1,4 @@
+import type { UserTextT } from "@atscript/ui";
 import type { Component, ComputedRef, InjectionKey } from "vue";
 import type { TAsChangeType, TAsUnionContext } from "../components/types";
 import type { TFormState } from "./types";
@@ -22,6 +23,7 @@ import type { AsFormPatchHandle } from "./use-as-form-patch";
 //   DISMISS_EXTERNAL_AT_KEY -> useAsErrorDismiss
 //   FORM_PATCH_KEY          -> useAsFormPatch
 //   LEVEL_KEY               -> useAsLevel
+//   MODEL_TEXTS_KEY         -> useAsModelTexts
 //   FORM_STATE_KEY, FORM_DATA_KEY, FORM_CONTEXT_KEY, ERRORS_KEY,
 //     COMPONENTS_KEY, ACTION_HANDLER_KEY, CHANGE_HANDLER_KEY,
 //     UNION_CONTEXT_KEY, HIDE_ROOT_TITLE_KEY -> consumed via
@@ -71,3 +73,9 @@ export const FORM_PATCH_KEY: InjectionKey<AsFormPatchHandle> = Symbol("atui.form
 export const FORM_NORMALIZED_DATA_KEY: InjectionKey<ComputedRef<Record<string, unknown>>> = Symbol(
   "atui.form-normalized-data",
 );
+
+// The translator of the model's own texts for the rendered form: the app's `t`,
+// or none when the def's schema was served translated (`FormDef.served`).
+// A getter, so the def (reactive) is read where the text is.
+export const MODEL_TEXTS_KEY: InjectionKey<() => UserTextT | undefined> =
+  Symbol("atui.model-texts");

@@ -119,6 +119,8 @@ export {
   useAsLocale,
 } from "./composables/use-as-locale";
 export type { AsServedTexts, UseAsLocaleReturn } from "./composables/use-as-locale";
+export { useAsModelTexts } from "./composables/use-as-model-texts";
+export { variantLabel } from "./composables/variant-label";
 
 // Composables — measurement & date inputs (companions to defaults)
 export { useAsDecimal } from "./composables/use-as-decimal";

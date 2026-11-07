@@ -45,6 +45,7 @@ import { isEmptyMember, isPureLiteralUnion } from "../value-help/extract-literal
 import { extractValueHelp } from "../value-help/extract-ref";
 import { isSkippedNavField } from "./skipped-nav";
 import { AS_UI_MESSAGES, type AsUiMessageCode } from "../messages";
+import { isServedType } from "../i18n/model-texts";
 
 /** Known atscript primitive extension tags that map directly to field types. */
 const UI_TAGS = new Set(["action", "paragraph", "select", "radio", "checkbox"]);
@@ -135,7 +136,11 @@ function unnamed(field: FormFieldDef): FormFieldDef {
  * becomes a nested object field, since inlining it would never end.
  */
 export function createFormDef(type: TAtscriptAnnotatedType, opts?: CreateFormDefOptions): FormDef {
-  return buildFormDef(type, opts?.mode === "edit", opts ?? {});
+  const def = buildFormDef(type, opts?.mode === "edit", opts ?? {});
+  // The mark travels with the def: a renderer reads it off the def, whatever wraps it (a
+  // reactive proxy loses the identity of `type`).
+  if (isServedType(type)) def.served = true;
+  return def;
 }
 
 /**
@@ -628,7 +633,7 @@ function createVariant(def: TAtscriptAnnotatedType, edit: boolean): FormUnionVar
     const label = getFieldMeta(def, META_LABEL) as string | undefined;
     const hasComponent = getFieldMeta(def, UI_FORM_COMPONENT) !== undefined;
     return {
-      ...(label === undefined ? typeLabel("object") : { label }),
+      ...(label === undefined ? typeLabel("object") : { label, labelText: label }),
       type: def,
       def: buildFormDef(def, edit),
       itemField: hasComponent ? createFieldDef("", def, edit) : undefined,

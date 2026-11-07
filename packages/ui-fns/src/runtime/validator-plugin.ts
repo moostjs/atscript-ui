@@ -1,6 +1,7 @@
 import type { TValidatorPlugin } from "@atscript/typescript/utils";
 import {
   UI_FORM_VALIDATE,
+  UI_FORM_VALIDATE_ERROR_CODE,
   asArray,
   getFieldMeta,
   getUiTexts,
@@ -80,7 +81,13 @@ export function uiFnsValidatorPlugin(): TValidatorPlugin {
       const result = fn(scope);
 
       if (result !== true) {
-        ctx.error(t(typeof result === "string" ? result : "UI_VALIDATION_FAILED"));
+        // Worded with `t` here: the code marks it final, so the form's lookup leaves it alone.
+        ctx.error(
+          t(typeof result === "string" ? result : "UI_VALIDATION_FAILED"),
+          undefined,
+          undefined,
+          { code: UI_FORM_VALIDATE_ERROR_CODE },
+        );
         // Still walk a container's children so their own errors are reported.
         if (container) ctx.validateAnnotatedType(def, value);
         return false;

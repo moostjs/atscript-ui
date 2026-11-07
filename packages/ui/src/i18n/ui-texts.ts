@@ -7,7 +7,11 @@ export type UiTextParams = Record<string, unknown>;
  * An app's own translator for the built-in UI texts: return the final text
  * (params already filled in), or `undefined` to fall back to the texts the
  * server served for the locale, then to English. `id` is a code of
- * `AS_UI_MESSAGES` (`UI_CANCEL`, …) or a literal text.
+ * `AS_UI_MESSAGES` (`UI_CANCEL`, …) or a literal text — since 0.1.170 also
+ * the texts of the model a form renders from a type compiled into the client
+ * (labels, descriptions, hints, placeholders, prefixes, option labels, titles,
+ * nav labels, …): the source text is the id, as in the catalogue the server
+ * translates served schemas with.
  */
 export type UiTranslate = (
   id: string,

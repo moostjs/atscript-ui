@@ -2,8 +2,7 @@
 import { ref, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { AsForm } from "@atscript/vue-form";
-import { createFormDef, type FormDef } from "@atscript/ui";
-import { deserializeAnnotatedType } from "@atscript/typescript/utils";
+import { createFormDef, deserializeServedType, type FormDef } from "@atscript/ui";
 import { VersionMismatchError } from "@atscript/db-client";
 import { clientForTable } from "../api/client-factory";
 import { createDemoTypes } from "../types/demo-types";
@@ -45,7 +44,7 @@ async function load() {
   error.value = null;
   try {
     const meta = await client.value.meta();
-    formDef.value = createFormDef(deserializeAnnotatedType(meta.type), {
+    formDef.value = createFormDef(deserializeServedType(meta.type), {
       mode: "edit",
       versionColumn: meta.versionColumn,
       metaFields: meta.fields,

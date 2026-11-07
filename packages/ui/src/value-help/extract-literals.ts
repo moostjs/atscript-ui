@@ -6,6 +6,7 @@ import type {
 } from "@atscript/typescript/utils";
 import { UI_LITERAL_LABEL } from "../shared/annotation-keys";
 import { getUiTexts, type UiT } from "../i18n/ui-texts";
+import { userText, type UserTextT } from "../i18n/model-texts";
 import { AS_UI_MESSAGES } from "../messages";
 
 /**
@@ -40,11 +41,14 @@ export const DEFAULT_BOOLEAN_LABELS: Readonly<Record<"true" | "false", string>> 
  * Handles nested unions created by flattenAnnotatedType, which recurses
  * into union items and produces synthetic unions containing both individual
  * literals and the original union type as nested items.
+ *
+ * `text` translates the `@ui.literalLabel` labels (the literals themselves are data).
  */
 export function extractLiteralOptions(
   prop: TAtscriptAnnotatedType,
   outer?: TAtscriptAnnotatedType,
   t: UiT = getUiTexts().t,
+  text?: UserTextT,
 ): LiteralOption[] | undefined {
   const items =
     prop.type.kind === "union"
@@ -61,8 +65,11 @@ export function extractLiteralOptions(
   // are the prop's and win over the element type's.
   const labels = [prop, outer].flatMap(
     (node) =>
-      (node?.metadata.get(UI_LITERAL_LABEL) as { value: string; label: string }[] | undefined) ??
-      [],
+      userText(
+        UI_LITERAL_LABEL,
+        node?.metadata.get(UI_LITERAL_LABEL) as { value: string; label: string }[] | undefined,
+        text,
+      ) ?? [],
   );
   if (labels.length) {
     const byValue = new Map(labels.map((l) => [l.value, l.label]));
@@ -80,11 +87,12 @@ export function extractLiteralOptions(
 export function extractFieldLiteralOptions(
   prop: TAtscriptAnnotatedType,
   t: UiT = getUiTexts().t,
+  text?: UserTextT,
 ): LiteralOption[] | undefined {
   if (prop.type.kind === "array") {
-    return extractLiteralOptions((prop.type as TAtscriptTypeArray).of, prop, t);
+    return extractLiteralOptions((prop.type as TAtscriptTypeArray).of, prop, t, text);
   }
-  return extractLiteralOptions(prop, undefined, t);
+  return extractLiteralOptions(prop, undefined, t, text);
 }
 
 /** A `null` / `undefined` member of a union (`T | null`): no value of its own. */

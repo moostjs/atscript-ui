@@ -5,6 +5,7 @@ import type {
   TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
 import { deserializeAnnotatedType, flattenAnnotatedType } from "@atscript/typescript/utils";
+import { deserializeServedType } from "../i18n/model-texts";
 import type { TDbActionInfo } from "@atscript/db-client";
 import { getFieldMeta } from "../shared/field-resolver";
 import {
@@ -55,7 +56,7 @@ export function createTableDef(
   preDeserializedType?: TAtscriptAnnotatedType,
   t?: UiT,
 ): TableDef {
-  const type = preDeserializedType ?? deserializeAnnotatedType(meta.type);
+  const type = preDeserializedType ?? deserializeServedType(meta.type);
 
   // Only flatten if the root is an object type
   const flatMap =
