@@ -15,11 +15,9 @@ vi.mock("@atscript/vue-form", () => ({
   createDefaultTypes: () => ({}),
 }));
 
-vi.mock("@atscript/typescript/utils", () => ({
-  deserializeAnnotatedType: (x: unknown) => x,
-}));
 vi.mock("@atscript/ui", () => ({
   createFormDef: () => ({ fields: [], rootField: { path: "", type: "object" } }),
+  deserializeServedType: (x: unknown) => x,
 }));
 
 // useMe() fires a real fetch("/api/me") on first use — mock it so no
