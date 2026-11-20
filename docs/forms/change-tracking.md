@@ -541,7 +541,9 @@ the item's unchanged optional fields; and some reorders were sent as
 operators that stored a different order. Whole items need
 **`@atscript/db` 0.1.180 or later on the server**: earlier versions merged
 `$update` items on the SQL and in-memory adapters, so a field left out of
-the item was not cleared. See
+the item was not cleared. An array whose items hold a display-only
+(`phantom`) field, such as a paragraph or an action, needs 0.1.181: before
+it the db asked for that field in every `$update` item. See
 [array patch operators](https://db.atscript.dev/api/update-patch).
 
 A `@db.json` field is stored as one JSON value, which takes no array
