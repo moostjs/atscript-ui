@@ -45,8 +45,12 @@ export interface ChangeTrackingOrder {
 
     // ── Keyed array of objects ──────────────────────────────
     // @expect.array.key on `sku` → the diff matches items by sku and emits
-    // $update (changed leaves), $insert (new sku) and $remove (dropped sku),
-    // instead of replacing the whole array.
+    // $update (changed line), $insert (new sku) and $remove (dropped sku),
+    // instead of replacing the whole array. The array keeps the default
+    // (replace) patch strategy, so a $update item is the WHOLE line: the db
+    // replaces the matched line with it, which also keeps the required
+    // `description` present. With @db.patch.strategy 'merge' here a $update
+    // item would carry just the sku + the changed fields.
     @meta.label 'Line items'
     @meta.description 'Edit a quantity (→ $update), add a row (→ $insert), or remove one (→ $remove). Matched by SKU.'
     @ui.form.label.singular 'line item'

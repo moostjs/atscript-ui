@@ -21,14 +21,16 @@
 // below to match (the spec reads them, not the page).
 //   - baseline `reference` = "ORD-2026-0042"
 //   - baseline `address`   = { street, city: "San Francisco", postcode }
-//   - baseline `items`     = [ {sku:"SKU-001", qty:3}, {sku:"SKU-002", qty:1} ]
+//   - baseline `items`     = [ {sku:"SKU-001", description:"Standard widget", qty:3},
+//                              {sku:"SKU-002", description:"Deluxe widget", qty:1} ]
 //   - `version` is `@db.column.version` (= 7) → getPatch() lifts it into a
 //     top-level `$cas: { version: 7 }` sibling, never a normal SET.
 //   - `address` carries `@db.patch.strategy 'merge'` → a single-leaf edit emits
 //     ONLY the changed leaf (`address: { city }`), not the whole sub-object.
 //   - `items` is keyed by `sku` (@expect.array.key) → a qty edit emits a keyed
-//     `$update`, a new row emits `$insert`, a removed row emits `$remove` (key
-//     only), NEVER a wholesale `$replace`.
+//     `$update` carrying the whole line (default replace patch strategy), a
+//     new row emits `$insert`, a removed row emits `$remove` (key only), NEVER
+//     a wholesale `$replace`.
 //
 // Label locators anchor on the BASE label with a regex (`labelRegex`) rather
 // than `{ exact: true }`: the required-marker `*` is painted via CSS `::after`
@@ -226,20 +228,18 @@ test.describe("Section 18 — form change tracking · live patch", () => {
     // The keyed array must diff to a per-item op, never replace the whole list.
     // Gate the poll on the FULL settled target shape so the non-retrying reads
     // below can never observe an intermediate op state.
+    // `items` keeps the default (replace) patch strategy, so the `$update` item
+    // is the WHOLE line — the unchanged `description` included.
+    const updatedLine = { sku: "SKU-001", description: "Standard widget", qty: 12 };
     await expect
       .poll(async () => await readLivePatch(page))
-      .toMatchObject({
-        items: {
-          $update: expect.arrayContaining([expect.objectContaining({ sku: "SKU-001", qty: 12 })]),
-        },
-        $cas: CAS,
-      });
+      .toMatchObject({ items: { $update: [updatedLine] }, $cas: CAS });
 
     // Read the now-settled patch once and assert the negative invariants on it:
     // keyed diff → `$update`, and NEVER a wholesale `$replace`.
     const patch = await readLivePatch(page);
     const itemsOp = patch.items as Record<string, unknown>;
-    expect(itemsOp).toHaveProperty("$update");
+    expect(itemsOp.$update).toEqual([updatedLine]);
     expect(itemsOp).not.toHaveProperty("$replace");
     expect(itemsOp).not.toHaveProperty("$insert");
     expect(itemsOp).not.toHaveProperty("$remove");

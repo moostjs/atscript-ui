@@ -2,9 +2,10 @@
 //
 // Covers: scalars (set/clear), inlined flat nested objects, structured
 // (@meta.label) nested objects (default replace strategy), merge-strategy
-// nested objects, 2-level nesting, keyed arrays (@expect.array.key), composite
-// keyed arrays, primitive arrays, uniqueItems primitive arrays, union + tuple
-// fields, and an optimistic-concurrency version column (@db.column.version).
+// nested objects, 2-level nesting, keyed arrays (@expect.array.key) under the
+// default and the merge patch strategy, composite keyed arrays, primitive
+// arrays, uniqueItems primitive arrays, union + tuple fields, and an
+// optimistic-concurrency version column (@db.column.version).
 
 // ── Scalars + clear ──────────────────────────────────────────
 
@@ -140,10 +141,87 @@ export interface StockLine {
     sku: string
 
     qty: number
+
+    bin?: string
 }
 
 export interface CompositeKeyArrayForm {
     stock: StockLine[]
+}
+
+/// Composite-key array tagged @db.patch.strategy 'merge' — `$update` items
+/// carry the full composite key + the changed leaves only.
+export interface MergeCompositeKeyArrayForm {
+    @db.patch.strategy 'merge'
+    stock: StockLine[]
+}
+
+// ── Keyed arrays under each patch strategy ───────────────────
+
+/// Keyed item with two required non-key fields and an optional one — shows
+/// which leaves a `$update` item carries under each array patch strategy.
+export interface OrderLine {
+    @expect.array.key
+    sku: string
+
+    qty: number
+
+    price: number
+
+    note?: string
+}
+
+/// Default (replace) strategy: the db replaces a matched element with the
+/// `$update` item, so the item is the whole current element.
+export interface OrderLinesForm {
+    lines: OrderLine[]
+}
+
+/// @db.patch.strategy 'merge' on the array: the db merges the `$update` item
+/// into the matched element, so the item is the key + the changed leaves.
+export interface MergeOrderLinesForm {
+    @db.patch.strategy 'merge'
+    lines: OrderLine[]
+}
+
+/// Keyed item holding a nested object — the db merges a `$update` item one
+/// level deep, so under merge a change inside `size` sends the whole `size`.
+export interface ParcelLine {
+    @expect.array.key
+    sku: string
+
+    qty: number
+
+    size: {
+        w: number
+        h: number
+    }
+}
+
+/// Default (replace) strategy keyed array of items with a nested object.
+export interface ParcelLinesForm {
+    lines: ParcelLine[]
+}
+
+/// Merge strategy keyed array of items with a nested object.
+export interface MergeParcelLinesForm {
+    @db.patch.strategy 'merge'
+    lines: ParcelLine[]
+}
+
+/// Keyed arrays below a structured merge object — the array's own strategy
+/// decides the `$update` item shape at any depth.
+@meta.label 'Order'
+type OrderSection = {
+    lines: OrderLine[]
+
+    @db.patch.strategy 'merge'
+    mergedLines: OrderLine[]
+}
+
+export interface NestedKeyedArraysForm {
+    @db.patch.strategy 'merge'
+    order: OrderSection
 }
 
 // ── Primitive array (unkeyed) ────────────────────────────────

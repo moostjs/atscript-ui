@@ -355,9 +355,10 @@ function diffObjectField(
 }
 
 /**
- * Whether an object's patch may carry only its changed leaves: a
- * `@db.patch.strategy 'merge'` object that is not `@db.json` (a JSON value is
- * stored, and so replaced, whole).
+ * Whether a field's patch may carry only its changed leaves: a
+ * `@db.patch.strategy 'merge'` field that is not `@db.json` (a JSON value is
+ * stored, and so replaced, whole). For an object field this decides the nested
+ * partial; for a keyed array field, the shape of its `$update` items.
  */
 function isMergePatched(prop: TAtscriptAnnotatedType): boolean {
   return (
@@ -405,12 +406,9 @@ function diffArrayField(
  * Produces a `TArrayPatch` value for one array field, or `undefined` when no
  * real op results (the caller then skips the field entirely).
  *
- * - Keyed arrays (item object has `@expect.array.key`): emit `$update`
- *   (key + changed leaves), `$insert` (wholly-new items, whole), `$remove`
- *   (key only). Reorder-only (same key membership, same content, different
- *   order) → `$replace` (key-ops can't express a pure reorder).
- *   Ambiguous keys (duplicate or missing key values) → `$replace` (the only
- *   faithful op when key identity is unreliable).
+ * - Keyed arrays (item object has `@expect.array.key`): `$update` / `$insert`
+ *   / `$remove` when those operators reproduce the form's array, else
+ *   `$replace` — see {@link diffKeyedArray}.
  * - Unkeyed object arrays / primitive arrays: `$replace` with the whole array.
  *   Primitive arrays with `@expect.array.uniqueItems` use by-value
  *   `$insert` / `$remove` (set semantics).
@@ -430,7 +428,7 @@ function diffArray(
 
   const keyProps = getArrayKeyProps(field.itemType);
   if (keyProps.length > 0) {
-    return diffKeyedArray(beforeArr, afterArr, keyProps);
+    return diffKeyedArray(beforeArr, afterArr, keyProps, isMergePatched(field.prop));
   }
 
   // Primitive uniqueItems → set semantics (by value).
@@ -444,10 +442,29 @@ function diffArray(
 }
 
 /**
- * Keyed array diff. Reorder-only (same membership) falls back to $replace.
+ * Keyed array diff: `$update` / `$insert` / `$remove` when those operators
+ * reproduce the form's array, else `{ $replace: after }`. Returns `undefined`
+ * when nothing changed (same order, no op), so the caller skips the field
+ * rather than emitting a malformed empty `{}`.
  *
- * Returns `undefined` when no $update/$insert/$remove op is produced (so the
- * caller skips the field rather than emitting a malformed empty `{}`).
+ * Order: the db applies the operators remove → update (in place) → insert
+ * (appended, in item order), so the array it ends with holds the baseline
+ * elements whose key is still present, in baseline order, followed by the
+ * `$insert` items. When that key sequence differs from the form's, the
+ * operators cannot express the form state and `$replace` is the only faithful
+ * patch — a reorder, a new row placed before an existing one, an edited key on
+ * a row that is not last (its remove + insert would move it to the end), a row
+ * removed and re-added under the same key elsewhere. A new row appended at the
+ * end and an edited key on the last row stay key operators.
+ *
+ * A `$update` item follows the array field's `@db.patch.strategy` (`merge` is
+ * whether it is `'merge'`), which the db applies to it: by default (replace)
+ * the db replaces the matched element, so the item is the whole current
+ * element minus its `undefined`-valued props; under `merge` the db shallow-
+ * merges the item in, so it is the key + the changed top-level leaves (a
+ * changed nested object whole), a cleared leaf as `null`
+ * ({@link buildKeyedUpdate}). Either way an item is emitted only when some
+ * leaf changed.
  *
  * Ambiguity fallback: if either side has DUPLICATE key buckets, or ANY element
  * is missing all of its key values, key identity is unreliable — fall back to
@@ -458,6 +475,7 @@ function diffKeyedArray(
   before: unknown[],
   after: unknown[],
   keyProps: string[],
+  merge: boolean,
 ): Record<string, unknown> | undefined {
   // Detect un-keyable elements (missing all key values) on either side.
   if (hasKeylessItem(before, keyProps) || hasKeylessItem(after, keyProps)) {
@@ -479,55 +497,45 @@ function diffKeyedArray(
     return { $replace: after };
   }
 
-  // One pass over the after side: classify every key as insert / update /
-  // unchanged, comparing each matched pair once.
-  const $insert: unknown[] = [];
+  // One pass over the baseline: a key gone from the form is a remove; a kept
+  // key must hold the next place of the form's key sequence (the order check),
+  // and is an update when its element changed. The form's keys after the kept
+  // ones are then all absent from the baseline — the inserts, in their order.
+  const afterKeys = [...afterByKey.keys()];
   const $update: Record<string, unknown>[] = [];
   const $remove: Record<string, unknown>[] = [];
-  let contentChanged = false;
-
-  for (const [k, el] of afterByKey) {
-    const prev = beforeByKey.get(k);
-    if (prev === undefined) {
-      $insert.push(el); // wholly-new item (key absent from baseline)
+  let kept = 0;
+  for (const [k, prev] of beforeByKey) {
+    const el = afterByKey.get(k);
+    if (el === undefined) {
+      $remove.push(pickKeys(prev, keyProps));
       continue;
     }
-    if (!deepEqual(prev, el)) {
-      contentChanged = true;
-      // Partial: key fields + only the changed leaves.
-      const partial = buildKeyedUpdate(prev, el, keyProps);
-      if (partial) $update.push(partial);
-    }
+    if (afterKeys[kept++] !== k) return { $replace: after };
+    if (deepEqual(prev, el)) continue;
+    const partial = buildKeyedUpdate(prev, el, keyProps);
+    if (partial) $update.push(merge ? partial : definedProps(el));
   }
-
-  // Reorder-only: identical key sets AND every matched item deep-equal →
-  // membership/content unchanged, only order differs. db arrays are ordered
-  // and key-ops can't express a pure reorder, so $replace is the only faithful op.
-  if (beforeByKey.size === afterByKey.size && $insert.length === 0 && !contentChanged) {
-    // Same keys + same content but the diff fired → order changed.
-    return { $replace: after };
-  }
-
-  // Removals: keys present in before but gone from after.
-  for (const [k, el] of beforeByKey) {
-    if (!afterByKey.has(k)) {
-      $remove.push(pickKeys(el, keyProps));
-    }
-  }
+  const $insert = afterKeys.slice(kept).map((k) => afterByKey.get(k));
 
   // No real op (e.g. the only diff was an explicit undefined-valued prop the
   // keyed update treats as equal) → undefined so the caller skips the field.
   return arrayOps({ $update, $insert, $remove });
 }
 
-/** Builds a `$update` partial: key fields + changed leaves only. */
+/**
+ * Builds a `$update` partial: key fields + changed leaves only (a cleared leaf
+ * as `null`), or `undefined` when no leaf changed. A leaf is a top-level prop
+ * of the element, compared by value: an explicit `undefined`-valued prop
+ * equals an absent one, and a changed nested object is sent whole (the db
+ * merges an item one level deep).
+ */
 function buildKeyedUpdate(
   prev: Record<string, unknown>,
   next: Record<string, unknown>,
   keyProps: string[],
 ): Record<string, unknown> | undefined {
-  const partial: Record<string, unknown> = {};
-  for (const k of keyProps) partial[k] = next[k];
+  const partial = pickKeys(next, keyProps);
 
   let changed = false;
   // Union of own keys across both sides — catches cleared (gone in next) leaves.
@@ -542,6 +550,18 @@ function buildKeyedUpdate(
     }
   }
   return changed ? partial : undefined;
+}
+
+/**
+ * Shallow copy of `el` without its `undefined`-valued own props (top level
+ * only; nested values are kept by reference).
+ */
+function definedProps(el: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const k of Object.keys(el)) {
+    if (el[k] !== undefined) out[k] = el[k];
+  }
+  return out;
 }
 
 /** Primitive uniqueItems set diff. Returns undefined if neither side differs. */
@@ -622,10 +642,15 @@ function hasKeylessItem(arr: unknown[], keyProps: string[]): boolean {
   return false;
 }
 
-/** Composite key string for a keyed-array element. */
+/**
+ * Bucket string for a keyed-array element's key values, type-strict like
+ * {@link stableKey}. A composite key is the JSON array of its tagged values,
+ * so no two different key tuples share a bucket (a joined string would: the
+ * values may contain the separator).
+ */
 function keyOf(el: Record<string, unknown>, keyProps: string[]): string {
   if (keyProps.length === 1) return stableKey(el[keyProps[0]!]);
-  return keyProps.map((k) => stableKey(el[k])).join(" ");
+  return JSON.stringify(keyProps.map((k) => stableKey(el[k])));
 }
 
 /** Picks only the key fields from an element (for $remove). */

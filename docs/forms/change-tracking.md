@@ -500,12 +500,49 @@ the touched sub-fields. See
 ### Arrays — keyed diff, with fallbacks
 
 For a **keyed** array (items carry a key), the diff is fine-grained:
-changed items become `$update` (key + changed leaves), new items
-`$insert`, dropped items `$remove` (key only). The diff falls back to a
-whole-array `$replace` when it can't compute a stable per-item diff — a
-pure reorder, duplicate keys, or keyless items. Unkeyed / primitive
-arrays always `$replace` (a `uniqueItems` primitive array may use
-by-value `$insert`/`$remove` instead).
+changed items become `$update`, new items `$insert` (whole), dropped items
+`$remove` (key only). The db applies them in place and appends inserted
+items at the end, so the diff falls back to a whole-array `$replace`
+whenever that would not give the form's order — a reorder, a new row placed
+before existing ones, an edited key on a row that isn't last — and when
+keys are duplicate or missing. A row appended at the end stays `$insert`.
+Unkeyed / primitive arrays always `$replace` (a `uniqueItems` primitive
+array may use by-value `$insert`/`$remove` instead).
+
+A `$update` item follows the array field's patch strategy — the same rule
+as nested objects:
+
+- **Default (replace)** — `@atscript/db` replaces the matched item with the
+  `$update` item, so the patch carries the **whole current item**: edit one
+  quantity and the item holds every field of that line, changed or not.
+- **`@db.patch.strategy 'merge'` on the array field** — the db merges the
+  `$update` item into the stored one, one level deep, so the patch carries
+  just the key plus the changed fields (a changed nested object whole, a
+  cleared field as `null`).
+
+```atscript
+export interface Order {
+    // $update items: key + changed fields only
+    @db.patch.strategy 'merge'
+    lines: OrderLine[]
+}
+```
+
+Under the default strategy a cleared field travels as the form holds it.
+Turned off with the optional toggle, or emptied in a default number,
+decimal, date or time input of an optional field, it is `undefined` and left
+out of the item. Emptied in such an input of a required field it is `null`,
+sent as `null`. An emptied text input holds `""`.
+
+Since 0.1.175 — earlier versions always sent the key plus the changed
+fields, which the db rejects under the default strategy when the item has
+other required fields (400 `PATCH_FIELD_REQUIRED`), or applies by dropping
+the item's unchanged optional fields; and some reorders were sent as
+operators that stored a different order. Whole items need
+**`@atscript/db` 0.1.180 or later on the server**: earlier versions merged
+`$update` items on the SQL and in-memory adapters, so a field left out of
+the item was not cleared. See
+[array patch operators](https://db.atscript.dev/api/update-patch).
 
 A `@db.json` field is stored as one JSON value, which takes no array
 operations, so a changed `@db.json` array is sent **whole** as a plain array

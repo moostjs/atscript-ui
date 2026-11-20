@@ -21,11 +21,14 @@ export interface PatchCartLine {
     sku: string
 
     qty: number
+
+    note?: string
 }
 
 export interface PatchArrayForm {
     name: string
 
+    // Default (replace) patch strategy: a `$update` item is the whole item.
     items: PatchCartLine[]
 }
 

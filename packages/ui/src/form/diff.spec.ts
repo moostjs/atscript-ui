@@ -10,8 +10,14 @@ import {
   InlineNestedForm,
   JsonArrayForm,
   KeyedArrayForm,
+  MergeCompositeKeyArrayForm,
   MergeNestedForm,
+  MergeOrderLinesForm,
+  MergeParcelLinesForm,
+  NestedKeyedArraysForm,
   OptionalMergeForm,
+  OrderLinesForm,
+  ParcelLinesForm,
   PrimitiveArrayForm,
   RenamedVersionForm,
   ScalarForm,
@@ -206,7 +212,7 @@ describe("buildFormDiff — nested objects (@db.patch.strategy 'merge')", () => 
 // ── Keyed arrays ─────────────────────────────────────────────
 
 describe("buildFormDiff — keyed arrays (@expect.array.key)", () => {
-  it("update existing item → $update with key + changed leaves only", () => {
+  it("update existing item (default replace strategy) → $update carries the whole current element", () => {
     const def = createFormDef(KeyedArrayForm);
     const baseline = wrap({
       items: [
@@ -222,7 +228,7 @@ describe("buildFormDiff — keyed arrays (@expect.array.key)", () => {
     });
     const r = buildFormDiff(def, baseline, current);
 
-    expect(r.patch).toEqual({ items: { $update: [{ sku: "A", qty: 5 }] } });
+    expect(r.patch).toStrictEqual({ items: { $update: [{ sku: "A", qty: 5, note: "x" }] } });
     expect(r.changes).toHaveLength(1);
     expect(r.changes[0]!.kind).toBe("array");
   });
@@ -255,35 +261,38 @@ describe("buildFormDiff — keyed arrays (@expect.array.key)", () => {
     expect(r.patch).toEqual({ items: { $remove: [{ sku: "B" }] } });
   });
 
-  it("mixed add + update + remove in one diff", () => {
+  it("mixed add + update + remove in one diff (the update is the whole element)", () => {
     const def = createFormDef(KeyedArrayForm);
     const baseline = wrap({
       items: [
-        { sku: "A", qty: 1 },
+        { sku: "A", qty: 1, note: "keep" },
         { sku: "B", qty: 2 },
       ],
     });
     const current = wrap({
       items: [
-        { sku: "A", qty: 10 }, // update
+        { sku: "A", qty: 10, note: "keep" }, // update (note unchanged)
         { sku: "C", qty: 3 }, // insert
         // B removed
       ],
     });
     const r = buildFormDiff(def, baseline, current);
-    const items = r.patch.items as Record<string, unknown>;
-    expect(items.$update).toEqual([{ sku: "A", qty: 10 }]);
-    expect(items.$insert).toEqual([{ sku: "C", qty: 3 }]);
-    expect(items.$remove).toEqual([{ sku: "B" }]);
+    expect(r.patch).toStrictEqual({
+      items: {
+        $update: [{ sku: "A", qty: 10, note: "keep" }],
+        $insert: [{ sku: "C", qty: 3 }],
+        $remove: [{ sku: "B" }],
+      },
+    });
   });
 
-  it("clearing an optional leaf inside a keyed item → null in $update", () => {
+  it("clearing an optional leaf inside a keyed item (default replace strategy) → the whole element without it", () => {
     const def = createFormDef(KeyedArrayForm);
     const baseline = wrap({ items: [{ sku: "A", qty: 1, note: "hello" }] });
     const current = wrap({ items: [{ sku: "A", qty: 1 }] }); // note cleared
     const r = buildFormDiff(def, baseline, current);
 
-    expect(r.patch).toEqual({ items: { $update: [{ sku: "A", note: null }] } });
+    expect(r.patch).toStrictEqual({ items: { $update: [{ sku: "A", qty: 1 }] } });
   });
 
   it("reorder-only (same membership + content) → $replace", () => {
@@ -383,27 +392,288 @@ describe("buildFormDiff — keyed arrays (ambiguity fallbacks)", () => {
   });
 });
 
+// ── Keyed arrays — order the key operators cannot express ────
+
+describe("buildFormDiff — keyed arrays (order: key operators or $replace)", () => {
+  const diffItems = (before: unknown[], after: unknown[]) =>
+    buildFormDiff(createFormDef(KeyedArrayForm), wrap({ items: before }), wrap({ items: after }))
+      .patch;
+  const A = { sku: "A", qty: 1 };
+  const B = { sku: "B", qty: 2 };
+  const C = { sku: "C", qty: 3 };
+
+  it("a reorder whose only other difference is an undefined-valued prop vs an absent one → $replace (the reorder is kept)", () => {
+    expect(diffItems([A, { ...B, note: undefined }], [B, A])).toStrictEqual({
+      items: { $replace: [B, A] },
+    });
+  });
+
+  it("editing the key of a row that is not last → $replace (a remove + insert would store it last)", () => {
+    const after = [{ sku: "A2", qty: 1 }, B];
+    expect(diffItems([A, B], after)).toStrictEqual({ items: { $replace: after } });
+  });
+
+  it("editing the key of the last row stays $remove + $insert", () => {
+    expect(diffItems([A, B], [A, C])).toStrictEqual({
+      items: { $insert: [C], $remove: [{ sku: "B" }] },
+    });
+  });
+
+  it("a row removed and a new row with its key added at the end → $replace ($update would keep its old place)", () => {
+    const after = [B, { sku: "A", qty: 9 }];
+    expect(diffItems([A, B], after)).toStrictEqual({ items: { $replace: after } });
+  });
+
+  it("a new row inserted at the start → $replace", () => {
+    expect(diffItems([A, B], [C, A, B])).toStrictEqual({ items: { $replace: [C, A, B] } });
+  });
+
+  it("a new row inserted in the middle → $replace", () => {
+    expect(diffItems([A, B], [A, C, B])).toStrictEqual({ items: { $replace: [A, C, B] } });
+  });
+
+  it("a new row appended at the end stays $insert, next to a removal", () => {
+    const D = { sku: "D", qty: 4 };
+    expect(diffItems([A, B, C], [A, C, D])).toStrictEqual({
+      items: { $insert: [D], $remove: [{ sku: "B" }] },
+    });
+  });
+});
+
+// ── Keyed arrays — $update item per patch strategy ───────────
+
+describe("buildFormDiff — keyed array $update item follows the array's @db.patch.strategy", () => {
+  const lineA = { sku: "A", qty: 1, price: 10, note: "gift" };
+  const lineB = { sku: "B", qty: 2, price: 5 };
+  const diffLines = (form: TAtscriptAnnotatedType, before: unknown[], after: unknown[]) =>
+    buildFormDiff(createFormDef(form), wrap({ lines: before }), wrap({ lines: after }));
+
+  describe("default (replace) strategy — the whole current element", () => {
+    it("one field of one element changed → $update carries every leaf of it, unchanged required and optional ones included", () => {
+      const r = diffLines(
+        OrderLinesForm,
+        [{ ...lineA }, { ...lineB }],
+        [{ ...lineA, qty: 3 }, { ...lineB }],
+      );
+
+      expect(r.patch).toStrictEqual({
+        lines: { $update: [{ sku: "A", qty: 3, price: 10, note: "gift" }] },
+      });
+      expect(r.changes).toHaveLength(1);
+      expect(r.changes[0]!.path).toBe("lines");
+    });
+
+    it("only an optional leaf changed → the item still carries the unchanged required fields", () => {
+      const r = diffLines(
+        OrderLinesForm,
+        [{ ...lineA }, { ...lineB }],
+        [{ ...lineA }, { ...lineB, note: "rush" }],
+      );
+
+      expect(r.patch).toStrictEqual({
+        lines: { $update: [{ sku: "B", qty: 2, price: 5, note: "rush" }] },
+      });
+    });
+
+    it("an optional leaf set to undefined (the optional toggle, an emptied optional number/date input) → the item lacks the leaf", () => {
+      const r = diffLines(OrderLinesForm, [{ ...lineA }], [{ ...lineA, note: undefined }]);
+
+      const item = (r.patch.lines as { $update: Record<string, unknown>[] }).$update[0]!;
+      expect(item).toStrictEqual({ sku: "A", qty: 1, price: 10 });
+      expect(item).not.toHaveProperty("note");
+    });
+
+    it("a leaf cleared to null (an emptied required number/date input) → the item carries the null", () => {
+      const r = diffLines(OrderLinesForm, [{ ...lineA }], [{ ...lineA, qty: null, note: null }]);
+
+      expect(r.patch).toStrictEqual({
+        lines: { $update: [{ sku: "A", qty: null, price: 10, note: null }] },
+      });
+    });
+
+    it("a leaf inside an element's nested object changed → the whole element, the nested object whole", () => {
+      const r = diffLines(
+        ParcelLinesForm,
+        [{ sku: "P", qty: 1, size: { w: 1, h: 2 } }],
+        [{ sku: "P", qty: 1, size: { w: 9, h: 2 } }],
+      );
+
+      expect(r.patch).toStrictEqual({
+        lines: { $update: [{ sku: "P", qty: 1, size: { w: 9, h: 2 } }] },
+      });
+    });
+
+    it("an optional leaf removed from the element → the item lacks the leaf, never null", () => {
+      const { note: _note, ...withoutNote } = lineA;
+      const r = diffLines(OrderLinesForm, [{ ...lineA }], [withoutNote]);
+
+      expect(r.patch).toStrictEqual({ lines: { $update: [{ sku: "A", qty: 1, price: 10 }] } });
+    });
+
+    it("an explicit undefined-valued prop vs an absent one is no change → no op", () => {
+      const r = diffLines(OrderLinesForm, [{ ...lineB }], [{ ...lineB, note: undefined }]);
+
+      expect(r.isDirty).toBe(false);
+      expect(r.patch).toEqual({});
+    });
+  });
+
+  describe("@db.patch.strategy 'merge' — the key + the changed leaves", () => {
+    it("one field of one element changed → $update carries the key + that leaf only", () => {
+      const r = diffLines(
+        MergeOrderLinesForm,
+        [{ ...lineA }, { ...lineB }],
+        [{ ...lineA, qty: 3 }, { ...lineB }],
+      );
+
+      expect(r.patch).toStrictEqual({ lines: { $update: [{ sku: "A", qty: 3 }] } });
+    });
+
+    it("an optional leaf cleared (own prop set to undefined) → the key + the leaf as null", () => {
+      const r = diffLines(MergeOrderLinesForm, [{ ...lineA }], [{ ...lineA, note: undefined }]);
+
+      expect(r.patch).toStrictEqual({ lines: { $update: [{ sku: "A", note: null }] } });
+    });
+
+    it("a leaf inside an element's nested object changed → the key + the whole nested object (the db merges one level deep)", () => {
+      const r = diffLines(
+        MergeParcelLinesForm,
+        [{ sku: "P", qty: 1, size: { w: 1, h: 2 } }],
+        [{ sku: "P", qty: 1, size: { w: 9, h: 2 } }],
+      );
+
+      expect(r.patch).toStrictEqual({ lines: { $update: [{ sku: "P", size: { w: 9, h: 2 } }] } });
+    });
+
+    it("an explicit undefined-valued prop vs an absent one is no change → no op", () => {
+      const r = diffLines(MergeOrderLinesForm, [{ ...lineB, note: undefined }], [{ ...lineB }]);
+
+      expect(r.isDirty).toBe(false);
+      expect(r.patch).toEqual({});
+    });
+
+    it("$insert stays the whole new item and $remove the key only", () => {
+      const lineC = { sku: "C", qty: 4, price: 1 };
+      const r = diffLines(
+        MergeOrderLinesForm,
+        [{ ...lineA }, { ...lineB }],
+        [{ ...lineA, price: 12 }, lineC],
+      );
+
+      expect(r.patch).toStrictEqual({
+        lines: {
+          $update: [{ sku: "A", price: 12 }],
+          $insert: [lineC],
+          $remove: [{ sku: "B" }],
+        },
+      });
+    });
+
+    it("a pure reorder still falls back to $replace", () => {
+      const r = diffLines(
+        MergeOrderLinesForm,
+        [{ ...lineA }, { ...lineB }],
+        [{ ...lineB }, { ...lineA }],
+      );
+
+      expect(r.patch).toStrictEqual({ lines: { $replace: [lineB, lineA] } });
+    });
+  });
+
+  it("root-array form (patch under 'value'): default strategy → whole element, merge → changed leaves", () => {
+    const baseline = wrap([{ ...lineA }, { ...lineB }]);
+    const current = wrap([{ ...lineA, qty: 3 }, { ...lineB }]);
+
+    const replaced = buildFormDiff(createFormDef(prop(OrderLinesForm, "lines")), baseline, current);
+    expect(replaced.patch).toStrictEqual({
+      value: { $update: [{ sku: "A", qty: 3, price: 10, note: "gift" }] },
+    });
+
+    const merged = buildFormDiff(
+      createFormDef(prop(MergeOrderLinesForm, "lines")),
+      baseline,
+      current,
+    );
+    expect(merged.patch).toStrictEqual({ value: { $update: [{ sku: "A", qty: 3 }] } });
+  });
+
+  it("keyed arrays inside a merge object: each array's own strategy picks its $update item shape", () => {
+    const r = buildFormDiff(
+      createFormDef(NestedKeyedArraysForm),
+      wrap({ order: { lines: [{ ...lineA }], mergedLines: [{ ...lineA }] } }),
+      wrap({ order: { lines: [{ ...lineA, qty: 3 }], mergedLines: [{ ...lineA, qty: 3 }] } }),
+    );
+
+    expect(r.patch).toStrictEqual({
+      order: {
+        lines: { $update: [{ sku: "A", qty: 3, price: 10, note: "gift" }] },
+        mergedLines: { $update: [{ sku: "A", qty: 3 }] },
+      },
+    });
+  });
+});
+
 // ── Composite-key arrays ─────────────────────────────────────
 
 describe("buildFormDiff — composite-key arrays (two @expect.array.key)", () => {
-  it("update matches on the composite (warehouse + sku)", () => {
+  it("update matches on the composite (warehouse + sku); default strategy → whole element", () => {
     const def = createFormDef(CompositeKeyArrayForm);
     const baseline = wrap({
       stock: [
-        { warehouse: "W1", sku: "A", qty: 1 },
+        { warehouse: "W1", sku: "A", qty: 1, bin: "B7" },
         { warehouse: "W2", sku: "A", qty: 5 }, // same sku, different warehouse
       ],
     });
     const current = wrap({
       stock: [
-        { warehouse: "W1", sku: "A", qty: 9 }, // qty changed
+        { warehouse: "W1", sku: "A", qty: 9, bin: "B7" }, // qty changed
         { warehouse: "W2", sku: "A", qty: 5 },
       ],
     });
     const r = buildFormDiff(def, baseline, current);
 
-    expect(r.patch).toEqual({
-      stock: { $update: [{ warehouse: "W1", sku: "A", qty: 9 }] },
+    expect(r.patch).toStrictEqual({
+      stock: { $update: [{ warehouse: "W1", sku: "A", qty: 9, bin: "B7" }] },
+    });
+  });
+
+  it("two key tuples whose values would join into the same string stay different elements", () => {
+    const def = createFormDef(CompositeKeyArrayForm);
+    // Joined with a space, both tuples would read `s:a s:b s:c`.
+    const first = { warehouse: "a s:b", sku: "c", qty: 1 };
+    const second = { warehouse: "a", sku: "b s:c", qty: 2 };
+    const r = buildFormDiff(
+      def,
+      wrap({ stock: [first, second] }),
+      wrap({ stock: [first, { ...second, qty: 5 }] }),
+    );
+
+    expect(r.patch).toStrictEqual({ stock: { $update: [{ ...second, qty: 5 }] } });
+  });
+
+  it("merge strategy on a composite-key array → $update carries both keys + the changed leaves only", () => {
+    const def = createFormDef(MergeCompositeKeyArrayForm);
+    const baseline = wrap({
+      stock: [
+        { warehouse: "W1", sku: "A", qty: 1, bin: "B7" },
+        { warehouse: "W2", sku: "A", qty: 5, bin: "C1" },
+      ],
+    });
+    const current = wrap({
+      stock: [
+        { warehouse: "W1", sku: "A", qty: 9, bin: "B7" }, // qty changed
+        { warehouse: "W2", sku: "A", qty: 5 }, // bin cleared
+      ],
+    });
+    const r = buildFormDiff(def, baseline, current);
+
+    expect(r.patch).toStrictEqual({
+      stock: {
+        $update: [
+          { warehouse: "W1", sku: "A", qty: 9 },
+          { warehouse: "W2", sku: "A", bin: null },
+        ],
+      },
     });
   });
 

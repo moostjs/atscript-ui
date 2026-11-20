@@ -124,14 +124,14 @@ describe("useAsForm({ trackChanges }) — baseline + dirty lifecycle", () => {
 });
 
 describe("useAsForm({ trackChanges }) — keyed array ops", () => {
-  it("editing a keyed-array item emits an $update op in the patch", async () => {
+  it("editing a keyed-array item emits an $update carrying the whole current item (default replace strategy)", async () => {
     const { PatchArrayForm } = await import("./fixtures/patch-forms.as");
     const { api, formData } = mountTrackedForm({
       type: PatchArrayForm,
       initialValue: {
         name: "Cart",
         items: [
-          { sku: "A", qty: 1 },
+          { sku: "A", qty: 1, note: "gift" },
           { sku: "B", qty: 2 },
         ],
       },
@@ -142,12 +142,33 @@ describe("useAsForm({ trackChanges }) — keyed array ops", () => {
 
     expect(api.patch!.isDirty.value).toBe(true);
     const patch = api.patch!.getPatch();
-    expect(patch).toEqual({ items: { $update: [{ sku: "A", qty: 5 }] } });
+    // The unchanged optional `note` rides along: the db replaces the element.
+    expect(patch).toStrictEqual({ items: { $update: [{ sku: "A", qty: 5, note: "gift" }] } });
     // change list reports the array change as a single `array` kind entry.
     const changes = api.patch!.getChanges();
     expect(changes).toHaveLength(1);
     expect(changes[0]!.kind).toBe("array");
     expect(changes[0]!.path).toBe("items");
+  });
+
+  it("an optional leaf of a keyed-array item set to undefined → the $update item lacks the leaf", async () => {
+    const { PatchArrayForm } = await import("./fixtures/patch-forms.as");
+    const { api, formData } = mountTrackedForm({
+      type: PatchArrayForm,
+      initialValue: { name: "Cart", items: [{ sku: "A", qty: 1, note: "gift" }] },
+    });
+
+    // What the optional toggle writes when it turns a field off (as do the
+    // default number / decimal / date / time inputs emptied on an optional
+    // field): the own prop set to `undefined`. An emptied text input writes
+    // `""` instead, which the item carries as is.
+    (formData.value.items as { note?: string }[])[0]!.note = undefined;
+    await nextTick();
+
+    const patch = api.patch!.getPatch();
+    const item = (patch.items as { $update: Record<string, unknown>[] }).$update[0]!;
+    expect(item).toStrictEqual({ sku: "A", qty: 1 });
+    expect(item).not.toHaveProperty("note");
   });
 
   it("adding a keyed-array item emits an $insert op", async () => {
