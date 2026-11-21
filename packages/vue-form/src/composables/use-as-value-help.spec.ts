@@ -144,3 +144,24 @@ describe("useAsValueHelp (eager-on-mount)", () => {
     unmount();
   });
 });
+
+describe("useAsValueHelp clear", () => {
+  // The default picker's "×" passes the emptied value of a required key (`null` for a number id).
+  it("clear(value) sets the model to the given value and empties the search", async () => {
+    const { factory } = makeFactory({ meta: async () => buildAuthorMeta() });
+    setDefaultClientFactory(factory);
+    const model = { value: 7 as unknown };
+
+    const { ret: vh, unmount } = withComposable(() =>
+      useAsValueHelp({ info: { url: "/authors", targetField: "id" }, model, onBlur: () => {} }),
+    );
+    await vh.kickoff();
+    vh.searchText.value = "ann";
+
+    vh.clear(null);
+
+    expect(model.value).toBeNull();
+    expect(vh.searchText.value).toBe("");
+    unmount();
+  });
+});

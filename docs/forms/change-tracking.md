@@ -72,6 +72,13 @@ discard the edits, or
 [`rebaseOnto()`](#folding-in-fresh-server-data-rebaseonto) to keep them on top
 of the new row.
 
+Since 0.1.177 a swap that lands a different union variant — a "discard
+changes" restore after the user switched a union, a loaded row whose
+variant differs from the seeded default — remounts the fields, so the
+variant picker shows the variant of the new data. The variant is read from
+the data: a just-switched variant whose fields still fail validation (an
+empty required field) can't be told apart from the first variant.
+
 ## The two outputs
 
 Everywhere the tracking surface is exposed (slots, descendant composable,
@@ -341,7 +348,7 @@ on the instance, alongside the form's own controls:
 
 ```ts
 asForm.value.submit(); // trigger validation + @submit
-asForm.value.reset(); // reset to defaults (also re-baselines the tracker)
+asForm.value.reset(); // fields back to a new form's values (also re-baselines)
 asForm.value.isDirty; // boolean
 asForm.value.changes; // FormFieldChange[]
 asForm.value.getPatch(opts?); // @atscript/db patch
@@ -360,7 +367,14 @@ so a generic parent can call them unconditionally without a feature check.
 After the server confirms the write, call `rebase()` to make the current
 data the new baseline. The form becomes clean (`isDirty === false`)
 without a remount, and the next edit diffs against the just-saved state.
-`reset()` re-baselines too, so a "discard changes" button is free.
+
+`reset()` re-baselines too, but with the form's fields **emptied**, not
+back to the loaded row (see
+[What `reset()` does](/forms/validation#what-reset-does)); the version
+column is kept, so `$cas` still carries the stored version. A "discard
+changes" button on an edit form assigns a fresh copy of the loaded row to
+`formData.value` instead — the data then equals the baseline again, so the
+form is clean.
 
 ## Folding in fresh server data — `rebaseOnto()`
 

@@ -44,7 +44,11 @@ export interface UseAsValueHelpReturn {
   labelIsFkValue: ComputedRef<boolean>;
   kickoff: () => Promise<void>;
   selectItem: (item: Record<string, unknown>) => void;
-  clear: () => void;
+  /**
+   * Clear the picker: set the model to `value` (`undefined` — unset — when
+   * omitted) and empty the search text.
+   */
+  clear: (value?: unknown) => void;
 }
 
 const DEBOUNCE_MS = 300;
@@ -181,13 +185,12 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
     onBlur();
   }
 
-  function clear() {
-    model.value = undefined;
+  function clear(value?: unknown) {
+    model.value = value;
     searchText.value = "";
-    results.value = [];
-    searching.value = false;
-    lastSearchedText = undefined;
-    searchSeq++;
+    // Lists every match again (a search still running for the old text is
+    // superseded), so the reopened list is not stuck on the old results.
+    void doSearch("");
   }
 
   return {

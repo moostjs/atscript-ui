@@ -421,7 +421,8 @@ The slots on `<AsForm>` expose imperative helpers:
 </AsForm>
 ```
 
-- `reset()` — re-applies type defaults, clears all errors.
+- `reset()` — returns the form to its empty state and clears all errors
+  ([details below](#what-reset-does)).
 - `clearErrors()` — clears all error state without touching values:
   per-field (touched / blur / submit / external) plus the form-level
   submit map that feeds descendant error-count badges.
@@ -437,6 +438,42 @@ const formRef = ref<InstanceType<typeof AsForm>>();
 formRef.value?.clearErrors();
 formRef.value?.setErrors({ "address.street": "Unknown address" });
 ```
+
+### What `reset()` does
+
+`reset()` gives every field of the form the value a newly created form holds
+— what `createAsFormDef` seeds a new form with:
+
+- each field takes the value of a new form: for example `""` for a
+  required string, `0` for a number, `false` for a boolean, `[]` for an
+  array — or its `@meta.default` / `@ui.form.fn.value` default, on optional
+  fields too;
+- optional fields without a default are absent — an optional object or
+  union that was switched on is off again;
+- rows added to an array are gone;
+- the field subtree is mounted afresh, so nothing typed before survives in
+  a component (a union's remembered variants, a picker's search);
+- touched state and validation errors are cleared; a server error
+  (`:errors`) is dismissed on a field whose value the reset changed, as an
+  edit would dismiss it — elsewhere it stays, and so does a form-level
+  `__form` server error.
+
+Only the form's fields are reset, in the object you bound — what the form
+does not render stays as it is: an edit form's `@db.column.version` column
+(so the next save's `$cas` still carries the stored version), navigation
+rows, and any other key of the data. A field of a form opened on a stored
+record resets to the new-form value too, not back to the record. To throw
+away unsaved edits instead, assign a fresh copy of the stored row to
+`formData.value`. With [change tracking](/forms/change-tracking) on, the
+reset state is the new baseline: the form is clean and `getPatch()`
+returns `{}`.
+
+::: warning Changed in 0.1.177
+Before 0.1.177 `reset()` wrote `""` into every non-optional field that was
+not an object or array — a number, boolean, literal-union or timestamp field
+then held a string and failed validation. Annotation defaults were not
+reapplied, and rows added to an array could reappear half-filled.
+:::
 
 ## Action-vs-submit
 

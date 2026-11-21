@@ -179,13 +179,17 @@ const { model, error, onBlur, isDirty } = useAsField<string>({
   setValue: (v) => /* write your value */,
   rules: [(v) => !!v || 'Required'],
   path: () => props.path,
-  resetValue: '',
 })
 ```
 
 Returns `{ model, error, onBlur, isDirty }`. The composable registers with the
 parent `<AsForm>` so the field participates in submit-time validation, reset,
-and external-error wiring. `isDirty` is a reactive per-field
+and external-error wiring. A form reset puts the empty-form value into the
+form data itself ([What `reset()` does](/forms/validation#what-reset-does)),
+so a field whose value lives in the form data needs nothing for it. Pass
+`resetValue` only when `getValue` / `setValue` reach state outside the form
+data: it is written after the form's own reset. Since 0.1.177 — before, a
+field without `resetValue` was reset to `""`. `isDirty` is a reactive per-field
 "changed-since-baseline" flag — `false` unless the form has `track-changes` on —
 so a custom field can mark itself visually; see
 [Change tracking — per-field dirty](/forms/change-tracking#marking-changed-fields-per-field-dirty).

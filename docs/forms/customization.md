@@ -223,7 +223,11 @@ const title = computed(() => getFieldMeta(props.def.type, META_LABEL) as string 
 <template>
   <form @submit.prevent="form.onSubmit">
     <MyCustomHeader :title="title" />
-    <AsField v-for="field in def.fields" :key="field.path" :field="field" />
+    <AsField
+      v-for="field in def.fields"
+      :key="`${form.remountKey.value}:${field.path}`"
+      :field="field"
+    />
     <MySubmitFooter :disabled="form.submitDisabled.value">
       {{ form.submitText.value }}
     </MySubmitFooter>
@@ -234,6 +238,12 @@ const title = computed(() => getFieldMeta(props.def.type, META_LABEL) as string 
 `def.fields` is the flat list of root-level child fields; for the
 header label you can also render `<AsField :field="def.rootField" />`
 and let `AsForm`'s default chrome resolve the title for you.
+
+Since 0.1.177 bind `form.remountKey` into the fields' `key`, as above.
+`reset()` bumps it so the fields mount afresh (with change tracking on, so
+does a data swap that lands another union variant). Without it, a union
+keeps showing the variant it had before the reset while its data holds
+another one, and a picker keeps its typed search.
 
 For lower-level access — replacing `<AsField>` itself with your own per-field
 component that calls `useAsField()` — see

@@ -182,12 +182,14 @@ const form = useAsForm<Contact>({
 <template>
   <form @submit.prevent="form.onSubmit">
     <h1>Contact</h1>
-    <AsField :field="def.rootField" />
+    <AsField :key="form.remountKey.value" :field="def.rootField" />
     <div v-if="form.formError.value">{{ form.formError.value }}</div>
     <button :disabled="form.submitDisabled.value">{{ form.submitText.value }}</button>
   </form>
 </template>
 ```
+
+Bind `form.remountKey` as the field tree's `:key` (0.1.177+): `reset()` bumps it to remount the fields (and, with `trackChanges`, a data swap landing another union variant). Without it a union shows its pre-reset variant over the reset data and a picker keeps its typed search.
 
 `useAsForm` MUST be called from `<script setup>` of a component (it issues `provide()` calls). Its return is shaped to back the `<AsForm>` template; reach for it only when you need a non-form root element or radically different layout.
 
@@ -216,7 +218,7 @@ Bag keys (don't paste the TS type — read them off `slotProps`):
 | `loading`          | `true` when the `loading` prop is set (overlay shown).                         |
 | `submitText`       | Resolved submit-button label (`@ui.form.submit.text` / fn).                    |
 | `submit`           | `() => void` — trigger submit.                                                 |
-| `reset`            | `() => Promise<void>` — re-apply defaults + clear errors.                      |
+| `reset`            | `() => Promise<void>` — fields to a new form's values + clear errors.          |
 | `clearErrors`      | `() => void`.                                                                  |
 | `setErrors`        | `(errors: Record<string, string>) => void`.                                    |
 | `dismissError`     | `(path: string) => void` — dismiss one leaf error.                             |
@@ -380,9 +382,10 @@ const { error, onBlur } = useAsField<string[]>({
     },
   ],
   path: () => props.path,
-  resetValue: [],
 });
 ```
+
+No `resetValue` for a value held in the form data: since 0.1.177 the form's reset puts the empty-form value there itself; `resetValue` (written after it) is only for state outside the form data.
 
 ## Re-using the ui-fns compiler from a custom component
 
@@ -419,7 +422,7 @@ Available from `@atscript/vue-form`:
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `useAsField(opts)`            | `{ model, error, onBlur }`                                                                                                 | Build a field that isn't backed by an AsField parent.                                                                                     |
 | `useAsForm(opts)`             | Full form state (see [forms.md](forms.md))                                                                                 | Custom form root.                                                                                                                         |
-| `useAsState(opts)`            | `{ formState, clearErrors, reset, submit, setErrors }`                                                                     | Low-level form-state machine without provide/inject.                                                                                      |
+| `useAsState(opts)`            | `{ formState, clearErrors, reset, submit, setErrors }`                                                                     | Low-level form-state machine without provide/inject. Its `reset` leaves the data alone (`useAsForm` resets it).                           |
 | `useAsPath()`                 | `{ path: ComputedRef<string> }`                                                                                            | Read absolute path prefix without other context.                                                                                          |
 | `useAsTypeMap()`              | `{ types: ComputedRef<Record<string, Component>> }`                                                                        | Read the form's `:types` map (for components that compose).                                                                               |
 | `useAsData()`                 | `{ rootData, getValueAt, siblingValue, setSibling, setValueAt }`                                                           | Reactive read of any value in the form, by path or sibling name; `setSibling` / `setValueAt` write other fields (tracked + re-validated). |

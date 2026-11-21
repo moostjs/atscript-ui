@@ -47,7 +47,7 @@ function setupFormField(
           }),
         rules: opts.rules,
         path: opts.path ?? (() => "field"),
-        resetValue: opts.resetValue,
+        ...("resetValue" in opts && { resetValue: opts.resetValue }),
       });
       return {};
     },
@@ -328,18 +328,18 @@ describe("useAsField", () => {
 
   // ── reset ─────────────────────────────────────────────────
 
-  it("reset sets model to resetValue (default '')", () => {
-    const valueRef = ref("hello");
-    const { formState } = setupFormField({
-      getValue: () => valueRef.value,
-      setValue: (v: unknown) => {
-        valueRef.value = v as string;
-      },
-    });
+  // The form resets its data to the empty-form values itself (since 0.1.177);
+  // a field without `resetValue` must not overwrite that — before, it wrote
+  // `""` whatever the field's type.
+  it("reset leaves the model alone when no resetValue is set", () => {
+    const valueRef = ref(42);
+    const setValue = vi.fn();
+    const { formState } = setupFormField({ getValue: () => valueRef.value, setValue });
 
     const registration = getRegistration(formState);
     registration.callbacks.reset();
-    expect(valueRef.value).toBe("");
+    expect(setValue).not.toHaveBeenCalled();
+    expect(valueRef.value).toBe(42);
   });
 
   it("reset sets model to custom resetValue when provided", () => {
@@ -355,6 +355,19 @@ describe("useAsField", () => {
     const registration = getRegistration(formState);
     registration.callbacks.reset();
     expect(valueRef.value).toBe("default");
+  });
+
+  // A field whose value lives outside the form data can ask to be unset.
+  it("reset writes an explicit `resetValue: undefined`", () => {
+    const setValue = vi.fn();
+    const { formState } = setupFormField({
+      getValue: () => "hello",
+      setValue,
+      resetValue: undefined,
+    });
+
+    getRegistration(formState).callbacks.reset();
+    expect(setValue).toHaveBeenCalledWith(undefined);
   });
 
   // ── watcher ───────────────────────────────────────────────

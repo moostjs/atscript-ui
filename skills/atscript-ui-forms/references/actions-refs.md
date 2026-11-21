@@ -278,6 +278,8 @@ For details on `@db.rel.FK` semantics, schema sync, and `@ui.dict.*` see the **a
 
 `AsRef` is registered under the built-in `ref` renderer id. When the target's `@db.http.path` is unreachable, AsRef falls back to a plain text input.
 
+The × (shown with a value or typed search text; never when disabled / read-only) empties the field as emptying an input does, and the search text with it; focus back in the input (since 0.1.177 — before it only emptied the search text): optional → `undefined` ("Not set" once focus leaves; patch `null` for a stored value, clean when nothing was stored); required → `""` for a string key, `null` for any other key (number id) — never its `@meta.default`; the `@meta.required` / type error shows by the usual timing, so a cleared required key blocks the submit. `AsRef` needs no `<AsForm>` around it for this.
+
 ## ValueHelpClient flow
 
 `AsRef` uses `useAsValueHelp(opts)` which wraps the framework-agnostic `ValueHelpClient` from `@atscript/ui`. The picker:
@@ -301,7 +303,7 @@ const vh = useAsValueHelp({
 // vh.labelIsFkValue  ComputedRef<boolean>  (target label === target id field)
 // vh.kickoff()       Pre-resolve the target metadata
 // vh.selectItem(it)  Commit `item[info.targetField]` to model
-// vh.clear()         Reset model + searchText
+// vh.clear(value?)   model = value (undefined when omitted), searchText = "", re-lists all matches
 ```
 
 When rolling your own picker without the Vue composable, drop down to the framework-agnostic primitives from `@atscript/ui`:

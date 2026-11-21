@@ -5,6 +5,7 @@ import {
   setDefaultClientFactory,
   setMetaCacheMaxEntries,
   setUiLocale,
+  setValueHelpCacheTtl,
 } from "@atscript/ui";
 import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, ref } from "vue";
@@ -35,6 +36,7 @@ const DICT_META = {
 
 afterEach(() => {
   setMetaCacheMaxEntries();
+  setValueHelpCacheTtl(5000);
   resetMetaCache();
   resetDefaultClientFactory();
 });
@@ -252,8 +254,11 @@ describe("useAsValueHelp — @ui.valueHelp scope", () => {
   });
 
   // Why: a search still in flight when the picker was cleared (or the locale
-  // switched) landed afterwards and refilled the cleared results.
+  // switched) landed afterwards and refilled the cleared results. Since
+  // 0.1.177 a cleared picker lists every match again (its search text is
+  // empty), so the late rows of the old text must not replace that list.
   it("a search in flight when the picker is cleared never lands", async () => {
+    setValueHelpCacheTtl(0);
     const pending: ((rows: unknown[]) => void)[] = [];
     setDefaultClientFactory(
       () =>
@@ -263,13 +268,14 @@ describe("useAsValueHelp — @ui.valueHelp scope", () => {
           invalidateMeta: () => {},
         }) as never,
     );
+    const model = { value: "blue" as unknown };
     let vh!: ReturnType<typeof useAsValueHelp>;
     const wrapper = mount(
       defineComponent({
         setup() {
           vh = useAsValueHelp({
             info: { url: "/dict3", targetField: "value" },
-            model: { value: undefined },
+            model,
             onBlur: () => {},
           });
           return () => h("span");
@@ -278,10 +284,24 @@ describe("useAsValueHelp — @ui.valueHelp scope", () => {
     );
     await flushPromises();
     expect(pending).toHaveLength(1);
-    vh.clear();
-    pending[0]!([{ attribute: "x", value: "late", label: "Late" }]);
+    pending[0]!([{ attribute: "x", value: "all", label: "All" }]);
     await flushPromises();
-    expect(vh.results.value).toEqual([]);
+
+    vh.searchText.value = "bl";
+    await new Promise((r) => setTimeout(r, 400));
+    await flushPromises();
+    expect(pending).toHaveLength(2);
+
+    vh.clear();
+    expect(model.value).toBeUndefined();
+    expect(vh.searchText.value).toBe("");
+    expect(pending).toHaveLength(3);
+    pending[1]!([{ attribute: "x", value: "late", label: "Late" }]);
+    await flushPromises();
+    expect(vh.results.value.map((r) => r.value)).not.toContain("late");
+    pending[2]!([{ attribute: "x", value: "all", label: "All" }]);
+    await flushPromises();
+    expect(vh.results.value.map((r) => r.value)).toEqual(["all"]);
     expect(vh.searching.value).toBe(false);
     wrapper.unmount();
   });

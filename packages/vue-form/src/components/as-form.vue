@@ -183,7 +183,7 @@ const { t } = useAsTexts();
       </button>
     </slot>
     <!-- `@ui.form.pushDown` fields render in their own grid below submit. -->
-    <div v-if="def.pushDownFields.length" class="as-form-grid">
+    <div v-if="def.pushDownFields.length" :key="form.remountKey.value" class="as-form-grid">
       <AsIterator :def="def" :fields="def.pushDownFields" />
     </div>
     <slot name="form.footer" v-bind="form.slotProps.value"></slot>

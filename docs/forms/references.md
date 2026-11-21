@@ -243,11 +243,35 @@ The default `AsRef` component is a Reka-ui Combobox with:
 - Keyboard-navigable list of results (`data-highlighted` / `data-state` driven
   by Reka).
 - Display of `@ui.dict.label` plus a faint secondary `@ui.dict.descr` line.
-- Clear button to reset the FK to `null`.
+- A clear button (×) that clears the field's value and the search text —
+  shown while the field has a value or search text, never on a disabled or
+  read-only field. Focus returns to the input.
 - Loading and empty-state slots.
 
 For deeper customisation (column layout, filters, mini-tables) swap the `ref`
 entry in the types map — see [Customization](/forms/customization).
+
+### Clearing a reference
+
+The × empties the field as emptying an input does
+([Emptied inputs](/forms/validation#emptied-inputs)):
+
+- **Optional reference** — unset (`undefined`). The input stays while focus
+  is in it; once focus leaves, the field shows its "Not set" placeholder.
+  With [change tracking](/forms/change-tracking), clearing a stored value is
+  a change (the patch sends `null`), and clearing a value the stored row
+  never had leaves the form clean.
+- **Required reference** — `""` for a string key, `null` for any other key
+  (a number id, say). Never its `@meta.default`: the field stays empty. A
+  `@meta.required` string key shows its required error, a number key its
+  type error, by the field's usual
+  [validation timing](/forms/validation#when-does-validation-fire) — and
+  the form cannot be submitted until a reference is picked.
+
+::: warning Changed in 0.1.177
+Before 0.1.177 the × only emptied the search text; the selected reference
+stayed in the form data.
+:::
 
 ## Cross-references
 

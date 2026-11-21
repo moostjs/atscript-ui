@@ -46,7 +46,7 @@ interface AsFormProps {
 }
 ```
 
-**Expose** (template ref): alongside the form's own controls, the instance carries error control — `clearErrors()`, `setErrors(errors)` (see [External errors](/forms/validation#external-errors)) — `action(name)` (fires a form action as its button would — emits `action` / `unsupported-action` with the normalized data; since 0.1.168) and the change-tracking surface — `submit()`, `reset()`, `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
+**Expose** (template ref): alongside the form's own controls, the instance carries error control — `clearErrors()`, `setErrors(errors)` (see [External errors](/forms/validation#external-errors)) — `action(name)` (fires a form action as its button would — emits `action` / `unsupported-action` with the normalized data; since 0.1.168) and the change-tracking surface — `submit()`, `reset()` ([what it does](/forms/validation#what-reset-does)), `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
 
 **Emits**:
 
@@ -326,6 +326,7 @@ interface UseAsFormReturn<TFormData, TFormContext> {
   errors: ComputedRef<Record<string, string | undefined> | undefined>;
   formError: ComputedRef<string | undefined>;
   internalErrors: Ref<Record<string, string>>;
+  /** The form's fields back to a new form's values, errors cleared — see [What `reset()` does](/forms/validation#what-reset-does). */
   reset: () => Promise<void>;
   clearErrors: () => void;
   setErrors: (errors: Record<string, string>) => void;
@@ -359,6 +360,14 @@ interface UseAsFormReturn<TFormData, TFormContext> {
   dismissFormError: () => void;
   formContext: ComputedRef<TFormContext | undefined>;
   handleChange: (type: TAsChangeType, path: string, value: unknown) => void;
+  /**
+   * Bind as `:key` on the root `<AsField>` of a custom form root (and on the
+   * grid of `@ui.form.pushDown` fields, if it renders one). Bumped by
+   * every `reset()` (since 0.1.177) and — with `trackChanges` — by a
+   * `rebaseOnto()` or a swap of `formData.value` that lands a different union
+   * variant, so the fields mount afresh.
+   */
+  remountKey: Ref<number>;
 }
 ```
 
@@ -376,6 +385,12 @@ function useAsState<TFormData, TFormContext>(options: {
 ```
 
 `TFormSubmitValidator` returns `true` for success or an `{ path, message }[]` error list.
+
+Its `reset()` runs each registered field's `resetValue` (only where one was passed to `useAsField`), then clears the error state; it does not write field values. The form data's reset to a new form's values is `useAsForm`'s `reset()`.
+
+::: warning Changed in 0.1.177
+Before 0.1.177 `useAsState().reset()` wrote `""` into every registered field without a `resetValue`. A custom root built on `useAsState` alone now resets its data itself.
+:::
 
 ### `useAsExternalErrors(options)`
 
@@ -471,7 +486,13 @@ interface UseAsFieldOptions<TValue, TFormData, TContext> {
   setValue: (v: TValue) => void;
   rules?: TFormRule<TValue, TFormData, TContext>[];
   path: () => string;
-  /** Value to set on form reset. Defaults to `''`. Use `[]` for arrays, `{}` for objects. */
+  /**
+   * Written on form reset, after the form has reset its fields to a new form's
+   * values, by fields of the reset form only (since 0.1.177; before, a field
+   * without it was reset to `''`). Leave it out when the value lives in the
+   * form data; pass it (`undefined` included) when `getValue` / `setValue`
+   * reach state outside the form data.
+   */
   resetValue?: TValue;
 }
 
@@ -695,7 +716,8 @@ interface UseAsValueHelpReturn {
   labelIsFkValue: ComputedRef<boolean>;
   kickoff: () => Promise<void>;
   selectItem: (item: Record<string, unknown>) => void;
-  clear: () => void;
+  /** Set the model to `value` (`undefined` — unset — when omitted) and empty the search text. `value` since 0.1.177. */
+  clear: (value?: unknown) => void;
 }
 
 function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpReturn;

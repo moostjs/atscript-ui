@@ -91,7 +91,7 @@ function changeLabel(c: FormFieldChange) {
           keyed line item (change a qty → <code>$update</code>, add a row → <code>$insert</code>,
           remove one → <code>$remove</code>) and watch the live <code>@atscript/db</code> patch on
           the right. The version column round-trips through <code>$cas</code> and is never emitted
-          as a SET.
+          as a SET. <strong>Reset to empty</strong> calls the form's <code>reset()</code>.
         </p>
         <RouterLink
           to="/forms-demo"
@@ -117,7 +117,7 @@ function changeLabel(c: FormFieldChange) {
         >
           <!-- Slot-prop variant: footer reads isDirty / changes straight off
                the slot binding (no template ref needed). -->
-          <template #form.footer="{ isDirty, changes }">
+          <template #form.footer="{ isDirty, changes, reset }">
             <div class="flex items-center gap-$m mt-$m">
               <button
                 type="button"
@@ -127,6 +127,14 @@ function changeLabel(c: FormFieldChange) {
                 @click="onSave"
               >
                 Save changes
+              </button>
+              <button
+                type="button"
+                data-testid="reset-btn"
+                class="c8-flat h-fingertip-m px-$l border-1 rounded-base font-600"
+                @click="reset"
+              >
+                Reset to empty
               </button>
               <span
                 data-testid="dirty-state"
@@ -191,6 +199,18 @@ function changeLabel(c: FormFieldChange) {
             </p>
             <pre data-testid="last-saved" :class="codeClass">{{
               JSON.stringify(lastSaved, null, 2)
+            }}</pre>
+          </section>
+
+          <section :class="panelClass">
+            <h3 class="text-body-l font-600 m-0">Form data · formData.value</h3>
+            <p class="text-callout text-current-muted m-0">
+              The model as the form holds it. <strong>Reset to empty</strong> gives it the empty
+              form <code>createAsFormDef</code> prepares — not the loaded order — and the form is
+              clean again.
+            </p>
+            <pre data-testid="form-data" :class="codeClass">{{
+              JSON.stringify(formData.value, null, 2)
             }}</pre>
           </section>
         </div>

@@ -60,7 +60,6 @@ const { error: localError, onBlur } = useAsField<string[]>({
     },
   ],
   path: () => props.path,
-  resetValue: [],
 });
 
 // `localError.value` is the single source of truth for "validation has

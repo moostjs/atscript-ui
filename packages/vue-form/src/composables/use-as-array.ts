@@ -4,7 +4,7 @@ import type {
   FormUnionFieldDef,
   FormUnionVariant,
 } from "@atscript/ui";
-import { getFieldMeta, createFormData, createFormValueResolver, isUnionField } from "@atscript/ui";
+import { getFieldMeta, isUnionField } from "@atscript/ui";
 import { computed, inject, reactive, watch, type ComputedRef } from "vue";
 import { CHANGE_HANDLER_KEY } from "./internal-keys";
 import { useFormContext } from "./use-form-context";
@@ -35,8 +35,7 @@ export function useAsArray(
   field: FormArrayFieldDef,
   disabled?: ComputedRef<boolean>,
 ): UseAsArrayReturn {
-  const { rootFormData, formContext, pathPrefix, getByPath, setByPath } =
-    useFormContext("useAsArray");
+  const { pathPrefix, getByPath, setByPath, emptyValueOf } = useFormContext("useAsArray");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const arrayValue = computed<unknown[]>(() => {
@@ -108,19 +107,9 @@ export function useAsArray(
 
   function addItem(variantIndex = 0) {
     if (!canAdd.value) return;
-    const resolver = createFormValueResolver(
-      rootFormData().value as Record<string, unknown>,
-      formContext.value,
-    );
-    let newItem: unknown;
-    if (isUnion) {
-      const variant = unionVariants[variantIndex];
-      if (!variant) return;
-      newItem = createFormData(variant.type, resolver).value;
-    } else {
-      newItem = createFormData(field.itemType, resolver).value;
-    }
-    ensureArray().push(newItem);
+    const itemType = isUnion ? unionVariants[variantIndex]?.type : field.itemType;
+    if (!itemType) return;
+    ensureArray().push(emptyValueOf(itemType));
     itemKeys.push(generateKey());
     handleChange("array-add", pathPrefix.value, arrayValue.value);
   }

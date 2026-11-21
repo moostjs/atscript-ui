@@ -17,7 +17,13 @@ export interface UseAsFieldOptions<TValue = any, TFormData = any, TContext = any
   setValue: (v: TValue) => void;
   rules?: TFormRule<TValue, TFormData, TContext>[];
   path: () => string;
-  /** Value to set on reset. Defaults to `''`. Use `[]` for arrays, `{}` for objects. */
+  /**
+   * Value written on form reset, after the form has reset its data to the
+   * empty-form values. Left out (the usual case), the field keeps the value
+   * that reset gives it; pass it (`undefined` included) for a value the form
+   * data does not hold, e.g. when `getValue` / `setValue` reach state outside
+   * the form data.
+   */
   resetValue?: TValue;
 }
 
@@ -154,7 +160,7 @@ export function useAsField<TValue = any, TFormData = any, TContext = any>(
           externalError.value = undefined;
         },
         reset: () => {
-          model.value = (opts.resetValue ?? "") as TValue;
+          if ("resetValue" in opts) model.value = opts.resetValue as TValue;
         },
         setExternalError: (msg?: string) => {
           externalError.value = msg;

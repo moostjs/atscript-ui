@@ -1,4 +1,4 @@
-import { createFormData, createFormValueResolver, type FormFieldDef } from "@atscript/ui";
+import type { FormFieldDef } from "@atscript/ui";
 import { computed, inject, type ComputedRef } from "vue";
 import { CHANGE_HANDLER_KEY } from "./internal-keys";
 import { useFormContext } from "./use-form-context";
@@ -22,23 +22,14 @@ export interface UseAsOptionalFieldReturn {
  * `<AsField>` for the field.
  */
 export function useAsOptionalField(field: FormFieldDef): UseAsOptionalFieldReturn {
-  const { rootFormData, formContext, buildPath, getByPath, setByPath } =
-    useFormContext("useAsOptionalField");
+  const { buildPath, getByPath, setByPath, emptyValueOf } = useFormContext("useAsOptionalField");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const enabled = computed(() => getByPath(buildPath(field.path)) != null);
 
   function toggle(on: boolean) {
     const path = buildPath(field.path);
-    if (on) {
-      const resolver = createFormValueResolver(
-        rootFormData().value as Record<string, unknown>,
-        formContext.value,
-      );
-      setByPath(path, createFormData(field.prop, resolver).value);
-    } else {
-      setByPath(path, undefined);
-    }
+    setByPath(path, on ? emptyValueOf(field.prop) : undefined);
     handleChange("update", path, getByPath(path));
   }
 

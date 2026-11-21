@@ -146,11 +146,12 @@ export interface AsFormPatchHandle {
  *                  container reference is also the write target for
  *                  `rebaseOnto` — mutating its `.value` preserves the bound
  *                  `:form-data` identity so the deep watch fires once.
- * @param onRebased optional callback fired AFTER `rebaseOnto` rewrites the live
- *                  data, so the host can force-remount the field subtree (e.g.
- *                  bump a key) when a union variant changed — the variant picker
- *                  detects its index once at setup and won't re-detect on a
- *                  data swap. No-op for `rebase()` (which doesn't move data).
+ * @param onRebased optional callback fired when `rebaseOnto` — or a swap of the
+ *                  container's `value` — lands a different union variant, so the
+ *                  host can force-remount the field subtree (e.g. bump a key):
+ *                  the variant picker detects its index once at setup and won't
+ *                  re-detect on a data swap. No-op for `rebase()` (which doesn't
+ *                  move data).
  */
 export function createAsFormPatch(
   def: () => FormDef,
@@ -204,10 +205,17 @@ export function createAsFormPatch(
   // swap we are trying to absorb. `flush: 'sync'` keeps the new baseline
   // observable to a `getPatch()` issued in the same tick as the assignment.
   capture();
+  // Set while `rebaseOnto` writes: it decides that remount itself.
+  let rebasing = false;
   watch(
     () => getData().value,
     (next, prev) => {
       if (next === prev) return;
+      // A swap that lands another union variant remounts the fields, as a
+      // rebase does (a "discard changes" restore of the loaded row, say).
+      if (!rebasing && unionVariantChanged(def(), { value: prev }, { value: next })) {
+        onRebased?.();
+      }
       if (baseline === undefined) {
         capture();
         return;
@@ -302,6 +310,15 @@ export function createAsFormPatch(
    * {@link AsFormPatchHandle.rebaseOnto}). One reactive write, then an explicit
    * re-baseline to the upstream snapshot.
    */
+  function write(value: unknown): void {
+    rebasing = true;
+    try {
+      setByPath(getData(), "", value);
+    } finally {
+      rebasing = false;
+    }
+  }
+
   function rebaseOnto(
     upstream: Record<string, unknown>,
     opts?: FormRebaseOptions,
@@ -315,7 +332,7 @@ export function createAsFormPatch(
     // reapplied.
     if (baseline === undefined) {
       const before = deepClone(getData(), toRaw) as Record<string, unknown>;
-      setByPath(getData(), "", u.value);
+      write(u.value);
       // The data swap may have landed a different union variant — force-remount.
       if (unionVariantChanged(def(), before, u)) onRebased?.();
       // If real data is now present, baseline it immediately (the deferred
@@ -340,7 +357,7 @@ export function createAsFormPatch(
     // SINGLE reactive write — preserve the bound container identity so the
     // consumer's `:form-data` ref stays the same object and the deep watch fires
     // once. `next.value` is already a fresh, proxy-free deep clone.
-    setByPath(getData(), "", next.value);
+    write(next.value);
 
     // Re-baseline EXPLICITLY to the upstream snapshot — NOT `capture()`, which
     // would snapshot the live container (now holding `next`) and make the

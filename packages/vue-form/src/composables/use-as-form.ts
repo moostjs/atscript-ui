@@ -1,5 +1,6 @@
 import {
   computed,
+  nextTick,
   provide,
   ref,
   toRaw,
@@ -10,7 +11,12 @@ import {
 } from "vue";
 import {
   buildDescendantErrorCounts,
+  createFormData,
+  createFormValueResolver,
+  deleteByPath,
+  getByPath,
   getDeclaredFormActions,
+  setByPath,
   getFormValidator,
   iteratePathAncestors,
   mergeErrorMaps,
@@ -165,9 +171,15 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   /** Errors discovered by the local validator on the most-recent submit. */
   internalErrors: Ref<Record<string, string>>;
   /**
-   * Reset internal validator + dismissal state and re-run field defaults. When
-   * `trackChanges` is enabled, also re-baselines the change tracker to the
-   * post-reset state (the form becomes clean again).
+   * Return the form's fields to what a newly created form holds
+   * (`createFormData` — annotation defaults included, optional fields absent;
+   * loaded values are not kept). Properties of the data that are not form
+   * fields (an edit form's version column, navigation rows) are left as they
+   * are. The field subtree remounts (`remountKey`); touched state, submit and
+   * live errors are cleared; a server error (`errors`) is dismissed where the
+   * reset changed the value — on other paths, and the external `__form`
+   * banner, it stays. When `trackChanges` is enabled, the post-reset state
+   * becomes the new clean baseline.
    */
   reset: () => Promise<void>;
   /**
@@ -226,9 +238,10 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
    */
   patch: AsFormPatchHandle | undefined;
   /**
-   * Remount key for the field subtree. Bound as `:key` on the root `<AsField>`.
-   * Bumped by `patch.rebaseOnto` only when a rebase lands a different union
-   * variant, forcing the variant picker to re-detect. `0` otherwise.
+   * Remount key for the field subtree. Bound as `:key` on the root `<AsField>`
+   * (and on the pushed-down fields). Bumped by every `reset()`, and — with
+   * `trackChanges` — when `patch.rebaseOnto` or a swap of the data's `value`
+   * lands a different union variant, forcing the variant picker to re-detect.
    */
   remountKey: Ref<number>;
   /** Dispatch an action — invoked by `<AsAction>`. */
@@ -326,16 +339,16 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
       }),
   });
 
+  // Remount key for the field subtree, bumped by every `reset()` and by a
+  // `patch.rebaseOnto` or data swap (via the `onRebased` callback) that lands a
+  // different union variant — `<AsUnion>` detects its index once at setup and won't
+  // re-detect on a data swap, so the subtree must remount to re-pick.
+  const remountKey = ref(0);
+
   // ── Change tracking (opt-in) ────────────────────────────────
   // Read the flag once at setup (matches `hideRootTitle` handling). OFF means
   // zero overhead: no baseline snapshot, no deep watch, and `useAsFormPatch()`
   // throws because FORM_PATCH_KEY is never provided.
-  // Remount key for the field subtree. Bumped by `patch.rebaseOnto` (via the
-  // `onRebased` callback) ONLY when a rebase lands a different union variant —
-  // `<AsUnion>` detects its index once at setup and won't re-detect on a data
-  // swap, so the subtree must remount to re-pick. Stays `0` for the common case
-  // (no union, or no variant change), so non-rebase flows never remount.
-  const remountKey = ref(0);
   const patch: AsFormPatchHandle | undefined = options.trackChanges?.()
     ? createAsFormPatch(
         () => options.def(),
@@ -350,18 +363,6 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
       )
     : undefined;
   if (patch) provide(FORM_PATCH_KEY, patch);
-
-  // Re-baseline after a reset: `reset()` restores field defaults (mutating the
-  // model + awaiting nextTick), so the post-reset state becomes the new clean
-  // baseline (no-op when tracking is off). Also drops the submit-time error
-  // map — a reset form displays no errors, so the badges must count none
-  // (`internalErrors` / `rootErrorDismissed` are declared below; `reset` only runs post-setup).
-  const reset = async () => {
-    internalErrors.value = {};
-    rootErrorDismissed.value = false;
-    await resetState();
-    patch?.rebase();
-  };
 
   // ── Provides — root data, prefix, type/component maps ───────
   provide(ROOT_DATA_KEY, data);
@@ -435,6 +436,48 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
     rootErrorDismissed.value = true;
     ext.dismissForm();
   }
+
+  // The form's fields get their empty-form values under a fresh field
+  // subtree, so no component keeps state from before (a union's stashed
+  // variants, an array's row keys, a picker's search) and mount-time writes
+  // (derived values) run again; `resetState` then applies explicit
+  // `resetValue`s on top. The submit-time error map goes too — a reset form
+  // displays no errors, so the badges must count none.
+  const reset = async () => {
+    internalErrors.value = {};
+    rootErrorDismissed.value = false;
+    const def = options.def();
+    const container = data.value as Record<string, unknown>;
+    const empty = createFormData(
+      def.type,
+      createFormValueResolver({}, (formContext.value ?? {}) as Record<string, unknown>),
+    );
+    const errorPaths = Object.keys(ext.effective.value ?? {});
+    const before = errorPaths.map((path) => getByPath(container, path));
+    if (typeof container.value === "object" && container.value !== null) {
+      // Into the bound data object (an inline `{ value: row }` container is
+      // not reactive) and only at the form's own fields: what the form does
+      // not render — an edit form's version column, navigation rows — stays.
+      for (const { path } of def.fields) {
+        const value = getByPath(empty, path);
+        if (value === undefined) deleteByPath(container, path);
+        else setByPath(container, path, value);
+      }
+    } else {
+      container.value = empty.value;
+    }
+    // The replaced fields never see their edit, so dismiss here what the edit
+    // would: the server error of every value the reset changed.
+    errorPaths.forEach((path, i) => {
+      if (getByPath(container, path) !== before[i]) ext.dismissAt(path);
+    });
+    // Remount before `resetState` runs the `resetValue`s, so only fields of
+    // the reset form write one (a removed row's field would re-create the row).
+    remountKey.value++;
+    await nextTick();
+    await resetState();
+    patch?.rebase();
+  };
 
   const descendantErrorCounts = computed(() => buildDescendantErrorCounts(allErrors.value));
   provide(DESCENDANT_ERROR_COUNTS_KEY, descendantErrorCounts);

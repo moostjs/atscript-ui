@@ -9,8 +9,9 @@ import {
   ComboboxRoot,
   ComboboxViewport,
 } from "reka-ui";
-import { ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useAsValueHelp } from "../../composables/use-as-value-help";
+import { committedText, committedValue } from "../../composables/_shape";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import AsInputControl from "../internal/as-input-control.vue";
@@ -34,9 +35,37 @@ const status = vh?.status;
 const searching = vh?.searching;
 
 const open = ref(false);
+// The input's text. Bound so "×" can empty it: the cancel primitive only
+// writes the element, which the next render of the input would undo.
+const inputText = ref("");
 
 function onSearchInput(e: Event) {
   if (vh) vh.searchText.value = (e.target as HTMLInputElement).value;
+}
+
+// The list closing puts the value's text back into the input: the typed
+// search is gone, so it no longer counts as something to clear.
+watch(open, (isOpen) => {
+  if (!isOpen && vh) vh.searchText.value = "";
+});
+
+// "×" empties the field as emptying an input does: an optional field is
+// unset; a required one holds `""` (string key) or `null` (any other key).
+const keyType = props.field?.prop.type;
+const stringKey = keyType?.kind === "" && keyType.designType === "string";
+const emptyValue = () =>
+  stringKey ? committedText("", props.optional) : committedValue(null, props.optional);
+
+const showClear = computed(() => {
+  if (props.disabled || props.readonly || !vh) return false;
+  const v = props.model.value;
+  return vh.searchText.value !== "" || (v != null && v !== emptyValue());
+});
+
+// Runs after the cancel primitive has focused the input.
+function onClear() {
+  inputText.value = "";
+  vh?.clear(emptyValue());
 }
 const { t } = useAsTexts();
 </script>
@@ -68,6 +97,7 @@ const { t } = useAsTexts();
       >
         <ComboboxAnchor class="as-ref-anchor">
           <ComboboxInput
+            v-model="inputText"
             :id="inputId"
             :placeholder="placeholder"
             :disabled="disabled"
@@ -82,8 +112,10 @@ const { t } = useAsTexts();
             @blur="onBlur"
           />
           <ComboboxCancel
-            v-if="model.value != null && model.value !== '' && !disabled && !readonly"
+            v-if="showClear"
             class="as-ref-clear"
+            :aria-label="label ? t('UI_FORM_CLEAR_FIELD', { field: label }) : t('UI_CLEAR')"
+            @click="onClear"
           >
             &times;
           </ComboboxCancel>

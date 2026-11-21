@@ -1,10 +1,5 @@
 import type { FormFieldDef, FormUnionFieldDef } from "@atscript/ui";
-import {
-  isUnionField,
-  createFormData,
-  createFormValueResolver,
-  detectUnionVariant,
-} from "@atscript/ui";
+import { isUnionField, detectUnionVariant } from "@atscript/ui";
 import { computed, inject, ref, type ComputedRef, type Ref } from "vue";
 import { CHANGE_HANDLER_KEY, PATH_PREFIX_KEY } from "./internal-keys";
 import type { TAsComponentProps } from "../components/types";
@@ -25,7 +20,7 @@ export function useAsUnion(props: TAsComponentProps): UseAsUnionReturn {
     PATH_PREFIX_KEY,
     computed(() => ""),
   );
-  const { rootFormData, formContext } = useFormContext("useAsUnion");
+  const { emptyValueOf } = useFormContext("useAsUnion");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const unionField = computed(() =>
@@ -68,17 +63,7 @@ export function useAsUnion(props: TAsComponentProps): UseAsUnionReturn {
     localUnionIndex.value = newIndex;
     const variant = unionField.value?.unionVariants[newIndex];
     if (variant && props.model) {
-      const stashed = variantDataStash.get(newIndex);
-      props.model.value =
-        stashed !== undefined
-          ? stashed
-          : createFormData(
-              variant.type,
-              createFormValueResolver(
-                rootFormData().value as Record<string, unknown>,
-                formContext.value,
-              ),
-            ).value;
+      props.model.value = variantDataStash.get(newIndex) ?? emptyValueOf(variant.type);
     }
     handleChange("union-switch", unionPath.value, props.model?.value);
   }

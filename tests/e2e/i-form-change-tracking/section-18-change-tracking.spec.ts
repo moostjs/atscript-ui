@@ -74,19 +74,19 @@ const changeRows = (page: Page): Locator => page.getByTestId("change-row");
 
 const reference = (page: Page): Locator => page.getByLabel(labelRegex("Reference"));
 
-// Parse the live `getPatch()` JSON panel. The panel always holds valid JSON
-// (`JSON.stringify(livePatch, null, 2)`), so we parse + assert structure
+// Parse one of the page's JSON panels (live `getPatch()`, last saved, form
+// data). Each always holds valid JSON (`JSON.stringify(…, null, 2)`), so we parse + assert structure
 // rather than substring-match. `expect.poll` re-reads until the parsed shape
 // satisfies the caller — web-first, no fixed sleeps.
-async function readLivePatch(page: Page): Promise<Record<string, unknown>> {
-  const raw = (await page.getByTestId("live-patch").textContent()) ?? "{}";
+async function readJsonPanel(page: Page, testId: string): Promise<Record<string, unknown>> {
+  const raw = (await page.getByTestId(testId).textContent()) ?? "{}";
   return JSON.parse(raw) as Record<string, unknown>;
 }
 
-async function readLastSaved(page: Page): Promise<Record<string, unknown>> {
-  const raw = (await page.getByTestId("last-saved").textContent()) ?? "{}";
-  return JSON.parse(raw) as Record<string, unknown>;
-}
+const readLivePatch = (page: Page) => readJsonPanel(page, "live-patch");
+// The model panel (`JSON.stringify(formData.value)` — `undefined` keys drop out).
+const readFormData = (page: Page) => readJsonPanel(page, "form-data");
+const readLastSaved = (page: Page) => readJsonPanel(page, "last-saved");
 
 // First line-item's Qty input. The keyed `items` array renders one nested
 // section per row in declaration order, so `.first()` is items[0] (SKU-001,
@@ -409,6 +409,49 @@ test.describe("Section 18 — form change tracking · live patch", () => {
     expect(itemsOp.$remove).toEqual([{ sku: "SKU-002" }]);
     expect(itemsOp).not.toHaveProperty("$replace");
     expect(itemsOp).not.toHaveProperty("$update");
+  });
+
+  // Since 0.1.177 a reset gives the form the empty form `createAsFormDef`
+  // prepares — before, it wrote "" into every non-optional scalar, so a number
+  // field held a string. Reset returns to the empty form, not to the loaded
+  // order, and the form is clean afterwards.
+  test('type into number fields, then Reset: the model is the empty form (numbers 0, not "") and the form is clean', async ({
+    page,
+  }) => {
+    const version = form(page).getByLabel(labelRegex("Version"));
+    await expect(version).toHaveValue(String(BASELINE_VERSION));
+    await version.fill("9");
+    await version.blur();
+    await firstQtyInput(page).fill("12");
+    await firstQtyInput(page).blur();
+    await expect(saveBtn(page)).toBeEnabled();
+
+    await page.getByTestId("reset-btn").click();
+
+    await expect(dirtyState(page)).toHaveText("No unsaved changes");
+    await expect(saveBtn(page)).toBeDisabled();
+    await expect(page.getByTestId("live-patch")).toHaveText("{}");
+    await expect(changeRows(page)).toHaveCount(0);
+    await expect
+      .poll(async () => await readFormData(page))
+      .toEqual({
+        reference: "",
+        status: "draft",
+        priority: false,
+        address: { street: "", city: "", postcode: "" },
+        items: [],
+        version: 0,
+      });
+    await expect(version).toHaveValue("0");
+    await expect(form(page).getByLabel(labelRegex("Qty"))).toHaveCount(0);
+
+    // The next edit diffs against the reset state.
+    await reference(page).fill("ORD-NEW");
+    await reference(page).blur();
+    await expect
+      .poll(async () => await readLivePatch(page))
+      .toMatchObject({ reference: "ORD-NEW" });
+    await expect(changeRows(page)).toHaveCount(1);
   });
 
   test("Save: Last-saved panel echoes the patch and Save disables again (rebase cleared dirty)", async ({

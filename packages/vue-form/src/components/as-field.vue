@@ -716,13 +716,6 @@ const {
   setValue: setModel,
   rules: isDerived ? [] : [formRule],
   path: () => absolutePath.value,
-  ...(props.field.prop.optional
-    ? { resetValue: undefined }
-    : isArrayField(props.field) || isTupleField(props.field)
-      ? { resetValue: [] }
-      : isObjectField(props.field)
-        ? { resetValue: {} }
-        : {}),
 });
 
 // Leaf fields emit 'update' on blur only when value changed since last emit.

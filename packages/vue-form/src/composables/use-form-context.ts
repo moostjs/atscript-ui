@@ -1,5 +1,8 @@
+import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import type { TFieldEvaluated, TFnScope } from "@atscript/ui-fns";
 import {
+  createFormData,
+  createFormValueResolver,
   getByPath as _getByPath,
   joinPath as _joinPath,
   setByPath as _setByPath,
@@ -69,6 +72,18 @@ export function useFormContext<TFormData = any, TFormContext = any>(componentNam
     _setByPath(rootFormData(), path, value);
   }
 
+  // ── Empty-form value ───────────────────────────────────────
+  // The value the empty-form preparation (`createFormData`) gives `type`:
+  // annotation defaults included, `@ui.form.fn.value` read against the
+  // form's current data and context.
+  function emptyValueOf(type: TAtscriptAnnotatedType): unknown {
+    const resolver = createFormValueResolver(
+      rootFormData().value as Record<string, unknown>,
+      formContext.value,
+    );
+    return createFormData(type, resolver).value;
+  }
+
   // ── Scope builder ───────────────────────────────────────────
   // `t`: the app's texts (fns translate with it; their text results too).
   const { t } = useAsTexts();
@@ -86,6 +101,7 @@ export function useFormContext<TFormData = any, TFormContext = any>(componentNam
     buildPath,
     getByPath,
     setByPath,
+    emptyValueOf,
     buildScope,
   };
 }

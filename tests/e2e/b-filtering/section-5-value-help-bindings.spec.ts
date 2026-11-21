@@ -141,6 +141,21 @@ test.describe("Section 5.1 — @ui.valueHelp on a composite-key dictionary (prod
   });
 });
 
+const PRODUCTS_URL = /\/api\/db\/tables\/products(\/|\?|$)/;
+
+const colorField = (page: Page): Locator =>
+  page.locator(".as-default-field", { has: page.locator("label", { hasText: /^Color$/ }) });
+
+/** Click the form's save button and return the products PATCH body it sends. */
+async function saveAndReadPatch(page: Page): Promise<Record<string, unknown>> {
+  const patch = page.waitForRequest((r) => r.method() === "PATCH" && PRODUCTS_URL.test(r.url()));
+  await page
+    .getByRole("button", { name: /save|submit|update/i })
+    .first()
+    .click();
+  return (await patch).postDataJSON() as Record<string, unknown>;
+}
+
 test.describe("Section 5.2 — form picker commits the value (products edit form)", () => {
   test("Color picker offers the colour values and stores `value`, not label or attribute", async ({
     page,
@@ -152,9 +167,7 @@ test.describe("Section 5.2 — form picker commits the value (products edit form
         decodeURIComponent(r.url()).includes("attribute=color"),
     );
     await page.goto("/products/SKU-00001/edit");
-    const color = page.locator(".as-default-field", {
-      has: page.locator("label", { hasText: /^Color$/ }),
-    });
+    const color = colorField(page);
     await expect(color).toBeVisible();
     await scoped;
     await color.locator(".as-ref-input").click();
@@ -163,16 +176,47 @@ test.describe("Section 5.2 — form picker commits the value (products edit form
     await expect(items).toHaveCount(4);
     await expect(items.filter({ hasText: /Small|Support/ })).toHaveCount(0);
 
-    const patch = page.waitForRequest(
-      (r) => r.method() === "PATCH" && /\/api\/db\/tables\/products(\/|\?|$)/.test(r.url()),
-    );
     await items.filter({ hasText: "Green" }).click();
-    await page
-      .getByRole("button", { name: /save|submit|update/i })
-      .first()
-      .click();
-    const body = (await patch).postDataJSON() as Record<string, unknown>;
+    const body = await saveAndReadPatch(page);
     expect(body.color).toBe("green");
+  });
+
+  // Since 0.1.177 the picker's "×" clears the value; before, it only emptied
+  // the search box and the stored colour stayed in the model. This checks the
+  // form data only: the demo edit page saves the whole record with `update`,
+  // where a missing key means "unchanged", so the server keeps its colour.
+  test("× clears the optional Color: the input empties and keeps focus, the field reads Not set, and the form data holds no colour", async ({
+    page,
+  }) => {
+    await page.goto("/products/SKU-00011/edit");
+    const color = colorField(page);
+    const input = color.locator(".as-ref-input");
+    await expect(input).not.toHaveValue("");
+
+    // Shown for a stored value, nothing typed.
+    const clear = color.getByRole("button", { name: "Clear Color" });
+    await expect(clear).toBeVisible();
+    await clear.click();
+
+    await expect(input).toHaveValue("");
+    await expect(input).toBeFocused();
+    await expect(clear).toHaveCount(0);
+
+    // Focus leaves → the unset optional field shows its placeholder.
+    await page.keyboard.press("Escape");
+    await page.getByRole("heading", { name: /Edit products/ }).click();
+    await expect(color.locator(".as-no-data")).toBeVisible();
+
+    // The submitted data is the form data: no colour key (unset). Answered
+    // here, so the seeded row stays as it is for the other specs.
+    await page.route(PRODUCTS_URL, (route) =>
+      route.request().method() === "PATCH"
+        ? route.fulfill({ json: { matchedCount: 1, modifiedCount: 1 } })
+        : route.fallback(),
+    );
+    const body = await saveAndReadPatch(page);
+    expect(body).not.toHaveProperty("color");
+    expect(body.sku).toBe("SKU-00011");
   });
 });
 

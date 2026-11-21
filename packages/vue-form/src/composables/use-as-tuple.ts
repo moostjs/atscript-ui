@@ -1,5 +1,5 @@
 import type { FormFieldDef, FormTupleFieldDef } from "@atscript/ui";
-import { getFieldMeta, createFormData, createFormValueResolver, META_LABEL } from "@atscript/ui";
+import { getFieldMeta, META_LABEL } from "@atscript/ui";
 import { computed, inject, onMounted, type ComputedRef } from "vue";
 import { CHANGE_HANDLER_KEY } from "./internal-keys";
 import { useFormContext } from "./use-form-context";
@@ -15,8 +15,7 @@ export interface UseAsTupleReturn {
 
 /** Composable for managing tuple field state. Fixed-length, position-typed; auto-fills missing positions on mount unless optional. */
 export function useAsTuple(field: FormTupleFieldDef): UseAsTupleReturn {
-  const { rootFormData, formContext, pathPrefix, getByPath, setByPath } =
-    useFormContext("useAsTuple");
+  const { pathPrefix, getByPath, setByPath, emptyValueOf } = useFormContext("useAsTuple");
   const handleChange = inject(CHANGE_HANDLER_KEY, () => {});
 
   const isOptional = field.prop.optional ?? false;
@@ -50,12 +49,8 @@ export function useAsTuple(field: FormTupleFieldDef): UseAsTupleReturn {
     }
     const tail = arr as unknown[];
     if (tail.length >= itemFields.length) return;
-    const resolver = createFormValueResolver(
-      rootFormData().value as Record<string, unknown>,
-      formContext.value,
-    );
     for (let i = tail.length; i < itemFields.length; i++) {
-      tail.push(createFormData(field.itemFields[i].prop, resolver).value);
+      tail.push(emptyValueOf(field.itemFields[i].prop));
     }
     handleChange("array-add", pathPrefix.value, tail);
   }
