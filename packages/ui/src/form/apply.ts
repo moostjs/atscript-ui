@@ -19,10 +19,10 @@ import { deleteByPath, setByPath } from "./path-utils";
  *
  * - `kind: 'set'`:
  *   - `change.after === undefined` → DELETE the own key at `change.path` (walk
- *     to parent, `delete`). A cleared field must read as ABSENT, not as a
- *     present `undefined` own-key — otherwise a re-diff sees a structural
- *     mismatch where the form intends "no value". `setByPath(…, undefined)`
- *     leaves an own key behind, so we use {@link deleteByPath} instead.
+ *     to parent, `delete`). A cleared field reads as ABSENT, not as a present
+ *     `undefined` own-key, so the data holds the same keys as data that never
+ *     had the field. `setByPath(…, undefined)` leaves an own key behind, so we
+ *     use {@link deleteByPath} instead.
  *   - otherwise → `setByPath(data, change.path, change.after)`.
  * - `kind: 'array'`: whole-array set via `setByPath(data, change.path,
  *   change.after)` (LOCKED Option A — no per-element merge; the diff already

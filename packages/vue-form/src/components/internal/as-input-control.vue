@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { TAsComponentProps } from "../types";
+import { committedText, committedValue } from "../../composables/_shape";
 
 // `inputId` is supplied per-mount by AsFieldShell's slot so the chrome and
 // the input share the same id. Other a11y wiring (`ariaDescribedBy`, etc.)
@@ -9,6 +11,21 @@ const props = defineProps<
     inputId: string;
   }
 >();
+
+/**
+ * The model as the input edits it. Emptied, the input commits `undefined` on
+ * an optional field; on a required one `""`, or `null` for the native number
+ * input (AsNumber without adornments) — the rule of the other number inputs.
+ */
+const inputModel = computed({
+  get: () => props.model.value,
+  set: (v: unknown) => {
+    props.model.value =
+      v === "" && props.type === "number"
+        ? committedValue(null, props.optional)
+        : committedText(v, props.optional);
+  },
+});
 
 /**
  * UX polish — numeric inputs select-all on focus so the next keystroke
@@ -27,7 +44,7 @@ function onFocus(e: FocusEvent): void {
   <textarea
     v-if="type === 'textarea'"
     :id="inputId"
-    v-model="model.value"
+    v-model="inputModel"
     @blur="onBlur"
     :placeholder="placeholder"
     :name="name"
@@ -42,7 +59,7 @@ function onFocus(e: FocusEvent): void {
   <input
     v-else
     :id="inputId"
-    v-model="model.value"
+    v-model="inputModel"
     @focus="onFocus"
     @blur="onBlur"
     :placeholder="placeholder"

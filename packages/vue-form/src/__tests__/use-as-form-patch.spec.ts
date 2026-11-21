@@ -159,9 +159,8 @@ describe("useAsForm({ trackChanges }) — keyed array ops", () => {
     });
 
     // What the optional toggle writes when it turns a field off (as do the
-    // default number / decimal / date / time inputs emptied on an optional
-    // field): the own prop set to `undefined`. An emptied text input writes
-    // `""` instead, which the item carries as is.
+    // default inputs emptied on an optional field, text inputs since
+    // 0.1.176): the own prop set to `undefined`.
     (formData.value.items as { note?: string }[])[0]!.note = undefined;
     await nextTick();
 
@@ -182,6 +181,34 @@ describe("useAsForm({ trackChanges }) — keyed array ops", () => {
     await nextTick();
 
     expect(api.patch!.getPatch()).toEqual({ items: { $insert: [{ sku: "C", qty: 3 }] } });
+  });
+
+  // A row the user adds holds `""` keys (present values); an incomplete key
+  // comes from stored data — a key column loaded as NULL.
+  it("a stored composite-key row with a NULL key value: editing it → $replace (since 0.1.176); editing another row → $update", async () => {
+    const { PatchStockForm } = await import("./fixtures/patch-forms.as");
+    const W1 = { warehouse: "W1", sku: "A", qty: 1 };
+    const orphan = { warehouse: null, sku: "B", qty: 3 };
+    const { api, formData } = mountTrackedForm({
+      type: PatchStockForm,
+      initialValue: { stock: [{ ...W1 }, { ...orphan }] },
+    });
+    const rows = formData.value.stock as Record<string, unknown>[];
+
+    rows[0]!.qty = 9;
+    await nextTick();
+    expect(api.patch!.getPatch()).toEqual({ stock: { $update: [{ ...W1, qty: 9 }] } });
+
+    rows[1]!.qty = 4;
+    await nextTick();
+    expect(api.patch!.getPatch()).toEqual({
+      stock: {
+        $replace: [
+          { ...W1, qty: 9 },
+          { ...orphan, qty: 4 },
+        ],
+      },
+    });
   });
 
   // Regression for the reactive change-tracking blind spot: `buildFormDiff`'s

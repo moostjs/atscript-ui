@@ -856,7 +856,7 @@ function applyFormChanges(
 
 ### `deepEqual(a, b)`
 
-Shared structural comparator behind the diff (order-sensitive arrays, `NaN`-equal, own-key structural). Use it for the same equality semantics the change tracker applies.
+Shared structural comparator behind the diff and the rebase (order-sensitive arrays, `NaN`-equal). Unset is one value: `null`, `undefined` and an absent object prop are equal at any depth (_since 0.1.176_; before, `null` ≠ `undefined` and an `undefined`-valued own prop ≠ an absent one); `""` and `0` are values. Use it for the same equality semantics the change tracker applies.
 
 ```typescript
 function deepEqual(a: unknown, b: unknown): boolean;

@@ -63,6 +63,8 @@ export function mountForm(
     defOptions?: CreateFormDefOptions;
     /** Render probe content into the `form.before` slot (inside AsForm providers). */
     slot?: () => VNode | VNode[];
+    /** Mount into the document (focus / `document.activeElement` need it). */
+    attachTo?: Element;
   },
 ) {
   const def = createFormDef(type, opts?.defOptions);
@@ -82,6 +84,7 @@ export function mountForm(
       trackChanges: opts?.trackChanges,
     },
     slots: opts?.slot ? { "form.before": opts.slot } : undefined,
+    attachTo: opts?.attachTo,
   });
 
   return { wrapper, def, formData };

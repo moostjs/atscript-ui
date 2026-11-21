@@ -20,11 +20,22 @@ export function preserveShape(
  * The value an emptied input commits: `undefined` (omitted) on an optional
  * field — `null` is not a value of `name?: T`, and atscript >= 0.1.103
  * rejects it there when the field also carries `@meta.required` — else
- * `null`. Shared by the number / decimal / date / datetime / time inputs.
+ * `null`. Shared by the number / decimal / date / datetime / time inputs and
+ * the native number input of the text control.
  */
 export function committedValue<T>(
   value: T | null,
   optional: boolean | undefined,
 ): T | null | undefined {
   return value === null && optional ? undefined : value;
+}
+
+/**
+ * The value an emptied text input commits: `undefined` (omitted) on an
+ * optional field, like {@link committedValue}; `""` on a required one. Used by
+ * the text control (which also renders the reference input's plain-text
+ * fallback).
+ */
+export function committedText(value: unknown, optional: boolean | undefined): unknown {
+  return value === "" && optional ? undefined : value;
 }

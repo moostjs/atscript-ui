@@ -81,9 +81,8 @@ export function setByPath(obj: Record<string, unknown>, path: string, value: unk
  * if any ancestor is missing, the call is a no-op (nothing to delete).
  *
  * Unlike `setByPath(obj, path, undefined)`, this leaves NO own key behind — the
- * leaf reads as absent (`'k' in parent === false`), which keeps `deepEqual`
- * structural comparisons in sync (a present `undefined` own-key and an absent
- * key are NOT structurally equal under the own-key walk). Used by
+ * leaf reads as absent (`'k' in parent === false`), so the cleared data holds
+ * the same keys as data that never had the field. Used by
  * {@link applyFormChanges} to apply a clear-to-`undefined` change as a delete.
  *
  * Empty path clears the root domain value (`obj.value = undefined`).

@@ -153,6 +153,8 @@ defineProps<TAsComponentProps<number>>();
 
 \* 0.1.133+.
 
+Unset optional field (`model.value == null`) → the shell shows the "Not set" placeholder instead of the default slot — but NOT while focus is inside the default slot's row (0.1.176+; a window/app switch keeps it), so a control that commits `undefined` when emptied keeps the cursor; the placeholder appears on blur. While held, the clear button, `data-dirty` and the `header` / `status` slots' `optionalEnabled` / `isDirty` keep the with-value state (dirty never turns off mid-edit). Emptied on `props.optional` → commit `undefined` (rules: [forms.md](forms.md) "Emptied inputs").
+
 ## Level 4 — Fully custom root
 
 Drop `<AsForm>` entirely; render the field tree yourself with `useAsForm`:

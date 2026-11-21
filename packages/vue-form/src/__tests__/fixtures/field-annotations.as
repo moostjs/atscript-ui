@@ -76,3 +76,47 @@ export interface EmptiedInputs {
     @ui.form.suffix 'pcs'
     qty?: number
 }
+
+/// Emptied text inputs (since 0.1.176): an optional one commits `undefined`
+/// like the inputs above, a required one keeps `""`; the plain number input
+/// (no adornment) follows the number rule.
+export interface EmptiedTextInputs {
+    @meta.label 'Nickname'
+    @meta.required
+    @expect.minLength 3
+    nickname?: string
+
+    @meta.label 'Bio'
+    @ui.form.type 'textarea'
+    bio?: string
+
+    @meta.label 'Secret'
+    @ui.form.type 'password'
+    secret?: string
+
+    @meta.label 'Title'
+    title: string
+
+    @meta.label 'Count'
+    count?: number
+
+    @meta.label 'Total'
+    total: number
+}
+
+/// A reference input without value help renders its plain-text fallback.
+export interface EmptiedRefInputs {
+    @meta.label 'Owner'
+    @ui.form.type 'ref'
+    owner?: string
+
+    @meta.label 'Assignee'
+    @ui.form.type 'ref'
+    assignee: string
+}
+
+/// Two inputs in one row (decimal: integer + fraction).
+export interface EmptiedDecimalInput {
+    @meta.label 'Fee'
+    fee?: decimal
+}

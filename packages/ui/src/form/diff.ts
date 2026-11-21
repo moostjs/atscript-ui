@@ -321,6 +321,7 @@ function diffObjectField(
   // nested below emits its whole sub-object (merge does NOT propagate). Version
   // exclusion never applies below the root, so omit it.
   const nested: Record<string, unknown> = {};
+  const changesBefore = changes.length;
   diffFields(
     field.objectDef.fields,
     fullPath,
@@ -334,8 +335,13 @@ function diffObjectField(
 
   // Wholesale clear: object present in baseline, gone in current → field: null
   // (a single clear, not a partial of nulled leaves; per-leaf changes already
-  // recorded by the recursion above).
+  // recorded by the recursion above). An object whose leaves are all unset
+  // (`{}`, or every leaf `null`) has no leaf that differs — the removal itself
+  // is then the change, so the form is dirty whenever the patch clears it.
   if ((afterObj === undefined || afterObj === null) && isPlainObject(beforeObj)) {
+    if (changes.length === changesBefore) {
+      changes.push({ path: fullPath, kind: "set", before: beforeObj, after: afterObj });
+    }
     setPatchLeaf(patch, field.path, null);
     return;
   }
@@ -390,8 +396,8 @@ function diffArrayField(
     getFieldMeta(field.prop, DB_JSON) !== undefined
       ? (after ?? null)
       : diffArray(field, before, after);
-  // Guard against a no-op array patch (e.g. items differ only by an explicit
-  // `undefined`-valued prop that the keyed diff treats as equal). No real op →
+  // Guard against a no-op array patch (e.g. a keyed array missing from the
+  // baseline and empty in the form: nothing to insert or remove). No real op →
   // no change recorded, no malformed `{}` emitted.
   if (value === undefined) return;
 
@@ -466,10 +472,16 @@ function diffArray(
  * ({@link buildKeyedUpdate}). Either way an item is emitted only when some
  * leaf changed.
  *
- * Ambiguity fallback: if either side has DUPLICATE key buckets, or ANY element
- * is missing all of its key values, key identity is unreliable — fall back to
- * `{ $replace: after }`, the only faithful op (last-write-wins collapse would
- * silently drop items, and a key-less `$update` is unmatchable by the DB).
+ * Fallbacks to `{ $replace: after }`, the only faithful op, when:
+ * - key identity is ambiguous — an element that is not an object or lacks ALL
+ *   of its key values, or a key shared by two elements on one side (a
+ *   last-write-wins collapse would silently drop items);
+ * - an element a key operator would name (a `$update`, `$remove` or `$insert`
+ *   item) lacks ANY of its key values (`undefined` / `null`): the db refuses
+ *   such an item (`PATCH_KEY_REQUIRED` for `$update` / `$remove`), while under
+ *   `$replace` it validates the array and reports the missing field on its
+ *   own path. An untouched row with an incomplete key names no operator, so
+ *   it does not turn an unrelated edit into a `$replace`.
  */
 function diffKeyedArray(
   before: unknown[],
@@ -477,25 +489,11 @@ function diffKeyedArray(
   keyProps: string[],
   merge: boolean,
 ): Record<string, unknown> | undefined {
-  // Detect un-keyable elements (missing all key values) on either side.
-  if (hasKeylessItem(before, keyProps) || hasKeylessItem(after, keyProps)) {
-    return { $replace: after };
-  }
-
-  const beforeByKey = new Map<string, Record<string, unknown>>();
-  for (const el of before) {
-    if (isPlainObject(el)) beforeByKey.set(keyOf(el, keyProps), el);
-  }
-  const afterByKey = new Map<string, Record<string, unknown>>();
-  for (const el of after) {
-    if (isPlainObject(el)) afterByKey.set(keyOf(el, keyProps), el);
-  }
-
-  // Duplicate keys on either side → ambiguous identity. Map collapse would
-  // silently lose items, so $replace is the only faithful op.
-  if (beforeByKey.size !== before.length || afterByKey.size !== after.length) {
-    return { $replace: after };
-  }
+  const beforeByKey = byKey(before, keyProps);
+  const afterByKey = byKey(after, keyProps);
+  if (!beforeByKey || !afterByKey) return { $replace: after };
+  const incomplete = (el: Record<string, unknown>) =>
+    keyProps.some((k) => el[k] === undefined || el[k] === null);
 
   // One pass over the baseline: a key gone from the form is a remove; a kept
   // key must hold the next place of the form's key sequence (the order check),
@@ -508,18 +506,22 @@ function diffKeyedArray(
   for (const [k, prev] of beforeByKey) {
     const el = afterByKey.get(k);
     if (el === undefined) {
+      if (incomplete(prev)) return { $replace: after };
       $remove.push(pickKeys(prev, keyProps));
       continue;
     }
     if (afterKeys[kept++] !== k) return { $replace: after };
     if (deepEqual(prev, el)) continue;
     const partial = buildKeyedUpdate(prev, el, keyProps);
-    if (partial) $update.push(merge ? partial : definedProps(el));
+    if (!partial) continue;
+    if (incomplete(el)) return { $replace: after };
+    $update.push(merge ? partial : definedProps(el));
   }
-  const $insert = afterKeys.slice(kept).map((k) => afterByKey.get(k));
+  const $insert = afterKeys.slice(kept).map((k) => afterByKey.get(k)!);
+  if ($insert.some(incomplete)) return { $replace: after };
 
-  // No real op (e.g. the only diff was an explicit undefined-valued prop the
-  // keyed update treats as equal) → undefined so the caller skips the field.
+  // No real op (e.g. both arrays empty, the baseline one missing) → undefined
+  // so the caller skips the field.
   return arrayOps({ $update, $insert, $remove });
 }
 
@@ -625,21 +627,24 @@ function isPrimitiveItem(field: FormArrayFieldDef): boolean {
   return field.itemType.type.kind === "";
 }
 
-/** True when any element lacks ALL of its key values (un-keyable identity). */
-function hasKeylessItem(arr: unknown[], keyProps: string[]): boolean {
+/**
+ * The elements by {@link keyOf} bucket, or `undefined` when key identity is
+ * ambiguous: an element is not an object or lacks ALL of its key values
+ * (`undefined` / `null`), or two elements share a key (a Map collapse would
+ * silently lose one).
+ */
+function byKey(
+  arr: unknown[],
+  keyProps: string[],
+): Map<string, Record<string, unknown>> | undefined {
+  const map = new Map<string, Record<string, unknown>>();
   for (const el of arr) {
-    if (!isPlainObject(el)) return true;
-    let hasAnyKey = false;
-    for (const k of keyProps) {
-      const v = el[k];
-      if (v !== undefined && v !== null) {
-        hasAnyKey = true;
-        break;
-      }
+    if (!isPlainObject(el) || keyProps.every((k) => el[k] === undefined || el[k] === null)) {
+      return undefined;
     }
-    if (!hasAnyKey) return true;
+    map.set(keyOf(el, keyProps), el);
   }
-  return false;
+  return map.size === arr.length ? map : undefined;
 }
 
 /**
@@ -701,15 +706,23 @@ function stableKey(v: unknown): string {
  * (revert-aware for NaN scalars) while `0` / `-0` stay equal (matches DB
  * intent — `===` treats them equal, only NaN is special-cased).
  *
+ * Unset is one value: `null`, `undefined` and an absent object prop are equal
+ * at any depth — a field loaded as `null` (SQL `NULL`) that the form holds as
+ * `undefined`, or an optional prop emptied to `undefined` in an array row, is
+ * unchanged. The patch cannot tell them apart either: it sends a cleared value
+ * as `null`.
+ *
  * The single comparator shared across the form engine: diff, conflict
  * detection ({@link buildFormRebase}), and apply all route through this — never
  * reimplement equality elsewhere.
  */
 export function deepEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true;
+  if (a === null || a === undefined || b === null || b === undefined) {
+    return (a === null || a === undefined) && (b === null || b === undefined);
+  }
   // NaN: `===` is false but a value reverted to a NaN baseline is unchanged.
   if (typeof a === "number" && typeof b === "number") return Number.isNaN(a) && Number.isNaN(b);
-  if (a === null || b === null || a === undefined || b === undefined) return false;
   if (typeof a !== "object" || typeof b !== "object") return false;
 
   const aIsArr = Array.isArray(a);
@@ -725,12 +738,12 @@ export function deepEqual(a: unknown, b: unknown): boolean {
 
   const ao = a as Record<string, unknown>;
   const bo = b as Record<string, unknown>;
-  const aKeys = Object.keys(ao);
-  const bKeys = Object.keys(bo);
-  if (aKeys.length !== bKeys.length) return false;
-  for (const k of aKeys) {
-    if (!Object.prototype.hasOwnProperty.call(bo, k)) return false;
-    if (!deepEqual(ao[k], bo[k])) return false;
+  // An absent prop reads as `undefined`, so it equals one that is unset.
+  for (const k of Object.keys(ao)) {
+    if (!deepEqual(ao[k], Object.hasOwn(bo, k) ? bo[k] : undefined)) return false;
+  }
+  for (const k of Object.keys(bo)) {
+    if (!Object.hasOwn(ao, k) && bo[k] !== undefined && bo[k] !== null) return false;
   }
   return true;
 }

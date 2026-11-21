@@ -15,7 +15,7 @@ formData.value = {
   reference: "ORD-2026-0042",
   status: "confirmed",
   priority: false,
-  notes: "",
+  notes: "Leave at the loading dock",
   address: {
     street: "1 Market St",
     city: "San Francisco",

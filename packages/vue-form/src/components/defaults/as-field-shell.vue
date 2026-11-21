@@ -7,6 +7,7 @@ import AsNoData from "../internal/as-no-data.vue";
 import AsOptionalClear from "../internal/as-optional-clear.vue";
 import AsVariantPicker from "../internal/as-variant-picker.vue";
 import { useAsTexts } from "../../composables/use-as-locale";
+import { useEditingHold } from "../../composables/_editing-hold";
 
 // AsFieldShell is a Tier-2 default — public, importable by consumers,
 // but not auto-resolved. It is always mounted as a child of an AsField
@@ -37,8 +38,22 @@ const labelParts = computed(() => formatIndexedLabelParts(props.label, props.arr
 
 const { rootRef, enableOptional } = useAsFocusFirstAfter(props.onToggleOptional);
 
+// An emptied input unsets an optional field (the default inputs commit
+// `undefined`). While focus is in the input row the field is "held": the input
+// stays, the clear button stays, and the dirty marker does not turn off (typing
+// through the empty state would flicker it) — until focus leaves the row.
+const { editing, onFocusin, onFocusout } = useEditingHold();
+const held = computed(() => !!props.optional && editing.value && !optionalEnabled.value);
+const chromeEnabled = computed(() => optionalEnabled.value || held.value);
+let dirtyWithValue = false;
+const shownDirty = computed<boolean>(() => {
+  const dirty = !!props.isDirty;
+  if (!held.value) return (dirtyWithValue = dirty);
+  return dirty || dirtyWithValue;
+});
+
 const showOptionalClear = computed(
-  () => !!props.optional && optionalEnabled.value && !props.chromeless,
+  () => !!props.optional && chromeEnabled.value && !props.chromeless,
 );
 // AsField always supplies `statusId`; the fallback keeps the shell usable when
 // a consumer mounts it standalone (the ids are derived from `inputId` there
@@ -47,7 +62,7 @@ const statusId = computed(() => props.statusId || `${props.inputId}-status`);
 
 const showEmptyPlaceholder = computed(
   () =>
-    !!props.optional && !optionalEnabled.value && !props.chromeless && !props.hideEmptyPlaceholder,
+    !!props.optional && !chromeEnabled.value && !props.chromeless && !props.hideEmptyPlaceholder,
 );
 const { t } = useAsTexts();
 </script>
@@ -58,7 +73,7 @@ const { t } = useAsTexts();
     class="as-default-field"
     :class="[fieldClass, $props.class]"
     :style="$props.style"
-    :data-dirty="isDirty ? '' : undefined"
+    :data-dirty="shownDirty ? '' : undefined"
     v-show="!hidden"
   >
     <!-- Header row: label/header on left, action buttons on right -->
@@ -78,8 +93,8 @@ const { t } = useAsTexts();
             name="header"
             :input-id="inputId"
             :desc-id="descId"
-            :optional-enabled="optionalEnabled"
-            :is-dirty="!!isDirty"
+            :optional-enabled="chromeEnabled"
+            :is-dirty="shownDirty"
             :status-id="statusId"
           />
         </template>
@@ -120,12 +135,12 @@ const { t } = useAsTexts();
       <AsNoData :kind="type === 'textarea' ? 'textarea' : 'input'" :on-edit="enableOptional" />
     </template>
     <template v-else>
-      <div class="as-field-input-row">
+      <div class="as-field-input-row" @focusin="onFocusin" @focusout="onFocusout">
         <slot :input-id="inputId" :error-id="errorId" :desc-id="descId" />
       </div>
       <slot name="after-input" :desc-id="descId" />
       <div
-        v-if="error || hint || formAction || isDirty || $slots.status"
+        v-if="error || hint || formAction || shownDirty || $slots.status"
         class="as-field-footer-row"
       >
         <!-- `status` owns the whole error/hint/announcement area: overriding it
@@ -133,7 +148,7 @@ const { t } = useAsTexts();
              node so `aria-describedby` still resolves). -->
         <slot
           name="status"
-          :is-dirty="!!isDirty"
+          :is-dirty="shownDirty"
           :error="error"
           :hint="hint"
           :status-id="statusId"
@@ -154,7 +169,7 @@ const { t } = useAsTexts();
                through `aria-describedby` instead, which AsField appends on
                exactly this `isDirty` condition, so a clean field never points
                at a missing node. -->
-          <span v-if="isDirty" :id="statusId" class="as-field-status">{{
+          <span v-if="shownDirty" :id="statusId" class="as-field-status">{{
             t("UI_FORM_MODIFIED")
           }}</span>
         </slot>

@@ -33,6 +33,12 @@ export interface OptionalObjectUnionForm {
     backupContact?: EmailContact | PhoneContact
 }
 
+// Optional primitive union — a text and a plain number variant.
+export interface OptionalPrimitiveUnionForm {
+    @meta.label 'Reference'
+    reference?: string | number
+}
+
 // Heterogeneous primitive union — variant picker switches input type.
 export interface PrimitiveUnionForm {
     @meta.label 'Quantity or label'

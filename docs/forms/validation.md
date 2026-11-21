@@ -56,10 +56,9 @@ the validator's format-specific message.
 empty". vue-form does **not** paint the required marker on these.
 
 Since atscript 0.1.103 such a field rejects `null` (it may only be
-omitted). An emptied date, datetime, time, number or decimal input on an
-optional field therefore commits `undefined` (since 0.1.153); on a
-non-optional field it keeps committing `null`. Declare the field
-`field?: string | null` when `null` is a value your API accepts.
+omitted). An emptied default input on an optional field therefore commits
+`undefined`, never `null` — see [Emptied inputs](#emptied-inputs). Declare
+the field `field?: string | null` when `null` is a value your API accepts.
 :::
 
 ### Layer 3: `@ui.form.validate`
@@ -144,6 +143,48 @@ surrounding spaces now fails in the browser, as it always did on the server.
   twice changes nothing.
 - Building your own form root? `getFormValidator(def).normalize(data)` does
   the same step ([@atscript/ui reference](/api/ui#getformvalidator-def-opts)).
+
+## Emptied inputs
+
+What a default input writes when the user deletes its whole value:
+
+| Input                                                            | Optional field (`name?: T`) | Required field |
+| ---------------------------------------------------------------- | --------------------------- | -------------- |
+| text, password, textarea, the plain-text fallback of a reference | `undefined`                 | `""`           |
+| number, decimal, date, datetime, time                            | `undefined`                 | `null`         |
+
+`undefined` means the optional field is not set:
+
+- **The validator skips it** — `@meta.required`, `@expect.minLength`,
+  `@expect.pattern` and `@ui.form.validate` don't run — so an optional e-mail
+  the user cleared is no error.
+- **A create form leaves it out of the payload**: the submitted data holds it
+  as `undefined`, which JSON drops, so a column default (`@db.default`)
+  applies instead of an empty string.
+- **[Change tracking](/forms/change-tracking)** sends `null` for a field that
+  had a value. A field stored unset — absent or `null` — that the user types
+  into and empties again is no change, at any depth (nested objects and array
+  rows too; since 0.1.176 — before, a stored `null` counted as changed). A
+  field stored as `""` (earlier versions saved emptied text
+  inputs that way) is a change: after emptying it is unset, sent as `null`.
+
+The input stays in place while focus is in it, so the user can keep typing —
+also through a window or app switch. The clear button and the "modified"
+marker stay too, and an optional union keeps its variant. Once focus leaves,
+the field shows its "Not set" placeholder (a union its "Add" button), as
+after the clear button.
+
+- _Since 0.1.176_ for the text inputs and for a number input without prefix,
+  suffix or unit (the native number input): before, they held `""` — on
+  optional fields too, where the validator then ran every rule against it.
+  The other inputs follow the rule since 0.1.153. The input staying in place
+  while focused is new in 0.1.176 as well.
+- **Click to edit** starts a field with its `@meta.default`, else with `""`
+  (text inputs, and date / time inputs over a string), `0` (number inputs,
+  and date / time inputs over a number) or `"0"` (decimal). A text field left
+  untouched at `""` is a value: `@meta.required` still reports it.
+- A custom input component writes the model itself: commit `undefined` when
+  it is emptied on an optional field (`props.optional`) to behave the same.
 
 ## Messages in the user's language
 

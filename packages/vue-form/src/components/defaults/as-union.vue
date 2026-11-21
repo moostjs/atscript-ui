@@ -9,6 +9,7 @@ import { UNION_CONTEXT_KEY } from "../../composables/internal-keys";
 import { useAsTexts } from "../../composables/use-as-locale";
 import { useAsModelTexts } from "../../composables/use-as-model-texts";
 import { variantLabel } from "../../composables/variant-label";
+import { provideEditingHold } from "../../composables/_editing-hold";
 
 const props = defineProps<TAsComponentProps>();
 
@@ -33,6 +34,11 @@ const unionCtx: TAsUnionContext | undefined = unionField.value
     }
   : undefined;
 if (unionCtx) provide(UNION_CONTEXT_KEY, unionCtx);
+
+// Emptying a primitive variant's input unsets an optional union (the default
+// inputs commit `undefined`): the variant stays while its input row has focus,
+// the "Add" placeholder shows once focus leaves it.
+const editing = provideEditingHold();
 
 const variantComponent = computed(() =>
   innerField.value ? types.value?.[innerField.value.type] : undefined,
@@ -82,7 +88,7 @@ const modelT = useAsModelTexts();
 
 <template>
   <div
-    v-if="optional && !optionalEnabled"
+    v-if="optional && !optionalEnabled && !editing"
     ref="rootRef"
     class="as-object-empty as-grid-item"
     :class="$props.class"

@@ -184,6 +184,12 @@ hidden "Modified" node — see
 [Change tracking](/forms/change-tracking#announcing-it-to-screen-readers) for
 the override recipe.
 
+An optional field the user just emptied keeps your control on screen while
+focus is inside the `default` slot's row; meanwhile `optionalEnabled` on
+`header` stays `true` and `isDirty` on `header` / `status` does not turn off.
+The "Not set" placeholder shows once focus leaves — see
+[Emptied inputs](/forms/validation#emptied-inputs) (since 0.1.176).
+
 `ColorSwatch.vue`, `StarRating.vue`, `TagInput.vue`,
 `NumberStepper.vue`, and `GrowingTextarea.vue` are typical working
 examples of this pattern.

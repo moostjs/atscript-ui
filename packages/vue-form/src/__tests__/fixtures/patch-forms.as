@@ -80,3 +80,42 @@ export interface PatchSectionForm {
         zip: string
     }
 }
+
+// ── Emptied optional text inputs at every depth ──────────────
+
+export interface PatchContact {
+    email: string
+
+    phone?: string
+}
+
+/// An optional text leaf at the top level (`remark`), in a nested object
+/// (`contact.phone`, merge strategy: the patch carries the changed leaves, a
+/// cleared one as `null`) and in a keyed-array row (`items[].note`).
+export interface PatchEmptiedTextForm {
+    name: string
+
+    remark?: string
+
+    @db.patch.strategy 'merge'
+    contact: PatchContact
+
+    items: PatchCartLine[]
+}
+
+// ── Composite-key array ──────────────────────────────────────
+
+export interface PatchStockLine {
+    @expect.array.key
+    warehouse: string
+
+    @expect.array.key
+    sku: string
+
+    qty: number
+}
+
+export interface PatchStockForm {
+    @meta.label 'Stock'
+    stock: PatchStockLine[]
+}

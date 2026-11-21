@@ -236,6 +236,11 @@ with its defaults; subsequent picks switch through the stash.
 Closing the placeholder sets `primaryContact` back to `undefined` and
 clears the stash.
 
+Emptying the input of a primitive variant (`reference?: string | number`)
+unsets the union too — the [emptied-input rule](/forms/validation#emptied-inputs).
+The variant stays while its input has focus, so the user can type on; the
+"Add" placeholder shows once focus leaves (since 0.1.176).
+
 ## Union-item arrays
 
 `events: EventA | EventB[]` renders the Add button as a multi-action

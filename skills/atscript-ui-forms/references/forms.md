@@ -189,7 +189,21 @@ Three layers, run in order on submit. Live (pre-submit) validation runs only the
 | `@meta.required`            | Implicit non-empty check                     | Same as above. Renders the `*` marker.                                                                                                          |
 | `@ui.form.validate '(...)'` | Custom validator strings (requires ui-fns)   | Same as above. Receives `TFnScope` with `v`/`data`/`context`/`entry`.                                                                           |
 
-Optional + `@meta.required` (`name?: string`): atscript ≥ 0.1.103 rejects `null` there. Emptied date / datetime / time / number / decimal inputs on optional fields commit `undefined` (0.1.153); non-optional keep `null`. Custom input components on optional fields must also commit `undefined`, not `null`, when emptied (use `props.optional`).
+Optional + `@meta.required` (`name?: string`): atscript ≥ 0.1.103 rejects `null` there.
+
+**Emptied inputs** — what a default input writes when the user deletes its whole value:
+
+| Input                                                   | Optional field | Required field |
+| ------------------------------------------------------- | -------------- | -------------- |
+| text / password / textarea, `AsRef` plain-text fallback | `undefined`    | `""`           |
+| number / decimal / date / datetime / time               | `undefined`    | `null`         |
+
+- `undefined` = unset: the validator skips the field (no `@meta.required`, `@expect.*`, `@ui.form.validate`); a create form's submit data holds it as `undefined`, dropped by JSON (a `@db.default` applies); the patch sends `null` for a stored value (left out of a whole keyed-array `$update` item).
+- Typed-then-emptied is no change when the stored value is unset — absent or `null` — at any depth (diff: `null` ≡ `undefined` ≡ absent, 0.1.176+). Stored `""` (older versions saved emptied text that way) → a change, sent as `null`.
+- Text inputs + the plain number input (no prefix/suffix/unit) since 0.1.176 — before they held `""`, also on optional fields (validated as `""`, sent as `""`). The others since 0.1.153.
+- Held editor (0.1.176): while focus is in the input row the input, its clear button and the dirty marker stay (also across a window/app switch), and an optional UNION keeps its variant; "Not set" / the union's "Add" shows after blur.
+- "Click to edit" starts the field at its `@meta.default`, else `""` (text; date/time over a string), `0` (number; date/time over a number) or `"0"` (decimal). Untouched `""` is a value: `@meta.required` still fails.
+- Custom input components write the model themselves: commit `undefined` (not `null`, not `""`) when emptied on an optional field (`props.optional`).
 
 `@expect.*` rules live in the atscript skill — see `expect.md` there for the catalog.
 

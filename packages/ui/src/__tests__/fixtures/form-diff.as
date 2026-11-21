@@ -224,6 +224,34 @@ export interface NestedKeyedArraysForm {
     order: OrderSection
 }
 
+// ── Unset values at every depth ──────────────────────────────
+
+@meta.label 'Profile'
+type UnsetProfile = {
+    bio: string
+    nick?: string
+}
+
+export interface UnsetLine {
+    label: string
+
+    note?: string
+}
+
+/// Optional leaves at the top level, in a merge nested object, in an unkeyed
+/// object array and in a keyed one — drives the unset equivalence (`null`,
+/// `undefined` and an absent prop are one value) and the `""` baseline.
+export interface UnsetForm {
+    note?: string
+
+    @db.patch.strategy 'merge'
+    profile: UnsetProfile
+
+    lines: UnsetLine[]
+
+    items: CartLine[]
+}
+
 // ── Primitive array (unkeyed) ────────────────────────────────
 
 /// Plain string array — unkeyed, drives $replace.

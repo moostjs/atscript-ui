@@ -20,6 +20,7 @@
 // version, reorders items, or changes a baseline value, update the constants
 // below to match (the spec reads them, not the page).
 //   - baseline `reference` = "ORD-2026-0042"
+//   - baseline `notes`     = "Leave at the loading dock" (optional text field)
 //   - baseline `address`   = { street, city: "San Francisco", postcode }
 //   - baseline `items`     = [ {sku:"SKU-001", description:"Standard widget", qty:3},
 //                              {sku:"SKU-002", description:"Deluxe widget", qty:1} ]
@@ -43,9 +44,12 @@
 // No arbitrary sleeps / fixed timeouts — every assertion is a web-first
 // auto-waiting matcher, and patch JSON is parsed + structurally asserted.
 
+import { existsSync } from "node:fs";
+import { chromium } from "@playwright/test";
 import { expect, test, type Locator, type Page } from "../fixtures";
 
 const BASELINE_REFERENCE = "ORD-2026-0042";
+const BASELINE_NOTES = "Leave at the loading dock";
 const BASELINE_VERSION = 7;
 const CAS = { version: BASELINE_VERSION };
 
@@ -161,6 +165,81 @@ test.describe("Section 18 — form change tracking · live patch", () => {
       .poll(async () => await readLivePatch(page))
       .toEqual({ status: "shipped", $cas: CAS });
     await expect(changeRows(page).filter({ hasText: "set · status" })).toHaveCount(1);
+  });
+
+  test("empty the optional Notes field: it stays in place while focused, the patch clears it (null), then it reads Not set", async ({
+    page,
+  }) => {
+    const notes = form(page).getByLabel(labelRegex("Notes"));
+    await expect(notes).toHaveValue(BASELINE_NOTES);
+
+    // Empty it from the keyboard, the way a user does.
+    await notes.click();
+    await notes.press("ControlOrMeta+a");
+    await notes.press("Backspace");
+
+    // An emptied optional text input unsets the field (since 0.1.176) — sent
+    // as a clear (`null`), never as "". The input stays while focus is in it.
+    await expect(notes).toBeFocused();
+    await expect(notes).toHaveValue("");
+    await expect.poll(async () => await readLivePatch(page)).toEqual({ notes: null, $cas: CAS });
+    await expect(changeRows(page).filter({ hasText: "set · notes" })).toHaveCount(1);
+
+    // Focus leaves → the unset optional field renders its "Not set" placeholder.
+    await notes.blur();
+    const notesField = form(page).locator(".as-default-field", {
+      has: page.locator(".as-field-label", { hasText: labelRegex("Notes") }),
+    });
+    await expect(notesField.locator(".as-no-data")).toBeVisible();
+    await expect(notesField.locator("input")).toHaveCount(0);
+  });
+
+  test("a window switch while the emptied Notes field has focus keeps it: focus comes back to it", async ({
+    baseURL,
+    context,
+  }) => {
+    // The suite's headless shell emulates focus, so a window switch never
+    // blurs the page there. The full Chromium build with focus emulation off
+    // does: `focusout` with no `relatedTarget`, the input staying the active
+    // element.
+    test.skip(
+      !existsSync(chromium.executablePath()),
+      "needs the full Chromium build, not only the headless shell — run `pnpm test:e2e:install`",
+    );
+    const browser = await chromium.launch({ channel: "chromium" });
+    try {
+      const ctx = await browser.newContext({ baseURL, storageState: await context.storageState() });
+      const page = await ctx.newPage();
+      const focusEmulationOff = async (p: Page) =>
+        (await ctx.newCDPSession(p)).send("Emulation.setFocusEmulationEnabled", { enabled: false });
+      await focusEmulationOff(page);
+      await gotoDemo(page);
+
+      const notes = form(page).getByLabel(labelRegex("Notes"));
+      await notes.click();
+      await notes.press("ControlOrMeta+a");
+      await notes.press("Backspace");
+      await expect.poll(async () => await readLivePatch(page)).toEqual({ notes: null, $cas: CAS });
+
+      // Switch to another window.
+      const other = await ctx.newPage();
+      await focusEmulationOff(other);
+      await other.bringToFront();
+      await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(false);
+      await expect(notes).toHaveCount(1);
+      expect(await page.evaluate(() => document.activeElement?.getAttribute("name"))).toBe("notes");
+
+      // Back: the input is still there, focused; typing goes on in it.
+      await page.bringToFront();
+      await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
+      await expect(notes).toBeFocused();
+      await page.keyboard.type("Ring twice");
+      await expect
+        .poll(async () => await readLivePatch(page))
+        .toEqual({ notes: "Ring twice", $cas: CAS });
+    } finally {
+      await browser.close();
+    }
   });
 
   test("edit a merge-strategy address leaf (City): patch emits ONLY the changed leaf, not the whole address", async ({

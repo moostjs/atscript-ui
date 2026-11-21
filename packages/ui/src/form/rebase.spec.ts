@@ -109,6 +109,18 @@ describe("buildFormRebase — same-path conflicts", () => {
     // next === upstream → no surviving diff.
     expect(r.reapplied).toEqual([]);
   });
+
+  it("both sides cleared the field — local to undefined, upstream to null → NO conflict (since 0.1.176)", () => {
+    const def = createFormDef(RebaseScalarForm);
+    const baseline = wrap<Record<string, unknown>>({ name: "Ada", nick: "A" });
+    const current = wrap<Record<string, unknown>>({ name: "Ada", nick: undefined });
+    const upstream = wrap<Record<string, unknown>>({ name: "Ada", nick: null });
+
+    const r = buildFormRebase(def, baseline, current, upstream);
+
+    expect(r.conflicts).toEqual([]);
+    expect(r.reapplied).toEqual([]);
+  });
 });
 
 // ── Nested-object leaf granularity ───────────────────────────

@@ -504,8 +504,18 @@ changed items become `$update`, new items `$insert` (whole), dropped items
 `$remove` (key only). The db applies them in place and appends inserted
 items at the end, so the diff falls back to a whole-array `$replace`
 whenever that would not give the form's order — a reorder, a new row placed
-before existing ones, an edited key on a row that isn't last — and when
-keys are duplicate or missing. A row appended at the end stays `$insert`.
+before existing ones, an edited key on a row that isn't last — when keys are
+duplicate or a row lacks all of its key values, and when a row the operators
+would name (an updated, removed or inserted one) lacks any of its key values
+(`null` / missing). With several `@expect.array.key` fields one missing value
+is enough — e.g. a stored row whose `warehouse` column is NULL, edited or
+removed: under `$replace` the db validates the whole array and reports the
+missing field on its own path (since 0.1.176 — before, the row went into the
+key operators, which the db refuses: `PATCH_KEY_REQUIRED`). A stored row with
+an incomplete key that the user leaves alone does not stop other rows' edits
+from being key operators, and a row the user adds holds `""` keys until
+filled in — present values, so it stays `$insert`. A row appended at the end
+stays `$insert`.
 Unkeyed / primitive arrays always `$replace` (a `uniqueItems` primitive
 array may use by-value `$insert`/`$remove` instead).
 
@@ -528,11 +538,19 @@ export interface Order {
 }
 ```
 
-Under the default strategy a cleared field travels as the form holds it.
-Turned off with the optional toggle, or emptied in a default number,
-decimal, date or time input of an optional field, it is `undefined` and left
-out of the item. Emptied in such an input of a required field it is `null`,
-sent as `null`. An emptied text input holds `""`.
+Under the default strategy a cleared field travels as the form holds it:
+turned off with the optional toggle, or emptied in a default input of an
+optional field, it is `undefined` and left out of the item; emptied on a
+required field it holds `null` or `""` (see
+[Emptied inputs](/forms/validation#emptied-inputs)), sent as is. Before
+0.1.176 an emptied text input held `""` on optional fields too, and was sent
+as `""`.
+
+Unset is one value to the diff (since 0.1.176): `null`, `undefined` and a
+missing field are equal at any depth, so a row field loaded as `null` that
+the form now holds as `undefined` changes nothing — in keyed and unkeyed
+arrays alike (before 0.1.176 the row went out as a `$update`, an unkeyed
+array was re-sent whole as `$replace`). `""` is a value, not unset.
 
 Since 0.1.175 — earlier versions always sent the key plus the changed
 fields, which the db rejects under the default strategy when the item has

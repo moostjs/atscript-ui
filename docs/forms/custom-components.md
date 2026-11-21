@@ -119,6 +119,11 @@ Notes:
 - The shell exposes the resolved `inputId` via the default slot scope — put it
   on your innermost control so the shell's `<label :for>` works.
 - `onBlur` is a prop (not an emit). Call it from your control's blur handler.
+- Emptied by the user on an optional field (`props.optional`), commit
+  `undefined`, as the default inputs do — see
+  [Emptied inputs](/forms/validation#emptied-inputs). The shell keeps your
+  control on screen while focus is inside it and shows the "Not set"
+  placeholder once focus leaves (since 0.1.176).
 - The default slot sits in a flex **row**. A single root element there fills
   the row and may shrink below its content width (`flex: 1; min-width: 0`), so
   a custom control is as wide as a built-in input. Render several roots side

@@ -1,7 +1,7 @@
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
 import { createFormDef } from "./create-form-def";
-import { buildFormDiff } from "./diff";
+import { buildFormDiff, deepEqual } from "./diff";
 import {
   ComboForm,
   CompositeKeyArrayForm,
@@ -24,6 +24,7 @@ import {
   StructNestedForm,
   UnionTupleForm,
   UniqueArrayForm,
+  UnsetForm,
   VersionedForm,
 } from "../__tests__/fixtures/form-diff.as";
 import { CountedRow, StampedRow } from "../__tests__/fixtures/update-stamps.as";
@@ -33,6 +34,15 @@ import { CountedRow, StampedRow } from "../__tests__/fixtures/update-stamps.as";
 /** Wrap domain data as the form-data container expected by getByPath. */
 function wrap<T>(value: T): { value: T } {
   return { value };
+}
+
+/** The patch of `KeyedArrayForm` for an `items` baseline → current. */
+function diffItems(before: unknown[], after: unknown[]) {
+  return buildFormDiff(
+    createFormDef(KeyedArrayForm),
+    wrap({ items: before }),
+    wrap({ items: after }),
+  ).patch;
 }
 
 /** Pull a prop type from a fixture interface by name (for root-leaf forms). */
@@ -196,6 +206,25 @@ describe("buildFormDiff — nested objects (@db.patch.strategy 'merge')", () => 
     expect(r.patch).toEqual({ profile: null });
   });
 
+  // No leaf differs (every one is unset on both sides), yet the object goes
+  // from stored to removed: the removal is the change, so a save gated on
+  // `isDirty` can send the clear.
+  it.each([
+    ["all leaves null", { bio: null, nick: null }],
+    ["no leaves", {}],
+  ])("wholesale-clear an optional object with %s → dirty, profile: null", (_name, profile) => {
+    const def = createFormDef(OptionalMergeForm);
+    const baseline = wrap({ name: "Co", profile });
+    const current = wrap({ name: "Co" });
+    const r = buildFormDiff(def, baseline, current);
+
+    expect(r.isDirty).toBe(true);
+    expect(r.changes).toEqual([
+      { path: "profile", kind: "set", before: profile, after: undefined },
+    ]);
+    expect(r.patch).toEqual({ profile: null });
+  });
+
   it("inlined object tagged 'merge' → changed-leaf partial (strategy read via flatMap)", () => {
     const def = createFormDef(InlineMergeForm);
     const baseline = wrap({ name: "Co", address: { street: "1 Main", city: "NYC" } });
@@ -353,6 +382,79 @@ describe("buildFormDiff — keyed arrays (@expect.array.key)", () => {
   });
 });
 
+// ── Unset values ─────────────────────────────────────────────
+
+// Since 0.1.176 `null`, `undefined` and an absent prop are one value (unset):
+// a field stored as `null` that the form holds as `undefined` (an emptied input
+// of an optional field) is no change, at every depth. A stored `""` is a value.
+describe("buildFormDiff — unset values", () => {
+  const diff = (before: unknown, after: unknown) =>
+    buildFormDiff(createFormDef(UnsetForm), wrap(before), wrap(after));
+
+  it("stored null, held undefined → no change at the top level, in a nested object, an unkeyed and a keyed row", () => {
+    const r = diff(
+      {
+        note: null,
+        profile: { bio: "b", nick: null },
+        lines: [{ label: "L", note: null }],
+        items: [{ sku: "A", qty: 1, note: null }],
+      },
+      {
+        note: undefined,
+        profile: { bio: "b", nick: undefined },
+        lines: [{ label: "L", note: undefined }],
+        items: [{ sku: "A", qty: 1, note: undefined }],
+      },
+    );
+    expect(r.isDirty).toBe(false);
+    expect(r.changes).toEqual([]);
+    expect(r.patch).toEqual({});
+  });
+
+  it("an optional prop emptied to undefined in an unkeyed row equals the absent prop → no no-op $replace", () => {
+    const base = { profile: { bio: "b" }, lines: [{ label: "L" }], items: [] };
+    const r = diff(base, { ...base, lines: [{ label: "L", note: undefined }] });
+    expect(r.isDirty).toBe(false);
+    expect(r.patch).toEqual({});
+  });
+
+  it('a stored "" held as undefined is a change — cleared (null / left out of the row), at every depth', () => {
+    const r = diff(
+      {
+        note: "",
+        profile: { bio: "b", nick: "" },
+        lines: [{ label: "L", note: "" }],
+        items: [{ sku: "A", qty: 1, note: "" }],
+      },
+      {
+        profile: { bio: "b" },
+        lines: [{ label: "L" }],
+        items: [{ sku: "A", qty: 1 }],
+      },
+    );
+    expect(r.patch).toStrictEqual({
+      note: null,
+      profile: { nick: null },
+      lines: { $replace: [{ label: "L" }] },
+      items: { $update: [{ sku: "A", qty: 1 }] },
+    });
+  });
+
+  it('deepEqual: null, undefined and an absent prop are equal; "", 0 and {} are values', () => {
+    expect(deepEqual(null, undefined)).toBe(true);
+    expect(deepEqual({ a: 1, b: undefined }, { a: 1 })).toBe(true);
+    expect(deepEqual({ a: 1 }, { a: 1, b: null })).toBe(true);
+    expect(deepEqual([{ a: null }], [{}])).toBe(true);
+    expect(deepEqual({ a: "" }, {})).toBe(false);
+    expect(deepEqual({}, { a: "" })).toBe(false);
+    expect(deepEqual("", undefined)).toBe(false);
+    expect(deepEqual({ a: 0 }, { a: null })).toBe(false);
+    expect(deepEqual(null, {})).toBe(false);
+    expect(deepEqual({ constructor: 1 }, {})).toBe(false);
+    expect(deepEqual({}, { constructor: 1 })).toBe(false);
+  });
+});
+
 // ── Keyed arrays — ambiguity fallbacks ───────────────────────
 
 describe("buildFormDiff — keyed arrays (ambiguity fallbacks)", () => {
@@ -379,6 +481,21 @@ describe("buildFormDiff — keyed arrays (ambiguity fallbacks)", () => {
     expect(r.patch).toEqual({ items: { $replace: [{ qty: 2 }] } });
   });
 
+  // Pins the single-key behaviour, unchanged by 0.1.176 (there one missing key
+  // value is all of them).
+  it("single key (unchanged): a null key value on either side → $replace; complete keys keep the key operators", () => {
+    const nullKey = { sku: null, qty: 2 };
+    expect(diffItems([{ sku: "A", qty: 1 }], [{ sku: "A", qty: 1 }, nullKey])).toStrictEqual({
+      items: { $replace: [{ sku: "A", qty: 1 }, nullKey] },
+    });
+    expect(diffItems([nullKey], [{ sku: "A", qty: 1 }])).toStrictEqual({
+      items: { $replace: [{ sku: "A", qty: 1 }] },
+    });
+    expect(diffItems([{ sku: "A", qty: 1 }], [{ sku: "A", qty: 4 }])).toStrictEqual({
+      items: { $update: [{ sku: "A", qty: 4 }] },
+    });
+  });
+
   it("explicit undefined-valued prop equal to absent → no op, no malformed {}", () => {
     const def = createFormDef(KeyedArrayForm);
     const baseline = wrap({
@@ -395,9 +512,6 @@ describe("buildFormDiff — keyed arrays (ambiguity fallbacks)", () => {
 // ── Keyed arrays — order the key operators cannot express ────
 
 describe("buildFormDiff — keyed arrays (order: key operators or $replace)", () => {
-  const diffItems = (before: unknown[], after: unknown[]) =>
-    buildFormDiff(createFormDef(KeyedArrayForm), wrap({ items: before }), wrap({ items: after }))
-      .patch;
   const A = { sku: "A", qty: 1 };
   const B = { sku: "B", qty: 2 };
   const C = { sku: "C", qty: 3 };
@@ -689,6 +803,65 @@ describe("buildFormDiff — composite-key arrays (two @expect.array.key)", () =>
     const r = buildFormDiff(def, baseline, current);
 
     expect(r.patch).toEqual({ stock: { $remove: [{ warehouse: "W2", sku: "A" }] } });
+  });
+
+  // Since 0.1.176: an element a key operator would name must carry every key
+  // value — before, such an item went out and the db refused the patch
+  // (`PATCH_KEY_REQUIRED`). An untouched row with an incomplete key names no
+  // operator and leaves the other rows' operators alone, as before.
+  describe("an element with an incomplete composite key", () => {
+    const diffStock = (before: unknown[], after: unknown[]) =>
+      buildFormDiff(
+        createFormDef(CompositeKeyArrayForm),
+        wrap({ stock: before }),
+        wrap({ stock: after }),
+      ).patch;
+    const W1 = { warehouse: "W1", sku: "A", qty: 1 };
+    const W2 = { warehouse: "W2", sku: "A", qty: 5 };
+    const noWarehouse = { sku: "B", qty: 3 };
+
+    it("a new row without its sku → $replace (not an $insert)", () => {
+      const after = [W1, W2, { warehouse: "W3", qty: 2 }];
+      expect(diffStock([W1, W2], after)).toStrictEqual({ stock: { $replace: after } });
+    });
+
+    it("a row whose sku was cleared to null → $replace (not a $remove + $insert)", () => {
+      const after = [W1, { ...W2, sku: null, qty: 6 }];
+      expect(diffStock([W1, W2], after)).toStrictEqual({ stock: { $replace: after } });
+    });
+
+    it("an edited stored row without its warehouse → $replace (not an $update)", () => {
+      const after = [W1, { ...noWarehouse, qty: 9 }];
+      expect(diffStock([W1, noWarehouse], after)).toStrictEqual({ stock: { $replace: after } });
+    });
+
+    it("a removed stored row whose warehouse is undefined → $replace (not a $remove)", () => {
+      const partial = { warehouse: undefined, sku: "B", qty: 3 };
+      expect(diffStock([W1, partial], [W1])).toStrictEqual({ stock: { $replace: [W1] } });
+    });
+
+    it("an untouched stored row without its warehouse leaves an edit of another row a $update", () => {
+      expect(diffStock([W1, noWarehouse], [{ ...W1, qty: 9 }, noWarehouse])).toStrictEqual({
+        stock: { $update: [{ ...W1, qty: 9 }] },
+      });
+    });
+
+    it("an untouched stored row without its warehouse leaves an appended row an $insert", () => {
+      const W3 = { warehouse: "W3", sku: "C", qty: 2 };
+      expect(diffStock([W1, noWarehouse], [W1, noWarehouse, W3])).toStrictEqual({
+        stock: { $insert: [W3] },
+      });
+    });
+
+    it("a stored row missing ALL its key values is ambiguous → $replace even untouched (unchanged)", () => {
+      const keyless = { qty: 3 };
+      const after = [{ ...W1, qty: 9 }, keyless];
+      expect(diffStock([W1, keyless], after)).toStrictEqual({ stock: { $replace: after } });
+    });
+
+    it("an unchanged array holding such a row → no patch entry", () => {
+      expect(diffStock([W1, noWarehouse], [{ ...W1 }, { ...noWarehouse }])).toStrictEqual({});
+    });
   });
 });
 

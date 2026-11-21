@@ -13,6 +13,7 @@ import { ref } from "vue";
 import { useAsValueHelp } from "../../composables/use-as-value-help";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
+import AsInputControl from "../internal/as-input-control.vue";
 import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps>();
@@ -44,20 +45,11 @@ const { t } = useAsTexts();
   <AsFieldShell v-bind="$props">
     <template #default="{ inputId }">
       <!-- Fallback: plain text input when no ValueHelpInfo or target meta unreachable -->
-      <input
+      <AsInputControl
         v-if="!info || !vh || status === 'error'"
-        :id="inputId"
-        v-model="model.value"
+        v-bind="$props"
         type="text"
-        :name="name"
-        :placeholder="placeholder"
-        :disabled="disabled"
-        :readonly="readonly"
-        :aria-required="required || undefined"
-        :aria-invalid="!!error || undefined"
-        :aria-describedby="ariaDescribedBy"
-        :aria-label="!label ? name : undefined"
-        @blur="onBlur"
+        :input-id="inputId"
       />
 
       <div v-else-if="status === 'loading' || !resolved" class="as-ref-loading">
