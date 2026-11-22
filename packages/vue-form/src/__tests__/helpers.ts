@@ -61,8 +61,8 @@ export function mountForm(
     trackChanges?: boolean;
     /** Options for `createFormDef` (e.g. `mode: "edit"`). */
     defOptions?: CreateFormDefOptions;
-    /** Render probe content into the `form.before` slot (inside AsForm providers). */
-    slot?: () => VNode | VNode[];
+    /** Render probe content into the `form.before` slot (inside AsForm providers; gets the slot props). */
+    slot?: (slotProps: any) => VNode | VNode[];
     /** Mount into the document (focus / `document.activeElement` need it). */
     attachTo?: Element;
   },

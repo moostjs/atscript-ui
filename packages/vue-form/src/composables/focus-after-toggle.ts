@@ -48,6 +48,46 @@ export async function focusNewFocusableAfter(
   }
 }
 
+// A reset hands focus back to the first field control of any kind — unlike the
+// toggle helpers above, a checkbox or radio counts. Buttons and <summary> do not.
+// Disabled controls match too: `resetKeepingFocus` skips whatever refuses focus.
+const FIELD_CONTROL_SELECTOR = [
+  "input:not([type=hidden]):not([type=button]):not([type=submit]):not([type=reset]):not([type=image])",
+  "select",
+  "textarea",
+].join(",");
+
+/**
+ * Run a form reset that remounts the field tree inside `root`. When the reset
+ * removed or disabled the focused element of `root` and nothing else took
+ * focus, focus the first field control it created that takes focus
+ * (`tabindex="-1"` skipped). Focus anywhere else is left alone. Backs
+ * `<AsForm>`'s reset; not exported from the package.
+ */
+export async function resetKeepingFocus(
+  reset: () => Promise<void>,
+  root: HTMLElement | null | undefined,
+): Promise<void> {
+  if (!root) return reset();
+  // The shadow root when the form renders inside one (no `activeElement` when detached).
+  const scope = root.getRootNode() as Document | ShadowRoot;
+  const focused = scope.activeElement;
+  if (!focused || !root.contains(focused)) return reset();
+  const known = new Set(root.querySelectorAll(FIELD_CONTROL_SELECTOR));
+  await reset();
+  await nextTick(); // the render the reset caused, e.g. a Reset button disabled once clean
+  if (focused.isConnected && !focused.matches(":disabled")) return;
+  // A just-disabled element stays active until the next frame (Chromium).
+  const doc = root.ownerDocument;
+  const focusTaken = () => doc.activeElement !== doc.body && scope.activeElement !== focused;
+  if (focusTaken()) return;
+  for (const el of root.querySelectorAll<HTMLElement>(FIELD_CONTROL_SELECTOR)) {
+    if (known.has(el) || el.tabIndex < 0) continue;
+    el.focus(); // a disabled or hidden control refuses it: try the next one
+    if (focusTaken()) return;
+  }
+}
+
 /** Sugar over `focusFirstAfter` scoped to a template ref. */
 export function useAsFocusFirstAfter(onToggleOptional?: (enabled: boolean) => void): {
   rootRef: Ref<HTMLElement | null>;

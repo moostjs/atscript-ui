@@ -179,7 +179,9 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
    * live errors are cleared; a server error (`errors`) is dismissed where the
    * reset changed the value — on other paths, and the external `__form`
    * banner, it stays. When `trackChanges` is enabled, the post-reset state
-   * becomes the new clean baseline.
+   * becomes the new clean baseline. Focus is left alone: `<AsForm>` moves it
+   * to the first field control when the reset removed or disabled the
+   * focused element.
    */
   reset: () => Promise<void>;
   /**

@@ -326,7 +326,11 @@ interface UseAsFormReturn<TFormData, TFormContext> {
   errors: ComputedRef<Record<string, string | undefined> | undefined>;
   formError: ComputedRef<string | undefined>;
   internalErrors: Ref<Record<string, string>>;
-  /** The form's fields back to a new form's values, errors cleared — see [What `reset()` does](/forms/validation#what-reset-does). */
+  /**
+   * The form's fields back to a new form's values, errors cleared — see [What `reset()` does](/forms/validation#what-reset-does).
+   * Leaves focus where it is; `<AsForm>`'s own reset also moves focus to the first field control
+   * when the reset removed or disabled the focused element (since 0.1.178).
+   */
   reset: () => Promise<void>;
   clearErrors: () => void;
   setErrors: (errors: Record<string, string>) => void;
@@ -757,12 +761,35 @@ function useAsTriStateCheckbox(options: UseAsTriStateCheckboxOptions): UseAsTriS
 
 ### `useAsFocusFirstAfter()` / `focusFirstAfter(...)` / `focusNewFocusableAfter(...)`
 
-Focus utilities for "after-toggle" flows — moves DOM focus to the first focusable element added to a region after a toggle.
+Focus utilities for "after-toggle" flows (switching an optional field on, adding a row): run an action, wait for the DOM to update, then move focus into a region. They focus inputs, selects and textareas only — not checkboxes, radio buttons or buttons, which the user reaches with Tab.
 
 ```typescript
-function useAsFocusFirstAfter(): { focusAfter: () => void };
-function focusFirstAfter(host: HTMLElement | undefined): void;
-function focusNewFocusableAfter(prev: HTMLElement[], host: HTMLElement | undefined): void;
+/** Run `action`, wait `ticks` (default 1) `nextTick`s, focus the first input in `scope()`. */
+function focusFirstAfter(
+  action: () => void,
+  scope: () => HTMLElement | null | undefined,
+  ticks?: number,
+): Promise<void>;
+
+/**
+ * Same, but focus the first input that was not in `scope()` before the action
+ * (the just-added row's first input); the first input when the region was not
+ * rendered before.
+ */
+function focusNewFocusableAfter(
+  action: () => void,
+  scope: () => HTMLElement | null | undefined,
+  ticks?: number,
+): Promise<void>;
+
+/** Both helpers scoped to a template ref: bind `rootRef` as the `ref` of the region. */
+function useAsFocusFirstAfter(onToggleOptional?: (enabled: boolean) => void): {
+  rootRef: Ref<HTMLElement | null>;
+  runAndFocus: (action: () => void, ticks?: number) => void;
+  runAndFocusNew: (action: () => void, ticks?: number) => void;
+  /** `runAndFocus(() => onToggleOptional?.(true))` — switch the optional field on and focus it. */
+  enableOptional: () => void;
+};
 ```
 
 ## Composables — date / number / decimal

@@ -1,11 +1,12 @@
 <script setup lang="ts" generic="TFormData = any, TFormContext = any">
+import { computed, ref, type Component } from "vue";
+import { resetKeepingFocus } from "../composables/focus-after-toggle";
 import { useAsForm, type TAsFormValue } from "../composables/use-as-form";
 import type { TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import AsIterator from "./as-iterator.vue";
 import { useAsTexts } from "../composables/use-as-locale";
 import type { ClientFactory, FormDef, FormFieldChange } from "@atscript/ui";
-import type { Component } from "vue";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
 
 export interface Props<TF, TC> {
@@ -100,6 +101,12 @@ const form = useAsForm<TFormData, TFormContext>({
   },
 });
 
+// A reset that removes the focused element moves focus to the first field
+// control instead of `<body>`; the template ref and every slot get this reset.
+const formEl = ref<HTMLFormElement>();
+const reset = () => resetKeepingFocus(form.reset, formEl.value);
+const slotProps = computed(() => ({ ...form.slotProps.value, reset }));
+
 // Imperative surface for a parent template ref (`asForm.value.*`). The change
 // tracker is `undefined` when `track-changes` is off; the getters return empty
 // so a parent can call them unconditionally. `isDirty` / `changes` proxy the
@@ -112,7 +119,7 @@ defineExpose({
    * not validated.
    */
   action: form.invokeAction,
-  reset: form.reset,
+  reset,
   /** Clear all error state (per-field + the submit-time map behind badges). */
   clearErrors: form.clearErrors,
   /** Set external-error messages by path (e.g. mapping a server 400). */
@@ -149,18 +156,18 @@ const { t } = useAsTexts();
 </script>
 
 <template>
-  <form class="as-form" :inert="loading" @submit.prevent="form.onSubmit">
-    <slot name="form.header" v-bind="form.slotProps.value"></slot>
-    <slot name="form.before" v-bind="form.slotProps.value"></slot>
+  <form ref="formEl" class="as-form" :inert="loading" @submit.prevent="form.onSubmit">
+    <slot name="form.header" v-bind="slotProps"></slot>
+    <slot name="form.before" v-bind="slotProps"></slot>
 
     <AsField :key="form.remountKey.value" :field="def.rootField" />
 
-    <slot name="form.after" v-bind="form.slotProps.value"></slot>
+    <slot name="form.after" v-bind="slotProps"></slot>
 
     <slot
       v-if="form.formError.value"
       name="form.error"
-      v-bind="form.slotProps.value"
+      v-bind="slotProps"
       :message="form.formError.value"
       :dismiss="form.dismissFormError"
     >
@@ -172,12 +179,7 @@ const { t } = useAsTexts();
       </div>
     </slot>
 
-    <slot
-      v-if="!hideSubmit"
-      name="form.submit"
-      v-bind="form.slotProps.value"
-      :text="form.submitText.value"
-    >
+    <slot v-if="!hideSubmit" name="form.submit" v-bind="slotProps" :text="form.submitText.value">
       <button type="submit" class="as-submit-btn" :disabled="form.submitDisabled.value">
         {{ form.submitText.value }}
       </button>
@@ -186,9 +188,9 @@ const { t } = useAsTexts();
     <div v-if="def.pushDownFields.length" :key="form.remountKey.value" class="as-form-grid">
       <AsIterator :def="def" :fields="def.pushDownFields" />
     </div>
-    <slot name="form.footer" v-bind="form.slotProps.value"></slot>
+    <slot name="form.footer" v-bind="slotProps"></slot>
     <div v-if="loading" class="as-form-overlay">
-      <slot name="form.loading" v-bind="form.slotProps.value">
+      <slot name="form.loading" v-bind="slotProps">
         <span class="as-form-overlay-icon" aria-hidden="true" />
       </slot>
     </div>

@@ -430,6 +430,10 @@ test.describe("Section 18 — form change tracking · live patch", () => {
 
     await expect(dirtyState(page)).toHaveText("No unsaved changes");
     await expect(saveBtn(page)).toBeDisabled();
+    // The footer Reset button is not part of the remounted field tree and
+    // stays enabled: it keeps focus (since 0.1.178 focus moves only when the
+    // reset removed or disabled the focused element).
+    await expect(page.getByTestId("reset-btn")).toBeFocused();
     await expect(page.getByTestId("live-patch")).toHaveText("{}");
     await expect(changeRows(page)).toHaveCount(0);
     await expect

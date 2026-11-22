@@ -468,6 +468,17 @@ away unsaved edits instead, assign a fresh copy of the stored row to
 reset state is the new baseline: the form is clean and `getPatch()`
 returns `{}`.
 
+Since 0.1.178 a reset keeps keyboard focus in the form. When the focused
+element is removed or disabled by the reset — an input in the fields when a
+keyboard shortcut resets the form, a button of a custom field, or a Reset
+button bound `:disabled="!isDirty"` that the now clean form disables — focus
+moves to the first field control that can take it instead of falling back to
+the page: an input of any kind (a checkbox, or the first radio button of a
+group, too), a select or a textarea. Buttons, and disabled, hidden or
+`tabindex="-1"` controls, are skipped. Focus anywhere else — on a Reset button
+in a `form.footer` slot that stays enabled, outside the form, or nowhere —
+stays where it is.
+
 ::: warning Changed in 0.1.177
 Before 0.1.177 `reset()` wrote `""` into every non-optional field that was
 not an object or array — a number, boolean, literal-union or timestamp field

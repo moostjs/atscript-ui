@@ -191,6 +191,8 @@ const form = useAsForm<Contact>({
 
 Bind `form.remountKey` as the field tree's `:key` (0.1.177+): `reset()` bumps it to remount the fields (and, with `trackChanges`, a data swap landing another union variant). Without it a union shows its pre-reset variant over the reset data and a picker keeps its typed search.
 
+The remount also removes the focused element if focus was inside the fields. `<AsForm>` (0.1.178+) then focuses the first field control; `form.reset()` leaves focus alone — a custom root mirrors it: note `document.activeElement` before `await form.reset()`, and if it was inside the root and after `await nextTick()` is disconnected or `:disabled` (Reset button bound to `isDirty`), focus the first field control (checkbox / radio included).
+
 `useAsForm` MUST be called from `<script setup>` of a component (it issues `provide()` calls). Its return is shaped to back the `<AsForm>` template; reach for it only when you need a non-form root element or radically different layout.
 
 `createFormDef(type, { versionColumn })` — pass the second argument when consuming meta from an OCC-protected table (`@db.column.version`). The version column is excluded from `fields[]` so renderers don't paint it as an input, but stays in `flatMap` + form data so the wire payload preserves it for the server's `$cas` lift. `versionColumn` is the logical field name ([`MetaResponse`](https://ui.atscript.dev/api/ui#metaresponse)). See the OCC edit pattern in [`atscript-ui-forms/SKILL.md`](../SKILL.md) and the `atscript-db` skill's OCC reference.

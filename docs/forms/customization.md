@@ -245,6 +245,15 @@ does a data swap that lands another union variant). Without it, a union
 keeps showing the variant it had before the reset while its data holds
 another one, and a picker keeps its typed search.
 
+The remount also removes whatever element had focus inside the fields. Since
+0.1.178 `<AsForm>` then moves focus to the first field control (see
+[What `reset()` does](/forms/validation#what-reset-does)); `form.reset()`
+itself leaves focus alone, because your root owns the DOM. To do the same,
+note `document.activeElement` before `await form.reset()` and, if it was
+inside your root and after `await nextTick()` is no longer in the document or
+is disabled (a Reset button bound to `isDirty`), focus your first field's
+control (a checkbox or radio counts).
+
 For lower-level access — replacing `<AsField>` itself with your own per-field
 component that calls `useAsField()` — see
 [Custom field components](/forms/custom-components).
