@@ -1,10 +1,10 @@
-import type { TAtscriptAnnotatedType, TAtscriptTypeObject } from "@atscript/typescript/utils";
+import { mergeStrategyPaths } from "@atscript/db/validator";
 import {
-  DB_JSON,
-  DB_PATCH_STRATEGY,
-  EXPECT_ARRAY_KEY,
-  EXPECT_ARRAY_UNIQUE_ITEMS,
-} from "../shared/annotation-keys";
+  defineAnnotatedType,
+  type TAtscriptAnnotatedType,
+  type TAtscriptTypeObject,
+} from "@atscript/typescript/utils";
+import { DB_JSON, EXPECT_ARRAY_KEY, EXPECT_ARRAY_UNIQUE_ITEMS } from "../shared/annotation-keys";
 import { getFieldMeta } from "../shared/field-resolver";
 import { findVersionColumn } from "./create-form-def";
 import { getByPath, isPlainObject } from "./path-utils";
@@ -105,7 +105,12 @@ export function buildFormDiff(
   // of whether the caller passed `createFormDef(type, { versionColumn })`.
   const versionColumn = findVersionColumn(def.flatMap);
 
-  diffFields(def.fields, "", baseline, current, changes, patch, versionColumn, def.flatMap);
+  if (def.type.type.kind === "object") {
+    const mergePaths = mergeStrategyPaths(def.type);
+    diffFields(def.fields, "", baseline, current, changes, patch, mergePaths, versionColumn);
+  } else {
+    diffLeafRoot(def, baseline, current, changes, patch);
+  }
 
   // ── Optimistic concurrency ($cas) ──
   if ((opts?.cas ?? true) && versionColumn && Object.keys(patch).length > 0) {
@@ -130,17 +135,15 @@ export function buildFormDiff(
  * patch entries are written into the local `patch` object so callers can place
  * the whole sub-object as a nested partial.
  *
+ * `mergePaths` is `mergeStrategyPaths` of `@atscript/db` for the form's type:
+ * the form-root paths (a field's `fullPath`, no array indices) where the
+ * server applies the merge strategy (atscript-db "Where Merge Applies"). An
+ * object there may be sent in part, and a keyed array there merges its
+ * `$update` items; every other object is sent whole.
+ *
  * `versionColumn` is the top-level `@db.column.version` field name (or
  * undefined). When set, the matching top-level field is skipped entirely — it
  * is server-managed and may only be round-tripped via `$cas`.
- *
- * `inlineFlatMap` is the form's `flatMap`, supplied only at the top-level walk.
- * It lets {@link diffScalarField} read `@db.patch.strategy` off the object
- * ancestors of an INLINED leaf (a dotted-path leaf with no `FormObjectFieldDef`
- * node — `createFormDef` dissolves unlabelled objects into dot-paths). At a
- * default (replace) ancestor the whole sub-object must be emitted. It is
- * intentionally NOT propagated into `diffObjectField` recursion, where the
- * strategy decision is already made per structured object.
  */
 function diffFields(
   fields: FormFieldDef[],
@@ -149,16 +152,10 @@ function diffFields(
   current: Record<string, unknown>,
   changes: FormFieldChange[],
   patch: Record<string, unknown>,
+  mergePaths: ReadonlySet<string>,
   versionColumn?: string,
-  inlineFlatMap?: Map<string, TAtscriptAnnotatedType>,
 ): void {
   for (const field of fields) {
-    // Single-leaf root form (non-object root) has exactly one field with
-    // path '' — diff the entire domain value as one scalar/array.
-    if (field.path === "" && fields.length === 1) {
-      diffLeafRoot(field, baseline, current, changes, patch);
-      continue;
-    }
     // Never a change, never a SET: phantoms (ui.action / paragraph) carry no
     // data, a derived column is server-computed (a written value is dropped),
     // the version column travels only via $cas.
@@ -173,39 +170,61 @@ function diffFields(
     const fullPath = prefix ? `${prefix}.${field.path}` : field.path;
 
     if (isArrayField(field)) {
-      diffArrayField(field, fullPath, baseline, current, changes, patch, inlineFlatMap);
+      diffArrayField(field, fullPath, baseline, current, changes, patch, mergePaths);
       continue;
     }
 
     if (isObjectField(field)) {
-      diffObjectField(field, fullPath, baseline, current, changes, patch);
+      diffObjectField(field, fullPath, baseline, current, changes, patch, mergePaths);
       continue;
     }
 
     // Scalar / union / tuple / ref — compared & set as a whole value.
-    diffScalarField(field, fullPath, baseline, current, changes, patch, inlineFlatMap);
+    diffScalarField(field, fullPath, baseline, current, changes, patch, mergePaths);
   }
 }
 
-/** Single-leaf root form (non-object root). Whole value is the patch. */
+/** The patch key of a single-leaf root form (non-object root): its patch is `{ value }`. */
+const LEAF_ROOT_KEY = "value";
+
+/** {@link leafRootMergePaths} per root type. */
+const leafRootMergePathsByType = new WeakMap<TAtscriptAnnotatedType, ReadonlySet<string>>();
+
+/**
+ * `mergeStrategyPaths` of a single-leaf root form, read off the `{ value }`
+ * shape of its patch. Cached per root type: building a type invalidates the
+ * type caches of `@atscript/typescript`.
+ */
+function leafRootMergePaths(type: TAtscriptAnnotatedType): ReadonlySet<string> {
+  let paths = leafRootMergePathsByType.get(type);
+  if (!paths) {
+    paths = mergeStrategyPaths(defineAnnotatedType("object").prop(LEAF_ROOT_KEY, type).$type);
+    leafRootMergePathsByType.set(type, paths);
+  }
+  return paths;
+}
+
+/** Single-leaf root form (non-object root): its whole value is the patch's `value`. */
 function diffLeafRoot(
-  field: FormFieldDef,
+  def: FormDef,
   baseline: Record<string, unknown>,
   current: Record<string, unknown>,
   changes: FormFieldChange[],
   patch: Record<string, unknown>,
 ): void {
+  const field = def.rootField;
   const before = getByPath(baseline, "");
   const after = getByPath(current, "");
   if (deepEqual(before, after)) return;
+  const mergePaths = leafRootMergePaths(def.type);
   if (isArrayField(field)) {
-    const arrayPatch = diffArray(field, before, after);
+    const arrayPatch = diffArray(field, before, after, mergePaths.has(LEAF_ROOT_KEY));
     if (arrayPatch === undefined) return;
     changes.push({ path: "", kind: "array", before, after });
-    patch.value = arrayPatch;
+    patch[LEAF_ROOT_KEY] = arrayPatch;
   } else {
     changes.push({ path: "", kind: "set", before, after });
-    patch.value = after === undefined ? null : after;
+    patch[LEAF_ROOT_KEY] = wholeValue(LEAF_ROOT_KEY, before, after, mergePaths) ?? null;
   }
 }
 
@@ -217,85 +236,84 @@ function diffScalarField(
   current: Record<string, unknown>,
   changes: FormFieldChange[],
   patch: Record<string, unknown>,
-  inlineFlatMap?: Map<string, TAtscriptAnnotatedType>,
+  mergePaths: ReadonlySet<string>,
 ): void {
   const before = getByPath(baseline, fullPath);
   const after = getByPath(current, fullPath);
   if (deepEqual(before, after)) return;
 
   changes.push({ path: fullPath, kind: "set", before, after });
-  if (setInlinedCutoff(field, fullPath, current, patch, inlineFlatMap)) return;
-
-  // Patch leaf path is relative to the local patch object — `field.path` keeps
-  // the dotted nesting inside the current context.
-  setPatchLeaf(patch, field.path, after === undefined ? null : after);
+  const value = wholeValue(fullPath, before, after, mergePaths) ?? null;
+  setFieldPatch(field, fullPath, value, baseline, current, patch, mergePaths);
 }
 
 /**
- * Inlined-object replace cutoff: a dotted leaf came from an object that
- * `createFormDef` dissolved into dot-paths. atscript-db's default nested
- * strategy is `replace` (the whole sub-object must be present), and a
- * `@db.json` object is stored as one value, so the whole sub-object is emitted
- * at the SHALLOWEST such ancestor. Merge ancestors pass through (partial);
- * `@db.column.version` exclusion already happened. Returns whether it did.
+ * Writes a changed field's patch `value` at its `field.path` in the local
+ * `patch` (relative to the current context, so possibly dotted). A dotted
+ * path runs through objects `createFormDef` dissolved into dot-paths; where
+ * one of them is outside `mergePaths`, the patch may not carry part of it, so
+ * the whole current object goes out at the SHALLOWEST such ancestor instead.
  */
-function setInlinedCutoff(
+function setFieldPatch(
   field: FormFieldDef,
   fullPath: string,
+  value: unknown,
+  baseline: Record<string, unknown>,
   current: Record<string, unknown>,
   patch: Record<string, unknown>,
-  inlineFlatMap?: Map<string, TAtscriptAnnotatedType>,
-): boolean {
-  if (!inlineFlatMap || !field.path.includes(".")) return false;
-  const cutoff = inlinedReplaceCutoff(field.path, inlineFlatMap);
-  if (cutoff === undefined) return false;
-  // `cutoff` is relative to the current context (matches `field.path` and
-  // the local `patch`). The data read-path needs the full prefix.
-  const prefixLen = fullPath.length - field.path.length; // includes trailing "."
-  const readPath = prefixLen > 0 ? fullPath.slice(0, prefixLen) + cutoff : cutoff;
-  const sub = getByPath(current, readPath);
-  setPatchLeaf(patch, cutoff, sub === undefined ? null : sub);
-  return true;
+  mergePaths: ReadonlySet<string>,
+): void {
+  // The current context's own path: "" or ending in ".".
+  const prefix = fullPath.slice(0, fullPath.length - field.path.length);
+  for (let dot = field.path.indexOf("."); dot !== -1; dot = field.path.indexOf(".", dot + 1)) {
+    const ancestor = field.path.slice(0, dot);
+    const path = prefix + ancestor;
+    if (mergePaths.has(path)) continue;
+    const whole = wholeValue(path, getByPath(baseline, path), getByPath(current, path), mergePaths);
+    setPatchLeaf(patch, ancestor, whole ?? null);
+    return;
+  }
+  setPatchLeaf(patch, field.path, value);
 }
 
 /**
- * For a dotted INLINED leaf path, returns the path of the shallowest object
- * ancestor whose `@db.patch.strategy` is the default (`replace`) or that is
- * `@db.json`, or undefined when every ancestor is a plain `merge` one (then the
- * leaf partial is correct). At such an ancestor the whole sub-object must be
- * present in the patch.
- *
- * Walks ancestor segments (`a`, `a.b`, … but not the leaf itself); the first
- * one that is an object AND not merge is the cutoff. merge does NOT propagate,
- * so a default-replace level below a merge level still cuts off there.
+ * `after`, the current value at `path`, to send whole. The server still
+ * merges every object inside it at a merge path — a merge object inside a
+ * replaced one, a merge `T | null` field — and keeps the children a patch
+ * leaves out there, so a child set in `before` and unset in `after` goes out
+ * as `null`. Copies only the objects it changes; the rest stays a live
+ * reference into `current`.
  */
-function inlinedReplaceCutoff(
-  leafPath: string,
-  flatMap: Map<string, TAtscriptAnnotatedType>,
-): string | undefined {
-  const segs = leafPath.split(".");
-  let acc = "";
-  for (let i = 0; i < segs.length - 1; i++) {
-    acc = acc ? `${acc}.${segs[i]}` : segs[i]!;
-    const prop = flatMap.get(acc);
-    if (!prop || prop.type.kind !== "object") continue;
-    if (!isMergePatched(prop)) return acc;
+function wholeValue(
+  path: string,
+  before: unknown,
+  after: unknown,
+  mergePaths: ReadonlySet<string>,
+): unknown {
+  if (mergePaths.size === 0 || !isPlainObject(before) || !isPlainObject(after)) return after;
+  const merge = mergePaths.has(path);
+  let out: Record<string, unknown> | undefined;
+  for (const k of Object.keys(before)) {
+    const value = after[k];
+    const sent =
+      merge && value === undefined && before[k] !== undefined && before[k] !== null
+        ? null
+        : wholeValue(`${path}.${k}`, before[k], value, mergePaths);
+    if (sent !== value) (out ??= { ...after })[k] = sent;
   }
-  return undefined;
+  return out ?? after;
 }
 
 /**
  * Inlined-or-structured object field — recurse, emit a nested partial OR the
- * whole sub-object depending on the field's `@db.patch.strategy`.
+ * whole sub-object.
  *
  * atscript-db's DEFAULT nested-object patch strategy is `replace` (strict —
  * every required child must be present, else 400; omitted optionals are
- * null-filled). A changed-leaves-only partial is a valid patch ONLY when the
- * object field carries `@db.patch.strategy 'merge'`. For the default (replace)
- * case we therefore emit the WHOLE current sub-object so the validator passes
- * and no optional leaf is silently nulled. `merge` does NOT propagate, so a
- * descendant object without its own `merge` again emits its full sub-object
- * (handled by recursion — `diffFields` re-enters this function per child).
+ * null-filled). A changed-leaves-only partial is a valid patch ONLY where the
+ * merge strategy applies — the object's path is in `mergePaths`. Anywhere else
+ * we emit the WHOLE current sub-object so the validator passes and no optional
+ * leaf is silently nulled.
  *
  * Wholesale-clear: if the sub-object was a defined object in `baseline` but is
  * now undefined/null, emit `field: null` (object removed) instead of a partial
@@ -308,6 +326,7 @@ function diffObjectField(
   current: Record<string, unknown>,
   changes: FormFieldChange[],
   patch: Record<string, unknown>,
+  mergePaths: ReadonlySet<string>,
 ): void {
   const beforeObj = getByPath(baseline, fullPath);
   const afterObj = getByPath(current, fullPath);
@@ -317,67 +336,34 @@ function diffObjectField(
   if (!isPlainObject(beforeObj) && !isPlainObject(afterObj)) return;
 
   // Single recursion populates `changes` AND the changed-leaves nested partial.
-  // Pass the child objectDef's flatMap so an INLINED default-replace sub-object
-  // nested below emits its whole sub-object (merge does NOT propagate). Version
-  // exclusion never applies below the root, so omit it.
+  // Version exclusion never applies below the root, so omit it.
   const nested: Record<string, unknown> = {};
   const changesBefore = changes.length;
-  diffFields(
-    field.objectDef.fields,
-    fullPath,
-    baseline,
-    current,
-    changes,
-    nested,
-    undefined,
-    field.objectDef.flatMap,
-  );
+  diffFields(field.objectDef.fields, fullPath, baseline, current, changes, nested, mergePaths);
 
   // Wholesale clear: object present in baseline, gone in current → field: null
   // (a single clear, not a partial of nulled leaves; per-leaf changes already
   // recorded by the recursion above). An object whose leaves are all unset
   // (`{}`, or every leaf `null`) has no leaf that differs — the removal itself
   // is then the change, so the form is dirty whenever the patch clears it.
-  if ((afterObj === undefined || afterObj === null) && isPlainObject(beforeObj)) {
-    if (changes.length === changesBefore) {
-      changes.push({ path: fullPath, kind: "set", before: beforeObj, after: afterObj });
-    }
-    setPatchLeaf(patch, field.path, null);
-    return;
+  const cleared = (afterObj === undefined || afterObj === null) && isPlainObject(beforeObj);
+  if (!cleared && Object.keys(nested).length === 0) return; // no change
+  if (cleared && changes.length === changesBefore) {
+    changes.push({ path: fullPath, kind: "set", before: beforeObj, after: afterObj });
   }
-
-  if (Object.keys(nested).length === 0) return; // no change
-
-  // Merge strategy → emit the changed-leaves-only nested partial. Default
-  // (replace) strategy → emit the WHOLE current sub-object (all leaves, changed
-  // or not) so atscript-db's strict replace validator passes and no optional
-  // leaf is silently nulled. `merge` does NOT propagate, so a descendant object
-  // without its own `merge` again emits its full sub-object (via recursion).
-  if (isMergePatched(field.prop)) {
-    setPatchLeaf(patch, field.path, nested);
-  } else {
-    setPatchLeaf(patch, field.path, afterObj === undefined ? null : afterObj);
-  }
-}
-
-/**
- * Whether a field's patch may carry only its changed leaves: a
- * `@db.patch.strategy 'merge'` field that is not `@db.json` (a JSON value is
- * stored, and so replaced, whole). For an object field this decides the nested
- * partial; for a keyed array field, the shape of its `$update` items.
- */
-function isMergePatched(prop: TAtscriptAnnotatedType): boolean {
-  return (
-    getFieldMeta(prop, DB_PATCH_STRATEGY) === "merge" && getFieldMeta(prop, DB_JSON) === undefined
-  );
+  const value =
+    !cleared && mergePaths.has(fullPath)
+      ? nested
+      : (wholeValue(fullPath, beforeObj, afterObj, mergePaths) ?? null);
+  setFieldPatch(field, fullPath, value, baseline, current, patch, mergePaths);
 }
 
 /**
  * Array field — keyed → $update/$insert/$remove; unkeyed → $replace. A
  * `@db.json` array is stored as one JSON value, which takes no array
- * operations: it is sent whole (`null` when cleared). An array inside an
- * inlined replace / `@db.json` object is sent with its whole sub-object, like
- * any leaf there.
+ * operations: it is sent whole (`null` when cleared). An array inside a
+ * dissolved object the merge strategy does not apply to is sent with that
+ * whole sub-object, like any leaf there.
  */
 function diffArrayField(
   field: FormArrayFieldDef,
@@ -386,7 +372,7 @@ function diffArrayField(
   current: Record<string, unknown>,
   changes: FormFieldChange[],
   patch: Record<string, unknown>,
-  inlineFlatMap?: Map<string, TAtscriptAnnotatedType>,
+  mergePaths: ReadonlySet<string>,
 ): void {
   const before = getByPath(baseline, fullPath);
   const after = getByPath(current, fullPath);
@@ -395,15 +381,14 @@ function diffArrayField(
   const value =
     getFieldMeta(field.prop, DB_JSON) !== undefined
       ? (after ?? null)
-      : diffArray(field, before, after);
+      : diffArray(field, before, after, mergePaths.has(fullPath));
   // Guard against a no-op array patch (e.g. a keyed array missing from the
   // baseline and empty in the form: nothing to insert or remove). No real op →
   // no change recorded, no malformed `{}` emitted.
   if (value === undefined) return;
 
   changes.push({ path: fullPath, kind: "array", before, after });
-  if (setInlinedCutoff(field, fullPath, current, patch, inlineFlatMap)) return;
-  setPatchLeaf(patch, field.path, value);
+  setFieldPatch(field, fullPath, value, baseline, current, patch, mergePaths);
 }
 
 // ── Array diffing ────────────────────────────────────────────
@@ -423,18 +408,21 @@ function diffArrayField(
  * (pure append) rather than `$upsert`. This is safe because `$insert` is only
  * ever used for keys ABSENT from baseline; existing keys go through `$update`.
  * `$upsert` would dedupe-by-key, which we don't need given that invariant.
+ *
+ * `merge`: the array's path is in `mergePaths` ({@link diffKeyedArray}).
  */
 function diffArray(
   field: FormArrayFieldDef,
   before: unknown,
   after: unknown,
+  merge: boolean,
 ): Record<string, unknown> | undefined {
   const beforeArr = Array.isArray(before) ? before : [];
   const afterArr = Array.isArray(after) ? after : [];
 
   const keyProps = getArrayKeyProps(field.itemType);
   if (keyProps.length > 0) {
-    return diffKeyedArray(beforeArr, afterArr, keyProps, isMergePatched(field.prop));
+    return diffKeyedArray(beforeArr, afterArr, keyProps, merge);
   }
 
   // Primitive uniqueItems → set semantics (by value).
@@ -463,14 +451,14 @@ function diffArray(
  * removed and re-added under the same key elsewhere. A new row appended at the
  * end and an edited key on the last row stay key operators.
  *
- * A `$update` item follows the array field's `@db.patch.strategy` (`merge` is
- * whether it is `'merge'`), which the db applies to it: by default (replace)
- * the db replaces the matched element, so the item is the whole current
- * element minus its `undefined`-valued props; under `merge` the db shallow-
- * merges the item in, so it is the key + the changed top-level leaves (a
- * changed nested object whole), a cleared leaf as `null`
- * ({@link buildKeyedUpdate}). Either way an item is emitted only when some
- * leaf changed.
+ * A `$update` item follows the array field's patch strategy (`merge` is
+ * whether the merge strategy applies to the array), which the db applies to
+ * it: by default (replace) the db replaces the matched element, so the item is
+ * the whole current element minus its `undefined`-valued props; under `merge`
+ * the db shallow-merges the item in, so it is the key + the changed top-level
+ * leaves, a cleared leaf as `null` ({@link buildKeyedUpdate}). A nested object
+ * of an element is sent whole either way: no merge strategy applies inside an
+ * array element. An item is emitted only when some leaf changed.
  *
  * Fallbacks to `{ $replace: after }`, the only faithful op, when:
  * - key identity is ambiguous — an element that is not an object or lacks ALL

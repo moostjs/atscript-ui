@@ -1,4 +1,5 @@
-import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import { ClientValidationError, ClientValidator } from "@atscript/db-client/validator";
+import type { TAtscriptAnnotatedType, TAtscriptTypeObject } from "@atscript/typescript/utils";
 import { describe, expect, it } from "vitest";
 import { createFormDef } from "./create-form-def";
 import { buildFormDiff, deepEqual } from "./diff";
@@ -6,6 +7,7 @@ import {
   ComboForm,
   CompositeKeyArrayForm,
   DeepNestedForm,
+  DissolvedHolderForm,
   InlineMergeForm,
   InlineNestedForm,
   JsonArrayForm,
@@ -14,6 +16,8 @@ import {
   MergeNestedForm,
   MergeOrderLinesForm,
   MergeParcelLinesForm,
+  MergePlacementsForm,
+  MergeTreeNode,
   NestedKeyedArraysForm,
   OptionalMergeForm,
   OrderLinesForm,
@@ -980,7 +984,7 @@ describe("buildFormDiff — @db.json arrays (whole values, no array operations)"
     });
   });
 
-  it("an array inside a structured @db.json object sends the whole object (merge inside ignored)", () => {
+  it("an array inside a structured @db.json object sends the whole object", () => {
     expect(diff({ settings: { flags: ["f2"], mode: "m" } })).toEqual({
       settings: { flags: ["f2"], mode: "m" },
     });
@@ -996,6 +1000,260 @@ describe("buildFormDiff — @db.json arrays (whole values, no array operations)"
     expect(diff({ plain: { items: ["i2"], note: "keep" } })).toEqual({
       plain: { items: ["i2"], note: "keep" },
     });
+  });
+});
+
+// ── Where the merge strategy applies ─────────────────────────
+
+/** A changed `geo.lat` of `PlacedPrefs` / `PlacedLine`, as sent whole. */
+const GEO_SENT_WHOLE = { lat: 9, lng: 2, note: "n" };
+
+/** A stored `PlacedPrefs`. */
+function placedPrefs() {
+  return { theme: "t", geo: { lat: 1, lng: 2, note: "n" } };
+}
+
+/** `MergePlacementsForm` data: a stored `geo` in every placement. */
+function placements() {
+  return {
+    prefs: placedPrefs(),
+    profile: placedPrefs(),
+    card: placedPrefs(),
+    contact: placedPrefs(),
+    saved: placedPrefs(),
+    sealed: placedPrefs(),
+    lines: [{ sku: "A", qty: 1, geo: { lat: 1, lng: 2, note: "n" } }],
+    mergedLines: [{ sku: "A", qty: 1, geo: { lat: 1, lng: 2, note: "n" } }],
+    trail: [placedPrefs()],
+    pair: [placedPrefs(), placedPrefs()],
+    pick: placedPrefs(),
+  };
+}
+
+type Placement = keyof ReturnType<typeof placements>;
+
+/**
+ * The patch of `MergePlacementsForm` once `edit` (by default: `lat` became 9)
+ * changed the `geo` at `key` (of its first element).
+ */
+function editGeo(
+  key: Placement,
+  edit = (geo: { lat: number; note?: string }) => {
+    geo.lat = 9;
+  },
+): Record<string, unknown> {
+  const after = placements();
+  const target = after[key];
+  edit((Array.isArray(target) ? target[0]! : target).geo);
+  return buildFormDiff(createFormDef(MergePlacementsForm), wrap(placements()), wrap(after)).patch;
+}
+
+/** `MergeTreeNode` data three nodes deep: `r` → `second` → `third`. */
+function tree(second = "c", third = "g") {
+  return {
+    name: "r",
+    kind: "k",
+    child: { name: second, kind: "k", child: { name: third, kind: "k" } },
+  };
+}
+
+/** `DissolvedHolderForm` data. */
+function holder() {
+  return {
+    box: { label: "L", geo: { lat: 1, lng: 2 } },
+    mergedBox: { label: "M", geo: { lat: 1, lng: 2 } },
+  };
+}
+
+/**
+ * The paths the db-client patch preflight rejects — the server's own patch
+ * rules.
+ */
+function rejectedPaths(type: TAtscriptAnnotatedType, patch: Record<string, unknown>): string[] {
+  try {
+    new ClientValidator(type as TAtscriptAnnotatedType<TAtscriptTypeObject>).validate(
+      patch,
+      "patch",
+    );
+    return [];
+  } catch (e) {
+    if (!(e instanceof ClientValidationError)) throw e;
+    return e.errors.map((err) => err.path);
+  }
+}
+
+describe("buildFormDiff — a partial object only where the merge strategy applies", () => {
+  it.each<[string, Placement, Record<string, unknown>]>([
+    [
+      "a merge object reached by its own path, holding a merge object → partial at both levels",
+      "prefs",
+      { prefs: { geo: { lat: 9 } } },
+    ],
+    [
+      "a merge object inside a replaced parent → the whole parent, the merge object whole",
+      "profile",
+      { profile: { theme: "t", geo: GEO_SENT_WHOLE } },
+    ],
+    [
+      "a merge object inside a dissolved replaced parent → the whole parent, the merge object whole",
+      "card",
+      { card: { theme: "t", geo: GEO_SENT_WHOLE } },
+    ],
+    [
+      "a merge `T | null` object (a union field of the form) → the whole object",
+      "contact",
+      { contact: { theme: "t", geo: GEO_SENT_WHOLE } },
+    ],
+    [
+      "a merge object inside a @db.json field (merge on the field through annotate) → the whole field",
+      "saved",
+      { saved: { theme: "t", geo: GEO_SENT_WHOLE } },
+    ],
+    [
+      "a merge object inside a @db.encrypted field (merge on the field through annotate) → the whole field",
+      "sealed",
+      { sealed: { theme: "t", geo: GEO_SENT_WHOLE } },
+    ],
+    [
+      "a merge object inside a keyed array item (replace array) → $update carries the whole element",
+      "lines",
+      { lines: { $update: [{ sku: "A", qty: 1, geo: GEO_SENT_WHOLE }] } },
+    ],
+    [
+      "a merge object inside a keyed array item (merge array) → $update carries the key + the whole merge object",
+      "mergedLines",
+      { mergedLines: { $update: [{ sku: "A", geo: GEO_SENT_WHOLE }] } },
+    ],
+    [
+      "a merge object inside an unkeyed array item → $replace with whole elements",
+      "trail",
+      { trail: { $replace: [{ theme: "t", geo: GEO_SENT_WHOLE }] } },
+    ],
+    [
+      "a merge object inside a tuple element → the whole tuple",
+      "pair",
+      {
+        pair: [
+          { theme: "t", geo: GEO_SENT_WHOLE },
+          { theme: "t", geo: { lat: 1, lng: 2, note: "n" } },
+        ],
+      },
+    ],
+    [
+      "a merge object inside a union member → the whole member",
+      "pick",
+      { pick: { theme: "t", geo: GEO_SENT_WHOLE } },
+    ],
+  ])("%s", (_name, key, expected) => {
+    const patch = editGeo(key);
+    expect(patch).toStrictEqual(expected);
+    expect(rejectedPaths(MergePlacementsForm, patch)).toEqual([]);
+  });
+
+  // The server keeps what a patch leaves out of a merge object, also inside an
+  // object sent whole, so a cleared child must go out as `null` there.
+  it.each<[string, Placement, Record<string, unknown>]>([
+    ["a merge object reached by its own path", "prefs", { prefs: { geo: { note: null } } }],
+    [
+      "a merge object inside a replaced parent",
+      "profile",
+      { profile: { theme: "t", geo: { lat: 1, lng: 2, note: null } } },
+    ],
+    [
+      "a merge object inside a dissolved replaced parent",
+      "card",
+      { card: { theme: "t", geo: { lat: 1, lng: 2, note: null } } },
+    ],
+    [
+      "a merge object inside a merge `T | null` object",
+      "contact",
+      { contact: { theme: "t", geo: { lat: 1, lng: 2, note: null } } },
+    ],
+    [
+      "a merge object inside a @db.json field (no merge applies) → left out",
+      "saved",
+      { saved: { theme: "t", geo: { lat: 1, lng: 2 } } },
+    ],
+  ])("a child cleared in %s → null", (_name, key, expected) => {
+    const patch = editGeo(key, (geo) => {
+      delete geo.note;
+    });
+    expect(patch).toStrictEqual(expected);
+    expect(rejectedPaths(MergePlacementsForm, patch)).toEqual([]);
+  });
+
+  it("a recursive merge type → partial down to where the type repeats, the whole object below it", () => {
+    const def = createFormDef(MergeTreeNode);
+    const second = buildFormDiff(def, wrap(tree()), wrap(tree("X"))).patch;
+    const third = buildFormDiff(def, wrap(tree()), wrap(tree("c", "X"))).patch;
+    expect(second).toStrictEqual({ child: { name: "X" } });
+    expect(third).toStrictEqual({ child: { child: { name: "X", kind: "k" } } });
+    expect(rejectedPaths(MergeTreeNode, second)).toEqual([]);
+    expect(rejectedPaths(MergeTreeNode, third)).toEqual([]);
+  });
+
+  it.each<[string, Record<string, unknown>, Record<string, unknown>, string[]]>([
+    [
+      "an object field inside a dissolved replace object → the whole dissolved object",
+      { box: { label: "L", geo: { lat: 9, lng: 2 } } },
+      { box: { label: "L", geo: { lat: 9, lng: 2 } } },
+      ["box.geo.lat"],
+    ],
+    [
+      "an object field cleared inside a dissolved replace object → the whole dissolved object without it",
+      { box: { label: "L" } },
+      { box: { label: "L" } },
+      ["box.geo.lat", "box.geo.lng"],
+    ],
+    [
+      "an object field inside a dissolved merge object → the dissolved object partial, the replace object whole",
+      { mergedBox: { label: "M", geo: { lat: 9, lng: 2 } } },
+      { mergedBox: { geo: { lat: 9, lng: 2 } } },
+      ["mergedBox.geo.lat"],
+    ],
+  ])("%s", (_name, edit, expected, changed) => {
+    const def = createFormDef(DissolvedHolderForm);
+    const r = buildFormDiff(def, wrap(holder()), wrap({ ...holder(), ...edit }));
+    expect(r.patch).toStrictEqual(expected);
+    expect(r.changes.map((c) => c.path)).toEqual(changed);
+    expect(rejectedPaths(DissolvedHolderForm, r.patch)).toEqual([]);
+  });
+
+  // The places above where the diff sends an object whole: a partial object
+  // there is rejected, so the acceptance checks above are not vacuous.
+  it.each<[string, TAtscriptAnnotatedType, Record<string, unknown>, string]>([
+    [
+      "a keyed array item (replace array)",
+      MergePlacementsForm,
+      { lines: { $update: [{ sku: "A", qty: 1, geo: { lat: 9 } }] } },
+      "lines.$update[0].geo.lng",
+    ],
+    [
+      "a keyed array item (merge array)",
+      MergePlacementsForm,
+      { mergedLines: { $update: [{ sku: "A", geo: { lat: 9 } }] } },
+      "mergedLines.$update[0].geo.lng",
+    ],
+    [
+      "a @db.encrypted field with merge through annotate",
+      MergePlacementsForm,
+      { sealed: { geo: { lat: 9 } } },
+      "sealed.geo.lng",
+    ],
+    [
+      "a recursive merge type below where it repeats",
+      MergeTreeNode,
+      { child: { child: { name: "X" } } },
+      "child.child.kind",
+    ],
+    [
+      "a dissolved replace object",
+      DissolvedHolderForm,
+      { box: { geo: { lat: 9, lng: 2 } } },
+      "box.label",
+    ],
+  ])("a partial object in %s → rejected", (_name, type, patch, path) => {
+    expect(rejectedPaths(type, patch)).toEqual([path]);
   });
 });
 

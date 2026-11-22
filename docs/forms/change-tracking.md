@@ -511,6 +511,25 @@ partials (and atomic ops on nested fields), annotate the parent field
 the touched sub-fields. See
 [nested patch strategies](https://db.atscript.dev/api/update-patch).
 
+The diff sends a partial object only where the server applies the merge
+strategy — see atscript-db
+[Where Merge Applies](https://db.atscript.dev/api/update-patch#where-merge-applies).
+Everywhere else the object goes out whole, `'merge'` or not: inside an array
+or tuple element, a union member, a `@db.json` or `@db.encrypted` field, and
+below the first repeat of a recursive type. A `'merge'` object inside an
+object sent whole (a replaced parent, a `T | null` field) still keeps what
+the patch leaves out, so a field cleared there goes out as `null`.
+
+Since 0.1.178; it needs `@atscript/db` 0.1.184 or later installed next to
+the form. Before, the diff sent part of an object in places the server
+validates it in full, and the patch was rejected: a `@db.encrypted` field
+given `'merge'` through `annotate`, a recursive merge type below its first
+repeat, and a labelled object inside an inlined object without `merge`. A
+field cleared in a `'merge'` object inside an object sent whole kept its
+stored value. An older server accepts the patches of a 0.1.178 form too —
+they only hold more complete objects — but keeps a field cleared below the
+first repeat of a recursive merge type.
+
 ### Arrays — keyed diff, with fallbacks
 
 For a **keyed** array (items carry a key), the diff is fine-grained:
@@ -541,8 +560,8 @@ as nested objects:
   quantity and the item holds every field of that line, changed or not.
 - **`@db.patch.strategy 'merge'` on the array field** — the db merges the
   `$update` item into the stored one, one level deep, so the patch carries
-  just the key plus the changed fields (a changed nested object whole, a
-  cleared field as `null`).
+  just the key plus the changed fields (a changed nested object whole, even
+  a `'merge'` one, a cleared field as `null`).
 
 ```atscript
 export interface Order {

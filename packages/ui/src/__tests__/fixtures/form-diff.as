@@ -4,8 +4,9 @@
 // (@meta.label) nested objects (default replace strategy), merge-strategy
 // nested objects, 2-level nesting, keyed arrays (@expect.array.key) under the
 // default and the merge patch strategy, composite keyed arrays, primitive
-// arrays, uniqueItems primitive arrays, union + tuple fields, and an
-// optimistic-concurrency version column (@db.column.version).
+// arrays, uniqueItems primitive arrays, union + tuple fields, an
+// optimistic-concurrency version column (@db.column.version), and a
+// merge-strategy object in every placement (where the merge strategy applies).
 
 // ── Scalars + clear ──────────────────────────────────────────
 
@@ -52,8 +53,8 @@ export interface StructNestedForm {
 // ── Inlined object with merge strategy ───────────────────────
 
 /// Inlined (unlabelled) object tagged @db.patch.strategy 'merge' on the prop.
-/// createFormDef still dissolves it into `address.*` dot-paths, but the diff
-/// engine must read the prop's merge strategy via flatMap and emit a partial.
+/// createFormDef still dissolves it into `address.*` dot-paths; the diff
+/// still emits a partial, as for a structured merge object.
 export interface InlineMergeForm {
     name: string
 
@@ -361,7 +362,6 @@ export interface JsonArrayForm {
     }
 
     @db.json
-    @db.patch.strategy 'merge'
     settings?: JsonSettings
 
     @db.patch.strategy 'merge'
@@ -374,5 +374,111 @@ export interface JsonArrayForm {
     plain?: {
         items: string[]
         note?: string
+    }
+}
+
+// ── Where the merge strategy applies ─────────────────────────
+
+type PlacedGeo = {
+    lat: number
+    lng: number
+    note?: string
+}
+
+/// One type in every kind of place. Its `geo` merges where a patch reaches it
+/// by its own path through stored objects (a `T | null` object is a `T`), and
+/// is sent whole everywhere else: inside an array or tuple element, a union
+/// member, a `@db.json` / `@db.encrypted` field — `mergeStrategyPaths`.
+@meta.label 'Prefs'
+type PlacedPrefs = {
+    theme?: string
+
+    @db.patch.strategy 'merge'
+    geo?: PlacedGeo
+}
+
+/// Keyed array item holding a merge-strategy object (declared here, so it is
+/// no build error inside an array element — and it never merges there).
+export interface PlacedLine {
+    @expect.array.key
+    sku: string
+
+    qty: number
+
+    @db.patch.strategy 'merge'
+    geo: PlacedGeo
+}
+
+/// `PlacedPrefs` / `PlacedLine` in every placement a form can edit; `card` is
+/// an unlabelled (dissolved) `PlacedPrefs`.
+@db.table 'merge_placements'
+export interface MergePlacementsForm {
+    @db.patch.strategy 'merge'
+    prefs?: PlacedPrefs
+
+    profile?: PlacedPrefs
+
+    card?: {
+        theme?: string
+
+        @db.patch.strategy 'merge'
+        geo?: PlacedGeo
+    }
+
+    @db.patch.strategy 'merge'
+    contact?: PlacedPrefs | null
+
+    @db.json
+    saved?: PlacedPrefs
+
+    @db.encrypted
+    sealed?: PlacedPrefs
+
+    lines?: PlacedLine[]
+
+    @db.patch.strategy 'merge'
+    mergedLines?: PlacedLine[]
+
+    trail?: PlacedPrefs[]
+
+    pair?: [PlacedPrefs, PlacedPrefs]
+
+    pick?: PlacedPrefs | string
+}
+
+/// `@db.patch.strategy 'merge'` written on a `@db.json` / `@db.encrypted` field
+/// is a build error; added through `annotate` it compiles and has no effect.
+annotate MergePlacementsForm {
+    @db.patch.strategy 'merge'
+    saved
+
+    @db.patch.strategy 'merge'
+    sealed
+}
+
+/// A recursive merge-strategy type: the merge strategy applies down to where
+/// the type repeats (`child`), not below it.
+@meta.label 'Node'
+export interface MergeTreeNode {
+    name: string
+
+    kind: string
+
+    @db.patch.strategy 'merge'
+    child?: MergeTreeNode
+}
+
+/// Structured (labelled) objects inside dissolved (unlabelled) ones — `box`
+/// under the default (replace) strategy, `mergedBox` under merge.
+export interface DissolvedHolderForm {
+    box: {
+        label: string
+        geo?: Geo
+    }
+
+    @db.patch.strategy 'merge'
+    mergedBox: {
+        label: string
+        geo?: Geo
     }
 }
