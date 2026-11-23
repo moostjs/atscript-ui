@@ -377,6 +377,43 @@ export interface JsonArrayForm {
     }
 }
 
+// ── @db.encrypted arrays ──────────────────────────────────────
+
+/// `@db.encrypted` stores a field as one ciphertext value: the db refuses
+/// every array operation on it, so the patch must carry whole values. `tags` /
+/// `lines` / `synonyms` are `@db.encrypted` arrays (primitives / keyed objects
+/// / unique primitives), `meta` / `plain` hold one inside a merge / replace
+/// object. `items` is a plain keyed array that keeps its operations.
+@db.table 'encrypted_array_form'
+export interface EncryptedArrayForm {
+    name: string
+
+    @db.encrypted
+    tags?: string[]
+
+    @db.encrypted
+    lines?: CartLine[]
+
+    @db.encrypted
+    @expect.array.uniqueItems
+    synonyms?: string[]
+
+    @db.patch.strategy 'merge'
+    meta?: {
+        @db.encrypted
+        labels?: string[]
+        note?: string
+    }
+
+    plain?: {
+        @db.encrypted
+        codes?: string[]
+        note?: string
+    }
+
+    items?: CartLine[]
+}
+
 // ── Where the merge strategy applies ─────────────────────────
 
 type PlacedGeo = {

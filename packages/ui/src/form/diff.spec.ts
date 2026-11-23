@@ -8,6 +8,7 @@ import {
   CompositeKeyArrayForm,
   DeepNestedForm,
   DissolvedHolderForm,
+  EncryptedArrayForm,
   InlineMergeForm,
   InlineNestedForm,
   JsonArrayForm,
@@ -999,6 +1000,76 @@ describe("buildFormDiff — @db.json arrays (whole values, no array operations)"
   it("an array inside an inlined replace object sends the whole object", () => {
     expect(diff({ plain: { items: ["i2"], note: "keep" } })).toEqual({
       plain: { items: ["i2"], note: "keep" },
+    });
+  });
+});
+
+// ── @db.encrypted arrays ─────────────────────────────────────
+
+describe("buildFormDiff — @db.encrypted arrays (whole values, no array operations)", () => {
+  const base = {
+    name: "n",
+    tags: ["a", "b"],
+    lines: [{ sku: "x", qty: 1 }],
+    synonyms: ["s1", "s2"],
+    meta: { labels: ["l1"], note: "keep" },
+    plain: { codes: ["c1"], note: "keep" },
+    items: [{ sku: "x", qty: 1 }],
+  };
+  const diff = (current: Record<string, unknown>) =>
+    buildFormDiff(createFormDef(EncryptedArrayForm), wrap(base), wrap({ ...base, ...current }));
+
+  // Each edit would take array operators on a plain array: `$replace`,
+  // `$update` + `$insert`, `$insert` + `$remove`.
+  const cases: [string, "tags" | "lines" | "synonyms", unknown[]][] = [
+    ["primitive", "tags", ["a", "c"]],
+    [
+      "keyed",
+      "lines",
+      [
+        { sku: "x", qty: 2 },
+        { sku: "y", qty: 1 },
+      ],
+    ],
+    ["uniqueItems", "synonyms", ["s1", "s3"]],
+  ];
+
+  it.each(cases)("an edited %s @db.encrypted array sends the whole array", (_kind, key, edited) => {
+    const r = diff({ [key]: edited });
+    expect(r.patch).toStrictEqual({ [key]: edited });
+    expect(r.changes).toEqual([{ path: key, kind: "array", before: base[key], after: edited }]);
+    expect(rejectedPaths(EncryptedArrayForm, r.patch)).toEqual([]);
+  });
+
+  it.each(cases)("a cleared %s @db.encrypted array sends null", (_kind, key) => {
+    expect(diff({ [key]: undefined }).patch).toStrictEqual({ [key]: null });
+  });
+
+  it.each(cases)("an unchanged %s @db.encrypted array → no patch entry", (_kind, key) => {
+    const r = diff({ name: "m", [key]: structuredClone(base[key]) });
+    expect(r.patch).toStrictEqual({ name: "m" });
+    expect(r.changes.map((c) => c.path)).toEqual(["name"]);
+  });
+
+  it("an @db.encrypted array inside a merge object → the whole array in the partial", () => {
+    const patch = diff({ meta: { labels: ["l1", "l2"], note: "keep" } }).patch;
+    expect(patch).toStrictEqual({ meta: { labels: ["l1", "l2"] } });
+    expect(rejectedPaths(EncryptedArrayForm, patch)).toEqual([]);
+  });
+
+  it("an @db.encrypted array inside a replace object → the whole object", () => {
+    expect(diff({ plain: { codes: ["c2"], note: "keep" } }).patch).toStrictEqual({
+      plain: { codes: ["c2"], note: "keep" },
+    });
+  });
+
+  it("a plain keyed array next to them keeps its operations", () => {
+    const items = [
+      { sku: "x", qty: 2 },
+      { sku: "y", qty: 1 },
+    ];
+    expect(diff({ items }).patch).toStrictEqual({
+      items: { $update: [{ sku: "x", qty: 2 }], $insert: [{ sku: "y", qty: 1 }] },
     });
   });
 });

@@ -4,7 +4,12 @@ import {
   type TAtscriptAnnotatedType,
   type TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
-import { DB_JSON, EXPECT_ARRAY_KEY, EXPECT_ARRAY_UNIQUE_ITEMS } from "../shared/annotation-keys";
+import {
+  DB_ENCRYPTED,
+  DB_JSON,
+  EXPECT_ARRAY_KEY,
+  EXPECT_ARRAY_UNIQUE_ITEMS,
+} from "../shared/annotation-keys";
 import { getFieldMeta } from "../shared/field-resolver";
 import { findVersionColumn } from "./create-form-def";
 import { getByPath, isPlainObject } from "./path-utils";
@@ -360,10 +365,10 @@ function diffObjectField(
 
 /**
  * Array field — keyed → $update/$insert/$remove; unkeyed → $replace. A
- * `@db.json` array is stored as one JSON value, which takes no array
- * operations: it is sent whole (`null` when cleared). An array inside a
- * dissolved object the merge strategy does not apply to is sent with that
- * whole sub-object, like any leaf there.
+ * `@db.json` or `@db.encrypted` array is stored as one value (JSON /
+ * ciphertext), which takes no array operations: it is sent whole (`null`
+ * when cleared). An array inside a dissolved object the merge strategy does
+ * not apply to is sent with that whole sub-object, like any leaf there.
  */
 function diffArrayField(
   field: FormArrayFieldDef,
@@ -379,7 +384,8 @@ function diffArrayField(
   if (deepEqual(before, after)) return;
 
   const value =
-    getFieldMeta(field.prop, DB_JSON) !== undefined
+    getFieldMeta(field.prop, DB_JSON) !== undefined ||
+    getFieldMeta(field.prop, DB_ENCRYPTED) !== undefined
       ? (after ?? null)
       : diffArray(field, before, after, mergePaths.has(fullPath));
   // Guard against a no-op array patch (e.g. a keyed array missing from the

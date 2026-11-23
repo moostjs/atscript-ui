@@ -597,11 +597,12 @@ the item was not cleared. An array whose items hold a display-only
 it the db asked for that field in every `$update` item. See
 [array patch operators](https://db.atscript.dev/api/update-patch).
 
-A `@db.json` field is stored as one JSON value, which takes no array
-operations, so a changed `@db.json` array is sent **whole** as a plain array
-(`null` when cleared) — and an array inside a `@db.json` object is sent with
-the whole object. An array inside an inlined object without `merge` is sent
-with its whole sub-object, like any other leaf there. Since 0.1.164 (earlier
+A `@db.json` or `@db.encrypted` field is stored as one value, which takes no
+array operations, so a changed `@db.json` or `@db.encrypted` array is sent
+**whole** as a plain array (`null` when cleared) — and an array inside a
+`@db.json` object is sent with the whole object. An array inside an inlined
+object without `merge` is sent with its whole sub-object, like any other leaf
+there. Since 0.1.164 for `@db.json` and 0.1.179 for `@db.encrypted` (earlier
 versions sent operations the db rejected).
 
 ### `$cas` needs a populated integer version

@@ -65,6 +65,7 @@ export const DB_VIEW = "db.view" as const;
 export const DB_VIEW_FOR = "db.view.for" as const;
 export const DB_HTTP_PATH = "db.http.path" as const;
 export const DB_JSON = "db.json" as const;
+export const DB_ENCRYPTED = "db.encrypted" as const;
 export const DB_AMOUNT_CURRENCY = "db.amount.currency" as const;
 export const DB_AMOUNT_CURRENCY_REF = "db.amount.currency.ref" as const;
 export const DB_UNIT = "db.unit" as const;
