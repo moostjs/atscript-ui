@@ -1007,7 +1007,7 @@ describe("buildFormDiff — @db.json arrays (whole values, no array operations)"
 
 // ── a form type whose fields are declared by reference ───────
 
-describe("buildFormDiff — fields declared by reference to a @db.json / @db.encrypted array", () => {
+describe("buildFormDiff — fields declared by reference restate the table's storage and patch annotations", () => {
   const base = { name: "n", synonyms: ["a", "b"], bare: ["a", "b"], secretTags: ["a", "b"] };
   const diff = (current: Partial<typeof base>) =>
     buildFormDiff(createFormDef(JsonArrayViewForm), wrap(base), wrap({ ...base, ...current }))
@@ -1025,6 +1025,28 @@ describe("buildFormDiff — fields declared by reference to a @db.json / @db.enc
   // rules, here `@expect.array.uniqueItems`, do), so the form sends operators.
   it("without the annotation restated the array keeps its operations", () => {
     expect(diff({ bare: ["a", "c"] })).toEqual({ bare: { $insert: ["c"], $remove: ["b"] } });
+  });
+
+  // The table merges the object; only a restated strategy makes the form send
+  // the change as a partial, with `null` for a child that was emptied.
+  it("a restated @db.patch.strategy 'merge' sends a partial that clears an emptied child", () => {
+    const merged = { labels: ["l1"], note: "keep" };
+    const r = buildFormDiff(
+      createFormDef(JsonArrayViewForm),
+      wrap({ ...base, meta: merged }),
+      wrap({ ...base, meta: { labels: ["l1"] } }),
+    ).patch;
+    expect(r).toEqual({ meta: { note: null } });
+  });
+
+  it("without the strategy restated the object is sent whole, the emptied child left out", () => {
+    const merged = { labels: ["l1"], note: "keep" };
+    const r = buildFormDiff(
+      createFormDef(JsonArrayViewForm),
+      wrap({ ...base, bareMeta: merged }),
+      wrap({ ...base, bareMeta: { labels: ["l1"] } }),
+    ).patch;
+    expect(r).toEqual({ bareMeta: { labels: ["l1"] } });
   });
 });
 

@@ -606,16 +606,26 @@ there. Since 0.1.164 for `@db.json` and 0.1.179 for `@db.encrypted` (earlier
 versions sent operations the db rejected).
 
 A form type that declares a field **by reference** to a table's field
-(`synonyms: Product.synonyms`) must restate `@db.json` or `@db.encrypted` on
-its own field. These two annotations describe the table's storage and do not
-travel through a reference, so without them the form treats the array as a
-plain one and sends array operations, which the db refuses (for a `@db.json`
-array the db-client preflight already does, with `ARRAY_OP_ON_JSON`):
+(`synonyms: Product.synonyms`) must restate `@db.json`, `@db.encrypted` and
+`@db.patch.strategy` on its own field. These annotations describe the table
+and do not travel through a reference (value rules such as
+`@expect.array.uniqueItems` do), so without them the form does not know how
+the table stores or patches the value:
+
+- without `@db.json` / `@db.encrypted` it treats the array as a plain one and
+  sends array operations, which the db refuses (for a `@db.json` array the
+  db-client preflight already does, with `ARRAY_OP_ON_JSON`);
+- without `@db.patch.strategy 'merge'` it sends a changed object whole and
+  leaves an emptied child out, and the table, which merges, keeps that child's
+  old value.
 
 ```atscript
 export interface ProductForm {
     @db.json
     synonyms: Product.synonyms
+
+    @db.patch.strategy 'merge'
+    details: Product.details
 }
 ```
 
