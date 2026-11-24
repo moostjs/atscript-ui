@@ -605,6 +605,20 @@ object without `merge` is sent with its whole sub-object, like any other leaf
 there. Since 0.1.164 for `@db.json` and 0.1.179 for `@db.encrypted` (earlier
 versions sent operations the db rejected).
 
+A form type that declares a field **by reference** to a table's field
+(`synonyms: Product.synonyms`) must restate `@db.json` or `@db.encrypted` on
+its own field. These two annotations describe the table's storage and do not
+travel through a reference, so without them the form treats the array as a
+plain one and sends array operations, which the db refuses (for a `@db.json`
+array the db-client preflight already does, with `ARRAY_OP_ON_JSON`):
+
+```atscript
+export interface ProductForm {
+    @db.json
+    synonyms: Product.synonyms
+}
+```
+
 ### `$cas` needs a populated integer version
 
 `$cas` only lifts when the baseline version is an integer. A row loaded

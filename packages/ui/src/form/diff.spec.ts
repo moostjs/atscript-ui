@@ -12,6 +12,7 @@ import {
   InlineMergeForm,
   InlineNestedForm,
   JsonArrayForm,
+  JsonArrayViewForm,
   KeyedArrayForm,
   MergeCompositeKeyArrayForm,
   MergeNestedForm,
@@ -1001,6 +1002,29 @@ describe("buildFormDiff — @db.json arrays (whole values, no array operations)"
     expect(diff({ plain: { items: ["i2"], note: "keep" } })).toEqual({
       plain: { items: ["i2"], note: "keep" },
     });
+  });
+});
+
+// ── a form type whose fields are declared by reference ───────
+
+describe("buildFormDiff — fields declared by reference to a @db.json / @db.encrypted array", () => {
+  const base = { name: "n", synonyms: ["a", "b"], bare: ["a", "b"], secretTags: ["a", "b"] };
+  const diff = (current: Partial<typeof base>) =>
+    buildFormDiff(createFormDef(JsonArrayViewForm), wrap(base), wrap({ ...base, ...current }))
+      .patch;
+
+  it("a restated @db.json sends the whole array", () => {
+    expect(diff({ synonyms: ["a", "c"] })).toEqual({ synonyms: ["a", "c"] });
+  });
+
+  it("a restated @db.encrypted sends the whole array", () => {
+    expect(diff({ secretTags: ["a", "c"] })).toEqual({ secretTags: ["a", "c"] });
+  });
+
+  // The storage annotation does not travel through the reference (the value
+  // rules, here `@expect.array.uniqueItems`, do), so the form sends operators.
+  it("without the annotation restated the array keeps its operations", () => {
+    expect(diff({ bare: ["a", "c"] })).toEqual({ bare: { $insert: ["c"], $remove: ["b"] } });
   });
 });
 

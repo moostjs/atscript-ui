@@ -377,6 +377,24 @@ export interface JsonArrayForm {
     }
 }
 
+// ── a form type over a table, fields declared by reference ────
+
+/// `@db.json` and `@db.encrypted` describe the declaring table's storage and
+/// do not travel through a field reference, so a form type that declares a
+/// field by reference restates them (`synonyms`, `secretTags`). `bare` does
+/// not: the form cannot know the array is stored as one value.
+export interface JsonArrayViewForm {
+    name: JsonArrayForm.name
+
+    @db.json
+    synonyms?: JsonArrayForm.synonyms
+
+    bare?: JsonArrayForm.synonyms
+
+    @db.encrypted
+    secretTags?: EncryptedArrayForm.synonyms
+}
+
 // ── @db.encrypted arrays ──────────────────────────────────────
 
 /// `@db.encrypted` stores a field as one ciphertext value: the db refuses
