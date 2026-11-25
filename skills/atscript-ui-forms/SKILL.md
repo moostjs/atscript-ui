@@ -167,6 +167,9 @@ import {
 
 // Types
 import type {
+  AsFormExposed, // type of an <AsForm> template ref (0.1.182+)
+  TAsFormError, // one `@error` entry: { path, message } (0.1.182+)
+  TAsFormSubmitResult, // what submit() returns (0.1.182+)
   TAsComponentProps,
   TAsComponentEmits,
   TAsCollapsibleProps,

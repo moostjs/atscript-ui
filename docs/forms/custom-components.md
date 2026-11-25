@@ -130,6 +130,14 @@ Notes:
   by side (e.g. a control plus an icon button) and you size them yourself:
   give the control `flex-1 min-w-0` and the extras `shrink-0`. Before 0.1.164
   a lone root shrank to its content width.
+- To keep a root at its content width (a segmented switch, a toggle), put a
+  flex utility on it: `class="flex-none"`. With the UnoCSS preset, a flex
+  utility on the direct child of the row (a root element, or a bare `<input>` /
+  `<select>` / `<textarea>`) wins over the row's fill since 0.1.182; before,
+  only an important utility (`!flex-none`) did. A min-width utility only sets
+  how far the control may shrink. With the
+  [pre-built CSS](/styling/prebuilt-css), the outcome depends on the order in
+  which your own CSS loads.
 
 ## Bare root — skipping `AsFieldShell`
 

@@ -2,12 +2,12 @@
 import { computed, ref, type Component } from "vue";
 import { resetKeepingFocus } from "../composables/focus-after-toggle";
 import { useAsForm, type TAsFormValue } from "../composables/use-as-form";
-import type { TFormState } from "../composables/types";
+import type { TAsFormError, TFormState } from "../composables/types";
 import AsField from "./as-field.vue";
 import AsIterator from "./as-iterator.vue";
 import { useAsTexts } from "../composables/use-as-locale";
 import type { ClientFactory, FormDef, FormFieldChange } from "@atscript/ui";
-import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
+import type { AsFormExposed, TAsChangeType, TAsComponentProps, TAsTypeComponents } from "./types";
 
 export interface Props<TF, TC> {
   def: FormDef;
@@ -68,7 +68,7 @@ const props = defineProps<Props<TFormData, TFormContext>>();
 // `formData` is the `{ value }` container; the events carry the value itself.
 const emit = defineEmits<{
   (e: "submit", data: TAsFormValue<TFormData>): void;
-  (e: "error", errors: { path: string; message: string }[]): void;
+  (e: "error", errors: TAsFormError[]): void;
   (e: "action", name: string, data: TAsFormValue<TFormData>): void;
   (e: "unsupported-action", name: string, data: TAsFormValue<TFormData>): void;
   (
@@ -107,11 +107,12 @@ const formEl = ref<HTMLFormElement>();
 const reset = () => resetKeepingFocus(form.reset, formEl.value);
 const slotProps = computed(() => ({ ...form.slotProps.value, reset }));
 
-// Imperative surface for a parent template ref (`asForm.value.*`). The change
-// tracker is `undefined` when `track-changes` is off; the getters return empty
-// so a parent can call them unconditionally. `isDirty` / `changes` proxy the
-// reactive tracker (false / [] when off).
-defineExpose({
+// Imperative surface for a parent template ref (`asForm.value.*`), typed by the
+// exported `AsFormExposed`. The change tracker is `undefined` when
+// `track-changes` is off; the getters return empty so a parent can call them
+// unconditionally. `isDirty` / `changes` proxy the reactive tracker (false / []
+// when off).
+defineExpose<AsFormExposed<TFormData>>({
   submit: form.onSubmit,
   /**
    * Fire a form action as its button would: emits `action` (or

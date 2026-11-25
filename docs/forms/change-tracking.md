@@ -263,14 +263,19 @@ the form goes clean again — all without a remount.
 ```vue
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
+import {
+  AsForm,
+  createDefaultTypes,
+  createAsFormDef,
+  type AsFormExposed,
+} from "@atscript/vue-form";
 import { Product } from "../forms/Product.as";
 
 const props = defineProps<{ id: string | number }>();
 const types = createDefaultTypes();
 
-const asForm = ref<InstanceType<typeof AsForm> | null>(null);
 const { def, formData } = createAsFormDef(Product);
+const asForm = ref<AsFormExposed<typeof formData> | null>(null);
 
 // Fetch the row and fill the wrapped container. The tracker baselines the
 // loaded row once `formData.value` resolves to real data.
@@ -344,13 +349,14 @@ that fails loudly at development time.
 ## Parent template ref — the `defineExpose` surface
 
 A parent that owns `<AsForm>` via a template ref gets the tracking surface
-on the instance, alongside the form's own controls:
+on the instance, alongside the form's own controls. Type the ref with
+`AsFormExposed<typeof formData>` (since 0.1.182):
 
 ```ts
-asForm.value.submit(); // trigger validation + @submit
+asForm.value.submit(); // validate + @submit / @error → { ok: true, data } | { ok: false, errors }
 asForm.value.reset(); // fields back to a new form's values (also re-baselines)
 asForm.value.isDirty; // boolean
-asForm.value.changes; // FormFieldChange[]
+asForm.value.changes; // readonly FormFieldChange[]
 asForm.value.getPatch(opts?); // @atscript/db patch
 asForm.value.getChanges(); // FormFieldChange[]
 asForm.value.isDirtyPath(path); // did one field change? → boolean

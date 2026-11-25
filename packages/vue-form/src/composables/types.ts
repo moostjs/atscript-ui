@@ -4,6 +4,17 @@ export type TFormRule<TValue, TFormData, TContext> = (
   context?: TContext,
 ) => boolean | string;
 
+/**
+ * One validation error of a submit: what `<AsForm>`'s `error` event (and the
+ * `error` callback of `useAsForm`) carries a list of. `path` is the field's
+ * dotted path; a failing `@ui.form.validate` on the form's interface is `__form`.
+ * A type alias (not an interface), so an entry stays assignable to
+ * `Record<string, string>`.
+ *
+ * @since 0.1.182
+ */
+export type TAsFormError = { path: string; message: string };
+
 export interface TFormFieldCallbacks {
   validate: () => boolean | string;
   clearErrors: () => void;

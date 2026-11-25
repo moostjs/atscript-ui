@@ -1,4 +1,5 @@
 import type {
+  FormFieldChange,
   FormFieldDef,
   FormUnionVariant,
   TFormAction,
@@ -6,6 +7,8 @@ import type {
   ValueHelpInfo,
 } from "@atscript/ui";
 import type { Component, Ref } from "vue";
+import type { TAsFormSubmitResult } from "../composables/use-as-form";
+import type { AsFormPatchHandle } from "../composables/use-as-form-patch";
 
 /**
  * Shared base props available to all custom form components.
@@ -314,4 +317,35 @@ export interface TAsCollapsibleSlots {
   actions(): unknown;
   body(): unknown;
   empty(): unknown;
+}
+
+/**
+ * What a template ref to `<AsForm>` exposes. `TFormData` is the type of the
+ * form's `formData` container (`typeof formData`); `<AsForm>` is a generic
+ * component, so type the ref with this interface:
+ * `const asForm = ref<AsFormExposed<typeof formData>>()`.
+ *
+ * The change-tracking members need `track-changes`; without it they return
+ * empty (`isDirty` is `false`, `getPatch()` is `{}`).
+ *
+ * @since 0.1.182
+ */
+export interface AsFormExposed<TFormData = any> extends Pick<
+  AsFormPatchHandle,
+  "getPatch" | "getChanges" | "isDirtyPath" | "rebase" | "rebaseOnto"
+> {
+  /** Validate and submit, as the submit button does: emits `submit` or `error` and returns the outcome. */
+  submit: () => TAsFormSubmitResult<TFormData>;
+  /** Fire a form action as its button would: emits `action` (or `unsupported-action`) with the normalized data, not validated. */
+  action: (name: string) => void;
+  /** Return the fields to a new form's values and clear all errors (also re-baselines change tracking). */
+  reset: () => Promise<void>;
+  /** Clear all error state (per-field and the submit-time map behind the badges). */
+  clearErrors: () => void;
+  /** Set error messages by path (e.g. mapping a server 400). */
+  setErrors: (errors: Record<string, string>) => void;
+  /** `true` when change tracking is on and the data differs from the baseline. */
+  readonly isDirty: boolean;
+  /** Per-field change list (empty when tracking is off). */
+  readonly changes: readonly FormFieldChange[];
 }

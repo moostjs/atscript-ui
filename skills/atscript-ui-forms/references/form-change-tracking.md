@@ -26,13 +26,19 @@ client, and `rebase()` after the write so the form goes clean again — no remou
 ```vue
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { AsForm, createAsFormDef, createDefaultTypes } from "@atscript/vue-form";
+import {
+  AsForm,
+  createAsFormDef,
+  createDefaultTypes,
+  type AsFormExposed,
+} from "@atscript/vue-form";
 import { Product } from "../forms/Product.as";
 
 const props = defineProps<{ id: string | number }>();
 const types = createDefaultTypes();
-const asForm = ref<InstanceType<typeof AsForm> | null>(null);
 const { def, formData } = createAsFormDef(Product);
+// `AsForm` is generic: type the ref with `AsFormExposed`, not `InstanceType<typeof AsForm>` (0.1.182+)
+const asForm = ref<AsFormExposed<typeof formData> | null>(null);
 
 // Fetch-then-fill: assign whenever the request resolves. A CLEAN swap
 // re-baselines the tracker onto the loaded row (0.1.134+) — no `v-if` gate.

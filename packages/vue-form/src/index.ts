@@ -36,6 +36,7 @@ export type {
   TAsChangeType,
   TAsCollapsibleProps,
   TAsCollapsibleSlots,
+  AsFormExposed,
 } from "./components/types";
 
 // Factories
@@ -50,7 +51,12 @@ export type { UseAsFieldOptions, UseAsFieldReturn } from "./composables/use-as-f
 export { useAsState } from "./composables/use-as-state";
 export type { UseAsStateReturn, TFormSubmitValidator } from "./composables/use-as-state";
 export { useAsForm } from "./composables/use-as-form";
-export type { TAsFormValue, UseAsFormOptions, UseAsFormReturn } from "./composables/use-as-form";
+export type {
+  TAsFormSubmitResult,
+  TAsFormValue,
+  UseAsFormOptions,
+  UseAsFormReturn,
+} from "./composables/use-as-form";
 export { useAsFormPatch } from "./composables/use-as-form-patch";
 export type { AsFormPatchHandle, RebaseOntoResult } from "./composables/use-as-form-patch";
 export { useAsExternalErrors } from "./composables/use-as-external-errors";
@@ -162,6 +168,7 @@ export type { FormFieldChange, FormDiffOptions, FormRebaseOptions } from "@atscr
 
 // Composable types (for advanced use)
 export type {
+  TAsFormError,
   TFormState,
   TFormRule,
   TFormFieldCallbacks,

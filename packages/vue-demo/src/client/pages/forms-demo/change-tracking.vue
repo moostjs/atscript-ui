@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
-import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
+import {
+  AsForm,
+  createDefaultTypes,
+  createAsFormDef,
+  type AsFormExposed,
+} from "@atscript/vue-form";
 import type { FormFieldChange } from "@atscript/ui";
 import { ChangeTrackingOrder } from "./schemas/change-tracking.as";
 import DarkToggle from "./_dark-toggle.vue";
@@ -32,7 +37,7 @@ formData.value = {
 
 // Parent template ref → the <AsForm> defineExpose surface
 // (submit / reset / isDirty / changes / getPatch / getChanges / rebase).
-const asForm = ref<InstanceType<typeof AsForm> | null>(null);
+const asForm = ref<AsFormExposed<typeof formData> | null>(null);
 
 // The patch snapshot we "persisted" on the last Save (for the echo panel).
 const lastSaved = ref<Record<string, unknown> | null>(null);

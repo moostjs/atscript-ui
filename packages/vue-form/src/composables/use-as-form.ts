@@ -60,7 +60,7 @@ import { CLIENT_FACTORY_KEY } from "./use-as-value-help";
 import { useAsExternalErrors } from "./use-as-external-errors";
 import { useAsState } from "./use-as-state";
 import { useAsTexts } from "./use-as-locale";
-import type { TFormState } from "./types";
+import type { TAsFormError, TFormState } from "./types";
 import type { TAsChangeType, TAsComponentProps, TAsTypeComponents } from "../components/types";
 
 /**
@@ -102,8 +102,12 @@ export interface UseAsFormOptions<TFormData = unknown, TFormContext = unknown> {
   firstValidation?: () => TFormState["firstValidation"] | undefined;
   /** Custom field components keyed by field name (matches `Props.components`). */
   components?: () => Record<string, Component<TAsComponentProps>> | undefined;
-  /** Type-to-component map keyed by field type (matches `Props.types`). */
-  types: () => TAsTypeComponents;
+  /**
+   * Type-to-component map keyed by field type (matches `Props.types`). Optional
+   * since 0.1.182: a form root that renders its own inputs and no `<AsField>`
+   * can leave it out (the map is then empty).
+   */
+  types?: () => TAsTypeComponents | undefined;
   /** Server-supplied errors keyed by absolute dotted path (`__form` for form-level). */
   errors?: () => Record<string, string | undefined> | undefined;
   /** Per-form value-help client factory. Falls back to the app-wide default when unset. */
@@ -133,7 +137,7 @@ export interface UseAsFormOptions<TFormData = unknown, TFormContext = unknown> {
    */
   emits?: {
     submit?: (data: TAsFormValue<TFormData>) => void;
-    error?: (errors: { path: string; message: string }[]) => void;
+    error?: (errors: TAsFormError[]) => void;
     action?: (name: string, data: TAsFormValue<TFormData>) => void;
     unsupportedAction?: (name: string, data: TAsFormValue<TFormData>) => void;
     change?: (
@@ -156,6 +160,19 @@ export type TAsFormValue<TFormData> = 0 extends 1 & TFormData
   : TFormData extends { value?: infer V }
     ? V
     : unknown;
+
+/**
+ * What a submit returns (`useAsForm().onSubmit()`, `submit()` on an `<AsForm>`
+ * template ref and in its slots), next to the `submit` / `error` it emits:
+ * `{ ok: true, data }` with the data `submit` carries, or `{ ok: false, errors }`
+ * with the errors `error` carries. With `firstValidation: "none"` nothing is
+ * validated, so a submit always returns `ok: true`.
+ *
+ * @since 0.1.182
+ */
+export type TAsFormSubmitResult<TFormData> =
+  | { ok: true; data: TAsFormValue<TFormData> }
+  | { ok: false; errors: TAsFormError[] };
 
 export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   /** Reactive form-data container `{ value: domainData }`. */
@@ -195,9 +212,10 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
   /**
    * Trigger submit. Applies the type's `@normalize.*` (trim, case) to the data,
    * validates the result and emits it with `submit` on success, `error` on
-   * validation failure. The form data itself is left as typed.
+   * validation failure. The form data itself is left as typed. Returns the
+   * outcome ({@link TAsFormSubmitResult}, since 0.1.182).
    */
-  onSubmit: () => void;
+  onSubmit: () => TAsFormSubmitResult<TFormData>;
   /** Resolved submit-button text (`@ui.form.submit.text` / fn variant). */
   submitText: ComputedRef<string>;
   /** Resolved submit-button disabled state (`@ui.form.fn.submitDisabled`). */
@@ -216,7 +234,7 @@ export interface UseAsFormReturn<TFormData = unknown, TFormContext = unknown> {
     disabled: boolean;
     loading: boolean;
     submitText: string;
-    submit: () => void;
+    submit: () => TAsFormSubmitResult<TFormData>;
     reset: () => Promise<void>;
     clearErrors: () => void;
     setErrors: (errors: Record<string, string>) => void;
@@ -374,7 +392,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   );
   provide(
     TYPES_KEY,
-    computed(() => options.types()),
+    computed(() => options.types?.() ?? {}),
   );
   provide(
     COMPONENTS_KEY,
@@ -621,7 +639,7 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
   provide(CHANGE_HANDLER_KEY, handleChange);
 
   // ── Submit ────────────────────────────────────────────────
-  function onSubmit() {
+  function onSubmit(): TAsFormSubmitResult<TFormData> {
     rootErrorDismissed.value = false;
     // `@normalize.*` (trim, case) applies to what is validated and submitted,
     // as on the server; the form keeps showing what the user typed.
@@ -632,13 +650,15 @@ export function useAsForm<TFormData = unknown, TFormContext = unknown>(
       internalErrors.value = {};
       // Related rows of navigation fields the form leaves out (loaded with
       // `$with`, never rendered or validated) are not submitted.
-      options.emits?.submit?.(omitSkippedNavFields(options.def(), data));
-    } else {
-      const errs: Record<string, string> = {};
-      for (const e of result) errs[e.path] = e.message;
-      internalErrors.value = errs;
-      options.emits?.error?.(result);
+      const payload = omitSkippedNavFields(options.def(), data);
+      options.emits?.submit?.(payload);
+      return { ok: true, data: payload };
     }
+    const errs: Record<string, string> = {};
+    for (const e of result) errs[e.path] = e.message;
+    internalErrors.value = errs;
+    options.emits?.error?.(result);
+    return { ok: false, errors: result };
   }
 
   return {

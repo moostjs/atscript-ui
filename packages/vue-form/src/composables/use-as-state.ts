@@ -10,7 +10,7 @@ import {
   type MaybeRef,
 } from "vue";
 import { FORM_CONTEXT_KEY, FORM_DATA_KEY, FORM_STATE_KEY } from "./internal-keys";
-import type { TFormFieldRegistration, TFormState } from "./types";
+import type { TAsFormError, TFormFieldRegistration, TFormState } from "./types";
 
 /** Custom form-level validator. Returns `Record<path, message>` (empty = passed). */
 export type TFormSubmitValidator = () => Record<string, string>;
@@ -19,7 +19,7 @@ export interface UseAsStateReturn {
   formState: TFormState;
   clearErrors: () => void;
   reset: () => Promise<void>;
-  submit: () => true | { path: string; message: string }[];
+  submit: () => true | TAsFormError[];
   setErrors: (errors: Record<string, string>) => void;
   /**
    * What every registered field DISPLAYS right now, keyed by path
@@ -107,7 +107,7 @@ export function useAsState<TFormData, TContext>(opts: {
     clearErrors();
   }
 
-  function submit(): true | { path: string; message: string }[] {
+  function submit(): true | TAsFormError[] {
     formState.firstSubmitHappened = true;
     // A submit applies to every currently-registered field — they're no
     // longer "fresh" past this point, regardless of whether validation
@@ -125,7 +125,7 @@ export function useAsState<TFormData, TContext>(opts: {
     }
 
     // Fallback: per-field iteration
-    const errors: { path: string; message: string }[] = [];
+    const errors: TAsFormError[] = [];
     for (const reg of fieldsById.values()) {
       const result = reg.callbacks.validate();
       if (result !== true) {

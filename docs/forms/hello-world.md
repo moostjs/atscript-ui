@@ -166,11 +166,13 @@ wrapper) once submit-time validation passes. If validation fails,
 ```
 
 ```ts
+import type { TAsFormError } from "@atscript/vue-form";
+
 function onSubmit(data: BasicForm) {
   // data: { firstName, lastName, age, email?, password }
 }
 
-function onErrors(errors: { path: string; message: string }[]) {
+function onErrors(errors: TAsFormError[]) {
   console.warn("validation failed:", errors);
 }
 ```

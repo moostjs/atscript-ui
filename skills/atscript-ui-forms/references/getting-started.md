@@ -73,7 +73,7 @@ export interface Contact {
 
 ```vue
 <script setup lang="ts">
-import { AsForm, createAsFormDef, createDefaultTypes } from "@atscript/vue-form";
+import { AsForm, createAsFormDef, createDefaultTypes, type TAsFormError } from "@atscript/vue-form";
 import { Contact } from "./contact.as";
 
 const { def, formData } = createAsFormDef(Contact);
@@ -83,7 +83,7 @@ function onSubmit(data: Contact) {
   console.log(data);
 }
 
-function onError(errors: { path: string; message: string }[]) {
+function onError(errors: TAsFormError[]) {
   console.warn("validation failed", errors);
 }
 </script>
@@ -138,7 +138,7 @@ If you omit `:form-data`, `useAsForm` falls back to a bare `ref<{}>` — no `{ v
 | Event                | Payload                                                                | Fires when                                                                                                                          |
 | -------------------- | ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | `submit`             | `(data: TFormData)`                                                    | `<form>` submit, validation passed. `data` is the unwrapped domain object.                                                          |
-| `error`              | `(errors: { path: string; message: string }[])`                        | `<form>` submit, validation failed. One entry per invalid field.                                                                    |
+| `error`              | `(errors: TAsFormError[])` — `{ path, message }[]`                     | `<form>` submit, validation failed. One entry per invalid field.                                                                    |
 | `action`             | `(name: string, data: TFormData)`                                      | Phantom `@ui.form.action` field invoked, OR `@wf.action.withData` field clicked. `name` is the action id.                           |
 | `unsupported-action` | `(name: string, data: TFormData)`                                      | An action name was dispatched that no field declares. Useful for shared chrome to detect mismatch.                                  |
 | `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur commit, array add/remove, union switch. `type` discriminates: `'update'` `'array-add'` `'array-remove'` `'union-switch'`. |

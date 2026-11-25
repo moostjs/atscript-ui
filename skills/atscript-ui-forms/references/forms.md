@@ -40,10 +40,16 @@ Root component. Renders an HTML `<form>`, owns the form-state machine, wires pro
 | Event                | Payload                                                                | When                                                                                                                                                               |
 | -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `submit`             | `(data: TFormData)`                                                    | Form submitted; validation passed. `data` is normalized (`@normalize.*`, 0.1.165).                                                                                 |
-| `error`              | `(errors: { path: string; message: string }[])`                        | Submit attempted; validation failed.                                                                                                                               |
+| `error`              | `(errors: TAsFormError[])` — `{ path, message }[]`                     | Submit attempted; validation failed. `TAsFormError` is exported (0.1.182).                                                                                         |
 | `action`             | `(name: string, data: TFormData)`                                      | A `@ui.form.action` button (or `@wf.action.withData`) fires. `data` = normalized, nav-skipped, NOT validated (0.1.168; was raw). Exposed `action(name)` fires one. |
 | `unsupported-action` | `(name: string, data: TFormData)`                                      | Action name dispatched but no field declares it.                                                                                                                   |
 | `change`             | `(type: TAsChangeType, path: string, value: unknown, data: TFormData)` | Leaf blur / array add+remove / union switch. For dirty state + an `@atscript/db` patch of edits, see [form-change-tracking.md](form-change-tracking.md).           |
+
+### Submit outcome + template ref (0.1.182+)
+
+`submit()` — on the template ref, in the slot props, and `useAsForm().onSubmit()` — returns `TAsFormSubmitResult` next to the event it emits: `{ ok: true, data }` (`data` = what `@submit` carries) or `{ ok: false, errors }` (= what `@error` carries). Several forms saved by one button: `const a = formA.value!.submit(), b = formB.value!.submit(); if (a.ok && b.ok) save(a.data, b.data)`. With `firstValidation: 'none'` nothing is validated → always `ok: true`.
+
+Type the template ref with `AsFormExposed<typeof formData>` (`ref<AsFormExposed<typeof formData>>()`); `InstanceType<typeof AsForm>` does not compile (`AsForm` is generic). Members: `submit`, `action`, `reset`, `clearErrors`, `setErrors`, `isDirty`, `changes`, `getPatch`, `getChanges`, `isDirtyPath`, `rebase`, `rebaseOnto`.
 
 ### Slots
 
@@ -248,13 +254,13 @@ export interface SignupForm {
 
 Field-level live validation is gated until one of these conditions matches. Once the first submit happens, every field is "active" regardless.
 
-| Strategy            | Live validation activates when…                                                 |
-| ------------------- | ------------------------------------------------------------------------------- |
-| `'on-change'`       | First submit happened **or** the field's model has changed (touched). (default) |
-| `'touched-on-blur'` | First submit happened **or** (blur happened AND touched).                       |
-| `'on-blur'`         | First submit happened **or** blur happened.                                     |
-| `'on-submit'`       | First submit happened. Live updates never run before then.                      |
-| `'none'`            | Disable live validation entirely. Submit also skips per-field iteration.        |
+| Strategy            | Live validation activates when…                                                                               |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `'on-change'`       | First submit happened **or** the field's model has changed (touched). (default)                               |
+| `'touched-on-blur'` | First submit happened **or** (blur happened AND touched).                                                     |
+| `'on-blur'`         | First submit happened **or** blur happened.                                                                   |
+| `'on-submit'`       | First submit happened. Live updates never run before then.                                                    |
+| `'none'`            | Disable validation entirely: never live, and a submit validates nothing (emits `submit`, returns `ok: true`). |
 
 ## Fresh-fields suppression
 

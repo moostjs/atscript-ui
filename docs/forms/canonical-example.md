@@ -65,8 +65,12 @@ Three things the rest of the page depends on:
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { ClientError, VersionMismatchError, type Client } from "@atscript/db-client";
-import type { FormFieldChange, FormRebaseOptions } from "@atscript/ui";
-import { AsForm, createAsFormDef, createDefaultTypes } from "@atscript/vue-form";
+import {
+  AsForm,
+  createAsFormDef,
+  createDefaultTypes,
+  type AsFormExposed,
+} from "@atscript/vue-form";
 import { ServiceTicket } from "../forms/ServiceTicket.as";
 import TicketPriority from "./TicketPriority.vue";
 
@@ -87,19 +91,8 @@ const types = { ...createDefaultTypes(), priority: TicketPriority };
 // read-only and unsent).
 const { def, formData } = createAsFormDef(ServiceTicket, undefined, { mode: "edit" });
 
-// The slice of `<AsForm>`'s `defineExpose` surface this page drives. `AsForm`
-// is a generic component, so a structural handle types the template ref more
-// cleanly than `InstanceType<typeof AsForm>`.
-type AsFormHandle = {
-  getPatch: () => Record<string, unknown>;
-  rebase: () => void;
-  rebaseOnto: (
-    upstream: Record<string, unknown>,
-    opts?: FormRebaseOptions,
-  ) => { conflicts: string[]; reapplied: FormFieldChange[] };
-};
-
-const asForm = ref<AsFormHandle | null>(null);
+// The template ref: what `<AsForm>` exposes (`getPatch`, `rebase`, `rebaseOnto`, …).
+const asForm = ref<AsFormExposed<typeof formData> | null>(null);
 const loading = ref(true);
 // Server-side field errors, keyed by dotted path (`__form` = form-level banner).
 const serverErrors = ref<Record<string, string>>({});

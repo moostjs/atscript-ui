@@ -52,8 +52,12 @@ export interface ServiceTicket {
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { ClientError, VersionMismatchError, type Client } from "@atscript/db-client";
-import type { FormFieldChange, FormRebaseOptions } from "@atscript/ui";
-import { AsForm, createAsFormDef, createDefaultTypes } from "@atscript/vue-form";
+import {
+  AsForm,
+  createAsFormDef,
+  createDefaultTypes,
+  type AsFormExposed,
+} from "@atscript/vue-form";
 import { ServiceTicket } from "../forms/ServiceTicket.as";
 import TicketPriority from "./TicketPriority.vue";
 
@@ -64,18 +68,9 @@ const types = { ...createDefaultTypes(), priority: TicketPriority };
 // `formData` is the WRAPPED container `{ value: domainData }`.
 const { def, formData } = createAsFormDef(ServiceTicket, undefined, { mode: "edit" });
 
-// `AsForm` is generic — a structural handle types the ref more cleanly than
-// `InstanceType<typeof AsForm>`.
-type AsFormHandle = {
-  getPatch: () => Record<string, unknown>;
-  rebase: () => void;
-  rebaseOnto: (
-    upstream: Record<string, unknown>,
-    opts?: FormRebaseOptions,
-  ) => { conflicts: string[]; reapplied: FormFieldChange[] };
-};
-
-const asForm = ref<AsFormHandle | null>(null);
+// `AsForm` is generic: type the template ref with `AsFormExposed` (0.1.182+),
+// never `InstanceType<typeof AsForm>` (does not compile).
+const asForm = ref<AsFormExposed<typeof formData> | null>(null);
 const loading = ref(true);
 const serverErrors = ref<Record<string, string>>({});
 const notice = ref("");

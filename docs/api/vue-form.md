@@ -48,10 +48,37 @@ interface AsFormProps {
 
 **Expose** (template ref): alongside the form's own controls, the instance carries error control — `clearErrors()`, `setErrors(errors)` (see [External errors](/forms/validation#external-errors)) — `action(name)` (fires a form action as its button would — emits `action` / `unsupported-action` with the normalized data; since 0.1.168) and the change-tracking surface — `submit()`, `reset()` ([what it does](/forms/validation#what-reset-does)), `isDirty`, `changes`, `getPatch(opts?)`, `getChanges()`, `rebase()`, `rebaseOnto(upstream, opts?)`. When `track-changes` is off these are safe no-ops (`isDirty` is `false`, `getPatch()` returns `{}`, `rebaseOnto()` returns an empty result). See [Change tracking — parent template ref](/forms/change-tracking#parent-template-ref-the-defineexpose-surface).
 
+Since 0.1.182 `submit()` returns the outcome next to the event it emits — `{ ok: true, data }` or `{ ok: false, errors }` (`TAsFormSubmitResult`, see [The outcome of `submit()`](/forms/validation#the-outcome-of-submit)) — and the exposed surface is exported as `AsFormExposed<TFormData>`. `<AsForm>` is a generic component, so `InstanceType<typeof AsForm>` does not compile; type the ref with the interface:
+
+```ts
+import { ref } from "vue";
+import { createAsFormDef, type AsFormExposed } from "@atscript/vue-form";
+
+const { def, formData } = createAsFormDef(Product);
+const asForm = ref<AsFormExposed<typeof formData>>();
+```
+
+```typescript
+interface AsFormExposed<TFormData = any> {
+  submit: () => TAsFormSubmitResult<TFormData>;
+  action: (name: string) => void;
+  reset: () => Promise<void>;
+  clearErrors: () => void;
+  setErrors: (errors: Record<string, string>) => void;
+  readonly isDirty: boolean;
+  readonly changes: readonly FormFieldChange[];
+  getPatch: (opts?: FormDiffOptions) => Record<string, unknown>;
+  getChanges: () => FormFieldChange[];
+  isDirtyPath: (path: string) => boolean;
+  rebase: () => void;
+  rebaseOnto: (upstream: Record<string, unknown>, opts?: FormRebaseOptions) => RebaseOntoResult;
+}
+```
+
 **Emits**:
 
 - `submit(data)` — validation passed, data ready to ship. Since 0.1.165 `data` has the type's `@normalize.*` applied (trimmed, case-folded) — what was validated; the form itself keeps what the user typed ([Normalized before validation](/forms/validation#normalized-before-validation)).
-- `error(errors)` — validation failed; payload is `{ path, message }[]`.
+- `error(errors)` — validation failed; payload is `{ path, message }[]` (`TAsFormError[]`, exported since 0.1.182).
 - `action(name, data)` — phantom `<AsAction>` button dispatched. `data` is what a submit would send — normalized, without the navigation fields the form leaves out — but not validated (an action is not a submit).
 - `unsupportedAction(name, data)` — action name not declared on the form's type; same `data`.
 - `change(type, path, value, data)` — granular per-field change; `type` is `TAsChangeType`.
@@ -208,12 +235,12 @@ All defaults accept the full `TAsComponentProps` contract — see [Component pro
 one of its slots is how a custom field keeps the standard label / error /
 status layout while replacing one part of it.
 
-| Slot          | Slot props                                                | Renders                                                               |
-| ------------- | --------------------------------------------------------- | --------------------------------------------------------------------- |
-| default       | `{ inputId, errorId, descId }`                            | The control itself, inside the input row (a lone root fills the row). |
-| `header`      | `{ inputId, descId, optionalEnabled, isDirty, statusId }` | Replaces the default `<label>` in the header row.                     |
-| `after-input` | `{ descId }`                                              | Extra content directly below the input row (e.g. a description node). |
-| `status`      | `{ isDirty, error, hint, statusId, inputId }`             | The whole footer error / hint / status area.                          |
+| Slot          | Slot props                                                | Renders                                                                                                                                                 |
+| ------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| default       | `{ inputId, errorId, descId }`                            | The control itself, inside the input row (a lone root fills the row; with the UnoCSS preset, `flex-none` on it keeps its content width, since 0.1.182). |
+| `header`      | `{ inputId, descId, optionalEnabled, isDirty, statusId }` | Replaces the default `<label>` in the header row.                                                                                                       |
+| `after-input` | `{ descId }`                                              | Extra content directly below the input row (e.g. a description node).                                                                                   |
+| `status`      | `{ isDirty, error, hint, statusId, inputId }`             | The whole footer error / hint / status area.                                                                                                            |
 
 `isDirty` and `statusId` on `header` are new in 0.1.133, as is the `status`
 slot. The default `status` content renders the error/hint node (`errorId`,
@@ -290,7 +317,8 @@ interface UseAsFormOptions<TFormData, TFormContext> {
   formContext?: () => TFormContext | undefined;
   firstValidation?: () => TFormState["firstValidation"] | undefined;
   components?: () => Record<string, Component<TAsComponentProps>> | undefined;
-  types: () => TAsTypeComponents;
+  /** Optional since 0.1.182: a form root that renders its own inputs (no `<AsField>`) can leave it out. */
+  types?: () => TAsTypeComponents | undefined;
   errors?: () => Record<string, string | undefined> | undefined;
   clientFactory?: () => ClientFactory | undefined;
   hideRootTitle?: () => boolean | undefined;
@@ -298,7 +326,7 @@ interface UseAsFormOptions<TFormData, TFormContext> {
   loading?: () => boolean | undefined;
   emits?: {
     submit?: (data: TAsFormValue<TFormData>) => void;
-    error?: (errors: { path: string; message: string }[]) => void;
+    error?: (errors: TAsFormError[]) => void;
     action?: (name: string, data: TAsFormValue<TFormData>) => void;
     unsupportedAction?: (name: string, data: TAsFormValue<TFormData>) => void;
     change?: (
@@ -316,6 +344,14 @@ type TAsFormValue<TFormData> = 0 extends 1 & TFormData
   : TFormData extends { value?: infer V }
     ? V
     : unknown;
+
+/** One validation error of a submit (`__form` for a failing `@ui.form.validate` on the interface). Since 0.1.182. */
+type TAsFormError = { path: string; message: string };
+
+/** What a submit returns. With `firstValidation: "none"` it is always `ok: true`. Since 0.1.182. */
+type TAsFormSubmitResult<TFormData> =
+  | { ok: true; data: TAsFormValue<TFormData> }
+  | { ok: false; errors: TAsFormError[] };
 ```
 
 Returns:
@@ -334,7 +370,8 @@ interface UseAsFormReturn<TFormData, TFormContext> {
   reset: () => Promise<void>;
   clearErrors: () => void;
   setErrors: (errors: Record<string, string>) => void;
-  onSubmit: () => void;
+  /** Validate and submit: emits `submit` / `error` and returns the outcome (since 0.1.182). */
+  onSubmit: () => TAsFormSubmitResult<TFormData>;
   submitText: ComputedRef<string>;
   submitDisabled: ComputedRef<boolean>;
   /** Resolved form-level title (`@ui.form.fn.title` / `@meta.label`); may be `undefined`. */
@@ -351,7 +388,7 @@ interface UseAsFormReturn<TFormData, TFormContext> {
     disabled: boolean;
     loading: boolean;
     submitText: string;
-    submit: () => void;
+    submit: () => TAsFormSubmitResult<TFormData>;
     reset: () => Promise<void>;
     clearErrors: () => void;
     setErrors: (errors: Record<string, string>) => void;

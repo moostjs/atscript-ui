@@ -254,6 +254,12 @@ inside your root and after `await nextTick()` is no longer in the document or
 is disabled (a Reset button bound to `isDirty`), focus your first field's
 control (a checkbox or radio counts).
 
+`form.onSubmit()` emits `submit` / `error` through `emits` and also returns
+the outcome, `{ ok: true, data }` or `{ ok: false, errors }` (since 0.1.182;
+see [The outcome of `submit()`](/forms/validation#the-outcome-of-submit)).
+A root that renders its own inputs with `useAsField()` and no `<AsField>` can
+leave `types` out (optional since 0.1.182).
+
 For lower-level access — replacing `<AsField>` itself with your own per-field
 component that calls `useAsField()` — see
 [Custom field components](/forms/custom-components).
@@ -274,7 +280,7 @@ The bag every slot gets:
 | `errors` / `formError`                      | External leaf errors + the form-level message          |
 | `disabled` / `loading`                      | Submit-disabled flag and busy state                    |
 | `submitText`                                | Resolved submit-button label                           |
-| `submit` / `reset`                          | Trigger submit / reset the form                        |
+| `submit` / `reset`                          | Trigger submit (returns the outcome) / reset the form  |
 | `clearErrors` / `setErrors`                 | Imperative error control                               |
 | `dismissError(path)` / `dismissFormError()` | Dismiss a leaf error or the banner                     |
 | `formContext`                               | The reactive form context                              |

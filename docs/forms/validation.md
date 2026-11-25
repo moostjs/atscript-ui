@@ -284,6 +284,28 @@ After the first edit on a leaf field, errors update on every
 keystroke. Until the user types, validation is silent.
 :::
 
+### The outcome of `submit()`
+
+_Since 0.1.182._ `submit()` (on an `<AsForm>` [template ref](#programmatic-control),
+in the slot props, and `onSubmit()` from `useAsForm`) also returns the
+outcome, next to the event it emits:
+
+- `{ ok: true, data }` — `data` is what `@submit` carries.
+- `{ ok: false, errors }` — `errors` is the `{ path, message }[]` list
+  `@error` carries (type `TAsFormError[]`).
+
+So a page that saves several forms with one button can check them all
+before it saves:
+
+```ts
+const person = personForm.value!.submit();
+const address = addressForm.value!.submit();
+if (person.ok && address.ok) await save({ ...person.data, address: address.data });
+```
+
+With `first-validation="none"` nothing is validated: `submit()` emits
+`@submit` and returns `{ ok: true, data }` whatever the data holds.
+
 ## Fresh fields
 
 Newly-mounted fields are marked **fresh** until the user edits them or
@@ -431,10 +453,13 @@ The slots on `<AsForm>` expose imperative helpers:
 
 `clearErrors` and `setErrors` are also exposed on the `<AsForm>`
 template ref (alongside `submit`, `reset`, and the change-tracking
-surface), so a host shell can drive them without slot plumbing:
+surface), so a host shell can drive them without slot plumbing. `<AsForm>`
+is a generic component, so type the ref with `AsFormExposed` (since 0.1.182):
 
 ```ts
-const formRef = ref<InstanceType<typeof AsForm>>();
+import type { AsFormExposed } from "@atscript/vue-form";
+
+const formRef = ref<AsFormExposed<typeof formData>>();
 formRef.value?.clearErrors();
 formRef.value?.setErrors({ "address.street": "Unknown address" });
 ```
