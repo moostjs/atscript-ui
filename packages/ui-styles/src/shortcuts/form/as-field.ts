@@ -88,10 +88,13 @@ export const asFieldShortcuts = defineShortcuts({
   "as-field-header-row": "flex items-center gap-$xs min-h-[1.5em]",
   "as-field-header-content": "flex flex-wrap items-center gap-x-$xs gap-y-[0.15em] flex-1 min-w-0",
   "as-field-header-actions": "flex items-center gap-$xs flex-shrink-0",
-  // A lone child (a custom control's root) fills the row and may shrink below
-  // its content width; adornments next to an input keep their size.
+  // A bare input / select / textarea and a lone child (a custom control's root)
+  // fill the row; a lone child may also shrink below its content width.
+  // Adornments next to an input keep their size. Inside `:where()` these rules
+  // weigh one class, so a flex utility on the direct child itself
+  // (`flex-none`) wins over the fill.
   "as-field-input-row":
-    "flex items-center gap-$xs [&>input]:flex-1 [&>select]:flex-1 [&>textarea]:flex-1 [&>*:only-child]:flex-1 [&>*:only-child]:min-w-0",
+    "flex items-center gap-$xs [&>:where(input,select,textarea)]:flex-1 [&>:where(*:only-child)]:flex-1 [&>:where(*:only-child)]:min-w-0",
   "as-error-slot": "leading-[1] text-callout text-current/60",
 
   // Screen-reader-only counterpart of the `data-dirty` left rail: the rail is

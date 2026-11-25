@@ -189,6 +189,30 @@ describe("as-field-input-row lets a custom control fill the row", () => {
       "min-width": "0",
     });
   });
+
+  // A content-width control (a segmented switch) opts out with a flex utility
+  // on its own root, whether that root is a bare input / select / textarea or
+  // any lone element. Every fill rule weighs one class (the rest sits inside
+  // `:where()`), as a utility does, and utilities are emitted after the
+  // shortcuts, so the utility wins without `!`.
+  it("a flex utility on the direct child of a field row wins over the row's fill", async () => {
+    const fills = (await rules("as-field-input-row")).filter(([, d]) => "flex" in d);
+    expect([...new Set(fills.map(([sel]) => sel))].toSorted()).toEqual([
+      ".as-field-input-row>:where(*:only-child)",
+      ".as-field-input-row>:where(input,select,textarea)",
+    ]);
+    const uno = await createGenerator(createAsBaseUnoConfig());
+    const { css } = await uno.generate(new Set(["as-field-input-row", "flex-none"]), {
+      preflights: false,
+      safelist: false,
+    });
+    const utility = css.indexOf(".flex-none{");
+    for (const sel of fills.map(([s]) => s)) {
+      const fill = css.indexOf(`${sel}{`);
+      expect(fill, sel).toBeGreaterThanOrEqual(0);
+      expect(utility, sel).toBeGreaterThan(fill);
+    }
+  });
 });
 
 /** `[selector, declarations]` for every rule a token produced. */
