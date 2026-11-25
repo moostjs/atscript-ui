@@ -122,6 +122,10 @@ Locale-formatted, right-aligned, tabular-nums. Reads four pieces of
   `column.unitRefField`. Renders as `Intl.NumberFormat({ style:
 "unit", unit })`.
 
+These annotations reach the table in the `/meta` type. `@atscript/moost-db`
+serves them from 0.1.192; with an older server the controller has to keep
+them in its `getSerializeOptions()` override.
+
 Shares `formatDecimalForDisplay` with `<AsNumber>` so form input and
 table cell render identically.
 
