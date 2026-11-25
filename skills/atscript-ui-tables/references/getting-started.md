@@ -144,7 +144,7 @@ v-slot="{
 }"
 ```
 
-Beyond the slot, the full `ReactiveTableState` is exposed via `useTableContext()` from any descendant. Components rendered outside the default slot (Tier-2 dialogs `<AsFilterDialog>`, `<AsConfigDialog>`, `<AsConfirmDialog>`, `<AsPresetDialog>`, lazy `<AsActionFormDialog>`) are mounted by `<AsTableRoot>` itself — placing them inside the slot will double-mount and break the dialog's open-state binding. Swap via the `controls` map instead.
+Beyond the slot, the full `ReactiveTableState` is exposed via `useTableContext()` from any descendant, and a template ref to `<AsTableRoot>` exposes `{ state, navBridge }` (the same `state`, plus the `TableNavBridge` of `useTableNavBridge()`) for the parent that owns it: `root.value!.state.sorters.value = [...]`. Components rendered outside the default slot (Tier-2 dialogs `<AsFilterDialog>`, `<AsConfigDialog>`, `<AsConfirmDialog>`, `<AsPresetDialog>`, lazy `<AsActionFormDialog>`) are mounted by `<AsTableRoot>` itself — placing them inside the slot will double-mount and break the dialog's open-state binding. Swap via the `controls` map instead.
 
 ## Default control + cell-type factories
 

@@ -99,6 +99,14 @@ interface AsTableRootProps {
 
 **Slot props** (default slot, bound from `state`): `tableDef`, `loadingMetadata`, `metadataError`, `allColumns`, `columnNames`, `columnWidths`, `columns`, `filterFields`, `filters`, `residualFilters`, `sorters`, `results`, `querying`, `queryingNext`, `totalCount`, `loadedCount`, `pagination`, `queryError`, `mustRefresh`, `searchTerm`, `selectedRows`, `selectedCount`, `selection`, `canSelectAllMatching`, `selectAllMatching`, `clearSelection` (these four since 0.1.147), `navBridge`, `query`, `queryNext`, `resetFilters`, `showConfigDialog`, `openFilterDialog`, `closeFilterDialog`, `setFieldFilter`, `removeFieldFilter`, `setResidualFilters`, `removeResidualFilter`, `addFilterField`, `removeFilterField`, `actions`, `prompt` (`residualFilters` and its two mutators since 0.1.140).
 
+**Expose** (template ref): `{ state, navBridge }` — `state` is the table's `ReactiveTableState` (the same object [`useTable`](#usetable-url-opts) returns and the slot props are bound from), `navBridge` the [`TableNavBridge`](#usetablenavbridge) for driving the row highlight from your own input. Use it from outside the default slot:
+
+```ts
+const root = ref<InstanceType<typeof AsTableRoot> | null>(null);
+// ...
+root.value!.state.sorters.value = [{ field: "amount", direction: "desc" }];
+```
+
 ### `AsTable`
 
 Paginated table renderer. Subscribes to `useTableContext()`. Use inside `<AsTableRoot>` or supply your own context.
