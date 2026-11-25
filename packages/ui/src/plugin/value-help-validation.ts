@@ -543,7 +543,7 @@ export function validateDistinct(token: Token, _args: Token[], doc: AtscriptDoc)
     struct &&
     isStructure(struct) &&
     field.prop.countAnnotations("db.column.dimension") === 0 &&
-    isStrictAggregateStruct(struct)
+    isStrictAggregateStruct(struct, doc)
   ) {
     errors.push({
       message: `$groupBy rejects this field of a strict aggregate table: ${NOT_DIMENSION_REASON} (add @db.column.dimension)`,

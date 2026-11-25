@@ -369,6 +369,24 @@ export interface Agg {
     expect(w).toHaveLength(1);
     expect(w[0]).toContain("not a dimension");
   });
+
+  it("DV3: a dimension the table inherits makes it strict", async () => {
+    const m = await msgs(`
+export interface AggBase {
+    @meta.id
+    id: number
+    @db.column.dimension
+    region: string
+}
+@db.table 'agg3'
+export interface Agg3 extends AggBase {
+    @ui.valueHelp.distinct
+    city: string
+}`);
+    const w = m.filter((x) => x.startsWith("W"));
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain("not a dimension");
+  });
 });
 
 describe("@ui.literalLabel diagnostics", () => {
