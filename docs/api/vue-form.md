@@ -279,6 +279,18 @@ function createAsFormDef<T extends TAtscriptAnnotatedType>(
 ): { def: FormDef; formData: { value: unknown } };
 ```
 
+The types in this signature are imported from the packages that own them. `TAtscriptAnnotatedType` (any generated `.as` type, the type to give a prop or variable that holds a form schema) comes from `@atscript/typescript/utils`; that package is a peer dependency of `@atscript/vue-form`, so your app already depends on it. `FormDef` and `CreateFormDefOptions` come from `@atscript/ui`, which the [installation guide](/guide/installation) adds to your app next to this package.
+
+```typescript
+import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+import type { FormDef } from "@atscript/ui";
+
+interface FormTab {
+  schema: TAtscriptAnnotatedType; // what createAsFormDef(type) accepts
+  def?: FormDef;
+}
+```
+
 For a form that edits a stored row pass `{ mode: "edit" }`: server-stamped update fields become read-only, and the `@db.column.version` field is left out of `def.fields[]` (it stays in `flatMap` and form data, so the wire payload still carries it for `$cas`). See the [Edit forms with optimistic concurrency](/tables/edit-form-occ) pattern guide.
 
 ```ts
