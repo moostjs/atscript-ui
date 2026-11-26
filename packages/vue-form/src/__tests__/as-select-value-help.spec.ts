@@ -77,6 +77,10 @@ async function mountSelectForm(initialValue: Record<string, unknown>, rows = CIT
   const def = createFormDef(SelectFillForm);
   def.fields.find((f) => f.path === "city")!.valueHelpInfo = CITY;
   def.fields.find((f) => f.path === "size")!.valueHelpInfo = { url: "/sizes", targetField: "code" };
+  def.fields.find((f) => f.path === "grade")!.valueHelpInfo = {
+    url: "/grades",
+    targetField: "code",
+  };
   const formData = reactive({ value: initialValue }) as { value: Record<string, unknown> };
   const wrapper = mount(AsForm as any, {
     props: { def, formData, types: createDefaultTypes(), trackChanges: true },
@@ -164,6 +168,14 @@ describe("a dropdown bound to a dictionary (since 0.1.190)", () => {
     expect(fieldOf(wrapper, "City").find(".as-ref-input").exists()).toBe(true);
     const warnings = warn.mock.calls.filter((c) => String(c[0]).includes("/cities"));
     expect(warnings).toHaveLength(1);
+  });
+});
+
+describe("a bound select with options of its own (since 0.1.190)", () => {
+  it("lists its own options, without the dictionary's empty option", async () => {
+    const { wrapper } = await mountSelectForm({ city: "BER", grade: "low" });
+    const grade = fieldOf(wrapper, "Grade");
+    expect(grade.findAll("option").map((o) => o.text())).toEqual(["low", "high"]);
   });
 });
 

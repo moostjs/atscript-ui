@@ -37,6 +37,10 @@ export interface SelectFillForm {
     @meta.label 'Size'
     @ui.form.type 'radio'
     size?: string
+
+    @meta.label 'Grade'
+    @ui.form.type 'select'
+    grade: 'low' | 'high'
 }
 
 @db.http.path '/cities'
