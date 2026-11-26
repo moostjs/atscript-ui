@@ -45,7 +45,7 @@ Annotated breakdown of the props you'll touch most:
 | `field`                     | Full `FormFieldDef` for advanced inspection                                |
 | `formAction`                | For phantom action fields — `{ id, label }`                                |
 | `options`                   | Resolved options for select/radio/checkbox                                 |
-| `valueHelp`                 | FK ref descriptor (`ValueHelpInfo`)                                        |
+| `valueHelp`                 | Value-help descriptor (`ValueHelpInfo`): FK or `@ui.valueHelp` binding     |
 | `singularLabel`             | From `@ui.form.label.singular` — used by arrays                            |
 | `prefix` / `suffix`         | Resolved adornment text                                                    |
 | `prefixIcon` / `suffixIcon` | Resolved adornment icon class                                              |

@@ -344,6 +344,13 @@ When both are present the field renders an `AsRef` picker by default
 
 `@ui.valueHelp` (since 0.1.148) binds a field to a dictionary without a foreign
 key — see [References](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
+Since 0.1.190 its filter can name fields of the form
+(`country = Customer.country` — [values of the form narrow the picker](/forms/references#values-of-the-form-narrow-the-picker)),
+`@ui.valueHelp.fill 'local', 'targetField'` makes a pick fill other fields
+([fills](/forms/references#a-pick-fills-other-fields-ui-valuehelp-fill)),
+`@ui.valueHelp.column 'field'` sets the picker dialog's columns, and
+`@ui.form.type 'select'` on a bound field lists the dictionary's values
+([dropdown](/forms/references#a-dropdown-from-a-dictionary)).
 `@ui.literalLabel` labels the literals of a union field's select / radio options
 without restating them in `@ui.form.options` — see
 [Union labels](/tables/filtering#union-labels). On a `boolean` (since 0.1.165)

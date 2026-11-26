@@ -75,7 +75,10 @@ dictionary.
 that:
 
 1. Fetches the target type's `@db.http.path` metadata once and caches it.
-2. Queries the target with `$select` scoped to PK + label + (optional) descr.
+2. Queries the target with `$select` scoped to PK + label + (optional) descr —
+   plus the committed field, the binding's [columns](#dialog-columns-ui-valuehelp-column)
+   and [fill targets](#a-pick-fills-other-fields-ui-valuehelp-fill) (_since
+   0.1.190_: one select rule for every value-help read, `valueHelpSelect`).
 3. On search, sends `$search` to a `@db.index.fulltext` target, or builds an
    `$or` regex filter for non-searchable targets, plus an exact-PK match.
 4. Honours `$limit` (default 20).
@@ -144,7 +147,151 @@ export interface TicketOverview {
   it names.
 
 A custom picker that builds its own query passes `info.filter` and selects
-`info.targetField` — see the [API reference](/api/ui#valuehelpinfo).
+`info.targetField` — see the [API reference](/api/ui#valuehelpinfo). In a form,
+it passes `valueHelpScope(info, read).filter` instead, so the
+[values of the form](#values-of-the-form-narrow-the-picker) apply too, and
+`info` to `ValueHelpClient.search`, which then selects the columns and fill
+targets as well.
+
+## Values of the form narrow the picker
+
+_Since 0.1.190._ A condition `targetField = Host.field` in the binding's filter
+names a field of the form: `Host` is the interface that declares the bound
+field (in an `annotate Host { … }` block, the annotated interface). The picker
+filters the dictionary by that field's current value.
+
+```atscript
+export interface Customer {
+    country?: string
+
+    @ui.valueHelp City, 'id', `country = Customer.country and active = true`
+    city?: string
+}
+```
+
+- **Empty leaves it out.** While `country` is empty (`undefined`, `null`, `""`)
+  the condition is dropped and the picker lists every active city. The value is
+  sent as the form holds it.
+- **A change re-scopes.** An open picker searches again at once (also for
+  unchanged search text); a closed one on its next open. A value already picked
+  that the new scope excludes stays until it is changed.
+- **By name, wherever the binding goes.** The reference reads the sibling named
+  `country` in every form the binding reaches — the declaring interface, an
+  `extends`, a chain reference (`city: Customer.city`), a view column. A form
+  without that sibling gets the wider picker.
+- **Forms only.** The table's filter bar shows the unscoped list: table
+  filters never read host values. `ValueHelpInfo.filter` holds only the
+  literal comparisons; the host references are in `ValueHelpInfo.hostFilter`.
+
+The compiler accepts a host reference only as a **top-level `and` condition
+`targetField = Host.field`** whose `field` is an existing scalar field of the
+host (declared or inherited; not an object, an array, `@db.json` or a
+navigation) of the same type as `targetField`, and not the bound field
+itself. A host reference under `or` / `not`, with another operator, on the
+left side, on a field of an inline structure, or in an `annotate … as` copy is
+a compile error. The editor offers the host interface after the operator and
+its fields after `Host.`, and go-to-definition and hover work on them. A
+dictionary bound from its own interface (`manager` of `Employee` picking from
+`Employee`) works: the right-hand side is the host.
+
+A composite-key member a host reference pins (`country` of a city keyed by
+`country` + `id`) counts as pinned: no "values may repeat" warning, and the
+pickers hide it while it has a value.
+
+## A pick fills other fields: `@ui.valueHelp.fill`
+
+_Since 0.1.190._ `@ui.valueHelp.fill 'local', 'targetField'` writes the picked
+row's `targetField` into the sibling field `local`. Repeat it per field.
+
+```atscript
+export interface Customer {
+    country?: string
+
+    @ui.valueHelp City, 'id', `country = Customer.country`
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'country', 'country'
+    city?: string
+
+    cityName?: string
+}
+```
+
+- Each write is an edit, as if the user had typed it: change tracking sees
+  it, the field validates, and `<AsForm>` emits `change`. A value the field
+  already holds is not written again.
+- Fills apply to the field's **own** binding — its `@ui.valueHelp`, else its
+  `@db.rel.FK` help. A binding the field only gets through its type or a chain
+  reference takes no fills (the names are siblings of the declaring
+  interface), and fills are not passed through references. `extends` keeps
+  them.
+- A fill whose field the form does not have, or holds as derived, read-only
+  or a navigation, is skipped (the compiler warns for the last three).
+- A filled field that has fills of its own does not pick again: fills do not
+  cascade.
+- A field can be both a host value and a fill target (`country` above): an
+  empty country lists every city, and a pick sets it.
+
+The compiler checks that `local` is a top-level scalar field of the host (not
+the bound field), that `targetField` is a top-level scalar field of the
+dictionary, and that their types match. An `annotate` entry that replaces the
+binding re-checks the field's fills and columns against the new dictionary.
+Fills are refused on a field of an inline structure and in an `annotate … as`
+copy. The editor completes `local` with the host's fields and `targetField`
+with the dictionary's.
+
+### Clearing filled fields
+
+The picker's × (and the empty option of a [dropdown](#a-dropdown-from-a-dictionary))
+also clears the fields this field's **last pick** filled — each only while it
+still holds what that pick wrote, and never one the binding reads as a host
+value. Clearing writes `undefined`. A field the user changed since keeps its
+value; resets, loaded records and other fields' fills clear nothing.
+
+## Dialog columns: `@ui.valueHelp.column`
+
+_Since 0.1.190._ `@ui.valueHelp.column 'field'` (repeat per column) sets the
+columns of the binding's picker dialogs — the table's filter dialog — to
+exactly these dictionary fields, in this order, instead of the dictionary's
+key / label / description view. The combobox and the dropdown keep key, label
+and description. Like fills, columns belong to the field's own binding (or FK
+help); unlike fills, they travel with the binding through references.
+
+```atscript
+@ui.valueHelp City, 'id'
+@ui.valueHelp.column 'id'
+@ui.valueHelp.column 'name'
+@ui.valueHelp.column 'region'
+city?: string
+```
+
+## A dropdown from a dictionary
+
+_Since 0.1.190._ `@ui.form.type 'select'` (or `'radio'`, or `@ui.type`) on a
+bound field with no options of its own lists the dictionary's values instead
+of a search picker: one read in the binding's scope (host values included),
+with the usual select. Each option shows the label (the key when it has none)
+and the description; the stored value is the committed field. Use it for small
+dictionaries.
+
+```atscript
+@ui.form.type 'select'
+@ui.valueHelp AttributeValue, 'value', `attribute = 'color'`
+@ui.valueHelp.fill 'colorLabel', 'label'
+color?: string
+```
+
+- A choice goes through the same pick path as the picker, so fills apply.
+- The dropdown starts with an empty option; choosing it empties the field as
+  the picker's × does and clears what the last choice filled.
+- A changed host value reads the list again.
+- More than 200 values (`VALUE_HELP_OPTIONS_CAP`) is too many for a dropdown:
+  the field falls back to the search picker (the `ref` entry of the types
+  map), with one warning in development.
+- A value the list does not hold stays and shows as it is stored.
+
+In the table's filter bar, a dictionary column with `@ui.type 'select'` picks
+from a checklist of the dictionary's values instead of the dictionary table —
+see [Value-help filters](/tables/filtering#value-help-filters).
 
 For union labels see [Union labels](/tables/filtering#union-labels); for
 distinct-value filters, [Distinct values](/tables/filtering#distinct-values).
@@ -245,7 +392,10 @@ The default `AsRef` component is a Reka-ui Combobox with:
 - Display of `@ui.dict.label` plus a faint secondary `@ui.dict.descr` line.
 - A clear button (×) that clears the field's value and the search text —
   shown while the field has a value or search text, never on a disabled or
-  read-only field. Focus returns to the input.
+  read-only field. Focus returns to the input. It also clears what the last
+  pick [filled](#clearing-filled-fields).
+- One pick path: a pick commits the value, writes the binding's fills and
+  validates the field (`selectItem`).
 - Loading and empty-state slots.
 
 For deeper customisation (column layout, filters, mini-tables) swap the `ref`
@@ -271,6 +421,12 @@ The × empties the field as emptying an input does
 ::: warning Changed in 0.1.177
 Before 0.1.177 the × only emptied the search text; the selected reference
 stayed in the form data.
+:::
+
+::: warning Changed in 0.1.190
+A pick now validates the field and marks it touched at once (the form emits
+`change` for it), not on the next blur. Before 0.1.190 the combobox wrote the
+value straight into the model and the field validated when focus left.
 :::
 
 ## Cross-references

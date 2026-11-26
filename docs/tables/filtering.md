@@ -502,6 +502,16 @@ on the column; the picker is purely a UI affordance.
 The binding's static `filter` is applied to every picker query, and fields it
 pins with `=` are hidden from the picker's columns and filter inputs — see
 [`@ui.valueHelp`](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
+Conditions that name a field of the form (`country = Customer.country`, since
+0.1.190) apply in forms only: in the filter bar the picker shows the list
+without them. `@ui.valueHelp.column` (since 0.1.190) sets the columns of the
+filter dialog — exactly those dictionary fields, in order; the inline dropdown
+keeps the key / label view. Every read selects the committed field, the
+columns and the fill targets.
+
+A dictionary column with `@ui.type 'select'` (since 0.1.190) picks from a
+checklist of the dictionary's values, like a literal union, once they load;
+with more than 200 values it keeps the dictionary picker.
 If the dictionary answers 4xx — the caller cannot read it — that table's column
 falls back to a free-text filter instead of an empty picker, until the table
 reloads.

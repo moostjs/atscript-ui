@@ -131,6 +131,12 @@ editor check them. All three apply to `prop` and `type`.
 
 - `@ui.valueHelp` — binds the field to a dictionary
   without a foreign key: [References](/forms/references#binding-without-a-foreign-key-ui-valuehelp).
+  Host references in its filter (`country = Customer.country`, since 0.1.190)
+  apply in forms only.
+- `@ui.valueHelp.column` (since 0.1.190, `prop` only) — the columns of the
+  binding's filter dialog, in order:
+  [Dialog columns](/forms/references#dialog-columns-ui-valuehelp-column).
+  `@ui.valueHelp.fill` (same release) applies in forms only.
 - `@ui.valueHelp.distinct` — offers the column's own stored values in the table
   filters: [Distinct values](/tables/filtering#distinct-values).
 - `@ui.literalLabel` — labels one literal of a union, or (since 0.1.165) one

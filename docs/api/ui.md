@@ -913,12 +913,52 @@ interface ValueHelpInfo {
   url: string;
   /** Field on the target that this FK / binding references — the value a pick commits. */
   targetField: string;
-  /** Static dictionary scope (`@ui.valueHelp`'s filter), AND'd into every picker query. Since 0.1.148. */
+  /** Static dictionary scope (`@ui.valueHelp`'s filter), AND'd into every picker query — literal comparisons only. Since 0.1.148. */
   filter?: FilterExpr;
   /** Target fields the filter pins with `=` — constant in the picker, hidden from its columns. Since 0.1.148. */
   pinned?: string[];
+  /** The filter's host references (`target = Host.local`): in a form, `target` is filtered by the sibling `local`'s value. Since 0.1.190. */
+  hostFilter?: { target: string; local: string }[];
+  /** `@ui.valueHelp.fill`: in a form, a pick writes the row's `target` into the sibling `local`. Since 0.1.190. */
+  fill?: { local: string; target: string }[];
+  /** `@ui.valueHelp.column`: the fields the picker dialogs show, in order. Since 0.1.190. */
+  columns?: string[];
 }
 ```
+
+Since 0.1.190 a filter's host references (`targetField = Host.field`) are
+lifted out of `filter` into `hostFilter`, so `filter` never holds a
+field-to-field comparison: a custom component that passes `info.filter` to
+the dictionary keeps working, and table filters (which read `filter` only)
+ignore host values. `fill` holds, on a form field's def, only the fills that
+form can write (`createFormDef` drops those whose field is missing, derived,
+read-only or a navigation). A binding without the new annotations yields the
+same info as before — the new keys are absent.
+
+### `valueHelpScope(info, read)` / `valueHelpFills(info, row)`
+
+_Since 0.1.190._ The form side of a binding: the scope a picker searches with,
+given the form's sibling values (`read(local)`), and what a pick writes.
+
+```typescript
+function valueHelpScope(info: ValueHelpInfo, read: (local: string) => unknown): ValueHelpScope;
+function valueHelpFills(info: ValueHelpInfo, row: Record<string, unknown>): ValueHelpFillWrite[];
+
+interface ValueHelpScope {
+  /** `info.filter` AND'd with `{ [target]: value }` per host reference whose sibling holds one value. */
+  filter?: FilterExpr;
+  /** `info.pinned` plus the targets those values pin. */
+  pinned: string[];
+}
+interface ValueHelpFillWrite {
+  local: string;
+  value: unknown; // row[target]
+}
+```
+
+A sibling that is empty (`undefined`, `null`, `""`) or holds no single value
+(an array, an object) leaves its condition out. vue-form's `useAsValueHelp`
+reads the siblings with `useAsData().siblingValue`.
 
 ### `extractValueHelp(prop)` / `extractLiteralOptions(prop)` / `isPureLiteralUnion(prop)`
 
@@ -962,20 +1002,68 @@ interface ValueHelpSearchOptions {
   mode?: "form" | "filter";
   /** Max results. Default: 20. */
   limit?: number;
-  /** Override the computed `$select` fields. */
+  /** Fields added to the ones every value-help read selects (`valueHelpSelect`). Adds since 0.1.190 (replaced before). */
   select?: string[];
-  /** Static scope (`ValueHelpInfo.filter`), AND'd with the search filter and with `$search`. Since 0.1.148. */
+  /** Scope — `ValueHelpInfo.filter`, or in a form `valueHelpScope(info, read).filter` — AND'd with the search filter and with `$search`. Since 0.1.148. */
   filter?: FilterExpr;
   /**
    * The field the picker commits (`ValueHelpInfo.targetField`). It is always selected and is the
-   * exact-match key of a non-searchable search. Default: `primaryKeys[0]`. Since 0.1.148.
+   * exact-match key of a non-searchable search. Default: `primaryKeys[0]`, or `info.targetField`. Since 0.1.148.
    */
   valueField?: string;
+  /** The binding: its `targetField`, `columns` and fill targets are always selected. Since 0.1.190. */
+  info?: Pick<ValueHelpInfo, "targetField" | "columns" | "fill">;
 }
 
 interface ValueHelpResult {
   items: Record<string, unknown>[];
 }
+```
+
+The non-searchable fallback (`$or` of prefix regexes plus an exact match on
+the committed field) runs over the dictionary's own key, label and description
+fields (and `@ui.dict.attr` fields in `"filter"` mode) — never over the
+columns, fill targets or `select` additions.
+
+::: warning Changed in 0.1.190
+`select` adds fields to the ones a value-help search always reads; before, it
+replaced them, and could leave out the committed field. Pass only the extra
+fields you need.
+:::
+
+### `valueHelpSelect(resolved, info?, mode?, valueField?)`
+
+_Since 0.1.190._ The one select rule of every value-help read — the form
+picker, the dropdown, the table's filter dialog and inline picker: the
+dictionary's keys, label and description (plus `@ui.dict.attr` fields in
+`"filter"` mode), the committed field, `info.columns` and the target fields of
+`info.fill`. `ValueHelpClient.search` selects it; the filter dialogs pass it as
+`alwaysSelected`.
+
+```typescript
+function valueHelpSelect(
+  resolved: ResolvedValueHelp,
+  info?: Pick<ValueHelpInfo, "targetField" | "columns" | "fill">,
+  mode?: "form" | "filter", // default "form"
+  valueField?: string, // default info.targetField
+): string[];
+```
+
+### `valueHelpOptions(rows, resolved, info)` / `VALUE_HELP_OPTIONS_CAP`
+
+_Since 0.1.190._ Dictionary rows as dropdown options: the committed field's
+value, the label field's text (the key when it has none) and the description
+after a dash. A dropdown from a dictionary reads at most
+`VALUE_HELP_OPTIONS_CAP` (200) values, asking for one more to tell a longer
+list, which keeps the search picker.
+
+```typescript
+const VALUE_HELP_OPTIONS_CAP: 200;
+function valueHelpOptions(
+  rows: Record<string, unknown>[],
+  resolved: ResolvedValueHelp,
+  info: Pick<ValueHelpInfo, "targetField">,
+): { key: string; label: string; value: string | number | boolean }[];
 ```
 
 ### `setValueHelpCacheTtl(ms)` / `invalidateValueHelpCache(client?)`

@@ -302,8 +302,10 @@ const vh = useAsValueHelp({
 // vh.searching       Ref<boolean>
 // vh.labelIsFkValue  ComputedRef<boolean>  (target label === target id field)
 // vh.kickoff()       Pre-resolve the target metadata
-// vh.selectItem(it)  Commit `item[info.targetField]` to model
-// vh.clear(value?)   model = value (undefined when omitted), searchText = "", re-lists all matches
+// vh.selectItem(it)  Commit `item[info.targetField]` to model, write the fills, onBlur (the one pick path)
+// vh.clear(value?)   model = value (undefined when omitted), clears what the last pick filled, searchText = "", re-lists all matches
+// vh.scope           ComputedRef<{ filter?, pinned }> — the binding's filter with the form's host values (0.1.190)
+// options.open?      Ref<boolean> — re-search on host change only while open (0.1.190); options.limit? rows per search
 ```
 
 When rolling your own picker without the Vue composable, drop down to the framework-agnostic primitives from `@atscript/ui`:
@@ -327,7 +329,27 @@ const { items } = await vh.search(resolved, { text: "acme", mode: "form", limit:
 
 ### Binding without a foreign key
 
-_Since 0.1.148._ `@ui.valueHelp` binds a field to a dictionary with no `@db.rel.FK` (composite-key dictionaries, view fields). `extractValueHelp` reads it first and it beats an FK on the field or its chain; it returns `{ url, targetField, filter?, pinned? }`, and `useAsValueHelp` passes `filter` and `valueField: targetField` to `ValueHelpClient.search`, so the picker is scoped and commits `item[targetField]`. A target without `@db.http.path` is ignored (the FK walk runs); workflow forms get the same binding. Annotation reference: the atscript-ui skill, `annotations.md`.
+_Since 0.1.148._ `@ui.valueHelp` binds a field to a dictionary with no `@db.rel.FK` (composite-key dictionaries, view fields). `extractValueHelp` reads it first and it beats an FK on the field or its chain; it returns `{ url, targetField, filter?, pinned?, hostFilter?, fill?, columns? }`, and `useAsValueHelp` passes the scope and `info` to `ValueHelpClient.search`, so the picker is scoped and commits `item[targetField]`. A target without `@db.http.path` is ignored (the FK walk runs); workflow forms get the same binding. Annotation reference: the atscript-ui skill, `annotations.md`.
+
+### Values of the form, fills, dropdown (since 0.1.190)
+
+```atscript
+export interface Customer {
+    country?: string
+    @ui.valueHelp City, 'id', `country = Customer.country and active = true`
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'country', 'country'
+    city?: string
+    cityName?: string
+}
+```
+
+- **Host references** (`country = Customer.country`): `useAsValueHelp` reads the sibling (`useAsData().siblingValue`) and searches with `valueHelpScope(info, read).filter` (exposed as `vh.scope`). Empty sibling → condition dropped. A host change re-searches an open picker at once, a closed one on its next open (`UseAsValueHelpOptions.open`; AsRef passes its open state). A value the new scope excludes is kept.
+- **Pick path**: AsRef's combobox commits through `vh.selectItem(row)` — model, then each fill via `setSibling` (a committed edit, unchanged values skipped), then `onBlur()`. So every ref pick now validates/touches the field at once (changed in 0.1.190). A custom picker must call `selectItem(row)` to get fills.
+- **Clearing**: `vh.clear(value)` also writes `undefined` into each fill target the last pick wrote while it still holds that value; never a `hostFilter` local (a field that both scopes and is filled). Resets, loads, user edits, other bindings' fills: nothing cleared; fills do not cascade.
+- **Dropdown (6b)**: `@ui.form.type 'select'` / `'radio'` on a bound field with no static options → AsField loads the dictionary (`$limit` = `VALUE_HELP_OPTIONS_CAP + 1` = 201, scope + select rule; `valueHelpOptions` maps rows) and passes them as `options`; the model setter routes picks through `selectItem`, an empty value through `clear`. AsSelect renders an empty first option for a bound field. 201 rows → the `ref` types-map entry renders instead (one dev warning). Host changes reload the list.
+- **Select rule**: `ValueHelpSearchOptions.select` now ADDS to `valueHelpSelect(resolved, info, mode)` (keys + label + descr [+ attrs] + targetField + columns + fill targets). The non-searchable regex fallback stays on key / label / descr.
+- `createFormDef` drops fills whose sibling is absent / derived / read-only / navigation, and all fills of a dotted-path (inline-structure) field.
 
 ### Reference chains
 

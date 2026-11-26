@@ -758,6 +758,10 @@ interface UseAsValueHelpOptions {
   model: { value: unknown };
   /** Called after a selection commits so AsField can run blur-time validation. */
   onBlur: () => void;
+  /** Whether the list is open: a changed host value searches again at once while it is, else on the next open. Left out: at once. Since 0.1.190. */
+  open?: Ref<boolean>;
+  /** Rows per search. Default 20. Since 0.1.190. */
+  limit?: number;
 }
 
 interface UseAsValueHelpReturn {
@@ -768,13 +772,26 @@ interface UseAsValueHelpReturn {
   searching: Ref<boolean>;
   labelIsFkValue: ComputedRef<boolean>;
   kickoff: () => Promise<void>;
+  /** The one pick path: commits `item[info.targetField]`, writes the binding's fills (since 0.1.190) and calls `onBlur`. */
   selectItem: (item: Record<string, unknown>) => void;
-  /** Set the model to `value` (`undefined` — unset — when omitted) and empty the search text. `value` since 0.1.177. */
+  /**
+   * Set the model to `value` (`undefined` — unset — when omitted) and empty the search text. `value` since 0.1.177.
+   * Since 0.1.190 it also clears (to `undefined`) each field the last pick filled while it still holds what the
+   * pick wrote — never one the binding reads as a host value.
+   */
   clear: (value?: unknown) => void;
+  /** The binding's scope with the form's host values (`valueHelpScope`). Since 0.1.190. */
+  scope: ComputedRef<ValueHelpScope>;
 }
 
 function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpReturn;
 ```
+
+The picker searches with `scope.value.filter` and passes `info` to
+`ValueHelpClient.search`, so every read selects the binding's columns and fill
+targets. A custom picker built on it commits through `selectItem(row)` to get
+the fills; writing the model directly skips them. Fills are written with
+`useAsData().setSibling`: each one is a committed edit.
 
 ### `useAsDropdown(containerRef)`
 
