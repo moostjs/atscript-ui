@@ -1,21 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h, nextTick } from "vue";
-import { mount, flushPromises } from "@vue/test-utils";
+import { createSSRApp, defineComponent, h, nextTick, reactive } from "vue";
+import { flushPromises } from "@vue/test-utils";
 import { useWfForm } from "../use-wf-form";
 import type { UseWfFormOptions, UseWfFormReturn } from "../use-wf-form";
-import { mockFetch, mockFetchError, mockInputRequired, mockFinished, mockError } from "./helpers";
-
-function mountComposable(opts: UseWfFormOptions) {
-  let result!: UseWfFormReturn;
-  const Comp = defineComponent({
-    setup() {
-      result = useWfForm(opts);
-      return () => h("div");
-    },
-  });
-  const wrapper = mount(Comp);
-  return { result, wrapper };
-}
+import {
+  mockFetch,
+  mockFetchError,
+  mockInputRequired,
+  mockFinished,
+  mockError,
+  mountComposable,
+  restoreLocation,
+  stubLocationSearch,
+} from "./helpers";
 
 beforeEach(() => {
   vi.restoreAllMocks();
@@ -375,5 +372,425 @@ describe("useWfForm", () => {
 
     expect(customFetch).toHaveBeenCalledTimes(1);
     expect(globalSpy).not.toHaveBeenCalled();
+  });
+});
+
+// Why: the client followed a token that changed between pauses but never told
+// the app, so a page started from a link kept the link's token in its URL and
+// resent it after a reload — once the server rotates the token, that run is lost.
+describe("useWfForm — token", () => {
+  it("starts as initialToken and follows each answer's wfs", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    mockFetch([
+      mockInputRequired(LoginForm, { token: "link" }),
+      mockInputRequired(LoginForm, { token: "rotated" }),
+    ]);
+
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "users/invite",
+      initialToken: "link",
+      autoStart: false,
+    });
+    expect(result.token.value).toBe("link");
+
+    await result.start();
+    await flushPromises();
+    expect(result.token.value).toBe("link");
+
+    await result.submit({ username: "a" });
+    await flushPromises();
+    expect(result.token.value).toBe("rotated");
+  });
+
+  it("is cleared when the run finishes, so a later start() begins a new run", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(LoginForm, { token: "tok1" }),
+      mockFinished(),
+      mockInputRequired(LoginForm, { token: "tok2" }),
+    ]);
+
+    const { result } = mountComposable({ path: "/api/wf", name: "auth/login" });
+    await flushPromises();
+    expect(result.token.value).toBe("tok1");
+
+    await result.submit({ username: "a" });
+    await flushPromises();
+    expect(result.token.value).toBeUndefined();
+
+    await result.start();
+    await flushPromises();
+    expect(calls[2]!.body).toEqual({ wfid: "auth/login" });
+  });
+
+  it.each([
+    [
+      "without a wfs (the token went out of band) clears it",
+      { sent: true, outlet: "email" },
+      undefined,
+    ],
+    ["with a wfs (in band) keeps that one", { outlet: "awaiting-payment", wfs: "pay" }, "pay"],
+  ])("an outlet pause %s", async (_, answer, expected) => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    mockFetch([mockInputRequired(LoginForm, { token: "tok1" }), answer]);
+
+    const { result } = mountComposable({ path: "/api/wf", name: "users/invite" });
+    await flushPromises();
+    await result.submit({ username: "a" });
+    await flushPromises();
+
+    expect(result.finished.value).toBe(true);
+    expect(result.token.value).toBe(expected);
+  });
+
+  it("a refused answer keeps the token, unless it carries a fresh one", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const answers = [
+      { ok: true, status: 200, body: mockInputRequired(LoginForm, { token: "tok1" }) },
+      { ok: false, status: 410, body: { message: "Gone", code: "WF_EXPIRED" } },
+      { ok: false, status: 400, body: { message: "Try again", wfs: "fresh" } },
+    ];
+    let i = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        const { ok, status, body } = answers[i++]!;
+        return { ok, status, json: async () => body } as unknown as Response;
+      }),
+    );
+
+    const { result } = mountComposable({ path: "/api/wf", name: "auth/login" });
+    await flushPromises();
+    await result.submit({ username: "a" });
+    await flushPromises();
+    expect(result.error.value).toMatchObject({ status: 410 });
+    expect(result.token.value).toBe("tok1");
+
+    await result.submit({ username: "a" });
+    await flushPromises();
+    expect(result.token.value).toBe("fresh");
+  });
+
+  it("stays undefined with cookie transport (the cookie is the token)", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(LoginForm, { token: "in-body" }),
+      mockFinished(),
+    ]);
+
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "users/invite",
+      tokenTransport: "cookie",
+      initialToken: "link",
+    });
+    expect(result.token.value).toBeUndefined();
+    await flushPromises();
+    // The link token still rides the start request, once.
+    expect(calls[0]!.body).toEqual({ wfid: "users/invite", wfs: "link" });
+    expect(result.token.value).toBeUndefined();
+
+    await result.submit({ username: "a" });
+    await flushPromises();
+    expect(calls[1]!.body).not.toHaveProperty("wfs");
+    expect(result.token.value).toBeUndefined();
+  });
+
+  it("start() after an out-of-band outlet pause begins a new run", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(LoginForm, { token: "tok1" }),
+      { sent: true, outlet: "email" },
+      mockInputRequired(LoginForm, { token: "tok2" }),
+    ]);
+
+    const { result } = mountComposable({ path: "/api/wf", name: "users/invite" });
+    await flushPromises();
+    await result.submit({ username: "a" });
+    await flushPromises();
+    await result.start();
+    await flushPromises();
+
+    expect(calls[2]!.body).toEqual({ wfid: "users/invite" });
+  });
+
+  // Why: start() put the link token back, so a start() during or after the run
+  // resent a link the server had rotated away, and `token` reported that dead link.
+  it("the link token is used up once answered: start() mid-run resumes the current pause", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(LoginForm, { token: "link" }),
+      mockInputRequired(LoginForm, { token: "rotated" }),
+      mockInputRequired(LoginForm, { token: "rotated" }),
+    ]);
+
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "users/invite",
+      initialToken: "link",
+    });
+    await flushPromises();
+    expect(calls[0]!.body).toEqual({ wfid: "users/invite", wfs: "link" });
+    await result.submit({ username: "a" });
+    await flushPromises();
+
+    await result.start({ hint: "x" });
+    await flushPromises();
+    expect(calls[2]!.body).toEqual({
+      wfid: "users/invite",
+      wfs: "rotated",
+      input: { formData: { hint: "x" } },
+    });
+    expect(result.token.value).toBe("rotated");
+  });
+
+  it("the link token is used up once answered: start() after a finish begins a new run", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(LoginForm, { token: "link" }),
+      mockFinished(),
+      mockInputRequired(LoginForm, { token: "tok2" }),
+    ]);
+
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "users/invite",
+      initialToken: "link",
+    });
+    await flushPromises();
+    await result.submit({ username: "a" });
+    await flushPromises();
+
+    await result.start();
+    await flushPromises();
+    expect(calls[2]!.body).toEqual({ wfid: "users/invite" });
+    expect(result.token.value).toBe("tok2");
+  });
+
+  it("a reactive initialToken that changes value is used by the next start()", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([
+      mockInputRequired(LoginForm, { token: "link-1" }),
+      mockFinished(),
+      mockInputRequired(LoginForm, { token: "link-2" }),
+    ]);
+    const opts = reactive<UseWfFormOptions>({
+      path: "/api/wf",
+      name: "users/invite",
+      initialToken: "link-1",
+    });
+
+    const { result } = mountComposable(opts);
+    await flushPromises();
+    await result.submit({ username: "a" });
+    await flushPromises();
+
+    opts.initialToken = "link-2";
+    await result.start();
+    await flushPromises();
+    expect(calls[2]!.body).toEqual({ wfid: "users/invite", wfs: "link-2" });
+    expect(result.token.value).toBe("link-2");
+  });
+
+  it("an unanswered start keeps the link token: retry() resends it", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const bodies: unknown[] = [];
+    let i = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        bodies.push(JSON.parse(init?.body as string));
+        if (i++ === 0) throw new Error("offline");
+        return { ok: true, json: async () => mockInputRequired(LoginForm, { token: "link" }) };
+      }),
+    );
+
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "users/invite",
+      initialToken: "link",
+    });
+    await flushPromises();
+    expect(result.error.value).toEqual({ message: "offline" });
+
+    await result.retry();
+    await flushPromises();
+    expect(bodies[1]).toEqual({ wfid: "users/invite", wfs: "link" });
+  });
+
+  it("a network error keeps the token", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const bodies: unknown[] = [];
+    let i = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url: string, init?: RequestInit) => {
+        bodies.push(JSON.parse(init?.body as string));
+        if (i++ === 1) throw new Error("offline");
+        return { ok: true, json: async () => mockInputRequired(LoginForm, { token: "tok1" }) };
+      }),
+    );
+
+    const { result } = mountComposable({ path: "/api/wf", name: "auth/login" });
+    await flushPromises();
+    await result.submit({ username: "a" });
+    await flushPromises();
+    expect(result.error.value).toEqual({ message: "offline" });
+    expect(result.token.value).toBe("tok1");
+
+    await result.retry();
+    await flushPromises();
+    expect(bodies[2]).toMatchObject({ wfs: "tok1" });
+  });
+
+  it("cookie transport: a second start() does not resend the link token", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const { calls } = mockFetch([mockInputRequired(LoginForm), mockInputRequired(LoginForm)]);
+
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "users/invite",
+      tokenTransport: "cookie",
+      initialToken: "link",
+    });
+    await flushPromises();
+    expect(calls[0]!.body).toEqual({ wfid: "users/invite", wfs: "link" });
+
+    await result.start();
+    await flushPromises();
+    expect(calls[1]!.body).toEqual({ wfid: "users/invite" });
+  });
+
+  describe("query transport", () => {
+    afterEach(() => restoreLocation());
+
+    it("is seeded from the URL and follows answers from there", async () => {
+      const { LoginForm } = await import("./fixtures/login-form.as");
+      stubLocationSearch("?wfs=from-url");
+      const { calls } = mockFetch([
+        mockInputRequired(LoginForm, { token: "from-url" }),
+        mockInputRequired(LoginForm, { token: "rotated" }),
+      ]);
+
+      const { result } = mountComposable({
+        path: "/api/wf",
+        name: "users/invite",
+        tokenTransport: "query",
+        autoStart: false,
+      });
+      expect(result.token.value).toBe("from-url");
+
+      await result.start();
+      await flushPromises();
+      expect(calls[0]!.body).toEqual({ wfid: "users/invite", wfs: "from-url" });
+      await result.submit({ username: "a" });
+      await flushPromises();
+      expect(result.token.value).toBe("rotated");
+    });
+
+    it("setup does not read the URL without a window (SSR)", async () => {
+      const { renderToString } = await import("vue/server-renderer");
+      let result!: UseWfFormReturn;
+      const app = createSSRApp(
+        defineComponent({
+          setup() {
+            result = useWfForm({ path: "/api/wf", name: "users/invite", tokenTransport: "query" });
+            return () => h("div");
+          },
+        }),
+      );
+      vi.stubGlobal("window", undefined);
+      try {
+        await renderToString(app);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+      expect(result.token.value).toBeUndefined();
+    });
+  });
+});
+
+// Why: with cookie transport a start sends `{ wfid }` + the cookie; while another
+// request of the run is in flight its state is consumed, the server reads the
+// cookie as no token and starts a second run — aborting the fetch doesn't stop it.
+describe("useWfForm — a start never races an in-flight request (cookie transport)", () => {
+  async function racing(tokenTransport: "body" | "cookie") {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const inits: RequestInit[] = [];
+    const settle: Array<() => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: RequestInit) => {
+        inits.push(init);
+        const answer = { ok: true, json: async () => mockInputRequired(LoginForm, { token: "t" }) };
+        if (inits.length === 1) return Promise.resolve(answer);
+        return new Promise((resolve) => settle.push(() => resolve(answer)));
+      }),
+    );
+    const { result } = mountComposable({ path: "/api/wf", name: "auth/login", tokenTransport });
+    await flushPromises();
+    void result.submit({ username: "a" });
+    await flushPromises();
+    return { result, inits, settle };
+  }
+
+  it("cookie: start() waits for the submit in flight, then goes", async () => {
+    const { result, inits, settle } = await racing("cookie");
+
+    const started = result.start();
+    await flushPromises();
+    expect(inits).toHaveLength(2);
+    expect(inits[1]!.signal!.aborted).toBe(false);
+
+    settle[0]!();
+    await flushPromises();
+    expect(inits).toHaveLength(3);
+    expect(JSON.parse(inits[2]!.body as string)).toEqual({ wfid: "auth/login" });
+    settle[1]!();
+    await started;
+  });
+
+  it("cookie: retry() of a start in flight waits for it too", async () => {
+    const { LoginForm } = await import("./fixtures/login-form.as");
+    const inits: RequestInit[] = [];
+    const settle: Array<() => void> = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: RequestInit) => {
+        inits.push(init);
+        return new Promise((resolve) =>
+          settle.push(() => resolve({ ok: true, json: async () => mockInputRequired(LoginForm) })),
+        );
+      }),
+    );
+    const { result } = mountComposable({
+      path: "/api/wf",
+      name: "auth/login",
+      tokenTransport: "cookie",
+    });
+    await flushPromises();
+    expect(inits).toHaveLength(1);
+
+    const retried = result.retry();
+    await flushPromises();
+    expect(inits).toHaveLength(1);
+
+    settle[0]!();
+    await flushPromises();
+    expect(inits).toHaveLength(2);
+    settle[1]!();
+    await retried;
+  });
+
+  it("body: start() still aborts the request in flight and goes at once", async () => {
+    const { result, inits, settle } = await racing("body");
+
+    const started = result.start();
+    await flushPromises();
+    expect(inits).toHaveLength(3);
+    expect(inits[1]!.signal!.aborted).toBe(true);
+    settle[1]!();
+    await started;
   });
 });

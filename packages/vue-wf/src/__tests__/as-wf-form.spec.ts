@@ -2,7 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import AsWfForm from "../components/as-wf-form.vue";
 import { createDefaultTypes } from "@atscript/vue-form";
-import { mockFetch, mockInputRequired, mockFinished } from "./helpers";
+import {
+  mockFetch,
+  mockInputRequired,
+  mockFinished,
+  restoreLocation,
+  stubLocationSearch,
+} from "./helpers";
 
 const types = createDefaultTypes();
 
@@ -364,5 +370,151 @@ describe("AsWfForm", () => {
     // Gating signal is the declared action id, not the field name.
     expect((wrapper.vm as any).supportsAction("resend")).toBe(true);
     expect((wrapper.vm as any).supportsAction("nope")).toBe(false);
+  });
+
+  // Why: an app that put the link's token in its URL had no way to follow a
+  // token the server rotated, so a reload resent the stale one.
+  it("emits token when the next token changes — not for initialToken, not when unchanged", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    mockFetch([
+      mockInputRequired(ActionForm, { token: "link" }),
+      mockInputRequired(ActionForm, { token: "link", errors: { username: "Taken" } }),
+      mockInputRequired(ActionForm, { token: "rotated" }),
+      mockFinished(),
+    ]);
+
+    const wrapper = mountAsWfForm({ name: "users/invite", initialToken: "link" });
+    await flushPromises();
+    expect(wrapper.emitted("token")).toBeUndefined();
+
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+    expect(wrapper.emitted("token")).toBeUndefined();
+
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+    expect(wrapper.emitted("token")).toEqual([["rotated"]]);
+
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+    expect(wrapper.emitted("finished")).toBeTruthy();
+    expect(wrapper.emitted("token")).toEqual([["rotated"], [undefined]]);
+  });
+
+  it("never emits token with cookie transport", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    mockFetch([mockInputRequired(ActionForm, { token: "tok1" }), mockFinished()]);
+
+    const wrapper = mountAsWfForm({ tokenTransport: "cookie" });
+    await flushPromises();
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+
+    expect(wrapper.emitted("finished")).toBeTruthy();
+    expect(wrapper.emitted("token")).toBeUndefined();
+  });
+
+  it("emits the token an in-band outlet pause hands over", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    mockFetch([
+      mockInputRequired(ActionForm, { token: "tok1" }),
+      { outlet: "awaiting-payment", wfs: "pay" },
+    ]);
+
+    const wrapper = mountAsWfForm();
+    await flushPromises();
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+
+    expect(wrapper.emitted("finished")).toBeTruthy();
+    expect(wrapper.emitted("token")).toEqual([["tok1"], ["pay"]]);
+  });
+
+  it("emits the fresh token a refused answer carries", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    const answers = [
+      { ok: true, status: 200, body: mockInputRequired(ActionForm, { token: "link" }) },
+      { ok: false, status: 400, body: { message: "Try again", wfs: "fresh" } },
+    ];
+    let i = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        const { ok, status, body } = answers[i++]!;
+        return { ok, status, json: async () => body } as unknown as Response;
+      }),
+    );
+
+    const wrapper = mountAsWfForm({ initialToken: "link" });
+    await flushPromises();
+    (wrapper.vm as any).action("resend");
+    await flushPromises();
+
+    expect(wrapper.emitted("error")).toBeTruthy();
+    expect(wrapper.emitted("token")).toEqual([["fresh"]]);
+  });
+
+  it("query transport: does not echo the URL's token on mount", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    stubLocationSearch("?wfs=from-url");
+    const { calls } = mockFetch([mockInputRequired(ActionForm, { token: "from-url" })]);
+
+    try {
+      const wrapper = mountAsWfForm({ tokenTransport: "query" });
+      await flushPromises();
+      expect(calls[0]!.body).toEqual({ wfid: "auth/login", wfs: "from-url" });
+      expect(wrapper.emitted("token")).toBeUndefined();
+    } finally {
+      restoreLocation();
+    }
+  });
+
+  it("@link-used fires without persist-token too", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    mockFetch([mockInputRequired(ActionForm, { token: "link" })]);
+    const onLinkUsed = vi.fn();
+
+    mountAsWfForm({ initialToken: "link", onLinkUsed });
+    await flushPromises();
+
+    expect(onLinkUsed).toHaveBeenCalledTimes(1);
+  });
+
+  it("persist-token: a reload resumes the saved run and fires @link-used once", async () => {
+    const { ActionForm } = await import("./fixtures/action-form.as");
+    history.replaceState(null, "", "/invite");
+    sessionStorage.setItem(
+      "wf:/invite:users/invite",
+      JSON.stringify({ link: "link", token: "rotated" }),
+    );
+    const { calls } = mockFetch([
+      mockInputRequired(ActionForm, { token: "rotated" }),
+      mockInputRequired(ActionForm, { token: "rotated-2" }),
+    ]);
+    const onLinkUsed = vi.fn();
+
+    try {
+      const wrapper = mountAsWfForm({
+        name: "users/invite",
+        initialToken: "link",
+        persistToken: "session",
+        onLinkUsed,
+      });
+      await flushPromises();
+      expect(calls[0]!.body).toEqual({ wfid: "users/invite", wfs: "rotated" });
+      expect(onLinkUsed).toHaveBeenCalledTimes(1);
+      expect(wrapper.emitted("token")).toBeUndefined();
+
+      (wrapper.vm as any).action("resend");
+      await flushPromises();
+      expect(wrapper.emitted("token")).toEqual([["rotated-2"]]);
+      expect(JSON.parse(sessionStorage.getItem("wf:/invite:users/invite")!)).toEqual({
+        link: "link",
+        token: "rotated-2",
+      });
+      expect(onLinkUsed).toHaveBeenCalledTimes(1);
+    } finally {
+      sessionStorage.clear();
+    }
   });
 });

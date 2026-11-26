@@ -2,6 +2,28 @@ import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
 import type { Mock } from "vitest";
 import { vi } from "vitest";
+import { defineComponent, h } from "vue";
+import { mount, type MountingOptions } from "@vue/test-utils";
+import { useWfForm } from "../use-wf-form";
+import type { UseWfFormOptions, UseWfFormReturn } from "../use-wf-form";
+
+// ── Composable host ──────────────────────────────────────────
+
+/** Mounts a component that calls `useWfForm(opts)` and hands back its return. */
+export function mountComposable(
+  opts: UseWfFormOptions,
+  mountOptions?: { global?: MountingOptions<unknown>["global"] },
+) {
+  let result!: UseWfFormReturn;
+  const Comp = defineComponent({
+    setup() {
+      result = useWfForm(opts);
+      return () => h("div");
+    },
+  });
+  const wrapper = mount(Comp, mountOptions);
+  return { result, wrapper };
+}
 
 // ── Server response builders ─────────────────────────────────
 
@@ -28,6 +50,26 @@ export function mockFinished(data?: Record<string, unknown>) {
 
 export function mockError(message: string, status?: number) {
   return { error: { message, status } };
+}
+
+// ── window.location stub ─────────────────────────────────────
+
+const originalLocation = window.location;
+
+export function stubLocationSearch(search: string) {
+  Object.defineProperty(window, "location", {
+    value: { ...originalLocation, search },
+    writable: true,
+    configurable: true,
+  });
+}
+
+export function restoreLocation() {
+  Object.defineProperty(window, "location", {
+    value: originalLocation,
+    writable: true,
+    configurable: true,
+  });
 }
 
 // ── Fetch mock ───────────────────────────────────────────────

@@ -19,9 +19,9 @@ function dismiss() {
 }
 function restart() {
   visible.value = false;
-  const cur = router.currentRoute.value.path;
-  if (cur.startsWith("/invite/")) void router.push("/login");
-  else void router.push(cur);
+  const cur = router.currentRoute.value;
+  if (cur.name === "invite-accept") void router.push("/login");
+  else void router.push(cur.path);
 }
 </script>
 

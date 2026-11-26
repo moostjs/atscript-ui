@@ -1,38 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { defineComponent, h } from "vue";
-import { mount, flushPromises } from "@vue/test-utils";
-import { useWfForm } from "../use-wf-form";
-import type { UseWfFormOptions, UseWfFormReturn } from "../use-wf-form";
-
-function mountComposable(opts: UseWfFormOptions) {
-  let result!: UseWfFormReturn;
-  const Comp = defineComponent({
-    setup() {
-      result = useWfForm(opts);
-      return () => h("div");
-    },
-  });
-  const wrapper = mount(Comp);
-  return { result, wrapper };
-}
-
-const originalLocation = window.location;
-
-function stubLocationSearch(search: string) {
-  Object.defineProperty(window, "location", {
-    value: { ...originalLocation, search },
-    writable: true,
-    configurable: true,
-  });
-}
-
-function restoreLocation() {
-  Object.defineProperty(window, "location", {
-    value: originalLocation,
-    writable: true,
-    configurable: true,
-  });
-}
+import { flushPromises } from "@vue/test-utils";
+import { mountComposable, restoreLocation, stubLocationSearch } from "./helpers";
 
 beforeEach(() => {
   vi.restoreAllMocks();

@@ -21,7 +21,8 @@ const routes = [
     component: () => import("./client/pages/invite-admin.vue"),
   },
   {
-    path: "/invite/:token",
+    // Optional: the page drops the link token from the address once it is saved.
+    path: "/invite/:token?",
     name: "invite-accept",
     component: () => import("./client/pages/invite-accept.vue"),
   },

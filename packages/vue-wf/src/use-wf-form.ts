@@ -4,7 +4,17 @@ import { AS_UI_MESSAGES } from "@atscript/ui/messages";
 import { useAsTexts } from "@atscript/vue-form/locale";
 import type { WfFinished } from "@atscript/moost-wf";
 import type { TSerializedAnnotatedType } from "@atscript/typescript/utils";
-import { onMounted, onUnmounted, reactive, ref, shallowRef, type Ref, type ShallowRef } from "vue";
+import {
+  getCurrentInstance,
+  onMounted,
+  onUnmounted,
+  reactive,
+  ref,
+  shallowRef,
+  type Ref,
+  type ShallowRef,
+} from "vue";
+import { sessionRunEntry } from "./session-run";
 
 /**
  * A status with its own friendly text (`UI_WF_STATUS_<status>`: client errors
@@ -23,6 +33,31 @@ function friendlyMessageForStatus(status: number, t: UiT): string {
 function servedTexts(data: unknown): unknown {
   const ir = (data as { inputRequired?: { payload?: { $i18n?: unknown } } } | null)?.inputRequired;
   return ir?.payload?.$i18n;
+}
+
+/** What `useWfForm` reads off an app's Vue Router (`$router`), without depending on it. */
+interface RouterLike {
+  currentRoute?: {
+    value?: { matched?: ReadonlyArray<{ path?: string }>; params?: Record<string, unknown> };
+  };
+}
+
+/**
+ * A route pattern with its params filled in (`/projects/:id/setup` →
+ * `/projects/42/setup`), leaving out a param that holds the link, so the page
+ * stays the same when the link leaves the URL (`/invite/:token?` → `/invite`).
+ */
+function fillRoutePattern(
+  pattern: string,
+  params: Record<string, unknown>,
+  link: string | undefined,
+): string {
+  const filled = pattern.replace(/:(\w+)(?:\([^)]*\))?[?*+]?/g, (_, name: string) => {
+    const value = params[name];
+    const text = Array.isArray(value) ? value.join("/") : typeof value === "string" ? value : "";
+    return text === link ? "" : text;
+  });
+  return filled.replace(/\/{2,}/g, "/").replace(/(.)\/$/, "$1");
 }
 
 export interface UseWfFormOptions {
@@ -67,9 +102,39 @@ export interface UseWfFormOptions {
    * outside `window.location.search` — e.g. encoded in a Vue Router path param
    * (`/invite/:token`) or pulled from app state. Included in the first request
    * so the server resumes the paused workflow instead of starting a new one.
-   * Takes precedence over `tokenTransport: "query"` auto-detection.
+   * Takes precedence over `tokenTransport: "query"` auto-detection. `start()`
+   * sends it until a request carrying it is answered, or after its value
+   * changes; otherwise the run's current token (none once the run is over).
    */
   initialToken?: string;
+  /**
+   * `"session"`: keep the run's token in this tab's `sessionStorage` (one entry
+   * per workflow, `{ link, token }`), so a reload resumes the run while the
+   * token stays out of the URL and the history. The saved token wins over no
+   * link or the same link; a different link starts from itself. The entry is
+   * written on every token change and removed when the run is over (and on a
+   * `410` of a run that did not start from a link); storage errors leave the run
+   * in memory and the link in the URL. With cookie transport nothing is stored
+   * (the cookie survives a reload): only the link is dropped. Off by default.
+   */
+  persistToken?: "session";
+  /**
+   * `sessionStorage` key for `persistToken`. Default `wf:<page>:<name>`, the page
+   * being the Vue Router route pattern with its params filled in, except one
+   * holding the link (`/projects/42/setup`, `/invite`); else `location.pathname`,
+   * which cannot tell a path-param link apart (set the key there). Set it also
+   * for two runs of one workflow on a page.
+   */
+  persistTokenKey?: string;
+  /**
+   * Called once the link (`initialToken`, or the URL's with `tokenTransport:
+   * "query"`) is no longer needed: the server has answered it and the run is
+   * held elsewhere (the saved entry with `persistToken`, the cookie after a
+   * successful answer or a `410`). Remove the link from the URL here (e.g.
+   * `router.replace`). Without it, `persistToken` in an app with no Vue Router
+   * removes `?<tokenName>=` via `history.replaceState`.
+   */
+  onLinkUsed?: () => void;
 }
 
 /** A failed round-trip, as `error` holds it (and `AsWfForm` emits it). */
@@ -122,6 +187,15 @@ export interface UseWfFormReturn {
   /** Typed envelope on finish — null while running, on outlet pause, or before first response. */
   finishedPayload: ShallowRef<WfFinished | null>;
   error: ShallowRef<unknown>;
+  /**
+   * The state token the next request sends: the start token (with
+   * `persistToken` the saved run's, else `initialToken` or the URL's with
+   * `tokenTransport: "query"`), then each answer's `wfs` —
+   * refused answers included. `undefined` once the run is over for this client:
+   * a finish, or an outlet pause whose answer carries no `wfs` (the token went
+   * out of band, e.g. in an email). Always `undefined` with cookie transport.
+   */
+  token: Readonly<Ref<string | undefined>>;
   start: (input?: Record<string, unknown>) => Promise<void>;
   submit: (data: unknown) => Promise<void>;
   action: (name: string) => Promise<void>;
@@ -153,7 +227,32 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   /** Increments each time the form schema changes — used as :key on AsForm to force remount. */
   const formKey = ref(0);
 
-  let token: string | undefined;
+  // `persistToken`: the run's token lives in this tab's sessionStorage, never in
+  // the URL. Cookie transport stores nothing (the cookie survives a reload); the
+  // link is still dropped from the URL once answered.
+  const persist = options.persistToken === "session";
+  const router = getCurrentInstance()?.appContext.config.globalProperties.$router as
+    | RouterLike
+    | undefined;
+  const entry =
+    persist && transport !== "cookie"
+      ? sessionRunEntry(options.persistTokenKey ?? defaultRunKey())
+      : undefined;
+  // The link (`initialToken`, or the URL's) is used up once the server has answered
+  // a request sent while it was present: `start()` then sends the run's own token,
+  // which the server may have rotated.
+  let answeredLink: string | undefined;
+  let pendingLink: string | undefined;
+  /** Answered, but kept in the URL until the run is held elsewhere. */
+  let linkToDrop: string | undefined;
+  /** The link the current run started from — saved along with its token. */
+  let runLink: string | undefined;
+  /** Whether the last write of the entry went through (no entry: nothing to hold). */
+  let runSaved = true;
+
+  // Seeded with the start token, so a watcher sees only the changes the run makes.
+  // Cookie transport holds none: the httpOnly cookie is the token.
+  const token = ref(transport === "cookie" ? undefined : startTokenFor(readInitialToken()));
   let lastRequestBody: Record<string, unknown> | undefined;
   let lastPayloadJson: string | undefined;
   let abortController: AbortController | undefined;
@@ -180,38 +279,131 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   function readInitialToken(): string | undefined {
     // Explicit prop wins — lets callers seed from path params / app state.
     if (options.initialToken) return options.initialToken;
-    if (transport === "query") {
+    // Also read at setup, where SSR has no window.
+    if (transport === "query" && typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
       return params.get(tokenName) ?? undefined;
     }
     return undefined;
   }
 
+  /**
+   * The token a start sends: the saved run's, when there is no link or the same
+   * link (it may have been renewed since); else the link until it is answered.
+   */
+  function startTokenFor(link: string | undefined): string | undefined {
+    const run = entry?.load();
+    if (run && (!link || run.link === link)) {
+      runLink = run.link;
+      return run.token;
+    }
+    runLink = link;
+    return link !== answeredLink ? link : undefined;
+  }
+
+  /**
+   * `wf:<page>:<name>`: two pages running one workflow (an admin page, an
+   * invitee's link page; project 1's and project 2's setup) never share a run.
+   * The page is the route pattern with its params filled in except the link's
+   * (stable when a path-param link leaves the URL), else the pathname.
+   */
+  function defaultRunKey(): string {
+    const route = router?.currentRoute?.value;
+    const pattern = route?.matched?.[route.matched.length - 1]?.path;
+    const page =
+      pattern === undefined
+        ? typeof window === "undefined"
+          ? ""
+          : window.location.pathname
+        : fillRoutePattern(pattern, route?.params ?? {}, readInitialToken());
+    return `wf:${page}:${options.name}`;
+  }
+
+  function setToken(next: unknown): void {
+    if (transport === "cookie") return;
+    token.value = typeof next === "string" && next ? next : undefined;
+    if (entry)
+      runSaved = entry.save(token.value ? { link: runLink, token: token.value } : undefined);
+  }
+
+  /**
+   * After an answer: the link sent with the request is used up — except a refused
+   * request with cookie transport (no cookie was set: the link is still the only
+   * copy; a 410 means it is dead anyway). It leaves the URL once the run is held
+   * elsewhere: by the cookie, or by a saved entry (a failed save keeps it there).
+   */
+  function afterAnswer(usedLink: string | undefined, res: Response): void {
+    if (usedLink) {
+      if (transport === "cookie" && !res.ok && res.status !== 410) {
+        pendingLink = usedLink;
+      } else {
+        answeredLink = usedLink;
+        linkToDrop = usedLink;
+      }
+    }
+    if (linkToDrop && (transport === "cookie" || runSaved)) {
+      const link = linkToDrop;
+      linkToDrop = undefined;
+      linkUsed(link);
+    }
+  }
+
+  /** The link is no longer needed: take it out of the URL. */
+  function linkUsed(link: string): void {
+    if (options.onLinkUsed) {
+      try {
+        options.onLinkUsed();
+      } catch (err) {
+        // The answer stays good: a throwing handler only leaves the link in the URL.
+        if (import.meta.env?.DEV) console.error("[useWfForm] onLinkUsed threw:", err);
+      }
+      return;
+    }
+    if (!persist || typeof window === "undefined") return;
+    if (router) {
+      if (import.meta.env?.DEV) {
+        console.warn(
+          "[useWfForm] persistToken: the link token stays in the URL — pass `onLinkUsed` " +
+            "(`@link-used` on <AsWfForm>) and remove it with your router.",
+        );
+      }
+      return;
+    }
+    const url = new URL(window.location.href);
+    if (url.searchParams.get(tokenName) !== link) return;
+    url.searchParams.delete(tokenName);
+    history.replaceState(history.state, "", url);
+  }
+
   function buildBody(payload: Record<string, unknown>): Record<string, unknown> {
     const body = { ...payload };
-    if (transport !== "cookie" && token) {
-      body[tokenName] = token;
+    if (token.value) {
+      body[tokenName] = token.value;
     }
     return body;
   }
 
   function extractToken(data: Record<string, unknown>): void {
-    if (transport !== "cookie" && tokenName in data) {
-      token = data[tokenName] as string;
-    }
+    if (tokenName in data) setToken(data[tokenName]);
+  }
+
+  /** The run is over for this client: a finish, or an outlet pause. */
+  function endRun(data: Record<string, unknown>, payload: WfFinished | null): void {
+    finished.value = true;
+    response.value = data;
+    finishedPayload.value = payload;
+    formDef.value = null;
+    formData.value = null;
+    lastPayloadJson = undefined;
+    // Nothing left to send — unless the answer hands this client a token to
+    // resume with (an in-band pause, e.g. `outletHttp({ outlet: "awaiting-payment" })`).
+    if (!(tokenName in data)) setToken(undefined);
   }
 
   function processResponse(data: Record<string, unknown>): void {
-    extractToken(data);
-
     if (data.finished) {
-      finished.value = true;
-      response.value = data;
       // Cast: `finished: true` discriminator gates this branch.
-      finishedPayload.value = data as unknown as WfFinished;
-      formDef.value = null;
-      formData.value = null;
-      lastPayloadJson = undefined;
+      endRun(data, data as unknown as WfFinished);
       return;
     }
 
@@ -222,14 +414,9 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     // consumers get a clean `@finished` signal instead of falling into the
     // "Unexpected response format" branch and re-submitting.
     if (data.sent === true || typeof data.outlet === "string") {
-      finished.value = true;
-      response.value = data;
       // Outlet pause is conceptually finished-for-this-client but isn't a
       // terminal `WfFinished` envelope — keep finishedPayload null.
-      finishedPayload.value = null;
-      formDef.value = null;
-      formData.value = null;
-      lastPayloadJson = undefined;
+      endRun(data, null);
       return;
     }
 
@@ -269,7 +456,35 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     error.value = null;
   }
 
+  /** The request in flight (it settles, never rejects). */
+  let inFlight: Promise<void> | undefined;
+
   async function post(body: Record<string, unknown>): Promise<void> {
+    const request = send(body);
+    inFlight = request;
+    try {
+      await request;
+    } finally {
+      if (inFlight === request) inFlight = undefined;
+    }
+  }
+
+  /**
+   * Cookie transport: a start sends `{ wfid }` with the cookie, and a cookie whose
+   * state an in-flight request has just consumed reads as no token — the server
+   * would start a second run (aborting the fetch does not stop the server). So a
+   * start waits for that request to settle instead of aborting it.
+   */
+  async function settleInFlight(): Promise<void> {
+    const request = inFlight;
+    if (!request) return;
+    await request;
+    // Another request may have begun meanwhile: wait for that one too.
+    return settleInFlight();
+  }
+  const startWaits = (): boolean => transport === "cookie" && inFlight !== undefined;
+
+  async function send(body: Record<string, unknown>): Promise<void> {
     abortController?.abort();
     abortController = new AbortController();
     const { signal } = abortController;
@@ -291,6 +506,8 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
         signal,
         body: JSON.stringify(buildBody(body)),
       });
+      const usedLink = pendingLink;
+      pendingLink = undefined;
 
       const data = await res.json().catch(() => null);
       // Served for the locale this request asked for — not when the app sent its own.
@@ -302,8 +519,11 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
       if (data && typeof data === "object" && !Array.isArray(data)) {
         extractToken(data as Record<string, unknown>);
       }
+      afterAnswer(usedLink, res);
 
       if (!res.ok) {
+        // A dead run that no link can bring back: don't resend it on every reload.
+        if (res.status === 410 && entry && !runLink) entry.save(undefined);
         const errData = data as { error?: string; message?: string; code?: unknown } | null;
         const msg = errData?.message ?? errData?.error ?? friendlyMessageForStatus(res.status, t);
         const failed: WfFormError = { message: msg, status: res.status };
@@ -328,12 +548,18 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   }
 
   async function start(input?: Record<string, unknown>): Promise<void> {
-    const initialToken = readInitialToken();
-    if (initialToken) token = initialToken;
+    if (startWaits()) await settleInFlight();
+    const link = readInitialToken();
+    // The saved run's token, or the link until it is answered (a changed value
+    // is a new link). Otherwise the run's own token goes: none once it is over.
+    const startToken = startTokenFor(link);
+    // With `persistToken` this saves it before the first request.
+    if (startToken) setToken(startToken);
+    pendingLink = link !== answeredLink ? link : undefined;
 
     // Dev-only: surface the silent magic-link footgun (URL has ?wfs=… but
     // initialToken was not wired, so the flow restarts instead of resuming).
-    if (import.meta.env?.DEV && !initialToken && transport !== "query") {
+    if (import.meta.env?.DEV && !link && transport !== "query") {
       const urlToken = new URLSearchParams(window.location.search).get(tokenName);
       if (urlToken) {
         console.warn(
@@ -348,7 +574,9 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
 
     const body: Record<string, unknown> = { [wfidName]: options.name };
     if (input) body.input = { formData: input };
-    if (initialToken) body[tokenName] = initialToken;
+    // `buildBody` adds the token; with cookie transport the start token rides
+    // the body (the cookie carries the run after the first answer).
+    if (startToken && transport === "cookie") body[tokenName] = startToken;
 
     await post(body);
   }
@@ -366,6 +594,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
   }
 
   async function retry(): Promise<void> {
+    if (lastRequestBody && wfidName in lastRequestBody && startWaits()) await settleInFlight();
     if (lastRequestBody) await post(lastRequestBody);
   }
 
@@ -386,6 +615,7 @@ export function useWfForm(options: UseWfFormOptions): UseWfFormReturn {
     response,
     finishedPayload,
     error,
+    token,
     start,
     submit,
     action,

@@ -46,6 +46,8 @@ const emit = defineEmits<{
   (e: "loading", isLoading: boolean): void;
   (e: "dismiss"): void;
   (e: "action", action: WfActionRequest): void;
+  /** The token the next request sends changed (`undefined`: none left) — never fires with cookie transport. */
+  (e: "token", token: string | undefined): void;
 }>();
 
 // ── Composable ──────────────────────────────────────────────
@@ -72,6 +74,10 @@ watch(
 watch([() => wf.formDef.value, () => wf.formContext.value], ([def, ctx]) => {
   if (def) emit("form", def, ctx);
 });
+watch(
+  () => wf.token.value,
+  (v) => emit("token", v),
+);
 
 // ── Action classification ───────────────────────────────────
 // Declared actions of the current FormDef — single source of truth (shared

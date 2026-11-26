@@ -281,8 +281,9 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         // keyed by the URL handle, NOT in a session cookie. Wiping cookies
         // mid-flow proves the form payload survived purely via the handle.
         await inviteeCtx.clearCookies();
-        // `localStorage` / `sessionStorage` in case the form ever caches state
-        // there (it doesn't today, but make the proof airtight).
+        // The page keeps the run's token in sessionStorage (`persist-token`) for
+        // reloads; wipe it and localStorage too, so the proof rests on the
+        // token the form holds in memory.
         await page.evaluate(() => {
           try {
             window.localStorage.clear();
@@ -291,8 +292,8 @@ test.describe("Section 19.W — wf-store (handle-based persistence)", () => {
         });
 
         // Fill credentials and submit. The form's wfs is held in component
-        // state from the initial GET — the navigation didn't touch the URL,
-        // so cookie clearance has no effect on the resume.
+        // state from the initial GET (the link has left the URL by now), so
+        // neither the cookie nor the storage wipe affects the resume.
         await page.locator('input[name="username"]').fill(chosenUsername);
         await page.locator('input[name="password"]').fill("secure-pass");
         await Promise.all([

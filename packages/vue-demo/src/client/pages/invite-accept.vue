@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { AsWfForm } from "@atscript/vue-wf";
 import { createDemoTypes } from "../types/demo-types";
@@ -8,13 +8,38 @@ import { sharedFetch } from "../api/fetch";
 
 const route = useRoute();
 const router = useRouter();
-const token = computed(() => String(route.params.token));
 const types = createDemoTypes();
 const { refresh } = useMe();
 
+// The emailed link token. The server may renew it mid-run (the link then stops
+// working), and the renewed one carries the invitee's set password:
+// `persist-token` keeps the run's token in this tab's sessionStorage (a reload
+// resumes; the address and the history never see it) and fires `@link-used`
+// once the server has answered the link, to drop it from the address.
+const link =
+  typeof route.params.token === "string" && route.params.token ? route.params.token : undefined;
+function dropLink() {
+  if (route.params.token) void router.replace({ name: "invite-accept" });
+}
+
+// An explicit key, so the page can tell whether this tab has a run to resume:
+// `/invite` with neither a link nor a saved run has nothing to accept (and must
+// not start an anonymous run). Storage is read after mount — the server has none.
+const RUN_KEY = "wf:invite-accept";
+const hasRun = ref<boolean | undefined>(link ? true : undefined);
+onMounted(() => {
+  if (hasRun.value !== undefined) return;
+  try {
+    hasRun.value = sessionStorage.getItem(RUN_KEY) !== null;
+  } catch {
+    hasRun.value = false;
+  }
+});
+
+// Replace, so Back doesn't return to the invite page.
 async function onFinished() {
   await refresh();
-  void router.push("/");
+  void router.replace("/");
 }
 function onError(e: { status?: number; message?: string }) {
   if (e?.status === 410) {
@@ -35,13 +60,20 @@ function onError(e: { status?: number; message?: string }) {
           atscript-ui demo
         </p>
       </div>
+      <p v-if="hasRun === false" class="p-4 text-sm opacity-60 m-0">
+        No invitation to accept here. Open the link from your invitation email.
+      </p>
       <AsWfForm
+        v-else-if="hasRun"
         path="/api/wf"
         name="api/users/invite"
-        :initial-token="token"
+        :initial-token="link"
+        persist-token="session"
+        :persist-token-key="RUN_KEY"
         :types="types"
         :fetch="sharedFetch"
         first-validation="on-submit"
+        @link-used="dropLink"
         @finished="onFinished"
         @error="onError"
       >
