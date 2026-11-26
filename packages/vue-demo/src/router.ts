@@ -87,6 +87,11 @@ const routes = [
     component: () => import("./client/pages/wf-demo/qr-and-copy.vue"),
   },
   {
+    path: "/forms-demo/value-help",
+    name: "forms-demo-value-help",
+    component: () => import("./client/pages/forms-demo/value-help.vue"),
+  },
+  {
     path: "/forms-demo/nested-collapsible",
     name: "forms-demo-nested-collapsible",
     component: () => import("./client/pages/forms-demo/nested-collapsible.vue"),

@@ -124,6 +124,13 @@ const variations: Variation[] = [
     status: "ready",
   },
   {
+    to: "/forms-demo/value-help",
+    title: "Value help · narrowed pickers, fills, dropdown",
+    description:
+      "A picker narrowed by another field of the form (host references in @ui.valueHelp's filter), picks that fill other fields (@ui.valueHelp.fill), and @ui.form.type 'select' listing a small dictionary.",
+    status: "ready",
+  },
+  {
     to: "/forms-demo/aooth-components",
     title: "Aooth components",
     description:
