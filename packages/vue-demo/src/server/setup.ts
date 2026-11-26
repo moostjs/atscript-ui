@@ -21,6 +21,8 @@ const { OrdersTable } = await import("./schemas/orders.as");
 const { AuditLogTable } = await import("./schemas/audit-log.as");
 const { TasksTable } = await import("./schemas/tasks.as");
 const { AttributeValuesTable } = await import("./schemas/attribute-values.as");
+const { CitiesTable } = await import("./schemas/cities.as");
+const { OfficesTable } = await import("./schemas/offices.as");
 const { AsPresetEntry } = await import("@atscript/moost-ui-presets");
 const { atscriptModels } = await import("./atscript.models.gen");
 const {
@@ -33,6 +35,8 @@ const {
   seedAuditLog,
   seedTasks,
   seedAttributeValues,
+  seedCities,
+  seedOffices,
 } = await import("./seed");
 
 const result = await syncSchema(db, [...atscriptModels, AsPresetEntry], {
@@ -49,6 +53,8 @@ const ordersT = db.getTable(OrdersTable);
 const auditLogT = db.getTable(AuditLogTable);
 const tasksT = db.getTable(TasksTable);
 const attributeValuesT = db.getTable(AttributeValuesTable);
+const citiesT = db.getTable(CitiesTable);
+const officesT = db.getTable(OfficesTable);
 
 await rolesT.insertMany(seedRoles() as Record<string, unknown>[]);
 await usersT.insertMany((await seedUsers()) as Record<string, unknown>[]);
@@ -59,4 +65,6 @@ await ordersT.insertMany(seedOrders() as Record<string, unknown>[]);
 await auditLogT.insertMany(seedAuditLog() as Record<string, unknown>[]);
 await tasksT.insertMany(seedTasks() as Record<string, unknown>[]);
 await attributeValuesT.insertMany(seedAttributeValues() as Record<string, unknown>[]);
+await citiesT.insertMany(seedCities() as Record<string, unknown>[]);
+await officesT.insertMany(seedOffices() as Record<string, unknown>[]);
 console.log(`✅ Demo DB ready at ${DB_PATH}`);

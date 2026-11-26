@@ -18,6 +18,8 @@ import { UsersController } from "./controllers/users.controller";
 import { RolesController } from "./controllers/roles.controller";
 import { CategoriesController } from "./controllers/categories.controller";
 import { AttributeValuesController } from "./controllers/attribute-values.controller";
+import { CitiesController } from "./controllers/cities.controller";
+import { OfficesController } from "./controllers/offices.controller";
 import { ProductsController } from "./controllers/products.controller";
 import { CustomersController } from "./controllers/customers.controller";
 import { OrdersController } from "./controllers/orders.controller";
@@ -95,6 +97,8 @@ app.registerControllers(
   RolesController,
   CategoriesController,
   AttributeValuesController,
+  CitiesController,
+  OfficesController,
   ProductsController,
   CustomersController,
   OrdersController,

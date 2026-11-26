@@ -10,6 +10,8 @@ import { AuditLogTable } from "./schemas/audit-log.as";
 import { TasksTable } from "./schemas/tasks.as";
 import { TaskBoardView } from "./schemas/task-board.as";
 import { AttributeValuesTable } from "./schemas/attribute-values.as";
+import { CitiesTable } from "./schemas/cities.as";
+import { OfficesTable } from "./schemas/offices.as";
 import { WfStateRow } from "./schemas/wf-state.as";
 
 const DB_PATH = process.env.DEMO_DB_PATH ?? ".data/demo.db";
@@ -25,5 +27,7 @@ export const auditLogTable = db.getTable(AuditLogTable);
 export const tasksTable = db.getTable(TasksTable);
 export const taskBoardView = db.getView(TaskBoardView);
 export const attributeValuesTable = db.getTable(AttributeValuesTable);
+export const citiesTable = db.getTable(CitiesTable);
+export const officesTable = db.getTable(OfficesTable);
 export const presetsTable = db.getTable(AsPresetEntry);
 export const wfStateTable = db.getTable(WfStateRow);

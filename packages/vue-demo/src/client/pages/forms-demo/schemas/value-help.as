@@ -47,3 +47,50 @@ export interface VariantPickerForm {
     @ui.form.grid.colSpan 'half'
     colorLabel?: string
 }
+
+/// The demo's city dictionary, as its controller serves it.
+@db.http.path '/api/db/tables/cities'
+export interface CityDict {
+    @meta.id
+    code: string
+
+    @ui.dict.label
+    name: string
+
+    country: string
+
+    region: string
+}
+
+@meta.label 'Office'
+export interface OfficePickerForm {
+    @meta.label 'Country'
+    @ui.form.grid.colSpan 'half'
+    country?: 'DE' | 'FR' | 'IT' | 'ES'
+
+    /// A picker dialog: the button after the input, or "See all" under its list, shows
+    /// the country's cities as a table. The city reads with its name while not edited.
+    @meta.label 'City'
+    @ui.valueHelp CityDict, 'code', `country = OfficePickerForm.country`
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'country', 'country'
+    @ui.valueHelp.column 'code'
+    @ui.valueHelp.column 'name'
+    @ui.valueHelp.column 'country'
+    @ui.valueHelp.column 'region'
+    @ui.valueLabel 'cityName'
+    @ui.form.grid.colSpan 'half'
+    city?: string
+
+    @meta.label 'City name'
+    cityName?: string
+
+    /// Read-only: the code with its name, code first.
+    @meta.label 'Head office'
+    @meta.readonly
+    @ui.valueLabel 'headOfficeName', 'keyText'
+    headOffice?: string
+
+    @ui.form.hidden
+    headOfficeName?: string
+}

@@ -9,7 +9,9 @@
 import { AttributeValuesTable } from "./schemas/attribute-values.as";
 import { AuditLogTable } from "./schemas/audit-log.as";
 import { CategoriesTable } from "./schemas/categories.as";
+import { CitiesTable } from "./schemas/cities.as";
 import { CustomersTable } from "./schemas/customers.as";
+import { OfficesTable } from "./schemas/offices.as";
 import { OrdersTable } from "./schemas/orders.as";
 import { ProductsTable } from "./schemas/products.as";
 import { RolesTable } from "./schemas/roles.as";
@@ -22,7 +24,9 @@ export const dbTables = [
   AttributeValuesTable,
   AuditLogTable,
   CategoriesTable,
+  CitiesTable,
   CustomersTable,
+  OfficesTable,
   OrdersTable,
   ProductsTable,
   RolesTable,

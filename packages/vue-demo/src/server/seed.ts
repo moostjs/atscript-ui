@@ -109,6 +109,51 @@ export const seedAttributeValues = () => [
   { attribute: "team", value: "sales", label: "Sales", active: true },
 ];
 
+/** The city dictionary behind the offices' picker dialog — more than a picker list shows. */
+export const seedCities = () =>
+  (
+    [
+      ["BER", "Berlin", "DE", "East"],
+      ["HAM", "Hamburg", "DE", "North"],
+      ["MUC", "Munich", "DE", "South"],
+      ["CGN", "Cologne", "DE", "West"],
+      ["FRA", "Frankfurt", "DE", "West"],
+      ["STR", "Stuttgart", "DE", "South"],
+      ["DUS", "Dusseldorf", "DE", "West"],
+      ["LEJ", "Leipzig", "DE", "East"],
+      ["DRS", "Dresden", "DE", "East"],
+      ["HAJ", "Hanover", "DE", "North"],
+      ["PAR", "Paris", "FR", "North"],
+      ["LYS", "Lyon", "FR", "South"],
+      ["MRS", "Marseille", "FR", "South"],
+      ["TLS", "Toulouse", "FR", "South"],
+      ["NCE", "Nice", "FR", "South"],
+      ["NTE", "Nantes", "FR", "West"],
+      ["SXB", "Strasbourg", "FR", "East"],
+      ["BOD", "Bordeaux", "FR", "West"],
+      ["LIL", "Lille", "FR", "North"],
+      ["ROM", "Rome", "IT", "Centre"],
+      ["MIL", "Milan", "IT", "North"],
+      ["NAP", "Naples", "IT", "South"],
+      ["TRN", "Turin", "IT", "North"],
+      ["FLR", "Florence", "IT", "Centre"],
+      ["BLQ", "Bologna", "IT", "North"],
+      ["MAD", "Madrid", "ES", "Centre"],
+      ["BCN", "Barcelona", "ES", "East"],
+      ["VLC", "Valencia", "ES", "East"],
+      ["SVQ", "Seville", "ES", "South"],
+      ["BIO", "Bilbao", "ES", "North"],
+    ] as const
+  ).map(([code, name, country, region]) => ({ code, name, country, region }));
+
+/** Offices: a city code with its name, shown together. */
+export const seedOffices = () => [
+  { name: "Head office", cityCode: "BER", cityName: "Berlin" },
+  { name: "Harbour office", cityCode: "HAM", cityName: "Hamburg" },
+  { name: "South office", cityCode: "LYS", cityName: "Lyon" },
+  { name: "Remote desk", cityCode: "MAD" },
+];
+
 const COLORS = ["red", "blue", "green", "black"];
 const SIZES = ["S", "M", "L", "XL"];
 

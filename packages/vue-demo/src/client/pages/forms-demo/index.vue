@@ -125,9 +125,9 @@ const variations: Variation[] = [
   },
   {
     to: "/forms-demo/value-help",
-    title: "Value help · narrowed pickers, fills, dropdown",
+    title: "Value help · narrowed pickers, fills, dropdown, picker dialog",
     description:
-      "A picker narrowed by another field of the form (host references in @ui.valueHelp's filter), picks that fill other fields (@ui.valueHelp.fill), and @ui.form.type 'select' listing a small dictionary.",
+      "A picker narrowed by another field of the form (host references in @ui.valueHelp's filter), picks that fill other fields (@ui.valueHelp.fill), @ui.form.type 'select' listing a small dictionary, a picker dialog (AsRefPicker) and codes shown with their text (@ui.valueLabel) in fields, cells and export.",
     status: "ready",
   },
   {

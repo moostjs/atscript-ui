@@ -307,6 +307,8 @@ export const DEMO_TABLES: DemoTable[] = [
     ],
     filtersOverflow: { maxVisible: 1 },
   },
+  // A city code shown with its name (`@ui.valueLabel`); the name is fetched with it.
+  { path: "offices", label: "Offices", resource: "offices", icon: "i-ph:buildings" },
   // Query-target showcase: `selectAllMatching` adds the "Select all N
   // matching" banner; `archive` / `set-priority` / `reopen` accept a query
   // target (`reopen` caps it at 25 rows), `notify` does not.

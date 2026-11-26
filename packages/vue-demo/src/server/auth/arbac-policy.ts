@@ -112,6 +112,8 @@ const managerRole = defineRole<DemoUserAttrs, ArbacDbScope>()
     allowTableWrite("customers"),
     allowTableWrite("orders"),
     allowTableWrite("attribute_values"),
+    allowTableWrite("cities"),
+    allowTableWrite("offices"),
     // tasks: read + write — the task actions (`@ArbacAction("update")`) too,
     // also when the task board runs them by delegation.
     allowTableWrite("tasks"),
@@ -130,6 +132,8 @@ const viewerBuilder = defineRole<DemoUserAttrs, ArbacDbScope>()
     // roles, categories: read, no narrowing
     allowTableRead("roles"),
     allowTableRead("categories"),
+    allowTableRead("cities"),
+    allowTableRead("offices"),
     // products, customers, orders: narrow reads
     allowTableRead("products", { scope: () => ({ projection: proj(VIEWER_PRODUCTS_COLS) }) }),
     // `$groupBy: false`: no distinct-values picker (grouped reads are refused)

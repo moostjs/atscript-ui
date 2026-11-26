@@ -1,12 +1,28 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { AsForm, createDefaultTypes, createAsFormDef } from "@atscript/vue-form";
-import { VariantPickerForm } from "./schemas/value-help.as";
+import { AsRefPicker, AsTable, AsTableRoot } from "@atscript/vue-table";
+import { OfficePickerForm, VariantPickerForm } from "./schemas/value-help.as";
 import DarkToggle from "./_dark-toggle.vue";
+import OfficesExport from "./_offices-export.vue";
+import { useMe } from "../../api/use-me";
 
 const { def, formData } = createAsFormDef(VariantPickerForm);
 formData.value = { attribute: "size" };
 const types = createDefaultTypes();
+
+// A reference field with a picker dialog (`AsRefPicker` for the `ref` type).
+const office = createAsFormDef(OfficePickerForm);
+office.formData.value = {
+  country: "DE",
+  city: "MUC",
+  cityName: "Munich",
+  headOffice: "BER",
+  headOfficeName: "Berlin",
+};
+const officeTypes = { ...createDefaultTypes(), ref: AsRefPicker };
+// Like `TablePage`: the table mounts once the signed-in user is known (client only).
+const { loaded } = useMe();
 
 // Every committed edit, in order — a pick commits its field and each field it fills.
 const changes = ref<string[]>([]);
@@ -65,6 +81,39 @@ function onSubmit(data: unknown) {
           changes.join("\n")
         }}</pre>
       </details>
+
+      <h2 class="text-h4 m-0 mt-$l">Picker dialog and codes with their text</h2>
+      <p class="text-callout text-current-muted m-0">
+        The city opens a dialog listing the country's cities; the city and the head office read as a
+        code with its name.
+      </p>
+      <AsForm
+        data-testid="value-help-dialog-form"
+        :def="office.def"
+        :form-data="office.formData"
+        :types="officeTypes"
+        hide-root-title
+        first-validation="on-submit"
+      >
+      </AsForm>
+      <pre
+        data-testid="value-help-dialog-preview"
+        class="layer-0 border-1 rounded-r2 p-$m text-callout overflow-auto"
+        >{{ JSON.stringify(office.formData, null, 2) }}</pre
+      >
+
+      <h2 class="text-h4 m-0 mt-$l">Offices</h2>
+      <section data-testid="offices-table" class="flex flex-col gap-$s h-[18em] min-h-0">
+        <AsTableRoot
+          v-if="loaded"
+          url="/api/db/tables/offices"
+          :limit="10"
+          class="flex-1 flex flex-col min-h-0"
+        >
+          <AsTable class="flex-1 min-h-0" />
+          <OfficesExport />
+        </AsTableRoot>
+      </section>
     </div>
   </div>
 </template>
