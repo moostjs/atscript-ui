@@ -167,6 +167,7 @@ declare global {
     "ui.valueHelp.column": (string)[]
     "ui.valueHelp.distinct": boolean
     "ui.literalLabel": ({ value: string, label: string })[]
+    "ui.valueLabel": { field: string, arrangement?: string }
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
