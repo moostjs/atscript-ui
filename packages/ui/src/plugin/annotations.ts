@@ -5,6 +5,8 @@ import {
   validateDistinct,
   literalLabelValues,
   validateFormType,
+  validateColumn,
+  validateFill,
   validateLiteralLabel,
   validateValueHelp,
   valueHelpScopes,
@@ -702,12 +704,18 @@ export const uiAnnotations: TAnnotationsTree = {
           "no query semantics, presentation only. Filter pickers (table filter dialog / inline field) " +
           "and form reference pickers search the target's controller and commit the target's " +
           "`field`. The binding wins over a `@db.rel.FK` on the field or its chain, and travels " +
-          "through chain refs and `extends`. The optional `filter` is a static scope AND'd into every " +
-          "picker query; fields it pins with `=` are hidden from the picker columns." +
+          "through chain refs and `extends`. The optional `filter` is a scope AND'd into every " +
+          "picker query; fields it pins with `=` are hidden from the picker columns. In a form, " +
+          "`targetField = Host.field` (`Host`: the interface declaring this field) narrows the " +
+          "picker by the value of another field of the form; while that field is empty the " +
+          "condition is left out. Table filters ignore such conditions." +
           "\n\n**Example:**\n" +
           "```atscript\n" +
           "@ui.valueHelp AttributeValue, 'value', `attribute = 'color'`\n" +
           "color: Ticket.color\n" +
+          "\n" +
+          "@ui.valueHelp City, 'id', `country = Customer.country and active = true`\n" +
+          "city?: string\n" +
           "```\n",
         nodeType: ["prop", "type"],
         multiple: false,
@@ -731,12 +739,76 @@ export const uiAnnotations: TAnnotationsTree = {
             name: "filter",
             type: "query",
             description:
-              "Static scope on the target (`attribute = 'color' and active = true`) — field-to-value " +
-              "comparisons of the target's fields only.",
+              "Scope on the target (`attribute = 'color' and active = true`): comparisons of the " +
+              "target's fields with literal values, and — top-level `and` conditions only — " +
+              "`targetField = Host.field`, which narrows the picker of a form by the value of " +
+              "another field of the host interface (left out while that field is empty).",
             fieldScope: valueHelpScopes.filter,
           },
         ],
         validate: validateValueHelp,
+      }),
+      fill: new AnnotationSpec({
+        description:
+          "A pick also fills another field of the form: writes the picked row's `targetField` " +
+          "into the sibling `local`, as an edit would. Repeat per field. Applies to the field's " +
+          "own binding (`@ui.valueHelp`, else `@db.rel.FK`) in forms only; a derived, read-only " +
+          "or navigation sibling is skipped. The clear button clears a filled field again " +
+          "while it still holds what the last pick wrote. Not passed through references." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@ui.valueHelp City, 'id'\n" +
+          "@ui.valueHelp.fill 'cityName', 'name'\n" +
+          "city?: string\n" +
+          "cityName?: string\n" +
+          "```\n",
+        nodeType: ["prop"],
+        multiple: true,
+        mergeStrategy: "replace",
+        // Names siblings of the DECLARING interface: a referring field's host
+        // may not have them, so the fills must not travel.
+        passedWhenReferred: false,
+        argument: [
+          {
+            name: "local",
+            type: "string",
+            description:
+              "A top-level scalar field of this interface that the pick writes — not this field.",
+            fieldScope: valueHelpScopes.hostField,
+          },
+          {
+            name: "targetField",
+            type: "string",
+            description:
+              "A top-level scalar field of the dictionary whose value is written; same type as `local`.",
+            fieldScope: valueHelpScopes.bindingField,
+          },
+        ],
+        validate: validateFill,
+      }),
+      column: new AnnotationSpec({
+        description:
+          "A column of this binding's picker dialogs: they show exactly these dictionary " +
+          "fields, in order, instead of the dictionary's key / label / description view. " +
+          "Repeat per column. The combobox and the dropdown keep key, label and description." +
+          "\n\n**Example:**\n" +
+          "```atscript\n" +
+          "@ui.valueHelp City, 'id'\n" +
+          "@ui.valueHelp.column 'id'\n" +
+          "@ui.valueHelp.column 'name'\n" +
+          "@ui.valueHelp.column 'region'\n" +
+          "city?: string\n" +
+          "```\n",
+        nodeType: ["prop"],
+        multiple: true,
+        mergeStrategy: "replace",
+        argument: {
+          name: "field",
+          type: "string",
+          description: "A top-level scalar field of the dictionary shown as a column.",
+          fieldScope: valueHelpScopes.bindingField,
+        },
+        validate: validateColumn,
       }),
       distinct: new AnnotationSpec({
         description:

@@ -4,6 +4,7 @@ import type {
   SemanticNode,
   SemanticPropNode,
   SemanticQueryComparisonNode,
+  SemanticQueryFieldRefNode,
   SemanticRefNode,
   TAnnotationArgument,
   TMessages,
@@ -23,10 +24,14 @@ import {
 import type { SemanticQueryExprNode } from "@atscript/core";
 import {
   NOT_DIMENSION_REASON,
-  forEachFieldRef,
+  annotationTarget,
+  effectiveAnnotationNames,
+  fkChainRef,
   getAnnotationAlias,
+  getTypeFields,
   isAliasDecl,
   isDbSourceDecl,
+  isNavProp,
   isStrictAggregateStruct,
   primitiveBaseType,
   validateExclusiveWith,
@@ -36,8 +41,10 @@ import {
 
 /**
  * Editor scopes + validators of `@ui.valueHelp`, `@ui.valueHelp.distinct` and
- * `@ui.literalLabel` (since 0.1.148). Scopes and validators share one source,
- * so a diagnostic and what the editor completes never diverge.
+ * `@ui.literalLabel` (since 0.1.148), and of `@ui.valueHelp.fill`,
+ * `@ui.valueHelp.column` and host references in a binding filter (since
+ * 0.1.190). Scopes and validators share one source, so a diagnostic and what
+ * the editor completes never diverge.
  */
 
 const WARNING = 2;
@@ -59,10 +66,33 @@ export const valueHelpScopes = {
     const target = targetOf(arg);
     return target ? { allowedTypes: [], unqualifiedTarget: target } : undefined;
   },
-  /** `filter`: the target type; unqualified fields belong to it. */
-  filter: (arg) => {
+  /**
+   * `filter`: the target type; unqualified fields belong to it. The host
+   * interface is in scope too: a right-hand `Host.field` is a host reference
+   * (since 0.1.190).
+   */
+  filter: (arg, doc) => {
     const target = targetOf(arg);
-    return target ? { allowedTypes: [target], unqualifiedTarget: target } : undefined;
+    if (!target) return undefined;
+    const host = hostOf(arg, doc);
+    const allowedTypes =
+      typeof host === "object" && host.name !== target ? [target, host.name] : [target];
+    return { allowedTypes, unqualifiedTarget: target };
+  },
+  /** `@ui.valueHelp.fill`'s `local`: a field of the host interface (since 0.1.190). */
+  hostField: (arg, doc) => {
+    const host = hostOf(arg, doc);
+    return typeof host === "object"
+      ? { allowedTypes: [], unqualifiedTarget: host.name }
+      : undefined;
+  },
+  /**
+   * A field of the target of the field's own binding — `@ui.valueHelp.fill`'s
+   * `targetField`, `@ui.valueHelp.column`'s `field` (since 0.1.190).
+   */
+  bindingField: (arg, doc) => {
+    const binding = bindingOf(annotationTarget(arg, doc), doc);
+    return binding ? { allowedTypes: [], unqualifiedTarget: binding.name } : undefined;
   },
 } satisfies Record<string, TFieldScopeHook>;
 
@@ -320,21 +350,151 @@ function conjuncts(expr: SemanticQueryExprNode): SemanticQueryExprNode[] {
   return [expr];
 }
 
+/** The right-hand field reference of a comparison, if it compares two fields. */
+function rightRef(cmp: SemanticQueryComparisonNode): SemanticQueryFieldRefNode | undefined {
+  return cmp.right && "fieldRef" in cmp.right
+    ? (cmp.right as SemanticQueryFieldRefNode)
+    : undefined;
+}
+
 /**
- * Fields the filter pins with a top-level `=` against a literal value. The
- * compile-time twin of `pinnedOf` in `value-help/filter-tree.ts` (which reads the
- * emitted tree at runtime) — keep the two rules in step.
+ * Fields the filter pins with a top-level `=` against a literal value, or — a
+ * host reference — against a field of the host `hostName`. The compile-time twin
+ * of `pinnedOf` in `value-help/filter-tree.ts` (which reads the emitted tree at
+ * runtime) — keep the two rules in step.
  */
-function pinnedFields(filter: Token | undefined): Set<string> {
+function pinnedFields(filter: Token | undefined, hostName?: string): Set<string> {
   const pinned = new Set<string>();
   const expr = filter?.queryNode?.expression;
   if (!expr) return pinned;
   for (const c of conjuncts(expr)) {
-    if (isQueryComparison(c) && c.operator === "=" && c.right && !("fieldRef" in c.right)) {
+    if (!isQueryComparison(c) || c.operator !== "=" || !c.right) continue;
+    const ref = rightRef(c);
+    if (!ref || (hostName !== undefined && ref.typeRef?.text === hostName)) {
       pinned.add(c.left.fieldRef.text);
     }
   }
   return pinned;
+}
+
+// ── Host interface and binding of a bound field (since 0.1.190) ──
+
+/**
+ * The form a bound field is edited in: the host interface — its name as a
+ * filter names it (`Host.field`) and its fields, declared or inherited — and
+ * the field itself. In a mutating `annotate` block: the annotated interface,
+ * and the field the entry lands on (atscript-db's `annotationTarget`, the one
+ * resolver db's own checks read an entry's field through).
+ */
+interface THost {
+  name: string;
+  fields: ReadonlyMap<string, SemanticPropNode>;
+  field: SemanticNode;
+}
+
+/**
+ * Where host references and fills are refused: `"inline"` — a field that is
+ * no top-level field of an interface (an inline structure's, a nested
+ * `annotate` entry's, a type's); `"copy"` — an entry of an `annotate … as`
+ * copy.
+ */
+type THostRefusal = "inline" | "copy";
+
+/**
+ * The {@link THost} of the field the annotation (or argument) `token` sits
+ * on; `undefined` when it sits on no field (a type-level binding, an entry
+ * that lands nowhere).
+ */
+function hostOf(token: Token, doc: AtscriptDoc): THost | THostRefusal | undefined {
+  const node = token.parentNode;
+  if (!node) return undefined;
+  if (isRef(node)) {
+    const at = node.token("identifier")?.range.start;
+    const block = at ? doc.annotateBlockAt(at.line, at.character) : undefined;
+    if (!block) return undefined;
+    if (!block.isMutating) return "copy";
+    if (node.hasChain) return "inline";
+    const field = annotationTarget(token, doc);
+    const fields = getTypeFields(field?.ownerNode, doc);
+    return field && fields ? { name: block.targetName, fields, field } : undefined;
+  }
+  if (!isProp(node)) return undefined;
+  const iface = node.ownerNode?.ownerNode;
+  if (!isStructure(node.ownerNode) || !iface || !isInterface(iface)) return "inline";
+  const fields = getTypeFields(iface, doc);
+  return fields && iface.id ? { name: iface.id, fields, field: node } : undefined;
+}
+
+const REFUSED: Record<THostRefusal, string> = {
+  inline:
+    "a top-level field of an interface, not a field of an inline structure, a type or a nested annotate entry",
+  copy: "a field of an interface or of a mutating annotate block, not of an `annotate … as` copy",
+};
+
+/** The target of a field's own binding (fills and columns belong to it). */
+interface TBinding {
+  /** The target's name as written. */
+  name: string;
+  target?: TTarget;
+}
+
+/**
+ * The binding a field's fills and columns belong to: its own `@ui.valueHelp`
+ * (for an `annotate` entry's field, the landed one — the entry's wins), else its
+ * own `@db.rel.FK` help. A binding the field only gets through its type or a
+ * chain reference takes no fills or columns.
+ */
+function bindingOf(field: SemanticNode | undefined, doc: AtscriptDoc): TBinding | undefined {
+  if (!field) return undefined;
+  const own = field.annotations?.find((a) => a.name === "ui.valueHelp");
+  if (own) {
+    const name = own.args[0]?.text;
+    return name ? { name, target: resolveTarget(name, doc) } : undefined;
+  }
+  if (field.countAnnotations("db.rel.FK") > 0) {
+    const ref = fkChainRef(field.getDefinition());
+    if (ref?.id) return { name: ref.id, target: resolveTarget(ref.id, doc.refOrigin(ref)) };
+  }
+  return undefined;
+}
+
+const SCALAR = "a scalar (not an object, an array, a navigation or @db.json)";
+
+/** Whether a field holds no scalar: an object, an array, `@db.json` or a navigation. */
+function isNotScalar(prop: SemanticNode, doc: AtscriptDoc): boolean {
+  if (prop.countAnnotations("db.json") > 0 || isNavProp(prop)) return true;
+  const design = designOf(prop.getDefinition(), doc.declaringDoc(prop, doc));
+  return design === "object" || design === "array";
+}
+
+/** FL3 / CL2: why `name` is no top-level scalar field of the binding's target. */
+function targetFieldProblem(binding: TBinding, name: string): string | undefined {
+  if (name.includes(".")) {
+    return `'${name}' must be a top-level field of '${binding.name}', not a dotted path`;
+  }
+  const target = binding.target;
+  if (!target) return undefined;
+  const prop = target.props.get(name);
+  if (!prop) return `Field '${name}' does not exist on '${binding.name}'`;
+  if (isNotScalar(prop, target.doc)) return `'${binding.name}.${name}' must be ${SCALAR}`;
+  return undefined;
+}
+
+/** FL4 / VH9: why the host field `local` cannot take the target field `name`'s values. */
+function designMismatch(
+  host: THost,
+  local: string,
+  binding: TBinding,
+  name: string,
+  doc: AtscriptDoc,
+): string | undefined {
+  const localProp = host.fields.get(local);
+  const targetProp = binding.target?.props.get(name);
+  if (!localProp || !targetProp || !binding.target) return undefined;
+  const a = designOf(targetProp.getDefinition(), binding.target.doc);
+  const b = designOf(localProp.getDefinition(), doc.declaringDoc(localProp, doc));
+  if (!a || !b || a === "other" || b === "other" || a === b) return undefined;
+  return `'${binding.name}.${name}' is ${a}, '${host.name}.${local}' is ${b}`;
 }
 
 // ── @ui.valueHelp ───────────────────────────────────────────
@@ -426,26 +586,33 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
   }
 
   const filterQuery = filterArg?.queryNode;
+  // The form the field is edited in: a right-hand field reference names its field (since 0.1.190).
+  const formHost = hostOf(token, doc);
+  const validHost = typeof formHost === "object" ? formHost : undefined;
   if (filterArg && filterQuery) {
-    // VH4: filter references the target only
+    // VH4: filter references the target — and, on the right-hand side, the host
     errors.push(
       ...validateQueryScope(
         filterArg,
-        { allowedTypes: [targetName], unqualifiedTarget: targetName },
+        {
+          allowedTypes:
+            validHost && validHost.name !== targetName
+              ? [targetName, validHost.name]
+              : [targetName],
+          unqualifiedTarget: targetName,
+        },
         doc,
       ),
     );
 
-    // VH5: field-to-value comparisons only
-    for (const cmp of comparisons(filterQuery.expression)) {
-      if (cmp.right && "fieldRef" in cmp.right) {
-        errors.push({
-          message: "a value-help filter compares target fields with literal values",
-          severity: ERROR,
-          range: cmp.right.fieldRef.range,
-        });
-      }
-    }
+    // VH5 / VH9: field-to-value comparisons, plus host references `targetField = Host.field`
+    errors.push(
+      ...validateHostRefs(filterQuery.expression, {
+        host: formHost,
+        binding: { name: targetName, target },
+        doc,
+      }),
+    );
   }
 
   // VH6: values may repeat in the picker
@@ -458,7 +625,8 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
       (fieldProp.countAnnotations("meta.id") > 0 && idFields.length === 1);
     let ok = isUnique;
     if (!ok && fieldProp.countAnnotations("meta.id") > 0) {
-      const pinned = pinnedFields(filterArg);
+      // a key member a host reference pins is constant in the picker too
+      const pinned = pinnedFields(filterArg, validHost?.name);
       ok = idFields.every(([name]) => name === fieldName || pinned.has(name));
     }
     if (!ok) {
@@ -470,13 +638,14 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
     }
   }
 
-  // VH7: manual filterable table — filter fields need @db.column.filterable
+  // VH7: manual filterable table — filter fields need @db.column.filterable. Only the
+  // left-hand fields are the dictionary's: a right-hand one is a host reference.
   if (filterQuery && getAnnotationAlias(target.decl, "db.table.filterable") === "manual") {
     const seen = new Set<string>();
-    forEachFieldRef(filterQuery.expression, (ref) => {
-      if (ref.typeRef && ref.typeRef.text !== targetName) return;
+    for (const { left: ref } of comparisons(filterQuery.expression)) {
+      if (ref.typeRef && ref.typeRef.text !== targetName) continue;
       const name = ref.fieldRef.text;
-      if (seen.has(name)) return;
+      if (seen.has(name)) continue;
       seen.add(name);
       const prop = target.props.get(name.split(".")[0]);
       if (prop && prop.countAnnotations("db.column.filterable") === 0) {
@@ -486,7 +655,31 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
           range: ref.fieldRef.range,
         });
       }
-    });
+    }
+  }
+
+  // An `annotate` entry that replaces the binding re-checks the fills and columns the field
+  // already carries against the new target (its own ones are checked by their validators).
+  if (validHost && isRef(host)) {
+    const binding = { name: targetName, target };
+    for (const a of validHost.field.annotations ?? []) {
+      if (a.token.parentNode === host) continue;
+      const isFill = a.name === "ui.valueHelp.fill";
+      if (!isFill && a.name !== "ui.valueHelp.column") continue;
+      const local = isFill ? a.args[0]?.text : undefined;
+      const name = a.args[isFill ? 1 : 0]?.text;
+      if (name === undefined) continue;
+      const problem =
+        targetFieldProblem(binding, name) ??
+        (local === undefined ? undefined : designMismatch(validHost, local, binding, name, doc));
+      if (problem) {
+        errors.push({
+          message: `@${a.name} '${a.args.map((t) => t.text).join("', '")}' of this field: ${problem}`,
+          severity: ERROR,
+          range: token.range,
+        });
+      }
+    }
   }
 
   return errors;
@@ -496,6 +689,200 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
 function comparisons(expr: SemanticQueryExprNode): SemanticQueryComparisonNode[] {
   if (isQueryLogical(expr)) return expr.operands.flatMap(comparisons);
   return isQueryComparison(expr) ? [expr] : [];
+}
+
+/**
+ * VH5 / VH9 (since 0.1.190): a field-to-field comparison is a host reference —
+ * a top-level `and` conjunct `targetField = Host.field` naming an existing
+ * scalar field of the host of the same design type that is not the bound
+ * field. Anything else that compares two fields or names the host is an error.
+ */
+function validateHostRefs(
+  expr: SemanticQueryExprNode,
+  ctx: { host: THost | THostRefusal | undefined; binding: TBinding; doc: AtscriptDoc },
+): TMessages {
+  const errors: TMessages = [];
+  const { host, binding, doc } = ctx;
+  const targetName = binding.name;
+  const error = (message: string, range: Token["range"]) =>
+    errors.push({ message, severity: ERROR, range });
+
+  const visit = (node: SemanticQueryExprNode, topLevel: boolean) => {
+    if (isQueryLogical(node)) {
+      const chain = topLevel && node.operator === "and";
+      for (const operand of node.operands) visit(operand, chain);
+      return;
+    }
+    if (!isQueryComparison(node)) return;
+    const hostName = typeof host === "object" ? host.name : undefined;
+    // the left side names the dictionary — a self-bound dictionary's own name is the target's
+    if (hostName && hostName !== targetName && node.left.typeRef?.text === hostName) {
+      error(
+        `the left side names a field of '${targetName}'; a host field belongs on the right ('field = ${hostName}.${node.left.fieldRef.text}')`,
+        node.left.typeRef.range,
+      );
+    }
+    const ref = rightRef(node);
+    if (!ref) return;
+    if (typeof host !== "object") {
+      error(
+        host === undefined
+          ? "a value-help filter compares target fields with literal values"
+          : `a host reference (a right-hand field reference) needs ${REFUSED[host]}`,
+        ref.fieldRef.range,
+      );
+      return;
+    }
+    const typeName = ref.typeRef?.text;
+    // another type: VH4 already reports it out of scope
+    if (typeName !== host.name) {
+      if (typeName === undefined || typeName === targetName) {
+        error(
+          `a value-help filter compares target fields with literal values, or with a field of the host: '${host.name}.${ref.fieldRef.text}'`,
+          ref.fieldRef.range,
+        );
+      }
+      return;
+    }
+    if (!topLevel) {
+      error(
+        "a host reference must be a top-level 'and' conjunct of the filter (not under 'or' / 'not')",
+        ref.fieldRef.range,
+      );
+    }
+    if (node.operator !== "=") {
+      error(`a host reference compares with '=' (got '${node.operator}')`, ref.fieldRef.range);
+    }
+    const name = ref.fieldRef.text;
+    const prop = name.includes(".") ? undefined : host.fields.get(name);
+    if (!prop) {
+      error(
+        name.includes(".")
+          ? `a host reference names a top-level field of '${host.name}', not a dotted path`
+          : `Field '${name}' does not exist on '${host.name}'`,
+        ref.fieldRef.range,
+      );
+      return;
+    }
+    if (name === host.field.id) {
+      error("a host reference cannot name the bound field itself", ref.fieldRef.range);
+    } else if (isNotScalar(prop, doc)) {
+      error(`host field '${host.name}.${name}' must be ${SCALAR}`, ref.fieldRef.range);
+    } else {
+      const mismatch = designMismatch(host, name, binding, node.left.fieldRef.text, doc);
+      if (mismatch) error(mismatch, ref.fieldRef.range);
+    }
+  };
+  visit(expr, true);
+  return errors;
+}
+
+// ── @ui.valueHelp.fill / @ui.valueHelp.column (since 0.1.190) ──
+
+export function validateFill(token: Token, args: Token[], doc: AtscriptDoc): TMessages {
+  const errors: TMessages = [];
+  const [localArg, targetArg] = args;
+  const host = hostOf(token, doc);
+  if (typeof host !== "object") {
+    if (host) {
+      errors.push({
+        message: `@ui.valueHelp.fill needs ${REFUSED[host]}`,
+        severity: ERROR,
+        range: token.range,
+      });
+    }
+    return errors;
+  }
+
+  // FL1: the field's own binding
+  const binding = bindingOf(host.field, doc);
+  if (!binding) {
+    errors.push({
+      message:
+        "@ui.valueHelp.fill needs a binding of this field's own (@ui.valueHelp or @db.rel.FK)",
+      severity: ERROR,
+      range: token.range,
+    });
+    return errors;
+  }
+
+  // FL2 / FL5: a scalar sibling of the host, written by the pick
+  const local = localArg?.text;
+  let localOk = false;
+  if (localArg && local !== undefined) {
+    const prop = local.includes(".") ? undefined : host.fields.get(local);
+    if (!prop || local === host.field.id) {
+      errors.push({
+        message: local.includes(".")
+          ? `'${local}' must be a top-level field of '${host.name}', not a dotted path`
+          : prop
+            ? "@ui.valueHelp.fill cannot fill the bound field itself"
+            : `Field '${local}' does not exist on '${host.name}'`,
+        severity: ERROR,
+        range: localArg.range,
+      });
+    } else if (isNavProp(prop)) {
+      errors.push({
+        message: `'${local}' is a navigation field — a pick never writes it`,
+        severity: WARNING,
+        range: localArg.range,
+      });
+    } else if (isNotScalar(prop, doc)) {
+      errors.push({
+        message: `'${host.name}.${local}' must be ${SCALAR}`,
+        severity: ERROR,
+        range: localArg.range,
+      });
+    } else {
+      localOk = true;
+      const effective = effectiveAnnotationNames(prop, doc);
+      const why = effective.has("db.column.derived")
+        ? "@db.column.derived"
+        : effective.has("meta.readonly")
+          ? "@meta.readonly"
+          : undefined;
+      if (why) {
+        errors.push({
+          message: `'${local}' is ${why} — a pick never writes it`,
+          severity: WARNING,
+          range: localArg.range,
+        });
+      }
+    }
+  }
+
+  // FL3 / FL4: a scalar field of the target, of the sibling's type
+  const name = targetArg?.text;
+  if (targetArg && name !== undefined) {
+    const problem =
+      targetFieldProblem(binding, name) ??
+      (localOk && local !== undefined
+        ? designMismatch(host, local, binding, name, doc)
+        : undefined);
+    if (problem) errors.push({ message: problem, severity: ERROR, range: targetArg.range });
+  }
+  return errors;
+}
+
+export function validateColumn(token: Token, args: Token[], doc: AtscriptDoc): TMessages {
+  const field = annotationTarget(token, doc);
+  if (!field) return [];
+  // CL1: the field's own binding
+  const binding = bindingOf(field, doc);
+  if (!binding) {
+    return [
+      {
+        message:
+          "@ui.valueHelp.column needs a binding of this field's own (@ui.valueHelp or @db.rel.FK)",
+        severity: ERROR,
+        range: token.range,
+      },
+    ];
+  }
+  // CL2: a scalar field of the target
+  const name = args[0]?.text;
+  const problem = name === undefined ? undefined : targetFieldProblem(binding, name);
+  return problem ? [{ message: problem, severity: ERROR, range: args[0].range }] : [];
 }
 
 // ── @ui.valueHelp.distinct ──────────────────────────────────

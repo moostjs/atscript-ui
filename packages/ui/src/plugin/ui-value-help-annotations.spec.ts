@@ -2,8 +2,10 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  analyzeQueryCursorContext,
   build,
   getFieldPathCompletionScope,
+  getQueryCompletionScope,
   getQueryScope,
   getValueCandidates,
   resolveFieldRefAt,
@@ -77,6 +79,20 @@ export interface NoPathDict {
 export interface Plain { x: string }
 export type Status = 'open' | 'closed'
 export type Level = 1 | 2
+
+@db.table 'cities'
+@db.http.path '/cities'
+export interface City {
+    @meta.id
+    country: string
+    @meta.id
+    code: string
+    @ui.dict.label
+    name: string
+    population: number
+    active: boolean
+    info: { a: string }
+}
 `;
 
 async function compile(
@@ -186,7 +202,10 @@ export interface Host {
 }`)
     ).join("\n");
     expect(m).toContain("'Country' which is not in scope");
-    expect(m).toContain("a value-help filter compares target fields with literal values");
+    // on a field, a right-hand field reference is a host reference (since 0.1.190)
+    expect(m).toContain(
+      "a value-help filter compares target fields with literal values, or with a field of the host: 'Host.value'",
+    );
     expect(m).toContain("Field 'missing' does not exist on 'AttributeValue'");
   });
 
@@ -505,8 +524,9 @@ export interface Host {
       allowedTypes: [],
       unqualifiedTarget: "AttributeValue",
     });
+    // the host interface is in scope too: a right-hand `Host.field` is a host reference
     expect(getQueryScope(ann.args[2], doc)).toEqual({
-      allowedTypes: ["AttributeValue"],
+      allowedTypes: ["AttributeValue", "Host"],
       unqualifiedTarget: "AttributeValue",
     });
     expect(typeof getFieldPathCompletionScope).toBe("function");
@@ -522,7 +542,13 @@ export interface Host {
 describe("editor hover content", () => {
   it("documents each annotation and every one of its arguments", async () => {
     const { doc } = await compile("export interface Host { a: string }");
-    for (const name of ["ui.valueHelp", "ui.valueHelp.distinct", "ui.literalLabel"]) {
+    for (const name of [
+      "ui.valueHelp",
+      "ui.valueHelp.distinct",
+      "ui.valueHelp.fill",
+      "ui.valueHelp.column",
+      "ui.literalLabel",
+    ]) {
       const spec = doc.resolveAnnotation(name)!;
       expect(spec, name).toBeDefined();
       expect(spec.config.description, `${name} description`).toBeTruthy();
@@ -534,6 +560,22 @@ describe("editor hover content", () => {
     expect(doc.resolveAnnotation("ui.literalLabel")!.config.mergeStrategy).toBe("append");
     expect(doc.resolveAnnotation("ui.valueHelp")!.arguments).toHaveLength(3);
     expect(doc.resolveAnnotation("ui.literalLabel")!.arguments).toHaveLength(2);
+    // fills and columns: repeatable, a referring prop's list replaces; fills stay home
+    const fill = doc.resolveAnnotation("ui.valueHelp.fill")!;
+    expect(fill.arguments.map((a) => a.name)).toEqual(["local", "targetField"]);
+    expect(fill.config).toMatchObject({
+      nodeType: ["prop"],
+      multiple: true,
+      mergeStrategy: "replace",
+      passedWhenReferred: false,
+    });
+    const column = doc.resolveAnnotation("ui.valueHelp.column")!;
+    expect(column.arguments.map((a) => a.name)).toEqual(["field"]);
+    expect(column.config).toMatchObject({
+      nodeType: ["prop"],
+      multiple: true,
+      mergeStrategy: "replace",
+    });
   });
 });
 
@@ -944,5 +986,548 @@ export interface TagsBad {
 }`);
     expect(m).toContain("E: 'tags' requires an array field (e.g. string[]), got string");
     expect(m).toContain("E: 'tags' requires an array field (e.g. string[]), got object");
+  });
+});
+
+// ── Since 0.1.190: host references, fills, columns ─────────
+
+/** Line / character of `shift` characters into the first occurrence of `needle` after `from`. */
+function at(text: string, needle: string, shift = 0, from?: string) {
+  const start = from === undefined ? 0 : text.indexOf(from);
+  const offset = text.indexOf(needle, start);
+  expect(offset, needle).toBeGreaterThanOrEqual(0);
+  const before = text.slice(0, offset + shift).split("\n");
+  return { line: before.length - 1, character: before.at(-1)!.length };
+}
+
+const errorsOf = (m: string[]) => m.filter((x) => x.startsWith("E"));
+
+describe("host references in the binding filter (VH9)", () => {
+  it("accepts `targetField = Host.field` conjuncts: declared, inherited, mixed with literals", async () => {
+    const m = await msgs(`
+export interface CustomerBase {
+    region: string
+}
+export interface Customer extends CustomerBase {
+    country: string
+    @ui.valueHelp City, 'code', \`country = Customer.country and active = true\`
+    city?: string
+    @ui.valueHelp City, 'code', \`country = Customer.region\`
+    other?: string
+}`);
+    expect(m).toEqual([]);
+  });
+
+  it("a host reference pins a composite-key member: no repeating-values warning (VH6)", async () => {
+    const m = await msgs(`
+export interface Customer {
+    country: string
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    city?: string
+    @ui.valueHelp City, 'code'
+    unpinned?: string
+}`);
+    expect(m.filter((x) => x.includes("values may repeat"))).toHaveLength(1);
+  });
+
+  it("a dictionary bound from its own interface: the right-hand side is the host", async () => {
+    const m = await msgs(`
+@db.table 'employees'
+@db.http.path '/employees'
+export interface Employee {
+    @meta.id
+    id: string
+    dept: string
+    @ui.valueHelp Employee, 'id', \`dept = Employee.dept\`
+    manager?: string
+}`);
+    expect(m).toEqual([]);
+  });
+
+  it("refuses every other use of the host", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    country: string
+    pop: number
+    addr: { zip: string }
+    tags: string[]
+    @db.json
+    raw: string
+    @ui.valueHelp City, 'code', \`country = Customer.country or active = true\`
+    a?: string
+    @ui.valueHelp City, 'code', \`not (country = Customer.country)\`
+    b?: string
+    @ui.valueHelp City, 'code', \`country != Customer.country\`
+    c?: string
+    @ui.valueHelp City, 'code', \`Customer.country = 'x'\`
+    d?: string
+    @ui.valueHelp City, 'code', \`country = name\`
+    e?: string
+    @ui.valueHelp City, 'code', \`country = Customer.nope\`
+    f?: string
+    @ui.valueHelp City, 'code', \`country = Customer.g\`
+    g?: string
+    @ui.valueHelp City, 'code', \`country = Customer.addr\`
+    h?: string
+    @ui.valueHelp City, 'code', \`country = Customer.raw\`
+    i?: string
+    @ui.valueHelp City, 'code', \`population = Customer.country\`
+    j?: string
+    @ui.valueHelp City, 'code', \`country = Customer.addr.zip\`
+    k?: string
+}`)
+    ).join("\n");
+    expect(m).toContain("must be a top-level 'and' conjunct of the filter");
+    expect(m).toContain("a host reference compares with '=' (got '!=')");
+    expect(m).toContain("the left side names a field of 'City'");
+    expect(m).toContain("or with a field of the host: 'Customer.name'");
+    expect(m).toContain("Field 'nope' does not exist on 'Customer'");
+    expect(m).toContain("cannot name the bound field itself");
+    expect(m).toContain("host field 'Customer.addr' must be a scalar");
+    expect(m).toContain("host field 'Customer.raw' must be a scalar");
+    expect(m).toContain("'City.population' is number, 'Customer.country' is string");
+    expect(m).toContain("names a top-level field of 'Customer', not a dotted path");
+    // under `or` AND under `not`
+    expect(m.match(/top-level 'and' conjunct/g)).toHaveLength(2);
+  });
+
+  it("a field of an inline structure, an `as` copy and a type-level binding take no host references", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    country: string
+    addr: {
+        @ui.valueHelp City, 'code', \`country = Customer.country\`
+        city: string
+    }
+}
+@ui.valueHelp City, 'code', \`country = Customer.country\`
+export type CityCode = string
+export interface Plain2 {
+    country: string
+    city?: string
+}
+annotate Plain2 as Plain2Copy {
+    @ui.valueHelp City, 'code', \`country = Plain2.country\`
+    city
+}`)
+    ).join("\n");
+    expect(m).toContain(
+      "a host reference (a right-hand field reference) needs a top-level field of an interface",
+    );
+    expect(m).toContain("not of an `annotate … as` copy");
+    expect(m).toContain("a value-help filter compares target fields with literal values");
+  });
+
+  it("works in an annotate entry, the host field named by the annotated interface", async () => {
+    const m = await msgs(`
+export interface Customer {
+    country: string
+    other: string
+    city?: string
+    note?: string
+}
+annotate Customer {
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    city
+    @ui.valueHelp City, 'code', \`country = Customer.other or active = true\`
+    note
+}`);
+    expect(errorsOf(m)).toHaveLength(1);
+    expect(m.join()).toContain("top-level 'and' conjunct");
+  });
+
+  it("an annotate entry resolves a field the interface only inherits (generated table interfaces)", async () => {
+    const m = await msgs(`
+export interface Row {
+    country: string
+    city?: string
+    cityName?: string
+}
+export interface RowTable extends Row {}
+annotate RowTable {
+    @ui.valueHelp City, 'code', \`country = RowTable.country\`
+    @ui.valueHelp.fill 'cityName', 'name'
+    city
+}`);
+    expect(m).toEqual([]);
+  });
+
+  it("VH7: a manual-filterable dictionary checks the left-hand fields only", async () => {
+    const m = await msgs(`
+export interface Host {
+    kind: string
+    other: string
+    @ui.valueHelp ManualDict, 'id', \`kind = Host.kind and other = Host.other\`
+    a?: string
+}`);
+    const w = m.filter((x) => x.startsWith("W"));
+    expect(w).toHaveLength(1);
+    expect(w[0]).toContain("'other' needs @db.column.filterable");
+  });
+});
+
+describe("@ui.valueHelp.fill diagnostics", () => {
+  it("accepts fills from the field's own binding and from its FK help", async () => {
+    const m = await msgs(`
+export interface Customer {
+    country: string
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'country', 'country'
+    city?: string
+    cityName?: string
+    @db.rel.FK
+    @ui.valueHelp.fill 'countryName', 'name'
+    countryCode?: Country.code
+    countryName?: string
+}`);
+    expect(m).toEqual([]);
+  });
+
+  it("FL1: a field without a binding of its own", async () => {
+    const m = await msgs(`
+export interface Base {
+    @ui.valueHelp City, 'code'
+    city?: string
+}
+export interface View {
+    @ui.valueHelp.fill 'cityName', 'name'
+    city?: Base.city
+    cityName?: string
+    @ui.valueHelp.fill 'cityName', 'name'
+    plain?: string
+}`);
+    expect(m.filter((x) => x.includes("needs a binding of this field's own"))).toHaveLength(2);
+  });
+
+  it("FL2-FL4: the sibling and the target field", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    pop: number
+    addr: { zip: string }
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'nope', 'name'
+    @ui.valueHelp.fill 'addr.zip', 'name'
+    @ui.valueHelp.fill 'city', 'name'
+    @ui.valueHelp.fill 'addr', 'name'
+    @ui.valueHelp.fill 'cityName', 'missing'
+    @ui.valueHelp.fill 'cityName', 'info.a'
+    @ui.valueHelp.fill 'cityName', 'info'
+    @ui.valueHelp.fill 'pop', 'name'
+    city?: string
+    cityName?: string
+}`)
+    ).join("\n");
+    expect(m).toContain("Field 'nope' does not exist on 'Customer'");
+    expect(m).toContain("'addr.zip' must be a top-level field of 'Customer', not a dotted path");
+    expect(m).toContain("cannot fill the bound field itself");
+    expect(m).toContain("'Customer.addr' must be a scalar");
+    expect(m).toContain("Field 'missing' does not exist on 'City'");
+    expect(m).toContain("'info.a' must be a top-level field of 'City', not a dotted path");
+    expect(m).toContain("'City.info' must be a scalar");
+    expect(m).toContain("'City.name' is string, 'Customer.pop' is number");
+  });
+
+  it("FL5: a derived, read-only or navigation sibling warns (the write is skipped)", async () => {
+    const m = await msgs(`
+@db.table 'fl5_orders'
+export interface Order {
+    @meta.id
+    id: number
+    @db.rel.FK
+    countryCode: Country.code
+    @db.rel.to
+    country?: Country
+    @meta.readonly
+    shown?: string
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'shown', 'name'
+    @ui.valueHelp.fill 'country', 'name'
+    city?: string
+}`);
+    const w = m.filter((x) => x.startsWith("W"));
+    expect(w.join("\n")).toContain("'shown' is @meta.readonly");
+    expect(w.join("\n")).toContain("'country' is a navigation field");
+    expect(errorsOf(m)).toEqual([]);
+  });
+
+  it("refused on a field of an inline structure and in an `as` copy", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    addr: {
+        @ui.valueHelp City, 'code'
+        @ui.valueHelp.fill 'name', 'name'
+        city: string
+        name: string
+    }
+}
+export interface Plain2 {
+    city?: string
+    cityName?: string
+}
+annotate Plain2 as Plain2Copy {
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'cityName', 'name'
+    city
+}`)
+    ).join("\n");
+    expect(m).toContain("@ui.valueHelp.fill needs a top-level field of an interface");
+    expect(m).toContain(
+      "@ui.valueHelp.fill needs a field of an interface or of a mutating annotate block",
+    );
+  });
+
+  it("runs in an annotate entry, against the landed binding", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    @ui.valueHelp City, 'code'
+    city?: string
+    cityName?: string
+    pop?: number
+}
+annotate Customer {
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'pop', 'name'
+    city
+}`)
+    ).join("\n");
+    expect(m).toContain("'City.name' is string, 'Customer.pop' is number");
+    expect(m).not.toContain("needs a binding");
+  });
+
+  it("an annotate entry replacing the binding re-checks the field's fills and columns", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.column 'population'
+    city?: string
+    cityName?: string
+}
+annotate Customer {
+    @ui.valueHelp Country, 'code'
+    city
+}`)
+    ).join("\n");
+    expect(m).toContain(
+      "@ui.valueHelp.column 'population' of this field: Field 'population' does not exist on 'Country'",
+    );
+    expect(m).not.toContain("@ui.valueHelp.fill 'cityName', 'name' of this field");
+  });
+});
+
+describe("@ui.valueHelp.column diagnostics", () => {
+  it("CL1 / CL2", async () => {
+    const m = (
+      await msgs(`
+export interface Customer {
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.column 'code'
+    @ui.valueHelp.column 'name'
+    @ui.valueHelp.column 'nope'
+    @ui.valueHelp.column 'info'
+    city?: string
+    @ui.valueHelp.column 'name'
+    plain?: string
+}`)
+    ).join("\n");
+    expect(m).toContain("Field 'nope' does not exist on 'City'");
+    expect(m).toContain("'City.info' must be a scalar");
+    expect(m).toContain("@ui.valueHelp.column needs a binding of this field's own");
+    expect(m.split("\n").filter((x) => x.startsWith("E"))).toHaveLength(3);
+  });
+
+  it("accepted inside an inline structure and in an annotate entry", async () => {
+    const m = await msgs(`
+export interface Customer {
+    addr: {
+        @ui.valueHelp Country, 'code'
+        @ui.valueHelp.column 'name'
+        country: string
+    }
+    country?: string
+}
+annotate Customer {
+    @ui.valueHelp Country, 'code'
+    @ui.valueHelp.column 'name'
+    country
+}`);
+    expect(m).toEqual([]);
+  });
+});
+
+describe("editor features of host references, fills and columns", () => {
+  const INLINE = `
+export interface Customer {
+    country: string
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.column 'population'
+    city?: string
+    cityName?: string
+}`;
+  const ANNOTATED = `
+export interface Customer {
+    country: string
+    city?: string
+    cityName?: string
+}
+annotate Customer {
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.column 'population'
+    city
+}`;
+
+  for (const [where, source] of [
+    ["inline", INLINE],
+    ["in an annotate entry", ANNOTATED],
+  ] as const) {
+    describe(where, () => {
+      it("the filter offers the host after an operator and its fields after `Host.`", async () => {
+        const { doc } = await compile(source);
+        const ann = doc.annotations.find((a) => a.name === "ui.valueHelp" && a.args.length === 3)!;
+        const scope = getQueryCompletionScope(ann.args[2], doc)!;
+        expect(scope.typeNames).toEqual(["City", "Customer"]);
+        expect(scope.unqualifiedTarget).toBe("City");
+        expect(analyzeQueryCursorContext("country = ", "query").type).toBe("after-operator");
+        expect(analyzeQueryCursorContext("country = Customer.", "query")).toMatchObject({
+          type: "after-dot",
+          typeName: "Customer",
+        });
+        expect(scope.getFields("Customer").map((f) => f.token("identifier")?.text)).toEqual(
+          expect.arrayContaining(["country", "cityName"]),
+        );
+      });
+
+      it("go-to-definition and hover on the host field of the filter", async () => {
+        const { doc, text } = await compile(source);
+        const ref = at(text, "Customer.country`", "Customer.".length + 2, "@ui.valueHelp City");
+        const result = doc.getToDefinitionAt(ref.line, ref.character)!;
+        expect(result[0].targetSelectionRange.start.line).toBe(
+          at(text, "country: string", 0, "export interface Customer").line,
+        );
+        const hover = resolveFieldRefAt(doc.tokensIndex.at(ref.line, ref.character)!, doc);
+        expect(hover?.typeName).toBe("Customer");
+        expect(hover?.prop.token("identifier")?.text).toBe("country");
+      });
+
+      it("fill: `local` completes and resolves to the host's field, `targetField` to the target's", async () => {
+        const { doc, text } = await compile(source);
+        const fill = doc.annotations.find((a) => a.name === "ui.valueHelp.fill")!;
+        expect(getQueryScope(fill.args[0], doc)).toEqual({
+          allowedTypes: [],
+          unqualifiedTarget: "Customer",
+        });
+        expect(getQueryScope(fill.args[1], doc)).toEqual({
+          allowedTypes: [],
+          unqualifiedTarget: "City",
+        });
+        // indexed for find-references and rename of the fields they name
+        expect(doc.fieldPathArgs).toEqual(expect.arrayContaining([fill.args[0], fill.args[1]]));
+        const locals = getFieldPathCompletionScope(
+          fill.args[0],
+          doc,
+          fill.args[0].range.start.character + 2,
+        );
+        expect(locals?.typeName).toBe("Customer");
+        expect(locals?.fields.map((f) => f.token("identifier")?.text)).toEqual(
+          expect.arrayContaining(["country", "cityName"]),
+        );
+        const targets = getFieldPathCompletionScope(
+          fill.args[1],
+          doc,
+          fill.args[1].range.start.character + 2,
+        );
+        expect(targets?.typeName).toBe("City");
+        expect(targets?.fields.map((f) => f.token("identifier")?.text)).toEqual(
+          expect.arrayContaining(["name", "population"]),
+        );
+
+        const local = at(text, "'cityName', 'name'", 3);
+        expect(
+          doc.getToDefinitionAt(local.line, local.character)![0].targetSelectionRange.start.line,
+        ).toBe(at(text, "cityName?: string").line);
+        const hover = resolveFieldRefAt(
+          doc.tokensIndex.at(local.line, local.character)!,
+          doc,
+          local.character,
+        );
+        expect(hover?.typeName).toBe("Customer");
+        expect(hover?.prop.token("identifier")?.text).toBe("cityName");
+        // hover on `targetField`: the dictionary's field
+        const target = at(text, "'name'", 3, "@ui.valueHelp.fill");
+        const onTarget = resolveFieldRefAt(
+          doc.tokensIndex.at(target.line, target.character)!,
+          doc,
+          target.character,
+        );
+        expect(onTarget?.typeName).toBe("City");
+        expect(onTarget?.prop.token("identifier")?.text).toBe("name");
+      });
+
+      it("column: completes and hovers as the binding target's field", async () => {
+        const { doc, text } = await compile(source);
+        const column = doc.annotations.find((a) => a.name === "ui.valueHelp.column")!;
+        const scope = getFieldPathCompletionScope(
+          column.args[0],
+          doc,
+          column.args[0].range.start.character + 2,
+        );
+        expect(scope?.typeName).toBe("City");
+        const pos = at(text, "'population'", 3);
+        const hover = resolveFieldRefAt(
+          doc.tokensIndex.at(pos.line, pos.character)!,
+          doc,
+          pos.character,
+        );
+        expect(hover?.typeName).toBe("City");
+        expect(hover?.prop.token("identifier")?.text).toBe("population");
+      });
+
+      // In an annotate entry, atscript core's `getToDefinitionAt` takes any token whose parent
+      // is the entry for the entry name and looks its text up on the annotated interface, before
+      // the argument's field scope is asked — so a string argument naming a field of ANOTHER type
+      // (the dictionary) gets no definition there; `@ui.valueHelp`'s own `field` has the same gap.
+      // Hover, completion and diagnostics use the scope and work. Drop `.fails` once core asks
+      // the field scope first.
+      const definitionCase = where === "inline" ? it : it.fails;
+      definitionCase(
+        "go-to-definition on the dictionary field of a fill and of a column",
+        async () => {
+          const { doc, text } = await compile(source);
+          const target = at(text, "'name'", 3, "@ui.valueHelp.fill");
+          expect(
+            doc.getToDefinitionAt(target.line, target.character)![0].targetSelectionRange.start
+              .line,
+          ).toBe(at(text, "name: string", 0, "export interface City").line);
+          const pos = at(text, "'population'", 3);
+          expect(
+            doc.getToDefinitionAt(pos.line, pos.character)![0].targetSelectionRange.start.line,
+          ).toBe(at(text, "population: number").line);
+        },
+      );
+    });
+  }
+
+  it("the target of a fill or column follows the field's FK help", async () => {
+    const { doc } = await compile(`
+export interface Order {
+    @db.rel.FK
+    @ui.valueHelp.fill 'countryName', 'name'
+    @ui.valueHelp.column 'name'
+    countryCode?: Country.code
+    countryName?: string
+}`);
+    const fill = doc.annotations.find((a) => a.name === "ui.valueHelp.fill")!;
+    expect(getQueryScope(fill.args[1], doc)?.unqualifiedTarget).toBe("Country");
+    const column = doc.annotations.find((a) => a.name === "ui.valueHelp.column")!;
+    expect(getQueryScope(column.args[0], doc)?.unqualifiedTarget).toBe("Country");
   });
 });
