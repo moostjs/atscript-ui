@@ -31,6 +31,7 @@ export type {
   TAsBaseComponentProps,
   TAsComponentProps,
   TAsComponentEmits,
+  TAsRefSlotProps,
   TAsTypeComponents,
   TAsUnionContext,
   TAsChangeType,

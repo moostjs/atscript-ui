@@ -117,6 +117,11 @@
       "import": "./dist/as-preset-picker.mjs",
       "require": "./dist/as-preset-picker.cjs"
     },
+    "./as-ref-picker": {
+      "types": "./dist/as-ref-picker.d.mts",
+      "import": "./dist/as-ref-picker.mjs",
+      "require": "./dist/as-ref-picker.cjs"
+    },
     "./as-residual-filter": {
       "types": "./dist/as-residual-filter.d.mts",
       "import": "./dist/as-residual-filter.mjs",
@@ -151,6 +156,11 @@
       "types": "./dist/as-table-root.d.mts",
       "import": "./dist/as-table-root.mjs",
       "require": "./dist/as-table-root.cjs"
+    },
+    "./as-value-help-dialog": {
+      "types": "./dist/as-value-help-dialog.d.mts",
+      "import": "./dist/as-value-help-dialog.mjs",
+      "require": "./dist/as-value-help-dialog.cjs"
     },
     "./as-window-table": {
       "types": "./dist/as-window-table.d.mts",

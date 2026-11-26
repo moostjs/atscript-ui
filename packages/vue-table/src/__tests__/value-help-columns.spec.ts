@@ -12,6 +12,7 @@ import {
   type ValueHelpInfo,
 } from "@atscript/ui";
 import AsFilterValueHelp from "../components/internal/as-filter-value-help.vue";
+import AsValueHelpTable from "../components/internal/as-value-help-table.vue";
 import { useBoundSelectColumn } from "../composables/use-value-pickers";
 import { createMockClient } from "./helpers";
 
@@ -81,7 +82,8 @@ async function mountDialog(info: ValueHelpInfo) {
     },
   });
   const wrapper = mount(Wrapper, { attachTo: document.body });
-  const comp = wrapper.findComponent(AsFilterValueHelp as never);
+  // the dictionary's table is the inner value-help table's (since 0.1.190)
+  const comp = wrapper.findComponent(AsValueHelpTable as never);
   await flushPromises();
   await nextTick();
   await flushPromises();

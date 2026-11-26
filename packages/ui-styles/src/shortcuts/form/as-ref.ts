@@ -2,8 +2,9 @@ import { defineShortcuts } from "vunor/theme";
 import { inputBase } from "./_shared";
 
 export const asRefShortcuts = defineShortcuts({
-  "as-ref-root": "block w-full",
-  "as-ref-anchor": "flex items-center relative [&>input]:flex-1",
+  // A row: the input, then what the `trailing` slot adds (a picker button, since 0.1.190).
+  "as-ref-root": "flex items-center gap-$xs w-full",
+  "as-ref-anchor": "flex flex-1 min-w-0 items-center relative [&>input]:flex-1",
   "as-ref-input": inputBase,
   "as-ref-clear": {
     "": "absolute right-$s top-1/2 -translate-y-1/2 p-0 border-0 bg-transparent text-current/50 cursor-pointer leading-none",

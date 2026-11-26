@@ -9,15 +9,21 @@ import {
   ComboboxRoot,
   ComboboxViewport,
 } from "reka-ui";
-import { computed, ref, watch } from "vue";
-import { useAsValueHelp } from "../../composables/use-as-value-help";
+import { computed, inject, ref, watch } from "vue";
+import { CLIENT_FACTORY_KEY, useAsValueHelp } from "../../composables/use-as-value-help";
 import { emptiedKey, soleRow } from "../../composables/_shape";
-import type { TAsComponentProps } from "../types";
+import type { TAsComponentProps, TAsRefSlotProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import AsInputControl from "../internal/as-input-control.vue";
 import { useAsTexts } from "../../composables/use-as-locale";
 
 const props = defineProps<TAsComponentProps>();
+defineSlots<{
+  /** After the input — a button opening another picker (since 0.1.190). */
+  trailing?: (props: TAsRefSlotProps) => unknown;
+  /** After the list — an entry such as "See all" (since 0.1.190). */
+  "list-end"?: (props: TAsRefSlotProps) => unknown;
+}>();
 
 const info = props.valueHelp;
 
@@ -104,6 +110,29 @@ function onInputBlur() {
   if (!open.value) inputText.value = displayValue(props.model.value);
   props.onBlur();
 }
+// A value committed while the list is closed (a pick from another picker, a fill) shows at once.
+watch(
+  () => props.model.value,
+  (v) => {
+    if (!open.value) inputText.value = displayValue(v);
+  },
+);
+
+// What the `trailing` / `list-end` slots get (since 0.1.190): another picker commits through
+// the same pick path, in the same scope, with the form's client factory.
+const clientFactory = inject(CLIENT_FACTORY_KEY, null) ?? undefined;
+function slotProps(): TAsRefSlotProps {
+  return {
+    searchText: vh?.searchText.value ?? "",
+    selectItem: (row) => vh?.selectItem(row),
+    scope: vh!.scope.value,
+    clientFactory,
+    close: () => {
+      listOpen.value = false;
+      inputText.value = displayValue(props.model.value);
+    },
+  };
+}
 
 function onSearchInput(e: Event) {
   if (vh) vh.searchText.value = (e.target as HTMLInputElement).value;
@@ -185,6 +214,7 @@ const { t } = useAsTexts();
             &times;
           </ComboboxCancel>
         </ComboboxAnchor>
+        <slot name="trailing" v-bind="slotProps()" />
 
         <ComboboxContent position="popper" side="bottom" :side-offset="4" class="as-ref-content">
           <ComboboxViewport class="as-ref-viewport">
@@ -213,6 +243,7 @@ const { t } = useAsTexts();
               <ComboboxEmpty class="as-ref-status">{{ t("UI_FORM_NO_RESULTS") }}</ComboboxEmpty>
             </template>
           </ComboboxViewport>
+          <slot name="list-end" v-bind="slotProps()" />
         </ComboboxContent>
       </ComboboxRoot>
     </template>

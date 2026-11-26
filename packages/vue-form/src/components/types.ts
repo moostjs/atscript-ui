@@ -1,10 +1,12 @@
 import type {
+  ClientFactory,
   FormFieldChange,
   FormFieldDef,
   FormUnionVariant,
   TFormAction,
   TFormEntryOptions,
   ValueHelpInfo,
+  ValueHelpScope,
 } from "@atscript/ui";
 import type { Component, Ref } from "vue";
 import type { TAsFormSubmitResult } from "../composables/use-as-form";
@@ -210,6 +212,27 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
    * an array-ITEM field stays `false` (the array container lights up instead).
    */
   isDirty?: boolean;
+}
+
+/**
+ * What `AsRef`'s `trailing` slot (after the input) and `list-end` slot (after
+ * the list) receive: enough for another picker of the same field — a dialog,
+ * say — to commit through the field's one pick path. Since 0.1.190.
+ */
+export interface TAsRefSlotProps {
+  /** The text typed into the input; empty once the list closed. */
+  searchText: string;
+  /**
+   * The one pick path: commits `row[targetField]`, writes the binding's fills
+   * and validates the field. Hand it the row the user picked.
+   */
+  selectItem: (row: Record<string, unknown>) => void;
+  /** The scope the field's picker searches with: the filter with the form's host values. */
+  scope: ValueHelpScope;
+  /** The client factory of the form (`<AsForm :client-factory>`), when it has one. */
+  clientFactory?: ClientFactory;
+  /** Closes the list (and puts the value's text back into the input). */
+  close: () => void;
 }
 
 /**

@@ -22,6 +22,8 @@ import { asTableShortcuts } from "./as-table";
 import { asWindowScrollbarShortcuts } from "./as-window-scrollbar";
 import { asWindowSkeletonShortcuts } from "./as-window-skeleton";
 import { asWindowTableShortcuts } from "./as-window-table";
+import { asRefPickerShortcuts } from "./as-ref-picker";
+import { asValueHelpDialogShortcuts } from "./as-value-help-dialog";
 
 export {
   asActionFormShortcuts,
@@ -47,6 +49,8 @@ export {
   asWindowScrollbarShortcuts,
   asWindowSkeletonShortcuts,
   asWindowTableShortcuts,
+  asRefPickerShortcuts,
+  asValueHelpDialogShortcuts,
 };
 
 export const tableShortcuts = mergeVunorShortcuts([
@@ -73,4 +77,6 @@ export const tableShortcuts = mergeVunorShortcuts([
   asWindowTableShortcuts,
   asWindowSkeletonShortcuts,
   asWindowScrollbarShortcuts,
+  asValueHelpDialogShortcuts,
+  asRefPickerShortcuts,
 ]);

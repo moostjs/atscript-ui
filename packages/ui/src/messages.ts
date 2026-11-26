@@ -57,6 +57,10 @@ export const AS_UI_MESSAGES = Object.freeze({
   UI_FORM_REMOVE_VALUE: "Remove {value}",
   UI_FORM_NO_MATCHES: "No matches",
   UI_FORM_NO_RESULTS: "No results",
+  // The reference field's picker dialog (`AsRefPicker`, since 0.1.190)
+  UI_FORM_SEE_ALL: "See all",
+  UI_FORM_BROWSE: "Browse {field}",
+  UI_FORM_PICK_HINT: "Double-click a row or press Enter to pick it.",
   UI_FORM_SWITCH: "Switch",
   UI_FORM_SWITCH_TYPE: "Switch type — current: {type}",
   UI_FORM_DECIMALS_OF: "decimals of {field}",

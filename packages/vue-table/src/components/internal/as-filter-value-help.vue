@@ -1,32 +1,17 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, shallowRef, watch } from "vue";
-import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
-import { optionValue, resolveValueHelp, valueHelpDictPaths, valueHelpSelect } from "@atscript/ui";
-import {
-  filledFilterCount,
-  isColumnFilterable,
-  isSimpleEq,
-  sameColumnSet,
-  type FilterCondition,
-} from "@atscript/ui-table";
+import { ref, watch } from "vue";
+import type { ColumnDef } from "@atscript/ui";
+import { optionValue } from "@atscript/ui";
+import { isSimpleEq, sameColumnSet, type FilterCondition } from "@atscript/ui-table";
 import type { Client } from "@atscript/db-client";
 import type { ReactiveTableState } from "../../types";
-import { useTable } from "../../composables/use-table";
 import {
   createStaticTableState,
   provideTableContext,
   useTableContextOptional,
 } from "../../composables/use-table-state";
-import {
-  createDistinctPager,
-  declineIfRejected,
-  valueColumn,
-} from "../../composables/use-value-pickers";
-import { useTableNavBridge } from "../../composables/use-table-nav-bridge";
-import AsWindowTable from "../as-window-table.vue";
-import AsFilterDialog from "../defaults/as-filter-dialog.vue";
-import AsConfigDialog from "../defaults/as-config-dialog.vue";
-import AsFilters from "../as-filters.vue";
+import { createDistinctPager, valueColumn } from "../../composables/use-value-pickers";
+import AsValueHelpTable from "./as-value-help-table.vue";
 import { useAsTexts } from "@atscript/vue-form/locale";
 
 const props = defineProps<{
@@ -41,7 +26,8 @@ const model = defineModel<FilterCondition[]>({ default: () => [] });
 const outer = useTableContextOptional();
 // Its pickers build their clients the way the table does.
 const clientFactory = outer?.clientFactory;
-// A dictionary target (FK or `@ui.valueHelp`): a full inner table.
+// A dictionary target (FK or `@ui.valueHelp`): a full inner table, built by
+// `AsValueHelpTable`. Its host references apply in forms only.
 const info = props.column.valueHelpInfo;
 // Distinct values of the column itself (`@ui.valueHelp.distinct`) read like an
 // enum picker (one value column) but page + search on the server.
@@ -73,32 +59,11 @@ function valuesToModel(values: unknown[]): FilterCondition[] {
 // direction (parent mutating `model` while the dialog is open) is not
 // honoured: the dialog is the only writer for this column's filter.
 const selectionRef = ref<unknown[]>(modelToValues(model.value));
-
-const resolved = shallowRef<ResolvedValueHelp | null>(null);
+// Handed to the dictionary table as the ref itself (a template unwraps a top-level ref).
+const selection = { ref: selectionRef };
 
 let innerState: ReactiveTableState | undefined;
-
-if (info) {
-  innerState = useTable(info.url, {
-    limit: 100,
-    // queryOnMount stays false: we trigger query() manually after clamping
-    // columnNames to dict paths so the bootstrap query doesn't go out with
-    // every table column, and so we don't fire two queries (auto-bootstrap
-    // + columnNames-watcher re-fire).
-    queryOnMount: false,
-    provideContext: true,
-    rowValueFn: (row) => row[info.targetField],
-    selectionPersistence: "persist",
-    selectedRows: selectionRef,
-    // The binding's static scope, AND'd into every query (since 0.1.148) — its
-    // host references apply in forms only. Every value-help read selects the same
-    // fields: the committed one, the dictionary view, the columns and fill targets.
-    forceFilters: info.filter,
-    alwaysSelected: () =>
-      resolved.value ? valueHelpSelect(resolved.value, info, "filter") : [info.targetField],
-    clientFactory,
-  });
-} else if (distinct) {
+if (!info && distinct) {
   const fetchPage = createDistinctPager(outer?.state, props.column, { texts, clientFactory });
   const { state } = createStaticTableState({
     rows: [],
@@ -113,8 +78,7 @@ if (info) {
     remote: ({ searchTerm }, page, size) => fetchPage(searchTerm.trim(), page, size),
   });
   innerState = state;
-  provideTableContext({ state, client: {} as Client, controls: {} });
-} else if (options) {
+} else if (!info && options) {
   const enumRows: Record<string, unknown>[] = options.map((o) => ({
     // The typed literal (`true`, `3`) — what the inline picker and the server use.
     __value: optionValue(o),
@@ -131,173 +95,23 @@ if (info) {
     },
   });
   innerState = state;
-  provideTableContext({ state, client: {} as Client, controls: {} });
 }
+// The enum and distinct pickers render their in-memory state through the same table.
+if (innerState) provideTableContext({ state: innerState, client: {} as Client, controls: {} });
 
-// FK only: resolve value-help meta on mount so column-clamp watcher knows
-// which fields to keep.
-if (info) {
-  onMounted(() => {
-    void resolveValueHelp(info.url, { texts, clientFactory })
-      .then((r) => {
-        resolved.value = r;
-      })
-      .catch((err) => {
-        // 4xx: the dictionary is not readable for this caller — the dialog
-        // falls back to its conditions tab. Anything else: the inner table
-        // shows whatever came through its own meta fetch; dict clamping is skipped.
-        declineIfRejected(outer?.state, info, err);
-      });
-  });
-}
-
-// FK: clamp visible columns to the value-help whitelist once BOTH:
-//   - the inner table has its TableDef loaded (so allColumns is populated)
-//   - resolveValueHelp has produced the dict field names
-// Then seed filterFields with all filterable dict columns. The columnNames
-// mutation, filterFields seeding, and explicit query() all coalesce into
-// one microtask-scheduled fetch (see use-table-state.ts scheduleQuery).
-if (info && innerState) {
-  const fkState = innerState;
-  let initialized = false;
-  const stop = watch(
-    [() => fkState.tableDef.value, resolved],
-    ([def, r]) => {
-      if (!def || !r || initialized) return;
-      initialized = true;
-      stop();
-      // `@ui.valueHelp.column` (since 0.1.190): exactly these fields, in order. Else the
-      // dictionary view; fields the filter pins with `=` are constant in the picker — no
-      // column, no filter input.
-      const byPath = new Map(fkState.allColumns.value.map((c) => [c.path, c]));
-      const dictPaths = valueHelpDictPaths(r);
-      const pinned = new Set(info.pinned);
-      const dictCols = info.columns
-        ? info.columns.flatMap((p) => byPath.get(p) ?? [])
-        : fkState.allColumns.value.filter((c) => dictPaths.has(c.path) && !pinned.has(c.path));
-      fkState.columnNames.value = dictCols.map((c) => c.path);
-      if (fkState.filterFields.value.length === 0) {
-        fkState.filterFields.value = dictCols.filter(isColumnFilterable).map((c) => c.path);
-      }
-      fkState.query();
-    },
-    { immediate: true },
-  );
-}
-
-// No `enterAction` override — the listener-driven fallback in
-// `state.handleNavKey` does the right thing: nobody registers `@main-action`
-// on `<AsWindowTable>` inside the dialog, so Enter falls through to
-// `toggleActiveSelection()` (mirroring Space).
-const navBridge = innerState ? useTableNavBridge(innerState) : undefined;
-
-if (innerState) {
-  watch(selectionRef, (v) => {
-    if (sameColumnSet(modelToValues(model.value), v)) return;
-    model.value = valuesToModel(v);
-  });
-}
-
-const searchable = computed(() => {
-  if (!innerState) return false;
-  // FK reads `searchable` off the loaded TableDef; enum's static TableDef
-  // sets `searchable: true` whenever `searchPaths` were provided.
-  return !!innerState.tableDef.value?.searchable;
+watch(selectionRef, (v) => {
+  if (sameColumnSet(modelToValues(model.value), v)) return;
+  model.value = valuesToModel(v);
 });
-
-const showFilters = ref(false);
-watch(
-  searchable,
-  (v) => {
-    showFilters.value = !v;
-  },
-  { immediate: true },
-);
-
-const hasFilterableFields = computed(
-  () => !!innerState && innerState.filterFields.value.length > 0,
-);
-
-const totalCount = computed(() => innerState?.totalCount.value ?? 0);
-
-const hasActiveFilters = computed(() =>
-  innerState
-    ? filledFilterCount(innerState.filters.value) > 0 || innerState.residualFilters.value.length > 0
-    : false,
-);
-
-function clearAllFilters() {
-  innerState?.resetFilters();
-}
 </script>
 
 <template>
-  <div class="as-filter-value-help">
-    <div class="as-filter-value-help-toolbar">
-      <div v-if="searchable" class="as-filter-value-help-search-wrap">
-        <span class="as-filter-value-help-search-icon i-as-search" aria-hidden="true" />
-        <input
-          :value="innerState?.searchTerm.value ?? ''"
-          type="text"
-          class="as-filter-value-help-search"
-          :placeholder="t('UI_SEARCH_PLACEHOLDER')"
-          autocomplete="off"
-          @input="
-            (e: Event) => {
-              if (innerState) innerState.searchTerm.value = (e.target as HTMLInputElement).value;
-            }
-          "
-          @keydown="(e: KeyboardEvent) => navBridge?.onKeydown(e)"
-        />
-      </div>
-      <span class="as-filter-value-help-count">
-        <button
-          v-if="info && searchable && hasFilterableFields"
-          type="button"
-          class="as-filter-value-help-filters-toggle"
-          :class="{ 'as-filter-value-help-filters-toggle-active': showFilters }"
-          :title="t(showFilters ? 'UI_FILTER_HIDE_FILTERS' : 'UI_FILTER_SHOW_FILTERS')"
-          @click="showFilters = !showFilters"
-        >
-          <span class="i-as-filter" aria-hidden="true" />
-        </button>
-        {{ t("UI_TABLE_RECORDS", { count: totalCount }) }}
-      </span>
-    </div>
-    <div v-if="info && showFilters" class="as-filter-value-help-filters">
-      <AsFilters />
-      <div class="as-spacer" />
-      <button
-        v-if="hasActiveFilters"
-        type="button"
-        class="as-filter-dialog-clear-all"
-        @click="clearAllFilters"
-      >
-        {{ t("UI_CLEAR_ALL") }}
-      </button>
-    </div>
-    <!-- Same window-table chrome for both branches. The enum branch's
-         in-memory state was provided into context above via
-         `provideTableContext`, so `<AsWindowTable>`'s `useTableContext()`
-         resolves identically to the FK branch's `useTable(...)`-provided
-         state. `select="multi"` is the rendering-side source of truth (the
-         `select` knob moved off the orchestrator/state during the actions
-         refactor), so the checkbox column renders for value picking. -->
-    <AsWindowTable
-      v-if="innerState"
-      select="multi"
-      :column-menu="{
-        sort: true,
-        filters: !!info,
-        hide: false,
-      }"
-    />
-    <!-- FK only: nested filter / config dialogs for the inner table's
-         column menu. Enum's column menu has filters/hide disabled, so
-         the dialogs would never open. -->
-    <template v-if="info">
-      <AsFilterDialog />
-      <AsConfigDialog />
-    </template>
-  </div>
+  <AsValueHelpTable
+    v-if="info"
+    select="multi"
+    :info="info"
+    :selection="selection.ref"
+    :client-factory="clientFactory"
+  />
+  <AsValueHelpTable v-else-if="innerState" select="multi" />
 </template>
