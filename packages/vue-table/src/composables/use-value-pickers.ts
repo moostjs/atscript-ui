@@ -89,14 +89,14 @@ const keyOf = (info: ValueHelpInfo) => `${info.url}\0${info.targetField}`;
 /**
  * Whether `column` offers a value picker: literal options, the distinct values of
  * its own table, or a dictionary the server has not declined for this table —
- * and only on a column the server filters by value with the operators a picker
- * emits (`$eq` / `$in`): an existence-only (JSON-stored) column takes the
- * empty / not-empty input instead.
+ * and only on a column the server filters by value with the operator a picker
+ * emits (`$eq`; several picks are an `$or` of them): an existence-only
+ * (JSON-stored) column takes the empty / not-empty input instead.
  */
 export function hasValuePicker(host: PickerHost, column: ColumnDef): boolean {
   if (!column.filterable) return false;
   const ops = column.filterOps;
-  if (ops && !(ops.includes("$eq") || ops.includes("$in"))) return false;
+  if (ops && !ops.includes("$eq")) return false;
   if (column.options?.length || column.distinct) return true;
   const info = column.valueHelpInfo;
   return !!info && !storeOf(host).declined.has(keyOf(info));

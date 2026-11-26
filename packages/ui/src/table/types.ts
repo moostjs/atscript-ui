@@ -38,9 +38,13 @@ export interface FieldMeta {
   /** Whether the field accepts value comparisons (`=`, `>`, `$regex`, …). */
   filterable: boolean;
   /**
-   * Present only when `filterable` is `false` but narrower predicates still
-   * pass the server's gate — e.g. `["$exists"]` on a JSON-stored column.
-   * Needs `@atscript/moost-db` 0.1.132+. Since 0.1.139.
+   * The filter operators the server accepts on this field when that is fewer
+   * than its type takes: an adapter's own list (served on a `filterable` field
+   * too since `@atscript/moost-db` 0.1.196; `filterable` is `false` when it
+   * leaves no comparison), or the narrower predicates that still pass on a
+   * field that is not `filterable` — e.g. `["$exists"]` on a JSON-stored
+   * column (`@atscript/moost-db` 0.1.132+). Absent: no restriction.
+   * Since 0.1.139.
    */
   filterOps?: string[];
   /**
@@ -223,11 +227,13 @@ export interface ColumnDef {
   /** Whether this column supports value filtering (the server's `filterable`). */
   filterable: boolean;
   /**
-   * Narrower filter operators the server accepts on a column that is not
-   * value-filterable — `["$exists"]` on a JSON-stored column, whose value
-   * cannot be compared but whose presence can. Copied from
-   * `meta.fields[path].filterOps`; omitted when absent. Filter UIs read it
-   * through `columnFilterConditions()` from `@atscript/ui-table`. Since 0.1.139.
+   * The filter operators the server accepts on this column when that is
+   * fewer than its type takes — an adapter's list on a value-filterable
+   * column, or `["$exists"]` on a JSON-stored one, whose value cannot be
+   * compared but whose presence can. Copied from
+   * `meta.fields[path].filterOps`; omitted when absent (no restriction).
+   * Filter UIs read it through `columnFilterConditions()` from
+   * `@atscript/ui-table`. Since 0.1.139.
    */
   filterOps?: string[];
   /**

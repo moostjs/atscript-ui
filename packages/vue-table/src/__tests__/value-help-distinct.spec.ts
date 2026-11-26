@@ -209,7 +209,7 @@ describe("AsFilterField — a locale switch without a remount", () => {
 describe("hasValuePicker gating", () => {
   const opts = [{ key: "bug", label: "Bug" }];
 
-  it("offers a picker on a value-filterable column (why: the picker emits eq / in)", () => {
+  it("offers a picker on a value-filterable column (why: the picker emits eq)", () => {
     expect(hasValuePicker(undefined, column({ options: opts }))).toBe(true);
     expect(hasValuePicker(undefined, column({ options: opts, filterOps: ["$eq", "$in"] }))).toBe(
       true,
@@ -221,10 +221,14 @@ describe("hasValuePicker gating", () => {
     expect(hasValuePicker(undefined, json)).toBe(false);
   });
 
-  it("offers none when the reported ops lack eq and in", () => {
+  it("offers none when the reported ops lack eq", () => {
     expect(hasValuePicker(undefined, column({ options: opts, filterOps: ["$exists"] }))).toBe(
       false,
     );
+    // A list without `$eq` on a filterable column: a pick would send a refused filter.
+    expect(
+      hasValuePicker(undefined, column({ options: opts, filterOps: ["$in", "$gt", "$lt"] })),
+    ).toBe(false);
   });
 });
 

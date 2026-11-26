@@ -305,7 +305,7 @@ interface ColumnDef {
   sortable: boolean;
   /** Value comparisons accepted (the server's `filterable`). */
   filterable: boolean;
-  /** Narrower operators accepted when `filterable` is `false`, e.g. `["$exists"]` on a JSON-stored column. Since 0.1.139. */
+  /** The operators accepted when fewer than the type takes: an adapter's list (also on a `filterable` column, `@atscript/moost-db` 0.1.196+), or `["$exists"]` on a JSON-stored column. Absent: no restriction. Since 0.1.139. */
   filterOps?: string[];
   /** `true` for an optional prop, and (since 0.1.165) for a type with a `null` member (`T | null`). */
   nullable: boolean;
@@ -372,7 +372,7 @@ interface MetaResponse {
 interface FieldMeta {
   sortable: boolean;
   filterable: boolean;
-  /** Present only when `filterable` is `false` but narrower predicates pass (`@atscript/moost-db` 0.1.132+). Since 0.1.139. */
+  /** The operators accepted when fewer than the type takes: an adapter's list, served on a `filterable` field too since `@atscript/moost-db` 0.1.196 (`filterable` is `false` when it leaves no comparison), or the narrower predicates of a field that is not `filterable` (0.1.132+). Since 0.1.139. */
   filterOps?: string[];
   /** The caller may write but not read this field (kept in `/meta` for forms). Never a column, never fetchable. Since 0.1.141. */
   writeOnly?: boolean;

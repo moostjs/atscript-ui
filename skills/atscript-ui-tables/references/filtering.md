@@ -194,7 +194,7 @@ buildTableQuery({
 
 ## Existence-only columns
 
-Since 0.1.139 (needs `@atscript/moost-db` 0.1.132+): `/meta.fields[P]` = `{ filterable: false, filterOps: ["$exists"] }` for a column whose value can't be compared but whose presence can (JSON / array storage on a relational adapter). `createTableDef` copies it to `ColumnDef.filterOps`.
+Since 0.1.139 (needs `@atscript/moost-db` 0.1.132+): `/meta.fields[P]` = `{ filterable: false, filterOps: ["$exists"] }` for a column whose value can't be compared but whose presence can (JSON / array storage on a relational adapter). `createTableDef` copies it to `ColumnDef.filterOps`. Since `@atscript/moost-db` 0.1.196 a `filterable: true` field may carry `filterOps` too (an adapter accepts fewer operators than the type takes): `columnFilterConditions` keeps only conditions whose operators are all listed, and a value picker needs `$eq`.
 
 | #   | Rule                                                                                                                                                                                                                                                             |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

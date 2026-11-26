@@ -98,10 +98,17 @@ the server's `/meta` (see [Annotations Reference](/tables/annotations)):
 | `/meta.fields[path]`                          | Filter UI offers                                   |
 | --------------------------------------------- | -------------------------------------------------- |
 | `filterable: true`                            | the column type's conditions (text, number, date…) |
+| `filterable: true`, `filterOps: [...]`        | those of them the listed operators allow           |
 | `filterable: false`, `filterOps: ["$exists"]` | only _is empty_ / _is not empty_                   |
 | `filterable: false`, no `filterOps`           | nothing — the column is not in any filter UI       |
 
-The middle row is a column whose value cannot be compared but whose
+An adapter may accept fewer operators on a field than its type takes;
+`@atscript/moost-db` 0.1.196+ then lists them in `filterOps` on a
+filterable field too (the second row), and a condition is offered only when
+the list holds every operator it sends — `bw` needs `$gte` and `$lte`, a
+date's `eq` the period bounds `$gte` and `$lt`, a value picker `$eq`.
+
+The third row is a column whose value cannot be compared but whose
 presence can — typically a JSON-stored object or array on a relational
 database (`@atscript/moost-db` 0.1.132+ reports it). Since 0.1.139 the
 column menu, config dialog, filter dialog and filter bar offer it with
