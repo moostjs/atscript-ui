@@ -18,7 +18,7 @@ declare global {
     "meta.documentation": (string)[]
     "meta.sensitive": boolean
     "meta.readonly": boolean
-    "meta.required": { message?: string }
+    "meta.required": { message?: string } | true
     "meta.default": string
     "meta.example": string
     "expect.minLength": { length: number, message?: string }
@@ -27,11 +27,18 @@ declare global {
     "expect.max": { maxValue: number, message?: string }
     "expect.exclusiveMin": { exclusiveMinValue: number, message?: string }
     "expect.exclusiveMax": { exclusiveMaxValue: number, message?: string }
-    "expect.int": boolean
+    "expect.int": { message?: string } | true
+    "expect.minKeys": { count: number, message?: string }
+    "expect.maxKeys": { count: number, message?: string }
+    "expect.message": string
     "expect.pattern": ({ pattern: string, flags?: string, message?: string })[]
-    "expect.array.uniqueItems": { message?: string }
-    "expect.array.key": { message?: string }
+    "expect.array.uniqueItems": { message?: string } | true
+    "expect.array.key": { message?: string } | true
+    "normalize.trim": boolean
+    "normalize.lowercase": boolean
+    "normalize.uppercase": boolean
     "emit.jsonSchema": boolean
+    "emit.compiledValidator": boolean
     "db.patch.strategy": string
     "db.table": string | true
     "db.table.filterable": string | true
@@ -43,6 +50,8 @@ declare global {
     "db.index.plain": ({ name?: string, sort?: string })[]
     "db.index.unique": (string | true)[]
     "db.index.fulltext": ({ name?: string, weight?: number })[]
+    "db.index.fulltext.language": ({ language: string, index?: string })[]
+    "db.index.fulltext.match": ({ mode: string, index?: string })[]
     "db.index.geo": string | true
     "db.column": string
     "db.column.renamed": string
@@ -56,10 +65,12 @@ declare global {
     "db.column.searchable": boolean
     "db.column.version": boolean
     "db.column.version.exempt": boolean
-    "db.default": string
+    "db.column.version.token": boolean
+    "db.default": string | number | boolean
     "db.default.increment": number | true
     "db.default.uuid": boolean
     "db.default.now": boolean
+    "db.default.store": boolean
     "db.onUpdate.now": boolean
     "db.onUpdate.inc": boolean
     "db.json": boolean
@@ -75,6 +86,7 @@ declare global {
     "db.rel.onDelete": string
     "db.rel.onUpdate": string
     "db.rel.via": import("@atscript/typescript/utils").AtscriptRef
+    "db.rel.store": boolean
     "db.rel.filterable": boolean
     "db.rel.filter": import("@atscript/typescript/utils").AtscriptQueryNode
     "db.view": string | true
@@ -125,6 +137,22 @@ declare global {
     "ui.form.suffix": string
     "ui.form.suffix.ref": string
     "ui.form.suffix.icon": string
+    "ui.form.validate": (string)[]
+    "ui.form.fn.title": string
+    "ui.form.fn.submit.text": string
+    "ui.form.fn.submit.disabled": string
+    "ui.form.fn.label": string
+    "ui.form.fn.description": string
+    "ui.form.fn.hint": string
+    "ui.form.fn.placeholder": string
+    "ui.form.fn.disabled": string
+    "ui.form.fn.hidden": string
+    "ui.form.fn.readonly": string
+    "ui.form.fn.value": string
+    "ui.form.fn.classes": string
+    "ui.form.fn.styles": string
+    "ui.form.fn.options": string
+    "ui.form.fn.attr": ({ name: string, fn: string })[]
     "ui.table.width": string
     "ui.table.component": string
     "ui.table.exclude": boolean
@@ -134,9 +162,15 @@ declare global {
     "ui.table.styles": (string)[]
     "ui.table.type": string
     "ui.table.order": number
+    "ui.table.fn.attr": ({ name: string, fn: string })[]
+    "ui.table.fn.classes": string
+    "ui.table.fn.styles": string
     "ui.valueHelp": { target: import("@atscript/typescript/utils").AtscriptRef, field: string, filter?: import("@atscript/typescript/utils").AtscriptQueryNode }
+    "ui.valueHelp.fill": ({ local: string, targetField: string })[]
+    "ui.valueHelp.column": (string)[]
     "ui.valueHelp.distinct": boolean
     "ui.literalLabel": ({ value: string, label: string })[]
+    "ui.valueLabel": { field: string, arrangement?: string }
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
@@ -152,6 +186,6 @@ declare global {
     "wf.action.withData": string
     "wf.store.fromContext": string
   }
-  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "phantom" | "db" | "vector" | "geoPoint" | "currencyCode" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
+  type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "trimmed" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "unknown" | "phantom" | "db" | "vector" | "geoPoint" | "currencyCode" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
 }
 // prettier-ignore-end
