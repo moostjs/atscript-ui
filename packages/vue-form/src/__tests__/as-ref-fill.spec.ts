@@ -259,9 +259,17 @@ describe("AsRef — a field of a namespace object (since 0.1.190)", () => {
 
 describe("a pick fills from the row picked, also where values repeat (since 0.1.190)", () => {
   // keyed by country + code: two cities share the code "SP"
+  const props = CITY_META.type.type.props;
   const KEYED_META = {
     ...CITY_META,
     primaryKeys: ["country", "code"],
+    type: {
+      ...CITY_META.type,
+      type: {
+        ...CITY_META.type.type,
+        props: { ...props, country: { ...props.country, metadata: { "meta.id": true } } },
+      },
+    },
   };
   const SPLIT = [
     { code: "SP", name: "Seville", country: "ES", region: "south" },
@@ -296,7 +304,8 @@ describe("a pick fills from the row picked, also where values repeat (since 0.1.
       country: "IT",
       region: "centre",
     });
-    // both rows are listed, each under its own key
+    // both rows are listed, each under its own key: the dictionary's primary key, not the
+    // committed value both rows hold
     await fieldOf(wrapper as unknown as Wrapper, "City")
       .find(".as-ref-input")
       .trigger("focus");
@@ -305,5 +314,9 @@ describe("a pick fills from the row picked, also where values repeat (since 0.1.
       expect.stringContaining("Seville"),
       expect.stringContaining("Spoleto"),
     ]);
+    const keys = wrapper
+      .findAllComponents({ name: "ComboboxItem" })
+      .map((item) => item.vm.$.vnode.key);
+    expect(keys).toEqual(["SP\u0000ES", "SP\u0000IT"]);
   });
 });
