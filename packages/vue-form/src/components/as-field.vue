@@ -69,6 +69,7 @@ import {
   type TFormAction,
 } from "@atscript/ui";
 import { useAsData } from "../composables/use-as-data";
+import { useAsValueHelpOptions } from "../composables/use-as-value-help-options";
 import { useAsLocale, useAsTexts } from "../composables/use-as-locale";
 import { useAsModelTexts } from "../composables/use-as-model-texts";
 import { buildFieldEntry, type TFnScope } from "@atscript/ui-fns";
@@ -403,6 +404,8 @@ const resolvedComponent = computed<Component | undefined>(() => {
   if (componentName) return components?.value?.[componentName];
   const map = types?.value;
   if (!map) return undefined;
+  // a dropdown whose dictionary is too long for one falls back to the search picker
+  if (boundOptions?.overflow.value && map.ref) return map.ref;
   return (
     (props.field.customType ? map[props.field.customType] : undefined) ?? map[props.field.type]
   );
@@ -732,6 +735,17 @@ const onBlur =
         }
       };
 
+// A `select` / `radio` field bound to a dictionary with no options of its own lists the
+// dictionary's values (since 0.1.190). Its picks go through the value help's one pick
+// path, so the binding's fills apply; an empty value clears.
+const boundOptions =
+  valueHelp &&
+  options === undefined &&
+  (props.field.type === "select" || props.field.type === "radio")
+    ? useAsValueHelpOptions({ info: valueHelp, model, onBlur })
+    : undefined;
+if (boundOptions) options = boundOptions.options;
+
 // Leaf-only per-keystroke external-error dismissal. Structured/union
 // containers reach `dismissExternalAt` through `handleChange` instead.
 if (!isStructured && !isUnion) {
@@ -754,7 +768,8 @@ const slotModel = {
     return model.value;
   },
   set value(v: unknown) {
-    model.value = v;
+    if (boundOptions && !boundOptions.overflow.value) boundOptions.pick(v);
+    else model.value = v;
   },
 };
 

@@ -3,6 +3,7 @@ import { flushPromises, mount } from "@vue/test-utils";
 import { defineComponent, h, nextTick, ref } from "vue";
 import { defineAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import {
+  VALUE_HELP_OPTIONS_CAP,
   resetDefaultClientFactory,
   resetMetaCache,
   setDefaultClientFactory,
@@ -11,6 +12,7 @@ import {
   type ValueHelpInfo,
 } from "@atscript/ui";
 import AsFilterValueHelp from "../components/internal/as-filter-value-help.vue";
+import { useBoundSelectColumn } from "../composables/use-value-pickers";
 import { createMockClient } from "./helpers";
 
 // Since 0.1.190: `@ui.valueHelp.column` sets the columns of the binding's dialog,
@@ -111,5 +113,53 @@ describe("value-help dialog columns (@ui.valueHelp.column)", () => {
     expect(state.columnNames.value).toEqual(["code", "name"]);
     expect(selectOf(pagesFn)).toEqual(expect.arrayContaining(["code", "name", "region"]));
     expect(selectOf(pagesFn)).not.toContain("population");
+  });
+});
+
+describe("a `select`-typed dictionary column in the filter bar (since 0.1.190)", () => {
+  async function pickerColumn(rows: Record<string, unknown>[], col: ColumnDef) {
+    const client = {
+      meta: () => Promise.resolve(cityMeta()),
+      query: async () => rows,
+      invalidateMeta: () => {},
+    };
+    setDefaultClientFactory(() => client as never);
+    let picker!: { value: ColumnDef | null };
+    const Harness = defineComponent({
+      setup() {
+        picker = useBoundSelectColumn(() => col, { texts: undefined });
+        return () => h("div");
+      },
+    });
+    mount(Harness);
+    await flushPromises();
+    return picker.value;
+  }
+
+  const bound: ColumnDef = {
+    ...column({ url: "/cities", targetField: "code", filter: { country: { $eq: "DE" } } as never }),
+    type: "select",
+  };
+
+  it("picks from the dictionary's values as literal options", async () => {
+    const picked = await pickerColumn(
+      [
+        { code: "BER", name: "Berlin" },
+        { code: "BON", name: "Bonn" },
+      ],
+      bound,
+    );
+    expect(picked).not.toHaveProperty("valueHelpInfo");
+    expect(picked?.options).toEqual([
+      { key: "BER", label: "Berlin", value: "BER" },
+      { key: "BON", label: "Bonn", value: "BON" },
+    ]);
+  });
+
+  it("past the cap, and for a column of another type: the dictionary picker", async () => {
+    const many = Array.from({ length: VALUE_HELP_OPTIONS_CAP + 1 }, (_, i) => ({ code: `C${i}` }));
+    expect(await pickerColumn(many, bound)).toBe(bound);
+    const plain = column({ url: "/cities", targetField: "code" });
+    expect(await pickerColumn([{ code: "BER" }], plain)).toBe(plain);
   });
 });

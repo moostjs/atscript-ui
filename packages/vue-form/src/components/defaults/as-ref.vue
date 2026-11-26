@@ -11,7 +11,7 @@ import {
 } from "reka-ui";
 import { computed, ref, watch } from "vue";
 import { useAsValueHelp } from "../../composables/use-as-value-help";
-import { committedText, committedValue } from "../../composables/_shape";
+import { emptiedKey } from "../../composables/_shape";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import AsInputControl from "../internal/as-input-control.vue";
@@ -61,10 +61,7 @@ watch(open, (isOpen) => {
 
 // "×" empties the field as emptying an input does: an optional field is
 // unset; a required one holds `""` (string key) or `null` (any other key).
-const keyType = props.field?.prop.type;
-const stringKey = keyType?.kind === "" && keyType.designType === "string";
-const emptyValue = () =>
-  stringKey ? committedText("", props.optional) : committedValue(null, props.optional);
+const emptyValue = () => emptiedKey(props.field?.prop.type, props.optional);
 
 const showClear = computed(() => {
   if (props.disabled || props.readonly || !vh) return false;

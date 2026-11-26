@@ -268,6 +268,8 @@ export {
   valueHelpSelect,
   valueHelpScope,
   valueHelpFills,
+  valueHelpOptions,
+  VALUE_HELP_OPTIONS_CAP,
   fetchDistinctValues,
   isPickerDeclined,
   resolveValueHelp,

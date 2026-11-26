@@ -1,3 +1,5 @@
+import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
+
 /**
  * Match the input shape on commit: `null`/`undefined` model → write the
  * canonical string (first-ever commit); pre-existing string → string;
@@ -38,4 +40,17 @@ export function committedValue<T>(
  */
 export function committedText(value: unknown, optional: boolean | undefined): unknown {
   return value === "" && optional ? undefined : value;
+}
+
+/**
+ * The value an emptied reference commits — the picker's "×" and the empty
+ * option of a dropdown bound to a dictionary: `undefined` on an optional
+ * field; else `""` for a string key and `null` for any other (a number id).
+ */
+export function emptiedKey(
+  type: TAtscriptAnnotatedType["type"] | undefined,
+  optional: boolean | undefined,
+): unknown {
+  const stringKey = type?.kind === "" && type.designType === "string";
+  return stringKey ? committedText("", optional) : committedValue(null, optional);
 }

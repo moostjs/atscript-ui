@@ -24,7 +24,7 @@ import {
 import { useConditionFormat } from "../../composables/use-condition-format";
 import { textAround } from "../../utils/text-around";
 import { useAsTexts, useUiLocaleKey } from "@atscript/vue-form/locale";
-import { hasValuePicker } from "../../composables/use-value-pickers";
+import { hasValuePicker, useBoundSelectColumn } from "../../composables/use-value-pickers";
 import { useTableContext } from "../../composables/use-table-state";
 import { useTableComponent } from "../../composables/use-table-component";
 import { useDialogTabKeyboard } from "../../composables/use-dialog-tab-keyboard";
@@ -32,7 +32,7 @@ import { useSeedOnOpen } from "../../composables/use-seed-on-open";
 import AsFilterConditions from "../internal/as-filter-conditions.vue";
 import AsFilterValueHelp from "../internal/as-filter-value-help.vue";
 
-const { state } = useTableContext();
+const { state, clientFactory } = useTableContext();
 const { formatCondition } = useConditionFormat(state);
 const texts = useAsTexts();
 const { t } = texts;
@@ -51,6 +51,8 @@ const isOpen = computed({
 });
 
 const column = computed<ColumnDef | null>(() => state.filterDialogColumn.value);
+// A `select`-typed dictionary column picks from its values' checklist once they load.
+const pickerColumn = useBoundSelectColumn(column, { texts, clientFactory });
 
 // Value help picks values, so it needs a value-filterable column — an
 // existence-only one (JSON storage) offers just the empty / not-empty pair.
@@ -254,8 +256,8 @@ function onOpenAutoFocus(event: Event) {
           <TabsContent value="value-help" class="as-filter-dialog-tab-content">
             <component
               :is="FilterValueHelp"
-              :key="locale ?? ''"
-              :column="column"
+              :key="`${locale ?? ''}${pickerColumn === column ? '' : '|options'}`"
+              :column="pickerColumn ?? column"
               v-model="valueHelpConditions"
             />
           </TabsContent>

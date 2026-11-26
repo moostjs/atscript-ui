@@ -22,6 +22,7 @@ export {
   valueHelpSelect,
 } from "./value-help-client";
 export { valueHelpFills, valueHelpScope } from "./scope";
+export { VALUE_HELP_OPTIONS_CAP, valueHelpOptions } from "./options";
 export type { ValueHelpFillWrite, ValueHelpScope } from "./scope";
 export { fetchDistinctValues, isPickerDeclined } from "./distinct-client";
 export { resolveValueHelp, resetValueHelpCache } from "./resolve";

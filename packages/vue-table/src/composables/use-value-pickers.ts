@@ -1,5 +1,5 @@
-import { ref, shallowReactive, shallowRef } from "vue";
-import type { ShallowRef } from "vue";
+import { computed, ref, shallowReactive, shallowRef, toValue, watch } from "vue";
+import type { ComputedRef, MaybeRefOrGetter, ShallowRef } from "vue";
 import type { FilterExpr } from "@uniqu/core";
 import type {
   ClientFactory,
@@ -12,9 +12,13 @@ import type {
 import { stableValueKey } from "@atscript/ui-table";
 import {
   NUMERIC_VALUE_KINDS,
+  VALUE_HELP_OPTIONS_CAP,
+  ValueHelpClient,
   fetchDistinctValues,
   getMetaEntry,
   isPickerDeclined,
+  resolveValueHelp,
+  valueHelpOptions,
 } from "@atscript/ui";
 
 type Row = Record<string, unknown>;
@@ -224,4 +228,59 @@ export function useDistinctPicker(
   }
 
   return { rows, count, more, querying, error, loaded, load };
+}
+
+/** A column bound to a dictionary and typed `@ui.type 'select'`, with no options of its own. */
+const isBoundSelect = (col: ColumnDef) =>
+  !!col.valueHelpInfo && col.type === "select" && !col.options?.length;
+
+/**
+ * The column a filter picker works with (since 0.1.190). A column bound to a
+ * dictionary and typed `@ui.type 'select'` — with no options of its own — gets
+ * the dictionary's values (in the binding's scope) as literal options once
+ * they load, so its picker is the options checklist; while they load, when the
+ * read fails or when there are more than `VALUE_HELP_OPTIONS_CAP`, it stays
+ * the column itself (the dictionary picker, which declines a 4xx itself).
+ */
+export function useBoundSelectColumn(
+  column: MaybeRefOrGetter<ColumnDef | null>,
+  opts: Pick<MetaEntryOptions, "texts"> & { clientFactory?: ClientFactory },
+): ComputedRef<ColumnDef | null> {
+  const loaded = shallowRef<{ source: ColumnDef; column: ColumnDef }>();
+  watch(
+    () => toValue(column),
+    (col) => {
+      if (!col || !isBoundSelect(col) || loaded.value?.source === col) return;
+      // read in the browser only: a server render asks nothing
+      if (typeof window === "undefined") return;
+      const info = col.valueHelpInfo!;
+      void (async () => {
+        try {
+          const resolved = await resolveValueHelp(info.url, opts);
+          const client = new ValueHelpClient(
+            getMetaEntry(info.url, opts.clientFactory, { texts: opts.texts }).client,
+          );
+          const { items } = await client.search(resolved, {
+            mode: "filter",
+            limit: VALUE_HELP_OPTIONS_CAP + 1,
+            filter: info.filter,
+            info,
+          });
+          if (items.length > VALUE_HELP_OPTIONS_CAP) return;
+          const { valueHelpInfo: _picker, ...rest } = col;
+          loaded.value = {
+            source: col,
+            column: { ...rest, options: valueHelpOptions(items, resolved, info) },
+          };
+        } catch {
+          // no verdict here: the dictionary picker stays
+        }
+      })();
+    },
+    { immediate: true },
+  );
+  return computed(() => {
+    const col = toValue(column);
+    return col && loaded.value?.source === col ? loaded.value.column : col;
+  });
 }

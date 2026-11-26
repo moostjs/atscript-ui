@@ -21,3 +21,20 @@ export interface RefFillForm {
     @meta.label 'Office name'
     officeName?: string
 }
+
+/// A dropdown and radios bound to a dictionary: their options come from it (since 0.1.190)
+export interface SelectFillForm {
+    @meta.label 'Country'
+    country?: string
+
+    @meta.label 'City'
+    @ui.form.type 'select'
+    city?: string
+
+    @meta.label 'City name'
+    cityName?: string
+
+    @meta.label 'Size'
+    @ui.form.type 'radio'
+    size?: string
+}
