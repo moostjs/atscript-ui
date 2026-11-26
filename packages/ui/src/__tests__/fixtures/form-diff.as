@@ -331,6 +331,57 @@ export interface RenamedVersionForm {
     customerId?: RenamedVersionForm.payload.customerId
 }
 
+// ── Version token + a navigation opted into the form ──────────
+
+@db.table 'diff_customers'
+export interface DiffCustomer {
+    @meta.id
+    id: number
+
+    name: string
+}
+
+/// `etag` is a version token the store issues (`@db.column.version.token`):
+/// `$cas` carries the baseline string. `customer` is a navigation the form
+/// renders (`@ui.form.order`): its changes are relation data, not a column.
+@db.table 'diff_token_orders'
+export interface TokenVersionForm {
+    @meta.id
+    id: number
+
+    note: string
+
+    @db.column.version
+    @db.column.version.token
+    etag: string
+
+    @db.rel.FK
+    customerId: DiffCustomer.id
+
+    @ui.form.order 9
+    @db.rel.to
+    customer?: DiffCustomer
+}
+
+/// The integer-version twin of `TokenVersionForm`.
+@db.table 'diff_int_orders'
+export interface IntVersionNavForm {
+    @meta.id
+    id: number
+
+    note: string
+
+    @db.column.version
+    version: number
+
+    @db.rel.FK
+    customerId: DiffCustomer.id
+
+    @ui.form.order 9
+    @db.rel.to
+    customer?: DiffCustomer
+}
+
 // ── @db.json arrays ───────────────────────────────────────────
 
 @meta.label 'Settings'

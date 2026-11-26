@@ -1,10 +1,11 @@
-import { mergeStrategyPaths } from "@atscript/db/validator";
+import { isNavRelation, mergeStrategyPaths } from "@atscript/db/validator";
 import {
   defineAnnotatedType,
   type TAtscriptAnnotatedType,
   type TAtscriptTypeObject,
 } from "@atscript/typescript/utils";
 import {
+  DB_COLUMN_VERSION_TOKEN,
   DB_ENCRYPTED,
   DB_JSON,
   EXPECT_ARRAY_KEY,
@@ -45,8 +46,11 @@ export interface FormDiffOptions {
    * Optimistic-concurrency control. When `true` (default), a top-level
    * `$cas: { [versionColumn]: baselineVersion }` sibling is auto-included in
    * the patch whenever the form has a `@db.column.version` column AND the
-   * patch is non-empty AND a baseline version value exists. `false` suppresses
-   * it entirely.
+   * patch is non-empty AND a baseline version value exists (an integer, or —
+   * since 0.1.190, on a `@db.column.version.token` column — a non-empty
+   * string). On a token column a patch that changes only navigation fields
+   * (relation data) carries no `$cas`: the server refuses that combination.
+   * `false` suppresses it entirely.
    *
    * Independent of `$cas`, the `@db.column.version` column is ALWAYS excluded
    * from the SET diff: it is server-managed, and a direct write to it is
@@ -120,16 +124,34 @@ export function buildFormDiff(
   // ── Optimistic concurrency ($cas) ──
   if ((opts?.cas ?? true) && versionColumn && Object.keys(patch).length > 0) {
     const baselineVersion = getByPath(baseline, versionColumn);
-    // versioning.md: the version column MUST resolve to `int`. Only lift a
-    // genuine integer into $cas — a string / non-integer / missing value is
-    // rejected by db's `separateCas` (`DbError('INVALID_QUERY')`), so skip it
-    // (matching the "missing baseline version → no $cas" behaviour).
-    if (typeof baselineVersion === "number" && Number.isInteger(baselineVersion)) {
+    if (def.flatMap.get(versionColumn)?.metadata.has(DB_COLUMN_VERSION_TOKEN)) {
+      // A version token (`@db.column.version.token`): a non-empty string the
+      // store issues. A patch of relation data only writes no column of its
+      // row, and the core refuses one with `$cas` on a token table (a versioned
+      // touch increments a counter), so it goes without.
+      if (
+        typeof baselineVersion === "string" &&
+        baselineVersion !== "" &&
+        Object.keys(patch).some((key) => !isNavKey(def, key))
+      ) {
+        patch.$cas = { [versionColumn]: baselineVersion };
+      }
+    } else if (typeof baselineVersion === "number" && Number.isInteger(baselineVersion)) {
+      // versioning.md: an integer version column. A string / non-integer /
+      // missing value is rejected by db's `separateCas`
+      // (`DbError('INVALID_QUERY')`), so skip it (matching the "missing
+      // baseline version → no $cas" behaviour).
       patch.$cas = { [versionColumn]: baselineVersion };
     }
   }
 
   return { isDirty: changes.length > 0, changes, patch };
+}
+
+/** Whether the top-level patch key `key` is a navigation field (related rows, a nested write). */
+function isNavKey(def: FormDef, key: string): boolean {
+  const prop = def.flatMap.get(key);
+  return prop !== undefined && isNavRelation(prop);
 }
 
 // ── Field walk ───────────────────────────────────────────────

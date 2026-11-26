@@ -776,7 +776,9 @@ interface FormDiffOptions {
    * Optimistic-concurrency control. `true` (default) auto-includes a top-level
    * `$cas: { [versionColumn]: baselineVersion }` whenever the form has a
    * `@db.column.version` column, the patch is non-empty, and a baseline integer
-   * version exists. `false` suppresses it. The version column is never emitted
+   * version exists — or, since 0.1.190 on a `@db.column.version.token` field, a
+   * non-empty string token (left out when the patch changes navigation fields
+   * only). `false` suppresses it. The version column is never emitted
    * as a normal SET regardless. See [Change tracking — `$cas`](/forms/change-tracking#optimistic-concurrency-cas).
    */
   cas?: boolean;

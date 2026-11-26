@@ -78,6 +78,7 @@ export const DB_UNIT = "db.unit" as const;
 export const DB_UNIT_REF = "db.unit.ref" as const;
 export const DB_COLUMN_PRECISION = "db.column.precision" as const;
 export const DB_COLUMN_VERSION = "db.column.version" as const;
+export const DB_COLUMN_VERSION_TOKEN = "db.column.version.token" as const;
 export const DB_COLUMN_DERIVED = "db.column.derived" as const;
 
 // ── Workflow annotation keys (registered by @atscript/moost-wf plugin) ──

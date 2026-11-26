@@ -480,9 +480,17 @@ prompt).
 - the type has a `@db.column.version` field,
 - `opts.cas !== false` (it defaults to `true`), and
 - the baseline version value is an integer (i.e. the loaded row was
-  actually populated).
+  actually populated) — or, on a version token, a non-empty string.
 
 Opt out for a specific call with `getPatch({ cas: false })`.
+
+_Since 0.1.190_ (`@atscript/db` 0.1.196+): on a store that issues its own
+row version — for example an HTTP entity tag — the version field is a
+string with `@db.column.version.token` as well, and `$cas` carries the
+baseline token: `{ note: "…", $cas: { etag: 'W/"a1"' } }`. A patch that
+changes only a navigation field the form renders (relation data, no column
+of the row itself) carries no `$cas` on such a field: the server refuses
+that combination. Integer versions are unchanged.
 
 ::: tip See also
 For the full OCC story — version-column schema sync, catching the
@@ -637,7 +645,8 @@ export interface ProductForm {
 
 ### `$cas` needs a populated integer version
 
-`$cas` only lifts when the baseline version is an integer. A row loaded
+`$cas` only lifts when the baseline version is an integer (a non-empty
+string on a `@db.column.version.token` field). A row loaded
 without its version column, or a `null`/missing version, produces a patch
 with no `$cas` — the write proceeds last-write-wins. Make sure your load
 query selects the version column if you rely on OCC.

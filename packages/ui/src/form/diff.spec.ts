@@ -11,6 +11,7 @@ import {
   EncryptedArrayForm,
   InlineMergeForm,
   InlineNestedForm,
+  IntVersionNavForm,
   JsonArrayForm,
   JsonArrayViewForm,
   KeyedArrayForm,
@@ -28,6 +29,7 @@ import {
   RenamedVersionForm,
   ScalarForm,
   StructNestedForm,
+  TokenVersionForm,
   UnionTupleForm,
   UniqueArrayForm,
   UnsetForm,
@@ -1490,6 +1492,56 @@ describe("buildFormDiff — $cas (optimistic concurrency)", () => {
     const r = buildFormDiff(def, baseline, current);
     expect(r.patch).toEqual({ name: "Grace" });
     expect(r.patch.$cas).toBeUndefined();
+  });
+});
+
+describe("buildFormDiff — $cas on a version token (@db.column.version.token)", () => {
+  const customer = { id: 7, name: "Acme" };
+  const order = { id: 1, note: "first", customerId: 7, customer };
+
+  it("a column change carries the baseline token", () => {
+    const def = createFormDef(TokenVersionForm);
+    const r = buildFormDiff(
+      def,
+      wrap({ ...order, etag: 'W/"a1"' }),
+      wrap({ ...order, note: "second", etag: 'W/"b2"' }),
+    );
+    expect(r.patch).toEqual({ note: "second", $cas: { etag: 'W/"a1"' } });
+  });
+
+  it("a change of relation data only carries no $cas (the server refuses it on a token)", () => {
+    const def = createFormDef(TokenVersionForm);
+    const r = buildFormDiff(
+      def,
+      wrap({ ...order, etag: 'W/"a1"' }),
+      wrap({ ...order, etag: 'W/"a1"', customer: { ...customer, name: "Acme Ltd" } }),
+    );
+    expect(r.isDirty).toBe(true);
+    expect(Object.keys(r.patch)).toEqual(["customer"]);
+  });
+
+  it("an empty baseline token → no $cas", () => {
+    const def = createFormDef(TokenVersionForm);
+    const r = buildFormDiff(
+      def,
+      wrap({ ...order, etag: "" }),
+      wrap({ ...order, note: "second", etag: "" }),
+    );
+    expect(r.patch).toEqual({ note: "second" });
+  });
+
+  it("an integer version is unchanged: a relation-only change still carries $cas", () => {
+    const def = createFormDef(IntVersionNavForm);
+    const baseline = wrap({ ...order, version: 4 });
+    const r = buildFormDiff(
+      def,
+      baseline,
+      wrap({ ...order, version: 4, customer: { ...customer, name: "Acme Ltd" } }),
+    );
+    expect(Object.keys(r.patch)).toEqual(["customer", "$cas"]);
+    expect(r.patch.$cas).toEqual({ version: 4 });
+    const columns = buildFormDiff(def, baseline, wrap({ ...order, note: "second", version: 4 }));
+    expect(columns.patch).toEqual({ note: "second", $cas: { version: 4 } });
   });
 });
 
