@@ -93,6 +93,14 @@ export interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   path: string;
   /** Resolved value-help descriptor for FK ref fields (`@db.rel.FK` → `@db.http.path`). */
   valueHelp?: ValueHelpInfo;
+  /**
+   * The value as `@ui.valueLabel` shows it: the code with the text of the
+   * sibling field the annotation names, arranged (`Berlin (BER)`). Shown by
+   * read-only text fields and by the reference field while it is not focused;
+   * an edited field shows the code. `undefined` without the annotation or
+   * while the value is empty. Since 0.1.190.
+   */
+  valueLabel?: string;
   /** Singular label for array fields (`@ui.form.label.singular`) — used in "Add <singular>" affordances. */
   singularLabel?: string;
   /** Stable input element id, suitable for `<label :for>`. Co-resolved with `errorId` / `descId` so a11y wiring is consistent. Always populated by AsField. */

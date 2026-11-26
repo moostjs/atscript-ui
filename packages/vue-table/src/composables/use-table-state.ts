@@ -168,7 +168,9 @@ export type QueryFn = (
 export interface BuildQueryOptions {
   /**
    * Column paths to project instead of the visible ones. Client-owned
-   * (`local`) columns are dropped from the result either way.
+   * (`local`) columns are dropped from the result either way. The
+   * `selectWith` fields of these columns come along, not the visible ones'
+   * (since 0.1.190).
    */
   columnPaths?: string[];
   /** Override the `$actions` opt-in (default: whatever the renderer asked for). */
@@ -782,8 +784,12 @@ export function createTableState(opts: CreateTableStateOptions): {
     const available: ReadonlySet<string> =
       tableDef.value?.fetchableFields ?? knownFields.value?.columns ?? new Set<string>();
     const extra = new Set<string>();
-    for (const c of columns.value) // selectWith: VISIBLE columns only
-      for (const p of c.selectWith ?? []) if (available.has(p)) extra.add(p);
+    // selectWith: the columns the query is for — the visible ones, or an export's own list
+    // (a `@ui.valueLabel` text travels this way, since 0.1.190)
+    const asked = buildOpts?.columnPaths
+      ? allColumns.value.filter((c) => buildOpts.columnPaths!.includes(c.path))
+      : columns.value;
+    for (const c of asked) for (const p of c.selectWith ?? []) if (available.has(p)) extra.add(p);
     // alwaysSelected: same gate
     for (const p of toValue(queryOpts?.alwaysSelected) ?? []) if (available.has(p)) extra.add(p);
     // The columns a delegated action's `idMap` reads (beyond `preferredId`,

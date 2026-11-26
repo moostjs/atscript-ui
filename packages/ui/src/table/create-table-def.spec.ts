@@ -161,6 +161,31 @@ describe("createTableDef", () => {
     expect(def.columns.find((c) => c.path === "plain")!.selectWith).toBeUndefined();
   });
 
+  it("a @ui.valueLabel column shows its code with a sibling's text, fetched with it", async () => {
+    const { WithValueLabel } = await import(F);
+    const paths = [
+      "city",
+      "cityName",
+      "login",
+      "firstName",
+      "lastName",
+      "office.zone",
+      "office.zoneName",
+    ];
+    const def = createTableDef(buildMeta(serializeAnnotatedType(WithValueLabel), paths));
+    const col = (path: string) => def.columns.find((c) => c.path === path)!;
+    expect(col("city").valueLabel).toEqual({ path: "cityName", arrangement: "textKey" });
+    expect(col("city").selectWith).toEqual(["cityName"]);
+    // a sibling already selected is not added twice
+    expect(col("login").valueLabel).toEqual({ path: "firstName", arrangement: "keyText" });
+    expect(col("login").selectWith).toEqual(["firstName", "lastName"]);
+    // a nested column's text is its sibling in the same object
+    expect(col("office.zone").valueLabel).toEqual({ path: "office.zoneName", arrangement: "text" });
+    expect(col("office.zone").selectWith).toEqual(["office.zoneName"]);
+    // a column without one has no key
+    expect("valueLabel" in col("cityName")).toBe(false);
+  });
+
   it("reads sortable/filterable from meta.fields", async () => {
     const { NameAndAge } = await import(F);
     const meta = buildMeta(serializeAnnotatedType(NameAndAge), ["name", "age"], {

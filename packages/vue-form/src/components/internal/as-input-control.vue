@@ -18,7 +18,9 @@ const props = defineProps<
  * input (AsNumber without adornments) — the rule of the other number inputs.
  */
 const inputModel = computed({
-  get: () => props.model.value,
+  // read-only: the value as `@ui.valueLabel` shows it, with its text (since 0.1.190)
+  get: () =>
+    props.readonly && props.valueLabel !== undefined ? props.valueLabel : props.model.value,
   set: (v: unknown) => {
     props.model.value =
       v === "" && props.type === "number"
@@ -65,7 +67,7 @@ function onFocus(e: FocusEvent): void {
     :placeholder="placeholder"
     :autocomplete="autocomplete"
     :name="name"
-    :type="type"
+    :type="readonly && valueLabel !== undefined ? 'text' : type"
     :disabled="disabled"
     :readonly="readonly"
     :aria-required="required || undefined"

@@ -102,6 +102,27 @@ export interface WithSelectWith {
     plain: string
 }
 
+/// Codes shown with their text (`@ui.valueLabel`, since 0.1.190). Backs:
+///   - "a @ui.valueLabel column shows its code with a sibling's text"
+export interface WithValueLabel {
+    @ui.valueLabel 'cityName'
+    city?: string
+    cityName?: string
+
+    @ui.valueLabel 'firstName', 'keyText'
+    @ui.table.selectWith 'firstName'
+    @ui.table.selectWith 'lastName'
+    login: string
+    firstName: string
+    lastName: string
+
+    office: {
+        @ui.valueLabel 'zoneName', 'text'
+        zone: string
+        zoneName: string
+    }
+}
+
 /// Two-prop fixture used for sortable/filterable meta.fields wiring. Backs:
 ///   - "reads sortable/filterable from meta.fields"
 export interface NameAndAge {

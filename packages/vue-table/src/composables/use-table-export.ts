@@ -147,7 +147,7 @@ export function useTableExport(ctx?: TableContext): UseTableExportReturn {
           const out = formatCell(raw, column, row);
           if (out !== undefined) return out;
         }
-        return resolveExportValue(raw, column);
+        return resolveExportValue(raw, column, row);
       };
     });
   }

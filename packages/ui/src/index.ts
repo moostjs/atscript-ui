@@ -135,6 +135,9 @@ export {
   resolveAttrs,
 } from "./shared/field-resolver";
 export { optKey, optLabel, optionLabel, parseStaticOptions, resolveOptions } from "./value-help";
+// `@ui.valueLabel` — a code shown with its text (since 0.1.190)
+export { arrangeText, valueLabelOf } from "./shared/value-label";
+export type { ValueLabel, ValueLabelArrangement } from "./shared/value-label";
 
 // ── Path utilities ──────────────────────────────────────────
 export {

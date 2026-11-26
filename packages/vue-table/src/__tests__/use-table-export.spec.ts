@@ -67,6 +67,25 @@ describe("useTableExport", () => {
     expect(result.format === "rows" && result.rows[0]).toEqual(["s0", 0]);
   });
 
+  it("a @ui.valueLabel column exports its code with the row's text, fetched with it (since 0.1.190)", async () => {
+    const { state, seen } = setup({
+      columns: [
+        mockColumn("id"),
+        mockColumn("name", {
+          valueLabel: { path: "secret", arrangement: "textKey" },
+          selectWith: ["secret"],
+        }),
+        mockColumn("secret"),
+      ],
+    });
+    state.columnNames.value = ["id"];
+    const { exportRows } = useTableExport(ctxOf(state));
+    // an export's own columns bring their text, also when they are not visible
+    const result = await exportRows({ format: "rows", columns: ["name"] });
+    expect(seen[0]!.query.controls!.$select).toEqual(["name", "secret"]);
+    expect(result.format === "rows" && result.rows[0]).toEqual(["s0 (n0)"]);
+  });
+
   it("keeps the active filters, search and sorters, and appends the pk as a tiebreaker", async () => {
     const { state, seen } = setup();
     state.sorters.value = [{ field: "name", direction: "desc" }];

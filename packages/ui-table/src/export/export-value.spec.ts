@@ -17,6 +17,14 @@ describe("resolveExportValue", () => {
     expect(resolveExportValue("zzz", c)).toBe("zzz");
   });
 
+  it("exports a @ui.valueLabel code with the row's text (since 0.1.190)", () => {
+    const c = col({ valueLabel: { path: "office.cityName", arrangement: "keyText" } });
+    expect(resolveExportValue("BER", c, { office: { cityName: "Berlin" } })).toBe("BER (Berlin)");
+    expect(resolveExportValue(7, c, { office: {} })).toBe("7");
+    // without the row: the code
+    expect(resolveExportValue("BER", c)).toBe("BER");
+  });
+
   it("labels each element of an array of a union column", () => {
     const c = col({
       options: [

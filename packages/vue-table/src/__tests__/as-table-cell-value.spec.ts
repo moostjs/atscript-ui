@@ -28,3 +28,29 @@ describe("AsTableCellValue — union option labels (@ui.literalLabel)", () => {
     expect(cellText({ status: "in-progress" })).toBe("in-progress");
   });
 });
+
+describe("AsTableCellValue — a code shown with its text (@ui.valueLabel, since 0.1.190)", () => {
+  const cell = (row: Record<string, unknown>, arrangement: "textKey" | "keyText" | "text") =>
+    mount(
+      AsTableCellValue as never,
+      {
+        props: {
+          row,
+          column: mockColumn("city", {
+            type: "ref",
+            valueLabel: { path: "cityName", arrangement },
+          }),
+        },
+      } as never,
+    )
+      .text()
+      .trim();
+
+  it("arranges the code with the row's text; an empty text or code shows what there is", () => {
+    expect(cell({ city: "BER", cityName: "Berlin" }, "textKey")).toBe("Berlin (BER)");
+    expect(cell({ city: "BER", cityName: "Berlin" }, "keyText")).toBe("BER (Berlin)");
+    expect(cell({ city: "BER", cityName: "Berlin" }, "text")).toBe("Berlin");
+    expect(cell({ city: "BER" }, "textKey")).toBe("BER");
+    expect(cell({ cityName: "Berlin" }, "textKey")).toBe("");
+  });
+});

@@ -106,3 +106,11 @@ describe("AsCellNumber", () => {
     expect(classes).toContain("as-cell-decimal");
   });
 });
+
+describe("AsCellNumber — a numeric code with its text (@ui.valueLabel, since 0.1.190)", () => {
+  it("shows the formatted code with the row's text", () => {
+    const column = makeColumn({ valueLabel: { path: "priorityText", arrangement: "keyText" } });
+    expect(mountCell({ value: 2, priorityText: "High" }, column).text()).toBe("2 (High)");
+    expect(mountCell({ value: 2 }, column).text()).toBe("2");
+  });
+});

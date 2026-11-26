@@ -22,6 +22,13 @@ const props = defineProps<TAsComponentProps>();
 const info = props.valueHelp;
 
 const open = ref(false);
+// A read-only field never opens its list: it shows the value, there is nothing to pick.
+const listOpen = computed({
+  get: () => open.value,
+  set: (v: boolean) => {
+    open.value = v && !props.readonly;
+  },
+});
 
 const vh = info
   ? useAsValueHelp({
@@ -68,6 +75,35 @@ function rowKey(item: Record<string, unknown>): string {
 // The input's text. Bound so "×" can empty it: the cancel primitive only
 // writes the element, which the next render of the input would undo.
 const inputText = ref("");
+
+// `@ui.valueLabel` (since 0.1.190): while the field is not being edited (or is read-only)
+// the input shows the code with its text; focused, the code alone, to search from.
+const focused = ref(false);
+const showsLabel = () => props.valueLabel !== undefined && (props.readonly || !focused.value);
+// What the input shows for the value — the combobox's own rule for a value without a label.
+function displayValue(v: unknown): string {
+  if (showsLabel()) return props.valueLabel!;
+  return v && typeof v !== "object" ? String(v) : "";
+}
+watch(
+  () => props.valueLabel,
+  () => {
+    if (!focused.value && !open.value) inputText.value = displayValue(props.model.value);
+  },
+);
+function onInputFocus() {
+  focused.value = true;
+  if (props.valueLabel !== undefined && !props.readonly) {
+    inputText.value = displayValue(props.model.value);
+  }
+  listOpen.value = true;
+}
+function onInputBlur() {
+  focused.value = false;
+  // an open list puts the text back as it closes (`displayValue`)
+  if (!open.value) inputText.value = displayValue(props.model.value);
+  props.onBlur();
+}
 
 function onSearchInput(e: Event) {
   if (vh) vh.searchText.value = (e.target as HTMLInputElement).value;
@@ -116,7 +152,7 @@ const { t } = useAsTexts();
       <ComboboxRoot
         v-else
         :model-value="model.value"
-        v-model:open="open"
+        v-model:open="listOpen"
         @update:model-value="onPick"
         :disabled="disabled"
         :name="name"
@@ -126,6 +162,7 @@ const { t } = useAsTexts();
         <ComboboxAnchor class="as-ref-anchor">
           <ComboboxInput
             v-model="inputText"
+            :display-value="displayValue"
             :id="inputId"
             :placeholder="placeholder"
             :disabled="disabled"
@@ -135,9 +172,9 @@ const { t } = useAsTexts();
             :aria-describedby="ariaDescribedBy"
             :aria-label="!label ? name : undefined"
             class="as-ref-input"
-            @focus="open = true"
+            @focus="onInputFocus"
             @input="onSearchInput"
-            @blur="onBlur"
+            @blur="onInputBlur"
           />
           <ComboboxCancel
             v-if="showClear"

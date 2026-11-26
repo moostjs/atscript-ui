@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-import { type ColumnDef, formatDecimalForDisplay } from "@atscript/ui";
+import { type ColumnDef, arrangeText, formatDecimalForDisplay } from "@atscript/ui";
 import { getCellValue } from "../../utils/get-cell-value";
 import { useCellLocale } from "../../composables/use-cell-locale";
 
@@ -17,8 +17,17 @@ const props = defineProps<{
 const { locale } = useCellLocale();
 
 // One computed per cell: the value, the currency / unit (static or per-row
-// ref field) and the formatting are all read here.
+// ref field) and the formatting are all read here — and a `@ui.valueLabel`
+// code is shown with the row's text (since 0.1.190).
 const formatted = computed(() => {
+  const text = formatNumber();
+  const valueLabel = props.column.valueLabel;
+  return valueLabel
+    ? arrangeText(text, getCellValue(props.row, valueLabel.path), valueLabel.arrangement)
+    : text;
+});
+
+function formatNumber(): string {
   const v = getCellValue(props.row, props.column.path);
   if (v === null || v === undefined || v === "") return "";
 
@@ -41,7 +50,7 @@ const formatted = computed(() => {
   });
   if (out !== "") return out;
   return typeof v === "string" ? v : String(v);
-});
+}
 
 /** A static code, else a non-empty string read from the row's ref field. */
 function refCode(code: string | undefined, refField: string | undefined): string | undefined {

@@ -75,3 +75,43 @@ export interface ShipmentForm {
 
     shipping: FillAddress
 }
+
+/// Codes shown with their text (`@ui.valueLabel`, since 0.1.190). The tests attach the
+/// city's value help by hand.
+export interface ValueLabelForm {
+    @meta.label 'City'
+    @ui.form.type 'ref'
+    @ui.valueLabel 'cityName'
+    city?: string
+
+    @meta.label 'City name'
+    cityName?: string
+
+    @meta.label 'Home'
+    @meta.readonly
+    @ui.valueLabel 'homeName', 'keyText'
+    home?: string
+
+    homeName?: string
+
+    @meta.label 'Zone'
+    @meta.readonly
+    @ui.valueLabel 'zoneName', 'text'
+    zone?: string
+
+    zoneName?: string
+
+    @meta.label 'Note'
+    @ui.valueLabel 'noteText'
+    note?: string
+
+    noteText?: string
+
+    @meta.label 'Origin'
+    @ui.form.type 'ref'
+    @meta.readonly
+    @ui.valueLabel 'originName'
+    origin?: string
+
+    originName?: string
+}

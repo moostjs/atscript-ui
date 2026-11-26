@@ -1,6 +1,7 @@
 import type { TAtscriptAnnotatedType, TSerializedAnnotatedType } from "@atscript/typescript/utils";
 import type { TCrudPermissions, TDbActionInfo } from "@atscript/db-client";
 import type { ValueHelpInfo } from "../value-help/types";
+import type { ValueLabelArrangement } from "../shared/value-label";
 
 // ── MetaResponse types (structurally compatible with @atscript/db-client) ────
 
@@ -248,6 +249,13 @@ export interface ColumnDef {
   options?: { key: string; label: string; value?: string | number | boolean }[];
   /** Value-help info for FK columns (from extractValueHelp). */
   valueHelpInfo?: ValueHelpInfo;
+  /**
+   * `@ui.valueLabel`: the column's value is a code shown with its text, which
+   * the row holds at `path` (the sibling field, joined to `selectWith`). Cells
+   * and export show `arrangeText(code, text, arrangement)`; sorting, filtering
+   * and filter chips keep the code. Since 0.1.190.
+   */
+  valueLabel?: { path: string; arrangement: ValueLabelArrangement };
   /**
    * Distinct-values picker (`@ui.valueHelp.distinct`): the table's own controller
    * (`url`) answers the values of `field` via `$groupBy`. Set only when the server

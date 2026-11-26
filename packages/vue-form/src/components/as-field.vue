@@ -65,6 +65,8 @@ import {
   UI_FORM_SUFFIX_REF,
   UI_FORM_VALIDATE,
   WF_ACTION_WITH_DATA,
+  arrangeText,
+  valueLabelOf,
   type FormFieldDef,
   type TFormAction,
 } from "@atscript/ui";
@@ -746,6 +748,19 @@ const boundOptions =
     : undefined;
 if (boundOptions) options = boundOptions.options;
 
+// `@ui.valueLabel` (since 0.1.190): the code shown with the text of a sibling field. Bound
+// apart from the display props (like `isDirty`): it reads the data.
+const valueLabelMeta = valueLabelOf(prop);
+let valueLabel: ComputedRef<string | undefined> | undefined;
+if (valueLabelMeta) {
+  const text = useAsData().siblingValue(valueLabelMeta.field);
+  valueLabel = computed(() => {
+    const v = model.value;
+    if (v === undefined || v === null || v === "" || typeof v === "object") return undefined;
+    return arrangeText(String(v), text.value, valueLabelMeta.arrangement);
+  });
+}
+
 // Leaf-only per-keystroke external-error dismissal. Structured/union
 // containers reach `dismissExternalAt` through `handleChange` instead.
 if (!isStructured && !isUnion) {
@@ -895,6 +910,7 @@ const ariaDescribedBy = computed<string | undefined>(() => {
     v-bind="componentProps"
     :is-dirty="isDirty"
     :ariaDescribedBy="ariaDescribedBy"
+    :value-label="valueLabel"
     @action="handleAction"
   />
   <div v-else class="as-field-missing">

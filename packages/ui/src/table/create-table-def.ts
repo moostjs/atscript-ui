@@ -22,6 +22,7 @@ import {
   UI_VALUE_HELP_DISTINCT,
 } from "../shared/annotation-keys";
 import { extractMeasurement } from "../form/measurement";
+import { valueLabelOf } from "../shared/value-label";
 import { humanizePath } from "../shared/str";
 import {
   extractFieldLiteralOptions,
@@ -169,13 +170,23 @@ function buildColumn(
   const tableComponent = getFieldMeta(prop, UI_TABLE_COMPONENT) as string | undefined;
   const decoration = fieldMeta.decoration === true;
   const filterOps = decoration ? undefined : fieldMeta.filterOps;
+  let selectWith = getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined;
+  // `@ui.valueLabel`: the text is a sibling of the column, fetched with it
+  const label = valueLabelOf(prop);
+  let valueLabel: ColumnDef["valueLabel"];
+  if (label) {
+    const dot = path.lastIndexOf(".");
+    const textPath = dot < 0 ? label.field : `${path.slice(0, dot + 1)}${label.field}`;
+    valueLabel = { path: textPath, arrangement: label.arrangement };
+    if (!selectWith?.includes(textPath)) selectWith = [...(selectWith ?? []), textPath];
+  }
   return {
     path,
     label: (getFieldMeta(prop, META_LABEL) as string | undefined) ?? humanizePath(path),
     type: tableType ?? sharedType ?? (valueHelpInfo ? "ref" : inferDisplayType(prop, options)),
     valueKind: inferValueKind(prop),
     component: tableComponent,
-    selectWith: getFieldMeta(prop, UI_TABLE_SELECT_WITH) as string[] | undefined,
+    selectWith,
     sortable: !decoration && (fieldMeta.sortable ?? false),
     filterable: !decoration && (fieldMeta.filterable ?? false),
     ...(filterOps && { filterOps: [...filterOps] }),
@@ -185,6 +196,7 @@ function buildColumn(
     order: (getFieldMeta(prop, UI_TABLE_ORDER) as number | undefined) ?? Infinity,
     options,
     valueHelpInfo,
+    ...(valueLabel && { valueLabel }),
     ...(distinct && { distinct }),
     ...extractMeasurement(prop),
   };
