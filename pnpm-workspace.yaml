@@ -5,18 +5,18 @@ packages:
 catalog:
   "@aooth/arbac": ^0.2.23
   "@aooth/arbac-moost": ^0.2.23
-  "@atscript/core": ^0.2.19
-  "@atscript/db": ^0.1.192
-  "@atscript/db-client": ^0.1.192
-  "@atscript/db-sql-tools": ^0.1.192
-  "@atscript/db-sqlite": ^0.1.192
-  "@atscript/moost-db": ^0.1.192
-  "@atscript/moost-validator": ^0.2.19
-  "@atscript/typescript": ^0.2.19
+  "@atscript/core": ^0.2.20
+  "@atscript/db": ^0.1.193
+  "@atscript/db-client": ^0.1.193
+  "@atscript/db-sql-tools": ^0.1.193
+  "@atscript/db-sqlite": ^0.1.193
+  "@atscript/moost-db": ^0.1.193
+  "@atscript/moost-validator": ^0.2.20
+  "@atscript/typescript": ^0.2.20
   "@iconify/utils": ^3.1.3
-  "@moostjs/event-http": ^0.7.9
-  "@moostjs/event-wf": ^0.7.9
-  "@moostjs/vite": ^0.7.9
+  "@moostjs/event-http": ^0.7.10
+  "@moostjs/event-wf": ^0.7.10
+  "@moostjs/vite": ^0.7.10
   "@playwright/test": ^1.60.0
   "@prostojs/deserialize-fn": ^0.0.6
   "@swc/core": ^1.15.40
@@ -31,17 +31,17 @@ catalog:
   "@vitejs/plugin-vue": ^6
   "@vue/test-utils": ^2
   "@vueuse/core": ^14.3.0
-  "@wooksjs/event-core": ^0.8.5
-  "@wooksjs/event-http": ^0.8.5
-  "@wooksjs/http-body": ^0.8.5
-  "@wooksjs/event-wf": ^0.8.5
+  "@wooksjs/event-core": ^0.8.6
+  "@wooksjs/event-http": ^0.8.6
+  "@wooksjs/http-body": ^0.8.6
+  "@wooksjs/event-wf": ^0.8.6
   happy-dom: ^18
-  "moost": ^0.7.9
+  "moost": ^0.7.10
   reka-ui: ^2.9.8
   sirv: ^3.0.2
   typescript: ^5
   unocss: ^66.7.0
-  unplugin-atscript: ^0.2.19
+  unplugin-atscript: ^0.2.20
   unplugin-swc: ^1.5.9
   vite: npm:@voidzero-dev/vite-plus-core@0.1.14
   vite-plus: 0.1.14
