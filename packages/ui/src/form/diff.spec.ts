@@ -1222,12 +1222,12 @@ describe("buildFormDiff — a partial object only where the merge strategy appli
       { contact: { theme: "t", geo: GEO_SENT_WHOLE } },
     ],
     [
-      "a merge object inside a @db.json field (merge on the field through annotate) → the whole field",
+      "a merge object inside a @db.json field → the whole field",
       "saved",
       { saved: { theme: "t", geo: GEO_SENT_WHOLE } },
     ],
     [
-      "a merge object inside a @db.encrypted field (merge on the field through annotate) → the whole field",
+      "a merge object inside a @db.encrypted field → the whole field",
       "sealed",
       { sealed: { theme: "t", geo: GEO_SENT_WHOLE } },
     ],
@@ -1352,7 +1352,7 @@ describe("buildFormDiff — a partial object only where the merge strategy appli
       "mergedLines.$update[0].geo.lng",
     ],
     [
-      "a @db.encrypted field with merge through annotate",
+      "a @db.encrypted field",
       MergePlacementsForm,
       { sealed: { geo: { lat: 9 } } },
       "sealed.geo.lng",

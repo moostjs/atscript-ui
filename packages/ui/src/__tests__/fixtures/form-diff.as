@@ -507,16 +507,6 @@ export interface MergePlacementsForm {
     pick?: PlacedPrefs | string
 }
 
-/// `@db.patch.strategy 'merge'` written on a `@db.json` / `@db.encrypted` field
-/// is a build error; added through `annotate` it compiles and has no effect.
-annotate MergePlacementsForm {
-    @db.patch.strategy 'merge'
-    saved
-
-    @db.patch.strategy 'merge'
-    sealed
-}
-
 /// A recursive merge-strategy type: the merge strategy applies down to where
 /// the type repeats (`child`), not below it.
 @meta.label 'Node'
