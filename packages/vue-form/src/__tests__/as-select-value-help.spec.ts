@@ -215,4 +215,21 @@ describe("a dropdown value several rows hold (since 0.1.190)", () => {
     await flushPromises();
     expect(formData.value).toMatchObject({ city: "BER", cityName: "Berlin" });
   });
+
+  it("clears what the previous pick filled: no stale text next to the new value", async () => {
+    const rows = [
+      { code: "SP", name: "Seville", country: "ES" },
+      { code: "SP", name: "Spoleto", country: "IT" },
+      { code: "BER", name: "Berlin", country: "DE" },
+    ];
+    const { wrapper, formData } = await mountSelectForm({ city: "SP" }, rows);
+    const select = fieldOf(wrapper, "City").find("select");
+    await select.setValue("BER");
+    await flushPromises();
+    expect(formData.value).toMatchObject({ city: "BER", cityName: "Berlin" });
+    await select.setValue("SP");
+    await flushPromises();
+    expect(formData.value.city).toBe("SP");
+    expect(formData.value.cityName).toBeUndefined();
+  });
 });

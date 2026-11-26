@@ -813,6 +813,8 @@ interface UseAsValueHelpReturn {
    * pick wrote — never one the binding reads as a host value.
    */
   clear: (value?: unknown) => void;
+  /** Commit `value` without a row (no fills); what the last pick filled is cleared as by `clear`. Since 0.1.190. */
+  commitValue: (value: unknown) => void;
   /** The binding's scope with the form's host values (`valueHelpScope`). Since 0.1.190. */
   scope: ComputedRef<ValueHelpScope>;
 }

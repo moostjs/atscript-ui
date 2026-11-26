@@ -1047,6 +1047,22 @@ export interface Customer {
     expect(repeat[0]).toContain("or to a host field a fill writes back from the picked row");
   });
 
+  it("a dropdown writes nothing back: a select or radio keeps the warning (VH6)", async () => {
+    const m = await msgs(`
+export interface Customer {
+    country: string
+    @ui.form.type 'select'
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'country', 'country'
+    city?: string
+    @ui.type 'radio'
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'country', 'country'
+    town?: string
+}`);
+    expect(m.filter((x) => x.includes("values may repeat"))).toHaveLength(2);
+  });
+
   it("a dictionary bound from its own interface: the right-hand side is the host", async () => {
     const m = await msgs(`
 @db.table 'employees'

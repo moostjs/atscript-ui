@@ -203,7 +203,9 @@ A composite-key member a host reference pins (`country` of a city keyed by
 `country` + `id`) is pinned only while the host field has a value: an empty
 one lists the ids of every country. So the compiler keeps its "values may
 repeat" warning unless a fill writes the host field back from the picked row
-(`@ui.valueHelp.fill 'country', 'country'`). While it has a value, the
+(`@ui.valueHelp.fill 'country', 'country'`) — and on a dropdown
+(`@ui.form.type 'select'` or `'radio'`) in any case, since it commits a value,
+not a row. While it has a value, the
 scope lists it in `pinned` (`useAsValueHelp().scope`), so a custom picker can
 hide it.
 
@@ -239,9 +241,11 @@ export interface Customer {
   cascade.
 - A field can be both a host value and a fill target (`country` above): an
   empty country lists every city, and a pick sets it.
-- The fills come from the row the user picked, also where the committed value
-  repeats (a city keyed by `country` + `id`: two countries may have the same
-  `id`).
+- In the combobox and the picker dialog, the fills come from the row the user
+  picked, also where the committed value repeats (a city keyed by `country` +
+  `id`: two countries may have the same `id`). A dropdown lists values, not
+  rows: a value several rows hold is committed without fills (see
+  [A dropdown from a dictionary](#a-dropdown-from-a-dictionary)).
 
 The compiler checks that `local` is a top-level scalar field of the host (not
 the bound field), that `targetField` is a top-level scalar field of the
@@ -303,6 +307,8 @@ color?: string
 - A value the list does not hold stays and shows as it is stored.
 - A value several rows hold (a dictionary keyed by more fields than the
   committed one) is committed without fills: an option is a value, not a row.
+  What the previous choice filled is cleared as the × clears it, so no stale
+  text stays next to the new value.
 - A field with options of its own (a literal union, `@ui.form.options`) lists
   those, with its placeholder, not the dictionary.
 

@@ -69,6 +69,12 @@ export interface UseAsValueHelpReturn {
    */
   clear: (value?: unknown) => void;
   /**
+   * Commit `value` without a row (a dropdown value several rows hold): no
+   * fills, and what this field's last pick filled is cleared by the rule of
+   * {@link clear}, so no stale fill stays next to the new value. Since 0.1.190.
+   */
+  commitValue: (value: unknown) => void;
+  /**
    * The scope the picker searches with: the binding's filter with the form's
    * host values, and the fields they pin (`valueHelpScope`). Since 0.1.190.
    */
@@ -247,7 +253,7 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
     onBlur();
   }
 
-  function clear(value?: unknown) {
+  function commitValue(value: unknown) {
     model.value = value;
     // Only what this field's last pick wrote, while the target still holds it — never a
     // field the binding reads as a host value (it scopes the picker, the user set it).
@@ -257,6 +263,10 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
       }
     }
     written.clear();
+  }
+
+  function clear(value?: unknown) {
+    commitValue(value);
     searchText.value = "";
     // Lists every match again (a search still running for the old text is
     // superseded), so the reopened list is not stuck on the old results.
@@ -273,6 +283,7 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
     kickoff,
     selectItem,
     clear,
+    commitValue,
     scope,
   };
 }

@@ -635,15 +635,19 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
       // The other key members are constant in the picker when the filter pins them to a
       // literal. A host reference pins one only while the host field has a value — an
       // empty one lists every member's rows — unless a fill writes the host field back
-      // from the picked row.
+      // from the picked row. A dropdown (`select` / `radio`) commits a value, not a row:
+      // nothing is written back from it.
       const literal = pinnedFields(filterArg);
       const byHost = validHost ? hostPins(filterArg, validHost.name) : undefined;
-      const fills = (validHost?.field.annotations ?? []).filter(
-        (a) => a.name === "ui.valueHelp.fill",
-      );
+      const fieldAnnotations = validHost?.field.annotations ?? [];
+      const argOf = (name: string) => fieldAnnotations.find((a) => a.name === name)?.args[0]?.text;
+      const formType = argOf("ui.form.type") ?? argOf("ui.type");
+      const dropdown = formType === "select" || formType === "radio";
+      const fills = fieldAnnotations.filter((a) => a.name === "ui.valueHelp.fill");
       const writtenBack = (member: string) => {
         const local = byHost?.get(member);
         return (
+          !dropdown &&
           local !== undefined &&
           fills.some((a) => a.args[0]?.text === local && a.args[1]?.text === member)
         );

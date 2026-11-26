@@ -22,7 +22,8 @@ export interface UseAsValueHelpOptionsReturn {
   /**
    * Commit a value of the list through the one pick path (`selectItem`, so
    * the binding's fills apply); an empty value clears, as the picker's "×" does.
-   * A value several loaded rows hold is committed without fills.
+   * A value several loaded rows hold is committed without fills, and what the
+   * field's last pick filled is cleared (`commitValue`).
    */
   pick: (value: unknown) => void;
 }
@@ -88,10 +89,11 @@ export function useAsValueHelpOptions(
       return;
     }
     // An option is a value, not a row: when several rows hold it (a dictionary keyed by
-    // more fields), the value is committed without fills rather than from a guessed row.
+    // more fields), the value is committed without fills rather than from a guessed row,
+    // and the previous pick's fills are cleared rather than left next to it.
     const row = soleRow(vh.results.value, info.targetField, value);
     if (row) vh.selectItem(row);
-    else model.value = value;
+    else vh.commitValue(value);
   }
 
   return { options, overflow, pick };
