@@ -1,4 +1,4 @@
-import type { Client } from "@atscript/db-client";
+import type { ClientLike } from "@atscript/db-client";
 import { getDefaultClientFactory, type ClientFactory } from "@atscript/ui";
 
 /**
@@ -18,7 +18,11 @@ export function currentLocale(locale: PresetsLocale | undefined): string | undef
  * client (`ClientFactoryOptions.locale`), so its error bodies and preflight
  * messages come back in that language.
  */
-export function localeClient(f: ClientFactory, url: string, locale: string | undefined): Client {
+export function localeClient(
+  f: ClientFactory,
+  url: string,
+  locale: string | undefined,
+): ClientLike {
   return locale === undefined ? f(url) : f(url, { locale });
 }
 
@@ -29,14 +33,14 @@ export function localeClient(f: ClientFactory, url: string, locale: string | und
  */
 export function clientPerLocale(cfg: {
   url: string;
-  client?: Client;
+  client?: ClientLike;
   clientFactory?: ClientFactory;
   locale?: PresetsLocale;
-}): () => Client {
+}): () => ClientLike {
   const { client, url, locale } = cfg;
   if (client) return () => client;
   const f = cfg.clientFactory ?? getDefaultClientFactory();
-  const byLocale = new Map<string | undefined, Client>();
+  const byLocale = new Map<string | undefined, ClientLike>();
   return () => {
     const loc = currentLocale(locale);
     let built = byLocale.get(loc);

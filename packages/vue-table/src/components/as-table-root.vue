@@ -33,7 +33,7 @@ import { provideCellLocale, useCellLocale } from "../composables/use-cell-locale
 import { useHasEmitListener } from "../composables/use-has-emit-listener";
 import { useTableNavBridge } from "../composables/use-table-nav-bridge";
 import type { SelectionPersistence } from "../composables/use-table-selection";
-import type { Client, PageResult } from "@atscript/db-client";
+import type { ClientLike, PageResult } from "@atscript/db-client";
 // `AsConfirmDialog` stays a static import — it's tiny and core to the
 // prompt/confirm path. The config / filter / preset dialogs each pull in a
 // heavier subtree, so they're lazy-loaded and only mounted once their open
@@ -346,7 +346,7 @@ function createLocalState(): ReactiveTableState {
 
   // Same tail as the fetching path (`useTable`): selection persistence, then
   // the context every child injects.
-  finalizeTableState(localState, {} as Client, {
+  finalizeTableState(localState, {} as ClientLike, {
     selectionPersistence: props.selectionPersistence,
     controls: props.controls,
     types: props.types,

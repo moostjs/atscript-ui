@@ -466,7 +466,7 @@ import { Client } from "@atscript/db-client";
 setDefaultClientFactory((url, options) => new Client(url, { ...options, fetch: authedFetch }));
 ```
 
-`getDefaultClientFactory()` and `resetDefaultClientFactory()` are also exported (the latter primarily for tests). `getDefaultClientFactory()` returns a `TypedClientFactory` (0.1.164+): `getDefaultClientFactory()<typeof Product>(url)` is a `Client<typeof Product>` with typed reads/writes; without a type argument it is the untyped `Client`. The installed factory may be any function returning a `Client` (new or cached).
+`getDefaultClientFactory()` and `resetDefaultClientFactory()` are also exported (the latter primarily for tests). `getDefaultClientFactory()` returns a `TypedClientFactory` (0.1.164+): `getDefaultClientFactory()<typeof Product>(url)` is a `ClientLike<typeof Product>` with typed reads/writes; without a type argument it is the untyped `ClientLike`. The installed factory may be any function returning a `ClientLike` (0.1.190+; `Client` before): a `Client` (new or cached) or any object with `Client`'s public members. `ClientLike` is re-exported by `@atscript/ui`; `getMetaEntry().client`, `sharedPresetsClient()` and `useTableContext().client` are typed `ClientLike` too — annotate them `ClientLike<T>`, not `Client<T>`.
 
 For the same prop on workflow forms see the **atscript-ui-wf** skill.
 

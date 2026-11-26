@@ -3,7 +3,7 @@ import { ref, watch } from "vue";
 import type { ColumnDef } from "@atscript/ui";
 import { optionValue } from "@atscript/ui";
 import { isSimpleEq, sameColumnSet, type FilterCondition } from "@atscript/ui-table";
-import type { Client } from "@atscript/db-client";
+import type { ClientLike } from "@atscript/db-client";
 import type { ReactiveTableState } from "../../types";
 import {
   createStaticTableState,
@@ -97,7 +97,7 @@ if (!info && distinct) {
   innerState = state;
 }
 // The enum and distinct pickers render their in-memory state through the same table.
-if (innerState) provideTableContext({ state: innerState, client: {} as Client, controls: {} });
+if (innerState) provideTableContext({ state: innerState, client: {} as ClientLike, controls: {} });
 
 watch(selectionRef, (v) => {
   if (sameColumnSet(modelToValues(model.value), v)) return;

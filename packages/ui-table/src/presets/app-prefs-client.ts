@@ -1,4 +1,4 @@
-import type { Client } from "@atscript/db-client";
+import type { ClientLike } from "@atscript/db-client";
 import type { ClientFactory } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
 
@@ -17,7 +17,7 @@ export interface AppPrefsClientConfig {
   url: string;
   app: string;
   /** Pre-built Client (auth-configured by host). */
-  client?: Client;
+  client?: ClientLike;
   /** Builds a Client when `client` is absent. Defaults to the app-wide `getDefaultClientFactory()`. */
   clientFactory?: ClientFactory;
   /**
@@ -55,7 +55,7 @@ type AppConfWritePayload = {
  */
 export class AppPrefsClient {
   private readonly app: string;
-  private readonly clientNow: () => Client;
+  private readonly clientNow: () => ClientLike;
 
   constructor(cfg: AppPrefsClientConfig) {
     if (!cfg.url) throw new Error("AppPrefsClient: `url` is required");
@@ -65,7 +65,7 @@ export class AppPrefsClient {
   }
 
   /** The db client for the current locale. */
-  private get client(): Client {
+  private get client(): ClientLike {
     return this.clientNow();
   }
 

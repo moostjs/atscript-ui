@@ -60,7 +60,7 @@ import {
   type UnsupportedFilter,
   type UrlQuerySync,
 } from "@atscript/ui-table";
-import type { Client, PageResult } from "@atscript/db-client";
+import type { ClientLike, PageResult } from "@atscript/db-client";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import { useAsTexts } from "@atscript/vue-form/locale";
 import type { FilterExpr, Uniquery } from "@uniqu/core";
@@ -132,7 +132,7 @@ function createSortValueReader(
 /** Everything provided by as-table-root to its subtree. */
 export interface TableContext {
   state: ReactiveTableState;
-  client: Client;
+  client: ClientLike;
   /**
    * The UI locale `client` asks the server in (its `/meta` entry's, see
    * `useTable`); `undefined` without one. What it serves belongs to this
@@ -340,7 +340,7 @@ export interface TablePresetOptions {
 
 export interface CreateTableStateOptions {
   /** Data-layer client used for `client.pages` calls. */
-  client: Client;
+  client: ClientLike;
   /** Default page size (`pagination.itemsPerPage`). */
   limit?: number;
   /** External refs from `defineModel`. */
@@ -1951,7 +1951,7 @@ export function createStaticTableState(opts: CreateStaticTableStateOptions): {
     return fetcher(q, page, size);
   };
   const result = createTableState({
-    client: {} as Client,
+    client: {} as ClientLike,
     selection: opts.selection,
     limit: opts.limit,
     displayColumns: opts.displayColumns,

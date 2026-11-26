@@ -1,5 +1,5 @@
 import { computed, shallowRef, watch, type ComputedRef, type ShallowRef } from "vue";
-import type { Client, TDbActionTargetSummary } from "@atscript/db-client";
+import type { ClientLike, TDbActionTargetSummary } from "@atscript/db-client";
 import { invalidateValueHelpCache, type TableDef, type UiT } from "@atscript/ui";
 import {
   REMOVE_PROCESSOR,
@@ -26,7 +26,7 @@ interface CreateActionsOpts {
   /** The table's UI texts (the built-in remove action's label and prompts). */
   t: UiT;
   /** Data-layer client used by `'backend'` / `'navigate'` / `'__remove'`. */
-  client: Client;
+  client: ClientLike;
   /** Row-delete opt-in: `false` (off, default), `true` (on with defaults), or an options object. */
   rowDelete: () => boolean | RowDeleteOpt;
   /**

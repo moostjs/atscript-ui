@@ -472,7 +472,7 @@ Inject the context provided by `AsTableRoot` (or `provideTableContext`).
 ```typescript
 interface TableContext {
   state: ReactiveTableState;
-  client: Client;
+  client: ClientLike; // `Client` before 0.1.190
   locale?: string; // since 0.1.165 — the UI locale `client` asks in; what it serves belongs to it
   clientFactory?: ClientFactory; // since 0.1.168 — the table's; its filter pickers build their clients with it
   controls: TAsTableControls;

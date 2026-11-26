@@ -26,7 +26,7 @@ Query wiring, state contract, mutators.
 - `entry.meta` — `MetaResponse` (`/meta` endpoint)
 - `entry.type` — atscript runtime type
 - `entry.tableDef` — composed `TableDef` (promise)
-- `entry.client` — `@atscript/db-client` `Client` instance
+- `entry.client` — the `@atscript/db-client` client, typed `ClientLike` (0.1.190+)
 
 Internal dispatch when `queryFn` is absent:
 

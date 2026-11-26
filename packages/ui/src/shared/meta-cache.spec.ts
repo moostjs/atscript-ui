@@ -1,5 +1,11 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { Client, MetaStore, defaultMetaStore } from "@atscript/db-client";
+import {
+  Client,
+  MetaStore,
+  defaultMetaStore,
+  type ClientLike,
+  type MetaResponse,
+} from "@atscript/db-client";
 import { serializeAnnotatedType } from "@atscript/typescript/utils";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -76,6 +82,8 @@ function makeMemoClient(metaImpl: () => Promise<unknown>) {
   return { client, fetchMeta, factory: (() => client) as unknown as ClientFactory };
 }
 
+const refuse = () => Promise.reject(new Error("not supported"));
+
 function deferred<T>() {
   let resolve!: (v: T) => void;
   let reject!: (e: unknown) => void;
@@ -109,6 +117,41 @@ describe("meta-cache", () => {
 
     expect(a).toBe(b);
     expect(a.client).toBe(b.client);
+  });
+
+  it("a class-free object with Client's public members serves an entry and its table def", async () => {
+    const serialized = await buildSerialized();
+    // No cast: the literal itself satisfies `ClientLike`.
+    const client: ClientLike = {
+      meta: async () => buildMetaResponse(serialized) as unknown as MetaResponse,
+      metaEtag: () => undefined,
+      metaStore: undefined,
+      invalidateMeta: () => {},
+      getValidator: refuse,
+      availableActions: refuse,
+      getActionForm: async () => null,
+      getActionFormTexts: async () => undefined,
+      query: refuse,
+      count: refuse,
+      aggregate: refuse,
+      pages: refuse,
+      geoSearch: refuse,
+      geoPages: refuse,
+      one: refuse,
+      insert: refuse,
+      update: refuse,
+      replace: refuse,
+      remove: refuse,
+      action: refuse,
+      actionOnQuery: refuse,
+      countActionTarget: refuse,
+    };
+    setDefaultClientFactory(() => client);
+
+    const entry = getMetaEntry("/authors");
+    expect(entry.client).toBe(client);
+    const def = await getMetaTableDef(entry);
+    expect(def.columns.map((c) => c.path)).toContain("name");
   });
 
   it("resolveValueHelp + getMetaEntry share a single /meta fetch", async () => {

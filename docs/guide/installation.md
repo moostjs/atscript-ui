@@ -47,6 +47,10 @@ version as `@atscript/vue-form`. `@atscript/vue-form` lists
 `@atscript/typescript` as a peer, the package your generated `.as` types come
 from.
 
+When upgrading from 0.1.189 or earlier (to 0.1.190):
+
+- `getDefaultClientFactory()`, `getMetaEntry().client`, `sharedPresetsClient()` and `useTableContext().client` are typed `ClientLike<T>` (from `@atscript/db-client`, re-exported by `@atscript/ui`): the public members of `Client`, so a factory may return an object that does not extend the class. Code that annotates their result as `Client<T>` writes `ClientLike<T>`. Nothing changes at run time.
+
 When upgrading from 0.1.181 or earlier (to 0.1.182 — all additive, except the field-row note):
 
 - `submit()` returns its outcome next to the `@submit` / `@error` it emits: `{ ok: true, data }` or `{ ok: false, errors }` — on an `<AsForm>` template ref, in the slot props and as `useAsForm().onSubmit()`. See [The outcome of `submit()`](/forms/validation#the-outcome-of-submit).

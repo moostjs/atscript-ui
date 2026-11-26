@@ -622,7 +622,7 @@ interface PresetsClientConfig {
   app: string;
   tableKey: string;
   /** Pre-built `Client` (auth-configured by the host). Wins over `clientFactory`. */
-  client?: Client;
+  client?: ClientLike;
   /** Builds a `Client` for the given URL. Defaults to `getDefaultClientFactory()`. */
   clientFactory?: ClientFactory;
   /**
@@ -696,7 +696,7 @@ function invalidatePresetsCache(): void; // also runs on every `resetMetaCache()
 function isPresetsCacheActive(): boolean; // browser && identity bound && max age >= 0
 ```
 
-Building blocks for framework adapters (`usePresets` in `@atscript/vue-table` is built on them): `presetsCacheKey(url, app, tableKey)`, `cachedPresetRows(key)`, `cachedPresetCapabilities(key)`, `loadPresetRows(key, fetchRows, { force?, origin? })`, `loadPresetCapabilities(key, fetchCaps, origin?)`, `subscribePresetsCache(key, listener)`, `publishPresetsWrite(key)`, `sharedPresetsClient(url, factory?, locale?)` (one client per URL, factory and UI locale — `locale` since 0.1.168), and the `PresetRows` / `PresetsCacheListener` types.
+Building blocks for framework adapters (`usePresets` in `@atscript/vue-table` is built on them): `presetsCacheKey(url, app, tableKey)`, `cachedPresetRows(key)`, `cachedPresetCapabilities(key)`, `loadPresetRows(key, fetchRows, { force?, origin? })`, `loadPresetCapabilities(key, fetchCaps, origin?)`, `subscribePresetsCache(key, listener)`, `publishPresetsWrite(key)`, `sharedPresetsClient(url, factory?, locale?)` (one client per URL, factory and UI locale — `locale` since 0.1.168; returns a `ClientLike` since 0.1.190), and the `PresetRows` / `PresetsCacheListener` types.
 
 ### `PresetsHttpError` / `isUnavailableError`
 
@@ -718,7 +718,7 @@ interface AppPrefsClientConfig {
   /** Same controller URL the presets table is mounted on. */
   url: string;
   app: string;
-  client?: Client;
+  client?: ClientLike;
   clientFactory?: ClientFactory;
   /**
    * Since 0.1.168: the UI locale to ask in, like `PresetsClientConfig.locale`.

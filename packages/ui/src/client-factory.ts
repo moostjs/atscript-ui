@@ -1,4 +1,9 @@
-import { Client, type AtscriptClientShape, type ClientOptions } from "@atscript/db-client";
+import {
+  Client,
+  type AtscriptClientShape,
+  type ClientLike,
+  type ClientOptions,
+} from "@atscript/db-client";
 
 /**
  * Client options the library itself may ask a {@link ClientFactory} for —
@@ -29,22 +34,24 @@ export type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore"> 
  * transport / auth wiring the host application wants. Forward the optional
  * second argument ({@link ClientFactoryOptions}) into the `Client` options.
  *
- * Any function returning a `Client` fits — one that builds a new client or
- * one that hands back a cached one.
+ * Any function returning a `ClientLike` fits — one that builds a new client,
+ * one that hands back a cached one, or one that returns an object with the
+ * public members of `Client` without extending the class. Since 0.1.190 the
+ * return is typed `ClientLike` (was `Client`).
  */
-export type ClientFactory = (url: string, options?: ClientFactoryOptions) => Client;
+export type ClientFactory = (url: string, options?: ClientFactoryOptions) => ClientLike;
 
 /**
  * The app-wide factory as {@link getDefaultClientFactory} returns it: generic
- * like `Client`. `factory<typeof Product>(url)` is a `Client<typeof Product>`
+ * like `Client`. `factory<typeof Product>(url)` is a `ClientLike<typeof Product>`
  * with typed reads and writes; without a type argument it is the untyped
- * `Client`. The type argument only types the client — nothing is checked at
+ * `ClientLike`. The type argument only types the client — nothing is checked at
  * runtime.
  */
 export type TypedClientFactory = <T extends AtscriptClientShape = AtscriptClientShape>(
   url: string,
   options?: ClientFactoryOptions,
-) => Client<T>;
+) => ClientLike<T>;
 
 const builtin: ClientFactory = (url, options) => new Client(url, options);
 

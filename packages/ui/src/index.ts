@@ -298,6 +298,8 @@ export {
   type TypedClientFactory,
   type ClientFactoryOptions,
 } from "./client-factory";
+// What every client output is typed as (since 0.1.190): the public members of `Client`.
+export type { ClientLike } from "@atscript/db-client";
 
 // ── Shared meta cache (single /meta fetch per URL across tables + value-help)
 export {

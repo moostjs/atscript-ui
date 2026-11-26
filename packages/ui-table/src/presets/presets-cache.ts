@@ -1,4 +1,4 @@
-import type { Client } from "@atscript/db-client";
+import type { ClientLike } from "@atscript/db-client";
 import {
   getDefaultClientFactory,
   getMetaCacheIdentity,
@@ -70,7 +70,7 @@ let maxAge = DEFAULT_MAX_AGE;
 const MAX_ENTRIES = 100;
 /** Least recently used first. */
 let entries = new Map<string, Entry>();
-let clients = new Map<ClientFactory, Map<string, Client>>();
+let clients = new Map<ClientFactory, Map<string, ClientLike>>();
 const listeners = new Map<string, Set<PresetsCacheListener>>();
 let wired = false;
 let lastMismatch: string | undefined;
@@ -195,7 +195,11 @@ function trim(): void {
  * locale). Since 0.1.153. `locale` (since 0.1.168) is passed to the factory
  * (`ClientFactoryOptions.locale`), so its messages come back in that language.
  */
-export function sharedPresetsClient(url: string, factory?: ClientFactory, locale?: string): Client {
+export function sharedPresetsClient(
+  url: string,
+  factory?: ClientFactory,
+  locale?: string,
+): ClientLike {
   wire();
   const f = factory ?? getDefaultClientFactory();
   let byUrl = clients.get(f);

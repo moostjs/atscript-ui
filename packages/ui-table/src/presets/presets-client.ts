@@ -1,4 +1,4 @@
-import { Client, ClientError } from "@atscript/db-client";
+import { ClientError, type ClientLike } from "@atscript/db-client";
 import type { ClientFactory } from "@atscript/ui";
 import type { FilterExpr } from "@uniqu/core";
 
@@ -27,7 +27,7 @@ export interface PresetsClientConfig {
   app: string;
   tableKey: string;
   /** Pre-built Client (auth-configured by the host). Wins over `clientFactory`. */
-  client?: Client;
+  client?: ClientLike;
   /** Builds a Client for the given URL. Defaults to the app-wide `getDefaultClientFactory()`. */
   clientFactory?: ClientFactory;
   /**
@@ -100,7 +100,7 @@ export class PresetsClient {
   private readonly url: string;
   private readonly app: string;
   private readonly tableKey: string;
-  private readonly clientNow: () => Client;
+  private readonly clientNow: () => ClientLike;
   private readonly locale?: PresetsLocale;
   private readonly fetchImpl: typeof globalThis.fetch;
 
@@ -117,7 +117,7 @@ export class PresetsClient {
   }
 
   /** The db client for the current locale. */
-  private get client(): Client {
+  private get client(): ClientLike {
     return this.clientNow();
   }
 

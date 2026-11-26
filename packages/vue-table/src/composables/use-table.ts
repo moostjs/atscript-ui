@@ -10,7 +10,7 @@ import {
 } from "@atscript/ui";
 import type { TAsTypeComponents } from "@atscript/vue-form";
 import { useAsTexts } from "@atscript/vue-form/locale";
-import type { Client } from "@atscript/db-client";
+import type { ClientLike } from "@atscript/db-client";
 import {
   getCurrentInstance,
   getCurrentScope,
@@ -246,7 +246,7 @@ export interface UseTableOptions {
  */
 export function finalizeTableState(
   state: ReactiveTableState,
-  client: Client,
+  client: ClientLike,
   opts?: Pick<
     UseTableOptions,
     | "selectionPersistence"
@@ -285,7 +285,7 @@ export function useTable(url: string, opts?: UseTableOptions): ReactiveTableStat
   // receives the texts `/meta` serves for it.
   const texts = useAsTexts();
   const locale = texts.locale();
-  let client: Client;
+  let client: ClientLike;
   let defPromise: Promise<TableDef> | undefined;
   if (typeof window !== "undefined") {
     const entry = getMetaEntry(url, opts?.clientFactory, { metaKey: opts?.metaKey, texts });

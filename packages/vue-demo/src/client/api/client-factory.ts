@@ -1,4 +1,4 @@
-import { Client, type AtscriptClientShape } from "@atscript/db-client";
+import { Client, type AtscriptClientShape, type ClientLike } from "@atscript/db-client";
 import type { ClientFactory } from "@atscript/ui";
 import { sharedFetch } from "./fetch";
 
@@ -55,7 +55,7 @@ export const clientFactory: ClientFactory = (url, options) => {
 /** Demo-internal helper for call sites that only know the table name. */
 export function clientForTable<T extends AtscriptClientShape = AtscriptClientShape>(
   path: string,
-): Client<T> {
+): ClientLike<T> {
   const key = path.replace(/^\/+|\/+$/g, "");
-  return clientFactory(`/api/db/tables/${key}`) as Client<T>;
+  return clientFactory(`/api/db/tables/${key}`) as ClientLike<T>;
 }

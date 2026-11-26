@@ -995,7 +995,7 @@ Thin wrapper over a pre-built `Client` (from `@atscript/db-client`) that runs FK
 
 ```typescript
 class ValueHelpClient {
-  constructor(client: Client);
+  constructor(client: ClientLike);
   search(resolved: ResolvedValueHelp, opts?: ValueHelpSearchOptions): Promise<ValueHelpResult>;
 }
 
@@ -1076,7 +1076,7 @@ _Since 0.1.151._ In the browser, identical `ValueHelpClient.search()` calls on t
 
 ```typescript
 function setValueHelpCacheTtl(ms: number): void; // 0 = share in-flight only, < 0 = off
-function invalidateValueHelpCache(client?: Client): void; // one client, or all when omitted
+function invalidateValueHelpCache(client?: ClientLike): void; // one client, or all when omitted
 ```
 
 `resetMetaCache()` clears every shared search, and so does a backend action or delete run through `<AsTable>`. Call `invalidateValueHelpCache()` after writing a dictionary any other way when pickers must refetch immediately.
@@ -1308,21 +1308,21 @@ function str(value: unknown): string;
 `ClientFactory` is the contract Vue tables and value-help use to build HTTP clients. Override globally to inject auth headers / retries / interceptors.
 
 ```typescript
-type ClientFactory = (url: string, options?: ClientFactoryOptions) => Client; // `Client` from `@atscript/db-client`
+type ClientFactory = (url: string, options?: ClientFactoryOptions) => ClientLike; // from `@atscript/db-client`, re-exported; `Client` before 0.1.190
 type ClientFactoryOptions = Pick<ClientOptions, "metaKey" | "metaStore"> & { locale?: string }; // since 0.1.153; `locale` since 0.1.165
 
 /** What `getDefaultClientFactory()` returns: generic like `Client` (since 0.1.164). */
 type TypedClientFactory = <T extends AtscriptClientShape = AtscriptClientShape>(
   url: string,
   options?: ClientFactoryOptions,
-) => Client<T>;
+) => ClientLike<T>;
 
 function setDefaultClientFactory(factory: ClientFactory): void;
 function getDefaultClientFactory(): TypedClientFactory; // never `undefined` — falls back to `(url, options) => new Client(url, options)`
 function resetDefaultClientFactory(): void;
 ```
 
-The factory you install is any function returning a `Client`, including one that hands back a cached client. The default factory you read back is generic: pass a model to get a typed client, or nothing for the untyped one. The type argument only types the client; nothing is checked at runtime.
+The factory you install is any function returning a `ClientLike`: a `Client`, one handed back from a cache, or (_since 0.1.190_) any object with the public members of `Client` that does not extend the class. `ClientLike<T>` is `@atscript/db-client`'s `Pick<Client<T>, keyof Client<T>>`; `@atscript/ui` re-exports it. The default factory you read back is generic: pass a model to get a typed client, or nothing for the untyped one. The type argument only types the client; nothing is checked at runtime.
 
 ```typescript
 import { Product } from "./models/product.as";
@@ -1389,7 +1389,7 @@ interface MetaEntryOptions {
 }
 
 interface MetaCacheEntry {
-  client: Client; // from `@atscript/db-client`
+  client: ClientLike; // from `@atscript/db-client`; `Client` before 0.1.190
   meta: Promise<MetaResponse>;
   type: Promise<TAtscriptAnnotatedType>; // pre-deserialized
   resolved?: Promise<ResolvedValueHelp>; // populated lazily by `resolveValueHelp`

@@ -1,4 +1,4 @@
-import type { Client, FilterExpr } from "@atscript/db-client";
+import type { ClientLike, FilterExpr } from "@atscript/db-client";
 import { escapeRegex } from "../shared/str";
 import type { ResolvedValueHelp } from "./resolve";
 import type { ValueHelpInfo } from "./types";
@@ -58,7 +58,7 @@ interface SharedSearch {
 
 const DEFAULT_VALUE_HELP_CACHE_TTL = 5000;
 let cacheTtl = DEFAULT_VALUE_HELP_CACHE_TTL;
-let searches = new WeakMap<Client, Map<string, SharedSearch>>();
+let searches = new WeakMap<ClientLike, Map<string, SharedSearch>>();
 
 /**
  * How long (ms) a settled value-help search is reused for an identical
@@ -75,7 +75,7 @@ export function setValueHelpCacheTtl(ms: number): void {
  * client when omitted. Call after writing to a dictionary outside the
  * built-in table actions to make pickers refetch at once.
  */
-export function invalidateValueHelpCache(client?: Client): void {
+export function invalidateValueHelpCache(client?: ClientLike): void {
   if (client) searches.get(client)?.clear();
   else searches = new WeakMap();
 }
@@ -103,7 +103,7 @@ function requestKey(request: Record<string, unknown>): string | undefined {
 }
 
 function sharedQuery(
-  client: Client,
+  client: ClientLike,
   request: Record<string, unknown>,
 ): Promise<Record<string, unknown>[]> {
   const run = () => client.query(request as any) as Promise<Record<string, unknown>[]>;
@@ -143,9 +143,9 @@ function sharedQuery(
  * {@link setValueHelpCacheTtl}).
  */
 export class ValueHelpClient {
-  private readonly _client: Client;
+  private readonly _client: ClientLike;
 
-  constructor(client: Client) {
+  constructor(client: ClientLike) {
     this._client = client;
   }
 

@@ -1,4 +1,9 @@
-import { clearMetaStore, defaultMetaStore, type Client, type MetaStore } from "@atscript/db-client";
+import {
+  clearMetaStore,
+  defaultMetaStore,
+  type ClientLike,
+  type MetaStore,
+} from "@atscript/db-client";
 import type { TAtscriptAnnotatedType } from "@atscript/typescript/utils";
 import { deserializeServedType } from "../i18n/model-texts";
 import {
@@ -40,7 +45,7 @@ import { getUiTexts, type UiTexts } from "../i18n/ui-texts";
  * uncached entry whose client keeps no `/meta` store.
  */
 export interface MetaCacheEntry {
-  client: Client;
+  client: ClientLike;
   meta: Promise<MetaResponse>;
   type: Promise<TAtscriptAnnotatedType>;
   resolved?: Promise<ResolvedValueHelp>;
@@ -128,7 +133,7 @@ export function createMetaClient(
   factory: ClientFactory | undefined,
   locale: string | undefined,
   metaKey?: string,
-): Client {
+): ClientLike {
   const clientOptions: ClientFactoryOptions = {};
   if (typeof window === "undefined") clientOptions.metaStore = false;
   else if (metaKey) clientOptions.metaKey = metaKey;
@@ -318,7 +323,7 @@ export function getMetaTableDef(
  * Shares the `Derived` of one `ETag` among the cached entries that loaded it;
  * an entry no longer cached (evicted, reset, server render) keeps its own.
  */
-function derive(entry: MetaCacheEntry, client: Client, meta: MetaResponse): Derived {
+function derive(entry: MetaCacheEntry, client: ClientLike, meta: MetaResponse): Derived {
   const slot = slots.get(entry)!;
   // Optional call: custom `ClientFactory` doubles often stub only `meta()`.
   const etag = cache.get(slot.key) === entry ? client.metaEtag?.() : undefined;
@@ -340,7 +345,7 @@ function derive(entry: MetaCacheEntry, client: Client, meta: MetaResponse): Deri
  * `clearMetaStore()`, and an eviction must not drop the ETags of every
  * other URL. A store-less client (`metaStore: false`) is skipped too.
  */
-function customStoreOf(client: Client): MetaStore | undefined {
+function customStoreOf(client: ClientLike): MetaStore | undefined {
   // Optional by nature: custom `ClientFactory` doubles often stub only `meta()`.
   const store = client.metaStore;
   return store && store !== defaultMetaStore ? store : undefined;

@@ -1,4 +1,4 @@
-import type { Client, FilterExpr } from "@atscript/db-client";
+import type { ClientLike, FilterExpr } from "@atscript/db-client";
 import { escapeRegex } from "../shared/str";
 
 export interface DistinctValuesOptions {
@@ -38,7 +38,7 @@ export function isPickerDeclined(err: unknown): boolean {
  * @internal Backs the distinct-values picker of `@atscript/vue-table`.
  */
 export async function fetchDistinctValues(
-  client: Pick<Client, "aggregate">,
+  client: Pick<ClientLike, "aggregate">,
   field: string,
   opts: DistinctValuesOptions = {},
 ): Promise<{ items: unknown[]; hasMore: boolean }> {

@@ -2,7 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createSSRApp, defineComponent, h } from "vue";
 import { renderToString } from "vue/server-renderer";
-import type { Client } from "@atscript/db-client";
+import type { Client, ClientLike } from "@atscript/db-client";
 import { provideAsLocale } from "@atscript/vue-form";
 import AsTableCellValue from "../components/defaults/as-table-cell-value.vue";
 import { createTableState, useTableContext } from "../composables/use-table-state";
@@ -77,7 +77,7 @@ describe("useTable on a server", () => {
     }) as never);
     try {
       let state!: ReactiveTableState;
-      let client: Client | undefined;
+      let client: ClientLike | undefined;
       const Cell = defineComponent({
         setup() {
           client = useTableContext().client;
