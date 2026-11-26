@@ -46,7 +46,7 @@ const isEmpty = (v: unknown) => v === undefined || v === null || v === "";
  * read of the dictionary in the binding's scope — the form's host values
  * included, read again when they change — with the select of every
  * value-help read, capped at `VALUE_HELP_OPTIONS_CAP`. A longer list
- * sets `overflow` and warns once in development.
+ * sets `overflow` (and warns once in development) until a read fits again.
  */
 export function useAsValueHelpOptions(
   opts: UseAsValueHelpOptionsOptions,
@@ -55,9 +55,10 @@ export function useAsValueHelpOptions(
   const vh = useAsValueHelp({ info, model, onBlur, limit: VALUE_HELP_OPTIONS_CAP + 1 });
   const overflow = ref(false);
 
+  // Every read decides: a list narrowed by a host value that fits again is a dropdown again.
   watch(vh.results, (rows) => {
-    if (rows.length <= VALUE_HELP_OPTIONS_CAP || overflow.value) return;
-    overflow.value = true;
+    overflow.value = rows.length > VALUE_HELP_OPTIONS_CAP;
+    if (!overflow.value) return;
     const key = `${info.url}\0${info.targetField}`;
     if (isDev() && !warned.has(key)) {
       warned.add(key);

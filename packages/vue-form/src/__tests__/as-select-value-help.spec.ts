@@ -167,6 +167,24 @@ describe("a dropdown bound to a dictionary (since 0.1.190)", () => {
   });
 });
 
+describe("a dropdown narrowed by a host value (since 0.1.190)", () => {
+  it("is the search picker while the list is too long, and a dropdown again once it fits", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const many = Array.from({ length: VALUE_HELP_OPTIONS_CAP + 1 }, (_, i) => ({
+      code: `C${i}`,
+      name: `City ${i}`,
+      country: i < 3 ? "DE" : "FR",
+    }));
+    const { wrapper, formData } = await mountSelectForm({ city: "C1" }, many);
+    expect(fieldOf(wrapper, "City").find("select").exists()).toBe(false);
+
+    formData.value.country = "DE";
+    await flushPromises();
+    await nextTick();
+    expect(optionTexts(wrapper)).toEqual(["", "City 0", "City 1", "City 2"]);
+  });
+});
+
 describe("a dropdown value several rows hold (since 0.1.190)", () => {
   it("is committed without fills: no row is guessed", async () => {
     const rows = [
