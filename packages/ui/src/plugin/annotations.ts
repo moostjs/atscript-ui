@@ -9,7 +9,9 @@ import {
   validateFill,
   validateLiteralLabel,
   validateValueHelp,
+  validateValueLabel,
   valueHelpScopes,
+  valueLabelFields,
 } from "./value-help-validation";
 
 const BUILTIN_TYPES = [
@@ -59,6 +61,7 @@ const ROW_SPAN_VALUES: string[] = ["1", "2", "3", "4", "5", "6"];
  * - `ui.table.<key>`  — table-only static
  * - `ui.dict.<key>`   — value-help annotations
  * - `ui.valueHelp`, `ui.literalLabel` — dictionary binding, union literal labels
+ * - `ui.valueLabel` — a code shown with the text of a sibling field
  * - `ui.nav.<key>`    — model-level navigation annotations
  * - `ui.array.<key>`  — array control annotations
  *
@@ -857,6 +860,47 @@ export const uiAnnotations: TAnnotationsTree = {
         { name: "label", type: "string", description: "Display label.", userText: true },
       ],
       validate: validateLiteralLabel,
+    }),
+
+    valueLabel: new AnnotationSpec({
+      description:
+        "Shows this field's value — a code — together with its text, read from a string field " +
+        "of the same interface: in table cells, export, read-only form fields and the " +
+        "reference field while it is not focused. Sorting and filtering stay on the code, and " +
+        "filter chips show the code. On a field with a value-help binding, let the pick fill the " +
+        "text (`@ui.valueHelp.fill`), or it goes stale after a pick. Not passed through " +
+        "references." +
+        "\n\n**Example:**\n" +
+        "```atscript\n" +
+        "@ui.valueHelp City, 'code'\n" +
+        "@ui.valueHelp.fill 'cityName', 'name'\n" +
+        "@ui.valueLabel 'cityName'\n" +
+        "city?: string\n" +
+        "cityName?: string\n" +
+        "```\n",
+      nodeType: ["prop"],
+      // Names a sibling of the DECLARING interface: a referring field's host
+      // may not have it, so the label must not travel.
+      passedWhenReferred: false,
+      argument: [
+        {
+          name: "field",
+          type: "string",
+          description:
+            "A string field of this interface holding the text of this field's value — not this field.",
+          valueScope: valueLabelFields,
+        },
+        {
+          optional: true,
+          name: "arrangement",
+          type: "string",
+          description:
+            "How the code and its text are shown: `textKey` (default) — `Berlin (BER)`; " +
+            "`keyText` — `BER (Berlin)`; `text` — `Berlin`. An empty text shows the code alone.",
+          values: ["textKey", "keyText", "text"],
+        },
+      ],
+      validate: validateValueLabel,
     }),
 
     // ── Dictionary annotations (value-help display + capabilities) ──

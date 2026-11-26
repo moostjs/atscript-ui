@@ -56,6 +56,8 @@ export const UI_VALUE_HELP_FILL = "ui.valueHelp.fill" as const;
 /** `@ui.valueHelp.column 'field'` — since 0.1.190. */
 export const UI_VALUE_HELP_COLUMN = "ui.valueHelp.column" as const;
 export const UI_LITERAL_LABEL = "ui.literalLabel" as const;
+/** `@ui.valueLabel 'field', 'arrangement'?` — a code shown with its text; since 0.1.190. */
+export const UI_VALUE_LABEL = "ui.valueLabel" as const;
 
 // ── Navigation annotations (registered by @atscript/ui plugin) ──
 export const UI_NAV_GROUP = "ui.nav.group" as const;

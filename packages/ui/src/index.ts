@@ -43,6 +43,8 @@ export {
   UI_DICT_FILTERABLE,
   UI_DICT_SORTABLE,
   UI_DICT_SEARCHABLE,
+  // A code shown with its text (since 0.1.190)
+  UI_VALUE_LABEL,
   // Navigation
   UI_NAV_GROUP,
   UI_NAV_ORDER,

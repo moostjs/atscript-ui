@@ -34,17 +34,19 @@ import {
   isNavProp,
   isStrictAggregateStruct,
   primitiveBaseType,
+  siblingStringFields,
   validateExclusiveWith,
   validateQueryScope,
   validateRefArgument,
+  validateSiblingStringField,
 } from "@atscript/db/shared";
 
 /**
  * Editor scopes + validators of `@ui.valueHelp`, `@ui.valueHelp.distinct` and
  * `@ui.literalLabel` (since 0.1.148), and of `@ui.valueHelp.fill`,
- * `@ui.valueHelp.column` and host references in a binding filter (since
- * 0.1.190). Scopes and validators share one source, so a diagnostic and what
- * the editor completes never diverge.
+ * `@ui.valueHelp.column`, host references in a binding filter and
+ * `@ui.valueLabel` (since 0.1.190). Scopes and validators share one source,
+ * so a diagnostic and what the editor completes never diverge.
  */
 
 const WARNING = 2;
@@ -1011,6 +1013,63 @@ export function validateLiteralLabel(token: Token, args: Token[], doc: AtscriptD
       severity: ERROR,
       range: value.range,
     });
+  }
+  return errors;
+}
+
+// ── @ui.valueLabel (since 0.1.190) ──────────────────────────
+
+/**
+ * `valueScope` of `@ui.valueLabel`'s `field`: the string-valued fields of the
+ * type the annotated field belongs to, declared or inherited
+ * (`siblingStringFields`: never the field itself, an object, a number or a
+ * dotted path) — for an `annotate` entry, of the annotated interface.
+ * Go-to-definition jumps to the field in the file that declares it.
+ */
+export function valueLabelFields(annotationToken: Token, doc: AtscriptDoc): TValueCandidate[] {
+  return siblingStringFields(annotationToken, doc).map((prop) => {
+    const token = prop.token("identifier");
+    return Object.assign(
+      { value: prop.id ?? `` },
+      token && { definition: { doc: doc.declaringDoc(prop, doc), token } },
+    );
+  });
+}
+
+export function validateValueLabel(token: Token, args: Token[], doc: AtscriptDoc): TMessages {
+  const errors: TMessages = [];
+  const field = annotationTarget(token, doc);
+  const name = args[0]?.text;
+
+  // VL1: a string sibling of the field, not the field itself
+  if (name !== undefined) {
+    if (field?.id !== undefined && name === field.id) {
+      errors.push({
+        message: "@ui.valueLabel names the field holding this value's text, not this field",
+        severity: ERROR,
+        range: args[0].range,
+      });
+    } else {
+      errors.push(...validateSiblingStringField(token, args, doc, "@ui.valueLabel"));
+    }
+  }
+
+  // VL2: one way to label a value
+  errors.push(...validateExclusiveWith(token, "@ui.valueLabel", [{ key: "ui.literalLabel" }], doc));
+
+  // VL3: on a bound field, a pick changes the code — a text no pick fills goes stale
+  if (field && name !== undefined && name !== field.id) {
+    const binding = bindingOf(field, doc);
+    const filled = (field.annotations ?? []).some(
+      (a) => a.name === "ui.valueHelp.fill" && a.args[0]?.text === name,
+    );
+    if (binding && !filled) {
+      errors.push({
+        message: `a pick of this field's value help does not fill '${name}' — the text goes stale after a pick (add @ui.valueHelp.fill '${name}', '<a field of ${binding.name}>')`,
+        severity: WARNING,
+        range: token.range,
+      });
+    }
   }
   return errors;
 }

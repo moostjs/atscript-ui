@@ -4,6 +4,7 @@ import { join } from "node:path";
 import {
   analyzeQueryCursorContext,
   build,
+  getDeclaredValue,
   getFieldPathCompletionScope,
   getQueryCompletionScope,
   getQueryScope,
@@ -548,6 +549,7 @@ describe("editor hover content", () => {
       "ui.valueHelp.fill",
       "ui.valueHelp.column",
       "ui.literalLabel",
+      "ui.valueLabel",
     ]) {
       const spec = doc.resolveAnnotation(name)!;
       expect(spec, name).toBeDefined();
@@ -1530,4 +1532,226 @@ export interface Order {
     const column = doc.annotations.find((a) => a.name === "ui.valueHelp.column")!;
     expect(getQueryScope(column.args[0], doc)?.unqualifiedTarget).toBe("Country");
   });
+});
+
+// ── Since 0.1.190: @ui.valueLabel ──────────────────────────
+
+describe("@ui.valueLabel diagnostics", () => {
+  it("accepts a string sibling, declared or inherited, with or without an arrangement", async () => {
+    const m = await msgs(`
+export interface BaseOffice {
+    regionName?: string
+}
+export interface Office extends BaseOffice {
+    @ui.valueLabel 'cityName'
+    city?: string
+    cityName?: string | null
+    @ui.valueLabel 'regionName', 'keyText'
+    region?: string
+    @ui.valueLabel 'statusText', 'text'
+    status?: number
+    statusText?: 'open' | 'closed'
+}`);
+    expect(m).toEqual([]);
+  });
+
+  it("VL1: a missing, number or dotted sibling, or the field itself", async () => {
+    const m = (
+      await msgs(`
+export interface Office {
+    headcount: number
+    nested: { a: string }
+    @ui.valueLabel 'nope'
+    a?: string
+    @ui.valueLabel 'headcount'
+    b?: string
+    @ui.valueLabel 'nested.a'
+    c?: string
+    @ui.valueLabel 'd'
+    d?: string
+}`)
+    ).join("\n");
+    expect(m).toContain("@ui.valueLabel 'nope': no sibling field named 'nope' on this type");
+    expect(m).toContain("@ui.valueLabel 'headcount': sibling field must be a string, got 'number'");
+    expect(m).toContain("@ui.valueLabel 'nested.a': no sibling field named 'nested.a'");
+    expect(m).toContain("names the field holding this value's text, not this field");
+    expect(m.split("\n").filter((x) => x.startsWith("E"))).toHaveLength(4);
+  });
+
+  it("the arrangement is one of textKey, keyText and text", async () => {
+    const m = (
+      await msgs(`
+export interface Office {
+    @ui.valueLabel 'cityName', 'key'
+    city?: string
+    cityName?: string
+}`)
+    ).join("\n");
+    expect(m).toContain('("arrangement") must be one of [textKey, keyText, text]');
+  });
+
+  it("VL2: not next to @ui.literalLabel, own or from the type", async () => {
+    const m = (
+      await msgs(`
+@ui.literalLabel 'a', 'A'
+export type Coded = 'a' | 'b'
+export interface Office {
+    label?: string
+    @ui.literalLabel 'x', 'X'
+    @ui.valueLabel 'label'
+    own?: 'x' | 'y'
+    @ui.valueLabel 'label'
+    typed?: Coded
+}`)
+    ).join("\n");
+    expect(m).toContain("@ui.valueLabel cannot coexist with @ui.literalLabel on the same field");
+    expect(m).toContain(
+      "@ui.valueLabel cannot coexist with @ui.literalLabel, which this field inherits from its type reference",
+    );
+  });
+
+  it("VL3: a bound field whose text no pick fills warns; a fill or no binding does not", async () => {
+    const m = await msgs(`
+export interface Office {
+    @ui.valueHelp City, 'code'
+    @ui.valueLabel 'cityName'
+    city?: string
+    cityName?: string
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'townName', 'name'
+    @ui.valueLabel 'townName'
+    town?: string
+    townName?: string
+    @db.rel.FK
+    @ui.valueLabel 'countryName'
+    countryCode?: Country.code
+    countryName?: string
+    @ui.valueLabel 'zoneName'
+    zone?: string
+    zoneName?: string
+}`);
+    // (City's `code` alone is no key: the bindings also warn that values may repeat)
+    const w = m.filter((x) => x.startsWith("W") && x.includes("goes stale"));
+    expect(w).toHaveLength(2);
+    expect(w.join("\n")).toContain(
+      "a pick of this field's value help does not fill 'cityName' — the text goes stale after a pick (add @ui.valueHelp.fill 'cityName', '<a field of City>')",
+    );
+    expect(w.join("\n")).toContain("does not fill 'countryName'");
+    expect(errorsOf(m)).toEqual([]);
+  });
+
+  it("runs in an annotate entry: inherited siblings, the landed binding and its fills", async () => {
+    const m = (
+      await msgs(`
+export interface BaseOffice {
+    city?: string
+    cityName?: string
+    town?: string
+    townName?: string
+    headcount?: number
+}
+export interface Office extends BaseOffice {}
+annotate Office {
+    @ui.valueLabel 'cityName'
+    city
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'townName', 'name'
+    @ui.valueLabel 'townName'
+    town
+}
+annotate Office {
+    @ui.valueHelp City, 'code'
+    @ui.valueLabel 'headcount'
+    cityName
+}`)
+    ).join("\n");
+    expect(m).toContain("@ui.valueLabel 'headcount': sibling field must be a string, got 'number'");
+    expect(m).toContain("does not fill 'headcount'");
+    expect(m).not.toContain("'cityName':");
+    expect(m).not.toContain("does not fill 'townName'");
+  });
+});
+
+describe("editor features of @ui.valueLabel", () => {
+  const INLINE = `
+export interface BaseOffice {
+    regionName?: string
+}
+export interface Office extends BaseOffice {
+    headcount: number
+    @ui.valueLabel 'cityName', 'textKey'
+    city?: string
+    cityName?: string
+}`;
+  const ANNOTATED = `
+export interface BaseOffice {
+    regionName?: string
+}
+export interface Office extends BaseOffice {
+    headcount: number
+    city?: string
+    cityName?: string
+}
+annotate Office {
+    @ui.valueLabel 'cityName', 'textKey'
+    city
+}`;
+
+  it("is documented with both arguments, a prop-only annotation that stays home", async () => {
+    const { doc } = await compile("export interface Host { a: string }");
+    const spec = doc.resolveAnnotation("ui.valueLabel")!;
+    expect(spec.config.description).toContain("Sorting and filtering stay on the code");
+    expect(spec.arguments.map((a) => a.name)).toEqual(["field", "arrangement"]);
+    for (const arg of spec.arguments) expect(arg.description, arg.name).toBeTruthy();
+    expect(spec.arguments[1]).toMatchObject({
+      optional: true,
+      values: ["textKey", "keyText", "text"],
+    });
+    expect(spec.config).toMatchObject({ nodeType: ["prop"], passedWhenReferred: false });
+    // offered among the `ui` annotations the editor completes
+    expect(Object.keys(doc.config.annotations!.ui as object)).toContain("valueLabel");
+    expect(spec.renderDocs("@ui.valueLabel")).toContain("filter chips show the code");
+  });
+
+  for (const [where, source] of [
+    ["inline", INLINE],
+    ["in an annotate entry", ANNOTATED],
+  ] as const) {
+    describe(where, () => {
+      it("`field` completes the string fields of the interface, inherited ones included", async () => {
+        const { doc } = await compile(source);
+        const ann = doc.annotations.find((a) => a.name === "ui.valueLabel")!;
+        // never the annotated field itself, nor a number
+        expect(getValueCandidates(ann.token, 0, doc)?.map((c) => c.value)).toEqual([
+          "regionName",
+          "cityName",
+        ]);
+      });
+
+      it("go-to-definition on `field` jumps to the sibling, also an inherited one", async () => {
+        const { doc, text } = await compile(source);
+        const ann = doc.annotations.find((a) => a.name === "ui.valueLabel")!;
+        const declared = getDeclaredValue(ann.args[0], doc);
+        expect(declared?.value).toBe("cityName");
+        const pos = at(text, "'cityName', 'textKey'", 3);
+        const result = doc.getToDefinitionAt(pos.line, pos.character)!;
+        expect(result[0].targetSelectionRange.start.line).toBe(at(text, "cityName?: string").line);
+        const inherited = getValueCandidates(ann.token, 0, doc)!.find(
+          (c) => c.value === "regionName",
+        )!;
+        expect(inherited.definition?.token.range.start.line).toBe(
+          at(text, "regionName?: string").line,
+        );
+      });
+
+      it("hover documents the annotation; diagnostics land on the entry", async () => {
+        const { doc, messages } = await compile(source);
+        expect(messages).toEqual([]);
+        const ann = doc.annotations.find((a) => a.name === "ui.valueLabel")!;
+        expect(doc.resolveAnnotation(ann.name)?.renderDocs(ann.token.text)).toContain(
+          "together with its text",
+        );
+      });
+    });
+  }
 });
