@@ -195,8 +195,11 @@ dictionary bound from its own interface (`manager` of `Employee` picking from
 `Employee`) works: the right-hand side is the host.
 
 A composite-key member a host reference pins (`country` of a city keyed by
-`country` + `id`) counts as pinned: no "values may repeat" warning, and the
-pickers hide it while it has a value.
+`country` + `id`) is pinned only while the host field has a value: an empty
+one lists the ids of every country. So the compiler keeps its "values may
+repeat" warning unless a fill writes the host field back from the picked row
+(`@ui.valueHelp.fill 'country', 'country'`). While it has a value, the
+pickers hide it.
 
 ## A pick fills other fields: `@ui.valueHelp.fill`
 

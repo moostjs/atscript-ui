@@ -360,23 +360,36 @@ function rightRef(cmp: SemanticQueryComparisonNode): SemanticQueryFieldRefNode |
 }
 
 /**
- * Fields the filter pins with a top-level `=` against a literal value, or — a
- * host reference — against a field of the host `hostName`. The compile-time twin
- * of `pinnedOf` in `value-help/filter-tree.ts` (which reads the emitted tree at
- * runtime) — keep the two rules in step.
+ * Fields the filter pins with a top-level `=` against a literal value. The
+ * compile-time twin of `pinnedOf` in `value-help/filter-tree.ts` (which reads
+ * the emitted tree at runtime) — keep the two rules in step.
  */
-function pinnedFields(filter: Token | undefined, hostName?: string): Set<string> {
+function pinnedFields(filter: Token | undefined): Set<string> {
   const pinned = new Set<string>();
   const expr = filter?.queryNode?.expression;
   if (!expr) return pinned;
   for (const c of conjuncts(expr)) {
     if (!isQueryComparison(c) || c.operator !== "=" || !c.right) continue;
-    const ref = rightRef(c);
-    if (!ref || (hostName !== undefined && ref.typeRef?.text === hostName)) {
-      pinned.add(c.left.fieldRef.text);
-    }
+    if (!rightRef(c)) pinned.add(c.left.fieldRef.text);
   }
   return pinned;
+}
+
+/**
+ * The target fields the filter's host references pin (`targetField =
+ * Host.field`), each with its host field — pinned only while that host field
+ * has a value.
+ */
+function hostPins(filter: Token | undefined, hostName: string): Map<string, string> {
+  const pins = new Map<string, string>();
+  const expr = filter?.queryNode?.expression;
+  if (!expr) return pins;
+  for (const c of conjuncts(expr)) {
+    if (!isQueryComparison(c) || c.operator !== "=") continue;
+    const ref = rightRef(c);
+    if (ref?.typeRef?.text === hostName) pins.set(c.left.fieldRef.text, ref.fieldRef.text);
+  }
+  return pins;
 }
 
 // ── Host interface and binding of a bound field (since 0.1.190) ──
@@ -627,13 +640,27 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
       (fieldProp.countAnnotations("meta.id") > 0 && idFields.length === 1);
     let ok = isUnique;
     if (!ok && fieldProp.countAnnotations("meta.id") > 0) {
-      // a key member a host reference pins is constant in the picker too
-      const pinned = pinnedFields(filterArg, validHost?.name);
-      ok = idFields.every(([name]) => name === fieldName || pinned.has(name));
+      // The other key members are constant in the picker when the filter pins them to a
+      // literal. A host reference pins one only while the host field has a value — an
+      // empty one lists every member's rows — unless a fill writes the host field back
+      // from the picked row.
+      const literal = pinnedFields(filterArg);
+      const byHost = validHost ? hostPins(filterArg, validHost.name) : undefined;
+      const fills = (validHost?.field.annotations ?? []).filter(
+        (a) => a.name === "ui.valueHelp.fill",
+      );
+      const writtenBack = (member: string) => {
+        const local = byHost?.get(member);
+        return (
+          local !== undefined &&
+          fills.some((a) => a.args[0]?.text === local && a.args[1]?.text === member)
+        );
+      };
+      ok = idFields.every(([name]) => name === fieldName || literal.has(name) || writtenBack(name));
     }
     if (!ok) {
       errors.push({
-        message: `values may repeat in the picker — '${targetName}.${fieldName}' is not unique (a sole @meta.id, @db.index.unique, or a composite key member with the other members pinned by '=' in the filter)`,
+        message: `values may repeat in the picker — '${targetName}.${fieldName}' is not unique (a sole @meta.id, @db.index.unique, or a composite key member with the other members pinned by '=' to a literal in the filter, or to a host field a fill writes back from the picked row)`,
         severity: WARNING,
         range: token.range,
       });

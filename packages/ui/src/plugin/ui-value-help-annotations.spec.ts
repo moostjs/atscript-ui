@@ -1013,23 +1013,35 @@ export interface CustomerBase {
 export interface Customer extends CustomerBase {
     country: string
     @ui.valueHelp City, 'code', \`country = Customer.country and active = true\`
+    @ui.valueHelp.fill 'country', 'country'
     city?: string
     @ui.valueHelp City, 'code', \`country = Customer.region\`
+    @ui.valueHelp.fill 'region', 'country'
     other?: string
 }`);
+    // (the fills write the key member back: no repeating-values warning, VH6)
     expect(m).toEqual([]);
   });
 
-  it("a host reference pins a composite-key member: no repeating-values warning (VH6)", async () => {
+  it("a host reference pins a composite-key member only with a fill writing it back (VH6)", async () => {
     const m = await msgs(`
 export interface Customer {
     country: string
     @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'country', 'country'
     city?: string
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    hostOnly?: string
+    @ui.valueHelp City, 'code', \`country = Customer.country\`
+    @ui.valueHelp.fill 'country', 'name'
+    elsewhere?: string
     @ui.valueHelp City, 'code'
     unpinned?: string
 }`);
-    expect(m.filter((x) => x.includes("values may repeat"))).toHaveLength(1);
+    // pinned only while the host field has a value: an empty one lists every country's codes
+    const repeat = m.filter((x) => x.includes("values may repeat"));
+    expect(repeat).toHaveLength(3);
+    expect(repeat[0]).toContain("or to a host field a fill writes back from the picked row");
   });
 
   it("a dictionary bound from its own interface: the right-hand side is the host", async () => {
@@ -1151,6 +1163,7 @@ export interface RowTable extends Row {}
 annotate RowTable {
     @ui.valueHelp City, 'code', \`country = RowTable.country\`
     @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'country', 'country'
     city
 }`);
     expect(m).toEqual([]);
