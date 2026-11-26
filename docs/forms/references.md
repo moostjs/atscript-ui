@@ -199,7 +199,8 @@ A composite-key member a host reference pins (`country` of a city keyed by
 one lists the ids of every country. So the compiler keeps its "values may
 repeat" warning unless a fill writes the host field back from the picked row
 (`@ui.valueHelp.fill 'country', 'country'`). While it has a value, the
-pickers hide it.
+scope lists it in `pinned` (`useAsValueHelp().scope`), so a custom picker can
+hide it.
 
 ## A pick fills other fields: `@ui.valueHelp.fill`
 
