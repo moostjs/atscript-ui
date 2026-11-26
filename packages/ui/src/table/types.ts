@@ -15,7 +15,12 @@ export interface SearchIndexInfo {
 /** Relation summary in meta response. */
 export interface RelationInfo {
   name: string;
-  direction: "to" | "from" | "via";
+  /**
+   * `"store"` (since 0.1.190, `@db.rel.store`, `@atscript/db` 0.1.196+): no
+   * foreign key, the store correlates the rows; like `"to"` / `"from"`, it is
+   * a to-one relation unless `isArray`.
+   */
+  direction: "to" | "from" | "via" | "store";
   isArray: boolean;
   /**
    * `true` when the relation is `@db.rel.filterable`: the server accepts

@@ -337,15 +337,6 @@ function annotatedField(
   return { prop, path, struct, owner };
 }
 
-function isNavigation(node: SemanticNode | undefined): boolean {
-  return (
-    !!node &&
-    (node.countAnnotations("db.rel.to") > 0 ||
-      node.countAnnotations("db.rel.from") > 0 ||
-      node.countAnnotations("db.rel.via") > 0)
-  );
-}
-
 /** Top-level conjuncts of a predicate (an `and` chain flattened). */
 function conjuncts(expr: SemanticQueryExprNode): SemanticQueryExprNode[] {
   if (isQueryLogical(expr) && expr.operator === "and") return expr.operands.flatMap(conjuncts);
@@ -520,8 +511,9 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
   const host = token.parentNode;
   const field = annotatedField(host, doc);
 
-  // VH8: navigation field / `.distinct` on the same node
-  if (isNavigation(field?.prop ?? host)) {
+  // VH8: navigation field (`@db.rel.store` included) / `.distinct` on the same node
+  const navNode = field?.prop ?? host;
+  if (navNode && isNavProp(navNode)) {
     errors.push({
       message: "@ui.valueHelp is not valid on a navigation field — bind the foreign-key field",
       severity: ERROR,

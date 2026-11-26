@@ -10,7 +10,7 @@ import { childFields, isArrayField, isObjectField, isTupleField, isUnionField } 
 
 /**
  * Whether a form leaves this prop out: a navigation field (`@db.rel.from` /
- * `.to` / `.via`) without a `@ui.form.*` annotation of its own. Navigation
+ * `.to` / `.via` / `.store`) without a `@ui.form.*` annotation of its own. Navigation
  * fields hold related rows (loaded with `$with`), not data the row's own form
  * edits, and a two-way pair points back at the form's own type. Annotating one
  * (`@ui.form.order`, `@ui.form.component`, …) opts it in.

@@ -51,6 +51,18 @@ export interface RecItem {
     shelf?: RecShelf
 }
 
+/// A navigation without a foreign key: the store correlates the rows (`@db.rel.store`).
+@db.table 'rec_store_shelves'
+export interface RecStoreShelf {
+    @meta.id
+    id: number
+
+    name: string
+
+    @db.rel.store
+    items?: RecItem[]
+}
+
 /// Self-referencing table: a parent FK and both nav directions.
 @db.table 'rec_categories'
 export interface RecCategory {

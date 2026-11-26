@@ -16,6 +16,7 @@ import {
   RecMU,
   RecShelf,
   RecShelfWithItems,
+  RecStoreShelf,
   RecW,
   TreeNode,
   TupleHolder,
@@ -323,8 +324,9 @@ describe("recursive types", () => {
   });
 
   describe("navigation fields", () => {
-    it("are skipped by default (from / to)", () => {
+    it("are skipped by default (from / to / store)", () => {
       expect(paths(createFormDef(RecShelf))).toEqual(["id", "name"]);
+      expect(paths(createFormDef(RecStoreShelf))).toEqual(["id", "name"]);
       expect(paths(createFormDef(RecItem))).toEqual(["id", "title", "shelfId"]);
       expect(paths(createFormDef(RecCategory, { mode: "edit" }))).toEqual([
         "id",
@@ -335,6 +337,7 @@ describe("recursive types", () => {
 
     it("are skipped after the /meta round-trip", () => {
       expect(paths(createFormDef(metaRoundTrip(RecShelf).type))).toEqual(["id", "name"]);
+      expect(paths(createFormDef(metaRoundTrip(RecStoreShelf).type))).toEqual(["id", "name"]);
       expect(paths(createFormDef(metaRoundTrip(RecCategory).type))).toEqual([
         "id",
         "name",

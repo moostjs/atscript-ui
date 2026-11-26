@@ -128,7 +128,7 @@ function unnamed(field: FormFieldDef): FormFieldDef {
  * a computed view column, from `opts.metaFields`; an update-stamped field
  * (see `CreateFormDefOptions.mode`), when `opts.mode` is `"edit"`.
  *
- * A navigation field (`@db.rel.from` / `.to` / `.via`) is left out unless it
+ * A navigation field (`@db.rel.from` / `.to` / `.via` / `.store`) is left out unless it
  * carries a `@ui.form.*` annotation of its own (see {@link isSkippedNavField}).
  *
  * Recursive types are safe at any depth: a type reached again inside its own

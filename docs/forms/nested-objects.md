@@ -77,7 +77,7 @@ export interface Category {
 ```
 
 Navigation fields of a db table — `@db.rel.from`, `@db.rel.to`,
-`@db.rel.via` — are **not** form fields by default: they hold related rows
+`@db.rel.via`, `@db.rel.store` — are **not** form fields by default: they hold related rows
 (loaded with `$with`), not data the row's own form edits, and a two-way pair
 points straight back at the form's type. The form leaves them out, its
 validator ignores loaded related rows, and neither the submitted data nor

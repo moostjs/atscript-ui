@@ -50,6 +50,7 @@ from.
 When upgrading from 0.1.189 or earlier (to 0.1.190):
 
 - `getDefaultClientFactory()`, `getMetaEntry().client`, `sharedPresetsClient()` and `useTableContext().client` are typed `ClientLike<T>` (from `@atscript/db-client`, re-exported by `@atscript/ui`): the public members of `Client`, so a factory may return an object that does not extend the class. Code that annotates their result as `Client<T>` writes `ClientLike<T>`. Nothing changes at run time.
+- `RelationInfo.direction` (`/meta` `relations[]`) gains `"store"` (`@db.rel.store`, `@atscript/db` 0.1.196+): a relation without a foreign key, to-one or to-many by `isArray`. Code that switches over `direction` adds a branch. Forms leave a store navigation out like any other, and `@ui.valueHelp` on one is a compile error.
 
 When upgrading from 0.1.181 or earlier (to 0.1.182 — all additive, except the field-row note):
 

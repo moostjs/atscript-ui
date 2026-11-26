@@ -295,12 +295,15 @@ export interface Host {
     @db.rel.from
     @ui.valueHelp Country, 'code'
     nav: Country[]
+    @db.rel.store
+    @ui.valueHelp Country, 'code'
+    stored?: Country
     @ui.valueHelp Country, 'code'
     @ui.valueHelp.distinct
     both: string
 }`)
     ).join("\n");
-    expect(m).toContain("not valid on a navigation field");
+    expect(m.match(/not valid on a navigation field/g)).toHaveLength(2);
     expect(m).toContain("@ui.valueHelp cannot coexist with @ui.valueHelp.distinct");
   });
 });

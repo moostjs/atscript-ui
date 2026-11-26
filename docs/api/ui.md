@@ -187,7 +187,7 @@ interface CreateFormDefOptions {
 
 When `opts.versionColumn` is supplied, the matching prop is excluded from the returned `fields[]` (so `AsForm`'s renderer doesn't paint it) but remains in `flatMap` and in the form's underlying data wrapper. This is the contract OCC needs: hide the version input from users while keeping the value in the wire payload so the server can lift it into `$cas`. Pass `meta.versionColumn` directly — it is the logical field name (see [`MetaResponse`](#metaresponse)). With `mode: "edit"` it defaults to the top-level `@db.column.version` field, so an edit form built straight from the type hides it too. Since 0.1.164.
 
-Navigation fields (`@db.rel.from` / `@db.rel.to` / `@db.rel.via`) are left out of the form: they hold related rows, not data the row's own form edits. Annotate one with any `@ui.form.*` (e.g. `@ui.form.order`) to include it — an included navigation object renders as a section, and its changes are nested writes to the related table. A skipped navigation field is also skipped by the [form validator](#validators), and its loaded rows are never sent: not by `buildFormDiff` (at any depth), not in `AsForm`'s `submit` data. Since 0.1.164.
+Navigation fields (`@db.rel.from` / `@db.rel.to` / `@db.rel.via`, and `@db.rel.store` since 0.1.190) are left out of the form: they hold related rows, not data the row's own form edits. Annotate one with any `@ui.form.*` (e.g. `@ui.form.order`) to include it — an included navigation object renders as a section, and its changes are nested writes to the related table. A skipped navigation field is also skipped by the [form validator](#validators), and its loaded rows are never sent: not by `buildFormDiff` (at any depth), not in `AsForm`'s `submit` data. Since 0.1.164.
 
 ### `omitSkippedNavFields(def, data)`
 
@@ -394,7 +394,8 @@ interface SearchIndexInfo {
 
 interface RelationInfo {
   name: string;
-  direction: "to" | "from" | "via";
+  /** `"store"` since 0.1.190 (`@db.rel.store`): no foreign key, the store correlates the rows; to-one unless `isArray`. */
+  direction: "to" | "from" | "via" | "store";
   isArray: boolean;
   /** `@db.rel.filterable` — the server accepts `name: { $some | $none: … }` filters (`@atscript/moost-db` 0.1.147+). Since 0.1.147. */
   filterable?: boolean;
