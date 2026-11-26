@@ -1506,28 +1506,17 @@ annotate Customer {
         expect(hover?.prop.token("identifier")?.text).toBe("population");
       });
 
-      // In an annotate entry, atscript core's `getToDefinitionAt` takes any token whose parent
-      // is the entry for the entry name and looks its text up on the annotated interface, before
-      // the argument's field scope is asked — so a string argument naming a field of ANOTHER type
-      // (the dictionary) gets no definition there; `@ui.valueHelp`'s own `field` has the same gap.
-      // Hover, completion and diagnostics use the scope and work. Drop `.fails` once core asks
-      // the field scope first.
-      const definitionCase = where === "inline" ? it : it.fails;
-      definitionCase(
-        "go-to-definition on the dictionary field of a fill and of a column",
-        async () => {
-          const { doc, text } = await compile(source);
-          const target = at(text, "'name'", 3, "@ui.valueHelp.fill");
-          expect(
-            doc.getToDefinitionAt(target.line, target.character)![0].targetSelectionRange.start
-              .line,
-          ).toBe(at(text, "name: string", 0, "export interface City").line);
-          const pos = at(text, "'population'", 3);
-          expect(
-            doc.getToDefinitionAt(pos.line, pos.character)![0].targetSelectionRange.start.line,
-          ).toBe(at(text, "population: number").line);
-        },
-      );
+      it("go-to-definition on the dictionary field of a fill and of a column", async () => {
+        const { doc, text } = await compile(source);
+        const target = at(text, "'name'", 3, "@ui.valueHelp.fill");
+        expect(
+          doc.getToDefinitionAt(target.line, target.character)![0].targetSelectionRange.start.line,
+        ).toBe(at(text, "name: string", 0, "export interface City").line);
+        const pos = at(text, "'population'", 3);
+        expect(
+          doc.getToDefinitionAt(pos.line, pos.character)![0].targetSelectionRange.start.line,
+        ).toBe(at(text, "population: number").line);
+      });
     });
   }
 
