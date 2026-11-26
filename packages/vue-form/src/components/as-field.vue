@@ -260,6 +260,10 @@ let resolvedPrefix: string | ComputedRef<string | undefined> | undefined;
 let resolvedSuffix: string | ComputedRef<string | undefined> | undefined;
 let resolvedScale: number | ComputedRef<number | undefined> | undefined;
 
+// A field of a namespace object (`shipping.amount`) has its siblings next to it
+// (`shipping.currency`), not in the form's root: sibling reads go through its parent path.
+const siblingPrefix = props.field.path.slice(0, props.field.path.lastIndexOf(".") + 1);
+
 if (hasAdornment) {
   const _data = useAsData();
   const { locale: _locale } = useAsLocale();
@@ -268,7 +272,7 @@ if (hasAdornment) {
   if (currencyLiteral !== undefined) {
     resolvedCurrencyCode = currencyLiteral;
   } else if (currencyRefField !== undefined) {
-    const ref = _data.siblingValue<string>(currencyRefField);
+    const ref = _data.siblingValue<string>(siblingPrefix + currencyRefField);
     resolvedCurrencyCode = computed<string | undefined>(() => {
       const v = ref.value;
       return typeof v === "string" && v.length > 0 ? v : undefined;
@@ -279,7 +283,7 @@ if (hasAdornment) {
   if (unitLiteral !== undefined) {
     resolvedUnitCode = unitLiteral;
   } else if (unitRefField !== undefined) {
-    const ref = _data.siblingValue<string>(unitRefField);
+    const ref = _data.siblingValue<string>(siblingPrefix + unitRefField);
     resolvedUnitCode = computed<string | undefined>(() => {
       const v = ref.value;
       return typeof v === "string" && v.length > 0 ? v : undefined;
@@ -292,7 +296,9 @@ if (hasAdornment) {
     isRef(v) ? v.value : v;
 
   // Prefix: explicit @ui.form.prefix wins → .ref → currency narrow symbol.
-  const prefixRefValue = prefixRefField ? _data.siblingValue<string>(prefixRefField) : undefined;
+  const prefixRefValue = prefixRefField
+    ? _data.siblingValue<string>(siblingPrefix + prefixRefField)
+    : undefined;
   resolvedPrefix = computed<string | undefined>(() => {
     if (prefixLiteral !== undefined && prefixLiteral.length > 0) {
       return userText(UI_FORM_PREFIX, prefixLiteral, modelT());
@@ -308,7 +314,9 @@ if (hasAdornment) {
   });
 
   // Suffix: explicit @ui.form.suffix wins → .ref → unit code.
-  const suffixRefValue = suffixRefField ? _data.siblingValue<string>(suffixRefField) : undefined;
+  const suffixRefValue = suffixRefField
+    ? _data.siblingValue<string>(siblingPrefix + suffixRefField)
+    : undefined;
   resolvedSuffix = computed<string | undefined>(() => {
     if (suffixLiteral !== undefined && suffixLiteral.length > 0) {
       return userText(UI_FORM_SUFFIX, suffixLiteral, modelT());
@@ -749,14 +757,11 @@ const boundOptions =
 if (boundOptions) options = boundOptions.options;
 
 // `@ui.valueLabel` (since 0.1.190): the code shown with the text of a sibling field. Bound
-// apart from the display props (like `isDirty`): it reads the data. A field of a namespace
-// object (`shipping.city`) has its sibling next to it (`shipping.cityName`).
+// apart from the display props (like `isDirty`): it reads the data, next to the field.
 const valueLabelMeta = valueLabelOf(prop);
 let valueLabel: ComputedRef<string | undefined> | undefined;
 if (valueLabelMeta) {
-  const dot = props.field.path.lastIndexOf(".");
-  const textPath = props.field.path.slice(0, dot + 1) + valueLabelMeta.field;
-  const text = useAsData().siblingValue(textPath);
+  const text = useAsData().siblingValue(siblingPrefix + valueLabelMeta.field);
   valueLabel = computed(() => {
     const v = model.value;
     if (v === undefined || v === null || v === "" || typeof v === "object") return undefined;

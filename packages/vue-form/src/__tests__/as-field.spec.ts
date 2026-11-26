@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { nextTick } from "vue";
+import { defineComponent, h, nextTick } from "vue";
+import { createDefaultTypes } from "../composables/create-default-types";
 import { mountForm, numberProp, objectType, stringProp } from "./helpers";
 
 describe("AsField", () => {
@@ -137,6 +138,30 @@ describe("AsField", () => {
     const { DescriptionField } = await import("./fixtures/field-annotations.as");
     const { wrapper } = mountForm(DescriptionField);
     expect(wrapper.text()).toContain("Tell us about yourself");
+  });
+
+  // A field of a namespace object (inlined `shipping.total`) has its sibling next to it,
+  // not in the form's root (since 0.1.190; it used to read the root's `currency`).
+  it("@db.amount.currency.ref in a namespace object reads the currency next to the amount", async () => {
+    const type = objectType({
+      currency: stringProp(),
+      shipping: objectType({
+        currency: stringProp(),
+        total: numberProp({ "db.amount.currency.ref": "currency" }),
+      }),
+    });
+    const Money = defineComponent({
+      props: ["model", "prefix"] as unknown as never,
+      setup(props: { prefix?: string }) {
+        return () => h("span", { class: "money-prefix" }, props.prefix ?? "");
+      },
+    });
+    const { wrapper } = mountForm(type, {
+      types: { ...createDefaultTypes(), decimal: Money },
+      initialValue: { currency: "USD", shipping: { currency: "EUR", total: 10 } },
+    });
+    await nextTick();
+    expect(wrapper.find(".money-prefix").text()).toBe("€");
   });
 
   it("surfaces @ui.form.prefix.icon as a `prefixIcon` prop on the rendered field component", async () => {
