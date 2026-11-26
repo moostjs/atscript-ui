@@ -51,6 +51,11 @@ When upgrading from 0.1.189 or earlier (to 0.1.190):
 
 - `getDefaultClientFactory()`, `getMetaEntry().client`, `sharedPresetsClient()` and `useTableContext().client` are typed `ClientLike<T>` (from `@atscript/db-client`, re-exported by `@atscript/ui`): the public members of `Client`, so a factory may return an object that does not extend the class. Code that annotates their result as `Client<T>` writes `ClientLike<T>`. Nothing changes at run time.
 - `RelationInfo.direction` (`/meta` `relations[]`) gains `"store"` (`@db.rel.store`, `@atscript/db` 0.1.196+): a relation without a foreign key, to-one or to-many by `isArray`. Code that switches over `direction` adds a branch. Forms leave a store navigation out like any other, and `@ui.valueHelp` on one is a compile error.
+- A reference pick validates the field, marks it touched and emits `change` at once, not on the next blur. See [references](/forms/references).
+- `ValueHelpSearchOptions.select` adds fields to the ones a value-help search always reads, instead of replacing them. Pass only the extra fields you need.
+- `as-ref-root` is a flex row (the input, then the `trailing` slot) instead of a block. Check style overrides that set `display` on it or on `as-ref-anchor`.
+- `buildQuery({ columnPaths })` and the export read the `selectWith` fields of the `columnPaths` columns, not of the visible ones.
+- A `select` / `radio` field with `@ui.valueHelp` and no options of its own lists the dictionary's values. It used to render an empty select.
 
 When upgrading from 0.1.181 or earlier (to 0.1.182 — all additive, except the field-row note):
 

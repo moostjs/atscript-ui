@@ -374,6 +374,12 @@ After the server confirms the write, call `rebase()` to make the current
 data the new baseline. The form becomes clean (`isDirty === false`)
 without a remount, and the next edit diffs against the just-saved state.
 
+On a versioned form (an integer version column or a version token), the
+write returns no new version, so `rebase()` keeps the loaded one and a second
+save without a reload is answered as a version mismatch (409). Re-read the
+saved row and fold it in with
+[`rebaseOnto(fresh)`](#folding-in-fresh-server-data-rebaseonto) instead.
+
 `reset()` re-baselines too, but with the form's fields **emptied**, not
 back to the loaded row (see
 [What `reset()` does](/forms/validation#what-reset-does)); the version
