@@ -191,6 +191,9 @@ const types = createDefaultTypes();
 </template>
 ```
 
+To keep the invitee's run across a reload after the server rotates
+the token, add `persist-token="session"` and `@link-used`; see
+[Keeping the current token across reloads](/workflows/outlets-resume#keeping-the-current-token-across-reloads).
 See [Outlets & Resume](/workflows/outlets-resume) and
 [State Persistence](/workflows/state-persistence) for the full
 pattern.

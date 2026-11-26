@@ -54,6 +54,12 @@ interface AsWfFormProps {
   wfidName?: string;
   /** Pre-existing token to resume from (e.g. Vue Router param). */
   initialToken?: string;
+  /** "session": keep the run's token in this tab's sessionStorage across reloads (since 0.1.187). */
+  persistToken?: "session";
+  /** sessionStorage key for persistToken. Default `wf:<page>:<name>` (route with params filled in). */
+  persistTokenKey?: string;
+  /** The link is no longer needed — remove it from the URL (`@link-used`; with or without persistToken). */
+  onLinkUsed?: () => void;
 
   // ── HTTP options ───────────────────────────────────────────
   /** Initial form data, sent as the first request's `input.formData`. */
@@ -109,6 +115,7 @@ defineEmits<{
   // `next` triggers an action. See "Finish Screens".
   (e: "dismiss"): void;
   (e: "action", action: WfAction): void;
+  (e: "token", token: string | undefined): void;
 }>();
 ```
 
@@ -128,6 +135,18 @@ defineEmits<{
   internally and don't trigger this event.
 - **`@loading`** — fires on every transition into / out of the
   loading state. Use for skeleton UI or button-disable.
+- **`@token`** (since 0.1.187) — the token the next request sends
+  changed: a new `wfs` in an answer, or `undefined` once the run is
+  over. It doesn't fire for the start token, and never with cookie
+  transport. It is the low-level API under `persistToken`.
+- **`@link-used`** (since 0.1.187) — the link token is no longer needed:
+  the server has answered it and the run is held elsewhere (the saved
+  entry with `persistToken`, or the cookie). Remove it from the URL with
+  your router. It binds the `onLinkUsed` prop, so `useWfForm()` takes the
+  same callback.
+  See
+  [Keeping the current token across reloads](/workflows/outlets-resume#keeping-the-current-token-across-reloads)
+  for both.
 
 ## Slots
 
@@ -301,6 +320,7 @@ interface UseWfFormReturn {
   finished: Ref<boolean>;
   response: ShallowRef<unknown>;
   error: ShallowRef<unknown>;
+  token: Readonly<Ref<string | undefined>>; // the token the next request sends, what @token emits
 
   // Methods
   start: (input?: Record<string, unknown>) => Promise<void>;
@@ -310,6 +330,22 @@ interface UseWfFormReturn {
   retry: () => Promise<void>;
 }
 ```
+
+### What `start()` sends
+
+`start(input?)` posts the workflow id, `input` (as `input.formData`) and
+a token:
+
+- **The start token** (`initialToken`, or the URL's with
+  `tokenTransport: "query"`), until a request carrying it has been
+  answered, or after its value changes.
+- **Otherwise the run's current token.** Mid-run, `start()` resumes the
+  current pause, and `input` reaches the paused step as its `formData`.
+- **Nothing once the run is over** (finished, or paused out of band), so
+  `start()` begins a new run. Before 0.1.187 it resent the link or the
+  finished run's token. With cookie transport the browser still sends the
+  run's cookie until the server clears it, which `@wooksjs/event-wf` does
+  from 0.8.6.
 
 A rolled-your-own shell. Note that the placeholder text below is just
 illustrative — `<AsWfForm>` renders an `as-form-overlay` spinner on a
@@ -406,6 +442,13 @@ abortController = new AbortController();
 So calling `wf.action('resend')` while a slow `wf.submit(...)` is
 mid-flight cancels the submit and dispatches the action. The user
 never sees a "delayed" response from the old request.
+
+The exception is cookie transport (since 0.1.187). There, a `start()`, or
+a `retry()` of a start, waits for the request in flight to settle and then
+goes with the state it left. A start sends `{ wfid }` with the cookie, and
+a cookie whose state the in-flight request has just consumed reads as no
+token, so the server would start a second run. Aborting the fetch does not
+stop the server.
 
 The component also aborts on unmount.
 

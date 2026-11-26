@@ -54,7 +54,7 @@ sendInvite(@WorkflowParam("context") ctx: InviteCtx) {
 ```
 
 - Durable state: `HandleStateStrategy` + `AsWfStore` — the link may be clicked tomorrow. See [state.md](state.md).
-- Admin's browser sees `{ sent: true }` → `@finished`; the invitee opens `?wfs=<token>` and mounts `<AsWfForm :initial-token="wfs" name="users/invite">` — engine resumes at `invite-send`, the `ctx.inviteEmailSent` guard skips the re-send. See [outlets.md](outlets.md).
+- Admin's browser sees `{ sent: true }` → `@finished`; the invitee opens `?wfs=<token>` and mounts `<AsWfForm :initial-token="wfs" name="users/invite">` — engine resumes at `invite-send`, the `ctx.inviteEmailSent` guard skips the re-send. Add `persist-token="session"` + `@link-used` (token in `sessionStorage`, never the URL) so a reload survives a rotated token — see [outlets.md](outlets.md#follow-the-token-across-reloads).
 - `@StepTTL` bounds the invite lifetime; `wfStore.cleanup()` on a timer reaps expired rows.
 - Shadow columns (`@wf.store.fromContext 'email'`, `'roleName'`) mirror context onto the state row so an admin UI can list pending invites without parsing JSON blobs.
 - Gate step 1 with an inline session check — auth interceptors don't auto-cover WF steps.

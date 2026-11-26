@@ -373,8 +373,10 @@ timer on `app.dispose()`, so tests and graceful shutdowns don't leak it.
 
 ## Race-safe consume: `getAndDelete`
 
-Outlet resume flows (magic links) are single-use by default — the
-engine calls `consume(token)` which calls `wfStore.getAndDelete`.
+Every resume consumes the state it reads: the engine calls
+`consume(token)`, which calls `wfStore.getAndDelete`. Whether the
+same token works again depends on where the run pauses next (see
+[How resume works on the wire](/workflows/outlets-resume#how-resume-works-on-the-wire)).
 The store guarantees:
 
 1. `findRow(handle)` to load the state.

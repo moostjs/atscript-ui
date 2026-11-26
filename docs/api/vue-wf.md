@@ -61,9 +61,37 @@ interface AsWfFormProps {
   autoStart?: boolean;
   /**
    * Pre-existing token to resume from — use when the token lives outside
-   * `window.location.search` (Vue Router param, app state).
+   * `window.location.search` (Vue Router param, app state). Sent until a
+   * request carrying it is answered, or after its value changes.
    */
   initialToken?: string;
+  /**
+   * Since 0.1.187. `"session"`: keep the run's token in this tab's
+   * `sessionStorage` (`{ link, token }`), so a reload resumes the run while the
+   * token stays out of the URL. Saved wins over no link / the same link; a
+   * different link starts from itself; removed when the run is over, and on a
+   * `410` of a run that did not start from a link; storage errors leave the run
+   * in memory and the link in the URL. Cookie transport: stores nothing, only the
+   * link is dropped. Off by default; read at setup.
+   */
+  persistToken?: "session";
+  /**
+   * `sessionStorage` key for `persistToken`. Default `wf:<page>:<name>`, the page
+   * being the Vue Router route pattern with its params filled in except the
+   * link's (`/projects/42/setup`, `/invite`), else `location.pathname` — which
+   * cannot tell a path-param link apart (set the key there).
+   */
+  persistTokenKey?: string;
+  /**
+   * The link (`initialToken`, or the URL's with `tokenTransport: "query"`) is no
+   * longer needed — answered, and the run held elsewhere (the saved entry; with
+   * cookie transport a successful answer or a `410`). Remove it from the URL
+   * (`router.replace`). Fires with or without `persistToken`; bound by `@link-used`;
+   * a throwing handler is logged in development. Without it, `persistToken` with
+   * no Vue Router removes `?<tokenName>=` via `history.replaceState`; with a router
+   * the link stays (dev warning).
+   */
+  onLinkUsed?: () => void;
   /** Type-to-component map for AsForm rendering. */
   types: TAsTypeComponents;
   /** First-validation strategy. */
@@ -97,8 +125,14 @@ interface AsWfFormProps {
   // Fired by the default AsWfFinish screen — see Finish Screens.
   dismiss:  () => void;
   action:   (action: WfActionRequest) => void;
+  // Since 0.1.187: the token the next request sends changed (`undefined`: none left).
+  // Never fires with cookie transport. Rules under useWfForm's `token`.
+  token:    (token: string | undefined) => void;
 }
 ```
+
+`@link-used` (since 0.1.187) is not an emit but the `onLinkUsed` prop above, so the
+same callback reaches `useWfForm`.
 
 ### Slots
 
@@ -181,6 +215,9 @@ interface UseWfFormOptions {
   fetch?: typeof fetch;
   autoStart?: boolean;
   initialToken?: string;
+  persistToken?: "session"; // since 0.1.187 — see the AsWfForm prop
+  persistTokenKey?: string;
+  onLinkUsed?: () => void;
 }
 ```
 
@@ -202,8 +239,16 @@ interface UseWfFormReturn {
   finished: Ref<boolean>;
   response: ShallowRef<unknown>;
   error: ShallowRef<unknown>;
+  /**
+   * Since 0.1.187. The state token the next request sends: the start token
+   * (`initialToken`, or the URL's with `tokenTransport: "query"`), then each
+   * answer's `wfs`, refused answers included. `undefined` once the run is over
+   * for this client: a finish, or an outlet pause whose answer carries no `wfs`.
+   * Always `undefined` with cookie transport.
+   */
+  token: Readonly<Ref<string | undefined>>;
 
-  /** Begin the workflow (or resume from `initialToken`). */
+  /** Begin the workflow, or resume: from the start token until it is answered, else the current token. */
   start: (input?: Record<string, unknown>) => Promise<void>;
   /** Submit the current form payload. */
   submit: (data: unknown) => Promise<void>;
@@ -222,6 +267,8 @@ interface UseWfFormReturn {
 - **Re-validation** is detected by hashing the `inputRequired.payload`. Identical schemas keep the same FormDef and `formData` reference; new schemas force a remount via `formKey`.
 - **AbortController** is created per request and cancelled when a newer request starts or the component unmounts — no race conditions during quick action chains.
 - **`initialToken`** takes precedence over `tokenTransport: "query"` auto-detection so Router-level params win over query strings.
+- **`token`** starts as the start token, so watching it (or `@token`) reports only the changes the run makes: `undefined` after a finish or an out-of-band pause, the handed-over token after an in-band pause that carries a `wfs`. See [Keeping the current token across reloads](/workflows/outlets-resume#keeping-the-current-token-across-reloads) for the full table.
+- **`start()`** (since 0.1.187) sends the start token until a request carrying it is answered, or after `initialToken` changes value; otherwise the current token. Mid-run it resumes the current pause; once the run is over it begins a new run. With cookie transport the browser still sends the run's cookie until the server clears it (`@wooksjs/event-wf` 0.8.6). See [What `start()` sends](/workflows/client#what-start-sends).
 
 ### Custom-shell example
 

@@ -20,37 +20,42 @@
 
 ## <AsWfForm> props
 
-| Prop              | Type                                     | Default            | Purpose                                                                                                                                                                                            |
-| ----------------- | ---------------------------------------- | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `path`            | `string`                                 | (required)         | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                                                                                                                    |
-| `name`            | `string`                                 | (required)         | Workflow id (`wfid`) to start (e.g. `'auth/login'`)                                                                                                                                                |
-| `input`           | `Record<string, unknown>`                | `undefined`        | Initial form data — sent as the start request's `input.formData` (protocol envelope); server reads `useWfState().input().formData` or `useAtscriptWf(Form).resolveInput()`. Never unwrapped.       |
-| `tokenTransport`  | `'body' \| 'cookie' \| 'query'`          | `'body'`           | Where to read / write the state token                                                                                                                                                              |
-| `tokenName`       | `string`                                 | `'wfs'`            | Token field name in JSON body / URL query                                                                                                                                                          |
-| `wfidName`        | `string`                                 | `'wfid'`           | Workflow-id field name in the JSON body                                                                                                                                                            |
-| `fetchOptions`    | `RequestInit`                            | `{}`               | Static `fetch` options (headers, credentials, etc.) merged into every request                                                                                                                      |
-| `fetch`           | `typeof fetch`                           | `globalThis.fetch` | Override `fetch` itself — for auth wrappers / status bus                                                                                                                                           |
-| `autoStart`       | `boolean`                                | `true`             | Auto-call `start(input)` on mount                                                                                                                                                                  |
-| `initialToken`    | `string`                                 | `undefined`        | Pre-existing state token (resume). Takes precedence over `tokenTransport: 'query'` auto-detection                                                                                                  |
-| `types`           | `TAsTypeComponents`                      | (required)         | Type-to-component map for `AsForm` rendering (use `createDefaultTypes()` from `@atscript/vue-form`)                                                                                                |
-| `firstValidation` | `TFormState['firstValidation']`          | undefined          | First-validation strategy forwarded to `AsForm` (see `atscript-ui-forms` skill)                                                                                                                    |
-| `components`      | `Record<string, Component>`              | undefined          | Custom components map forwarded to `AsForm`                                                                                                                                                        |
-| `clientFactory`   | `ClientFactory`                          | undefined          | Per-form FK value-help client factory forwarded to `AsForm`                                                                                                                                        |
-| `hideRootTitle`   | `boolean`                                | `false`            | Forwarded to the inner `AsForm` — suppress the root field's `@meta.label` heading (title only; description still renders)                                                                          |
-| `hideSubmit`      | `boolean`                                | `false`            | Forwarded to the inner `AsForm` — suppress the default submit button                                                                                                                               |
-| `navigate`        | `(url: string) => void \| Promise<void>` | undefined          | Redirect handler for finish-screen `redirect` actions — see [finish-screens.md](finish-screens.md). Matches `@atscript/db-client`'s `Client({ navigate })`. Falls back to `window.location.assign` |
+| Prop              | Type                                     | Default              | Purpose                                                                                                                                                                                                                     |
+| ----------------- | ---------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `path`            | `string`                                 | (required)           | HTTP endpoint for the workflow trigger (e.g. `/api/wf/trigger`)                                                                                                                                                             |
+| `name`            | `string`                                 | (required)           | Workflow id (`wfid`) to start (e.g. `'auth/login'`)                                                                                                                                                                         |
+| `input`           | `Record<string, unknown>`                | `undefined`          | Initial form data — sent as the start request's `input.formData` (protocol envelope); server reads `useWfState().input().formData` or `useAtscriptWf(Form).resolveInput()`. Never unwrapped.                                |
+| `tokenTransport`  | `'body' \| 'cookie' \| 'query'`          | `'body'`             | Where to read / write the state token                                                                                                                                                                                       |
+| `tokenName`       | `string`                                 | `'wfs'`              | Token field name in JSON body / URL query                                                                                                                                                                                   |
+| `wfidName`        | `string`                                 | `'wfid'`             | Workflow-id field name in the JSON body                                                                                                                                                                                     |
+| `fetchOptions`    | `RequestInit`                            | `{}`                 | Static `fetch` options (headers, credentials, etc.) merged into every request                                                                                                                                               |
+| `fetch`           | `typeof fetch`                           | `globalThis.fetch`   | Override `fetch` itself — for auth wrappers / status bus                                                                                                                                                                    |
+| `autoStart`       | `boolean`                                | `true`               | Auto-call `start(input)` on mount                                                                                                                                                                                           |
+| `initialToken`    | `string`                                 | `undefined`          | Pre-existing state token (resume). Takes precedence over `tokenTransport: 'query'` auto-detection                                                                                                                           |
+| `types`           | `TAsTypeComponents`                      | (required)           | Type-to-component map for `AsForm` rendering (use `createDefaultTypes()` from `@atscript/vue-form`)                                                                                                                         |
+| `firstValidation` | `TFormState['firstValidation']`          | undefined            | First-validation strategy forwarded to `AsForm` (see `atscript-ui-forms` skill)                                                                                                                                             |
+| `components`      | `Record<string, Component>`              | undefined            | Custom components map forwarded to `AsForm`                                                                                                                                                                                 |
+| `clientFactory`   | `ClientFactory`                          | undefined            | Per-form FK value-help client factory forwarded to `AsForm`                                                                                                                                                                 |
+| `hideRootTitle`   | `boolean`                                | `false`              | Forwarded to the inner `AsForm` — suppress the root field's `@meta.label` heading (title only; description still renders)                                                                                                   |
+| `hideSubmit`      | `boolean`                                | `false`              | Forwarded to the inner `AsForm` — suppress the default submit button                                                                                                                                                        |
+| `navigate`        | `(url: string) => void \| Promise<void>` | undefined            | Redirect handler for finish-screen `redirect` actions — see [finish-screens.md](finish-screens.md). Matches `@atscript/db-client`'s `Client({ navigate })`. Falls back to `window.location.assign`                          |
+| `persistToken`    | `'session'`                              | `undefined` (off)    | since 0.1.187 — keep the run's token in this tab's `sessionStorage` (`{ link, token }`) across reloads, never in the URL. Rules: [outlets.md → Follow the token across reloads](outlets.md#follow-the-token-across-reloads) |
+| `persistTokenKey` | `string`                                 | `'wf:<page>:<name>'` | storage key for `persistToken` (page = route pattern with params filled in except the link's, else pathname — set the key there for path-param links) — set it for two runs of one workflow on a page                       |
+| `onLinkUsed`      | `() => void`                             | undefined            | the link is no longer needed (answered + held by the saved entry / cookie) — remove it from the URL (`router.replace`). Bound by `@link-used`; with or without `persistToken`                                               |
 
 `path`, `name`, `types` are the only required props.
 
 ## Emits
 
-| Event      | Signature                                                             | Fires when                                                                                                                                                            |
-| ---------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `finished` | `(response: unknown) => void`                                         | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`)                                                                   |
-| `error`    | `(error: WfFormError) => void` — `{ message, status?, code?, body? }` | network failure, non-2xx response, or `{ error: {...} }` body (see [Error message resolution](#error-message-resolution)); branch on `code` for a step's own refusals |
-| `form`     | `(def: FormDef, context?: Record<string, unknown>) => void`           | each time the rendered form / context changes (initial render, schema swap, re-validation)                                                                            |
-| `submit`   | `(data: unknown) => void`                                             | user submitted the form (fires **before** the HTTP request is sent)                                                                                                   |
-| `loading`  | `(isLoading: boolean) => void`                                        | request lifecycle — `true` on send, `false` on response/error                                                                                                         |
+| Event       | Signature                                                             | Fires when                                                                                                                                                                                                                              |
+| ----------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `finished`  | `(response: unknown) => void`                                         | flow completes (`{ finished: true, ... }`) OR outlet pause (`{ sent: true }` / `{ outlet: '...' }`)                                                                                                                                     |
+| `error`     | `(error: WfFormError) => void` — `{ message, status?, code?, body? }` | network failure, non-2xx response, or `{ error: {...} }` body (see [Error message resolution](#error-message-resolution)); branch on `code` for a step's own refusals                                                                   |
+| `form`      | `(def: FormDef, context?: Record<string, unknown>) => void`           | each time the rendered form / context changes (initial render, schema swap, re-validation)                                                                                                                                              |
+| `submit`    | `(data: unknown) => void`                                             | user submitted the form (fires **before** the HTTP request is sent)                                                                                                                                                                     |
+| `loading`   | `(isLoading: boolean) => void`                                        | request lifecycle — `true` on send, `false` on response/error                                                                                                                                                                           |
+| `token`     | `(token: string \| undefined) => void`                                | the token the next request sends changed (since 0.1.187); `undefined` = run over. Not for the start token, never with cookie transport — see [outlets.md → Follow the token across reloads](outlets.md#follow-the-token-across-reloads) |
+| `link-used` | `() => void` — the `onLinkUsed` prop                                  | once the link is no longer needed (answered + held elsewhere; [outlets.md](outlets.md#follow-the-token-across-reloads) rule 4) — drop it from the URL with your router                                                                  |
 
 Side-effects are wired internally via watchers that translate composable refs to emits.
 
@@ -167,6 +172,7 @@ interface UseWfFormReturn {
   finished: Ref<boolean>;
   response: ShallowRef<unknown>;
   error: ShallowRef<unknown>;
+  token: Readonly<Ref<string | undefined>>; // since 0.1.187 — what @token emits
   start: (input?: Record<string, unknown>) => Promise<void>;
   submit: (data: unknown) => Promise<void>;
   action: (name: string) => Promise<void>;
@@ -175,27 +181,28 @@ interface UseWfFormReturn {
 }
 ```
 
-| Method                       | Sends                                | Purpose                                             |
-| ---------------------------- | ------------------------------------ | --------------------------------------------------- |
-| `start(input?)`              | `{ wfid, input?, wfs? }`             | start (or resume with `initialToken`) the flow      |
-| `submit(data)`               | `{ wfs, input: data }`               | submit the current form                             |
-| `action(name)`               | `{ wfs, action: name }`              | dispatch a plain action (no data)                   |
-| `actionWithData(name, data)` | `{ wfs, action: name, input: data }` | dispatch a `@wf.action.withData` action             |
-| `retry()`                    | last request body                    | replay the last failed request — see error recovery |
+| Method                       | Sends                                | Purpose                                                                                                                                                                                                                                                                                             |
+| ---------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `start(input?)`              | `{ wfid, input?, wfs? }`             | start, or resume: `wfs` = start token until a request carrying it is answered (or `initialToken` changed), else the current token — mid-run resumes the pause (`input` → its `formData`), run over → new run (since 0.1.187; cookie: until the server clears the cookie, `@wooksjs/event-wf` 0.8.6) |
+| `submit(data)`               | `{ wfs, input: data }`               | submit the current form                                                                                                                                                                                                                                                                             |
+| `action(name)`               | `{ wfs, action: name }`              | dispatch a plain action (no data)                                                                                                                                                                                                                                                                   |
+| `actionWithData(name, data)` | `{ wfs, action: name, input: data }` | dispatch a `@wf.action.withData` action                                                                                                                                                                                                                                                             |
+| `retry()`                    | last request body                    | replay the last failed request — see error recovery                                                                                                                                                                                                                                                 |
 
 ### State refs
 
-| Ref           | Type                                          | Replaced when                                                                 |
-| ------------- | --------------------------------------------- | ----------------------------------------------------------------------------- |
-| `formDef`     | `ShallowRef<FormDef \| null>`                 | new payload arrives (different schema) — `null` on finished/outlet            |
-| `formData`    | `ShallowRef<Record<string, unknown> \| null>` | new payload arrives — `null` on finished/outlet                               |
-| `formContext` | `ShallowRef<Record<string, unknown>>`         | every response (with `errors` stripped)                                       |
-| `errors`      | `ShallowRef<Record<string, string>>`          | every response (server-side validation errors, keyed by field path)           |
-| `loading`     | `Ref<boolean>`                                | request lifecycle                                                             |
-| `finished`    | `Ref<boolean>`                                | flow finished OR outlet pause                                                 |
-| `response`    | `ShallowRef<unknown>`                         | finished body                                                                 |
-| `error`       | `ShallowRef<unknown>`                         | error body or network failure                                                 |
-| `formKey`     | `Ref<number>`                                 | bumps when payload changes — bind to `:key` on rendered form to force remount |
+| Ref           | Type                                          | Replaced when                                                                                                                                                            |
+| ------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `formDef`     | `ShallowRef<FormDef \| null>`                 | new payload arrives (different schema) — `null` on finished/outlet                                                                                                       |
+| `formData`    | `ShallowRef<Record<string, unknown> \| null>` | new payload arrives — `null` on finished/outlet                                                                                                                          |
+| `formContext` | `ShallowRef<Record<string, unknown>>`         | every response (with `errors` stripped)                                                                                                                                  |
+| `errors`      | `ShallowRef<Record<string, string>>`          | every response (server-side validation errors, keyed by field path)                                                                                                      |
+| `loading`     | `Ref<boolean>`                                | request lifecycle                                                                                                                                                        |
+| `finished`    | `Ref<boolean>`                                | flow finished OR outlet pause                                                                                                                                            |
+| `response`    | `ShallowRef<unknown>`                         | finished body                                                                                                                                                            |
+| `error`       | `ShallowRef<unknown>`                         | error body or network failure                                                                                                                                            |
+| `token`       | `Readonly<Ref<string \| undefined>>`          | the token the next request sends: start token, then each answer's `wfs`; `undefined` at run end / cookie transport ([rules](outlets.md#follow-the-token-across-reloads)) |
+| `formKey`     | `Ref<number>`                                 | bumps when payload changes — bind to `:key` on rendered form to force remount                                                                                            |
 
 `AsWfForm` already binds `formKey` to its inner `AsForm`. When building a custom shell, do the same.
 
@@ -213,6 +220,9 @@ interface UseWfFormOptions {
   fetch?: typeof fetch;
   autoStart?: boolean; // default true
   initialToken?: string;
+  persistToken?: "session"; // since 0.1.187, off by default
+  persistTokenKey?: string; // default `wf:<page>:<name>`
+  onLinkUsed?: () => void; // `@link-used` on <AsWfForm>
 }
 ```
 
@@ -279,7 +289,7 @@ Caveat: re-validating with a payload that differs only in `@wf.context.pass` key
 
 `useWfForm` keeps one `AbortController` per round-trip:
 
-- Each `post()` aborts the previous in-flight controller before starting a new one.
+- Each `post()` aborts the previous in-flight controller before starting a new one — except with cookie transport, where `start()` (and a `retry()` of a start) **waits** for the in-flight request to settle (since 0.1.187): a start sends `{ wfid }` + the cookie, a cookie consumed by the in-flight request reads as no token → the server would fork a second run (aborting the fetch doesn't stop the server).
 - `onUnmounted` aborts on component unmount.
 - `AbortError` from `fetch` is silently swallowed (not surfaced as `error`).
 
@@ -378,19 +388,34 @@ const token = (route.query.wfs as string) || undefined;
 </template>
 ```
 
-Pattern 2 — Vue Router path param (`/invite/:token`):
+Pattern 2 — Vue Router path param (`/invite/:token?` — optional, so the link can leave the path):
 
 ```vue
 <script setup lang="ts">
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 const route = useRoute();
-const token = route.params.token as string;
+const router = useRouter();
+const link =
+  typeof route.params.token === "string" && route.params.token ? route.params.token : undefined;
+
+function dropLink() {
+  if (route.params.token) void router.replace({ name: "invite" }); // a named replace leaves the optional param out
+}
 </script>
 
 <template>
-  <AsWfForm path="/api/wf/trigger" name="admin/invite" :initialToken="token" :types />
+  <AsWfForm
+    path="/api/wf/trigger"
+    name="admin/invite"
+    :initialToken="link"
+    persist-token="session"
+    :types
+    @link-used="dropLink"
+  />
 </template>
 ```
+
+Never write a renewed token back into the param — it carries the raised privilege.
 
 `initialToken` always wins. Use it whenever the token comes from somewhere other than `window.location.search` — router params, app state, postMessage, etc.
 
@@ -400,7 +425,9 @@ Pattern 3 — auto-detect from URL (`tokenTransport: 'query'` only):
 <AsWfForm path="/api/wf/trigger" name="auth/magic-link" tokenTransport="query" :types />
 ```
 
-The composable reads `?wfs=<token>` from `window.location.search` once on `start()`. Skip `initialToken` for this auto-detection path.
+The composable reads `?wfs=<token>` from `window.location.search` at setup (to seed `token`) and on each `start()`. Skip `initialToken` for this auto-detection path.
+
+All three patterns resend the URL's token on reload. Add `persist-token="session"` + `@link-used` (Pattern 3 without a router: the option drops `?wfs=` itself) — see [outlets.md → Follow the token across reloads](outlets.md#follow-the-token-across-reloads).
 
 ## SSR considerations
 
