@@ -99,12 +99,15 @@ watch(
     if (!focused.value && !open.value) inputText.value = displayValue(props.model.value);
   },
 );
+// A focus given back by the slots (`focus()`, e.g. as a dialog closes) leaves the list closed.
+const inputRef = ref<{ $el: HTMLElement } | null>(null);
+let quietFocus = false;
 function onInputFocus() {
   focused.value = true;
   if (props.valueLabel !== undefined && !props.readonly) {
     inputText.value = displayValue(props.model.value);
   }
-  listOpen.value = true;
+  if (!quietFocus) listOpen.value = true;
 }
 function onInputBlur() {
   focused.value = false;
@@ -132,6 +135,11 @@ function slotProps(): TAsRefSlotProps {
     close: () => {
       listOpen.value = false;
       inputText.value = displayValue(props.model.value);
+    },
+    focus: () => {
+      quietFocus = true;
+      inputRef.value?.$el.focus();
+      quietFocus = false;
     },
   };
 }
@@ -192,6 +200,7 @@ const { t } = useAsTexts();
       >
         <ComboboxAnchor class="as-ref-anchor">
           <ComboboxInput
+            ref="inputRef"
             v-model="inputText"
             :display-value="displayValue"
             :id="inputId"

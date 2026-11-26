@@ -181,6 +181,27 @@ describe("AsRefPicker — the picker dialog of a reference field (since 0.1.190)
     expect(document.querySelector(".as-ref-content")).toBeNull();
   });
 
+  it("closing the dialog opened by “See all” puts the focus back into the field, list closed", async () => {
+    const { wrapper } = await mountPicker({});
+    const input = wrapper.find<HTMLInputElement>(".as-ref-input");
+    input.element.focus();
+    await flushPromises();
+    // a click focuses the button first, as a browser does
+    const seeAll = document.querySelector<HTMLButtonElement>(".as-ref-picker-see-all")!;
+    seeAll.focus();
+    seeAll.click();
+    await flushPromises();
+    await nextTick();
+    await flushPromises();
+    document.querySelector<HTMLButtonElement>(".as-value-help-dialog-close")!.click();
+    await flushPromises();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushPromises();
+    expect(document.querySelector(".as-value-help-dialog-content")).toBeNull();
+    expect(document.activeElement).toBe(input.element);
+    expect(document.querySelector(".as-ref-content")).toBeNull();
+  });
+
   it("a read-only field has no picker button", async () => {
     const { wrapper } = await mountPicker({ city: "BER" }, { readonly: true });
     expect(wrapper.find(".as-ref-input").exists()).toBe(true);

@@ -233,6 +233,8 @@ export interface TAsRefSlotProps {
   clientFactory?: ClientFactory;
   /** Closes the list (and puts the value's text back into the input). */
   close: () => void;
+  /** Focuses the input without opening the list (e.g. when a dialog it opened closes). */
+  focus: () => void;
 }
 
 /**

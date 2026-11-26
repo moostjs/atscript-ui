@@ -342,7 +342,11 @@ defineProps<{
   clientFactory?: ClientFactory;
 }>();
 // v-model:open — whether the dialog is open
-defineEmits<{ pick: [row: Record<string, unknown>] }>();
+defineEmits<{
+  pick: [row: Record<string, unknown>];
+  // closing, about to give the focus back: `preventDefault()` to place it yourself
+  closeAutoFocus: [event: Event];
+}>();
 ```
 
 Wire `pick` to the field's `selectItem` (from `useAsValueHelp`, or `AsRef`'s
@@ -355,7 +359,9 @@ Its classes are `as-value-help-dialog-*` (the table inside keeps
 _Since 0.1.190._ The reference field with a picker dialog: vue-form's `AsRef`
 plus a button after the input and a **See all** entry under its list. Both
 open `AsValueHelpDialog` with the typed text as its search; a row picked
-there goes through the field's `selectItem`. A disabled or read-only field
+there goes through the field's `selectItem`. Closing the dialog gives the
+focus back to what opened it: the button, or — for **See all**, which closed
+with the list — the field's input, with the list closed. A disabled or read-only field
 shows neither. Register it for the `ref` type:
 
 ```typescript

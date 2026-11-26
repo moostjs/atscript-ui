@@ -17,11 +17,21 @@ const { t } = useAsTexts();
 
 const dialogOpen = ref(false);
 const dialogSearch = ref("");
+// "See all" sits in the list, gone once the dialog opens: the dialog gives the focus back
+// to the field's input instead. The trailing button stays and gets it back itself.
+let returnFocus: (() => void) | undefined;
 
-function browse(searchText: string, close: () => void) {
+function browse(searchText: string, close: () => void, focus?: () => void) {
   close();
+  returnFocus = focus;
   dialogSearch.value = searchText;
   dialogOpen.value = true;
+}
+
+function onCloseAutoFocus(event: Event) {
+  if (!returnFocus) return;
+  event.preventDefault();
+  returnFocus();
 }
 
 const canPick = () => !props.disabled && !props.readonly;
@@ -48,15 +58,16 @@ const canPick = () => !props.disabled && !props.readonly;
           :title="label ?? name"
           :client-factory="clientFactory"
           @pick="selectItem"
+          @close-auto-focus="onCloseAutoFocus"
         />
       </template>
     </template>
-    <template #list-end="{ searchText, close }">
+    <template #list-end="{ searchText, close, focus }">
       <button
         v-if="valueHelp && canPick()"
         type="button"
         class="as-ref-picker-see-all"
-        @click="browse(searchText, close)"
+        @click="browse(searchText, close, focus)"
       >
         {{ t("UI_FORM_SEE_ALL") }}
       </button>

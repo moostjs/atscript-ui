@@ -38,7 +38,11 @@ const props = defineProps<{
   clientFactory?: ClientFactory;
 }>();
 const open = defineModel<boolean>("open", { default: false });
-const emit = defineEmits<{ pick: [row: Row] }>();
+const emit = defineEmits<{
+  pick: [row: Row];
+  /** The dialog is closing and about to give the focus back; `preventDefault()` to place it yourself. */
+  closeAutoFocus: [event: Event];
+}>();
 const { t } = useAsTexts();
 
 function onPick(row: Row) {
@@ -65,7 +69,11 @@ function onOpenAutoFocus(event: Event) {
   <DialogRoot v-model:open="open">
     <DialogPortal>
       <DialogOverlay class="as-value-help-dialog-overlay" />
-      <DialogContent class="as-value-help-dialog-content" @open-auto-focus="onOpenAutoFocus">
+      <DialogContent
+        class="as-value-help-dialog-content"
+        @open-auto-focus="onOpenAutoFocus"
+        @close-auto-focus="emit('closeAutoFocus', $event)"
+      >
         <div class="as-value-help-dialog-header">
           <DialogTitle class="as-value-help-dialog-title">{{ title }}</DialogTitle>
           <DialogDescription class="sr-only">{{ t("UI_FORM_PICK_HINT") }}</DialogDescription>
