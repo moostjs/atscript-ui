@@ -43,6 +43,8 @@ const vh = info
       onBlur: props.onBlur,
       // a changed host value searches again while the list is open, else on its next open
       open,
+      // a read-only field opens no list: it asks no rows
+      readonly: () => !!props.readonly,
     })
   : undefined;
 

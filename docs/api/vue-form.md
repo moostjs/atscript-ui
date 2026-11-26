@@ -795,6 +795,8 @@ interface UseAsValueHelpOptions {
   open?: Ref<boolean>;
   /** Rows per search. Default 20. Since 0.1.190. */
   limit?: number;
+  /** While `true` (a read-only field) no rows are asked; with `open`, the first open searches. Since 0.1.190. */
+  readonly?: () => boolean;
 }
 
 interface UseAsValueHelpReturn {

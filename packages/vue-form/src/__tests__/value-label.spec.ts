@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createFormDef,
   resetDefaultClientFactory,
@@ -133,6 +133,31 @@ describe("@ui.valueLabel in forms (since 0.1.190)", () => {
     formData.value.cityName = "Lyon (Rhône)";
     await nextTick();
     expect(input.element.value).toBe("Lyon (Rhône) (LYO)");
+  });
+
+  it("a read-only reference field asks no rows of its dictionary", async () => {
+    setValueHelpCacheTtl(-1);
+    const query = vi.fn(async () => CITIES);
+    setDefaultClientFactory(
+      (url) =>
+        ({
+          meta: () => Promise.resolve(CITY_META),
+          query: url === "/origins" ? query : async () => CITIES,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { ValueLabelForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(ValueLabelForm);
+    def.fields.find((f) => f.path === "origin")!.valueHelpInfo = {
+      url: "/origins",
+      targetField: "code",
+    };
+    mount(AsForm as any, {
+      props: { def, formData: reactive({ value: { origin: "BER" } }), types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    expect(query).not.toHaveBeenCalled();
   });
 
   it("a read-only reference field shows the text also when focused, and opens no list", async () => {

@@ -43,6 +43,11 @@ export interface UseAsValueHelpOptions {
   open?: Ref<boolean>;
   /** Rows per search. Default 20. Since 0.1.190. */
   limit?: number;
+  /**
+   * While it returns `true` (a read-only field, which opens no list) the
+   * picker asks no rows; with `open`, the first open searches. Since 0.1.190.
+   */
+  readonly?: () => boolean;
 }
 
 export type UseAsValueHelpStatus = "loading" | "ready" | "error";
@@ -84,7 +89,7 @@ export interface UseAsValueHelpReturn {
 const DEBOUNCE_MS = 300;
 
 export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpReturn {
-  const { info, model, onBlur, open } = options;
+  const { info, model, onBlur, open, readonly } = options;
   const limit = options.limit ?? 20;
 
   // The form around the field: host values are read from it, fills written into it.
@@ -218,7 +223,7 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
   });
 
   watch(resolved, (r) => {
-    if (r) void doSearch(searchText.value);
+    if (r && !readonly?.()) void doSearch(searchText.value);
   });
 
   // A changed host value re-scopes the picker: an open one searches again (also for an
@@ -228,13 +233,14 @@ export function useAsValueHelp(options: UseAsValueHelpOptions): UseAsValueHelpRe
       lastSearchedText = undefined;
       if (resolved.value && (!open || open.value)) void doSearch(searchText.value);
     });
-    if (open) {
-      watch(open, (isOpen) => {
-        if (isOpen && resolved.value && lastSearchedText === undefined) {
-          void doSearch(searchText.value);
-        }
-      });
-    }
+  }
+  // An open that finds no search yet (re-scoped, or never asked while read-only) searches.
+  if (open) {
+    watch(open, (isOpen) => {
+      if (isOpen && resolved.value && lastSearchedText === undefined) {
+        void doSearch(searchText.value);
+      }
+    });
   }
 
   onMounted(() => {
