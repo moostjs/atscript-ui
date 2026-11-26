@@ -17,8 +17,9 @@ Annotations cluster into five namespaces:
 - **`@ui.dict.*`** — value-help / dictionary display + capabilities.
   Read both by the table (FK target columns) and by the value-help
   picker UI.
-- **`@ui.valueHelp`**, **`@ui.valueHelp.distinct`**, **`@ui.literalLabel`** —
-  value-help without a foreign key, distinct-values picker, union labels
+- **`@ui.valueHelp`**, **`@ui.valueHelp.distinct`**, **`@ui.literalLabel`**,
+  **`@ui.valueLabel`** — value-help without a foreign key, distinct-values
+  picker, union labels, a code shown with its text
   (see [below](#ui-valuehelp-ui-valuehelp-distinct-ui-literallabel)).
 - **`@ui.type`** — cross-cutting renderer override (applies wherever
   there's no surface-specific override).
@@ -142,6 +143,13 @@ editor check them. All three apply to `prop` and `type`.
 - `@ui.literalLabel` — labels one literal of a union, or (since 0.1.165) one
   value of a boolean: [Union labels](/tables/filtering#union-labels),
   [Boolean labels](/tables/filtering#boolean-labels).
+- `@ui.valueLabel 'field', 'arrangement'?` (since 0.1.190, `prop` only) — the
+  column's value is a code shown with the text of a sibling field
+  (`Berlin (BER)`; `'keyText'` `BER (Berlin)`, `'text'` `Berlin`) in cells and
+  export. The text field is fetched with the column (it joins `selectWith`), so
+  it may be `@ui.table.exclude`. Sorting and filtering stay on the code, and
+  filter chips show the code. Not next to `@ui.literalLabel`:
+  [A code with its text](/forms/references#a-code-with-its-text-ui-valuelabel).
 
 ## `@ui.type` — shared renderer override
 

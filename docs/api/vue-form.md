@@ -229,6 +229,39 @@ Every component implements `TAsComponentProps`. The columns below list the `@ui.
 
 All defaults accept the full `TAsComponentProps` contract — see [Component prop & emit types](#component-prop-emit-types).
 
+### `AsRef` slots
+
+_Since 0.1.190._ Two slots let another picker sit beside the combobox and
+commit through the field's one pick path — `AsRefPicker` of
+`@atscript/vue-table` fills them with a button and a "See all" entry that open
+its picker dialog.
+
+| Slot       | Where                 |
+| ---------- | --------------------- |
+| `trailing` | after the input       |
+| `list-end` | under the list, in it |
+
+Both receive `TAsRefSlotProps`:
+
+```typescript
+interface TAsRefSlotProps {
+  /** The text typed into the input; empty once the list closed. */
+  searchText: string;
+  /** The one pick path: commits `row[targetField]`, writes the fills, validates. Hand it the row picked. */
+  selectItem: (row: Record<string, unknown>) => void;
+  /** The scope the field's picker searches with (the filter with the form's host values). */
+  scope: ValueHelpScope;
+  /** The form's client factory (`<AsForm :client-factory>`), when it has one. */
+  clientFactory?: ClientFactory;
+  /** Closes the list and puts the value's text back into the input. */
+  close: () => void;
+}
+```
+
+A read-only `AsRef` opens no list (since 0.1.190). With
+[`@ui.valueLabel`](/forms/references#a-code-with-its-text-ui-valuelabel) the
+input shows the code with its text while the field is not focused.
+
 ### `AsFieldShell` slots
 
 `AsFieldShell` is the chrome every other default renders inside, so overriding
@@ -1064,6 +1097,13 @@ interface TAsComponentProps<V = unknown> extends TAsBaseComponentProps {
   arrayIndex?: number;
   path: string;
   valueHelp?: ValueHelpInfo;
+  /**
+   * The value as `@ui.valueLabel` shows it: the code with the text of the
+   * sibling field it names, arranged (`Berlin (BER)`). Read-only text fields
+   * and the reference field while not focused show it. `undefined` without
+   * the annotation or while the value is empty. Since 0.1.190.
+   */
+  valueLabel?: string;
   singularLabel?: string;
   inputId: string;
   errorId: string;

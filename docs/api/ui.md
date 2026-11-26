@@ -316,6 +316,8 @@ interface ColumnDef {
   /** A literal union's options and (since 0.1.165) a boolean's — `true` / `false`, labelled Yes / No unless `@ui.literalLabel` says otherwise. `value` (since 0.1.148) is the typed literal — `true`, `3` — that a filter sends; `key` is its string form. Always set by `createTableDef`; a hand-built column may omit it. */
   options?: { key: string; label: string; value?: string | number | boolean }[];
   valueHelpInfo?: ValueHelpInfo;
+  /** `@ui.valueLabel`: the value is a code shown with the text the row holds at `path` (a sibling, joined to `selectWith`) — `arrangeText(code, text, arrangement)`. Sorting and filtering stay on the code. Since 0.1.190. */
+  valueLabel?: { path: string; arrangement: ValueLabelArrangement };
   /** Distinct-values picker (`@ui.valueHelp.distinct`): the table's own controller answers the values of `field`. Since 0.1.148. */
   distinct?: { url: string; field: string };
   currencyCode?: string;
@@ -624,6 +626,8 @@ Every supported annotation has a stringly-typed constant exported from `@atscrip
 ### Dictionary
 
 `UI_DICT_LABEL`, `UI_DICT_DESCR`, `UI_DICT_ATTR`, `UI_DICT_FILTERABLE`, `UI_DICT_SORTABLE`, `UI_DICT_SEARCHABLE`.
+
+`UI_VALUE_LABEL` (since 0.1.190) — `@ui.valueLabel`, read with [`valueLabelOf`](#arrangetext-key-text-arrangement-valuelabelof-prop).
 
 ### Navigation
 
@@ -1140,6 +1144,24 @@ function resolveOptions(
 ```
 
 `resolveOptions` checks `@ui.form.fn.options` via the active resolver (with `@atscript/ui-fns` installed), then `@ui.form.options`, then literal-union (and, since 0.1.165, boolean) extraction. Pass `field.labelsFrom` as `labelsFrom` so an array item or a union variant also takes the enclosing prop's `@ui.literalLabel` labels. The built-in `AsSelect`, `AsRadio` and `AsMultiSelect` bind `optionValue(opt)`, so a select over a boolean or a number union writes `true` / `3`, not `"true"` / `"3"` (since 0.1.165); a custom picker should do the same.
+
+### `arrangeText(key, text, arrangement?)` / `valueLabelOf(prop)`
+
+_Since 0.1.190._ The one rendering of `@ui.valueLabel`: a code with its text.
+Cells, export and form fields use it; so can a custom cell.
+
+```typescript
+type ValueLabelArrangement = "textKey" | "keyText" | "text";
+interface ValueLabel {
+  /** The sibling field holding the text. */
+  field: string;
+  arrangement: ValueLabelArrangement;
+}
+/** `textKey` (default) `text (key)`, `keyText` `key (text)`, `text` the text alone. An empty text yields `key`; an empty key yields `""`. */
+function arrangeText(key: string, text: unknown, arrangement?: ValueLabelArrangement): string;
+/** The field's `@ui.valueLabel`, the arrangement defaulted to `textKey`; `undefined` without one. */
+function valueLabelOf(prop: TAtscriptAnnotatedType): ValueLabel | undefined;
+```
 
 ## Grid layout
 

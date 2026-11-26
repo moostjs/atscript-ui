@@ -512,6 +512,10 @@ columns and the fill targets.
 A dictionary column with `@ui.type 'select'` (since 0.1.190) picks from a
 checklist of the dictionary's values, like a literal union, once they load;
 with more than 200 values it keeps the dictionary picker.
+A column whose code shows with its text
+([`@ui.valueLabel`](/forms/references#a-code-with-its-text-ui-valuelabel),
+since 0.1.190) still filters and sorts on the code, and its filter chips show
+the code.
 If the dictionary answers 4xx — the caller cannot read it — that table's column
 falls back to a free-text filter instead of an empty picker, until the table
 reloads.

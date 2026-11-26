@@ -1199,9 +1199,15 @@ function collectExportRows<T = Record<string, unknown>>(opts: {
 /**
  * Resolve a raw cell value to the scalar an export carries, using the same
  * column metadata the cells read: union/enum keys → labels, `Date` → ISO 8601,
- * arrays joined, other objects JSON, `null`/`undefined` → `null`.
+ * arrays joined, other objects JSON, `null`/`undefined` → `null`. A
+ * `@ui.valueLabel` column (`column.valueLabel`) given the `row` → the code with
+ * the row's text, as the cell shows it (`row` since 0.1.190).
  */
-function resolveExportValue(value: unknown, column?: ColumnDef): ExportScalar;
+function resolveExportValue(
+  value: unknown,
+  column?: ColumnDef,
+  row?: Record<string, unknown>,
+): ExportScalar;
 ```
 
 ## Utilities

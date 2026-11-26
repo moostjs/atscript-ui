@@ -179,6 +179,11 @@ export interface Customer {
   `country` in every form the binding reaches — the declaring interface, an
   `extends`, a chain reference (`city: Customer.city`), a view column. A form
   without that sibling gets the wider picker.
+- **Next to the field.** A bound field of a
+  [namespace](/forms/nested-objects#section-or-namespace) object
+  (`shipping: Address`, rendered inline) reads its host value from its own
+  sibling: `Address.country` is `shipping.country` there, not the form's
+  `country`. Its fills land next to it too.
 - **Forms only.** The table's filter bar shows the unscoped list: table
   filters never read host values. `ValueHelpInfo.filter` holds only the
   literal comparisons; the host references are in `ValueHelpInfo.hostFilter`.
@@ -234,6 +239,9 @@ export interface Customer {
   cascade.
 - A field can be both a host value and a fill target (`country` above): an
   empty country lists every city, and a pick sets it.
+- The fills come from the row the user picked, also where the committed value
+  repeats (a city keyed by `country` + `id`: two countries may have the same
+  `id`).
 
 The compiler checks that `local` is a top-level scalar field of the host (not
 the bound field), that `targetField` is a top-level scalar field of the
@@ -254,9 +262,10 @@ value; resets, loaded records and other fields' fills clear nothing.
 ## Dialog columns: `@ui.valueHelp.column`
 
 _Since 0.1.190._ `@ui.valueHelp.column 'field'` (repeat per column) sets the
-columns of the binding's picker dialogs — the table's filter dialog — to
-exactly these dictionary fields, in this order, instead of the dictionary's
-key / label / description view. The combobox and the dropdown keep key, label
+columns of the binding's picker dialogs — the table's filter dialog and the
+form's [picker dialog](#a-picker-dialog-asrefpicker) — to exactly these
+dictionary fields, in this order, instead of the dictionary's key / label /
+description view. The combobox and the dropdown keep key, label
 and description. Like fills, columns belong to the field's own binding (or FK
 help); unlike fills, they travel with the binding through references.
 
@@ -292,6 +301,10 @@ color?: string
   the field falls back to the search picker (the `ref` entry of the types
   map), with one warning in development.
 - A value the list does not hold stays and shows as it is stored.
+- A value several rows hold (a dictionary keyed by more fields than the
+  committed one) is committed without fills: an option is a value, not a row.
+- A field with options of its own (a literal union, `@ui.form.options`) lists
+  those, with its placeholder, not the dictionary.
 
 In the table's filter bar, a dictionary column with `@ui.type 'select'` picks
 from a checklist of the dictionary's values instead of the dictionary table —
@@ -299,6 +312,81 @@ see [Value-help filters](/tables/filtering#value-help-filters).
 
 For union labels see [Union labels](/tables/filtering#union-labels); for
 distinct-value filters, [Distinct values](/tables/filtering#distinct-values).
+
+## A picker dialog: `AsRefPicker`
+
+_Since 0.1.190._ For a dictionary too large to browse in a list, register
+`AsRefPicker` from `@atscript/vue-table` for the `ref` type. It is the
+reference field plus a button after the input and a **See all** entry under
+its list; both open `AsValueHelpDialog`, the dictionary as a table.
+
+```ts
+import { createDefaultTypes } from "@atscript/vue-form";
+import { AsRefPicker } from "@atscript/vue-table";
+
+const types = { ...createDefaultTypes(), ref: AsRefPicker };
+```
+
+- **The field's binding.** The dialog shows the binding's
+  [columns](#dialog-columns-ui-valuehelp-column) (else the dictionary's key,
+  label and description), in the field's scope — the filter with the form's
+  [host values](#values-of-the-form-narrow-the-picker); a key member a host
+  value pins has no column while it has a value. Its query selects what every
+  value-help read selects (the committed field, the columns, the fill
+  targets). Search, filters, sorting and paging work as in any table.
+- **One pick path.** Enter or a double-click picks a row: the dialog hands it
+  to the field's `selectItem`, so the value is committed, the
+  [fills](#a-pick-fills-other-fields-ui-valuehelp-fill) are written from that
+  row and the field validates — as for a pick from the list. The dialog
+  closes.
+- **See all** carries the typed text into the dialog's search. It shows
+  however many rows match (no count is asked for). Limitation: a dictionary
+  without full-text search has no search box in the dialog, so the text is
+  not carried; its filters are.
+- A disabled or read-only field shows neither the button nor the entry.
+
+The dialog is a component of its own: a custom picker opens it with the
+field's `selectItem`, `scope` and client factory, which `AsRef`'s `trailing`
+slot (after the input) and `list-end` slot (under the list) hand over —
+see the [vue-table API](/api/vue-table#asvaluehelpdialog).
+
+## A code with its text: `@ui.valueLabel`
+
+_Since 0.1.190._ `@ui.valueLabel 'field'` shows the field's value — a code —
+together with its text, read from a string field of the same interface.
+
+```atscript
+export interface Office {
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueLabel 'cityName'
+    city?: string
+
+    cityName?: string
+}
+```
+
+| Arrangement (2nd argument) | Shows          |
+| -------------------------- | -------------- |
+| `'textKey'` (default)      | `Berlin (BER)` |
+| `'keyText'`                | `BER (Berlin)` |
+| `'text'`                   | `Berlin`       |
+
+- **Where.** Table cells, [export](/tables/export#cell-values), read-only form
+  fields, and the reference field while it is not focused — focused, it shows
+  the code, to search from. An empty text shows the code alone.
+- **The value stays the code.** Sorting and filtering use the code; filter
+  chips show the code.
+- **Keep the text current.** On a bound field, let the pick fill the text
+  (`@ui.valueHelp.fill`): the compiler warns when no fill writes it, since the
+  text would go stale after a pick.
+- The text field is a sibling in the declaring interface, so the annotation is
+  not passed through references.
+
+The compiler checks that the text field exists, is a string and is not the
+field itself, and refuses `@ui.valueLabel` next to `@ui.literalLabel`. The
+editor completes the text field with the string fields of the interface
+(inherited ones included) and jumps to it.
 
 ## Controlling display with `@ui.dict.*`
 
@@ -399,8 +487,11 @@ The default `AsRef` component is a Reka-ui Combobox with:
   read-only field. Focus returns to the input. It also clears what the last
   pick [filled](#clearing-filled-fields).
 - One pick path: a pick commits the value, writes the binding's fills and
-  validates the field (`selectItem`).
-- Loading and empty-state slots.
+  validates the field (`selectItem`) — with the row picked, never one looked
+  up by its value.
+- A read-only reference field opens no list (since 0.1.190).
+- Loading and empty-state slots; since 0.1.190 a `trailing` slot after the
+  input and a `list-end` slot under the list (`AsRefPicker` fills them).
 
 For deeper customisation (column layout, filters, mini-tables) swap the `ref`
 entry in the types map — see [Customization](/forms/customization).
@@ -431,6 +522,10 @@ stayed in the form data.
 A pick now validates the field and marks it touched at once (the form emits
 `change` for it), not on the next blur. Before 0.1.190 the combobox wrote the
 value straight into the model and the field validated when focus left.
+
+The picker's root (`as-ref-root`) is a flex row — the input, then what the
+`trailing` slot adds — instead of a block; a style override that set
+`display` on it, or on `as-ref-anchor`, may need a look.
 :::
 
 ## Cross-references
@@ -442,6 +537,7 @@ value straight into the model and the field validated when focus left.
 
 ## Next steps
 
-- [Customization](/forms/customization) — swap `AsRef` for your own picker
+- [Customization](/forms/customization) — swap `AsRef` for your own picker,
+  or for `AsRefPicker` (a picker dialog)
 - [Validation](/forms/validation) — error messages for required FKs
 - [Locale & currency](/forms/locale) — formatting nearby decimal columns

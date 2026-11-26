@@ -349,7 +349,22 @@ export interface Customer {
 - **Clearing**: `vh.clear(value)` also writes `undefined` into each fill target the last pick wrote while it still holds that value; never a `hostFilter` local (a field that both scopes and is filled). Resets, loads, user edits, other bindings' fills: nothing cleared; fills do not cascade.
 - **Dropdown (6b)**: `@ui.form.type 'select'` / `'radio'` on a bound field with no static options → AsField loads the dictionary (`$limit` = `VALUE_HELP_OPTIONS_CAP + 1` = 201, scope + select rule; `valueHelpOptions` maps rows) and passes them as `options`; the model setter routes picks through `selectItem`, an empty value through `clear`. AsSelect renders an empty first option for a bound field. 201 rows → the `ref` types-map entry renders instead (one dev warning). Host changes reload the list.
 - **Select rule**: `ValueHelpSearchOptions.select` now ADDS to `valueHelpSelect(resolved, info, mode)` (keys + label + descr [+ attrs] + targetField + columns + fill targets). The non-searchable regex fallback stays on key / label / descr.
-- `createFormDef` drops fills whose sibling is absent / derived / read-only / navigation, and all fills of a dotted-path (inline-structure) field.
+- `createFormDef` drops fills whose sibling is absent / derived / read-only / navigation. A field of a namespace object (dotted path in the def, `shipping.city`) gets its `hostFilter[].local` and `fill[].local` prefixed with its parent (`shipping.country`) — its siblings, not the form root's.
+- **The row picked**: AsRef records the clicked / Enter-ed row from `ComboboxItem @select` and hands THAT row to `selectItem`; items are keyed by the dictionary's primary key. Only without a recorded row is the row looked up by value, and only when exactly one loaded row holds it. A dropdown value several rows hold is committed without fills. Never `results.find(r => r[targetField] === value)` in a custom picker — composite-key dictionaries repeat values.
+
+### Picker dialog — AsRefPicker (since 0.1.190)
+
+```ts
+import { createDefaultTypes } from "@atscript/vue-form";
+import { AsRefPicker } from "@atscript/vue-table";
+const types = { ...createDefaultTypes(), ref: AsRefPicker };
+```
+
+`AsRefPicker` (vue-table, Tier 2) = `AsRef` + a button in its `trailing` slot + a "See all" entry in its `list-end` slot (always shown, no count). Both close the list and open `AsValueHelpDialog` (vue-table, Tier 2): `v-model:open`, props `{ info, scope?, search?, title?, clientFactory? }`, emits `pick(row)`; wire `pick` to the slot's `selectItem`. The dialog's inner table (internal `AsValueHelpTable`, `select: "single"`, shared with the filter dialog's `"multi"`) shows `info.columns` (else the dict view minus `scope.pinned`), `forceFilters` = `scope.filter`, `alwaysSelected` = `valueHelpSelect(resolved, info, "filter")`; "See all" seeds `searchTerm` with the typed text when the dictionary is searchable (else not carried). Enter / double-click → main action → `pick`. Disabled / read-only field: no button, no entry; a read-only AsRef opens no list. AsRef slot props (`TAsRefSlotProps`): `{ searchText, selectItem, scope, clientFactory?, close }`. `as-ref-root` is a flex row since 0.1.190.
+
+### Code with its text — @ui.valueLabel (since 0.1.190)
+
+`AsField` reads `valueLabelOf(prop)` and, only for annotated fields, binds `valueLabel = arrangeText(String(model), siblingValue(field), arrangement)` (a computed bound apart from the memoised display props). `AsInputControl` shows it while `readonly` (a read-only number input renders as text then); `AsRef` passes it as the combobox `displayValue` while not focused or read-only — focused, the code. Undefined while the value is empty.
 
 ### Reference chains
 

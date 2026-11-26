@@ -42,7 +42,9 @@ control. Outside the subtree, pass the context explicitly:
 runs it through `state.fetchPage()`, so a custom `:query-fn` is honoured
 too. Two things are different from a normal page fetch:
 
-- **`$select`** is the export's column list, not the table's.
+- **`$select`** is the export's column list, not the table's — with the
+  `selectWith` fields of those columns (since 0.1.190; before, of the visible
+  ones).
   Client-owned [display columns](/tables/customization#display-only-columns)
   are stripped: they have no server field behind them.
 - **`$sort`** gets the table's primary key(s) appended as a tiebreaker.
@@ -109,6 +111,10 @@ Values come out of the same column metadata the cells read:
 - union / enum and boolean columns export the option's **label**, not its key
   (a boolean reads `Yes` / `No` unless `@ui.literalLabel` names its values —
   since 0.1.165);
+- a [`@ui.valueLabel`](/forms/references#a-code-with-its-text-ui-valuelabel)
+  column exports its code with the row's text, as the cell shows it
+  (`Berlin (BER)`, since 0.1.190) — the text is fetched with the column, also
+  when an explicit `columns` list leaves it out;
 - `Date` values export as ISO 8601 (re-importable, unlike a
   locale-formatted date);
 - arrays join with `", "`, other objects become JSON;

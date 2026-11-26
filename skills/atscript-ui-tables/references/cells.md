@@ -17,7 +17,7 @@ Built-in cells, custom cell dispatch, slot API, locale.
 | ----------- | ------------------ | ---------------------------------------------------------------------------------------- |
 | `text`      | `AsTableCellValue` | Passthrough via `formatCellValue`.                                                       |
 | `enum`      | `AsTableCellValue` | Enum label (lookup `column.options`).                                                    |
-| `ref`       | `AsTableCellValue` | FK display label resolved from joined row data.                                          |
+| `ref`       | `AsTableCellValue` | The stored key; with `@ui.valueLabel` the key with the row's text (`Berlin (BER)`).      |
 | `boolean`   | `AsTableCellValue` | Option label: `@ui.literalLabel` or `Yes` / `No` (`DEFAULT_BOOLEAN_LABELS`).             |
 | `number`    | `AsCellNumber`     | `Intl.NumberFormat` with currency, precision, unit. Right-aligned, tabular-nums.         |
 | `date`      | `AsCellDate`       | Date-only via `Intl.DateTimeFormat`.                                                     |
@@ -27,6 +27,8 @@ Built-in cells, custom cell dispatch, slot API, locale.
 | `object`    | `AsCellJson`       | JSON tree popover.                                                                       |
 | `union`     | `AsCellUnion`      | Per-row dispatcher: primitive / array / object branches; switches subtree per row.       |
 | `__actions` | `AsRowActions`     | Synthesized row-actions pseudo-column. See [actions-selection.md](actions-selection.md). |
+
+**`@ui.valueLabel 'field', 'arrangement'?` (since 0.1.190).** `createTableDef` sets `ColumnDef.valueLabel = { path, arrangement }` (the sibling's full path — `office.zoneName` for `office.zone`) and appends that path to `selectWith`, so the text is fetched with the column (gated by `fetchableFields`; the sibling may be `@ui.table.exclude`). `AsTableCellValue` (`displayCellValue`) and `AsCellNumber` show `arrangeText(formatted, row[path], arrangement)`: `textKey` `Berlin (BER)` (default), `keyText` `BER (Berlin)`, `text` `Berlin`; empty text → the code; empty code → `""`. Sort, filter, filter chips: the code. A custom cell renders it with `arrangeText` from `@atscript/ui`.
 
 ## Resolution order
 

@@ -72,7 +72,7 @@ Every result carries `columns` (labels), `columnPaths`, `rowCount` and `total`; 
 
 ## Cell values
 
-Defaults use the same column metadata the cells read: union/enum keys → option **labels**, `Date` → ISO 8601, arrays joined with `", "`, other objects JSON, numbers/booleans stay scalars, `null`/`undefined` → empty field.
+Defaults use the same column metadata the cells read: union/enum keys → option **labels**, `Date` → ISO 8601, arrays joined with `", "`, other objects JSON, numbers/booleans stay scalars, `null`/`undefined` → empty field. A `@ui.valueLabel` column exports `arrangeText(code, row text)` like its cell (`resolveExportValue(value, column, row)` — `row` since 0.1.190); since 0.1.190 `buildQuery({ columnPaths })` takes `selectWith` from the exported columns, so the text comes along even when the column is not visible.
 
 ```ts
 await exportRows({

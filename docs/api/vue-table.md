@@ -321,6 +321,52 @@ Dialog for actions that declare an `@InputForm` schema. Opens via `state.request
 import AsActionFormDialog from "@atscript/vue-table/as-action-form-dialog";
 ```
 
+### `AsValueHelpDialog`
+
+_Since 0.1.190._ A form field's picker dialog: the binding's dictionary as a
+table — its `@ui.valueHelp.column` columns, else the dictionary's key, label
+and description — in the field's scope, with search, filters, sorting and
+paging. Enter or a double-click picks a row: `pick` hands it over and the
+dialog closes. The table mounts on open.
+
+```typescript
+defineProps<{
+  info: ValueHelpInfo;
+  /** The scope with the form's host values (`useAsValueHelp().scope`); its `pinned` fields get no column. Default: `info.filter`. */
+  scope?: ValueHelpScope;
+  /** Text searched for on open (a searchable dictionary). */
+  search?: string;
+  /** The dialog's title — the field's label. */
+  title?: string;
+  /** Builds the dictionary's client. Default: the app's. */
+  clientFactory?: ClientFactory;
+}>();
+// v-model:open — whether the dialog is open
+defineEmits<{ pick: [row: Record<string, unknown>] }>();
+```
+
+Wire `pick` to the field's `selectItem` (from `useAsValueHelp`, or `AsRef`'s
+[slots](/api/vue-form#asref-slots)) so the fills come from the row picked.
+Its classes are `as-value-help-dialog-*` (the table inside keeps
+`as-filter-value-help-*`).
+
+### `AsRefPicker`
+
+_Since 0.1.190._ The reference field with a picker dialog: vue-form's `AsRef`
+plus a button after the input and a **See all** entry under its list. Both
+open `AsValueHelpDialog` with the typed text as its search; a row picked
+there goes through the field's `selectItem`. A disabled or read-only field
+shows neither. Register it for the `ref` type:
+
+```typescript
+import { createDefaultTypes } from "@atscript/vue-form";
+import { AsRefPicker } from "@atscript/vue-table";
+
+const types = { ...createDefaultTypes(), ref: AsRefPicker };
+```
+
+Guide: [A picker dialog](/forms/references#a-picker-dialog-asrefpicker).
+
 ## Tier 2 — Filter UI
 
 ### `AsFilterField`
@@ -942,7 +988,7 @@ The full reactive state object (the `ReactiveTableState` type exported by `@atsc
 - **Prompt / action-form**: `confirmRequest`, `prompt`, `acceptPrompt`, `dismissPrompt`, `actionFormRequest`, `requestActionInput`, `acceptActionForm`, `dismissActionForm`.
 - **Presets namespace**: `preset: PresetSurface` — see [`PresetSurface`](#presetsurface).
 - **Row-action policy** (since 0.1.134): `rowActions: Ref<RowActionsConfig | undefined>` — renderer-pushed by `<AsTableRoot :row-actions>` — and `rowActionsPolicy`, the compiled view of it. Both `<AsRowActions>` and `<AsTableActions>` read the compiled policy, so the row cell and the selection toolbar always agree.
-- **Query surface** (since 0.1.134): `buildQuery(opts?)` returns the `Uniquery` the table's own fetch would send right now (`{ columnPaths?, includeActions? }` overrides); `fetchPage(query, page, size)` runs one page through the configured `queryFn` / client. These are the two seams `useTableExport` builds on.
+- **Query surface** (since 0.1.134): `buildQuery(opts?)` returns the `Uniquery` the table's own fetch would send right now (`{ columnPaths?, includeActions? }` overrides; since 0.1.190 the `selectWith` fields are those of the `columnPaths` columns, not of the visible ones); `fetchPage(query, page, size)` runs one page through the configured `queryFn` / client. These are the two seams `useTableExport` builds on.
 - **Local sorting** (since 0.1.134): `localColumnPaths` (paths of the client-owned columns) and `applyLocalSort(rows)` — `<AsTable>` runs the loaded page through it, sorting by the FULL sorter list so the server's ordering survives and a local sorter lands at its real priority. Inert without [display columns](/tables/customization#display-only-columns), in window mode, and for an in-memory table (its query function sorts the dataset itself, which is also what lets a window-mode in-memory table keep the affordance). `localSortAvailable` (since 0.1.135) is the single rule every sort affordance reads, so the header and the config dialog cannot offer different sets.
 - **URL bridge**: `applyUrlQuery(urlString, opts?)`. The URL decides what happens to filters and sorters it omits, within the `urlQuerySync` gates: a URL carrying `$snapshot` (every URL the table writes) clears them; any other URL resets them to the table's boot baseline (the owned filters and sorters it had before the first URL was applied — preset, persisted draft, props) and lays its own on top. `opts.mode` (`"merge"` / `"replace"`) overrides the marker. `<AsTableRoot>` calls it on every pass without a mode. Since 0.1.140 filter pieces the field model cannot hold are restored as `residualFilters`, and a marker-less URL owns every path it mentions (inside such a condition too). Since 0.1.139; 0.1.137–0.1.138 merged onto the current state on the first pass and replaced on every later one — see [Hydration and restoration](/tables/url-state#hydration-and-restoration).
 - **Query methods**: `query(opts?: { silent?: boolean })` (microtask-coalesced refresh; `{ silent: true }` runs the current query with no `querying` flip and leaves rows as-is on failure — for timer-driven live refresh), `queryImmediate(opts?: { silent?: boolean })` (awaitable form, same `silent` semantics), `queryNext()`, `loadRange()`, `invalidate()`. Every query keeps prior rows until the response settles, then swaps `results` + `totalCount` atomically (keep-rows-until-settle contract).
