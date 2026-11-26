@@ -283,32 +283,43 @@ function collectFields(
 }
 
 /**
- * A pick writes its fills into sibling fields of the same def
- * (`@ui.valueHelp.fill`, since 0.1.190). A fill whose field the def does not
- * have (a view or a chain reference without it), or holds as derived,
- * read-only or a navigation, is dropped from the bound field's
- * `valueHelpInfo` — as are all fills of a field the def lists by a dotted path
- * (an inline structure's, whose siblings are not the def's).
+ * Scopes a binding's sibling names to the def (since 0.1.190). Host references
+ * (`hostFilter`) and fills (`@ui.valueHelp.fill`) name fields of the interface
+ * declaring the bound field; a field the def lists by a dotted path — a field of
+ * a namespace object rendered inline, `shipping.city` — has those siblings under
+ * the same parent, so they become `shipping.country`. A fill whose field the def
+ * does not have (a view or a chain reference without it), or holds as derived,
+ * read-only or a navigation, is dropped from the bound field's `valueHelpInfo`.
  */
 function keepWritableFills(fields: CollectedField[]): void {
   const byPath = new Map(fields.map((c) => [c.field.path, c.field]));
   for (const { field } of fields) {
     const info = field.valueHelpInfo;
-    if (!info?.fill) continue;
-    const fill = field.path.includes(".")
-      ? []
-      : info.fill.filter(({ local }) => {
-          const sibling = byPath.get(local);
-          return (
-            !!sibling &&
-            !sibling.derived &&
-            getFieldMeta(sibling.prop, META_READONLY) === undefined &&
-            !isNavRelation(sibling.prop)
-          );
-        });
-    if (fill.length === info.fill.length) continue;
-    const { fill: _dropped, ...rest } = info;
-    field.valueHelpInfo = fill.length > 0 ? { ...rest, fill } : rest;
+    if (!info?.fill && !info?.hostFilter) continue;
+    const dot = field.path.lastIndexOf(".");
+    const parent = dot < 0 ? "" : field.path.slice(0, dot + 1);
+    const hostFilter =
+      parent && info.hostFilter
+        ? info.hostFilter.map((h) => ({ ...h, local: parent + h.local }))
+        : info.hostFilter;
+    const fill = info.fill
+      ?.map((f) => (parent ? { ...f, local: parent + f.local } : f))
+      .filter(({ local }) => {
+        const sibling = byPath.get(local);
+        return (
+          !!sibling &&
+          !sibling.derived &&
+          getFieldMeta(sibling.prop, META_READONLY) === undefined &&
+          !isNavRelation(sibling.prop)
+        );
+      });
+    if (!parent && fill?.length === info.fill?.length) continue;
+    const { fill: _fill, hostFilter: _hostFilter, ...rest } = info;
+    field.valueHelpInfo = {
+      ...rest,
+      ...(hostFilter && { hostFilter }),
+      ...(fill && fill.length > 0 && { fill }),
+    };
   }
 }
 

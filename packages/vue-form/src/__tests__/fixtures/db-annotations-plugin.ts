@@ -2,7 +2,8 @@ import { AnnotationSpec, type TAtscriptPlugin } from "@atscript/core";
 
 /**
  * Minimal test-only ATScript plugin registering the `@db.*` annotations used by
- * the change-tracking fixtures (`patch-forms.as`).
+ * the change-tracking fixtures (`patch-forms.as`) and the value-help
+ * dictionaries of `ref-fill-forms.as` (`@db.http.path`).
  *
  * vue-form does NOT depend on `@atscript/db` at runtime — `@atscript/ui`'s diff
  * engine reads these annotation keys generically off the annotated type — so we
@@ -34,6 +35,13 @@ export function dbAnnotationsPlugin(): TAtscriptPlugin {
               to: new AnnotationSpec({
                 description: "Navigation field: the row this one points to.",
                 nodeType: ["prop"],
+              }),
+            },
+            http: {
+              path: new AnnotationSpec({
+                description: "Controller path of a value-help dictionary.",
+                nodeType: ["interface"],
+                argument: { name: "path", type: "string" },
               }),
             },
             patch: {

@@ -222,3 +222,37 @@ describe("AsRef — a pick fills, × clears what it filled (since 0.1.190)", () 
     expect(formData.value.cityName).toBeUndefined();
   });
 });
+
+describe("AsRef — a field of a namespace object (since 0.1.190)", () => {
+  it("reads its host value and writes its fill next to it, not in the form's root", async () => {
+    setValueHelpCacheTtl(-1);
+    const query = vi.fn(async (req: { filter?: Record<string, unknown> }) => {
+      const country = (req.filter as { country?: string } | undefined)?.country;
+      return CITIES.filter((c) => !country || c.country === country);
+    });
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(CITY_META),
+          query,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { ShipmentForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(ShipmentForm);
+    const formData = reactive({ value: { country: "FR", shipping: { country: "DE" } } }) as {
+      value: Record<string, any>;
+    };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    expect(lastFilter(query)).toEqual({ country: "DE" });
+
+    await pick(wrapper as unknown as Wrapper, "Shipping city", "Bonn");
+    expect(formData.value.shipping).toEqual({ country: "DE", city: "BON", cityName: "Bonn" });
+    expect(formData.value.cityName).toBeUndefined();
+  });
+});

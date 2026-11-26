@@ -56,3 +56,21 @@ export interface CustomerView {
     city?: Customer.city
     cityName?: string
 }
+
+/// A bound field of an interface used as a namespace object: the form renders `shipping`
+/// inline, so the binding's siblings are `shipping.*` there
+export interface Address {
+    country?: string
+
+    @ui.valueHelp City, 'code', `country = Address.country`
+    @ui.valueHelp.fill 'cityName', 'name'
+    city?: string
+
+    cityName?: string
+}
+
+export interface Shipment {
+    country?: string
+
+    shipping: Address
+}

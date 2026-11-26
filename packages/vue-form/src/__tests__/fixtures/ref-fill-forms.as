@@ -38,3 +38,36 @@ export interface SelectFillForm {
     @ui.form.type 'radio'
     size?: string
 }
+
+@db.http.path '/cities'
+export interface FillCity {
+    @meta.id
+    code: string
+
+    @ui.dict.label
+    name: string
+
+    country: string
+}
+
+/// A bound field of an interface used as a namespace object (since 0.1.190): the form
+/// renders `shipping` inline, so the binding's host field and fill are `shipping.*`
+export interface FillAddress {
+    @meta.label 'Shipping country'
+    country?: string
+
+    @meta.label 'Shipping city'
+    @ui.valueHelp FillCity, 'code', `country = FillAddress.country`
+    @ui.valueHelp.fill 'cityName', 'name'
+    city: string
+
+    @meta.label 'Shipping city name'
+    cityName?: string
+}
+
+export interface ShipmentForm {
+    @meta.label 'Country'
+    country?: string
+
+    shipping: FillAddress
+}

@@ -8,6 +8,7 @@ import {
   UI_FORM_TYPE,
 } from "../shared/annotation-keys";
 import { buildUnionVariants, createFormDef } from "./create-form-def";
+import { valueHelpScope } from "../value-help/scope";
 import { isArrayField, isObjectField, isTupleField, isUnionField } from "./types";
 import type {
   FormArrayFieldDef,
@@ -784,5 +785,21 @@ describe("value-help fills on the form def (since 0.1.190)", () => {
     const form = defineAnnotatedType("object").prop("city", city).$type;
     const info = createFormDef(form).fields.find((f) => f.path === "city")!.valueHelpInfo!;
     expect(info).toEqual({ url: "/cities", targetField: "code" });
+  });
+});
+
+describe("value-help siblings of a namespace object's field (since 0.1.190)", () => {
+  it("scopes host references and fills to the field's parent", async () => {
+    const { Shipment } = await import("../__tests__/fixtures/value-help-host.as");
+    const def = createFormDef(Shipment);
+    const city = def.fields.find((f) => f.path === "shipping.city")!;
+    expect(city.valueHelpInfo).toMatchObject({
+      hostFilter: [{ target: "country", local: "shipping.country" }],
+      fill: [{ local: "shipping.cityName", target: "name" }],
+    });
+    // the form's own `country` is another field: a value there scopes nothing
+    expect(
+      valueHelpScope(city.valueHelpInfo!, (p) => ({ country: "FR", "shipping.country": "DE" })[p]),
+    ).toEqual({ filter: { country: "DE" }, pinned: ["country"] });
   });
 });

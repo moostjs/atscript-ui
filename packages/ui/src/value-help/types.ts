@@ -41,13 +41,16 @@ export interface ValueHelpInfo {
    * The filter's host references (`targetField = Host.field`): in a form, the
    * picker also filters `target` by the value of the sibling field `local`,
    * left out while that field is empty (`valueHelpScope`). Table filters do
-   * not apply them. Since 0.1.190.
+   * not apply them. In a form def, `local` is the sibling's path in the def:
+   * for a field of a namespace object rendered inline it carries the parent
+   * (`shipping.country`). Since 0.1.190.
    */
   hostFilter?: { target: string; local: string }[];
   /**
    * `@ui.valueHelp.fill`: in a form, a pick also writes the row's `target`
    * into the sibling field `local`. Only from the field's own binding or FK
-   * help; a form keeps the fills it can write. Since 0.1.190.
+   * help; a form keeps the fills it can write, `local` scoped as in
+   * {@link hostFilter}. Since 0.1.190.
    */
   fill?: { local: string; target: string }[];
   /**

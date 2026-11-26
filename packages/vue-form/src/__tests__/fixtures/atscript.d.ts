@@ -97,6 +97,7 @@ declare global {
     "ui.valueHelp.column": (string)[]
     "ui.valueHelp.distinct": boolean
     "ui.literalLabel": ({ value: string, label: string })[]
+    "ui.valueLabel": { field: string, arrangement?: string }
     "ui.dict.label": boolean
     "ui.dict.descr": boolean
     "ui.dict.attr": (boolean)[]
@@ -111,6 +112,7 @@ declare global {
     "db.column.version": boolean
     "db.rel.from": boolean
     "db.rel.to": boolean
+    "db.http.path": string
     "db.patch.strategy": string
   }
   type AtscriptPrimitiveTags = "never" | "string" | "email" | "phone" | "date" | "isoDate" | "uuid" | "url" | "ipv4" | "ipv6" | "ip" | "char" | "required" | "trimmed" | "number" | "positive" | "negative" | "single" | "double" | "int" | "int8" | "int16" | "int32" | "int64" | "uint8" | "byte" | "uint16" | "port" | "uint32" | "uint64" | "timestamp" | "created" | "updated" | "decimal" | "boolean" | "true" | "false" | "null" | "void" | "undefined" | "unknown" | "phantom" | "ui" | "action" | "paragraph" | "select" | "radio" | "checkbox"
