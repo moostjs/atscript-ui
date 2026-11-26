@@ -25,6 +25,7 @@ import {
   DB_UNIT_REF,
   META_DESCRIPTION,
   META_LABEL,
+  META_READONLY,
   UI_FORM_COMPONENT,
   UI_FORM_FN_OPTIONS,
   UI_FORM_NS,
@@ -277,7 +278,38 @@ function collectFields(
       pushDown: getFieldMeta(originalProp, UI_FORM_PUSH_DOWN) !== undefined,
     });
   }
+  keepWritableFills(fields);
   return fields;
+}
+
+/**
+ * A pick writes its fills into sibling fields of the same def
+ * (`@ui.valueHelp.fill`, since 0.1.190). A fill whose field the def does not
+ * have (a view or a chain reference without it), or holds as derived,
+ * read-only or a navigation, is dropped from the bound field's
+ * `valueHelpInfo` — as are all fills of a field the def lists by a dotted path
+ * (an inline structure's, whose siblings are not the def's).
+ */
+function keepWritableFills(fields: CollectedField[]): void {
+  const byPath = new Map(fields.map((c) => [c.field.path, c.field]));
+  for (const { field } of fields) {
+    const info = field.valueHelpInfo;
+    if (!info?.fill) continue;
+    const fill = field.path.includes(".")
+      ? []
+      : info.fill.filter(({ local }) => {
+          const sibling = byPath.get(local);
+          return (
+            !!sibling &&
+            !sibling.derived &&
+            getFieldMeta(sibling.prop, META_READONLY) === undefined &&
+            !isNavRelation(sibling.prop)
+          );
+        });
+    if (fill.length === info.fill.length) continue;
+    const { fill: _dropped, ...rest } = info;
+    field.valueHelpInfo = fill.length > 0 ? { ...rest, fill } : rest;
+  }
 }
 
 // ── Unified field def creation ───────────────────────────────

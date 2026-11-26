@@ -1,5 +1,11 @@
 import type { TAtscriptAnnotatedType, TAtscriptTypeObject } from "@atscript/typescript/utils";
-import { DB_HTTP_PATH, DB_REL_FK, UI_VALUE_HELP } from "../shared/annotation-keys";
+import {
+  DB_HTTP_PATH,
+  DB_REL_FK,
+  UI_VALUE_HELP,
+  UI_VALUE_HELP_COLUMN,
+  UI_VALUE_HELP_FILL,
+} from "../shared/annotation-keys";
 import { valueHelpFilter } from "./filter-tree";
 import type { ValueHelpInfo } from "./types";
 
@@ -51,9 +57,34 @@ function bindingInfo(node: TAtscriptAnnotatedType): ValueHelpInfo | undefined {
   if (!url) return undefined;
   const info: ValueHelpInfo = { url, targetField: binding.field };
   if (binding.filter) {
-    const { filter, pinned } = valueHelpFilter(binding.filter);
-    info.filter = filter;
+    const { filter, pinned, hostFilter } = valueHelpFilter(binding.filter);
+    if (filter) info.filter = filter;
     if (pinned.length > 0) info.pinned = pinned;
+    if (hostFilter.length > 0) info.hostFilter = hostFilter;
+  }
+  return info;
+}
+
+/**
+ * Adds a link's `@ui.valueHelp.column` list and — on the prop itself only
+ * (`own`) — its `@ui.valueHelp.fill` list to `info` (since 0.1.190). A link
+ * reached through a reference names fields of ANOTHER interface, so its fills
+ * stay there; its columns name the target, so they come along.
+ */
+function withExtras(
+  info: ValueHelpInfo,
+  node: TAtscriptAnnotatedType,
+  own: boolean,
+): ValueHelpInfo {
+  const columns = node.metadata.get(UI_VALUE_HELP_COLUMN) as string[] | undefined;
+  if (columns && columns.length > 0) info.columns = [...columns];
+  const fills = own
+    ? (node.metadata.get(UI_VALUE_HELP_FILL) as
+        | { local: string; targetField: string }[]
+        | undefined)
+    : undefined;
+  if (fills && fills.length > 0) {
+    info.fill = fills.map((f) => ({ local: f.local, target: f.targetField }));
   }
   return info;
 }
@@ -93,7 +124,7 @@ export function extractValueHelp(prop: TAtscriptAnnotatedType): ValueHelpInfo | 
 
   for (let depth = 0; node && depth < MAX_REF_CHAIN_DEPTH; depth++) {
     const bound = bindingInfo(node);
-    if (bound) return bound;
+    if (bound) return withExtras(bound, node, depth === 0);
 
     const ref: TAtscriptAnnotatedType["ref"] = node.ref;
     if (!ref) return undefined;
@@ -103,7 +134,7 @@ export function extractValueHelp(prop: TAtscriptAnnotatedType): ValueHelpInfo | 
 
     if (node.metadata.has(DB_REL_FK)) {
       const url = target.metadata.get(DB_HTTP_PATH) as string | undefined;
-      if (url) return { url, targetField: ref.field };
+      if (url) return withExtras({ url, targetField: ref.field }, node, depth === 0);
     }
 
     // Not a value-help link itself — hop onto the referenced field and re-test.

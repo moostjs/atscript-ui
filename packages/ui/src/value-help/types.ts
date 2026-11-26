@@ -28,7 +28,8 @@ export interface ValueHelpInfo {
   targetField: string;
   /**
    * Static dictionary scope from `@ui.valueHelp`'s filter — AND'd into every
-   * picker query. Since 0.1.148.
+   * picker query. Comparisons with literal values only: the filter's host
+   * references are in {@link hostFilter}. Since 0.1.148.
    */
   filter?: FilterExpr;
   /**
@@ -36,4 +37,22 @@ export interface ValueHelpInfo {
    * from its columns. Since 0.1.148.
    */
   pinned?: string[];
+  /**
+   * The filter's host references (`targetField = Host.field`): in a form, the
+   * picker also filters `target` by the value of the sibling field `local`,
+   * left out while that field is empty (`valueHelpScope`). Table filters do
+   * not apply them. Since 0.1.190.
+   */
+  hostFilter?: { target: string; local: string }[];
+  /**
+   * `@ui.valueHelp.fill`: in a form, a pick also writes the row's `target`
+   * into the sibling field `local`. Only from the field's own binding or FK
+   * help; a form keeps the fills it can write. Since 0.1.190.
+   */
+  fill?: { local: string; target: string }[];
+  /**
+   * `@ui.valueHelp.column`: the target fields the picker dialogs show, in
+   * order, instead of the dictionary view. Since 0.1.190.
+   */
+  columns?: string[];
 }

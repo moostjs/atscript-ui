@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef, watch } from "vue";
 import type { ColumnDef, ResolvedValueHelp } from "@atscript/ui";
-import { optionValue, resolveValueHelp, valueHelpDictPaths } from "@atscript/ui";
+import { optionValue, resolveValueHelp, valueHelpDictPaths, valueHelpSelect } from "@atscript/ui";
 import {
   filledFilterCount,
   isColumnFilterable,
@@ -90,10 +90,12 @@ if (info) {
     rowValueFn: (row) => row[info.targetField],
     selectionPersistence: "persist",
     selectedRows: selectionRef,
-    // The binding's static scope, AND'd into every query (since 0.1.148); the
-    // committed field is always fetched, even when it is not a key / label.
+    // The binding's static scope, AND'd into every query (since 0.1.148) — its
+    // host references apply in forms only. Every value-help read selects the same
+    // fields: the committed one, the dictionary view, the columns and fill targets.
     forceFilters: info.filter,
-    alwaysSelected: [info.targetField],
+    alwaysSelected: () =>
+      resolved.value ? valueHelpSelect(resolved.value, info, "filter") : [info.targetField],
     clientFactory,
   });
 } else if (distinct) {
@@ -164,12 +166,15 @@ if (info && innerState) {
       if (!def || !r || initialized) return;
       initialized = true;
       stop();
+      // `@ui.valueHelp.column` (since 0.1.190): exactly these fields, in order. Else the
+      // dictionary view; fields the filter pins with `=` are constant in the picker — no
+      // column, no filter input.
+      const byPath = new Map(fkState.allColumns.value.map((c) => [c.path, c]));
       const dictPaths = valueHelpDictPaths(r);
-      // Fields the filter pins with `=` are constant in the picker — no column, no filter input.
       const pinned = new Set(info.pinned);
-      const dictCols = fkState.allColumns.value.filter(
-        (c) => dictPaths.has(c.path) && !pinned.has(c.path),
-      );
+      const dictCols = info.columns
+        ? info.columns.flatMap((p) => byPath.get(p) ?? [])
+        : fkState.allColumns.value.filter((c) => dictPaths.has(c.path) && !pinned.has(c.path));
       fkState.columnNames.value = dictCols.map((c) => c.path);
       if (fkState.filterFields.value.length === 0) {
         fkState.filterFields.value = dictCols.filter(isColumnFilterable).map((c) => c.path);

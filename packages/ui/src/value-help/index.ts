@@ -19,7 +19,10 @@ export {
   ValueHelpClient,
   invalidateValueHelpCache,
   setValueHelpCacheTtl,
+  valueHelpSelect,
 } from "./value-help-client";
+export { valueHelpFills, valueHelpScope } from "./scope";
+export type { ValueHelpFillWrite, ValueHelpScope } from "./scope";
 export { fetchDistinctValues, isPickerDeclined } from "./distinct-client";
 export { resolveValueHelp, resetValueHelpCache } from "./resolve";
 export type { ResolvedValueHelp } from "./resolve";

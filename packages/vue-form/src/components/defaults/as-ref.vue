@@ -21,11 +21,15 @@ const props = defineProps<TAsComponentProps>();
 
 const info = props.valueHelp;
 
+const open = ref(false);
+
 const vh = info
   ? useAsValueHelp({
       info,
       model: props.model,
       onBlur: props.onBlur,
+      // a changed host value searches again while the list is open, else on its next open
+      open,
     })
   : undefined;
 
@@ -34,7 +38,13 @@ const results = vh?.results;
 const status = vh?.status;
 const searching = vh?.searching;
 
-const open = ref(false);
+// Every pick goes through `selectItem` (since 0.1.190): it commits the value, writes the
+// binding's fills and validates the field.
+function onPick(value: unknown) {
+  const row = info && results?.value.find((r) => r[info.targetField] === value);
+  if (row) vh?.selectItem(row);
+  else props.model.value = value;
+}
 // The input's text. Bound so "×" can empty it: the cancel primitive only
 // writes the element, which the next render of the input would undo.
 const inputText = ref("");
@@ -88,8 +98,9 @@ const { t } = useAsTexts();
       <!-- reka-ui Combobox for FK ref fields — value is the raw FK id. -->
       <ComboboxRoot
         v-else
-        v-model="model.value"
+        :model-value="model.value"
         v-model:open="open"
+        @update:model-value="onPick"
         :disabled="disabled"
         :name="name"
         ignore-filter

@@ -51,6 +51,10 @@ export const UI_DICT_SEARCHABLE = "ui.dict.searchable" as const;
 // ── Value-help bindings (registered by @atscript/ui plugin, since 0.1.148) ──
 export const UI_VALUE_HELP = "ui.valueHelp" as const;
 export const UI_VALUE_HELP_DISTINCT = "ui.valueHelp.distinct" as const;
+/** `@ui.valueHelp.fill 'local', 'targetField'` — since 0.1.190. */
+export const UI_VALUE_HELP_FILL = "ui.valueHelp.fill" as const;
+/** `@ui.valueHelp.column 'field'` — since 0.1.190. */
+export const UI_VALUE_HELP_COLUMN = "ui.valueHelp.column" as const;
 export const UI_LITERAL_LABEL = "ui.literalLabel" as const;
 
 // ── Navigation annotations (registered by @atscript/ui plugin) ──

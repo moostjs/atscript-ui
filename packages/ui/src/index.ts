@@ -265,6 +265,9 @@ export {
   ValueHelpClient,
   invalidateValueHelpCache,
   setValueHelpCacheTtl,
+  valueHelpSelect,
+  valueHelpScope,
+  valueHelpFills,
   fetchDistinctValues,
   isPickerDeclined,
   resolveValueHelp,
@@ -275,6 +278,8 @@ export type {
   ValueHelpSearchOptions,
   ValueHelpResult,
   ResolvedValueHelp,
+  ValueHelpScope,
+  ValueHelpFillWrite,
 } from "./value-help";
 
 // ── Client factory (shared by tables + value-help) ──────────

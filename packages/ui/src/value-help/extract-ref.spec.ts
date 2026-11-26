@@ -292,3 +292,59 @@ describe("extractValueHelp — binding hosted on a @db.view", () => {
     expect(extractValueHelp(getProp(deserializeAnnotatedType(wire), "color"))).toEqual(EXPECTED);
   });
 });
+
+describe("extractValueHelp — host references, fills, columns (since 0.1.190)", () => {
+  it("lifts host references out of the filter and reads the fills and columns", async () => {
+    const { Customer } = await import("../__tests__/fixtures/value-help-host.as");
+    expect(extractValueHelp(getProp(Customer, "city"))).toEqual({
+      url: "/cities",
+      targetField: "code",
+      filter: { region: { $eq: "north" } },
+      pinned: ["region"],
+      hostFilter: [{ target: "country", local: "country" }],
+      fill: [
+        { local: "cityName", target: "name" },
+        { local: "country", target: "country" },
+        { local: "locked", target: "name" },
+      ],
+      columns: ["code", "name"],
+    });
+  });
+
+  it("an FK help takes the field's fills and columns", async () => {
+    const { Customer } = await import("../__tests__/fixtures/value-help-host.as");
+    expect(extractValueHelp(getProp(Customer, "countryCode"))).toEqual({
+      url: "/countries",
+      targetField: "code",
+      fill: [{ local: "countryName", target: "name" }],
+      columns: ["name"],
+    });
+  });
+
+  it("extends keeps everything; a chain reference keeps the host references and columns, not the fills", async () => {
+    const { CustomerExtended, CustomerView } =
+      await import("../__tests__/fixtures/value-help-host.as");
+    expect(extractValueHelp(getProp(CustomerExtended, "city"))?.fill).toHaveLength(3);
+    const viewed = extractValueHelp(getProp(CustomerView, "city"));
+    expect(viewed).toMatchObject({
+      hostFilter: [{ target: "country", local: "country" }],
+      columns: ["code", "name"],
+    });
+    expect(viewed).not.toHaveProperty("fill");
+  });
+
+  it("the serialized shape (/meta) gives the same info", async () => {
+    const { Customer } = await import("../__tests__/fixtures/value-help-host.as");
+    const wire = JSON.parse(
+      JSON.stringify(serializeAnnotatedType(Customer, { refDepth: 0.5 })),
+    ) as TSerializedAnnotatedType;
+    const fromMeta = extractValueHelp(getProp(deserializeAnnotatedType(wire), "city"));
+    expect(fromMeta).toEqual(extractValueHelp(getProp(Customer, "city")));
+  });
+
+  it("a binding without the new annotations is unchanged (no new keys)", async () => {
+    const { Ticket } = await import("../__tests__/fixtures/value-help-binding.as");
+    const info = extractValueHelp(getProp(Ticket, "color"))!;
+    expect(Object.keys(info).toSorted()).toEqual(["filter", "pinned", "targetField", "url"]);
+  });
+});

@@ -8,6 +8,7 @@ import {
   optionValue,
   resolveValueHelp,
   valueHelpDictPaths,
+  valueHelpSelect,
 } from "@atscript/ui";
 import {
   arraysEqual,
@@ -84,9 +85,11 @@ if (info) {
     limit: 10,
     provideContext: false,
     clientFactory,
-    // the binding's static scope + the committed field (since 0.1.148)
+    // the binding's static scope (since 0.1.148; host references apply in forms only) +
+    // the fields every value-help read selects (since 0.1.190)
     forceFilters: info.filter,
-    alwaysSelected: [info.targetField],
+    alwaysSelected: () =>
+      resolved.value ? valueHelpSelect(resolved.value, info, "filter") : [info.targetField],
   });
 }
 
@@ -335,7 +338,7 @@ async function doSearch(text: string) {
       mode: "filter",
       limit: 10,
       filter: info?.filter,
-      valueField: info?.targetField,
+      info,
     });
     innerState.results.value = result.items;
     innerState.queryError.value = null;

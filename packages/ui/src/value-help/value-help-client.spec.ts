@@ -4,6 +4,7 @@ import {
   ValueHelpClient,
   invalidateValueHelpCache,
   setValueHelpCacheTtl,
+  valueHelpSelect,
 } from "./value-help-client";
 import type { ResolvedValueHelp } from "./resolve";
 
@@ -70,6 +71,49 @@ describe("ValueHelpClient.search", () => {
     });
   });
 
+  // Since 0.1.190 `select` adds fields; before, it replaced the computed ones.
+  it("`select` adds to the fields always read — it cannot drop the committed field", async () => {
+    const { query, vh } = setup();
+    await vh.search(resolved({ primaryKeys: ["id"], labelField: "name" }), {
+      valueField: "code",
+      select: ["extra", "name"],
+    });
+    expect(query.mock.calls[0][0].controls.$select).toEqual(["id", "name", "code", "extra"]);
+  });
+
+  it("the binding's committed field, columns and fill targets are selected; the search fields stay the dictionary's", async () => {
+    const { query, vh } = setup();
+    const info = {
+      targetField: "value",
+      columns: ["value", "region"],
+      fill: [
+        { local: "colorName", target: "label" },
+        { local: "hex", target: "hex" },
+      ],
+    };
+    await vh.search(resolved(), { info, text: "bl" });
+    const arg = query.mock.calls[0][0];
+    expect(arg.controls.$select).toEqual(["attribute", "value", "label", "region", "hex"]);
+    // `info.targetField` is the exact-match key; the regex runs on key / label only
+    expect(arg.filter.$or).toContainEqual({ value: "bl" });
+    expect(arg.filter.$or).not.toContainEqual({ region: { $regex: "/^bl/i" } });
+    expect(arg.filter.$or).not.toContainEqual({ hex: { $regex: "/^bl/i" } });
+  });
+
+  it("valueHelpSelect: the one select rule (attrs in filter mode)", () => {
+    const r = resolved({ descrField: "descr", attrFields: ["group"] });
+    expect(valueHelpSelect(r)).toEqual(["attribute", "value", "label", "descr"]);
+    expect(valueHelpSelect(r, { targetField: "code", columns: ["kind"] }, "filter")).toEqual([
+      "attribute",
+      "value",
+      "label",
+      "code",
+      "descr",
+      "group",
+      "kind",
+    ]);
+  });
+
   it("defaults the exact-match key to primaryKeys[0] (unchanged for single-key dictionaries)", async () => {
     const { query, vh } = setup();
     await vh.search(resolved({ primaryKeys: ["id"], labelField: "name" }), { text: "7" });
@@ -123,7 +167,7 @@ describe("ValueHelpClient search sharing", () => {
     await vh.search(resolved(), { text: "r" });
     await vh.search(resolved(), { text: "re", limit: 5 });
     await vh.search(resolved(), { text: "re", filter: { attribute: "size" } as never });
-    await vh.search(resolved(), { text: "re", mode: "filter", select: ["label"] });
+    await vh.search(resolved(), { text: "re", mode: "filter", select: ["region"] });
     expect(query).toHaveBeenCalledTimes(5);
   });
 

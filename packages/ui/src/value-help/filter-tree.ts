@@ -35,27 +35,51 @@ function translate(node: TTreeNode): FilterExpr {
   return { [left]: { [op]: right } } as FilterExpr;
 }
 
-/**
- * Fields the tree pins to one value (`=` comparison against a literal) at its top-level
- * `and` chain. The runtime twin of `pinnedFields` in `plugin/value-help-validation.ts`
- * (which reads the source predicate) — keep the two rules in step.
- */
-function pinnedOf(node: TTreeNode, out: string[]): void {
-  if (Array.isArray(node.$and)) {
-    for (const n of node.$and) pinnedOf(n as TTreeNode, out);
-  } else if (node.left && node.op === "$eq" && !isFieldRef(node.right)) {
-    out.push((node.left as TFieldRef).field);
-  }
+/** The top-level `and` chain of a tree, nested `$and`s flattened. */
+function conjunctsOf(node: TTreeNode): TTreeNode[] {
+  return Array.isArray(node.$and) ? node.$and.flatMap((n) => conjunctsOf(n as TTreeNode)) : [node];
+}
+
+/** A host reference: a top-level `targetField = Host.field` (a right-hand field ref). */
+function isHostRef(node: TTreeNode): boolean {
+  return !!node.left && node.op === "$eq" && isFieldRef(node.right);
 }
 
 /**
- * Translates the static `filter` of a `@ui.valueHelp` binding into a Uniquery
+ * Translates the `filter` of a `@ui.valueHelp` binding into a Uniquery
  * `FilterExpr` (mirrors `translateQueryTree` of `@atscript/db`, with refs
- * resolved to the plain field path), plus the target fields it pins with `=` —
- * constant inside the picker, so their columns are hidden. Since 0.1.148.
+ * resolved to the plain field path), plus the target fields it pins with `=`
+ * against a literal — constant inside the picker, so their columns are hidden.
+ * Since 0.1.148.
+ *
+ * Since 0.1.190 the host references (`targetField = Host.field`, top-level
+ * conjuncts; position decides, the type of the reference is not read) are
+ * lifted out into `hostFilter`: `filter` holds the literal comparisons only
+ * (`undefined` when nothing else is left), so it never sends a field-to-field
+ * comparison to the dictionary.
+ *
+ * `pinned` is the runtime twin of `pinnedFields` in
+ * `plugin/value-help-validation.ts` (which reads the source predicate) — keep
+ * the two rules in step.
  */
-export function valueHelpFilter(tree: unknown): { filter: FilterExpr; pinned: string[] } {
+export function valueHelpFilter(tree: unknown): {
+  filter?: FilterExpr;
+  pinned: string[];
+  hostFilter: { target: string; local: string }[];
+} {
   const pinned: string[] = [];
-  pinnedOf(tree as TTreeNode, pinned);
-  return { filter: translate(tree as TTreeNode), pinned: [...new Set(pinned)] };
+  const hostFilter: { target: string; local: string }[] = [];
+  const rest: FilterExpr[] = [];
+  for (const node of conjunctsOf(tree as TTreeNode)) {
+    const left = (node.left as TFieldRef | undefined)?.field;
+    if (isHostRef(node)) {
+      hostFilter.push({ target: left!, local: (node.right as TFieldRef).field });
+      continue;
+    }
+    if (left !== undefined && node.op === "$eq" && !isFieldRef(node.right)) pinned.push(left);
+    rest.push(translate(node));
+  }
+  const filter =
+    rest.length === 0 ? undefined : rest.length === 1 ? rest[0] : ({ $and: rest } as FilterExpr);
+  return { ...(filter && { filter }), pinned: [...new Set(pinned)], hostFilter };
 }

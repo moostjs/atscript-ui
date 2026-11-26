@@ -755,3 +755,34 @@ describe("FK ref fields", () => {
     });
   });
 });
+
+describe("value-help fills on the form def (since 0.1.190)", () => {
+  it("keeps the fills the form can write: a read-only sibling's is dropped", async () => {
+    const { Customer } = await import("../__tests__/fixtures/value-help-host.as");
+    const def = createFormDef(Customer);
+    expect(def.fields.find((f) => f.path === "city")!.valueHelpInfo!.fill).toEqual([
+      { local: "cityName", target: "name" },
+      { local: "country", target: "country" },
+    ]);
+    expect(def.fields.find((f) => f.path === "countryCode")!.valueHelpInfo!.fill).toEqual([
+      { local: "countryName", target: "name" },
+    ]);
+  });
+
+  it("a fill whose field the form does not have is dropped; none left, no key", () => {
+    const city = defineAnnotatedType()
+      .designType("string")
+      .annotate(
+        "ui.valueHelp" as never,
+        {
+          target: { metadata: new Map([["db.http.path", "/cities"]]) },
+          field: "code",
+        } as never,
+      )
+      .annotate("ui.valueHelp.fill" as never, [{ local: "missing", targetField: "name" }] as never)
+      .optional().$type;
+    const form = defineAnnotatedType("object").prop("city", city).$type;
+    const info = createFormDef(form).fields.find((f) => f.path === "city")!.valueHelpInfo!;
+    expect(info).toEqual({ url: "/cities", targetField: "code" });
+  });
+});

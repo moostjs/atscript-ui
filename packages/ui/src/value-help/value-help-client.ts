@@ -1,6 +1,7 @@
 import type { Client, FilterExpr } from "@atscript/db-client";
 import { escapeRegex } from "../shared/str";
 import type { ResolvedValueHelp } from "./resolve";
+import type { ValueHelpInfo } from "./types";
 
 export interface ValueHelpSearchOptions {
   /** Search term. Empty or undefined returns all records. */
@@ -9,20 +10,30 @@ export interface ValueHelpSearchOptions {
   mode?: "form" | "filter";
   /** Max results. Default: 20. */
   limit?: number;
-  /** Override the computed select fields. */
+  /**
+   * Fields added to the ones a value-help search always reads
+   * ({@link valueHelpSelect}). Since 0.1.190 it adds; before, it replaced them
+   * (and could leave out the committed field).
+   */
   select?: string[];
   /**
-   * Static dictionary scope (`ValueHelpInfo.filter`) — AND'd with the search
-   * filter and with `$search`. Since 0.1.148.
+   * Dictionary scope — AND'd with the search filter and with `$search`: the
+   * binding's `ValueHelpInfo.filter`, or in a form `valueHelpScope(info, …).filter`
+   * (the filter with the host values). Since 0.1.148.
    */
   filter?: FilterExpr;
   /**
    * The target field the picker commits (`ValueHelpInfo.targetField`). It is
    * selected, and it is the exact-match key of a non-searchable search — a
    * composite-key dictionary's `primaryKeys[0]` is not the value. Default:
-   * `primaryKeys[0]`. Since 0.1.148.
+   * `primaryKeys[0]`, or `info.targetField`. Since 0.1.148.
    */
   valueField?: string;
+  /**
+   * The binding searched: its `targetField`, `columns` and the target fields
+   * of its `fill` are always selected ({@link valueHelpSelect}). Since 0.1.190.
+   */
+  info?: Pick<ValueHelpInfo, "targetField" | "columns" | "fill">;
 }
 
 export interface ValueHelpResult {
@@ -150,10 +161,12 @@ export class ValueHelpClient {
   ): Promise<ValueHelpResult> {
     const mode = opts?.mode ?? "form";
     const limit = opts?.limit ?? 20;
-    const valueField = opts?.valueField;
-    const selectFields = opts?.select ?? computeSelectFields(resolved, mode, valueField);
+    const valueField = opts?.valueField ?? opts?.info?.targetField;
     const text = opts?.text;
     const scope = opts?.filter;
+    const selectFields = valueHelpSelect(resolved, opts?.info, mode, valueField);
+    if (opts?.select)
+      for (const f of opts.select) if (!selectFields.includes(f)) selectFields.push(f);
     const controls: Record<string, unknown> = { $select: selectFields, $limit: limit };
 
     let filter: FilterExpr | undefined = scope;
@@ -161,9 +174,11 @@ export class ValueHelpClient {
       if (resolved.searchable) {
         controls.$search = text;
       } else {
-        // Non-searchable: `$or` regex across the fields + exact match on the value key
+        // Non-searchable: `$or` regex across the dictionary's own fields (key, label,
+        // description — never the columns or fill targets) + exact match on the value key
         const keyField = valueField ?? resolved.primaryKeys[0] ?? resolved.labelField;
-        const search = buildOrFilter(text, selectFields, keyField) as FilterExpr;
+        const fields = computeSelectFields(resolved, mode, valueField);
+        const search = buildOrFilter(text, fields, keyField) as FilterExpr;
         filter = scope ? ({ $and: [scope, search] } as FilterExpr) : search;
       }
     }
@@ -175,7 +190,27 @@ export class ValueHelpClient {
 }
 
 /**
- * Compute the $select fields for a value-help query — always including the
+ * The fields every value-help read selects — the one rule for the form picker,
+ * the dropdown and the table's filter pickers (since 0.1.190): the dictionary's
+ * keys, label and description (and its `@ui.dict.attr` fields in `"filter"`
+ * mode), the committed `targetField` (`valueField` overrides it), the
+ * binding's `columns` and the target fields of its `fill`.
+ */
+export function valueHelpSelect(
+  resolved: ResolvedValueHelp,
+  info?: Pick<ValueHelpInfo, "targetField" | "columns" | "fill">,
+  mode: "form" | "filter" = "form",
+  valueField: string | undefined = info?.targetField,
+): string[] {
+  const fields = computeSelectFields(resolved, mode, valueField);
+  if (info?.targetField) fields.push(info.targetField);
+  if (info?.columns) fields.push(...info.columns);
+  if (info?.fill) for (const f of info.fill) fields.push(f.target);
+  return [...new Set(fields)];
+}
+
+/**
+ * The dictionary's own fields of a value-help query — always including the
  * `valueField` the picker commits (a unique non-PK field is otherwise never fetched).
  */
 function computeSelectFields(
