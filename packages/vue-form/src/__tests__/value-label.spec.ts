@@ -144,4 +144,18 @@ describe("@ui.valueLabel in forms (since 0.1.190)", () => {
     expect(input.element.value).toBe("Berlin (BER)");
     expect(wrapper.findAll(".as-ref-item")).toHaveLength(0);
   });
+
+  it("a field of a namespace object reads the text next to it", async () => {
+    const { ValueLabelShipment } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(ValueLabelShipment);
+    const formData = reactive({
+      value: { cityName: "Elsewhere", shipping: { city: "BER", cityName: "Berlin" } },
+    }) as { value: Record<string, unknown> };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    expect(inputOf(wrapper as unknown as Wrapper, "Ship to").element.value).toBe("Berlin (BER)");
+  });
 });

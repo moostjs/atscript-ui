@@ -749,11 +749,14 @@ const boundOptions =
 if (boundOptions) options = boundOptions.options;
 
 // `@ui.valueLabel` (since 0.1.190): the code shown with the text of a sibling field. Bound
-// apart from the display props (like `isDirty`): it reads the data.
+// apart from the display props (like `isDirty`): it reads the data. A field of a namespace
+// object (`shipping.city`) has its sibling next to it (`shipping.cityName`).
 const valueLabelMeta = valueLabelOf(prop);
 let valueLabel: ComputedRef<string | undefined> | undefined;
 if (valueLabelMeta) {
-  const text = useAsData().siblingValue(valueLabelMeta.field);
+  const dot = props.field.path.lastIndexOf(".");
+  const textPath = props.field.path.slice(0, dot + 1) + valueLabelMeta.field;
+  const text = useAsData().siblingValue(textPath);
   valueLabel = computed(() => {
     const v = model.value;
     if (v === undefined || v === null || v === "" || typeof v === "object") return undefined;

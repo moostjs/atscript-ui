@@ -115,3 +115,17 @@ export interface ValueLabelForm {
 
     originName?: string
 }
+
+/// A code with its text in a namespace object: the text is its sibling there (since 0.1.190)
+export interface ValueLabelShipment {
+    shipping: {
+        @meta.label 'Ship to'
+        @meta.readonly
+        @ui.valueLabel 'cityName'
+        city?: string
+
+        cityName?: string
+    }
+
+    cityName?: string
+}
