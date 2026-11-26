@@ -54,3 +54,22 @@ export function emptiedKey(
   const stringKey = type?.kind === "" && type.designType === "string";
   return stringKey ? committedText("", optional) : committedValue(null, optional);
 }
+
+/**
+ * The one loaded row holding `value` in `field` — `undefined` when none does or
+ * when several do (a dictionary whose key has more members than the committed
+ * field): the value is then committed without a row, so no fill guesses one.
+ */
+export function soleRow(
+  rows: readonly Record<string, unknown>[],
+  field: string,
+  value: unknown,
+): Record<string, unknown> | undefined {
+  let found: Record<string, unknown> | undefined;
+  for (const row of rows) {
+    if (row[field] !== value) continue;
+    if (found) return undefined;
+    found = row;
+  }
+  return found;
+}

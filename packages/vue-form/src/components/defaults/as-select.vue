@@ -30,7 +30,11 @@ const emptyValue = () => emptiedKey(props.field?.prop.type, props.optional);
         >
           <option v-if="valueHelp" :value="emptyValue()">{{ placeholder }}</option>
           <option v-else-if="placeholder" value="" disabled>{{ placeholder }}</option>
-          <option v-for="opt in options" :key="optKey(opt)" :value="optionValue(opt)">
+          <option
+            v-for="(opt, i) in options"
+            :key="`${i}:${optKey(opt)}`"
+            :value="optionValue(opt)"
+          >
             {{ optLabel(opt) }}
           </option>
         </select>

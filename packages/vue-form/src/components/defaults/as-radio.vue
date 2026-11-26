@@ -20,7 +20,7 @@ defineProps<TAsComponentProps>();
         :aria-invalid="!!error || undefined"
         :aria-describedby="ariaDescribedBy"
       >
-        <label v-for="opt in options" :key="optKey(opt)">
+        <label v-for="(opt, i) in options" :key="`${i}:${optKey(opt)}`">
           <input
             type="radio"
             :value="optionValue(opt)"

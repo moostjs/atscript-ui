@@ -166,3 +166,23 @@ describe("a dropdown bound to a dictionary (since 0.1.190)", () => {
     expect(warnings).toHaveLength(1);
   });
 });
+
+describe("a dropdown value several rows hold (since 0.1.190)", () => {
+  it("is committed without fills: no row is guessed", async () => {
+    const rows = [
+      { code: "SP", name: "Seville", country: "ES" },
+      { code: "SP", name: "Spoleto", country: "IT" },
+      { code: "BER", name: "Berlin", country: "DE" },
+    ];
+    const { wrapper, formData } = await mountSelectForm({ city: "BER" }, rows);
+    const select = fieldOf(wrapper, "City").find("select");
+    await select.setValue("SP");
+    await flushPromises();
+    expect(formData.value.city).toBe("SP");
+    expect(formData.value.cityName).toBeUndefined();
+    // a value one row holds fills as before
+    await select.setValue("BER");
+    await flushPromises();
+    expect(formData.value).toMatchObject({ city: "BER", cityName: "Berlin" });
+  });
+});

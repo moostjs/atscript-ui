@@ -6,6 +6,7 @@ import {
 } from "@atscript/ui";
 import { computed, ref, watch, type ComputedRef, type Ref } from "vue";
 import { useAsValueHelp } from "./use-as-value-help";
+import { soleRow } from "./_shape";
 
 export interface UseAsValueHelpOptionsOptions {
   info: ValueHelpInfo;
@@ -21,6 +22,7 @@ export interface UseAsValueHelpOptionsReturn {
   /**
    * Commit a value of the list through the one pick path (`selectItem`, so
    * the binding's fills apply); an empty value clears, as the picker's "×" does.
+   * A value several loaded rows hold is committed without fills.
    */
   pick: (value: unknown) => void;
 }
@@ -84,7 +86,9 @@ export function useAsValueHelpOptions(
       vh.clear(value);
       return;
     }
-    const row = vh.results.value.find((r) => r[info.targetField] === value);
+    // An option is a value, not a row: when several rows hold it (a dictionary keyed by
+    // more fields), the value is committed without fills rather than from a guessed row.
+    const row = soleRow(vh.results.value, info.targetField, value);
     if (row) vh.selectItem(row);
     else model.value = value;
   }

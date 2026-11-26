@@ -11,7 +11,7 @@ import {
 } from "reka-ui";
 import { computed, ref, watch } from "vue";
 import { useAsValueHelp } from "../../composables/use-as-value-help";
-import { emptiedKey } from "../../composables/_shape";
+import { emptiedKey, soleRow } from "../../composables/_shape";
 import type { TAsComponentProps } from "../types";
 import AsFieldShell from "./as-field-shell.vue";
 import AsInputControl from "../internal/as-input-control.vue";
@@ -39,11 +39,31 @@ const status = vh?.status;
 const searching = vh?.searching;
 
 // Every pick goes through `selectItem` (since 0.1.190): it commits the value, writes the
-// binding's fills and validates the field.
+// binding's fills and validates the field — with the row the user picked, which the
+// item's `select` hands over just before the combobox commits its value. Values may
+// repeat (a dictionary keyed by more fields than the committed one), so the row is never
+// looked up by value, except when only one loaded row holds it.
+let pickedRow: Record<string, unknown> | undefined;
+function onItemSelect(item: Record<string, unknown>) {
+  pickedRow = item;
+}
 function onPick(value: unknown) {
-  const row = info && results?.value.find((r) => r[info.targetField] === value);
+  const picked = pickedRow;
+  pickedRow = undefined;
+  const row =
+    info &&
+    (picked?.[info.targetField] === value
+      ? picked
+      : soleRow(results?.value ?? [], info.targetField, value));
   if (row) vh?.selectItem(row);
   else props.model.value = value;
+}
+// A key per row: the dictionary's primary key (the committed value may repeat).
+function rowKey(item: Record<string, unknown>): string {
+  const keys = resolved?.value?.primaryKeys ?? [];
+  return keys.length > 0
+    ? keys.map((k) => String(item[k])).join("\u0000")
+    : String(item[info!.targetField]);
 }
 // The input's text. Bound so "×" can empty it: the cancel primitive only
 // writes the element, which the next render of the input would undo.
@@ -137,9 +157,10 @@ const { t } = useAsTexts();
             <template v-else>
               <ComboboxItem
                 v-for="item in results"
-                :key="String(item[info.targetField])"
+                :key="rowKey(item)"
                 :value="item[info.targetField]"
                 class="as-ref-item"
+                @select="onItemSelect(item)"
               >
                 <span class="as-ref-item-id">{{ item[info.targetField] }}</span>
                 <span class="as-ref-item-label">

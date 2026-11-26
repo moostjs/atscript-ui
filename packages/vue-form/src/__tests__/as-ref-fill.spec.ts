@@ -256,3 +256,54 @@ describe("AsRef — a field of a namespace object (since 0.1.190)", () => {
     expect(formData.value.cityName).toBeUndefined();
   });
 });
+
+describe("a pick fills from the row picked, also where values repeat (since 0.1.190)", () => {
+  // keyed by country + code: two cities share the code "SP"
+  const KEYED_META = {
+    ...CITY_META,
+    primaryKeys: ["country", "code"],
+  };
+  const SPLIT = [
+    { code: "SP", name: "Seville", country: "ES", region: "south" },
+    { code: "SP", name: "Spoleto", country: "IT", region: "centre" },
+  ];
+
+  it("the combobox writes the clicked row's fields", async () => {
+    setValueHelpCacheTtl(-1);
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(KEYED_META),
+          query: async () => SPLIT,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { RefFillForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(RefFillForm);
+    def.fields.find((f) => f.path === "city")!.valueHelpInfo = CITY;
+    def.fields.find((f) => f.path === "office")!.valueHelpInfo = OFFICE;
+    const formData = reactive({ value: {} }) as { value: Record<string, unknown> };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    await pick(wrapper as unknown as Wrapper, "City", "Spoleto");
+    expect(formData.value).toMatchObject({
+      city: "SP",
+      cityName: "Spoleto",
+      country: "IT",
+      region: "centre",
+    });
+    // both rows are listed, each under its own key
+    await fieldOf(wrapper as unknown as Wrapper, "City")
+      .find(".as-ref-input")
+      .trigger("focus");
+    await flushPromises();
+    expect(wrapper.findAll(".as-ref-item").map((i) => i.text())).toEqual([
+      expect.stringContaining("Seville"),
+      expect.stringContaining("Spoleto"),
+    ]);
+  });
+});
