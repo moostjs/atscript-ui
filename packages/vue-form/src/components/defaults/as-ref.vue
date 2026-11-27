@@ -72,16 +72,22 @@ function rowKey(item: Record<string, unknown>): string {
     : String(item[info!.targetField]);
 }
 // The row the list marks as selected: the one picked while the field still holds its value,
-// else the one loaded row holding the value (a value loaded with the record). While the user
-// types a search it stays as it was: a changed key would make the combobox put the value's
-// text back over the typed one.
+// else the one loaded row holding the value (a value loaded with the record). While the list
+// is open and the value unchanged it stays as it was — also while a typed search narrows the
+// rows or is cleared again: a changed key would make the combobox put the value's text back
+// over the typed one.
 let shownKey: string | undefined;
+let shownFor: unknown;
 const selectedKey = computed(() => {
   if (!info) return undefined;
   const value = props.model.value;
   const picked = pickedRow.value;
-  if (picked && Object.is(picked[info.targetField], value)) return (shownKey = rowKey(picked));
-  if (vh?.searchText.value) return shownKey;
+  if (picked && Object.is(picked[info.targetField], value)) {
+    shownFor = value;
+    return (shownKey = rowKey(picked));
+  }
+  if (open.value && Object.is(shownFor, value)) return shownKey;
+  shownFor = value;
   const row = soleRow(results?.value ?? [], info.targetField, value);
   return (shownKey = row ? rowKey(row) : undefined);
 });
@@ -274,7 +280,13 @@ const { t } = useAsTexts();
         </ComboboxContent>
         <!-- The field's value for a native form, as every other control carries it (the
              combobox's own value is the selected row's key). After the visible input. -->
-        <input v-if="name" type="hidden" :name="name" :value="model.value ?? ''" />
+        <input
+          v-if="name"
+          type="hidden"
+          :name="name"
+          :value="model.value ?? ''"
+          :disabled="disabled"
+        />
       </ComboboxRoot>
     </template>
   </AsFieldShell>

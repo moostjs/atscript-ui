@@ -7,7 +7,11 @@ import {
   setValueHelpCacheTtl,
   type ValueHelpInfo,
 } from "@atscript/ui";
-import { deserializeAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
+import {
+  defineAnnotatedType,
+  deserializeAnnotatedType,
+  serializeAnnotatedType,
+} from "@atscript/typescript/utils";
 import { flushPromises, mount } from "@vue/test-utils";
 import { nextTick, reactive } from "vue";
 import AsForm from "../components/as-form.vue";
@@ -490,6 +494,29 @@ describe("AsRef — typing a search, the field's native value (since 0.1.191)", 
     expect(input.element.value).toBe("Bon");
   });
 
+  it("a typed search cleared at once (before the next search) stays empty", async () => {
+    const { wrapper } = await mountSearching(
+      { city: "BER", cityName: "Berlin" },
+      CITY_META,
+      CITIES,
+    );
+    const input = fieldOf(wrapper, "City").find<HTMLInputElement>(".as-ref-input");
+    await input.trigger("focus");
+    await flushPromises();
+    await typeInto(input, "Bo");
+    // select-all + Delete: the results are still Bonn's
+    input.element.value = "";
+    await input.trigger("input");
+    await flushPromises();
+    await nextTick();
+    expect(input.element.value).toBe("");
+    // and once the cleared search has listed every row again
+    await new Promise((r) => setTimeout(r, 350));
+    await flushPromises();
+    await nextTick();
+    expect(input.element.value).toBe("");
+  });
+
   it("the hidden native input carries the field's value, not the row's key", async () => {
     const props = CITY_META.type.type.props;
     const keyed = {
@@ -517,6 +544,43 @@ describe("AsRef — typing a search, the field's native value (since 0.1.191)", 
     const { wrapper } = await mountSearching({}, keyed, split);
     await pick(wrapper, "City", "Spoleto");
     expect(native(wrapper)).toBe("SP");
+  });
+
+  it("a disabled reference is left out of the native form data, as other controls are", async () => {
+    setValueHelpCacheTtl(-1);
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(CITY_META),
+          query: async () => CITIES,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const ref = (disabled: boolean) => {
+      const t = defineAnnotatedType()
+        .designType("string")
+        .annotate("ui.form.type" as never, "ref" as never);
+      if (disabled) t.annotate("ui.form.disabled" as never, true as never);
+      return t.$type;
+    };
+    const form = defineAnnotatedType("object")
+      .prop("city", ref(false))
+      .prop("home", ref(true)).$type;
+    const def = createFormDef(form);
+    for (const f of def.fields) f.valueHelpInfo = { url: "/cities", targetField: "code" };
+    const wrapper = mount(AsForm as any, {
+      props: {
+        def,
+        formData: reactive({ value: { city: "BER", home: "LYO" } }),
+        types: createDefaultTypes(),
+      },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    const data = new FormData(wrapper.find("form").element as HTMLFormElement);
+    expect(data.get("city")).toBe("BER");
+    expect(data.has("home")).toBe(false);
   });
 });
 
