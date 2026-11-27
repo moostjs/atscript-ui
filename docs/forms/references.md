@@ -285,7 +285,9 @@ columns of the binding's picker dialogs — the table's filter dialog and the
 form's [picker dialog](#a-picker-dialog-asrefpicker) — to exactly these
 dictionary fields, in this order, instead of the dictionary's key / label /
 description view. The combobox and the dropdown keep key, label
-and description. Like fills, columns belong to the field's own binding (or FK
+and description; the combobox also shows the key members listed as columns
+next to each key (see [Columns tell rows apart](#columns-tell-rows-apart)).
+Like fills, columns belong to the field's own binding (or FK
 help); unlike fills, they travel with the binding through references.
 
 ```atscript
@@ -304,7 +306,10 @@ caller) is left out of the dialog.
 _Since 0.1.191._ When the committed field is one member of a composite key,
 the compiler warns that values may repeat in the picker unless the other
 members are pinned. A member listed as a column of the binding counts too:
-the picker dialog shows it, so the user can tell the rows apart.
+the picker shows it, so the user can tell the rows apart. The picker dialog
+shows it as a column, and the combobox shows its value next to each row's
+key (`1000 · A1`, `1000 · B2`). Columns that are no key members stay in the
+dialog.
 
 ```atscript
 export interface Order {
@@ -318,15 +323,20 @@ export interface Order {
 
 Here `CostCenter` is keyed by `controllingArea` + `id`. Two controlling areas
 may use the same `id`, and the `controllingArea` column tells their rows
-apart. A pick commits from the row picked, and fills from it too. A dropdown
+apart. A pick commits from the row picked, and fills from it too. The
+column makes the pick unambiguous, not the stored record: only the committed
+field is stored, so a reopened list marks no row unless a fill or a host
+reference writes the other member back. A dropdown
 (`@ui.form.type 'select'` or `'radio'`) shows no columns, so it keeps the
 warning. Other ways to satisfy the rule are a literal pin in the filter and
 a [host field a fill writes back](#values-of-the-form-narrow-the-picker).
 
 ::: warning Changed in 0.1.191
 A composite-key member listed as a `@ui.valueHelp.column` no longer draws the
-"values may repeat" warning. Before 0.1.191 only a literal pin or a host field
-a fill writes back from the picked row satisfied it.
+"values may repeat" warning, and the combobox shows its value next to each
+row's key. Before 0.1.191 only a literal pin or a host field a fill writes
+back from the picked row satisfied the rule, and the combobox showed the
+committed value alone.
 :::
 
 ## A dropdown from a dictionary

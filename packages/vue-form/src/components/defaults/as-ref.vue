@@ -85,6 +85,16 @@ const selectedKey = computed(() => {
   const row = soleRow(results?.value ?? [], info.targetField, value);
   return (shownKey = row ? rowKey(row) : undefined);
 });
+// `@ui.valueHelp.column` key members other than the committed field (since 0.1.191): each
+// item shows their values next to its key, so rows holding the same value read apart.
+const keyColumns = computed(() => {
+  const keys = resolved?.value?.primaryKeys ?? [];
+  return (info?.columns ?? []).filter((c) => c !== info?.targetField && keys.includes(c));
+});
+function itemKey(item: Record<string, unknown>): string {
+  const parts = [item[info!.targetField], ...keyColumns.value.map((c) => item[c])];
+  return parts.filter((v) => v !== undefined && v !== null && v !== "").join(" · ");
+}
 // The input's text. Bound so "×" can empty it: the cancel primitive only
 // writes the element, which the next render of the input would undo.
 const inputText = ref("");
@@ -246,7 +256,7 @@ const { t } = useAsTexts();
                 class="as-ref-item"
                 @select="pickRow(item)"
               >
-                <span class="as-ref-item-id">{{ item[info.targetField] }}</span>
+                <span class="as-ref-item-id">{{ itemKey(item) }}</span>
                 <span class="as-ref-item-label">
                   {{ item[resolved.labelField] }}
                   <span

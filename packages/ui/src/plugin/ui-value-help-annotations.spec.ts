@@ -1101,6 +1101,36 @@ annotate Customer {
     expect(errorsOf(m)).toEqual([]);
   });
 
+  it("every other key member must be told apart: one column of two is not enough (VH6)", async () => {
+    const m = await msgs(`
+@db.table 'rates'
+@db.http.path '/rates'
+export interface Rate {
+    @meta.id
+    region: string
+    @meta.id
+    year: string
+    @meta.id
+    code: string
+    name: string
+}
+export interface Quote {
+    @ui.valueHelp Rate, 'code'
+    @ui.valueHelp.column 'region'
+    one?: string
+    @ui.valueHelp Rate, 'code'
+    @ui.valueHelp.column 'region'
+    @ui.valueHelp.column 'year'
+    both?: string
+    @ui.valueHelp Rate, 'code', \`year = '2026'\`
+    @ui.valueHelp.column 'region'
+    columnAndPin?: string
+}`);
+    // only `one` leaves a member (`year`) neither shown nor pinned
+    expect(m.filter((x) => x.includes("values may repeat"))).toHaveLength(1);
+    expect(errorsOf(m)).toEqual([]);
+  });
+
   it("a dictionary bound from its own interface: the right-hand side is the host", async () => {
     const m = await msgs(`
 @db.table 'employees'

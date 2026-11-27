@@ -794,7 +794,10 @@ export const uiAnnotations: TAnnotationsTree = {
         description:
           "A column of this binding's picker dialogs: they show exactly these dictionary " +
           "fields, in order, instead of the dictionary's key / label / description view. " +
-          "Repeat per column. The combobox and the dropdown keep key, label and description." +
+          "Repeat per column. The combobox and the dropdown keep key, label and description; " +
+          "the combobox also shows, next to each key, the values of the key members listed " +
+          "here. A composite-key member listed here tells rows holding the same value apart, " +
+          "so the compiler does not warn that values may repeat." +
           "\n\n**Example:**\n" +
           "```atscript\n" +
           "@ui.valueHelp City, 'id'\n" +

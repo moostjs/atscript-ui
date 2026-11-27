@@ -519,3 +519,69 @@ describe("AsRef — typing a search, the field's native value (since 0.1.191)", 
     expect(native(wrapper)).toBe("SP");
   });
 });
+
+describe("AsRef — key members listed as columns tell rows apart (since 0.1.191)", () => {
+  it("each item shows them next to its key; other columns stay in the dialog", async () => {
+    setValueHelpCacheTtl(-1);
+    const str = { kind: "", designType: "string", tags: [] };
+    const meta = {
+      searchable: false,
+      primaryKeys: ["controllingArea", "id"],
+      fields: {},
+      type: {
+        $v: 2,
+        metadata: {},
+        type: {
+          kind: "object",
+          tags: [],
+          propsPatterns: [],
+          props: {
+            controllingArea: { metadata: { "meta.id": true }, type: str },
+            id: { metadata: { "meta.id": true }, type: str },
+            name: { metadata: { "ui.dict.label": true }, type: str },
+            region: { metadata: {}, type: str },
+          },
+        },
+      },
+    };
+    const rows = [
+      { controllingArea: "A1", id: "1000", name: "Administration", region: "north" },
+      { controllingArea: "B2", id: "1000", name: "Administration", region: "south" },
+    ];
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(meta),
+          query: async () => rows,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { RefFillForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(RefFillForm);
+    def.fields.find((f) => f.path === "city")!.valueHelpInfo = {
+      url: "/cost-centers",
+      targetField: "id",
+      columns: ["id", "controllingArea", "name", "region"],
+      fill: [{ local: "region", target: "region" }],
+    };
+    def.fields.find((f) => f.path === "office")!.valueHelpInfo = OFFICE;
+    const formData = reactive({ value: {} }) as { value: Record<string, unknown> };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    await fieldOf(wrapper as unknown as Wrapper, "City")
+      .find(".as-ref-input")
+      .trigger("focus");
+    await flushPromises();
+    // the committed `id` with the other key member; `name` and `region` are no key members
+    expect(wrapper.findAll(".as-ref-item-id").map((i) => i.text())).toEqual([
+      "1000 · A1",
+      "1000 · B2",
+    ]);
+    await pick(wrapper as unknown as Wrapper, "City", "B2");
+    expect(formData.value).toMatchObject({ city: "1000", region: "south" });
+  });
+});
