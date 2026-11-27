@@ -129,8 +129,9 @@ export interface TicketOverview {
   walk runs. A `@db.table` / `@db.view` target needs no literal `@db.http.path`:
   its controller stamps the path at runtime.
 - **Pinned fields are hidden.** A field the filter pins with `=`
-  (`attribute = 'color'`) is constant inside the picker, so the table pickers
-  drop its column and filter input.
+  (`attribute = 'color'`) is constant inside the picker, so in the default
+  view the table pickers drop its column and filter input. Declared
+  [columns](#dialog-columns-ui-valuehelp-column) are shown as declared.
 - **The committed value is `field`**, never the label or the key head. The
   picker also fetches it when it is a unique non-key field, and the exact-match
   search runs on it.
@@ -325,8 +326,9 @@ Here `CostCenter` is keyed by `controllingArea` + `id`. Two controlling areas
 may use the same `id`, and the `controllingArea` column tells their rows
 apart. A pick commits from the row picked, and fills from it too. The
 column makes the pick unambiguous, not the stored record: only the committed
-field is stored, so a reopened list marks no row unless a fill or a host
-reference writes the other member back. A dropdown
+field is stored, so when the record is loaded again the list marks no row —
+unless a host reference pins the other member to a host field that holds it
+(for instance one a fill writes back). A dropdown
 (`@ui.form.type 'select'` or `'radio'`) shows no columns, so it keeps the
 warning. Other ways to satisfy the rule are a literal pin in the filter and
 a [host field a fill writes back](#values-of-the-form-narrow-the-picker).

@@ -797,7 +797,8 @@ export const uiAnnotations: TAnnotationsTree = {
           "Repeat per column. The combobox and the dropdown keep key, label and description; " +
           "the combobox also shows, next to each key, the values of the key members listed " +
           "here. A composite-key member listed here tells rows holding the same value apart, " +
-          "so the compiler does not warn that values may repeat." +
+          "so the compiler does not warn that values may repeat (every other key member " +
+          "listed or pinned; not on a select / radio)." +
           "\n\n**Example:**\n" +
           "```atscript\n" +
           "@ui.valueHelp City, 'id'\n" +
