@@ -392,10 +392,10 @@ const types = { ...createDefaultTypes(), ref: AsRefPicker };
 ```
 
 - **The field's binding.** The dialog shows the binding's
-  [columns](#dialog-columns-ui-valuehelp-column) (else the dictionary's key,
-  label and description), in the field's scope — the filter with the form's
-  [host values](#values-of-the-form-narrow-the-picker); a key member a host
-  value pins has no column while it has a value. Its query selects what every
+  [columns](#dialog-columns-ui-valuehelp-column) as declared (else the
+  dictionary's key, label and description, without a key member a host value
+  pins while it has a value), in the field's scope — the filter with the
+  form's [host values](#values-of-the-form-narrow-the-picker). Its query selects what every
   value-help read selects (the committed field, the columns, the fill
   targets). Search, filters, sorting and paging work as in any table.
 - **One pick path.** Enter or a double-click picks a row: the dialog hands it
