@@ -938,8 +938,8 @@ lifted out of `filter` into `hostFilter`, so `filter` never holds a
 field-to-field comparison: a custom component that passes `info.filter` to
 the dictionary keeps working, and table filters (which read `filter` only)
 ignore host values. `fill` holds, on a form field's def, only the fills that
-form can write (`createFormDef` drops those whose field is missing, derived,
-read-only or a navigation). A binding without the new annotations yields the
+form can write (`createFormDef` drops those whose field is missing, derived
+or a navigation; since 0.1.191 it keeps a read-only one). A binding without the new annotations yields the
 same info as before — the new keys are absent.
 
 ### `valueHelpScope(info, read)` / `valueHelpFills(info, row)`

@@ -25,7 +25,6 @@ import {
   DB_UNIT_REF,
   META_DESCRIPTION,
   META_LABEL,
-  META_READONLY,
   UI_FORM_COMPONENT,
   UI_FORM_FN_OPTIONS,
   UI_FORM_NS,
@@ -288,8 +287,10 @@ function collectFields(
  * declaring the bound field; a field the def lists by a dotted path — a field of
  * a namespace object rendered inline, `shipping.city` — has those siblings under
  * the same parent, so they become `shipping.country`. A fill whose field the def
- * does not have (a view or a chain reference without it), or holds as derived,
- * read-only or a navigation, is dropped from the bound field's `valueHelpInfo`.
+ * does not have (a view or a chain reference without it, a field the served type
+ * leaves out), or holds as derived or a navigation, is dropped from the bound
+ * field's `valueHelpInfo`. A read-only field is written (since 0.1.191): the
+ * text next to a code that the server computes shows the picked row's.
  */
 function keepWritableFills(fields: CollectedField[]): void {
   const byPath = new Map(fields.map((c) => [c.field.path, c.field]));
@@ -306,12 +307,7 @@ function keepWritableFills(fields: CollectedField[]): void {
       ?.map((f) => (parent ? { ...f, local: parent + f.local } : f))
       .filter(({ local }) => {
         const sibling = byPath.get(local);
-        return (
-          !!sibling &&
-          !sibling.derived &&
-          getFieldMeta(sibling.prop, META_READONLY) === undefined &&
-          !isNavRelation(sibling.prop)
-        );
+        return !!sibling && !sibling.derived && !isNavRelation(sibling.prop);
       });
     if (!parent && fill?.length === info.fill?.length) continue;
     const { fill: _fill, hostFilter: _hostFilter, ...rest } = info;

@@ -47,6 +47,10 @@ version as `@atscript/vue-form`. `@atscript/vue-form` lists
 `@atscript/typescript` as a peer, the package your generated `.as` types come
 from.
 
+When upgrading from 0.1.190 or earlier (to 0.1.191):
+
+- A pick writes a `@meta.readonly` fill target, such as the read-only text next to a code, and the compiler no longer warns about one. After a pick the form's patch carries that field like any value the app sets; a backend that computes it ignores or drops it. A `@db.column.derived` target is still skipped. See [fills](/forms/references#a-pick-fills-other-fields-ui-valuehelp-fill).
+
 When upgrading from 0.1.189 or earlier (to 0.1.190):
 
 - `getDefaultClientFactory()`, `getMetaEntry().client`, `sharedPresetsClient()` and `useTableContext().client` are typed `ClientLike<T>` (from `@atscript/db-client`, re-exported by `@atscript/ui`): the public members of `Client`, so a factory may return an object that does not extend the class. Code that annotates their result as `Client<T>` writes `ClientLike<T>`. Nothing changes at run time.

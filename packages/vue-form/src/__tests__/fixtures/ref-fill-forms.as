@@ -129,3 +129,22 @@ export interface ValueLabelShipment {
 
     cityName?: string
 }
+
+/// A code with a read-only text the server computes: the pick fills it (since 0.1.191).
+/// `cityCountry` is read-only too; a permission layer may leave it out of the served type.
+export interface ReadonlyTextForm {
+    @meta.label 'City'
+    @ui.valueHelp FillCity, 'code'
+    @ui.valueHelp.fill 'cityName', 'name'
+    @ui.valueHelp.fill 'cityCountry', 'country'
+    @ui.valueLabel 'cityName'
+    city: string
+
+    @meta.label 'City name'
+    @meta.readonly
+    cityName?: string
+
+    @meta.label 'City country'
+    @meta.readonly
+    cityCountry?: string
+}

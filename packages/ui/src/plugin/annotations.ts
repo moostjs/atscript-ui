@@ -755,8 +755,9 @@ export const uiAnnotations: TAnnotationsTree = {
         description:
           "A pick also fills another field of the form: writes the picked row's `targetField` " +
           "into the sibling `local`, as an edit would. Repeat per field. Applies to the field's " +
-          "own binding (`@ui.valueHelp`, else `@db.rel.FK`) in forms only; a derived, read-only " +
-          "or navigation sibling is skipped. The clear button clears a filled field again " +
+          "own binding (`@ui.valueHelp`, else `@db.rel.FK`) in forms only; a derived or " +
+          "navigation sibling is skipped, a read-only one is written (the text next to a " +
+          "code). The clear button clears a filled field again " +
           "while it still holds what the last pick wrote. Not passed through references." +
           "\n\n**Example:**\n" +
           "```atscript\n" +

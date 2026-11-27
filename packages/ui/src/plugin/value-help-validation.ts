@@ -860,15 +860,11 @@ export function validateFill(token: Token, args: Token[], doc: AtscriptDoc): TMe
       });
     } else {
       localOk = true;
-      const effective = effectiveAnnotationNames(prop, doc);
-      const why = effective.has("db.column.derived")
-        ? "@db.column.derived"
-        : effective.has("meta.readonly")
-          ? "@meta.readonly"
-          : undefined;
-      if (why) {
+      // A `@meta.readonly` sibling is written (since 0.1.191): the text next to a code
+      // shows the picked row's. A derived column is the server's alone.
+      if (effectiveAnnotationNames(prop, doc).has("db.column.derived")) {
         errors.push({
-          message: `'${local}' is ${why} — a pick never writes it`,
+          message: `'${local}' is @db.column.derived — a pick never writes it`,
           severity: WARNING,
           range: localArg.range,
         });

@@ -7,6 +7,7 @@ import {
   setValueHelpCacheTtl,
   type ValueHelpInfo,
 } from "@atscript/ui";
+import { deserializeAnnotatedType, serializeAnnotatedType } from "@atscript/typescript/utils";
 import { flushPromises, mount } from "@vue/test-utils";
 import { nextTick, reactive } from "vue";
 import AsForm from "../components/as-form.vue";
@@ -318,5 +319,62 @@ describe("a pick fills from the row picked, also where values repeat (since 0.1.
       .findAllComponents({ name: "ComboboxItem" })
       .map((item) => item.vm.$.vnode.key);
     expect(keys).toEqual(["SP\u0000ES", "SP\u0000IT"]);
+  });
+});
+
+describe("a pick fills a read-only text (since 0.1.191)", () => {
+  async function mountReadonly(hide?: string) {
+    setValueHelpCacheTtl(-1);
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(CITY_META),
+          query: async () => CITIES,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { ReadonlyTextForm } = await import("./fixtures/ref-fill-forms.as");
+    let type = ReadonlyTextForm as Parameters<typeof createFormDef>[0];
+    if (hide) {
+      // the served type without the field: a permission layer projected it out
+      const wire = JSON.parse(JSON.stringify(serializeAnnotatedType(type, { refDepth: 0.5 })));
+      delete wire.type.props[hide];
+      type = deserializeAnnotatedType(wire);
+    }
+    const def = createFormDef(type);
+    const formData = reactive({ value: {} }) as { value: Record<string, unknown> };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes(), trackChanges: true },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    return { wrapper, formData, vm: wrapper.vm as unknown as Exposed };
+  }
+
+  it("writes the text; the field shows it, the code shows with it, the patch sends it", async () => {
+    const { wrapper, formData, vm } = await mountReadonly();
+    const w = wrapper as unknown as Wrapper;
+    await pick(w, "City", "Lyon");
+    expect(formData.value).toEqual({ city: "LYO", cityName: "Lyon", cityCountry: "FR" });
+    // a changed read-only field is sent like any value the app sets
+    expect(vm.getPatch()).toEqual({ city: "LYO", cityName: "Lyon", cityCountry: "FR" });
+    // the read-only field shows the text; it stays read-only
+    const text = fieldOf(w, "City name").find<HTMLInputElement>("input");
+    expect(text.element.value).toBe("Lyon");
+    expect(text.element.readOnly).toBe(true);
+    // `@ui.valueLabel`: leaving the field shows the code with the picked text
+    const input = fieldOf(w, "City").find<HTMLInputElement>(".as-ref-input");
+    await input.trigger("blur");
+    await flushPromises();
+    await new Promise((r) => setTimeout(r, 5));
+    expect(input.element.value).toBe("Lyon (LYO)");
+  });
+
+  it("a fill target the served type leaves out is skipped: no key in the data or the patch", async () => {
+    const { wrapper, formData, vm } = await mountReadonly("cityCountry");
+    await pick(wrapper as unknown as Wrapper, "City", "Lyon");
+    expect(formData.value).toEqual({ city: "LYO", cityName: "Lyon" });
+    expect(vm.getPatch()).toEqual({ city: "LYO", cityName: "Lyon" });
   });
 });

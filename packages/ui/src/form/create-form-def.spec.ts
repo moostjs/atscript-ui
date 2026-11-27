@@ -758,12 +758,14 @@ describe("FK ref fields", () => {
 });
 
 describe("value-help fills on the form def (since 0.1.190)", () => {
-  it("keeps the fills the form can write: a read-only sibling's is dropped", async () => {
+  it("keeps the fills the form can write — a read-only sibling's too (since 0.1.191)", async () => {
     const { Customer } = await import("../__tests__/fixtures/value-help-host.as");
     const def = createFormDef(Customer);
+    // `locked` is @meta.readonly: the pick writes it, as the text next to a code
     expect(def.fields.find((f) => f.path === "city")!.valueHelpInfo!.fill).toEqual([
       { local: "cityName", target: "name" },
       { local: "country", target: "country" },
+      { local: "locked", target: "name" },
     ]);
     expect(def.fields.find((f) => f.path === "countryCode")!.valueHelpInfo!.fill).toEqual([
       { local: "countryName", target: "name" },
@@ -785,6 +787,39 @@ describe("value-help fills on the form def (since 0.1.190)", () => {
     const form = defineAnnotatedType("object").prop("city", city).$type;
     const info = createFormDef(form).fields.find((f) => f.path === "city")!.valueHelpInfo!;
     expect(info).toEqual({ url: "/cities", targetField: "code" });
+  });
+
+  it("a derived sibling's fill is dropped; a read-only one the form lacks is dropped too", () => {
+    const text = (annotation?: string) => {
+      const t = defineAnnotatedType().designType("string");
+      if (annotation) t.annotate(annotation as never, true as never);
+      return t.optional().$type;
+    };
+    const city = defineAnnotatedType()
+      .designType("string")
+      .annotate(
+        "ui.valueHelp" as never,
+        {
+          target: { metadata: new Map([["db.http.path", "/cities"]]) },
+          field: "code",
+        } as never,
+      )
+      .annotate(
+        "ui.valueHelp.fill" as never,
+        [
+          { local: "cityName", targetField: "name" },
+          { local: "computed", targetField: "name" },
+          // read-only and left out of the served type (a permission layer projected it out)
+          { local: "hidden", targetField: "country" },
+        ] as never,
+      )
+      .optional().$type;
+    const form = defineAnnotatedType("object")
+      .prop("city", city)
+      .prop("cityName", text("meta.readonly"))
+      .prop("computed", text("db.column.derived")).$type;
+    const info = createFormDef(form).fields.find((f) => f.path === "city")!.valueHelpInfo!;
+    expect(info.fill).toEqual([{ local: "cityName", target: "name" }]);
   });
 });
 

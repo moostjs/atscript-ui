@@ -1265,7 +1265,7 @@ export interface Customer {
     expect(m).toContain("'City.name' is string, 'Customer.pop' is number");
   });
 
-  it("FL5: a derived, read-only or navigation sibling warns (the write is skipped)", async () => {
+  it("FL5: a derived or navigation sibling warns (the write is skipped); a read-only one is written", async () => {
     const m = await msgs(`
 @db.table 'fl5_orders'
 export interface Order {
@@ -1275,16 +1275,24 @@ export interface Order {
     countryCode: Country.code
     @db.rel.to
     country?: Country
+    @db.json
+    payload?: { label: string }
+    @db.column.derived
+    computed?: Order.payload.label
     @meta.readonly
     shown?: string
-    @ui.valueHelp City, 'code'
+    @ui.valueHelp Country, 'code'
+    @ui.valueHelp.fill 'computed', 'name'
     @ui.valueHelp.fill 'shown', 'name'
     @ui.valueHelp.fill 'country', 'name'
     city?: string
 }`);
     const w = m.filter((x) => x.startsWith("W"));
-    expect(w.join("\n")).toContain("'shown' is @meta.readonly");
+    expect(w).toHaveLength(2);
+    expect(w.join("\n")).toContain("'computed' is @db.column.derived — a pick never writes it");
     expect(w.join("\n")).toContain("'country' is a navigation field");
+    // since 0.1.191 a pick writes a @meta.readonly sibling: the text next to a code
+    expect(m.join("\n")).not.toContain("'shown'");
     expect(errorsOf(m)).toEqual([]);
   });
 

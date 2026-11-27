@@ -235,8 +235,14 @@ export interface Customer {
   reference takes no fills (the names are siblings of the declaring
   interface), and fills are not passed through references. `extends` keeps
   them.
-- A fill whose field the form does not have, or holds as derived, read-only
-  or a navigation, is skipped (the compiler warns for the last three).
+- A fill whose field the form does not have (a view without it, a field the
+  served type leaves out), or holds as derived or a navigation, is skipped:
+  no key is written. The compiler warns for the last two.
+- A read-only field is written (since 0.1.191). This is the usual text next
+  to a code: a `customerName` the server computes next to `customerId` shows
+  the picked row's name. The user still cannot edit it. The form's patch
+  sends it like any value the app sets, and a backend that computes the
+  field ignores or drops it.
 - A filled field that has fills of its own does not pick again: fills do not
   cascade.
 - A field can be both a host value and a fill target (`country` above): an
@@ -254,6 +260,12 @@ binding re-checks the field's fills and columns against the new dictionary.
 Fills are refused on a field of an inline structure and in an `annotate … as`
 copy. The editor completes `local` with the host's fields and `targetField`
 with the dictionary's.
+
+::: warning Changed in 0.1.191
+A pick writes a `@meta.readonly` fill target, and the compiler no longer
+warns about one. Before 0.1.191 the pick skipped it, so a read-only text next
+to the code went stale. A `@db.column.derived` target is still never written.
+:::
 
 ### Clearing filled fields
 
@@ -385,7 +397,9 @@ export interface Office {
   chips show the code.
 - **Keep the text current.** On a bound field, let the pick fill the text
   (`@ui.valueHelp.fill`): the compiler warns when no fill writes it, since the
-  text would go stale after a pick.
+  text would go stale after a pick. A `@meta.readonly` text, one the server
+  computes, is filled too (since 0.1.191), so the label shows the picked text
+  at once.
 - The text field is a sibling in the declaring interface, so the annotation is
   not passed through references.
 
