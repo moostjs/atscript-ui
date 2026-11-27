@@ -28,6 +28,13 @@ describe("fetchDistinctValues", () => {
     expect(controls.$skip).toBe(100);
   });
 
+  it("reads a nested leaf by its path: the grouped row nests it", async () => {
+    const { aggregate, dv } = setup([{ price: { amount: 5 } }, { price: { amount: 9 } }]);
+    const res = await dv.values("price.amount");
+    expect(aggregate.mock.calls[0][0].controls.$groupBy).toEqual(["price.amount"]);
+    expect(res.items).toEqual([5, 9]);
+  });
+
   it("drops the null group client-side", async () => {
     const { dv } = setup([{ city: null }, { city: "A" }]);
     expect((await dv.values("city")).items).toEqual(["A"]);

@@ -1,4 +1,5 @@
 import type { ClientLike, FilterExpr } from "@atscript/db-client";
+import { getByPath } from "../form/path-utils";
 import { escapeRegex } from "../shared/str";
 
 export interface DistinctValuesOptions {
@@ -70,9 +71,10 @@ export async function fetchDistinctValues(
     },
   } as never)) as Record<string, unknown>[];
 
+  // a nested leaf (`price.amount`) comes back nested: `{ price: { amount } }`
   const items = rows
     .slice(0, limit)
-    .map((r) => r[field])
+    .map((r) => getByPath({ value: r }, field))
     .filter((v) => v !== null && v !== undefined);
   return { items, hasMore: rows.length > limit };
 }
