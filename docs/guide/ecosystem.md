@@ -80,7 +80,7 @@ The Vue split (`vue-form` / `vue-table` / `vue-wf`) intentionally mirrors the ag
 
 A one-line definition of every term that recurs in the docs. Click through for the full API.
 
-- **FormDef** — the materialised form descriptor a `useForm()` call returns. Fields, validators, layout, submit action, all resolved from `.as` metadata. [API](/api/ui).
+- **FormDef** — the materialised form descriptor `createAsFormDef()` returns as `def`. Fields, validators, layout, submit action, all resolved from `.as` metadata. [API](/api/ui).
 - **TableDef** — the materialised table descriptor `<AsTableRoot>` builds. Columns, filterable fields, sortable fields, default sort, value-help wiring. [API](/api/ui).
 - **FieldResolver** — the indirection layer between annotations and rendered components. Reads `@ui.*` from the `.as` runtime descriptor; `ui-fns` swaps in a dynamic version that also evaluates `@ui.fn.*`. [API](/api/ui).
 - **FilterCondition** — a single applied filter (`{ field, op, value }`). Mutated by filter chips / dialogs. [API](/api/ui-table).

@@ -149,7 +149,7 @@ What the preset does:
 
 - Registers the vunor shortcuts engine atscript-ui depends on internally (scopes, layers, surfaces, `c8-*` clickables, `i8-*` inputs, fingertip-\* heights, spacing tokens `$xxs..$xxl`).
 - Registers the `as-*` shortcut tree from `@atscript/ui-styles` (every component's styles live here, not in `.vue` templates).
-- Registers a custom extractor that scans your sources for `<AsForm>` / `useForm` / `createDefaultTypes` / etc. and pulls in the matching pre-computed class lists. **You don't have to add `node_modules` to `content.filesystem`.**
+- Registers a custom extractor that scans your sources for `<AsForm>`-style tags, imports from `@atscript/vue-form` / `vue-table` / `vue-wf` / `vue-aooth`, and `createDefaultTypes()`-style calls, and pulls in the matching pre-computed class lists. **You don't have to add `node_modules` to `content.filesystem`.**
 - Bakes in an icon set under the `as` collection (`i-as-search`, `i-as-close`, `i-as-loading`, …).
 
 For theme tuning, per-component safelist control, and pre-built CSS see [Styling](/styling/).
@@ -171,7 +171,7 @@ What auto-resolves:
 | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `<AsForm>` `<AsField>` `<AsIterator>` `<AsTable>` `<AsTableRoot>` `<AsWindowTable>` `<AsTableActions>` `<AsFilters>` `<AsPresetPicker>` `<AsWfForm>` | Default field components (`AsInput`, `AsSelect`, `AsCheckbox`, …), default cells, default dialogs |
 
-Tier-2 defaults are swap targets you compose through `:types` / `:components` prop maps, not template tags — so the resolver intentionally skips them. Composables (`useForm`, `useTable`, `useWfForm`) are not components and always need an explicit import. See [Styling: AsResolver](/styling/installation#asresolver-auto-import) for the full pattern.
+Tier-2 defaults are swap targets you compose through `:types` / `:components` prop maps, not template tags — so the resolver intentionally skips them. Composables (`useAsForm`, `useTable`, `useWfForm`) are not components and always need an explicit import. See [Styling: AsResolver](/styling/installation#asresolver-auto-import) for the full pattern.
 
 ## Atscript config
 

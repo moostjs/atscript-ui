@@ -66,7 +66,7 @@ export default defineConfig({
 });
 ```
 
-`AsResolver()` only auto-imports Tier-1 components — the ones you write as tags: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsWindowTable>`, `<AsFilters>`, `<AsPresetPicker>`, `<AsWfForm>`. Default field components (`AsInput`, `AsSelect`, …) and composables (`useForm`, `useTable`, …) are always explicit imports — see [Installation](./installation#dynamic-resolver-opt-in) for the rationale.
+`AsResolver()` only auto-imports Tier-1 components — the ones you write as tags: `<AsForm>`, `<AsField>`, `<AsIterator>`, `<AsTable>`, `<AsTableRoot>`, `<AsWindowTable>`, `<AsFilters>`, `<AsPresetPicker>`, `<AsWfForm>`. Default field components (`AsInput`, `AsSelect`, …) and composables (`useAsForm`, `useTable`, …) are always explicit imports — see [Installation](./installation#dynamic-resolver-opt-in) for the rationale.
 
 ## 4. Wire up UnoCSS
 
@@ -142,14 +142,15 @@ Render it:
 ```vue
 <!-- src/views/Contact.vue -->
 <script setup lang="ts">
-import { useForm } from "@atscript/vue-form";
+import { createAsFormDef } from "@atscript/vue-form";
 import { Contact } from "../forms/contact.as";
 
-const { def, formData, validate } = useForm(Contact);
+// `def` describes what to render; `formData` is the wrapped container `{ value }`.
+const { def, formData } = createAsFormDef(Contact);
 
-function onSubmit() {
-  if (!validate()) return;
-  console.log("Submitted:", formData.value);
+// `@submit` fires once the type's own validation passes, with the form's data.
+function onSubmit(data: Contact) {
+  console.log("Submitted:", data);
 }
 </script>
 
@@ -209,12 +210,8 @@ Render the table. `<AsTableRoot>` owns query state (filters, sort, pagination); 
 
 ```vue
 <!-- src/views/Products.vue -->
-<script setup lang="ts">
-import { Product } from "../schemas/Product.as";
-</script>
-
 <template>
-  <AsTableRoot :type="Product" url="/api/products">
+  <AsTableRoot url="/api/products">
     <AsFilters />
     <AsTable />
   </AsTableRoot>
@@ -223,13 +220,13 @@ import { Product } from "../schemas/Product.as";
 
 What this does:
 
-- `AsTableRoot` derives a `TableDef` from `Product`. Every annotated field becomes a column candidate.
+- `AsTableRoot` reads the table from the endpoint: it fetches `/meta`, which carries the field metadata and the serialized `Product` type, and builds a `TableDef` from it. Every annotated field becomes a column candidate.
 - `AsFilters` renders inline filter chips. The filter input for each field is inferred from its type — string → text, number → range, enum → multi-select.
 - `AsTable` renders the body. Sort is one click on the header; the page bar at the bottom is automatic.
 - The `url="/api/products"` is a [`moost-db`](https://db.atscript.dev/http/) REST endpoint. The table writes its filter/sort/page state as a [Uniquery](https://db.atscript.dev) query string and reads `{ data, total }` back.
 
 ::: tip Don't have a server yet?
-You can also pass a `:query` function — any `(params) => Promise<{ data, total }>` works. See [Query function](/tables/query-function) for the contract.
+Pass your own fetcher as `:query-fn` (the table still reads the `/meta` shape), or render rows you already have with `:rows` + `:columns` and no endpoint at all. See [Query function](/tables/query-function) for both.
 :::
 
 ## 8. Build the schemas

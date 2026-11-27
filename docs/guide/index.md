@@ -40,9 +40,10 @@ export interface SignUp {
 
 ```vue
 <script setup lang="ts">
-import { useForm } from "@atscript/vue-form";
+import { createAsFormDef } from "@atscript/vue-form";
 import { SignUp } from "./sign-up.as";
-const { def, formData } = useForm(SignUp);
+const { def, formData } = createAsFormDef(SignUp);
+const onSubmit = (data: SignUp) => console.log(data);
 </script>
 
 <template>
