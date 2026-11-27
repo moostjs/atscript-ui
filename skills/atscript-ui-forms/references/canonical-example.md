@@ -99,7 +99,10 @@ async function onSubmit(): Promise<void> {
   try {
     // getPatch() is a runtime diff — cast at the typed client boundary.
     await props.client.update({ id: props.id, ...patch } as never);
-    asForm.value!.rebase(); // clean again, no remount
+    // The write returns no new version: re-read and fold in (a plain rebase()
+    // keeps the old version → the next save is a 409).
+    const fresh = await props.client.one({ id: props.id });
+    if (fresh) asForm.value!.rebaseOnto({ value: fresh }); // clean, new version
     notice.value = "Saved";
   } catch (e) {
     await onSubmitFailed(e);
@@ -193,7 +196,7 @@ function pick(next: string): void {
 | 1   | `createAsFormDef(type)` → `{ def, formData }`; `formData` is `{ value: domainData }` (what `:form-data` expects). `@submit` / `@action` / `@change` emit the **unwrapped** domain data, typed as the model (0.1.164+; `TAsFormValue<typeof formData>`), so `save(p: Product)` binds as `@submit="save"`. Navigation fields the form leaves out (`@db.rel.*` without `@ui.form.*`) are absent from the `submit` payload. |
 | 2   | Fill the container whenever you like: replacing `formData.value` on a CLEAN form re-baselines the tracker onto the new value (since 0.1.134), so a form mounted before the row lands is not born dirty. A DIRTY swap keeps the old baseline — call `rebase()` (drop the edits) or `rebaseOnto()` (keep them) yourself.                                                                                                  |
 | 3   | An unchanged submit yields `getPatch() === {}` — and an empty patch carries **no `$cas`**. Return before calling the client: send nothing.                                                                                                                                                                                                                                                                              |
-| 4   | A changed submit sends only the diff plus `$cas: { version }`; the `@db.column.version` column is never sent as a normal field. `rebase()` after the write, or the next submit re-sends the same patch.                                                                                                                                                                                                                 |
+| 4   | A changed submit sends only the diff plus `$cas: { version }`; the `@db.column.version` column is never sent as a normal field. After the write, re-read the row and `rebaseOnto({ value: fresh })`: the form is clean (the next submit sends nothing) and the next `$cas` carries the version the save wrote; `rebase()` would keep the old one → 409 on the next save.                                                |
 | 5   | `VersionMismatchError` (409) → reload + `rebaseOnto({ value: fresh }, { conflict: 'ours' })`: local edits survive, `conflicts` lists diverged paths, and the retry lifts the FRESH `$cas` automatically.                                                                                                                                                                                                                |
 | 6   | `ClientError.errors` is `{ path, message, details? }[]`. Map to `Record<path, message>` for `:errors`; a pathless entry goes under `__form` (the banner). External errors auto-dismiss on edit.                                                                                                                                                                                                                         |
 

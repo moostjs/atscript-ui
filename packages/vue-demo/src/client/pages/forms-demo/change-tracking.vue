@@ -60,7 +60,10 @@ function onSave() {
   // In a real app: await table.updateOne(id, patch). Here we just echo it…
   lastSaved.value = patch;
   console.log("ChangeTrackingOrder save patch:", patch);
-  // …then re-baseline so the form goes clean again without a remount.
+  // …then re-baseline so the form goes clean again without a remount. A real
+  // save of this versioned row re-reads it and calls `rebaseOnto({ value: fresh })`
+  // instead: the write returns no new version, so `rebase()` would keep the old
+  // one and the next save would be a 409.
   asForm.value?.rebase();
 }
 

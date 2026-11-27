@@ -85,9 +85,12 @@ async function onSubmit(): Promise<void> {
     // `getPatch()` is a runtime diff (`Record<string, unknown>`), so the client's
     // typed write signature needs a cast at this boundary.
     await props.client.update({ id: props.id, ...patch } as never);
-    // Saved: the current data becomes the new baseline — the form goes clean
-    // without a remount, and the next patch diffs against what we just wrote.
-    asForm.value!.rebase();
+    // Saved. The write returns no new version, so re-read the row and fold it
+    // in: the stored row (with its new version) becomes the baseline, the saved
+    // edits drop out clean, and the next patch carries the new `$cas`. A plain
+    // `rebase()` would keep the old version, and the next save would be a 409.
+    const fresh = await props.client.one({ id: props.id });
+    if (fresh) asForm.value!.rebaseOnto({ value: fresh });
     notice.value = "Saved";
   } catch (e) {
     await onSubmitFailed(e);

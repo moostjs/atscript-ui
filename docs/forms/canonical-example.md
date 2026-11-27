@@ -130,9 +130,12 @@ async function onSubmit(): Promise<void> {
     // `getPatch()` is a runtime diff (`Record<string, unknown>`), so the client's
     // typed write signature needs a cast at this boundary.
     await props.client.update({ id: props.id, ...patch } as never);
-    // Saved: the current data becomes the new baseline — the form goes clean
-    // without a remount, and the next patch diffs against what we just wrote.
-    asForm.value!.rebase();
+    // Saved. The write returns no new version, so re-read the row and fold it
+    // in: the stored row (with its new version) becomes the baseline, the saved
+    // edits drop out clean, and the next patch carries the new `$cas`. A plain
+    // `rebase()` would keep the old version, and the next save would be a 409.
+    const fresh = await props.client.one({ id: props.id });
+    if (fresh) asForm.value!.rebaseOnto({ value: fresh });
     notice.value = "Saved";
   } catch (e) {
     await onSubmitFailed(e);
@@ -272,8 +275,12 @@ never called. That's the whole reason to submit a patch rather than the
 
 One edited field produces `{ subject: "…", $cas: { version: 3 } }` — no other
 field, and never `version` as a normal column (it is server-managed). After the
-write, `rebase()` makes the form clean again without a remount, so an immediate
-second submit sends nothing.
+write, the example re-reads the row and folds it in with `rebaseOnto()`: the
+form is clean again without a remount, so an immediate second submit sends
+nothing, and the next edit's `$cas` carries the version the save wrote. A plain
+`rebase()` keeps the loaded version (the write returns none), so the next save
+would be answered as a version mismatch; see
+[Change tracking](/forms/change-tracking#folding-in-fresh-server-data-rebaseonto).
 
 ### Version mismatch is recoverable
 
