@@ -72,16 +72,18 @@ function rowKey(item: Record<string, unknown>): string {
     : String(item[info!.targetField]);
 }
 // The row the list marks as selected: the one picked while the field still holds its value,
-// else the one loaded row holding the value (a value loaded with the record).
+// else the one loaded row holding the value (a value loaded with the record). While the user
+// types a search it stays as it was: a changed key would make the combobox put the value's
+// text back over the typed one.
+let shownKey: string | undefined;
 const selectedKey = computed(() => {
   if (!info) return undefined;
   const value = props.model.value;
   const picked = pickedRow.value;
-  const row =
-    picked && Object.is(picked[info.targetField], value)
-      ? picked
-      : soleRow(results?.value ?? [], info.targetField, value);
-  return row ? rowKey(row) : undefined;
+  if (picked && Object.is(picked[info.targetField], value)) return (shownKey = rowKey(picked));
+  if (vh?.searchText.value) return shownKey;
+  const row = soleRow(results?.value ?? [], info.targetField, value);
+  return (shownKey = row ? rowKey(row) : undefined);
 });
 // The input's text. Bound so "×" can empty it: the cancel primitive only
 // writes the element, which the next render of the input would undo.
@@ -199,7 +201,6 @@ const { t } = useAsTexts();
         :model-value="selectedKey"
         v-model:open="listOpen"
         :disabled="disabled"
-        :name="name"
         ignore-filter
         class="as-ref-root"
       >
@@ -261,6 +262,9 @@ const { t } = useAsTexts();
           </ComboboxViewport>
           <slot name="list-end" v-bind="slotProps()" />
         </ComboboxContent>
+        <!-- The field's value for a native form, as every other control carries it (the
+             combobox's own value is the selected row's key). After the visible input. -->
+        <input v-if="name" type="hidden" :name="name" :value="model.value ?? ''" />
       </ComboboxRoot>
     </template>
   </AsFieldShell>

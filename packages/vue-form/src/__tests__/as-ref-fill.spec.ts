@@ -171,16 +171,15 @@ describe("AsRef — a pick fills, × clears what it filled (since 0.1.190)", () 
       country: "FR",
       region: "south",
     });
-    // each write is a committed edit, and the pick commits the field itself (`onBlur`)
+    // each write is a committed edit, and the pick commits the field itself (`onBlur`): one
+    // `change` each, none twice
     const changes = (wrapper.emitted("change") ?? []).map((e) => [e[0], e[1], e[2]]);
-    expect(changes).toEqual(
-      expect.arrayContaining([
-        ["update", "cityName", "Lyon"],
-        ["update", "country", "FR"],
-        ["update", "region", "south"],
-        ["update", "city", "LYO"],
-      ]),
-    );
+    expect(changes).toEqual([
+      ["update", "cityName", "Lyon"],
+      ["update", "country", "FR"],
+      ["update", "region", "south"],
+      ["update", "city", "LYO"],
+    ]);
   });
 
   it("× clears the fills that still hold what the pick wrote — never the host field", async () => {
@@ -426,5 +425,97 @@ describe("a pick fills a read-only text (since 0.1.191)", () => {
     await pick(wrapper as unknown as Wrapper, "City", "Lyon");
     expect(formData.value).toEqual({ city: "LYO", cityName: "Lyon" });
     expect(vm.getPatch()).toEqual({ city: "LYO", cityName: "Lyon" });
+  });
+});
+
+describe("AsRef — typing a search, the field's native value (since 0.1.191)", () => {
+  // A dictionary without full-text search: the typed text is a `^text` regex on its fields.
+  async function mountSearching(initial: Record<string, unknown>, meta: unknown, rows: Row[]) {
+    setValueHelpCacheTtl(-1);
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(meta),
+          query: async (req: { filter?: unknown }) => {
+            const typed = /\^([A-Za-z0-9]+)\//.exec(JSON.stringify(req.filter ?? {}))?.[1];
+            if (!typed) return rows;
+            const p = typed.toLowerCase();
+            return rows.filter((r) =>
+              [r.code, r.name].some((v) => String(v).toLowerCase().startsWith(p)),
+            );
+          },
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { RefFillForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(RefFillForm);
+    const { hostFilter: _, ...fillOnly } = CITY;
+    def.fields.find((f) => f.path === "city")!.valueHelpInfo = fillOnly;
+    def.fields.find((f) => f.path === "office")!.valueHelpInfo = OFFICE;
+    const formData = reactive({ value: initial }) as { value: Record<string, unknown> };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    return { wrapper: wrapper as unknown as Wrapper, formData };
+  }
+  type Row = Record<string, unknown>;
+
+  async function typeInto(input: ReturnType<Wrapper["find"]>, text: string) {
+    (input.element as HTMLInputElement).value = text;
+    await input.trigger("input");
+    // past the search debounce
+    await new Promise((r) => setTimeout(r, 350));
+    await flushPromises();
+    await nextTick();
+  }
+
+  it("the typed text stays while the results leave out the stored row", async () => {
+    const { wrapper } = await mountSearching(
+      { city: "BER", cityName: "Berlin" },
+      CITY_META,
+      CITIES,
+    );
+    const input = fieldOf(wrapper, "City").find<HTMLInputElement>(".as-ref-input");
+    await input.trigger("focus");
+    await flushPromises();
+    await typeInto(input, "Bo");
+    expect(wrapper.findAll(".as-ref-item").map((i) => i.text())).toEqual([
+      expect.stringContaining("Bonn"),
+    ]);
+    expect(input.element.value).toBe("Bo");
+    await typeInto(input, "Bon");
+    expect(input.element.value).toBe("Bon");
+  });
+
+  it("the hidden native input carries the field's value, not the row's key", async () => {
+    const props = CITY_META.type.type.props;
+    const keyed = {
+      ...CITY_META,
+      primaryKeys: ["country", "code"],
+      type: {
+        ...CITY_META.type,
+        type: {
+          ...CITY_META.type.type,
+          props: { ...props, country: { ...props.country, metadata: { "meta.id": true } } },
+        },
+      },
+    };
+    const split = [
+      { code: "SP", name: "Seville", country: "ES", region: "south" },
+      { code: "SP", name: "Spoleto", country: "IT", region: "centre" },
+    ];
+    const native = (w: Wrapper) =>
+      fieldOf(w, "City").find<HTMLInputElement>("input[type='hidden'][name='city']").element.value;
+    // a stored value, the list never opened
+    const stored = await mountSearching({ city: "SP", cityName: "Spoleto" }, keyed, split);
+    expect(native(stored.wrapper)).toBe("SP");
+    stored.wrapper.unmount();
+    // a pick of a row keyed by country + code
+    const { wrapper } = await mountSearching({}, keyed, split);
+    await pick(wrapper, "City", "Spoleto");
+    expect(native(wrapper)).toBe("SP");
   });
 });
