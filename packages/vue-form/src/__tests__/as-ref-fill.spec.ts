@@ -590,7 +590,7 @@ describe("AsRef — key members listed as columns tell rows apart (since 0.1.191
     const str = { kind: "", designType: "string", tags: [] };
     const meta = {
       searchable: false,
-      primaryKeys: ["controllingArea", "id"],
+      primaryKeys: ["country", "code"],
       fields: {},
       type: {
         $v: 2,
@@ -600,8 +600,8 @@ describe("AsRef — key members listed as columns tell rows apart (since 0.1.191
           tags: [],
           propsPatterns: [],
           props: {
-            controllingArea: { metadata: { "meta.id": true }, type: str },
-            id: { metadata: { "meta.id": true }, type: str },
+            country: { metadata: { "meta.id": true }, type: str },
+            code: { metadata: { "meta.id": true }, type: str },
             name: { metadata: { "ui.dict.label": true }, type: str },
             region: { metadata: {}, type: str },
           },
@@ -609,8 +609,8 @@ describe("AsRef — key members listed as columns tell rows apart (since 0.1.191
       },
     };
     const rows = [
-      { controllingArea: "A1", id: "1000", name: "Administration", region: "north" },
-      { controllingArea: "B2", id: "1000", name: "Administration", region: "south" },
+      { country: "DE", code: "7", name: "Central", region: "north" },
+      { country: "FR", code: "7", name: "Central", region: "south" },
     ];
     setDefaultClientFactory(
       () =>
@@ -623,9 +623,9 @@ describe("AsRef — key members listed as columns tell rows apart (since 0.1.191
     const { RefFillForm } = await import("./fixtures/ref-fill-forms.as");
     const def = createFormDef(RefFillForm);
     def.fields.find((f) => f.path === "city")!.valueHelpInfo = {
-      url: "/cost-centers",
-      targetField: "id",
-      columns: ["id", "controllingArea", "name", "region"],
+      url: "/warehouses",
+      targetField: "code",
+      columns: ["code", "country", "name", "region"],
       fill: [{ local: "region", target: "region" }],
     };
     def.fields.find((f) => f.path === "office")!.valueHelpInfo = OFFICE;
@@ -640,13 +640,10 @@ describe("AsRef — key members listed as columns tell rows apart (since 0.1.191
       .find(".as-ref-input")
       .trigger("focus");
     await flushPromises();
-    // the committed `id` with the other key member; `name` and `region` are no key members
-    expect(wrapper.findAll(".as-ref-item-id").map((i) => i.text())).toEqual([
-      "1000 · A1",
-      "1000 · B2",
-    ]);
-    await pick(wrapper as unknown as Wrapper, "City", "B2");
-    expect(formData.value).toMatchObject({ city: "1000", region: "south" });
+    // the committed `code` with the other key member; `name` and `region` are no key members
+    expect(wrapper.findAll(".as-ref-item-id").map((i) => i.text())).toEqual(["7 · DE", "7 · FR"]);
+    await pick(wrapper as unknown as Wrapper, "City", "FR");
+    expect(formData.value).toMatchObject({ city: "7", region: "south" });
   });
 });
 

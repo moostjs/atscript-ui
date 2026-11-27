@@ -309,22 +309,21 @@ the compiler warns that values may repeat in the picker unless the other
 members are pinned. A member listed as a column of the binding counts too:
 the picker shows it, so the user can tell the rows apart. The picker dialog
 shows it as a column, and the combobox shows its value next to each row's
-key (`1000 · A1`, `1000 · B2`). Columns that are no key members stay in the
+key (`7 · DE`, `7 · FR`). Columns that are no key members stay in the
 dialog.
 
 ```atscript
 export interface Order {
-    @ui.valueHelp CostCenter, 'id'
-    @ui.valueHelp.column 'controllingArea'
-    @ui.valueHelp.column 'id'
+    @ui.valueHelp Warehouse, 'code'
+    @ui.valueHelp.column 'country'
+    @ui.valueHelp.column 'code'
     @ui.valueHelp.column 'name'
-    costCenter?: string
+    warehouse?: string
 }
 ```
 
-Here `CostCenter` is keyed by `controllingArea` + `id`. Two controlling areas
-may use the same `id`, and the `controllingArea` column tells their rows
-apart. A pick commits from the row picked, and fills from it too. The
+Here `Warehouse` is keyed by `country` + `code`. Two countries may use the
+same `code`, and the `country` column tells their rows apart. A pick commits from the row picked, and fills from it too. The
 column makes the pick unambiguous, not the stored record: only the committed
 field is stored, so when the record is loaded again the list marks no row —
 unless a host reference pins the other member to a host field that holds it
