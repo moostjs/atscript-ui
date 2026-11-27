@@ -649,3 +649,51 @@ describe("AsRef — key members listed as columns tell rows apart (since 0.1.191
     expect(formData.value).toMatchObject({ city: "1000", region: "south" });
   });
 });
+
+const checkedItems = (w: Wrapper) =>
+  w.findAll(".as-ref-item[data-state='checked']").map((i) => i.text());
+
+describe("AsRef — the list marks the field's row when its rows arrive (since 0.1.191)", () => {
+  it("a list opened before the first rows land marks the stored value's row", async () => {
+    setValueHelpCacheTtl(-1);
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(CITY_META),
+          // a slow first read: the field is focused before it answers
+          query: () => new Promise((r) => setTimeout(() => r(CITIES), 150)),
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { RefFillForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(RefFillForm);
+    def.fields.find((f) => f.path === "city")!.valueHelpInfo = {
+      url: "/cities",
+      targetField: "code",
+    };
+    def.fields.find((f) => f.path === "office")!.valueHelpInfo = OFFICE;
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData: reactive({ value: { city: "BER" } }), types: createDefaultTypes() },
+      attachTo: document.body,
+    }) as unknown as Wrapper;
+    await flushPromises();
+    await nextTick();
+    await fieldOf(wrapper, "City").find(".as-ref-input").trigger("focus");
+    await new Promise((r) => setTimeout(r, 200));
+    await flushPromises();
+    await nextTick();
+    expect(checkedItems(wrapper)).toEqual([expect.stringContaining("Berlin")]);
+  });
+
+  it("a host value changed while the list was closed: the search at open marks the row", async () => {
+    const { wrapper, formData } = await mountFillForm({ country: "FR", city: "BER" });
+    // France lists Lyon only; Germany, searched at the next open, lists Berlin
+    formData.value.country = "DE";
+    await flushPromises();
+    await nextTick();
+    await fieldOf(wrapper, "City").find(".as-ref-input").trigger("focus");
+    await flushPromises();
+    await nextTick();
+    expect(checkedItems(wrapper)).toEqual([expect.stringContaining("Berlin")]);
+  });
+});

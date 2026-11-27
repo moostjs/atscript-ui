@@ -72,12 +72,14 @@ function rowKey(item: Record<string, unknown>): string {
     : String(item[info!.targetField]);
 }
 // The row the list marks as selected: the one picked while the field still holds its value,
-// else the one loaded row holding the value (a value loaded with the record). While the list
-// is open and the value unchanged it stays as it was — also while a typed search narrows the
-// rows or is cleared again: a changed key would make the combobox put the value's text back
-// over the typed one.
+// else the one loaded row holding the value (a value loaded with the record). Once a search is
+// typed during this open, and while the value is unchanged, it stays as it was — also while
+// the typed search narrows the rows or is cleared again: a changed key would make the
+// combobox put the value's text back over the typed one. Before that, rows arriving (the
+// first search, a search at open) mark the row.
 let shownKey: string | undefined;
 let shownFor: unknown;
+const searchedThisOpen = ref(false);
 const selectedKey = computed(() => {
   if (!info) return undefined;
   const value = props.model.value;
@@ -86,7 +88,7 @@ const selectedKey = computed(() => {
     shownFor = value;
     return (shownKey = rowKey(picked));
   }
-  if (open.value && Object.is(shownFor, value)) return shownKey;
+  if (searchedThisOpen.value && Object.is(shownFor, value)) return shownKey;
   shownFor = value;
   const row = soleRow(results?.value ?? [], info.targetField, value);
   return (shownKey = row ? rowKey(row) : undefined);
@@ -168,13 +170,17 @@ function slotProps(): TAsRefSlotProps {
 }
 
 function onSearchInput(e: Event) {
-  if (vh) vh.searchText.value = (e.target as HTMLInputElement).value;
+  if (!vh) return;
+  vh.searchText.value = (e.target as HTMLInputElement).value;
+  searchedThisOpen.value = true;
 }
 
 // The list closing puts the value's text back into the input: the typed
 // search is gone, so it no longer counts as something to clear.
 watch(open, (isOpen) => {
-  if (!isOpen && vh) vh.searchText.value = "";
+  if (isOpen) return;
+  searchedThisOpen.value = false;
+  if (vh) vh.searchText.value = "";
 });
 
 // "×" empties the field as emptying an input does: an optional field is
