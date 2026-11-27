@@ -106,6 +106,15 @@ describe("value-help dialog columns (@ui.valueHelp.column)", () => {
     expect(selectOf(pagesFn)).toEqual(expect.arrayContaining(["population", "name", "code"]));
   });
 
+  it("a column the served dictionary does not have (a hidden field) is left out", async () => {
+    const { state } = await mountDialog({
+      url: "/cities",
+      targetField: "code",
+      columns: ["zone", "name", "code"],
+    });
+    expect(state.columnNames.value).toEqual(["name", "code"]);
+  });
+
   it("without columns: the dictionary view; the fill targets are selected too", async () => {
     const { state, pagesFn } = await mountDialog({
       url: "/cities",

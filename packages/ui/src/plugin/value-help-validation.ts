@@ -635,28 +635,39 @@ export function validateValueHelp(token: Token, args: Token[], doc: AtscriptDoc)
       // The other key members are constant in the picker when the filter pins them to a
       // literal. A host reference pins one only while the host field has a value — an
       // empty one lists every member's rows — unless a fill writes the host field back
-      // from the picked row. A dropdown (`select` / `radio`) commits a value, not a row:
-      // nothing is written back from it.
+      // from the picked row. A member shown as a column of the binding tells the rows
+      // apart in the picker (since 0.1.191). A dropdown (`select` / `radio`) commits a
+      // value, not a row, and shows no columns: neither applies to it.
       const literal = pinnedFields(filterArg);
       const byHost = validHost ? hostPins(filterArg, validHost.name) : undefined;
-      const fieldAnnotations = validHost?.field.annotations ?? [];
+      // the field's annotations as its fill and column validators read them
+      const fieldAnnotations = annotationTarget(token, doc)?.annotations ?? [];
       const argOf = (name: string) => fieldAnnotations.find((a) => a.name === name)?.args[0]?.text;
       const formType = argOf("ui.form.type") ?? argOf("ui.type");
       const dropdown = formType === "select" || formType === "radio";
       const fills = fieldAnnotations.filter((a) => a.name === "ui.valueHelp.fill");
+      const columns = new Set(
+        fieldAnnotations
+          .filter((a) => a.name === "ui.valueHelp.column")
+          .map((a) => a.args[0]?.text),
+      );
       const writtenBack = (member: string) => {
         const local = byHost?.get(member);
         return (
-          !dropdown &&
           local !== undefined &&
           fills.some((a) => a.args[0]?.text === local && a.args[1]?.text === member)
         );
       };
-      ok = idFields.every(([name]) => name === fieldName || literal.has(name) || writtenBack(name));
+      ok = idFields.every(
+        ([name]) =>
+          name === fieldName ||
+          literal.has(name) ||
+          (!dropdown && (writtenBack(name) || columns.has(name))),
+      );
     }
     if (!ok) {
       errors.push({
-        message: `values may repeat in the picker — '${targetName}.${fieldName}' is not unique (a sole @meta.id, @db.index.unique, or a composite key member with the other members pinned by '=' to a literal in the filter, or to a host field a fill writes back from the picked row)`,
+        message: `values may repeat in the picker — '${targetName}.${fieldName}' is not unique (a sole @meta.id, @db.index.unique, or a composite key member with the other members pinned by '=' to a literal in the filter, or to a host field a fill writes back from the picked row, or shown as a @ui.valueHelp.column of this field)`,
         severity: WARNING,
         range: token.range,
       });

@@ -50,6 +50,7 @@ from.
 When upgrading from 0.1.190 or earlier (to 0.1.191):
 
 - A pick writes a `@meta.readonly` fill target, such as the read-only text next to a code, and the compiler no longer warns about one. After a pick the form's patch carries that field like any value the app sets; a backend that computes it ignores or drops it. A `@db.column.derived` target is still skipped. See [fills](/forms/references#a-pick-fills-other-fields-ui-valuehelp-fill).
+- A composite-key member listed as a `@ui.valueHelp.column` of the binding satisfies the "values may repeat" rule, so that warning goes away for such bindings; a dropdown keeps it. In the combobox, picking another row with the value the field already holds now writes that row's fills, and the list marks only the row picked (`data-state="checked"`). See [Columns tell rows apart](/forms/references#columns-tell-rows-apart).
 
 When upgrading from 0.1.189 or earlier (to 0.1.190):
 

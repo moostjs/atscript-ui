@@ -1063,6 +1063,44 @@ export interface Customer {
     expect(m.filter((x) => x.includes("values may repeat"))).toHaveLength(2);
   });
 
+  it("a key member shown as a column tells the rows apart, except in a dropdown (VH6)", async () => {
+    const m = await msgs(`
+export interface Customer {
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.column 'country'
+    @ui.valueHelp.column 'code'
+    @ui.valueHelp.column 'name'
+    city?: string
+    addr: {
+        @ui.valueHelp City, 'code'
+        @ui.valueHelp.column 'country'
+        city?: string
+    }
+    place?: string
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.column 'name'
+    town?: string
+    @ui.form.type 'select'
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.column 'country'
+    village?: string
+    @ui.type 'radio'
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.column 'country'
+    hamlet?: string
+}
+annotate Customer {
+    @ui.valueHelp City, 'code'
+    @ui.valueHelp.column 'country'
+    place
+}`);
+    // `town` shows no `country` column; a dropdown shows no columns at all
+    const repeat = m.filter((x) => x.includes("values may repeat"));
+    expect(repeat).toHaveLength(3);
+    expect(repeat.join("\n")).toContain("or shown as a @ui.valueHelp.column of this field");
+    expect(errorsOf(m)).toEqual([]);
+  });
+
   it("a dictionary bound from its own interface: the right-hand side is the host", async () => {
     const m = await msgs(`
 @db.table 'employees'

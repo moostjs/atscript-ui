@@ -161,6 +161,33 @@ describe("AsRefPicker — the picker dialog of a reference field (since 0.1.190)
     expect(document.querySelector(".as-value-help-dialog-content")).toBeNull();
   });
 
+  it("Enter picks the active row by keyboard; the field's list then marks that row (since 0.1.191)", async () => {
+    const { wrapper, formData } = await mountPicker({});
+    const state = await openDialog(wrapper);
+    state.viewportRowCount.value = 5;
+    await flushPromises();
+    await nextTick();
+    const body = document.querySelector<HTMLElement>(".as-value-help-dialog-content tbody")!;
+    const key = (k: string) =>
+      body.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, cancelable: true }));
+    // down to the second "SP" row (Spoleto), then Enter
+    key("ArrowDown");
+    key("ArrowDown");
+    await nextTick();
+    expect(document.querySelector(".as-table-row-active")?.textContent).toContain("Spoleto");
+    key("Enter");
+    await flushPromises();
+    expect(formData.value).toMatchObject({ city: "SP", cityName: "Spoleto", country: "IT" });
+    // both "SP" rows are listed for Italy only now (the fill wrote the host value): reopen
+    // the list without it, and the row picked is the one marked
+    formData.value.country = undefined;
+    await nextTick();
+    await wrapper.find(".as-ref-input").trigger("focus");
+    await flushPromises();
+    const checked = [...document.querySelectorAll(".as-ref-item[data-state='checked']")];
+    expect(checked.map((i) => i.textContent)).toEqual([expect.stringContaining("Spoleto")]);
+  });
+
   it("“See all” under the list opens the dialog searching for the typed text", async () => {
     const { wrapper, pages } = await mountPicker({}, { searchable: true });
     const input = wrapper.find<HTMLInputElement>(".as-ref-input");

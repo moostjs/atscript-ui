@@ -9,7 +9,7 @@ import {
   ComboboxRoot,
   ComboboxViewport,
 } from "reka-ui";
-import { computed, inject, ref, watch } from "vue";
+import { computed, inject, ref, shallowRef, watch } from "vue";
 import { CLIENT_FACTORY_KEY, useAsValueHelp } from "../../composables/use-as-value-help";
 import { emptiedKey, soleRow } from "../../composables/_shape";
 import type { TAsComponentProps, TAsRefSlotProps } from "../types";
@@ -54,24 +54,15 @@ const status = vh?.status;
 const searching = vh?.searching;
 
 // Every pick goes through `selectItem` (since 0.1.190): it commits the value, writes the
-// binding's fills and validates the field — with the row the user picked, which the
-// item's `select` hands over just before the combobox commits its value. Values may
-// repeat (a dictionary keyed by more fields than the committed one), so the row is never
-// looked up by value, except when only one loaded row holds it.
-let pickedRow: Record<string, unknown> | undefined;
-function onItemSelect(item: Record<string, unknown>) {
-  pickedRow = item;
-}
-function onPick(value: unknown) {
-  const picked = pickedRow;
-  pickedRow = undefined;
-  const row =
-    info &&
-    (picked?.[info.targetField] === value
-      ? picked
-      : soleRow(results?.value ?? [], info.targetField, value));
-  if (row) vh?.selectItem(row);
-  else props.model.value = value;
+// binding's fills and validates the field — with the row the user picked, handed over by
+// the item's `select` (a click or Enter). Values may repeat (a dictionary keyed by more
+// fields than the committed one), so a row is never looked up by value: the list's items
+// are the rows' keys, and a pick of another row holding the value the field already holds
+// is a pick too (since 0.1.191).
+const pickedRow = shallowRef<Record<string, unknown>>();
+function pickRow(row: Record<string, unknown>) {
+  pickedRow.value = row;
+  vh?.selectItem(row);
 }
 // A key per row: the dictionary's primary key (the committed value may repeat).
 function rowKey(item: Record<string, unknown>): string {
@@ -80,6 +71,18 @@ function rowKey(item: Record<string, unknown>): string {
     ? keys.map((k) => String(item[k])).join("\u0000")
     : String(item[info!.targetField]);
 }
+// The row the list marks as selected: the one picked while the field still holds its value,
+// else the one loaded row holding the value (a value loaded with the record).
+const selectedKey = computed(() => {
+  if (!info) return undefined;
+  const value = props.model.value;
+  const picked = pickedRow.value;
+  const row =
+    picked && Object.is(picked[info.targetField], value)
+      ? picked
+      : soleRow(results?.value ?? [], info.targetField, value);
+  return row ? rowKey(row) : undefined;
+});
 // The input's text. Bound so "×" can empty it: the cancel primitive only
 // writes the element, which the next render of the input would undo.
 const inputText = ref("");
@@ -88,15 +91,17 @@ const inputText = ref("");
 // the input shows the code with its text; focused, the code alone, to search from.
 const focused = ref(false);
 const showsLabel = () => props.valueLabel !== undefined && (props.readonly || !focused.value);
-// What the input shows for the value — the combobox's own rule for a value without a label.
-function displayValue(v: unknown): string {
+// What the input shows for the field's value — the combobox's own rule for a value without
+// a label. Always the field's value: the combobox's own value is the selected row's key.
+function displayValue(): string {
   if (showsLabel()) return props.valueLabel!;
+  const v = props.model.value;
   return v && typeof v !== "object" ? String(v) : "";
 }
 watch(
   () => props.valueLabel,
   () => {
-    if (!focused.value && !open.value) inputText.value = displayValue(props.model.value);
+    if (!focused.value && !open.value) inputText.value = displayValue();
   },
 );
 // A focus given back by the slots (`focus()`, e.g. as a dialog closes) leaves the list closed.
@@ -105,21 +110,21 @@ let quietFocus = false;
 function onInputFocus() {
   focused.value = true;
   if (props.valueLabel !== undefined && !props.readonly) {
-    inputText.value = displayValue(props.model.value);
+    inputText.value = displayValue();
   }
   if (!quietFocus) listOpen.value = true;
 }
 function onInputBlur() {
   focused.value = false;
   // an open list puts the text back as it closes (`displayValue`)
-  if (!open.value) inputText.value = displayValue(props.model.value);
+  if (!open.value) inputText.value = displayValue();
   props.onBlur();
 }
 // A value committed while the list is closed (a pick from another picker, a fill) shows at once.
 watch(
   () => props.model.value,
-  (v) => {
-    if (!open.value) inputText.value = displayValue(v);
+  () => {
+    if (!open.value) inputText.value = displayValue();
   },
 );
 
@@ -129,12 +134,12 @@ const clientFactory = inject(CLIENT_FACTORY_KEY, null) ?? undefined;
 function slotProps(): TAsRefSlotProps {
   return {
     searchText: vh?.searchText.value ?? "",
-    selectItem: (row) => vh?.selectItem(row),
+    selectItem: pickRow,
     scope: vh!.scope.value,
     clientFactory,
     close: () => {
       listOpen.value = false;
-      inputText.value = displayValue(props.model.value);
+      inputText.value = displayValue();
     },
     focus: () => {
       quietFocus = true;
@@ -187,12 +192,12 @@ const { t } = useAsTexts();
         <span class="as-ref-spinner" aria-hidden="true" />
       </div>
 
-      <!-- reka-ui Combobox for FK ref fields — value is the raw FK id. -->
+      <!-- reka-ui Combobox for FK ref fields — its value is the selected row's key; a pick
+           commits the row's value through `pickRow`. -->
       <ComboboxRoot
         v-else
-        :model-value="model.value"
+        :model-value="selectedKey"
         v-model:open="listOpen"
-        @update:model-value="onPick"
         :disabled="disabled"
         :name="name"
         ignore-filter
@@ -236,9 +241,9 @@ const { t } = useAsTexts();
               <ComboboxItem
                 v-for="item in results"
                 :key="rowKey(item)"
-                :value="item[info.targetField]"
+                :value="rowKey(item)"
                 class="as-ref-item"
-                @select="onItemSelect(item)"
+                @select="pickRow(item)"
               >
                 <span class="as-ref-item-id">{{ item[info.targetField] }}</span>
                 <span class="as-ref-item-label">

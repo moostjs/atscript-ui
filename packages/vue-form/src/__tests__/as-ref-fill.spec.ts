@@ -320,6 +320,56 @@ describe("a pick fills from the row picked, also where values repeat (since 0.1.
       .map((item) => item.vm.$.vnode.key);
     expect(keys).toEqual(["SP\u0000ES", "SP\u0000IT"]);
   });
+
+  it("another row of the value the field holds is a pick too; the list marks the row picked", async () => {
+    setValueHelpCacheTtl(-1);
+    setDefaultClientFactory(
+      () =>
+        ({
+          meta: () => Promise.resolve(KEYED_META),
+          query: async () => SPLIT,
+          invalidateMeta: () => {},
+        }) as never,
+    );
+    const { RefFillForm } = await import("./fixtures/ref-fill-forms.as");
+    const def = createFormDef(RefFillForm);
+    // no host reference: a reopened list is the same search, not a new one
+    const { hostFilter: _, ...fillOnly } = CITY;
+    def.fields.find((f) => f.path === "city")!.valueHelpInfo = fillOnly;
+    def.fields.find((f) => f.path === "office")!.valueHelpInfo = OFFICE;
+    const formData = reactive({ value: {} }) as { value: Record<string, unknown> };
+    const wrapper = mount(AsForm as any, {
+      props: { def, formData, types: createDefaultTypes() },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    await nextTick();
+    const w = wrapper as unknown as Wrapper;
+    await pick(w, "City", "Seville");
+    expect(formData.value).toMatchObject({ city: "SP", cityName: "Seville", country: "ES" });
+    // reopened, the list marks the row picked, not every row holding "SP"
+    const input = fieldOf(w, "City").find(".as-ref-input");
+    await input.trigger("focus");
+    await flushPromises();
+    const checked = () =>
+      wrapper.findAll(".as-ref-item[data-state='checked']").map((i) => i.text());
+    expect(checked()).toEqual([expect.stringContaining("Seville")]);
+    // the same committed value from another row, by keyboard: that row's fields are written
+    await input.trigger("keydown", { key: "ArrowDown" });
+    expect(wrapper.find(".as-ref-item[data-highlighted]").text()).toContain("Spoleto");
+    await input.trigger("keydown", { key: "Enter" });
+    await flushPromises();
+    await nextTick();
+    expect(formData.value).toMatchObject({
+      city: "SP",
+      cityName: "Spoleto",
+      country: "IT",
+      region: "centre",
+    });
+    await input.trigger("focus");
+    await flushPromises();
+    expect(checked()).toEqual([expect.stringContaining("Spoleto")]);
+  });
 });
 
 describe("a pick fills a read-only text (since 0.1.191)", () => {

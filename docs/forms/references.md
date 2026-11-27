@@ -203,7 +203,8 @@ A composite-key member a host reference pins (`country` of a city keyed by
 `country` + `id`) is pinned only while the host field has a value: an empty
 one lists the ids of every country. So the compiler keeps its "values may
 repeat" warning unless a fill writes the host field back from the picked row
-(`@ui.valueHelp.fill 'country', 'country'`) — and on a dropdown
+(`@ui.valueHelp.fill 'country', 'country'`), or the member is one of the
+binding's [columns](#columns-tell-rows-apart) — and on a dropdown
 (`@ui.form.type 'select'` or `'radio'`) in any case, since it commits a value,
 not a row. While it has a value, the
 scope lists it in `pinned` (`useAsValueHelp().scope`), so a custom picker can
@@ -249,8 +250,10 @@ export interface Customer {
   empty country lists every city, and a pick sets it.
 - In the combobox and the picker dialog, the fills come from the row the user
   picked, also where the committed value repeats (a city keyed by `country` +
-  `id`: two countries may have the same `id`). A dropdown lists values, not
-  rows: a value several rows hold is committed without fills (see
+  `id`: two countries may have the same `id`). Picking another row with the
+  value the field already holds is a pick too, and writes that row's fields
+  (since 0.1.191). A dropdown lists values, not rows: a value several rows
+  hold is committed without fills (see
   [A dropdown from a dictionary](#a-dropdown-from-a-dictionary)).
 
 The compiler checks that `local` is a top-level scalar field of the host (not
@@ -292,6 +295,39 @@ help); unlike fills, they travel with the binding through references.
 @ui.valueHelp.column 'region'
 city?: string
 ```
+
+A column the served dictionary does not have (a field hidden from the
+caller) is left out of the dialog.
+
+### Columns tell rows apart
+
+_Since 0.1.191._ When the committed field is one member of a composite key,
+the compiler warns that values may repeat in the picker unless the other
+members are pinned. A member listed as a column of the binding counts too:
+the picker dialog shows it, so the user can tell the rows apart.
+
+```atscript
+export interface Order {
+    @ui.valueHelp CostCenter, 'id'
+    @ui.valueHelp.column 'controllingArea'
+    @ui.valueHelp.column 'id'
+    @ui.valueHelp.column 'name'
+    costCenter?: string
+}
+```
+
+Here `CostCenter` is keyed by `controllingArea` + `id`. Two controlling areas
+may use the same `id`, and the `controllingArea` column tells their rows
+apart. A pick commits from the row picked, and fills from it too. A dropdown
+(`@ui.form.type 'select'` or `'radio'`) shows no columns, so it keeps the
+warning. Other ways to satisfy the rule are a literal pin in the filter and
+a [host field a fill writes back](#values-of-the-form-narrow-the-picker).
+
+::: warning Changed in 0.1.191
+A composite-key member listed as a `@ui.valueHelp.column` no longer draws the
+"values may repeat" warning. Before 0.1.191 only a literal pin or a host field
+a fill writes back from the picked row satisfied it.
+:::
 
 ## A dropdown from a dictionary
 
@@ -508,7 +544,8 @@ The default `AsRef` component is a Reka-ui Combobox with:
   pick [filled](#clearing-filled-fields).
 - One pick path: a pick commits the value, writes the binding's fills and
   validates the field (`selectItem`) — with the row picked, never one looked
-  up by its value.
+  up by its value. The list marks the row picked (`data-state="checked"`),
+  not every row that holds its value (since 0.1.191).
 - A read-only reference field opens no list (since 0.1.190).
 - Loading and empty-state slots; since 0.1.190 a `trailing` slot after the
   input and a `list-end` slot under the list (`AsRefPicker` fills them).
